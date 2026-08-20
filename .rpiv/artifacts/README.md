@@ -1,6 +1,6 @@
 # SlopStop RPIV Artifacts
 
-The files below were copied byte-for-byte from the `rpiv-claude` repository on 2026-08-14. Their original frontmatter, source repository, commit, branch, timestamps, and content hashes are preserved as provenance. Later SlopStop decisions do not rewrite these historical records.
+The imported files below were copied byte-for-byte from the `rpiv-claude` repository on 2026-08-14. Their original frontmatter, source repository, commit, branch, timestamps, and content hashes are preserved as provenance. Later SlopStop decisions do not rewrite these historical records. Research produced directly in SlopStop records its own repository provenance.
 
 ## Requirements Lineage
 
@@ -11,6 +11,7 @@ The files below were copied byte-for-byte from the `rpiv-claude` repository on 2
 ## Research
 
 - `research/2026-08-14_12-09-42_custom-coding-harness-options.md` compares runtime, orchestration, visualization, and capability-broker options. Some recommendations were superseded by the confirmed FRDs; it remains evidence, not current authority.
+- `research/2026-08-20_19-27-59_runtime-constraints-program-order.md` verifies current runtime constraints and the partial ordering they impose on v1 programs.
 
 ## Current Authority
 
