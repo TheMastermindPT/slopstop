@@ -1,0 +1,28 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "project": ["*.{cjs,js,mjs,ts}"]
+    },
+    "apps/desktop": {
+      "entry": [
+        "forge.config.ts",
+        "src/main/main.ts",
+        "src/preload/preload.ts",
+        "tests/e2e/**/*.{mjs,ts}",
+        "vite.*.config.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "*.config.ts"]
+    },
+    "apps/harness": {
+      "entry": ["src/process-entry.ts"],
+      "project": ["src/**/*.ts", "tests/**/*.ts"]
+    },
+    "packages/kernel": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/protocol": {
+      "project": ["src/**/*.ts"]
+    }
+  }
+}

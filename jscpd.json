@@ -1,0 +1,15 @@
+{
+  "path": ["apps", "packages"],
+  "threshold": 0,
+  "minLines": 10,
+  "minTokens": 60,
+  "reporters": ["console"],
+  "ignore": [
+    "**/.vite/**",
+    "**/coverage/**",
+    "**/node_modules/**",
+    "**/out/**",
+    "**/playwright-report/**",
+    "**/test-results/**"
+  ]
+}

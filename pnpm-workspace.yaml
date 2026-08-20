@@ -1,0 +1,55 @@
+packages:
+  - apps/*
+  - packages/*
+
+autoInstallPeers: false
+blockExoticSubdeps: true
+managePackageManagerVersions: true
+nodeLinker: hoisted
+saveExact: true
+sharedWorkspaceLockfile: true
+strictPeerDependencies: true
+strictDepBuilds: true
+
+overrides:
+  "@electron/node-gyp": 10.2.0-electron.1
+
+catalog:
+  "@biomejs/biome": 2.5.8
+  "@commitlint/cli": 21.2.2
+  "@commitlint/config-conventional": 21.2.2
+  "@electron-forge/cli": 7.11.2
+  "@electron-forge/plugin-fuses": 7.11.2
+  "@electron-forge/plugin-vite": 7.11.2
+  "@electron-forge/shared-types": 7.11.2
+  "@electron/fuses": 1.8.0
+  "@playwright/test": 1.62.1
+  "@sentry/electron": 7.16.0
+  "@testing-library/dom": 10.4.1
+  "@testing-library/react": 16.3.2
+  "@testing-library/user-event": 14.6.4
+  "@types/node": 24.13.3
+  "@types/react": 19.2.18
+  "@types/react-dom": 19.2.4
+  "@vitejs/plugin-react": 6.0.5
+  "@vitest/coverage-v8": 4.1.10
+  dependency-cruiser: 18.2.0
+  electron: 43.4.0
+  husky: 9.1.7
+  jscpd: 5.0.15
+  jsdom: 30.0.1
+  knip: 6.32.2
+  likec4: 1.59.2
+  lint-staged: 17.3.0
+  pino: 10.3.1
+  pino-pretty: 13.1.3
+  react: 19.2.8
+  react-dom: 19.2.8
+  typescript: 6.0.2
+  vite: 8.2.1
+  vitest: 4.1.10
+  zod: 4.4.3
+
+allowBuilds:
+  electron: true
+  esbuild: true

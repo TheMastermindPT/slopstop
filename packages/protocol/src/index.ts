@@ -1,0 +1,26 @@
+export type {
+  DesktopMessage,
+  HarnessFailureCode,
+  HarnessMessage,
+  HarnessStatus,
+  MessageId,
+  ProtocolParseResult,
+  RetryHarnessResult,
+} from "./protocol.js";
+export {
+  createFailureEvent,
+  createHandshakeCommand,
+  createReadyEvent,
+  DesktopMessageSchema,
+  HarnessBootstrapSchema,
+  HarnessDiagnosticCodeSchema,
+  HarnessFailureCodeSchema,
+  HarnessMessageSchema,
+  HarnessStatusSchema,
+  MessageIdSchema,
+  parseDesktopMessage,
+  parseHarnessMessage,
+  protocolVersion,
+  RetryHarnessResultSchema,
+  readMessageId,
+} from "./protocol.js";

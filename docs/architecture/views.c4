@@ -1,0 +1,31 @@
+views {
+  view context {
+    title "SlopStop System Context"
+    description "Local product boundary and optional external services."
+    include developer, slopstop.**, gitRepository, modelProviders, operatingSystem, sentry
+    autoLayout LeftRight
+  }
+
+  view process-boundaries of slopstop {
+    title "Desktop, Harness, Packages, and Storage"
+    description "Strict renderer boundary and the separately supervised harness process."
+    include slopstop.**
+    include developer -> slopstop.desktop.renderer
+    include slopstop.harness -> gitRepository
+    include slopstop.harness -> modelProviders
+    include slopstop.desktop.main -> operatingSystem
+    include slopstop.desktop.main -> sentry
+    include slopstop.harness -> sentry
+    autoLayout LeftRight
+  }
+
+  dynamic view startup-handshake {
+    title "Desktop and Harness Startup Handshake"
+    developer -> slopstop.desktop.renderer "launches application"
+    slopstop.desktop.main -> slopstop.harness "forks utility process"
+    slopstop.desktop.main -> slopstop.harness "transfers message port"
+    slopstop.desktop.main -> slopstop.harness "sends versioned handshake"
+    slopstop.desktop.main <- slopstop.harness "returns sequenced ready event"
+    slopstop.desktop.renderer <- slopstop.desktop.main "projects ready status through preload"
+  }
+}

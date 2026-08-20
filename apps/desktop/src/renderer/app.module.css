@@ -1,0 +1,250 @@
+.shell {
+  position: relative;
+  display: grid;
+  min-width: 20rem;
+  min-height: 100vh;
+  grid-template-rows: auto 1fr auto;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  overflow: hidden;
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px), var(--surface);
+  background-size: 3rem 3rem;
+  color: var(--ink);
+}
+
+.shell::before,
+.shell::after {
+  position: absolute;
+  z-index: 0;
+  content: "";
+  pointer-events: none;
+}
+
+.shell::before {
+  inset: 50% 0 auto;
+  border-top: 1px solid var(--axis-line);
+}
+
+.shell::after {
+  inset: 0 auto 0 50%;
+  border-left: 1px solid var(--axis-line);
+}
+
+.coordinates,
+footer {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--ink-muted);
+  font-family: var(--font-measure);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+}
+
+.instrument {
+  z-index: 1;
+  display: grid;
+  width: min(100%, 58rem);
+  grid-template-columns: minmax(15rem, 0.9fr) minmax(18rem, 1.1fr);
+  align-items: center;
+  gap: clamp(2rem, 8vw, 7rem);
+  margin: auto;
+}
+
+.reticle {
+  position: relative;
+  width: min(52vw, 22rem);
+  aspect-ratio: 1;
+  justify-self: end;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+
+.reticle::before,
+.reticle::after {
+  position: absolute;
+  content: "";
+  background: var(--line);
+}
+
+.reticle::before {
+  top: 50%;
+  right: -1rem;
+  left: -1rem;
+  height: 1px;
+}
+
+.reticle::after {
+  top: -1rem;
+  bottom: -1rem;
+  left: 50%;
+  width: 1px;
+}
+
+.orbit {
+  position: absolute;
+  inset: 16%;
+  border: 1px dashed var(--line-strong);
+  border-radius: 50%;
+}
+
+.beacon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--signal);
+  box-shadow: 0 0 0 1px var(--signal);
+  transform: translate(-50%, -50%);
+}
+
+.reticle[data-state="starting"] .beacon,
+.reticle[data-state="degraded"] .beacon {
+  animation: acquire 1.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.reticle[data-state="crashed"] .beacon,
+.reticle[data-state="stopped"] .beacon {
+  background: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+
+.readout {
+  max-width: 30rem;
+}
+
+.coordinate {
+  margin: 0 0 1.1rem;
+  color: var(--signal);
+  font-family: var(--font-measure);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
+
+.readout h1 {
+  margin: 0;
+  font-size: clamp(3.2rem, 8vw, 6rem);
+  font-weight: 540;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+.status {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 36rem;
+  margin-top: 2.25rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line-strong);
+}
+
+.status strong {
+  font-size: 1.05rem;
+  font-weight: 620;
+}
+
+.status span {
+  max-width: 44ch;
+  color: var(--ink-muted);
+  line-height: 1.65;
+}
+
+.readout button {
+  margin-top: 1.5rem;
+  border: 1px solid var(--signal);
+  border-radius: 0;
+  padding: 0.72rem 1rem;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 620;
+  cursor: pointer;
+}
+
+.readout button:hover:not(:disabled) {
+  background: var(--signal);
+  color: var(--surface);
+}
+
+.readout button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.retryError {
+  color: var(--danger);
+  line-height: 1.5;
+}
+
+@keyframes acquire {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px var(--signal),
+      0 0 0 0 rgb(158 181 140 / 0.28);
+  }
+  55% {
+    box-shadow:
+      0 0 0 1px var(--signal),
+      0 0 0 1.5rem transparent;
+  }
+}
+
+@media (max-width: 46rem) {
+  .coordinates span:nth-child(2) {
+    display: none;
+  }
+
+  .instrument {
+    grid-template-columns: 1fr;
+    align-content: center;
+    gap: 2.5rem;
+  }
+
+  .reticle {
+    width: min(65vw, 15rem);
+    justify-self: start;
+  }
+
+  .readout h1 {
+    font-size: clamp(3.4rem, 17vw, 5rem);
+  }
+
+  footer {
+    align-items: flex-end;
+  }
+}
+
+@media (max-width: 46rem) and (max-height: 36rem) {
+  .instrument {
+    grid-template-columns: minmax(10rem, 0.8fr) minmax(16rem, 1.2fr);
+    gap: clamp(1.5rem, 4vw, 2.5rem);
+  }
+
+  .reticle {
+    width: min(30vw, 12rem);
+    justify-self: end;
+  }
+
+  .readout h1 {
+    font-size: clamp(3rem, 10vw, 4rem);
+  }
+
+  .status {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reticle[data-state] .beacon {
+    animation: none;
+  }
+}

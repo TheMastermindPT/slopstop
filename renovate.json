@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "rangeStrategy": "pin",
+  "dependencyDashboard": true,
+  "schedule": ["before 6am on monday"],
+  "semanticCommits": "enabled",
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Keep Electron Forge packages on one version",
+      "matchPackageNames": ["@electron-forge/**"],
+      "groupName": "electron forge"
+    },
+    {
+      "description": "Keep Vitest packages on one version",
+      "matchPackageNames": ["vitest", "@vitest/**"],
+      "groupName": "vitest"
+    },
+    {
+      "description": "Group Sentry SDK updates",
+      "matchPackageNames": ["@sentry/**"],
+      "groupName": "sentry"
+    }
+  ]
+}

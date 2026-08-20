@@ -1,0 +1,48 @@
+specification {
+  element actor {
+    notation "Person"
+    style { shape person }
+  }
+
+  element system {
+    notation "Software system"
+  }
+
+  element application {
+    notation "Application boundary"
+    style { shape browser }
+  }
+
+  element process {
+    notation "Operating-system process"
+    style { shape rectangle }
+  }
+
+  element component {
+    notation "Runtime component"
+    style { shape component }
+  }
+
+  element package {
+    notation "Workspace package"
+    style { shape document }
+  }
+
+  element database {
+    notation "Local database"
+    style { shape storage }
+  }
+
+  element external {
+    notation "External boundary"
+  }
+
+  relationship invokes
+  relationship launches
+  relationship messages
+  relationship imports
+  relationship persists
+  relationship requests
+  relationship reports
+  relationship protects
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@slopstop/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "productName": "SlopStop",
+  "description": "SlopStop Electron desktop application.",
+  "type": "module",
+  "main": ".vite/build/main.cjs",
+  "scripts": {
+    "package": "electron-forge package",
+    "package:launch-smoke": "node tests/e2e/package-smoke.mjs",
+    "package:smoke": "electron-forge package && node tests/e2e/package-smoke.mjs",
+    "start": "electron-forge start",
+    "test:e2e": "electron-forge package && playwright test --config playwright.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sentry/electron": "catalog:",
+    "@slopstop/protocol": "workspace:*",
+    "pino": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "catalog:",
+    "@electron-forge/plugin-fuses": "catalog:",
+    "@electron-forge/plugin-vite": "catalog:",
+    "@electron-forge/shared-types": "catalog:",
+    "@electron/fuses": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "electron": "catalog:",
+    "pino-pretty": "catalog:",
+    "vite": "catalog:"
+  }
+}

@@ -1,0 +1,44 @@
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+
+# Build and test output
+.vite/
+out/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Application runtime state
+projects/
+*.log
+*.db-shm
+*.db-wal
+.slopstop/*
+!.slopstop/project.json
+
+# RPIV durable records are tracked; runtime state is not
+.rpiv/*
+!.rpiv/artifacts/
+!.rpiv/artifacts/**
+!.rpiv/decisions/
+!.rpiv/decisions/**
+!.rpiv/guidance/
+!.rpiv/guidance/**
+
+# Design-tool runtime output
+.impeccable/
+
+# Editors and operating systems
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini

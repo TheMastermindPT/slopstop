@@ -1,0 +1,85 @@
+model {
+  developer = actor "Developer" {
+    description "The first and only user in the personal local-first product."
+  }
+
+  slopstop = system "SlopStop" {
+    description "Local-first desktop harness for visible, non-linear multi-agent coding work."
+
+    desktop = application "Desktop application" {
+      technology "Electron, React, TypeScript"
+
+      renderer = component "Renderer" {
+        technology "React"
+        description "Sandboxed projection and control surface with no Node access."
+      }
+
+      preload = component "Preload API" {
+        technology "Electron contextBridge"
+        description "Narrow typed bridge between untrusted renderer code and Electron main."
+      }
+
+      main = component "Desktop coordinator" {
+        technology "Electron main"
+        description "Owns windows, credential access, harness supervision, and renderer projections."
+      }
+    }
+
+    harness = process "Harness utility process" {
+      technology "Node.js utilityProcess"
+      description "One supervised process per desktop app; owns agent, repository, persistence, and tool adapters."
+    }
+
+    kernel = package "Project kernel" {
+      technology "TypeScript"
+      description "Framework-independent canonical domain behavior."
+    }
+
+    protocol = package "Process protocol" {
+      technology "TypeScript, Zod"
+      description "Versioned schemas, message factories, and parse diagnostics for trust boundaries."
+    }
+
+    canonicalDb = database "Canonical project data" {
+      technology "libSQL, Drizzle"
+      description "SlopStop-owned event, projection, evidence, memory, approval, and recovery state."
+    }
+
+    mastraDb = database "Mastra runtime data" {
+      technology "libSQL"
+      description "Framework-owned traces, memory, and runtime records kept separate from canonical state."
+    }
+  }
+
+  gitRepository = external "Active Git repository" {
+    description "User source, worktrees, diffs, tests, and durable historical code evidence."
+  }
+
+  modelProviders = external "Model providers" {
+    description "User-configured provider-neutral models reached only through the harness."
+  }
+
+  operatingSystem = external "Operating system services" {
+    description "Process isolation, filesystem, and encrypted credential storage."
+  }
+
+  sentry = external "Sentry" {
+    description "Optional consent-gated crash reporting after strict redaction."
+  }
+
+  developer -[invokes]-> slopstop.desktop.renderer "operates SlopStop"
+  slopstop.desktop.renderer -[messages]-> slopstop.desktop.preload "calls typed API"
+  slopstop.desktop.preload -[messages]-> slopstop.desktop.main "validates IPC"
+  slopstop.desktop.main -[launches]-> slopstop.harness "supervises"
+  slopstop.desktop.main -[imports]-> slopstop.protocol "validates messages"
+  slopstop.harness -[imports]-> slopstop.protocol "validates messages"
+  slopstop.harness -[imports]-> slopstop.kernel "executes domain behavior"
+  slopstop.protocol -[imports]-> slopstop.kernel "may reuse domain schemas"
+  slopstop.harness -[persists]-> slopstop.canonicalDb "serializes canonical writes"
+  slopstop.harness -[persists]-> slopstop.mastraDb "isolates framework state"
+  slopstop.harness -[requests]-> gitRepository "reads and performs approved effects"
+  slopstop.harness -[requests]-> modelProviders "runs approved parent and worker turns"
+  slopstop.desktop.main -[protects]-> operatingSystem "encrypts credentials"
+  slopstop.desktop.main -[reports]-> sentry "opt-in redacted crashes"
+  slopstop.harness -[reports]-> sentry "opt-in redacted crashes"
+}

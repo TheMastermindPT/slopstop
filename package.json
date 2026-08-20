@@ -1,0 +1,61 @@
+{
+  "name": "slopstop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A local-first desktop coding harness for visible, non-linear multi-agent development.",
+  "type": "module",
+  "packageManager": "pnpm@11.5.1",
+  "engines": {
+    "node": ">=24 <27",
+    "pnpm": "11.5.1"
+  },
+  "scripts": {
+    "build": "pnpm package",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm check:boundaries",
+    "check:architecture": "likec4 validate --json --no-layout docs/architecture",
+    "check:boundaries": "depcruise --config dependency-cruiser.config.cjs apps packages",
+    "check:dead-code": "knip",
+    "check:deep": "pnpm check && pnpm test:coverage && pnpm test:integration && pnpm check:dead-code && pnpm check:duplicates && pnpm check:architecture && pnpm test:e2e && pnpm package:launch-smoke",
+    "check:duplicates": "jscpd --config jscpd.json",
+    "dev": "pnpm --filter @slopstop/desktop start",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "package": "pnpm --filter @slopstop/desktop package",
+    "package:launch-smoke": "pnpm --filter @slopstop/desktop package:launch-smoke",
+    "package:smoke": "pnpm --filter @slopstop/desktop package:smoke",
+    "postinstall": "pnpm --filter @slopstop/desktop exec install-electron",
+    "prepare": "husky",
+    "test": "pnpm test:unit",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "pnpm --filter @slopstop/desktop test:e2e",
+    "test:integration": "vitest run --config apps/harness/vitest.integration.config.ts",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "dependency-cruiser": "catalog:",
+    "husky": "catalog:",
+    "jscpd": "catalog:",
+    "jsdom": "catalog:",
+    "knip": "catalog:",
+    "likec4": "catalog:",
+    "lint-staged": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.19.0",
+      "onFail": "download"
+    }
+  }
+}
