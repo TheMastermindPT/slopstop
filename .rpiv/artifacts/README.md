@@ -12,6 +12,7 @@ The imported files below were copied byte-for-byte from the `rpiv-claude` reposi
 
 - `research/2026-08-14_12-09-42_custom-coding-harness-options.md` compares runtime, orchestration, visualization, and capability-broker options. Some recommendations were superseded by the confirmed FRDs; it remains evidence, not current authority.
 - `research/2026-08-20_19-27-59_runtime-constraints-program-order.md` verifies current runtime constraints and the partial ordering they impose on v1 programs.
+- `research/2026-08-20_20-03-59_v1-program-requirements-coverage.md` maps confirmed requirements to proposed v1 programs, post-v1 families, cross-cutting invariants, and explicit non-goals.
 
 ## Current Authority
 
