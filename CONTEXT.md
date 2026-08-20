@@ -19,6 +19,10 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Typed command | A validated request that may change canonical state through the coordinator. |
 | Compound code anchor | A Git-, text-, symbol-, syntax-, and optional LSP-backed code reference registered by the harness. |
 | Verified memory | A durable claim accepted through evidence and policy, with provenance, scope, confidence, and invalidation rules. |
+| Memory Topic | A stable project-local organizer for related Verified Memories; it has navigational metadata but no trust state, and each memory has one primary topic. |
+| Memory Revision | An immutable version of a Verified Memory's claim, scope, and evidence dependencies; a semantic edit creates a new revision and removes the prior accepted revision from trusted retrieval until the replacement is accepted. |
+| Memory Proposal | An untrusted structured candidate produced by an attributed worker with approved `memory-propose` capability; it links claim, topic, scope, evidence, invalidation dependencies, and limitations but cannot enter trusted retrieval until user acceptance. |
+| Memory Retrieval | A typed, bounded, and audited query authorized by an approved plan; trusted retrieval returns only current accepted memories for the permitted scope, while stale memories require explicit inspection or re-verification. |
 | Capability catalogue | The provenance-aware inventory of skills, tools, prompts, analyzers, servers, and extensions that may become available. |
 | Recovery journal | A durable write-ahead record used to distinguish completed, failed, and uncertain side effects. |
 | Uncertain side effect | An operation known to have started but lacking durable proof of completion; it cannot be replayed automatically. |
