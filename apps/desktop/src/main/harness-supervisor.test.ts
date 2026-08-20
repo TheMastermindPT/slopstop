@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import path from "node:path";
 import {
   createFailureEvent,
   createReadyEvent,
@@ -238,6 +239,6 @@ describe("HarnessSupervisor", () => {
   });
 
   it("resolves the colocated harness bundle", () => {
-    expect(harnessEntryPath("C:/app/build")).toBe("C:\\app\\build\\harness.cjs");
+    expect(harnessEntryPath("C:/app/build")).toBe(path.join("C:/app/build", "harness.cjs"));
   });
 });
