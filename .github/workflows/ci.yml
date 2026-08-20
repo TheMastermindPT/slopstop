@@ -38,8 +38,16 @@ jobs:
       - name: Install Electron test system dependencies
         run: pnpm exec playwright install-deps chromium
 
-      - name: Run deep checks
-        run: xvfb-run --auto-servernum pnpm check:deep
+      - name: Run portable deep checks
+        run: xvfb-run --auto-servernum pnpm check:deep:portable
+
+      - name: Configure packaged Electron sandbox
+        run: |
+          sudo chown root:root apps/desktop/out/SlopStop-linux-x64/chrome-sandbox
+          sudo chmod 4755 apps/desktop/out/SlopStop-linux-x64/chrome-sandbox
+
+      - name: Run packaged Electron smoke
+        run: xvfb-run --auto-servernum pnpm package:launch-smoke
 
   windows-process-and-package:
     name: Windows process and package proof
@@ -71,6 +79,9 @@ jobs:
 
       - name: Build and run packaged Electron tests
         run: pnpm test:e2e
+
+      - name: Run packaged Electron smoke
+        run: pnpm package:launch-smoke
 
       - name: Upload packaged Windows app
         uses: actions/upload-artifact@v4
