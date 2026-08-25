@@ -9,6 +9,7 @@
         "forge.config.ts",
         "src/main/main.ts",
         "src/preload/preload.ts",
+        "src/renderer/prototype/main.tsx",
         "tests/e2e/**/*.{mjs,ts}",
         "vite.*.config.ts"
       ],

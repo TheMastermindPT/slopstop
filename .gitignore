@@ -13,6 +13,8 @@ test-results/
 .stryker-tmp/
 *.tsbuildinfo
 
+.playwright-cli
+
 # Local configuration and secrets
 .env
 .env.*
@@ -36,8 +38,9 @@ projects/
 !.rpiv/guidance/
 !.rpiv/guidance/**
 
-# Design-tool runtime output
-.impeccable/
+# Design-tool runtime output; the canonical design sidecar is durable
+.impeccable/*
+!.impeccable/design.json
 
 # Editors and operating systems
 .idea/

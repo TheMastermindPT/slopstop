@@ -11,10 +11,12 @@
     "package:launch-smoke": "node tests/e2e/package-smoke.mjs",
     "package:smoke": "electron-forge package && node tests/e2e/package-smoke.mjs",
     "start": "electron-forge start",
+    "start:prototype": "electron-forge start -- --prototype",
     "test:e2e": "electron-forge package && playwright test --config playwright.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@phosphor-icons/react": "catalog:",
     "@sentry/electron": "catalog:",
     "@slopstop/protocol": "workspace:*",
     "pino": "catalog:",
