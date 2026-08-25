@@ -35,6 +35,10 @@ const config: ForgeConfig = {
           name: "main_window",
           config: "vite.renderer.config.ts",
         },
+        {
+          name: "prototype_window",
+          config: "vite.prototype.config.ts",
+        },
       ],
       concurrent: 2,
     }),

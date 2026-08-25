@@ -1,6 +1,12 @@
 import { createRequire } from "node:module";
 import path from "node:path";
-import { type ElectronApplication, _electron as electron, expect, test } from "@playwright/test";
+import {
+  type ElectronApplication,
+  _electron as electron,
+  expect,
+  type Page,
+  test,
+} from "@playwright/test";
 import { WorkspaceIntentSchema, WorkspaceQuerySchema } from "@slopstop/protocol";
 
 const query = WorkspaceQuerySchema.parse({
@@ -31,6 +37,26 @@ function developmentElectronExecutable(): string {
   }
 
   return path.join(electronDirectory, "electron");
+}
+
+function collectRendererErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => errors.push(error.message));
+  return errors;
+}
+
+async function capturePrototype(page: Page, directory: string, name: string): Promise<void> {
+  if (process.env["SLOPSTOP_CAPTURE_PROTOTYPE"] === "1") {
+    await page.screenshot({
+      path: path.join(directory, name),
+      fullPage: false,
+    });
+  }
 }
 
 test.describe("built desktop shell", () => {
@@ -136,4 +162,76 @@ test.describe("built desktop shell", () => {
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
     expect(dimensions.documentHeight).toBeLessThanOrEqual(dimensions.viewportHeight);
   });
+});
+
+test("opens the isolated supervision prototype at wide and narrow widths", async () => {
+  const application = await electron.launch({
+    executablePath: developmentElectronExecutable(),
+    args: [path.resolve(".vite/build/main.cjs"), "--prototype"],
+  });
+
+  try {
+    const page = await application.firstWindow();
+    const rendererErrors = collectRendererErrors(page);
+
+    await expect(page.getByRole("heading", { name: "Relationship map" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Attention" })).toBeVisible();
+
+    const workspaceTabs = page.getByRole("tablist", { name: "Open workspace surfaces" });
+    await workspaceTabs.getByRole("tab", { name: "Conversation" }).click();
+    await expect(page.getByRole("heading", { name: "Frame the product" })).toBeVisible();
+    await expect(page.getByRole("complementary", { name: "Context workbench" })).toHaveCount(0);
+    const captureDirectory = path.resolve("../..", ".impeccable", "review");
+    await capturePrototype(page, captureDirectory, "conversation-wide.png");
+    await page.getByRole("button", { name: "Review Frame" }).click();
+    await expect(page.getByRole("heading", { name: "Review the Frame" })).toBeVisible();
+    await capturePrototype(page, captureDirectory, "review-wide.png");
+    await page.getByRole("button", { name: "Return to Conversation" }).click();
+    await page.getByRole("button", { name: "Open Project menu" }).click();
+    await page.getByRole("menuitem", { name: /Memory library/i }).click();
+    await expect(page.getByRole("heading", { name: "Project Memory" })).toBeVisible();
+    await capturePrototype(page, captureDirectory, "memory-wide.png");
+    await page.getByRole("button", { name: "Return to Conversation" }).click();
+    await workspaceTabs.getByRole("tab", { name: "Map" }).click();
+    await expect(page.getByRole("heading", { name: "Relationship map" })).toBeVisible();
+
+    const boundary = await page.evaluate(() => ({
+      processType: typeof globalThis.process,
+      requireType: typeof globalThis.require,
+      preloadApiType: typeof window.slopstop,
+    }));
+    expect(boundary).toEqual({
+      processType: "undefined",
+      requireType: "undefined",
+      preloadApiType: "undefined",
+    });
+
+    await capturePrototype(page, captureDirectory, "map-wide.png");
+
+    await application.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setSize(900, 700);
+    });
+    await workspaceTabs.getByRole("tab", { name: "Conversation" }).click();
+    await expect(page.getByRole("heading", { name: "Frame the product" })).toBeVisible();
+
+    const dimensions = await page.evaluate(() => ({
+      documentHeight: document.documentElement.scrollHeight,
+      documentWidth: document.documentElement.scrollWidth,
+      viewportHeight: innerHeight,
+      viewportWidth: innerWidth,
+    }));
+    expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    expect(dimensions.documentHeight).toBeLessThanOrEqual(dimensions.viewportHeight);
+
+    await capturePrototype(page, captureDirectory, "conversation-narrow.png");
+
+    await workspaceTabs.getByRole("tab", { name: "Map" }).click();
+    await expect(page.getByRole("complementary", { name: "Context workbench" })).toBeInViewport({
+      ratio: 1,
+    });
+
+    expect(rendererErrors).toEqual([]);
+  } finally {
+    await application.close();
+  }
 });

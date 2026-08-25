@@ -26,8 +26,10 @@ import { createWorkspaceBridge, type WorkspaceBridgeClient } from "./workspace-b
 
 let supervisor: HarnessSupervisor | undefined;
 let workspaceBridge: WorkspaceBridgeClient | undefined;
+const prototypeMode = process.argv.includes("--prototype");
 let packageSmokeState: "inactive" | "pending" | "passed" = "inactive";
-const packageSmoke = app.isPackaged && process.env["SLOPSTOP_PACKAGE_SMOKE"] === "1";
+const packageSmoke =
+  !prototypeMode && app.isPackaged && process.env["SLOPSTOP_PACKAGE_SMOKE"] === "1";
 if (packageSmoke) {
   packageSmokeState = "pending";
 }
@@ -97,21 +99,30 @@ export function registerWorkspaceIpc(bridge: WorkspaceBridgeClient): void {
   });
 }
 
-async function createWindow(): Promise<BrowserWindow> {
+type WindowOptions = Readonly<{
+  width: number;
+  height: number;
+  backgroundColor: string;
+  devServerUrl: string | undefined;
+  viteName: string;
+  preload: string | undefined;
+}>;
+
+async function createApplicationWindow(options: WindowOptions): Promise<BrowserWindow> {
   const window = new BrowserWindow({
-    width: 1120,
-    height: 720,
+    width: options.width,
+    height: options.height,
     minWidth: 640,
     minHeight: 480,
     show: false,
-    backgroundColor: "#101411",
+    backgroundColor: options.backgroundColor,
     webPreferences: {
       contextIsolation: true,
       devTools: !app.isPackaged,
       nodeIntegration: false,
-      preload: path.join(__dirname, "preload.js"),
       sandbox: true,
       webSecurity: true,
+      ...(options.preload === undefined ? {} : { preload: options.preload }),
     },
   });
 
@@ -119,11 +130,11 @@ async function createWindow(): Promise<BrowserWindow> {
     window.show();
   });
 
-  if (MAIN_WINDOW_VITE_DEV_SERVER_URL !== undefined) {
-    lockNavigation(window.webContents, MAIN_WINDOW_VITE_DEV_SERVER_URL);
-    await window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+  if (options.devServerUrl !== undefined) {
+    lockNavigation(window.webContents, options.devServerUrl);
+    await window.loadURL(options.devServerUrl);
   } else {
-    const rendererPath = path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`);
+    const rendererPath = path.join(__dirname, `../renderer/${options.viteName}/index.html`);
     lockNavigation(window.webContents, pathToFileURL(rendererPath).href);
     await window.loadFile(rendererPath);
   }
@@ -131,42 +142,69 @@ async function createWindow(): Promise<BrowserWindow> {
   return window;
 }
 
+function createActiveWindow(): Promise<BrowserWindow> {
+  const options: WindowOptions = prototypeMode
+    ? {
+        width: 1440,
+        height: 900,
+        backgroundColor: "#050711",
+        devServerUrl: PROTOTYPE_WINDOW_VITE_DEV_SERVER_URL,
+        viteName: PROTOTYPE_WINDOW_VITE_NAME,
+        preload: undefined,
+      }
+    : {
+        width: 1120,
+        height: 720,
+        backgroundColor: "#101411",
+        devServerUrl: MAIN_WINDOW_VITE_DEV_SERVER_URL,
+        viteName: MAIN_WINDOW_VITE_NAME,
+        preload: path.join(__dirname, "preload.js"),
+      };
+  return createApplicationWindow(options);
+}
+
 async function bootstrap(): Promise<void> {
   await app.whenReady();
   app.setAppUserModelId("dev.slopstop.desktop");
   app.setAppLogsPath();
 
-  const logger = createMainLogger(app.getPath("logs"), app.isPackaged);
-  logger.info({ crashReporting: initializeCrashReporting() }, "SlopStop desktop starting.");
-
   configureSessionSecurity();
-  supervisor = new HarnessSupervisor(harnessEntryPath(__dirname), logger);
-  workspaceBridge = createWorkspaceBridge({
-    session: supervisor.getSession(),
-    createId: randomUUID,
-    now: () => new Date().toISOString(),
-  });
-  registerHarnessIpc(supervisor);
-  registerWorkspaceIpc(workspaceBridge);
-  supervisor.subscribe(broadcastHarnessStatus);
-  workspaceBridge.subscribe(broadcastWorkspaceNotification);
-  if (packageSmoke) {
-    const stopSmokeListener = supervisor.subscribe((status) => {
-      if (status.state === "ready") {
-        stopSmokeListener();
-        smokeHarnessReady = true;
-        runPackageSmokeIfReady();
-      }
-    });
-  }
-  supervisor.start();
 
-  smokeWindow = await createWindow();
-  runPackageSmokeIfReady();
+  if (!prototypeMode) {
+    const logger = createMainLogger(app.getPath("logs"), app.isPackaged);
+    logger.info({ crashReporting: initializeCrashReporting() }, "SlopStop desktop starting.");
+
+    supervisor = new HarnessSupervisor(harnessEntryPath(__dirname), logger);
+    workspaceBridge = createWorkspaceBridge({
+      session: supervisor.getSession(),
+      createId: randomUUID,
+      now: () => new Date().toISOString(),
+    });
+    registerHarnessIpc(supervisor);
+    registerWorkspaceIpc(workspaceBridge);
+    supervisor.subscribe(broadcastHarnessStatus);
+    workspaceBridge.subscribe(broadcastWorkspaceNotification);
+    if (packageSmoke) {
+      const stopSmokeListener = supervisor.subscribe((status) => {
+        if (status.state === "ready") {
+          stopSmokeListener();
+          smokeHarnessReady = true;
+          runPackageSmokeIfReady();
+        }
+      });
+    }
+    supervisor.start();
+  }
+
+  const activeWindow = await createActiveWindow();
+  if (!prototypeMode) {
+    smokeWindow = activeWindow;
+    runPackageSmokeIfReady();
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      void createWindow();
+      void createActiveWindow();
     }
   });
 }

@@ -24,6 +24,7 @@ catalog:
   "@electron-forge/shared-types": 7.11.2
   "@electron/fuses": 1.8.0
   "@playwright/test": 1.62.1
+  "@phosphor-icons/react": 2.1.10
   "@sentry/electron": 7.16.0
   "@stryker-mutator/core": 10.0.0
   "@stryker-mutator/vitest-runner": 10.0.0
