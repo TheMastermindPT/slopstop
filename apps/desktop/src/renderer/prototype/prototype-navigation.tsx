@@ -279,6 +279,16 @@ function RunsSidebar({
   );
 }
 
+type WorkspaceSidebarProps = Readonly<{
+  activeProjectId: string;
+  activeRunId: string | undefined;
+  activeSection: ActivitySection;
+  onAttention: (id: string) => void;
+  onFile: (file: FileFixture) => void;
+  onProject: (projectId: string) => void;
+  onRun: (run: RunFixture) => void;
+}>;
+
 function SidebarContent({
   activeProjectId,
   activeRunId,
@@ -287,15 +297,7 @@ function SidebarContent({
   onFile,
   onProject,
   onRun,
-}: Readonly<{
-  activeProjectId: string;
-  activeRunId: string | undefined;
-  activeSection: ActivitySection;
-  onAttention: (id: string) => void;
-  onFile: (file: FileFixture) => void;
-  onProject: (projectId: string) => void;
-  onRun: (run: RunFixture) => void;
-}>) {
+}: WorkspaceSidebarProps) {
   switch (activeSection) {
     case "projects":
       return <ProjectsSidebar activeProjectId={activeProjectId} onSelect={onProject} />;
@@ -316,15 +318,7 @@ export function WorkspaceSidebar({
   onFile,
   onProject,
   onRun,
-}: Readonly<{
-  activeProjectId: string;
-  activeRunId: string | undefined;
-  activeSection: ActivitySection;
-  onAttention: (id: string) => void;
-  onFile: (file: FileFixture) => void;
-  onProject: (projectId: string) => void;
-  onRun: (run: RunFixture) => void;
-}>) {
+}: WorkspaceSidebarProps) {
   return (
     <aside className={styles["workspace-sidebar"]}>
       <header className={styles["sidebar-header"]}>
