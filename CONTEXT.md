@@ -15,7 +15,11 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Delegation plan | The just-in-time, user-approved worker roles, tasks, tools, budgets, dependencies, models, and risks for a run. |
 | Evidence gate | The check that accepted, current evidence is sufficient before implementation side effects begin. |
 | Completion contract | The observable checks and evidence required before a Waypoint may complete. |
-| Board | One append-only Waypoint collaboration timeline containing chat and typed events. Chat alone has no state authority. |
+| Board | The canonical append-only index of ordered references to one Waypoint's conversation messages and approved typed events; it owns neither source content nor presentation. |
+| Board entry | One immutable, Project-ordered reference to a Waypoint conversation message or approved typed event, with structural provenance and optional supersession but no copied source content. |
+| Board position | A monotonic Project-scoped ordering value assigned by the canonical writer when it accepts a Board entry; it is separate from Board-entry identity and source time. |
+| Board admission policy | The versioned canonical policy that decides which typed event references enter a Waypoint Board and which of those also appear in the Project activity feed. |
+| Board read position | The monotonic highest contiguous Board position confirmed as presented in one scope; the Project feed and each Waypoint keep independent positions. |
 | Typed command | A validated request that may change canonical state through the coordinator. |
 | Compound code anchor | A Git-, text-, symbol-, syntax-, and optional LSP-backed code reference registered by the harness. |
 | Verified memory | A durable claim accepted through evidence and policy, with provenance, scope, confidence, and invalidation rules. |
