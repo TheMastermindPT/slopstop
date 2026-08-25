@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": [
+    "packages/kernel/src/workspace-identifiers.ts",
+    "packages/protocol/src/protocol.ts",
+    "packages/protocol/src/workspace-protocol.ts",
+    "apps/harness/src/workspace-application.ts",
+    "apps/harness/src/harness-runtime.ts",
+    "apps/desktop/src/main/harness-session.ts",
+    "apps/desktop/src/main/harness-supervisor.ts",
+    "apps/desktop/src/main/workspace-bridge.ts",
+    "apps/desktop/src/main/package-smoke-verifier.ts",
+    "apps/desktop/src/preload/preload.ts"
+  ],
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "vitest.config.ts",
+    "related": true
+  },
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
+  "incremental": true,
+  "incrementalFile": "reports/mutation/incremental.json",
+  "concurrency": 4,
+  "reporters": ["json", "html"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/mutation.html"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  }
+}

@@ -3,19 +3,19 @@ import path from "node:path";
 import {
   createHandshakeCommand,
   HarnessBootstrapSchema,
+  type HarnessMessage,
   type HarnessStatus,
   HarnessStatusSchema,
-  parseHarnessMessage,
   type RetryHarnessResult,
 } from "@slopstop/protocol";
-import {
-  MessageChannelMain,
-  type MessagePortMain,
-  type UtilityProcess,
-  utilityProcess,
-} from "electron";
+import { MessageChannelMain, type UtilityProcess, utilityProcess } from "electron";
 import type { Logger } from "pino";
 import { reportHarnessCrash } from "./crash-reporting.js";
+import {
+  HarnessSession,
+  type HarnessSessionClient,
+  type HarnessSessionEvent,
+} from "./harness-session.js";
 
 const handshakeTimeoutMs = 5_000;
 const maxAutomaticAttempts = 3;
@@ -30,19 +30,26 @@ export class HarnessSupervisor {
   #attempt = 0;
   #child: UtilityProcess | undefined;
   #handshakeTimer: NodeJS.Timeout | undefined;
-  #port: MessagePortMain | undefined;
   #restartBlocked = false;
   #restartTimer: NodeJS.Timeout | undefined;
+  readonly #session = new HarnessSession();
   #status: HarnessStatus = { state: "stopped" };
   #stopping = false;
 
   constructor(entryPath: string, logger: Logger) {
     this.#entryPath = entryPath;
     this.#logger = logger;
+    this.#session.subscribe((event) => {
+      this.#handleSessionEvent(event);
+    });
   }
 
   getStatus(): HarnessStatus {
     return this.#status;
+  }
+
+  getSession(): HarnessSessionClient {
+    return this.#session;
   }
 
   retry(): RetryHarnessResult {
@@ -56,6 +63,9 @@ export class HarnessSupervisor {
       };
     }
 
+    this.#clearTimers();
+    this.#session.detach();
+    this.#child = undefined;
     this.#attempt = 0;
     this.#restartBlocked = false;
     this.#stopping = false;
@@ -75,8 +85,7 @@ export class HarnessSupervisor {
   stop(): void {
     this.#stopping = true;
     this.#clearTimers();
-    this.#port?.close();
-    this.#port = undefined;
+    this.#session.detach();
     this.#child?.kill();
     this.#child = undefined;
     this.#setStatus({ state: "stopped" });
@@ -100,47 +109,59 @@ export class HarnessSupervisor {
     }
   }
 
-  #handleHarnessMessage(value: unknown): void {
-    const parsed = parseHarnessMessage(value);
-    if (!parsed.ok) {
-      this.#restartBlocked = true;
-      this.#setStatus({
-        state: "crashed",
-        attempt: this.#attempt,
-        canRetry: true,
-        diagnostic: {
-          code: "HARNESS_PROTOCOL_ERROR",
-          message: "Harness returned an invalid or incompatible protocol message.",
-        },
-      });
-      this.#child?.kill();
-      return;
+  #handleHarnessMessage(message: HarnessMessage): void {
+    switch (message.event) {
+      case "system.failure":
+        this.#restartBlocked = true;
+        this.#setStatus({
+          state: "crashed",
+          attempt: this.#attempt,
+          canRetry: true,
+          diagnostic: {
+            code: "HARNESS_PROTOCOL_ERROR",
+            message: message.payload.message,
+          },
+        });
+        this.#child?.kill();
+        return;
+      case "system.ready":
+        if (this.#handshakeTimer !== undefined) {
+          clearTimeout(this.#handshakeTimer);
+          this.#handshakeTimer = undefined;
+        }
+        this.#setStatus({
+          state: "ready",
+          attempt: this.#attempt,
+          harnessVersion: message.payload.harnessVersion,
+        });
+        return;
+      case "workspace.intent.result":
+      case "workspace.projection.invalidated":
+      case "workspace.query.result":
+        return;
     }
+  }
 
-    if (parsed.value.event === "system.failure") {
-      this.#restartBlocked = true;
-      this.#setStatus({
-        state: "crashed",
-        attempt: this.#attempt,
-        canRetry: true,
-        diagnostic: {
-          code: "HARNESS_PROTOCOL_ERROR",
-          message: parsed.value.payload.message,
-        },
-      });
-      this.#child?.kill();
-      return;
+  #handleSessionEvent(event: HarnessSessionEvent): void {
+    switch (event.type) {
+      case "disconnected":
+        return;
+      case "protocol-error":
+        this.#restartBlocked = true;
+        this.#setStatus({
+          state: "crashed",
+          attempt: this.#attempt,
+          canRetry: true,
+          diagnostic: {
+            code: "HARNESS_PROTOCOL_ERROR",
+            message: "Harness returned an invalid or incompatible protocol message.",
+          },
+        });
+        this.#child?.kill();
+        return;
+      case "message":
+        this.#handleHarnessMessage(event.message);
     }
-
-    if (this.#handshakeTimer !== undefined) {
-      clearTimeout(this.#handshakeTimer);
-      this.#handshakeTimer = undefined;
-    }
-    this.#setStatus({
-      state: "ready",
-      attempt: this.#attempt,
-      harnessVersion: parsed.value.payload.harnessVersion,
-    });
   }
 
   #handleProcessExit(child: UtilityProcess, exitCode: number): void {
@@ -149,8 +170,7 @@ export class HarnessSupervisor {
     }
 
     this.#child = undefined;
-    this.#port?.close();
-    this.#port = undefined;
+    this.#session.detach();
     if (this.#handshakeTimer !== undefined) {
       clearTimeout(this.#handshakeTimer);
       this.#handshakeTimer = undefined;
@@ -198,13 +218,9 @@ export class HarnessSupervisor {
     }
   }
 
-  #spawn(): void {
-    this.#attempt += 1;
-    this.#setStatus({ state: "starting", attempt: this.#attempt });
-
-    let child: UtilityProcess;
+  #createChild(): UtilityProcess | undefined {
     try {
-      child = utilityProcess.fork(this.#entryPath, [], {
+      return utilityProcess.fork(this.#entryPath, [], {
         serviceName: "SlopStop Harness",
         stdio: "pipe",
       });
@@ -219,10 +235,11 @@ export class HarnessSupervisor {
           message: "Harness process could not be started.",
         },
       });
-      return;
+      return undefined;
     }
+  }
 
-    this.#child = child;
+  #observeChild(child: UtilityProcess): void {
     child.stdout?.on("data", (chunk: Buffer) => {
       this.#logger.info({ output: chunk.toString("utf8").trimEnd() }, "Harness output.");
     });
@@ -236,35 +253,64 @@ export class HarnessSupervisor {
       this.#handleProcessExit(child, exitCode);
     });
     child.once("spawn", () => {
-      const { port1, port2 } = new MessageChannelMain();
-      this.#port = port2;
-      port2.on("message", (event) => {
-        this.#handleHarnessMessage(event.data);
-      });
-      port2.start();
-      child.postMessage(HarnessBootstrapSchema.parse({ kind: "harness.connect" }), [port1]);
-      port2.postMessage(
-        createHandshakeCommand(
-          {
-            messageId: randomUUID(),
-            sentAt: new Date().toISOString(),
-          },
-          "0.0.0",
-        ),
-      );
-      this.#handshakeTimer = setTimeout(() => {
-        this.#logger.error({ attempt: this.#attempt }, "Harness handshake timed out.");
-        this.#setStatus({
-          state: "degraded",
-          attempt: this.#attempt,
-          diagnostic: {
-            code: "HARNESS_HANDSHAKE_TIMEOUT",
-            message: "Harness did not complete its startup handshake in time.",
-          },
-        });
-        child.kill();
-      }, handshakeTimeoutMs);
+      this.#connectChild(child);
     });
+  }
+
+  #connectChild(child: UtilityProcess): void {
+    const { port1, port2 } = new MessageChannelMain();
+    this.#session.attach(port2);
+    child.postMessage(HarnessBootstrapSchema.parse({ kind: "harness.connect" }), [port1]);
+    const handshake = this.#session.send(
+      createHandshakeCommand(
+        {
+          messageId: randomUUID(),
+          sentAt: new Date().toISOString(),
+        },
+        "0.0.0",
+      ),
+    );
+    if (!handshake.ok) {
+      this.#restartBlocked = true;
+      this.#logger.error(
+        { attempt: this.#attempt, code: handshake.error.code },
+        "Harness handshake could not be sent.",
+      );
+      this.#setStatus({
+        state: "crashed",
+        attempt: this.#attempt,
+        canRetry: true,
+        diagnostic: {
+          code: "HARNESS_START_FAILED",
+          message: "Harness handshake could not be sent.",
+        },
+      });
+      child.kill();
+      return;
+    }
+    this.#handshakeTimer = setTimeout(() => {
+      this.#logger.error({ attempt: this.#attempt }, "Harness handshake timed out.");
+      this.#setStatus({
+        state: "degraded",
+        attempt: this.#attempt,
+        diagnostic: {
+          code: "HARNESS_HANDSHAKE_TIMEOUT",
+          message: "Harness did not complete its startup handshake in time.",
+        },
+      });
+      child.kill();
+    }, handshakeTimeoutMs);
+  }
+
+  #spawn(): void {
+    this.#attempt += 1;
+    this.#setStatus({ state: "starting", attempt: this.#attempt });
+    const child = this.#createChild();
+    if (child === undefined) {
+      return;
+    }
+    this.#child = child;
+    this.#observeChild(child);
   }
 }
 

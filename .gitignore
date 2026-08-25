@@ -8,7 +8,9 @@ out/
 dist/
 coverage/
 playwright-report/
+reports/mutation/
 test-results/
+.stryker-tmp/
 *.tsbuildinfo
 
 # Local configuration and secrets

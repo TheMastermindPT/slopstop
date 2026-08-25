@@ -1,6 +1,20 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { type ElectronApplication, _electron as electron, expect, test } from "@playwright/test";
+import { WorkspaceIntentSchema, WorkspaceQuerySchema } from "@slopstop/protocol";
+
+const query = WorkspaceQuerySchema.parse({
+  query: "memory-library.read",
+  projectId: "11111111-1111-4111-8111-111111111111",
+  cursor: null,
+});
+const intent = WorkspaceIntentSchema.parse({
+  intent: "memory.proposal.review",
+  projectId: "11111111-1111-4111-8111-111111111111",
+  proposalId: "22222222-2222-4222-8222-222222222222",
+  decision: "accept",
+  expectedProjectionRevision: 0,
+});
 
 function developmentElectronExecutable(): string {
   const require = createRequire(import.meta.url);
@@ -56,7 +70,47 @@ test.describe("built desktop shell", () => {
     expect(boundary).toEqual({
       processType: "undefined",
       requireType: "undefined",
-      exposedApi: ["getHarnessStatus", "retryHarness", "subscribeHarnessStatus"],
+      exposedApi: [
+        "getHarnessStatus",
+        "queryWorkspace",
+        "retryHarness",
+        "submitWorkspaceIntent",
+        "subscribeHarnessStatus",
+        "subscribeWorkspaceNotifications",
+      ],
+    });
+  });
+
+  test("returns truthful unavailable workspace results through Electron", async () => {
+    if (application === undefined) {
+      throw new Error("Electron application did not launch.");
+    }
+    const page = await application.firstWindow();
+    const workspaceResults = await page.evaluate(
+      async ({ query: queryInput, intent: intentInput }) => ({
+        query: await window.slopstop.queryWorkspace(queryInput),
+        intent: await window.slopstop.submitWorkspaceIntent(intentInput),
+      }),
+      { query, intent },
+    );
+
+    expect(workspaceResults).toEqual({
+      query: {
+        status: "unavailable",
+        query,
+        diagnostic: {
+          code: "WORKSPACE_CAPABILITY_UNAVAILABLE",
+          message: "Memory producer is unavailable.",
+        },
+      },
+      intent: {
+        status: "unavailable",
+        capability: "memory",
+        diagnostic: {
+          code: "WORKSPACE_CAPABILITY_UNAVAILABLE",
+          message: "Memory producer is unavailable.",
+        },
+      },
     });
   });
 
