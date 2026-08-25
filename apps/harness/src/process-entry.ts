@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { HarnessBootstrapSchema } from "@slopstop/protocol";
 import pino from "pino";
 import { type HarnessTransport, startHarnessRuntime } from "./harness-runtime.js";
+import { createUnavailableWorkspaceApplication } from "./workspace-application.js";
 
 type UtilityMessageEvent = Readonly<{
   data: unknown;
@@ -74,6 +75,7 @@ parentPort.once("message", (event) => {
 
   const stopRuntime = startHarnessRuntime({
     transport: createTransport(port),
+    workspaceApplication: createUnavailableWorkspaceApplication(),
     harnessVersion: "0.0.0",
     createId: randomUUID,
     now: () => new Date().toISOString(),

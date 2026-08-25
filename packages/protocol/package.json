@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@slopstop/kernel": "workspace:*",
     "zod": "catalog:"
   }
 }

@@ -23,10 +23,24 @@ function exposeApi(api: SlopStopApi): void {
   });
 }
 
+const unusedWorkspaceApi = {
+  queryWorkspace: async () => {
+    throw new Error("queryWorkspace is not used by this test.");
+  },
+  submitWorkspaceIntent: async () => {
+    throw new Error("submitWorkspaceIntent is not used by this test.");
+  },
+  subscribeWorkspaceNotifications: () => () => undefined,
+} satisfies Pick<
+  SlopStopApi,
+  "queryWorkspace" | "submitWorkspaceIntent" | "subscribeWorkspaceNotifications"
+>;
+
 describe("desktop shell", () => {
   it("projects harness status updates from the preload API", async () => {
     let notify: ((status: HarnessStatus) => void) | undefined;
     exposeApi({
+      ...unusedWorkspaceApi,
       getHarnessStatus: async () => startingStatus,
       retryHarness: async () => ({ ok: true }),
       subscribeHarnessStatus: (listener) => {
@@ -52,6 +66,7 @@ describe("desktop shell", () => {
   it("offers an explicit retry after the harness exhausts automatic recovery", async () => {
     const retryHarness = vi.fn(async () => ({ ok: true as const }));
     exposeApi({
+      ...unusedWorkspaceApi,
       getHarnessStatus: async () => ({
         state: "crashed",
         attempt: 3,

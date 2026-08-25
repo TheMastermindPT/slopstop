@@ -1,6 +1,20 @@
 import { z } from "zod";
+import type {
+  WorkspaceIntent,
+  WorkspaceIntentResult,
+  WorkspaceNotification,
+  WorkspaceQuery,
+  WorkspaceQueryResult,
+} from "./workspace-protocol.js";
+import {
+  WorkspaceIntentResultSchema,
+  WorkspaceIntentSchema,
+  WorkspaceNotificationSchema,
+  WorkspaceQueryResultSchema,
+  WorkspaceQuerySchema,
+} from "./workspace-protocol.js";
 
-export const protocolVersion = 1 as const;
+export const protocolVersion = 2 as const;
 
 export const MessageIdSchema = z.uuid().brand<"MessageId">();
 export type MessageId = z.infer<typeof MessageIdSchema>;
@@ -14,15 +28,29 @@ const EnvelopeProbeSchema = z
   })
   .passthrough();
 
-const DesktopEnvelopeSchema = z.strictObject({
+const DesktopCommandMetadataSchema = {
   protocolVersion: z.literal(protocolVersion),
   messageType: z.literal("command"),
   messageId: MessageIdSchema,
   sentAt: TimestampSchema,
+} as const;
+
+const HandshakeCommandSchema = z.strictObject({
+  ...DesktopCommandMetadataSchema,
   command: z.literal("system.handshake"),
   payload: z.strictObject({
     desktopVersion: z.string().min(1),
   }),
+});
+const WorkspaceQueryCommandSchema = z.strictObject({
+  ...DesktopCommandMetadataSchema,
+  command: z.literal("workspace.query"),
+  payload: WorkspaceQuerySchema,
+});
+const WorkspaceIntentCommandSchema = z.strictObject({
+  ...DesktopCommandMetadataSchema,
+  command: z.literal("workspace.intent"),
+  payload: WorkspaceIntentSchema,
 });
 
 export const HarnessBootstrapSchema = z.strictObject({
@@ -63,12 +91,35 @@ const FailureEventSchema = z.strictObject({
   }),
 });
 
-export const DesktopMessageSchema = DesktopEnvelopeSchema;
+const WorkspaceQueryResultEventSchema = z.strictObject({
+  ...HarnessEventMetadataSchema,
+  event: z.literal("workspace.query.result"),
+  payload: WorkspaceQueryResultSchema,
+});
+const WorkspaceIntentResultEventSchema = z.strictObject({
+  ...HarnessEventMetadataSchema,
+  event: z.literal("workspace.intent.result"),
+  payload: WorkspaceIntentResultSchema,
+});
+const WorkspaceProjectionInvalidatedEventSchema = z.strictObject({
+  ...HarnessEventMetadataSchema,
+  event: z.literal("workspace.projection.invalidated"),
+  payload: WorkspaceNotificationSchema,
+});
+
+export const DesktopMessageSchema = z.discriminatedUnion("command", [
+  HandshakeCommandSchema,
+  WorkspaceQueryCommandSchema,
+  WorkspaceIntentCommandSchema,
+]);
 export type DesktopMessage = z.infer<typeof DesktopMessageSchema>;
 
 export const HarnessMessageSchema = z.discriminatedUnion("event", [
   ReadyEventSchema,
   FailureEventSchema,
+  WorkspaceQueryResultEventSchema,
+  WorkspaceIntentResultEventSchema,
+  WorkspaceProjectionInvalidatedEventSchema,
 ]);
 export type HarnessMessage = z.infer<typeof HarnessMessageSchema>;
 
@@ -151,10 +202,16 @@ type CommandMetadata = Readonly<{
 }>;
 
 function normalizeIssues(error: z.ZodError): ProtocolParseIssue[] {
-  return error.issues.map((issue) => ({
-    code: issue.code,
-    path: issue.path.map(String).join(".") || "$",
-  }));
+  return error.issues.map((issue) => {
+    const path = issue.path.map(String).join(".") || "$";
+    return {
+      code:
+        issue.code === "invalid_union" && (path === "command" || path === "event")
+          ? "invalid_value"
+          : issue.code,
+      path,
+    };
+  });
 }
 
 function hasUnsupportedVersion(value: unknown): boolean {
@@ -195,21 +252,63 @@ export function parseHarnessMessage(value: unknown): ProtocolParseResult<Harness
   return parseMessage(HarnessMessageSchema, value);
 }
 
-export function createHandshakeCommand(
+function createCommand(
   metadata: CommandMetadata,
-  desktopVersion: string,
+  command: DesktopMessage["command"],
+  payload: unknown,
 ): DesktopMessage {
   return DesktopMessageSchema.parse({
     protocolVersion,
     messageType: "command",
     ...metadata,
-    command: "system.handshake",
-    payload: { desktopVersion },
+    command,
+    payload,
   });
 }
 
+function createEvent(
+  metadata: EventMetadata,
+  event: HarnessMessage["event"],
+  payload: unknown,
+): HarnessMessage {
+  return HarnessMessageSchema.parse({
+    protocolVersion,
+    messageType: "event",
+    ...metadata,
+    event,
+    payload,
+  });
+}
+
+export function createHandshakeCommand(
+  metadata: CommandMetadata,
+  desktopVersion: string,
+): DesktopMessage {
+  return createCommand(metadata, "system.handshake", { desktopVersion });
+}
+
+export function createWorkspaceQueryCommand(
+  metadata: CommandMetadata,
+  query: WorkspaceQuery,
+): DesktopMessage {
+  return createCommand(metadata, "workspace.query", query);
+}
+
+export function createWorkspaceIntentCommand(
+  metadata: CommandMetadata,
+  intent: WorkspaceIntent,
+): DesktopMessage {
+  return createCommand(metadata, "workspace.intent", intent);
+}
+
 export function readMessageId(value: unknown): MessageId | null {
-  if (typeof value !== "object" || value === null || !("messageId" in value)) {
+  if (typeof value !== "object") {
+    return null;
+  }
+  if (value === null) {
+    return null;
+  }
+  if (!("messageId" in value)) {
     return null;
   }
 
@@ -218,13 +317,7 @@ export function readMessageId(value: unknown): MessageId | null {
 }
 
 export function createReadyEvent(metadata: EventMetadata, harnessVersion: string): HarnessMessage {
-  return HarnessMessageSchema.parse({
-    protocolVersion,
-    messageType: "event",
-    ...metadata,
-    event: "system.ready",
-    payload: { harnessVersion },
-  });
+  return createEvent(metadata, "system.ready", { harnessVersion });
 }
 
 export function createFailureEvent(
@@ -235,11 +328,26 @@ export function createFailureEvent(
     retryable: boolean;
   }>,
 ): HarnessMessage {
-  return HarnessMessageSchema.parse({
-    protocolVersion,
-    messageType: "event",
-    ...metadata,
-    event: "system.failure",
-    payload: failure,
-  });
+  return createEvent(metadata, "system.failure", failure);
+}
+
+export function createWorkspaceQueryResultEvent(
+  metadata: EventMetadata,
+  result: WorkspaceQueryResult,
+): HarnessMessage {
+  return createEvent(metadata, "workspace.query.result", result);
+}
+
+export function createWorkspaceIntentResultEvent(
+  metadata: EventMetadata,
+  result: WorkspaceIntentResult,
+): HarnessMessage {
+  return createEvent(metadata, "workspace.intent.result", result);
+}
+
+export function createWorkspaceProjectionInvalidatedEvent(
+  metadata: EventMetadata,
+  notification: WorkspaceNotification,
+): HarnessMessage {
+  return createEvent(metadata, "workspace.projection.invalidated", notification);
 }

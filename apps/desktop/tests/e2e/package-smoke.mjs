@@ -29,7 +29,11 @@ await new Promise((resolve, reject) => {
   const errorChunks = [];
   const timeout = setTimeout(() => {
     child.kill();
-    reject(new Error(`Packaged SlopStop did not reach harness-ready within ${smokeTimeoutMs}ms.`));
+    reject(
+      new Error(
+        `Packaged SlopStop did not validate the renderer boundary within ${smokeTimeoutMs}ms.`,
+      ),
+    );
   }, smokeTimeoutMs);
 
   child.stderr.on("data", (chunk) => {
@@ -42,7 +46,9 @@ await new Promise((resolve, reject) => {
   child.once("exit", (code) => {
     clearTimeout(timeout);
     if (code === 0) {
-      process.stdout.write("Packaged SlopStop reached harness-ready and exited cleanly.\n");
+      process.stdout.write(
+        "Packaged SlopStop validated the renderer boundary and exited cleanly.\n",
+      );
       resolve();
       return;
     }
