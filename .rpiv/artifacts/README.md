@@ -16,6 +16,9 @@ The imported files below were copied byte-for-byte from the `rpiv-claude` reposi
 
 ## Current Authority
 
+- `plans/2026-08-25_14-53-19_workspace-production-boundary-tracer-bullet.md` is the implemented five-phase Workspace production-boundary plan.
+- `validation/2026-08-25_20-05-32_workspace-production-boundary-tracer-bullet.md` records its final runtime, mutation, and Code Health proof.
+
 - `PRODUCT.md` summarizes durable confirmed product truth.
 - `docs/adr/` records SlopStop implementation decisions made after the imported artifacts.
 - `.rpiv/decisions/` contains standing rules that bind future work.
