@@ -8,8 +8,8 @@ export type CenterSurface =
   | "review"
   | "memory"
   | "settings";
-export type AttentionKind = "decision" | "recovery" | "review";
-export type WaypointStatus = "attention" | "active" | "blocked" | "ready";
+type AttentionKind = "decision" | "recovery" | "review";
+type WaypointStatus = "attention" | "active" | "blocked" | "ready";
 
 export type ProjectFixture = Readonly<{
   id: string;
@@ -41,15 +41,6 @@ export type WaypointFixture = Readonly<{
   y: number;
   objective: string;
   currentRun?: string;
-}>;
-
-export type RelationFixture = Readonly<{
-  id: string;
-  from: string;
-  to: string;
-  type: "blocks" | "related" | "derived";
-  active: boolean;
-  path: string;
 }>;
 
 export type FileFixture = Readonly<{
@@ -208,41 +199,6 @@ export const waypoints: readonly WaypointFixture[] = [
     y: 70,
     objective: "Bind the recovery result to the exact candidate revision and scenario.",
     currentRun: "run-42",
-  },
-];
-
-export const relations: readonly RelationFixture[] = [
-  {
-    id: "storage-timer",
-    from: "session-storage",
-    to: "timer-engine",
-    type: "related",
-    active: true,
-    path: "M 230 250 C 330 130, 390 120, 500 170",
-  },
-  {
-    id: "timer-suspension",
-    from: "timer-engine",
-    to: "browser-suspension",
-    type: "blocks",
-    active: true,
-    path: "M 540 180 C 640 220, 650 280, 700 345",
-  },
-  {
-    id: "storage-evidence",
-    from: "session-storage",
-    to: "resume-evidence",
-    type: "derived",
-    active: false,
-    path: "M 250 280 C 280 380, 330 430, 405 470",
-  },
-  {
-    id: "evidence-suspension",
-    from: "resume-evidence",
-    to: "browser-suspension",
-    type: "blocks",
-    active: true,
-    path: "M 460 475 C 570 480, 620 430, 695 370",
   },
 ];
 
