@@ -72,6 +72,7 @@ SlopStop treats project intent, execution attempts, and model conversations as s
 - The harness runs in one supervised utility process per desktop application.
 - Mastra is the first agent runtime behind a project-owned adapter and is added only when its first behavior is implemented.
 - Canonical and Mastra persistence use separate local libSQL databases with Drizzle-owned canonical migrations.
+- Canonical persistence uses Project-scoped composite keys, directly queryable current aggregates, immutable Accepted revisions, append-only settlement history, and family-owned status transitions. The installation registry selects and operates versioned Storage generations but never becomes Project truth.
 - Backup, export, forward migration, restore, import, runtime reset, and deletion use durable staged operations. A Project backup verifies both databases and one sealed identity/schema/checksum manifest; migration, restore, and import replace active storage only with a complete verified generation.
 - A persistence fault opens the Project in read-only safe mode and never creates fresh defaults while any prior-state witness exists. Missing, corrupt, failed, recovery-required, identity-conflict, and unsupported-newer remain distinct.
 - Close releases only the live session; Archive preserves a reversible canonical lifecycle; Delete SlopStop data removes only confirmed local SlopStop state after quiescence and never deletes the Git repository, tracked files, managed worktrees, or external exports.
