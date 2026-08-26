@@ -30,6 +30,8 @@
 
 ## Test Discipline
 
+- This section governs development of SlopStop itself. Every SlopStop behavior change follows the strict red-green and review/refactor sequence below; a product-domain discipline exception for work supervised in an external Project never waives these repository rules.
+- Documentation-only decision work may use its applicable document validation gates, but it cannot classify a SlopStop behavior change as documentation to avoid red-green proof.
 - Test behavior through an agreed public seam, not private methods or internal collaborator calls.
 - Work one vertical slice at a time: failing behavior test, minimal implementation, passing test, then a separate review/refactor gate.
 - Foundation seams are protocol parse/dispatch, harness runtime through its transport port, and renderer behavior through the preload API in a real Electron launch.

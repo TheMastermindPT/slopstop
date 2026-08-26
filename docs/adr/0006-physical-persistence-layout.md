@@ -45,7 +45,7 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 | Settlement | `command_idempotency`, `command_receipts`, `command_rejections`, `canonical_events` |
 | Status | `project_status_transitions`, `project_status_transition_conditions`, `waypoint_status_transitions`, `waypoint_status_transition_conditions` |
 | Onboarding | `onboarding_sources`, `onboarding_observations`, `onboarding_decisions`, `onboarding_decision_dependencies`, `onboarding_decision_reuses`, `onboarding_readiness` |
-| Profiles | `project_profiles`, `project_profile_revisions`, and revision children for provider overrides, tool decisions, exact Capability-version decisions, and restrictions |
+| Profiles | `project_profiles`, `project_profile_revisions`, and revision children for provider overrides, tool decisions, exact Capability-version decisions, Development-discipline overrides, and restrictions |
 | Board | `board_admission_policy_versions`, `board_entries`, `board_message_sources`, `board_execution_sources`, `board_supersessions`, `board_read_positions` |
 | Durable workspace | `conversations`, `conversation_branches`, `conversation_messages`, `conversation_context_records`, `frame_drafts` |
 | Execution invocation context | `invocation_context_records`, `invocation_context_sources`, `invocation_context_transformations`, `invocation_context_retrievals`, `invocation_context_recent_turn_slices`, `invocation_context_compactions`, `invocation_context_artifacts` |
@@ -83,6 +83,7 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 
 - Persist immutable, versioned onboarding source, observation, and decision identities. Bind decision dependencies to semantic fingerprints and record explicit reuse links so a changed dependency stales only affected decisions. Keep current readiness directly queryable and preserve its transition history.
 - Keep the Application profile as mutable singleton state with optimistic versioning in `application.db`, accompanied by append-only `application_profile_audit_events`. It has no immutable accepted-revision chain.
+- Keep the Application Development-discipline default outside the Application profile. Store each accepted selection as an append-only `application_development_discipline_default_decisions` row and select the current fallback through the singleton `application_development_discipline_defaults` row. The mutable Application profile supplies no identity to this decision chain.
 - Keep Project profiles as revisioned canonical aggregates. Normalize provider overrides, tool decisions, exact Capability-version decisions, and restrictions into revision child rows. Derive effective policy from the accepted Project profile plus separately owned live ceilings, revocations, and ADR 0011 Run policy epochs; do not persist a flattened effective-policy authority.
 
 ### Board And Durable Workspace
@@ -103,7 +104,7 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 
 ### Installation Registry And Diagnostics
 
-`application.db` contains `application_state`, `application_profile_audit_events`, `diagnostic_consent_state`, `diagnostic_consent_decisions`, `diagnostic_delivery_outcomes`, `credential_references`, `storage_registrations`, `storage_locations`, `storage_generations`, `storage_operations`, `storage_operation_steps`, `storage_tombstones`, and `schema_metadata`.
+`application.db` contains `application_state`, `application_profile_audit_events`, `application_development_discipline_defaults`, `application_development_discipline_default_decisions`, `application_development_discipline_default_commands`, `diagnostic_consent_state`, `diagnostic_consent_decisions`, `diagnostic_delivery_outcomes`, `credential_references`, `storage_registrations`, `storage_locations`, `storage_generations`, `storage_operations`, `storage_operation_steps`, `storage_tombstones`, and `schema_metadata`.
 
 - Key registration by `storage_id`, bind it to one `project_id`, and point it to the active `generation_id` and location. Keep observed locations and generations separately so move and recovery evidence are not overwritten. Use one partial unique active-generation index per Storage and reject an already registered Project identity during import.
 - Keep normalized machine-local paths only in `storage_locations`; exclude them from Project persistence, manifests, portable exports, and transmitted diagnostics. Credential references contain operating-system secret identifiers, never secret values.
