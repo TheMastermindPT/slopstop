@@ -79,7 +79,7 @@ The user approved the common Evidence envelope plus typed family ledgers and ato
 
 ## Independent Review Closure
 
-ADR 0010 closes the accepted direction at implementation-design depth. It defines exact family verdicts, scope-safe current-evaluation keys and accepted decisions, mutually exclusive current-location anchor outcomes plus a historical-only path, durable rerun producer starts, evaluator identity/version/hash dependencies, versioned Artifact state and journalled retention, Candidate technical verdicts separate from user actions, typed reverse invalidation, discriminated Artifact provenance, concrete table families and indexes, and explicit ticket-criteria coverage without moving Run-workspace or producer lifecycle ownership out of Execution and its adapters. ADRs 0006 and 0008 also distinguish application `workspaces` from Execution `run_workspaces`.
+ADR 0010 closes the accepted direction at implementation-design depth. It defines exact family verdicts, scope-safe current-evaluation keys and accepted decisions, mutually exclusive current-location anchor outcomes plus a historical-only path, durable rerun producer starts, evaluator identity/version/hash dependencies, versioned Artifact state and journalled retention, Candidate technical verdicts separate from user actions, typed reverse invalidation, discriminated Artifact provenance, concrete table families and indexes, and explicit ticket-criteria coverage without moving Run-workspace or producer lifecycle ownership out of Execution. Model and Tool adapters only emit attributed observations. ADRs 0006 and 0008 also distinguish application `workspaces` from Execution `run_workspaces`.
 
 ## Complexity
 
