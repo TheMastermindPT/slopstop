@@ -5,6 +5,18 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Term | Meaning |
 | --- | --- |
 | Project | One saved Git repository and its local SlopStop state; visualized as a galaxy. |
+| Project lifecycle | The independent active or archived axis of one Project; archiving preserves identity and history and never means close, delete, ready, or healthy. |
+| Project backup | A sealed, checksum-verified snapshot of both quiescent Project databases and their identity/schema manifest; it contains no raw credentials. |
+| Project restore | A staged, verified activation of a Project backup for the same Project and database lineages that preserves the previously active generation. |
+| Project export | A portable Project backup stored outside application data for reinstall or machine transfer; it excludes machine-local paths and raw credentials. |
+| Project snapshot | One immutable backup or export with its own opaque identity, sealed manifest, and checksums over an exact Storage generation. |
+| Canonical recovery package | An explicitly incomplete package containing verified canonical Project truth when runtime persistence is unavailable; it opens only in safe mode and requires explicit runtime reset before normal use. |
+| Persistence health | The independent healthy, migration-required, recovery-required, missing, corrupt, identity-conflict, unsupported-newer, unavailable, or broken state of one canonical or runtime database. |
+| Storage generation | One activated physical pairing of canonical and runtime Project persistence; restore, import, or runtime reset creates a new generation without redefining Project identity. |
+| Storage operation | One durable backup, export, migration, restore, import, runtime-reset, or delete attempt whose journal remains outside the Storage generation it may alter. |
+| Storage safe mode | The read-only Project mode entered when either database is not healthy; only diagnosis and explicit storage-recovery operations remain available. |
+| Prior-state witness | Any registry record, marker, manifest, generation, database sidecar, local snapshot, or unfinished-operation journal proving that missing files must enter recovery instead of fresh initialization. |
+| Deletion tombstone | The external operation witness retained while destructive Project-data deletion is incomplete; it blocks fresh initialization until deletion either completes or is recovered. |
 | Feature | A durable objective container with its own Frame record, goals, constraints, revisions, and Waypoint star system. |
 | Waypoint | A durable project objective represented as a planet; never an agent session or temporary worker task. |
 | Application coordinator | Deterministic software that owns canonical project state, scheduling, policy, budgets, and recovery. |
@@ -38,7 +50,7 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 
 ## Status Families
 
-Waypoint, run, worker, action, process-job, finding, and onboarding-readiness statuses are separate fixed models. Do not reuse one family's status to stand in for another.
+Waypoint, run, worker, action, process-job, finding, onboarding-readiness, Project-lifecycle, storage-operation, and persistence-health statuses are separate fixed models. Do not reuse one family's status to stand in for another.
 
 ## Graphs
 
