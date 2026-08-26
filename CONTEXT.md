@@ -48,6 +48,11 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Accepted revision | An immutable, explicitly accepted version of canonical aggregate content to which directly queryable current state may point. |
 | Writer generation | A durable fencing identity acquired under the operating-system writer lease and checked by every canonical command settlement. |
 | Runtime handoff | A versioned immutable request crossing from canonical outbox to the runtime inbox through at-least-once delivery, stable reservation, and evidence-backed reconciliation. |
+| Workspace protocol | The application transport boundary for Conversation, Frame, and Memory projections; it is not a Run workspace aggregate or physical checkout. |
+| Run workspace | One Run-owned logical binding to an exact mode, Repository binding, baseline, physical resource, and fingerprint waterline. |
+| Run-workspace resource | The physical current checkout or managed worktree identified by Git administration and Repository binding rather than path alone; several read-only Run workspaces may reference it. |
+| Read claim | A short-lived Process-job claim permitting observation of one Run-workspace resource at one accepted fingerprint. |
+| Mutation lease | The durable exclusive grant allowing one Worker to perform declared mutations on one Run-workspace resource; it never expires or releases solely because time passed or a process stopped. |
 | Compound code anchor | A Git-, text-, symbol-, syntax-, and optional LSP-backed code reference registered by the harness. |
 | Verified memory | A durable claim accepted through evidence and policy, with provenance, scope, confidence, and invalidation rules. |
 | Memory Topic | A stable project-local organizer for related Verified Memories; it has navigational metadata but no trust state, and each memory has one primary topic. |
@@ -55,17 +60,20 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Memory Proposal | An untrusted structured candidate produced by an attributed worker with approved `memory-propose` capability; it links claim, topic, scope, evidence, invalidation dependencies, and limitations but cannot enter trusted retrieval until user acceptance. |
 | Memory Retrieval | A typed, bounded, and audited query authorized by an approved plan; trusted retrieval returns only current accepted memories for the permitted scope, while stale memories require explicit inspection or re-verification. |
 | Capability catalogue | The provenance-aware inventory of skills, tools, prompts, analyzers, servers, and extensions that may become available. |
-| Recovery journal | A durable write-ahead record used to distinguish completed, failed, and uncertain side effects. |
+| Recovery journal | Evidence-owned durable write-ahead records of effect intent, start, terminal observation, and reconciliation used to distinguish completed, failed, and uncertain side effects. |
 | Uncertain side effect | An operation known to have started but lacking durable proof of completion; it cannot be replayed automatically. |
 | Workspace fingerprint | A Git, diff, and untracked-file identity binding evidence to the code state it evaluated. |
-| Process job | A cancellable, timed, output-bounded command with durable ownership and distinct terminal states. |
+| Declared effect set | The versioned file, Git, local-artifact, external-service, and credential scopes that one authorized action may affect. |
+| Process job | One coordinator-owned operating-system process attempt with a bounded invocation, output, lifecycle, effect declaration, and durable attribution. |
+| Safe checkpoint | An Execution record referencing Evidence proof that dispatch is closed, no mutating process or uncertain effect remains, and the final Workspace fingerprint is accepted. |
 | Resume capsule | Persisted context sufficient to continue an interrupted run without guessing or repeating uncertain effects. |
+| Resume checkpoint | A Safe checkpoint plus the exact Resume capsule, policy, Capability, budget, approval, and availability inputs needed to continue a Run. |
 | Language Intelligence Service | Workspace-isolated LSP lifecycle, synchronization, diagnostics, semantic navigation, and mutation proposals. |
 | Debug observation | Registered and redacted runtime evidence from a future DAP session; supporting evidence, never red-green proof. |
 
 ## Status Families
 
-Waypoint, Run, Worker, Control request, Process job, Finding, Integration, onboarding readiness, Project lifecycle, Storage operation, and persistence health statuses are separate fixed models. Action availability is a separate derived projection. Do not reuse one family's state to stand in for another.
+Waypoint, Run, Worker, Control request, Run workspace, Process job, Finding, Integration, onboarding readiness, Project lifecycle, Storage operation, and persistence health statuses are separate fixed models. Action availability is a separate derived projection. Do not reuse one family's state to stand in for another.
 
 ## Graphs
 

@@ -80,6 +80,8 @@ SlopStop treats project intent, execution attempts, and model conversations as s
 - Test-first preferred is the default discipline. Behavior uses red-green at an agreed public seam, followed by a separate review/refactor gate.
 - Workers do not nest. Repository reads that become evidence, mutations, commands, analyzers, Git operations, and external effects belong to attributed workers.
 - Each Waypoint has at most one nonterminal Run, each Run has one logical Waypoint parent, and each Delegation task has at most one nonterminal Worker attempt. Runtime and model outputs remain attributed proposals; only typed coordinator commands, independent Evidence authority, and proven recovery records can move canonical execution state.
+- Each Run binds one exact Run workspace in read-only current-checkout, explicitly leased editable current-checkout, or isolated-worktree mode. Physical-resource coordination permits parallel readers at one fingerprint and at most one mutating Worker; external changes invalidate attribution instead of entering a Candidate delta silently.
+- The Application coordinator is the sole process and committed-action authority. Evidence owns fingerprints, deltas, the Recovery Journal, reconciliation, and safety proof; a started effect is never retried without conclusive recovery, and completed, cancelled, failed, or uncertain work remains retained until explicit Integration, export, discard, or cleanup.
 - Automatic model fallback, silent isolation downgrade, and failure-to-clean degradation are prohibited.
 - Live debugger implementation follows the first resilient proof; its safety seam is designed earlier.
 
