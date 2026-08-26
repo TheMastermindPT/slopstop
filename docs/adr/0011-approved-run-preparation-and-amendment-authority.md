@@ -97,17 +97,17 @@ A mutating sibling set may dispatch concurrently only when the accepted plan and
 - every task belongs to one exact approved fan-out group;
 - every pair is explicitly independent for the approved effect scopes and has no Task-DAG path between them;
 - every sibling uses the same exact immutable source input and accepted baseline fingerprint;
-- every task has an isolated mutation resource, with no shared mutable checkout, lease, Git administrative resource, credential mutation, or unpartitioned external-state scope;
+- every task has an isolated mutation resource and separate Repository resource key, with no shared mutable checkout, lease, Git administrative mutation, ref mutation, credential mutation, or unpartitioned external-state scope; compatible read access to a shared Git common directory remains separately declared and coordinated;
 - the group fixes maximum concurrency, shared and per-task budgets, deterministic downstream composition order, and conflict behavior;
 - current workspace, slot, policy, capability, Evidence, budget, and live-restriction checks pass independently for every admission.
 
 Read-only siblings may share one physical resource only under ADR 0008 read claims at the same accepted fingerprint. A plan declaration cannot weaken ADR 0008's mutation rules or grant Candidate authority.
 
-- One-predecessor input selects one exact accepted predecessor result through a newly sealed task-input snapshot.
-- Multi-predecessor input materializes all required accepted results in the accepted plan's order. The snapshot records composer identity/version, source identities and hashes, baseline, canonicalization, conflict behavior, output artifacts and fingerprint, producer attempt, and Evidence decision.
+- One-predecessor input selects one exact ADR 0015 accepted Worker result through a newly sealed Task-input snapshot.
+- Multi-predecessor input consumes accepted `COMPOSITION_COMPLETE` Evidence over all required Worker results in the accepted plan's order. The snapshot records Composition identity, compositor identity/version/implementation hash, source identities and manifests, baseline, canonicalization, conflict behavior, output Artifacts and fingerprint, producer attempt, and Evidence decision.
 - Missing, rejected, stale, changed, conflicting, truncated, uncertain, or broken input stays distinctly blocked and never becomes an empty composition.
 - A composition conflict creates Attention and a typed blocked condition. It creates no implicit Worker, task, retry, Candidate, or Integration action.
-- Candidate selection, Candidate materialization, Candidate review, and Integration remain outside this decision and with their existing owners.
+- ADR 0015 owns Worker-result acceptance, Composition, Candidate selection and publication, Candidate materialization, Candidate user review, and Integration. This decision owns only the approved Task DAG and its input requirements.
 
 ### Resolver Work
 
@@ -117,7 +117,7 @@ Read-only siblings may share one physical resource only under ADR 0008 read clai
 
 ### Initial Preparation And Run Amendments
 
-- A manual Action creates no Run until `BeginAction`. That command rechecks Action availability, acquires the Run slot, creates the Run and Waypoint parent in `draft`, and records the manual cause.
+- A manual Action creates no Run until `BeginAction`. That command rechecks Action availability, acquires the Run slot, creates the Run and Waypoint parent in `draft`, and records the manual cause. ADR 0015 `BeginCandidateChangeRun` is the separate Candidate-successor path: it performs the same slot and draft creation but requires an exact Candidate `request-changes` decision against a terminal predecessor, records that immutable successor link instead of an Action selection, and fixes the exact predecessor Candidate manifest/fingerprint as the new Run's `predecessor-candidate` baseline.
 - `PrepareAutomaticAction` may create a `draft` Run and prepare a proposal, but cannot approve an epoch, enter `ready`, start a Worker, or cross a model, tool, process, workspace-mutation, or external-effect boundary.
 - `SubmitRunPreparation` accepts a `draft` initial Run, an `amendment-requested` Run, or an `awaiting-approval` Run with the exact pending proposal. It validates provisional-plan acyclicity, complete manifest inputs, the required initial resolved profile or amendment profile-selection variant, complete ADR 0012 discipline-resolution inputs and fingerprint, amendment compatibility and complete newly owned classification children when applicable, and expected versions; seals the proposal and view; and moves the Run to `awaiting-approval`. Replacing a pending amendment proposal marks that proposal `superseded`, inserts a new complete child set under the replacement even when values repeat, computes the replacement's owner-bound hash, and records an `awaiting-approval -> awaiting-approval` self-transition with a new Entity version.
 - `RejectRunPreparation` records an attributed initial rejection and moves `awaiting-approval -> draft` without accepted tasks, plan revision, profile revision, or epoch. `RejectRunAmendment` rejects the amendment and its contained pending Model-change requests, then moves `awaiting-approval -> amendment-requested`; the prior epoch remains current and dispatch stays closed.
@@ -138,7 +138,7 @@ Every sealed `RunAmendmentProposal` owns immutable child rows that classify each
 | --- | --- |
 | `not-started-retained` | The same accepted task identity and fingerprint remains selected and no Worker or effect started. |
 | `checkpointed-worker-retained` | The same Worker reached a portable checkpoint and its task, input, workspace, effect scope, model rule, and remaining budget are unchanged. |
-| `accepted-result-carried` | The proposal selects one exact terminal result, Artifact set, Evidence decision, input/result fingerprint, Worker, task, and source epoch for acceptance by reference. |
+| `accepted-result-carried` | The proposal selects one exact terminal result, Artifact set, Evidence decision, input/result fingerprint, Worker, task, and source epoch for acceptance by reference; approval makes this exact classification part of the new epoch's accepted prior-work selection without pretending the result was produced under that epoch. |
 | `completed-unselected` | Prior work remains immutable history but the new plan does not consume it. |
 | `invalidated` | Changed authority or input makes the prior item inapplicable. |
 | `abandoned` | The user excludes reconciled prior work while history remains. |
@@ -230,7 +230,7 @@ Execution adds these owner tables to `slopstop.db` under ADR 0006's Project-scop
 | Run-profile proposal | `run_profile_proposals`, `run_profile_proposal_resolved_values`, `run_profile_proposal_sources` |
 | Proposal and approval | `run_approval_proposals`, `run_amendment_proposals`, `run_amendment_proposal_prior_work_classifications`, `run_amendment_proposal_carried_results`, `run_amendment_proposal_started_effect_classifications`, `run_approval_proposal_budget_limits`, `run_approval_proposal_evidence_dependencies`, `run_approval_proposal_artifact_state_dependencies`, `run_approval_proposal_conditions`, `run_approval_views`, `run_approval_decisions` |
 | Accepted profile and epoch | `run_profile_revisions`, `run_profile_revision_resolved_values`, `run_profile_revision_sources`, `run_policy_epochs`, `run_policy_epoch_budget_limits` |
-| Sealed task input | `task_input_snapshots`, `task_input_predecessor_results`, `task_input_compositions`, `task_input_composition_conflicts` |
+| Sealed task input | `task_input_snapshots`, `task_input_snapshot_baselines`, `task_input_snapshot_worker_results`, `task_input_snapshot_compositions`, `delegation_task_input_bindings` |
 | Side question | `run_side_questions`, `run_side_question_answers` |
 | Rebuildable approval index | `approval_dependency_index_generations`, `approval_dependency_index_nodes`, `approval_dependency_index_edges` |
 
@@ -244,7 +244,7 @@ Execution adds these owner tables to `slopstop.db` under ADR 0006's Project-scop
 - Use real composite foreign keys only to exact owners already defined by accepted decisions. Project-profile requirements reference the exact Project-profile revision and child decision. Plan-owned tool rows store requirements and schema fingerprints, not tool authority; dispatch must resolve them through the current Project profile and ADR 0009 capability report. Any requirement that depends on an owner row that does not yet exist remains a proposal condition and cannot appear in accepted plan or epoch rows.
 - Store every prior-work classification once per amendment proposal and source identity. Store every Recovery-Journal-started effect once per amendment proposal and effect identity, with unique-key variant, source command, decision, reconciliation Evidence, and carry-forward semantic. Composite uniqueness and child-count checks prove completeness separately for each proposal; equal values across proposals still require distinct rows and owner-bound hashes. `recovery-required` prohibits approval and epoch creation.
 - Incompatible amendment submissions use only ADR 0006's existing `command_idempotency`, `command_receipts`, and `command_rejections` tables. They create no `control_requests`, `control_request_run_amendments`, Run transition, amendment proposal, or Canonical event row.
-- Keep task-input snapshots distinct from ADR 0010 Candidate scopes. A composition conflict contains no Worker, Candidate, or Integration identity.
+- Keep Task-input snapshots distinct from ADR 0010 Candidate scopes. A Composition conflict references its exact input Worker results and Evidence but creates no new Worker, Candidate, or Integration authority.
 - Treat approval-index rows as disposable cache data. They contain source identities needed for reverse lookup but no current pointer, decision action, precedence position, or foreign key that can authorize dispatch.
 
 ### Direct Queries And Required Indexes
@@ -254,10 +254,10 @@ Execution adds these owner tables to `slopstop.db` under ADR 0006's Project-scop
 - Index profile proposals by Run and Project sequence, fingerprint, source identity/revision, resolution-rule version, and resolved value kind. Index approval proposals by Run and Project sequence, every currently owned revision and fingerprint, profile-selection kind and fingerprint, predecessor epoch, amendment request, Model-change request, limits fingerprint, Evidence decision, Evidence scope fingerprint, Artifact-state version, condition code, classification-set hash, manifest hash, view hash, and decision action.
 - Index amendment proposal classifications by proposal and subject kind/identity; carried results by proposal and exact source task/Worker/result; started effects by proposal and effect identity, unique-key variant, source Command ID, decision, reconciliation Evidence, and carry-forward semantic.
 - Index epochs by Run and epoch number, predecessor epoch, proposal hash, approval decision and receipt, accepted plan/profile revisions, amendment proposal and classification-set hash, limits fingerprint, Evidence decision, and Artifact-state version. Prior-work and started-effect lookup uses the referenced amendment proposal tables, not epoch-owned copies.
-- Index task-input snapshots by Run, epoch, target task, and source fingerprint; predecessor selections by predecessor task and Worker result; compositions by target task and output fingerprint; conflicts by composition and unresolved state.
+- Index Task-input snapshots by Run, epoch, source kind, and fingerprint; task bindings by accepted plan, epoch, target task, and snapshot; Worker-result sources by predecessor task and result; snapshot compositions by Composition and output fingerprint; conflicts through ADR 0015 Composition Evidence.
 - Index side questions by Run and Project sequence and answers by question and Model attempt. There is no promotion index.
 - Index approval dependency edges for reverse lookup by `(project_id, source_kind, source_id, source_version_or_fingerprint, target_kind, target_id)` and by target. Every lookup is followed by authoritative reference comparison.
-- Add no ready queue, transitive-closure table, generalized reachability index, JSON authority index, or Candidate materialization table.
+- Add no ready queue, transitive-closure table, generalized reachability index, or JSON authority index. ADR 0015 separately permits typed Candidate-materialization records as rebuildable physical resources with no Candidate authority.
 
 ### Stable Diagnostics
 

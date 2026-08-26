@@ -129,7 +129,7 @@ The runtime must also preserve exact prompt and Invocation context record proven
 - Give every parallel Worker its own Turn Machine instance, turn sequence, Sealed Invocations, Model attempts, context slices, visible tools, budget waterline, and adapter observations. Parallel execution never creates one shared runtime-owned agent loop.
 - Keep logical Task-DAG fan-out, fan-in, and result synthesis with the Waypoint parent. Keep dependency readiness, concurrency and budget admission, dispatch, retry, and cancellation with the deterministic Application coordinator under approved Execution policy. No Worker, provider, model, or optional runtime may create, join, retry, cancel, or accept another Worker.
 - Feed Worker results back to the Waypoint parent only as attributed, validated result, Evidence, Tool invocation, and artifact references in a later Waypoint-parent Invocation context record and Sealed Invocation. When the Waypoint parent is unavailable, retain those exact references in its durable result queue. The Waypoint parent's later interpretation remains a proposal until the owning command and Evidence boundaries accept it.
-- Continue to apply Worker slots, Run-workspace resource coordination, mutation leases, and Process-job limits independently of model parallelism. Separate Turn Machines do not authorize concurrent mutation or bypass the approved Delegation plan.
+- Continue to apply Worker slots, ADR 0015 isolated Task-resource coordination, Repository mutation leases, declared shared-resource compatibility, and Process-job limits independently of model parallelism. Separate Turn Machines do not authorize concurrent mutation, Composition, or bypass of the approved Delegation plan.
 
 ### Physical Records
 
