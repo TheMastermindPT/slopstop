@@ -27,6 +27,7 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 - `solutions/2026-08-26_03-57-45_ticket-61-parallel-worker-candidate-composition.md` records the accepted isolated Task-resource, immutable Worker-result composition, Candidate manifest, separate Candidate review, and exact target-specific Integration architecture for ticket `#61`.
 - `solutions/2026-08-26_03-57-45_ticket-62-finding-lifecycle.md` records the accepted stable Finding aggregate, immutable decision ledger, bounded remediation and recheck authority, and query-only Validation Episode architecture for ticket `#62`.
 - `solutions/2026-08-26_03-57-45_ticket-63-evidence-ledger-architecture.md` records the accepted narrow Evidence envelope, typed family ledgers, exact parallel scope, and atomic current-evaluation architecture for ticket `#63`.
+- `solutions/2026-08-26_ticket-74-language-observation-intake.md` records the accepted Execution/Language/Evidence ownership split, task-shaped Language operations, proved completion, fenced retries, semantic enrichment, and proposal-only mutation boundary for ticket `#74`.
 
 ## Current Authority
 
