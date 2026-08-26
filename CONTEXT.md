@@ -26,14 +26,23 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Application coordinator | Deterministic software that owns canonical project state, scheduling, policy, budgets, and recovery. |
 | Waypoint parent | The single logical AI supervisor of one Run, preserving identity across safe restart, resume, compaction, runtime session replacement, and model changes. |
 | Worker | One bounded, attributed, non-nesting attempt to perform an exact Delegation task. |
+| Turn Machine | The Execution-owned internal sequence controller for one Waypoint parent or Worker; it is reconstructed from durable records, is not a domain aggregate, and never replaces Worker state authority. |
 | Run | One supervised attempt to perform an exact Action version on one Waypoint. |
 | Run slot | The current exclusive claim that permits at most one nonterminal Run for a Waypoint without adding execution state to the Waypoint aggregate. |
 | Action | A reusable capability such as Frame, Research, Implement, or Validate; not a mandatory pipeline stage. |
 | Action availability | A versioned live projection of whether one Action is available, blocked, unavailable, or broken for one Waypoint; it is recalculated from authoritative inputs and never set directly. |
 | Delegation plan | The just-in-time, user-approved worker roles, tasks, tools, budgets, dependencies, models, and risks for a run. |
 | Delegation task | One immutable task inside an accepted Delegation plan revision; Worker retries preserve the task identity while creating new Worker identities. |
-| Control request | One durable steering, pause, resume, redirect, retry, cancellation, Change request, Model change, or Side question intent targeted at a Run, its Waypoint parent, or one Worker. |
-| Model attempt | One append-only attributed model invocation linked to an exact Run, parent or Worker, prompt, Context record, policy epoch, Capability versions, provider, model, settings, limits, and result. |
+| Control request | One durable typed intent whose kind fixes its target: Run pause, resume, cancellation, and Change request target the Run; Worker stop and Worker model change target one Worker; Waypoint-parent model change targets that parent. |
+| Model attempt | One durable append-only attributed admitted provider-dispatch attempt for an exact Waypoint parent or Worker, created after command and policy admission and durable Recovery Journal `started`, immediately before the adapter boundary; it distinguishes `proven-not-started`, `provider-invocation-observed`, and `invocation-uncertain` without owning execution state. |
+| Sealed invocation | One immutable provider-neutral candidate containing the exact proposed identity, task, policy epoch, workspace, Invocation context record, visible tools, provider, model, budget, and completion inputs; command or policy admission may reject it before any Model attempt exists. |
+| Attributed observation | One normalized immutable report with a closed versioned kind, emitted by a provider, runtime, or tool adapter and recorded by Execution against an exact invocation; it reports what was observed and owns no state transition. |
+| Model availability observation | One attributed `provider-unavailable` or `model-unavailable` observation for an admitted dispatch; it is distinct from generic provider rejection or failure and may propose, but never perform, recovery behavior. |
+| Model change | One approval-gated Control request that selects an exact provider/model for future Waypoint-parent invocations or a linked replacement of one stopped Worker; it never mutates an in-flight invocation or selects a fallback automatically. |
+| Context record | One Conversation-owned immutable record linked to an exact response message, describing what that direct response used and excluded; its `responseMessageId` contract is never reused as Execution invocation state. |
+| Invocation context record | One Execution-owned immutable record of the exact purpose, prompt sources, and deterministic compiled context prepared for one Waypoint parent or Worker provider candidate; a model-based compaction uses the specialized `context-compaction` purpose and produces an artifact only for a later record. It is separate from every Conversation Context record. |
+| Tool invocation | One durable attributed attempt to handle an exact model-visible tool proposal through ordered observations; it is not a domain aggregate and its terminal transport observation is not semantic or effect success. |
+| Worker stop | The terminal outcome for one Worker after model unavailability or an explicit stop request closes its dispatch and reaches a Worker-safe boundary; replacement uses a new linked Worker identity. |
 | Run policy epoch | One immutable approved authority basis for Run dispatches; later restriction still applies live, while added power requires another approved epoch. |
 | Evidence gate | The check that accepted, current evidence is sufficient before implementation side effects begin. |
 | Completion contract | The observable checks and evidence required before a Waypoint may complete. |
@@ -48,8 +57,8 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Accepted revision | An immutable, explicitly accepted version of canonical aggregate content to which directly queryable current state may point. |
 | Writer generation | A durable fencing identity acquired under the operating-system writer lease and checked by every canonical command settlement. |
 | Runtime handoff | A versioned immutable request crossing from canonical outbox to the runtime inbox through at-least-once delivery, stable reservation, and evidence-backed reconciliation. |
-| Workspace protocol | The application transport boundary for Conversation, Frame, and Memory projections; it is not a Run workspace aggregate or physical checkout. |
-| Run workspace | One Run-owned logical binding to an exact mode, Repository binding, baseline, physical resource, and fingerprint waterline. |
+| Workspace protocol | The application-facing identity and transport boundary for Conversation, Frame, and Memory projections; it owns no Execution checkout, lease, process, or effect state. |
+| Run workspace | One separate Execution-owned logical binding to an exact mode, Repository binding, baseline, physical resource, and fingerprint waterline; it never reuses Workspace-protocol identity. |
 | Run-workspace resource | The physical current checkout or managed worktree identified by Git administration and Repository binding rather than path alone; several read-only Run workspaces may reference it. |
 | Read claim | A short-lived Process-job claim permitting observation of one Run-workspace resource at one accepted fingerprint. |
 | Mutation lease | The durable exclusive grant allowing one Worker to perform declared mutations on one Run-workspace resource; it never expires or releases solely because time passed or a process stopped. |
@@ -61,11 +70,12 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Memory Retrieval | A typed, bounded, and audited query authorized by an approved plan; trusted retrieval returns only current accepted memories for the permitted scope, while stale memories require explicit inspection or re-verification. |
 | Capability catalogue | The provenance-aware inventory of skills, tools, prompts, analyzers, servers, and extensions that may become available. |
 | Recovery journal | Evidence-owned durable write-ahead records of effect intent, start, terminal observation, and reconciliation used to distinguish completed, failed, and uncertain side effects. |
+| Run recovery reconciliation | One accepted Evidence-backed settlement that removes only the resolved recovery condition, then recomputes Run state and every remaining blocker before dispatch, retry, or model replacement may continue. |
 | Uncertain side effect | An operation known to have started but lacking durable proof of completion; it cannot be replayed automatically. |
 | Workspace fingerprint | A Git, diff, and untracked-file identity binding evidence to the code state it evaluated. |
 | Declared effect set | The versioned file, Git, local-artifact, external-service, and credential scopes that one authorized action may affect. |
 | Process job | One coordinator-owned operating-system process attempt with a bounded invocation, output, lifecycle, effect declaration, and durable attribution. |
-| Safe checkpoint | An Execution record referencing Evidence proof that dispatch is closed, no mutating process or uncertain effect remains, and the final Workspace fingerprint is accepted. |
+| Safe checkpoint | An Execution record referencing Evidence proof that dispatch is closed, zero Model attempts and Tool invocations remain in flight, no mutating process or uncertain effect remains, and the final Workspace fingerprint is accepted. |
 | Resume capsule | Persisted context sufficient to continue an interrupted run without guessing or repeating uncertain effects. |
 | Resume checkpoint | A Safe checkpoint plus the exact Resume capsule, policy, Capability, budget, approval, and availability inputs needed to continue a Run. |
 | Language Intelligence Service | Workspace-isolated LSP lifecycle, synchronization, diagnostics, semantic navigation, and mutation proposals. |

@@ -48,11 +48,13 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 | Profiles | `project_profiles`, `project_profile_revisions`, and revision children for provider overrides, tool decisions, exact Capability-version decisions, and restrictions |
 | Board | `board_admission_policy_versions`, `board_entries`, `board_message_sources`, `board_execution_sources`, `board_supersessions`, `board_read_positions` |
 | Durable workspace | `conversations`, `conversation_branches`, `conversation_messages`, `conversation_context_records`, `frame_drafts` |
+| Execution invocation context | `invocation_context_records`, `invocation_context_sources`, `invocation_context_transformations`, `invocation_context_retrievals`, `invocation_context_recent_turn_slices`, `invocation_context_compactions`, `invocation_context_artifacts` |
 | Runtime handoff | `runtime_handoffs`, `runtime_handoff_attempts`, `runtime_acknowledgements`, `runtime_outcomes` |
 | Migration metadata | `schema_metadata` |
 
+- Keep Identity-owned `workspaces` for the application Workspace protocol used by Conversation, Frame, and Memory projections. It is not an Execution checkout or Run workspace. ADR 0008 owns the separate `run_workspaces` physical family; no foreign key may use one identity in place of the other.
 - Keep conversation and Frame-draft rows durable in `slopstop.db`, but outside canonical command sequence, revision, and event authority until an explicit accepted command turns a proposal into canonical state.
-- Do not create empty tables for program behavior still owned by Execution, Evidence, Memory, Language, or Frame. Their migrations add owner-specific entities and status-transition tables later while following this key and revision contract. Exact Capability catalogue acceptance, Project enablement, and future Run policy epochs remain distinct owner records; a Project-profile child stores an exact accepted Capability-version reference rather than collapsing those gates.
+- Do not create empty tables for program behavior still owned by Execution, Evidence, Memory, Language, or Frame. ADR 0009 defines the Execution invocation-context family, but its migration still lands only with its first behavior. Other migrations add owner-specific entities and status-transition tables later while following this key and revision contract. Exact Capability catalogue acceptance, Project enablement, and future Run policy epochs remain distinct owner records; a Project-profile child stores an exact accepted Capability-version reference rather than collapsing those gates.
 
 ### Commands And Canonical Events
 
@@ -89,7 +91,8 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 - Require exactly one private source row in either `board_message_sources` or `board_execution_sources`. Make each stable source reference unique within the Project so idempotent admission cannot create duplicate entries. Validate the required one-of-two child shape in the admission transaction and during integrity checks.
 - Represent correction links in `board_supersessions`. Make the replacing entry unique and the replaced entry unique so a chain cannot branch; the command also requires the expected current head.
 - Key read positions by Project and exact scope, allowing one Project-feed position and one position per Waypoint. A read position can only advance to a confirmed contiguous Board position.
-- Give conversations Project or Waypoint scope, acyclic branches, immutable messages, and cursor order. Keep immutable Context records separate from mutable Frame drafts. None of these rows gains canonical authority through storage location alone.
+- Give conversations Project or Waypoint scope, acyclic branches, immutable messages, and cursor order. Keep Conversation-owned immutable Context records linked to exact response messages and separate from mutable Frame drafts. None of these rows gains canonical authority through storage location alone.
+- Keep Execution-owned Invocation context records in their own table family. They target an exact Waypoint parent or Worker candidate and never reuse `conversation_context_records`, `ContextRecordId`, or the Conversation projection's required `responseMessageId`.
 
 ### Runtime Handoff And Writer Recovery
 
