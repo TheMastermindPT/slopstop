@@ -21,6 +21,7 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 
 - `solutions/2026-08-22_22-52-33_end-state-comprehension-strategies.md` compares and exercises Future Walkthrough, Expectation Cards, Prediction Game, and Traceable Mirror before recording the accepted adaptive comprehension approach.
 - `solutions/2026-08-26_03-57-45_ticket-58-provider-neutral-agent-runtime.md` records the accepted Execution-owned Turn Machine and immutable Sealed Invocation boundary for provider-neutral, attributable, pausable, and recoverable Model attempts.
+- `solutions/2026-08-26_03-57-45_ticket-60-approved-run-preparation.md` records the accepted immutable Run-policy-epoch authority, plan-owned Task DAG, one sealed approval view, and non-authoritative reverse invalidation index for ticket `#60`.
 - `solutions/2026-08-26_03-57-45_ticket-63-evidence-ledger-architecture.md` records the accepted narrow Evidence envelope, typed family ledgers, exact parallel scope, and atomic current-evaluation architecture for ticket `#63`.
 
 ## Current Authority
