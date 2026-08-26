@@ -1,6 +1,6 @@
 # SlopStop RPIV Artifacts
 
-The imported files below were copied byte-for-byte from the `rpiv-claude` repository on 2026-08-14. Their original frontmatter, source repository, commit, branch, timestamps, and content hashes are preserved as provenance. Later SlopStop decisions do not rewrite these historical records. Research produced directly in SlopStop records its own repository provenance.
+The 2026-08-14 discover and research artifacts were copied byte-for-byte from the `rpiv-claude` repository. Their original frontmatter, source repository, commit, branch, timestamps, and content hashes are preserved as provenance. Later SlopStop decisions do not rewrite those historical records. Newer artifacts produced directly in SlopStop record their own repository provenance.
 
 ## Requirements Lineage
 
@@ -21,6 +21,7 @@ The imported files below were copied byte-for-byte from the `rpiv-claude` reposi
 
 - `solutions/2026-08-22_22-52-33_end-state-comprehension-strategies.md` compares and exercises Future Walkthrough, Expectation Cards, Prediction Game, and Traceable Mirror before recording the accepted adaptive comprehension approach.
 - `solutions/2026-08-26_03-57-45_ticket-58-provider-neutral-agent-runtime.md` records the accepted Execution-owned Turn Machine and immutable Sealed Invocation boundary for provider-neutral, attributable, pausable, and recoverable Model attempts.
+- `solutions/2026-08-26_03-57-45_ticket-63-evidence-ledger-architecture.md` records the accepted narrow Evidence envelope, typed family ledgers, exact parallel scope, and atomic current-evaluation architecture for ticket `#63`.
 
 ## Current Authority
 

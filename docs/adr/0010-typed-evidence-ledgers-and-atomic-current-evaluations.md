@@ -1,0 +1,444 @@
+# ADR 0010: Typed Evidence Ledgers And Atomic Current Evaluations
+
+- Status: Accepted
+- Date: 2026-08-26
+- Decision owners: Pedro Mesquita
+
+## Context
+
+Evidence must independently judge attributed observations from Workers, Process jobs, repository tools, analyzers, Language Intelligence, recovery, Candidate construction, and Integration without taking Execution or Integration ownership. ADR 0006 requires directly queryable current authority alongside append-only history. ADR 0007 permits Execution to consume exact Evidence authorization but not write Evidence truth. ADR 0008 assigns Run-workspace fingerprints, deltas, Recovery Journal observations, effect reconciliation, and safety proofs to Evidence while retaining Run workspaces, Process jobs, and coordination in Execution.
+
+Parallel Workers make scope as important as outcome. A passing result on one Task workspace says nothing about a sibling Task workspace or the materialized Candidate scope. Content hashes can prove that bytes did not change, but cannot identify the Finding, Worker delta, Candidate, anchor, evaluation, or decision whose history must survive. Missing inputs, broken evaluators, stale fingerprints, ambiguous anchors, rejected decisions, truncated outputs, and uncertain effects must remain visible instead of being reported as clean.
+
+## Decisions
+
+### Evidence Families And Authority
+
+- Define an `Evidence family` as one bounded proof domain with one typed subject model, one scope model, closed observation, evaluation, and decision schemas, one verdict vocabulary, one materialized-current key, and one Evidence-owned writer. A verdict has no meaning outside its family.
+- Use the closed family set `run-workspace-fingerprint`, `run-workspace-baseline`, `worker-delta`, `test`, `completion`, `finding`, `finding-recheck`, `effect`, `recovery`, `candidate-review`, `integration-applicability`, `anchor-resolution`, and `artifact-state` for the aggregates decided here. Later families require their own decision and cannot borrow these verdicts.
+- Make Evidence the sole domain authority for these observations, evaluations, decisions, applicability, invalidation, and materialized current evaluations. The Application coordinator remains the sole committed-action authority. Execution, Language Intelligence, Memory, Validation, and Integration submit attributed inputs or consume exact Evidence references but cannot write Evidence state directly.
+- Keep process exit, semantic test result, effect certainty, Finding closure, Candidate technical acceptability, Candidate user authorization, Integration applicability, and completion authorization separate. An observation from one family cannot settle another family without a typed evaluation that references it as an exact dependency.
+
+### Common Evidence Envelope
+
+- Give every immutable Evidence entry a narrow structural envelope containing Project-scoped opaque identity, Evidence family and record kind, schema version, exact producer identity and version, typed subject identity and version, `EvidenceScopeId`, scope-schema version, applicable captured, input, target, and result `EvidenceScopeFingerprintId` references, artifact references, observed and recorded times, canonical recorded Project sequence, trust basis, and integrity metadata.
+- Keep the envelope structural. It contains no generic verdict, severity, status, family policy, subject payload, or untyped JSON authority. Each family validates one typed payload and stores real Project-scoped references to its subjects.
+- Treat `observation`, `evaluation`, and `decision` only as structural record kinds. An observation records what an attributed producer reported. An evaluation interprets exact observations and dependencies under an evaluator and rule version. A decision accepts, rejects, supersedes, or invalidates an exact evaluation under the owning family's authority.
+- Use one canonical `trust basis` term. A trust basis records the source classification, assessing authority, policy or rule version, and optional prior decision known when the entry is appended. It never mutates; later trust change appends a family decision. Trust basis says whether an entry may be used for its declared scope, not whether its domain outcome is favorable.
+
+### Identity, Time, And Integrity
+
+- Use an opaque `EvidenceEntryId` for each immutable ledger entry. Keep `EvidenceScopeId`, `EvidenceScopeFingerprintId`, `ArtifactId`, `ArtifactStateVersionId`, `EvidenceProducerAttemptId`, `EvaluatorId`, `EvaluatorVersionId`, `CompoundCodeAnchorId`, `RunWorkspaceFingerprintId`, `CandidateFingerprintId`, `WorkerDeltaId`, `CandidateDeltaId`, `FindingId`, family observation identities, family evaluation identities, and family decision identities as separate durable domain identities.
+- Never derive a domain identity from a content hash and never make a digest unique across independent observations. Two producers may observe identical bytes or results while retaining distinct attribution and history. Canonical command idempotency, not hash equality, prevents duplicate settlement.
+- Record fingerprint and digest algorithm, canonicalization version, and value together. A record digest covers the immutable canonical envelope and typed payload, excluding the digest field itself. Artifact digests cover referenced bytes. Integrity mismatch is broken Evidence, not a different identity and not an absent record.
+- Record producer-observed time separately from canonical recorded time, Project sequence, and entry ordinal. Source time supports explanation but never decides ledger order, current authority, or freshness by itself.
+
+### Materialized Current Evaluations
+
+- Replace the ambiguous `Evidence head` term with `Evidence current evaluation`. Each family owns a directly queryable materialized row for one exact subject and scope key.
+- Store the exact `EvidenceScopeId`, `current_evaluation_id`, `current_evaluation_entry_id`, `current_decision_id`, current verdict, exact input and result fingerprints, evaluator identity, version, implementation-hash algorithm and implementation hash, rule versions, and `current_version` on that row. These fields identify the accepted evaluation presently authoritative for the subject-and-scope key, including an accepted unfavorable, stale, conflicting, or broken verdict.
+- Also store `latest_evaluation_id`, `latest_evaluation_entry_id`, and `latest_decision_id`. A rejected proposal can therefore remain visible without becoming current. `latest_*` and `current_*` are equal after an accepted replacement and may differ only when the latest proposal was rejected or was already superseded by a newer applicable evaluation.
+- Create the materialized row on the first family decision. `latest_*` is always populated. `current_*` and current verdict may be null only when no evaluation for that key has ever been accepted, such as a first rejected proposal; that state means no authoritative evaluation, never clean or absent history.
+- Advance the materialized row with compare-and-set against its expected `current_version`, current evaluation, exact subject versions, dependency fingerprints, and Writer generation. Every transaction that advances `current_*` inserts the exact family evaluation and a family decision accepting that evaluation, then updates both pointer pairs in the same transaction. No current pointer may move from an observation, evaluation alone, previously accepted decision, or side effect of another aggregate write.
+- Never leave an inapplicable favorable evaluation current. If a rejected replacement also proves that the prior current evaluation is no longer applicable, the same transaction appends and accepts the family's exact stale, conflicting, missing, or broken evaluation and points `current_*` to it.
+- Preserve every prior entry and decision. Re-evaluation, rejection, correction, restoration, and invalidation append records; they never rewrite an observation, reuse an attempt identity, rewind history, or point current authority directly at an observation.
+
+### Typed Record Boundaries
+
+| Evidence family | Typed observation | Typed evaluation | Typed decision |
+| --- | --- | --- | --- |
+| Run-workspace fingerprint | One capture attempt over an exact Run-workspace resource and bound | Completeness and resource-identity verdict | Accept or reject the capture for the Run-workspace current evaluation |
+| Run-workspace baseline | Exact fingerprint and immutable baseline references | Clean, approved-dirty, mismatch, freshness, or failure verdict | Accept, reject, supersede, or invalidate the baseline evaluation |
+| Worker delta | One repeatable attributed comparison observation over a stable Worker delta identity and the Task workspace's sealed input and result | Completeness, attribution, scope, freshness, or failure verdict for that observation | Admit or refuse the observation as the Worker's current delta evaluation |
+| Test | One exact test-command result and artifacts | Test-semantic verdict under one contract check and rule version | Accept, reject, supersede, or invalidate the test evaluation |
+| Completion | Exact current test, Finding, effect, Candidate, and contract dependencies | Completion authorization or exact blocking verdict | Authorize, reject, supersede, or invalidate completion |
+| Finding | One proposed stable claim with rule, subject, severity, and origin | Current Finding disposition and applicability verdict | Open, route, close, accept risk, reject, or supersede the Finding |
+| Finding recheck | One independent rerun against the same Finding identity | Reproduction, resolution, difference, freshness, or failure verdict | Accept or reject the recheck without directly rewriting Finding disposition |
+| Effect | Journal, process, provider, fingerprint, and artifact observations for one effect identity | Real-world effect certainty and scope verdict | Accept, reject, supersede, or invalidate effect reconciliation |
+| Recovery | Exact current effect evaluations and Run-workspace recovery observations | Recovery need, reconciliation, safety, or blocking verdict | Accept or reject recovery and any resulting safety proof |
+| Candidate review | Exact membership, materialization, validation, and technical-review observations for one Candidate version | Acceptability, required technical change, blocker, freshness, uncertainty, or failure verdict | Accept, reject, supersede, or invalidate the proposed Evidence evaluation only |
+| Integration applicability | Exact accepted Candidate evaluation, separate Candidate user authorization, and current Integration-target observations | Applicability, conflict, authorization, freshness, or uncertainty verdict | Accept, reject, supersede, or invalidate applicability; never apply the Candidate |
+| Anchor resolution | One resolver attempt with ordered candidates and corroborating inputs | One anchor-resolution verdict from the closed matrix | Accept, reject, supersede, or invalidate the current mapping |
+| Artifact state | One attributed availability, byte-integrity, or retention observation for an exact Artifact | Current availability, integrity, retention, or state-check failure verdict | Accept, reject, supersede, or invalidate the proposed Artifact-state evaluation |
+
+### Run-Workspace Fingerprint, Baseline, And Worker-Delta Verdicts
+
+These verdicts belong only to their named family:
+
+| Family verdict | Exact meaning |
+| --- | --- |
+| `FINGERPRINT_CAPTURED` | A complete Run-workspace fingerprint was produced for the exact resource and capture scope; it says nothing about clean or dirty state. |
+| `FINGERPRINT_MISSING` | The expected Run-workspace resource or required Git state is unavailable without a competing claimant or proof of deletion. |
+| `FINGERPRINT_CONFLICTING` | The observed Git administration or resource identity conflicts with the expected Run-workspace resource. |
+| `FINGERPRINT_BROKEN` | The expected resource exists but is unreadable or inconsistent, or the fingerprint producer failed. |
+| `FINGERPRINT_TRUNCATED` | A bound prevented enumeration of every required Git, diff, or untracked input, so no complete fingerprint exists. |
+| `FINGERPRINT_REJECTED` | The produced capture was refused by the fingerprint family's trust basis, scope, or policy and is not authoritative. |
+| `BASELINE_ACCEPTED_CLEAN` | The exact complete baseline fingerprint has no tracked, staged, or untracked changes relative to its declared commit. |
+| `BASELINE_ACCEPTED_DIRTY` | The exact complete dirty baseline fingerprint was explicitly approved for this Run workspace. |
+| `BASELINE_MISMATCH` | A complete observed fingerprint differs from the immutable Run-workspace baseline without an identity conflict. |
+| `BASELINE_STALE` | The baseline evaluation targets an older Run-workspace fingerprint than the current accepted capture. |
+| `BASELINE_MISSING` | A required baseline identity, commit, or complete fingerprint is unavailable. |
+| `BASELINE_CONFLICTING` | Baseline and current observations refer to incompatible Run-workspace resource identities. |
+| `BASELINE_BROKEN` | Baseline integrity or evaluation failed and comparison cannot be trusted. |
+| `BASELINE_TRUNCATED` | A required baseline or current capture is incomplete because of a bound. |
+| `BASELINE_REJECTED` | The proposed baseline was explicitly refused and grants no Run-workspace authority. |
+| `WORKER_DELTA_EMPTY` | A complete comparison proves no Task-workspace change between the sealed input and result fingerprints. |
+| `WORKER_DELTA_CAPTURED` | A complete Worker delta contains only changes attributable to the exact Worker attempt and declared effect scope. |
+| `WORKER_DELTA_OUT_OF_SCOPE` | The complete delta contains a change outside the Worker's declared effect set. |
+| `WORKER_DELTA_EXTERNAL_CHANGE` | A change cannot be attributed to the Worker because the Run-workspace resource changed outside its accepted lease or input scope. |
+| `WORKER_DELTA_STALE` | The delta was computed from a sealed input or result fingerprint that is no longer the Task-workspace scope being evaluated. |
+| `WORKER_DELTA_MISSING` | A required sealed input, result fingerprint, or delta artifact is unavailable. |
+| `WORKER_DELTA_CONFLICTING` | The input and result refer to incompatible Run-workspace resources or Worker identities. |
+| `WORKER_DELTA_BROKEN` | Delta production, parsing, or integrity verification failed. |
+| `WORKER_DELTA_TRUNCATED` | The delta omitted required paths or bytes because of a bound and cannot prove completeness. |
+| `WORKER_DELTA_REJECTED` | The proposed delta was refused by scope, trust basis, or policy and cannot enter a Candidate. |
+
+### Test And Completion Verdicts
+
+| Family verdict | Exact meaning |
+| --- | --- |
+| `TEST_PASSED` | The exact approved command completed and the test-specific evaluator proved the expected passing semantics for the bound Run-workspace fingerprint. |
+| `TEST_EXPECTED_RED` | The test failed for the exact approved reason attributable to the behavior not yet implemented; it is valid red Evidence, not general failure. |
+| `TEST_BASELINE_FAILURE` | The failure existed in the registered pre-change baseline and cannot serve as the new expected red. |
+| `TEST_FAILED` | The test ran completely and produced a semantic failure other than the approved expected red. |
+| `TEST_NOT_RUN` | Conclusive process Evidence proves the approved test command never started. |
+| `TEST_TIMED_OUT` | The test process exceeded its approved timeout and disappearance was confirmed; no pass or expected red is inferred. |
+| `TEST_CANCELLED` | Cancellation completed before a trustworthy semantic result was produced. |
+| `TEST_STALE` | The observation, command, contract, rule, or Capability version does not match the current test-evaluation key. |
+| `TEST_AMBIGUOUS` | Complete available output supports more than one test-specific interpretation and no one result may be selected. |
+| `TEST_TRUNCATED` | Required output was bounded before the evaluator could prove complete test semantics. |
+| `TEST_REJECTED` | The observation or evaluation was refused by test scope, trust basis, approval, or policy. |
+| `TEST_BROKEN` | Test invocation, result parsing, artifact integrity, or the evaluator failed. |
+| `COMPLETION_AUTHORIZED` | Every exact Completion-contract requirement has current accepted Evidence and no blocking Finding, uncertain effect, or stale dependency remains. |
+| `COMPLETION_BLOCKED_MISSING_EVIDENCE` | At least one required Completion-contract item has no accepted Evidence. |
+| `COMPLETION_BLOCKED_FAILED_CHECK` | At least one required current test or validation evaluation has a blocking failed verdict. |
+| `COMPLETION_BLOCKED_STALE_EVIDENCE` | At least one required evaluation is bound to an obsolete fingerprint, contract, rule, or subject version. |
+| `COMPLETION_BLOCKED_OPEN_FINDING` | At least one in-scope blocking Finding is not closed by verified recheck or explicit accepted-risk policy. |
+| `COMPLETION_BLOCKED_UNCERTAIN_EFFECT` | At least one started effect lacks conclusive reconciliation. |
+| `COMPLETION_BLOCKED_AMBIGUOUS_EVIDENCE` | A required evaluation has complete but non-unique interpretation. |
+| `COMPLETION_BLOCKED_TRUNCATED_EVIDENCE` | A required evaluation depends on incomplete bounded output. |
+| `COMPLETION_REJECTED` | The completion proposal was explicitly refused under the exact Completion contract or approval policy. |
+| `COMPLETION_BROKEN` | Completion evaluation or one required dependency has broken integrity or execution. |
+
+### Finding And Recheck Verdicts
+
+| Family verdict | Exact meaning |
+| --- | --- |
+| `FINDING_OPEN` | A stable accepted Finding currently requires disposition or remediation. |
+| `FINDING_REMEDIATION_PENDING` | In-scope remediation is authorized but no accepted resolving recheck exists. |
+| `FINDING_CLOSED_VERIFIED` | An independent accepted `RECHECK_RESOLVED` evaluation against the exact remediation fingerprint closed the same Finding identity. |
+| `FINDING_RISK_ACCEPTED` | An authorized actor accepted the precisely described residual risk under an exact policy and scope; no fix is implied. |
+| `FINDING_FALSE_POSITIVE` | An authorized decision proved that the accepted Finding claim does not apply under its exact rule and scope. |
+| `FINDING_OUT_OF_SCOPE` | The Finding remains real but is outside the current Run's accepted remediation scope and cannot silently expand it. |
+| `FINDING_SUPERSEDED` | A linked Finding with a new stable identity replaces this materially different claim; history remains. |
+| `FINDING_STALE` | The Finding has not been rechecked against the current relevant fingerprint or rule version. |
+| `FINDING_REJECTED` | A proposed Finding was refused admission; it is not open and cannot block or close completion. |
+| `FINDING_BROKEN` | Finding production, identity matching, rule execution, or integrity verification failed. |
+| `RECHECK_REPRODUCED` | Independent recheck proves the same Finding still exists under the same stable identity. |
+| `RECHECK_RESOLVED` | Independent recheck proves the exact Finding no longer applies at the remediation fingerprint. |
+| `RECHECK_CHANGED` | The observed problem is materially different; it cannot close the original Finding and requires a linked Finding decision. |
+| `RECHECK_NOT_APPLICABLE` | The original subject no longer exists or the rule no longer applies for an accepted reason; a Finding decision must still decide closure. |
+| `RECHECK_STALE` | Recheck input predates the current remediation fingerprint, Finding version, or rule version. |
+| `RECHECK_AMBIGUOUS` | Complete recheck Evidence cannot uniquely determine whether the same Finding remains. |
+| `RECHECK_TRUNCATED` | Bounded recheck output cannot establish reproduction or resolution. |
+| `RECHECK_REJECTED` | The proposed recheck was refused by independence, scope, trust basis, or policy. |
+| `RECHECK_BROKEN` | Recheck invocation, matching, parsing, integrity, or evaluation failed. |
+
+### Effect And Recovery Verdicts
+
+| Family verdict | Exact meaning |
+| --- | --- |
+| `EFFECT_NOT_STARTED` | Durable intent exists and conclusive Evidence proves the effect never reached `started`. |
+| `EFFECT_STARTED_UNSETTLED` | Durable `started` proof exists but no conclusive terminal effect observation exists yet. |
+| `EFFECT_COMPLETED_AS_DECLARED` | Conclusive observations prove every declared effect completed within scope. |
+| `EFFECT_FAILED_NO_EFFECT` | The operation failed and conclusive before/after Evidence proves no declared or undeclared effect occurred. |
+| `EFFECT_PARTIAL` | Some declared effect occurred but the complete declared outcome did not. |
+| `EFFECT_SCOPE_VIOLATION` | A conclusive observation proves an undeclared effect occurred or was attempted. |
+| `EFFECT_MISSING` | A required journal record, provider observation, fingerprint, or artifact is unavailable. |
+| `EFFECT_TRUNCATED` | Bounded observation prevents complete effect reconciliation. |
+| `EFFECT_UNCERTAIN` | The effect started and available Evidence cannot prove its terminal real-world outcome. |
+| `EFFECT_REJECTED` | A proposed effect observation or reconciliation was refused by identity, scope, trust basis, or policy. |
+| `EFFECT_BROKEN` | Journal integrity, observation, provider reconciliation, or evaluator execution failed. |
+| `RECOVERY_NOT_REQUIRED` | Conclusive current Effect Evidence proves no unresolved or uncertain effect requires recovery. |
+| `RECOVERY_REQUIRED` | At least one current effect or Run-workspace invariant requires recovery before dispatch. |
+| `RECOVERY_RECONCILED_NO_EFFECT` | Recovery proved the attempted operation produced no effect and is safe to retry only under a new identity. |
+| `RECOVERY_RECONCILED_COMPLETED` | Recovery proved the original effect completed and must not be replayed. |
+| `RECOVERY_RECONCILED_FAILED` | Recovery proved terminal failure with no remaining uncertain or partial effect. |
+| `RECOVERY_RECONCILED_PARTIAL` | Recovery proved a partial effect whose retained state requires explicit remediation. |
+| `RECOVERY_BLOCKED_MISSING` | Required recovery Evidence is unavailable. |
+| `RECOVERY_BLOCKED_TRUNCATED` | Bounded recovery Evidence cannot prove a safe terminal state. |
+| `RECOVERY_BLOCKED_UNCERTAIN` | Available recovery Evidence cannot distinguish completion, failure, or partial effect. |
+| `RECOVERY_REJECTED` | A proposed reconciliation was refused by identity, scope, trust basis, or policy. |
+| `RECOVERY_BROKEN` | Recovery journal, reconciliation, or safety-proof integrity failed. |
+
+### Candidate-Review Verdicts
+
+| Family verdict | Exact meaning |
+| --- | --- |
+| `CANDIDATE_ACCEPTABLE` | The exact materialized Candidate is closed, non-empty, complete, current, independently validated as a whole, and technically eligible for separate user authorization. |
+| `CANDIDATE_CHANGES_REQUIRED` | A complete and trustworthy technical review proves concrete changes are required in this Candidate version; it does not mean a user submitted a Change request. |
+| `CANDIDATE_BLOCKED` | Technical acceptability cannot be reached because one or more exact structural or prerequisite blockers apply. |
+| `CANDIDATE_STALE` | The source baseline, selected Worker delta, construction rule, or Candidate fingerprint is no longer current. |
+| `CANDIDATE_UNCERTAIN` | Current available observations cannot establish acceptability, a concrete required change, or a definitive blocker because effect or review certainty remains unresolved. |
+| `CANDIDATE_BROKEN` | Candidate construction, materialization, validation, or integrity verification failed. |
+
+`CANDIDATE_BLOCKED` requires at least one closed `candidate_blocker_kind`: `empty`, `missing-input`, `incomplete`, `conflicting`, `contaminated`, `ambiguous`, or `truncated`. These kinds preserve the exact blocking diagnosis without turning user or decision actions into verdicts. Apply broken, stale, uncertain, blocker, and required-change conditions in that order; `CANDIDATE_ACCEPTABLE` is possible only when none applies, so the verdicts are mutually exclusive.
+
+Candidate Evidence decisions use only the actions `accept-evaluation`, `reject-evaluation`, `supersede-evaluation`, and `invalidate-evaluation` against an exact proposed Candidate evaluation. `reject-evaluation` records refusal and may advance `latest_*` but never `current_*`. Supersession or invalidation can change current authority only when the same transaction inserts and accepts the exact replacement evaluation. A Candidate user review, approval, rejection, or Change request is a separate canonical record outside the Evidence decision action and Candidate verdict; Integration consumes it as an independent typed authorization dependency.
+
+### Integration-Applicability Verdicts
+
+| Family verdict | Exact meaning |
+| --- | --- |
+| `INTEGRATION_APPLICABLE` | The exact Candidate has current accepted `CANDIDATE_ACCEPTABLE` Evidence and separate user authorization, and applies to the exact current target fingerprint with no predicted conflict and all required Evidence current. |
+| `INTEGRATION_ALREADY_APPLIED` | Conclusive target Evidence proves this exact Candidate identity and fingerprint were already integrated. |
+| `INTEGRATION_NOT_AUTHORIZED` | A current accepted `CANDIDATE_ACCEPTABLE` evaluation, separate Candidate user authorization, completion authorization, policy, or required Integration authority is absent. |
+| `INTEGRATION_TARGET_MISSING` | The target Repository binding, ref, or complete fingerprint is unavailable. |
+| `INTEGRATION_TARGET_STALE` | The target fingerprint differs from the one used by the applicability evaluation. |
+| `INTEGRATION_CONFLICTING` | The exact Candidate and target produce a deterministic content or ref conflict. |
+| `INTEGRATION_SCOPE_MISMATCH` | Candidate source, Repository binding, target, or approved Integration scope do not agree. |
+| `INTEGRATION_MISSING_EVIDENCE` | A required Candidate-review, completion, effect, or target evaluation is absent. |
+| `INTEGRATION_AMBIGUOUS` | Complete available Evidence permits more than one target or applicability interpretation. |
+| `INTEGRATION_TRUNCATED` | Bounded Candidate or target Evidence prevents complete applicability proof. |
+| `INTEGRATION_UNCERTAIN` | A prior Integration effect may have started but is not conclusively reconciled. |
+| `INTEGRATION_REJECTED` | The applicability proposal was explicitly refused by target, trust basis, approval, or policy. |
+| `INTEGRATION_BROKEN` | Applicability computation, target observation, dependency integrity, or evaluator execution failed. |
+
+### Parallel Task-Workspace And Candidate Scope
+
+- Define a `Task workspace` as the Evidence scope for one immutable Delegation task and Worker attempt over one exact Run workspace, sealed input snapshot, accepted start Run-workspace fingerprint, result fingerprint, and producing Process job, tool, or model attempt. It is not another checkout or Execution aggregate.
+- Bind Worker-local Evidence to the exact Project, Run, Worker attempt, Delegation task, Task workspace, artifacts, result identity, and optional `WorkerDeltaId`. A Worker delta cannot contain sibling, external, or later changes from the same physical resource.
+- Never let one Task workspace's Evidence close, authorize, invalidate, or stand in for a sibling. A dependent task consumes a newly sealed input snapshot that explicitly references accepted predecessor outputs; it never inherits proof from a live predecessor worktree.
+- Define Candidate scope by one materialized `CandidateDeltaId` and version, source baseline fingerprint, exact selected Worker-delta identities and fingerprints, materialized Candidate fingerprint, accepted construction evaluation decision, and target identity when applicability is evaluated.
+- Validate the materialized Candidate as a whole. Green Evidence for every selected Task workspace remains local and is not Completion Evidence for their combination. Candidate validation receives a new Evidence identity even when it reuses exact branch observations as dependencies.
+- Bind Integration-applicability Evidence to the immutable Candidate identity and fingerprint, current accepted Candidate evaluation, separate Candidate user authorization, exact target identity, and current target fingerprint. Evidence decides applicability; Integration alone applies the Candidate and reports attributed observations back to Effect and Recovery families.
+- Define `IntegrationTargetId` as the stable Integration-owned identity of one Repository binding and target ref. A changed target fingerprint changes applicability, not target identity.
+
+### Typed Evidence Scopes And Fingerprints
+
+- Give every Run workspace, Task workspace, Candidate, and Artifact scope one stable opaque `EvidenceScopeId`. Store the scope kind on the identity root and require exactly one typed child: a Run-workspace child references `RunWorkspaceId` in Execution's `run_workspaces`, a Task-workspace child references the exact `WorkerId`, `DelegationTaskId`, and `RunWorkspaceId`, a Candidate child references `CandidateDeltaId` and version, and an Artifact child references `ArtifactId`.
+- Give every state used by Evidence an opaque `EvidenceScopeFingerprintId` bound to exactly one `EvidenceScopeId`. A typed child references one immutable `RunWorkspaceFingerprintId` for Run-workspace and Task-workspace scopes, one immutable `CandidateFingerprintId` for Candidate scope, or one immutable `ArtifactStateVersionId` for Artifact scope. Equal digest values do not merge scope-fingerprint identities.
+- Treat a Compound code anchor's `captured_scope_id` and `captured_scope_fingerprint_id` as immutable source authority. The captured fingerprint identifies the source state F1 where the anchor was registered; it is not a freshness requirement for a later target state.
+- Treat a current-location anchor-resolution observation's `target_scope_id`, `requested_target_scope_fingerprint_id`, and nullable `evaluated_target_scope_fingerprint_id` as separate target facts. The requested fingerprint is F2 selected for resolution. At evaluation settlement, Evidence reads the authoritative current fingerprint for that same target scope and records it as the evaluated fingerprint. It may remain null only when target observation is missing or broken before any authoritative current fingerprint can be obtained.
+- Resolve the authoritative target fingerprint from the Run-workspace fingerprint current evaluation, the exact Task-workspace sealed input or accepted result selected by the request, or the immutable Candidate fingerprint. Scope kind and identity must agree across the request, both target fingerprint bindings, and the current-evaluation key.
+- A normal source-to-target change from captured F1 to requested and current F2 is not stale. It proceeds through content, Git, syntax, and semantic resolution and may yield exact, moved, changed, missing, deleted, ambiguous, truncated, uncertain, broken, invalid, or rejected according to the current-location anchor matrix.
+
+### Compound Code Anchors And Resolution
+
+- Give each Compound code anchor a stable opaque identity and immutable captured authority: exact typed `captured_scope_id`, `captured_scope_fingerprint_id`, Repository binding, Git commit and blob, normalized path, range, exact text and normalized hash, surrounding context, language, enclosing symbol, syntax fingerprint, and optional semantic enrichment. LSP URI, position, symbol occurrence, definition, server, and Capability metadata enrich resolution but never replace scope, fingerprint, Git, content, or syntax authority.
+- Append each current-location resolution attempt as a typed observation and evaluation bound to exact target scope, requested target fingerprint, evaluated authoritative target fingerprint, and resolver version. Preserve all candidates and confidence inputs needed to explain the result. Never mutate the captured anchor or silently select a weak candidate.
+- Attempt exact blob and location, Git diff or rename mapping, symbol resolution, snippet matching, syntax matching, and context matching in decreasing confidence order. Semantic enrichment may corroborate a result but cannot turn missing or contradictory durable authority into an exact match.
+- Use the closed mode vocabulary `current-location` and `historical-captured`. A current-location request uses `anchor_resolution_observations`, `anchor_resolution_evaluations`, decisions, and the materialized current table. A historical-captured query uses separate append-only historical tables and never enters the current-location decision path.
+
+Apply invalid, broken target observation, stale target, and truncated conditions before considering a navigational match. Then compare captured source F1 with authoritative target F2: unavailable required authority or no candidate without deletion proof yields missing; conclusive deletion yields deleted; more than one plausible candidate yields ambiguous. For exactly one usable candidate, unchanged semantic content and syntax at the same normalized path and range yields exact, unchanged semantic content and syntax at a different normalized path or range yields moved, and material content or syntax change yields changed. Incomplete or contradictory remaining signals yield uncertain. This precedence makes exact, moved, changed, deleted, ambiguous, missing, and uncertain mutually exclusive.
+
+| Anchor-resolution verdict | Exact meaning |
+| --- | --- |
+| `ANCHOR_INVALID` | The envelope or captured fields fail their versioned schema or contradict one another. |
+| `ANCHOR_BROKEN` | A valid attempt cannot complete because integrity verification, Git access, parsing, or the resolver fails. |
+| `ANCHOR_MISSING` | Required captured authority or target state is unavailable, or no current target candidate can be found without conclusive deletion proof. |
+| `ANCHOR_STALE` | At evaluation time, the requested target `EvidenceScopeFingerprintId` differs from the authoritative current fingerprint for the same target `EvidenceScopeId`; the captured source fingerprint is never used for this comparison. |
+| `ANCHOR_EXACT` | At the authoritative target fingerprint, exactly one location has the same normalized path, range, semantic content, and syntax; source and target commits or fingerprint IDs may differ. |
+| `ANCHOR_MOVED` | Exactly one current location preserves the captured semantic content and syntax, but its normalized path or range differs. Git move or rename, symbol, snippet, syntax, or context Evidence may establish it; pure line or column drift caused by surrounding insertions is moved. |
+| `ANCHOR_CHANGED` | Exactly one current location is established, but captured semantic content or syntax has materially changed, regardless of whether path or range also changed. |
+| `ANCHOR_DELETED` | Current Git history proves deletion and no valid move or rename target exists. |
+| `ANCHOR_HISTORICAL_ONLY` | A historical-captured evaluation verified and returned the immutable captured source for inspection; it makes no current-location claim and is prohibited in current-location evaluations. |
+| `ANCHOR_AMBIGUOUS` | More than one plausible current location remains after all available corroboration. |
+| `ANCHOR_TRUNCATED` | A bounded result ends before completeness, uniqueness, or absence can be established. |
+| `ANCHOR_UNCERTAIN` | Available signals are incomplete or conflicting without meeting another exact outcome. |
+| `ANCHOR_REJECTED` | An attributed decision refuses a weak or policy-ineligible proposed mapping. |
+
+### Unchanged-Fingerprint Reruns
+
+- Define an evaluation key as the exact Evidence family, subject, scope, Run-workspace, Task-workspace or Candidate input fingerprints, `EvaluatorId`, `EvaluatorVersionId`, evaluator implementation-hash algorithm and implementation hash, rule versions, Capability versions, command specification, approved limits, Artifact-state versions, and trust basis. `Unchanged` means the complete key is identical, not merely that one digest matches.
+- Apply ADR 0006 command idempotency before Evidence behavior. An exact duplicate with the same `CommandId` and command fingerprint returns the original receipt and appends no rerun request, observation, evaluation, decision, artifact link, or materialized-row version. Reusing that `CommandId` with different content produces `IDEMPOTENCY_CONFLICT` and no Evidence entry.
+- An explicit rerun request uses a new `CommandId`, new `EvidenceRerunRequestId`, approved reason, expected materialized-current version, prior evaluation identity, and the complete evaluation key. If admission rejects before dispatch, only the durable rejected command receipt is added. An accepted request is durably queued but has no producer-attempt identity until a separate start transaction; request-without-start is therefore an explicit accepted-but-never-started state and changes no current evaluation.
+- Before dispatching any accepted rerun producer, `Start<Family>ProducerAttempt` atomically creates a new `EvidenceProducerAttemptId` and rerun-start row with its own start command receipt. Store the exact rerun request, subject, scope, evaluation key, start Project sequence, and a closed typed producer reference for an Execution Worker, Process job, Model attempt, or Tool invocation. A check permits exactly one producer arm and real composite foreign keys reach the owner's identity; optional Worker attribution on Process, Model, or Tool arms must agree with that owner.
+- Evidence owns only the capture-attempt identity and its relation to the rerun. Execution and the Model or Tool adapter retain lifecycle authority for the referenced Worker, Process job, Model attempt, or Tool invocation. Evidence never creates a competing process, model, tool, or Worker status. For an effectful attempt, the same start transaction requires the exact Recovery Journal, persists intent and `started` before dispatch, and binds the producer attempt to that journal.
+- A terminal producer result atomically inserts one rerun-result row and the exact family observation referencing `EvidenceProducerAttemptId`, even when bytes, fingerprint, and verdict equal the prior run. Interrupted, timed-out, truncated, failed, or otherwise non-semantic outcomes append their exact observation rather than disappearing.
+- A durable producer-attempt start without a rerun result is never treated as not started or clean. Startup reconciliation appends an interrupted observation when the referenced owner and declared no-effect scope prove continuity loss without an effect; an effectful or otherwise inconclusive start remains uncertain and uses its Recovery Journal until reconciled. This state is physically distinguishable from an accepted request with no start row.
+- Evaluate and decide every appended rerun observation. An accepted favorable result appends history and advances both `latest_*` and `current_*` to the new evaluation. An accepted failed result does the same; an older success cannot remain current after a current exact failure.
+- An accepted stale result advances `latest_*`. It replaces `current_*` only when it proves that the current pointer depends on the same obsolete input. It cannot displace an already accepted evaluation for a newer input. An accepted conflicting result becomes current only when the conflict applies to the present exact subject and scope; otherwise its evaluation is stale.
+- A produced result rejected after observation appends the observation, evaluation, and rejection decision and advances only `latest_*`. The prior `current_*` remains only if the transaction proves it is still applicable. Otherwise the same transaction appends and accepts the exact stale, conflicting, missing, or broken evaluation and makes that non-favorable evaluation current.
+- An explicit rerun that reproduces an identical accepted verdict still advances the materialized version and current evaluation identity because it is a new attributed observation. It does not erase or coalesce the prior run. Automatic rerun is prohibited for every unchanged evaluation key: accepted success is reused until invalidated, while failed and rejected outcomes remain visible until explicit approval or a relevant changed key permits another attempt.
+
+### Change-Aware Invalidation And Failure Preservation
+
+- Bind every evaluation to exact Evidence entries and scope fingerprints plus typed relational dependencies for every subject version, evaluator identity, evaluator version and implementation hash, rule-set version, Capability version, approved-limit source, Run policy epoch, Artifact-state version, and trust basis it used. Dependency values never live only in payload JSON.
+- Represent subject dependencies with a closed subject discriminator and typed nullable identity columns for Run, Worker, Run workspace, Finding, Candidate, Artifact, Integration target, Compound code anchor, and contract aggregate. A check permits exactly one typed subject identity, and composite foreign keys bind its recorded non-negative version to the owner.
+- Represent evaluator dependencies by stable `EvaluatorId`, immutable `EvaluatorVersionId`, semantic version, implementation-hash algorithm, and implementation hash. A composite foreign key reaches the exact registered evaluator version and hash; a name or semantic version alone is not authority. Represent rule dependencies by stable rule-set identity, optional rule identity, and exact rule-set version. Represent Capability dependencies by stable Capability identity and exact accepted version. Represent approved-limit dependencies by the exact Delegation-plan revision or Run-policy owner plus its limits fingerprint. Represent policy dependencies by Run and exact Run policy epoch. Represent Artifact dependencies by exact Artifact and accepted `ArtifactStateVersionId`. Represent trust dependencies by the exact immutable trust-basis Evidence entry.
+- Keep one directly queryable current-version row per `EvaluatorId`. Accepting a replacement evaluator version compare-and-sets that row and, in the same transaction, reverse-invalidates every still-current evaluation bound to the superseded `EvaluatorVersionId` or implementation hash. Registering an additional version without making it current changes no Evidence authority.
+- When an input changes, query the matching reverse dependency index by stable owner identity and old version, hash, fingerprint, epoch, Artifact-state version, or trust-basis entry. Join the resulting evaluation Evidence-entry IDs to indexed `current_evaluation_entry_id` columns on family current tables. From each still-current direct match, follow indexed `evidence_entry_dependencies` only to still-current downstream evaluations until the finite affected set is closed. Historical and superseded evaluations remain immutable history.
+- Require every Evidence-entry dependency to point to an entry earlier in lexicographic `(project_sequence, entry_ordinal)` order than its owner; prohibit self-reference and cycles in the writing transaction and opening integrity checks. The resulting dependency DAG permits deterministic downstream invalidation without a generalized graph authority or reachability index.
+- Each invalidation command rechecks the changed input, affected dependency set, and current-row versions, then appends the family-specific stale, conflicting, missing, or broken evaluation and exact accepted decision and advances one affected materialized current evaluation atomically in dependency order. A deterministic dispatcher may group only the exact closed rows declared in that command's write set; it cannot use a generic public cross-family batch.
+- Do not let a changed fingerprint alone claim improvement or regression. It invalidates applicability and permits measured re-evaluation; only the family-specific evaluation and decision establish the new outcome.
+- Distinguish an observed empty set from failure to produce a complete set. Zero diagnostics, an empty Worker delta, no Findings, or no effects is authoritative only through the exact family verdict that proves a complete observation.
+- Missing, broken, stale, ambiguous, rejected, truncated, and uncertain conditions never map to clean, pass, zero Findings, safe, absent, approvable, applicable, or complete. Every such result carries its typed verdict, exact failing dependency, and diagnostic.
+
+### Artifacts
+
+- Give every bounded local Artifact an opaque `ArtifactId`, immutable expected kind and media type, expected byte length, digest metadata, truncation-at-production state, and the closed provenance origin `evidence-produced` or `imported-source`. Keep mutable availability, integrity, and retention state off the Artifact identity row. Keep machine-local paths and artifact bytes out of the portable Evidence envelope.
+- An evidence-produced Artifact references exactly one producing Evidence entry. It means SlopStop observed that entry create the bytes under its attributed command and scope; it does not infer original authorship beyond that production event.
+- An imported-source Artifact references no producing Evidence entry. It references one immutable Artifact source record plus one importer command receipt and the exact importer trust basis. Source kinds `imported`, `historical`, and `research` preserve logical source repository or system, revision, stable relative identifier, original timestamp and producer when known, and declared source digest without claiming that Evidence originally produced the bytes.
+- Give each Artifact one Artifact Evidence scope. Append typed state observations for storage reachability, byte presence, measured size and digest, integrity-check execution, retention request, removal start, and verified removal. An accepted Artifact-state evaluation creates one immutable `ArtifactStateVersionId` containing exact availability, integrity, and retention values plus its observation, evaluator, and accepted decision references; `artifact_state_current_evaluations` points atomically to the current version.
+
+| Artifact-state verdict | Exact meaning |
+| --- | --- |
+| `ARTIFACT_AVAILABLE_VERIFIED` | Required bytes are currently readable, measured metadata and digest match the immutable Artifact identity, and no removal effect has started. |
+| `ARTIFACT_UNAVAILABLE` | The bounded store or medium cannot currently be reached or read, so byte absence and integrity cannot be established. |
+| `ARTIFACT_MISSING` | The expected bytes are conclusively absent without a completed approved-removal proof. |
+| `ARTIFACT_CORRUPT` | Bytes are readable but expected size, digest, media constraints, or immutable provenance integrity does not match. |
+| `ARTIFACT_REMOVAL_STARTED` | An approved journalled removal effect started but has no verified terminal removal observation; availability and effect outcome are uncertain. |
+| `ARTIFACT_REMOVED` | An approved journalled removal was observed complete and the expected bytes are absent; immutable identity, provenance, state history, and dependency links remain. |
+| `ARTIFACT_STATE_STALE` | The state evaluation used a superseded evaluator implementation, storage policy, retention authority, or Artifact identity expectation. |
+| `ARTIFACT_STATE_BROKEN` | The state observer, integrity evaluator, or storage metadata failed and no trustworthy state can be claimed. |
+
+- Require every evaluation consuming Artifact bytes to reference the exact current `ARTIFACT_AVAILABLE_VERIFIED` `ArtifactStateVersionId` through a typed dependency. An unavailable, missing, removal-started, removed, or stale current state atomically invalidates dependent current evaluations to the exact family's stale verdict or named stale-evidence blocker. Corrupt or state-broken current state atomically replaces them with the exact family's broken verdict. None can become clean, pass, empty, absent, complete, approvable, or applicable. Returning to available creates a new state version and requires re-evaluation; it never restores an old favorable pointer automatically.
+- Keep Artifact-state observations, evaluations, decisions, and versions append-only. State decision actions accept, reject, supersede, or invalidate one exact proposed state evaluation. A rejected proposal never changes current state. Every accepted state change and all dependent current-evaluation invalidations commit in one fenced Writer transaction.
+- Never delete Artifact identity, provenance, source, import, Evidence links, state history, or dependency records when bytes are removed. Age or quota may create a retention request or block new production but cannot remove bytes automatically. An explicit removal decision requires the expected current Artifact-state version, no dependent current evaluation, no accepted rerun without terminal settlement, no active producer attempt, no unresolved Recovery Journal, and no export or Integration hold.
+- Treat byte removal as an effect. In one start transaction, persist its Recovery Journal intent and `started` record and append the `ARTIFACT_REMOVAL_STARTED` evaluation, accepted decision, state version, and current-state advance before dispatch. Then verify absence and append `ARTIFACT_REMOVED` with its accepted decision. A crash, external deletion, failed removal, inaccessible store, or digest mismatch appends its exact current state and runs reverse invalidation; it never reports successful retention cleanup or empty output by default.
+- Permit several Evidence entries to reference one immutable artifact and several artifacts to share the same digest. Artifact identity preserves lifecycle and provenance while the digest verifies bytes.
+- Importing identical source bytes again uses canonical command idempotency for an exact duplicate. A distinct approved import keeps a distinct Artifact and import record even when source and local digests match.
+
+### Physical Tables
+
+Evidence adds these owner tables to `slopstop.db` under ADR 0006's Project-scoped key, migration, command-settlement, and Writer-fencing rules:
+
+| Family | Tables |
+| --- | --- |
+| Common envelope | `evidence_entries`, `evidence_entry_dependencies`, `evidence_entry_fingerprints`, `evidence_trust_bases` |
+| Typed dependency bindings | `evidence_evaluators`, `evidence_evaluator_versions`, `evidence_evaluator_current_versions`, `evidence_rule_sets`, `evidence_rule_versions`, `evidence_subject_version_dependencies`, `evidence_evaluator_dependencies`, `evidence_rule_version_dependencies`, `evidence_capability_version_dependencies`, `evidence_approved_limit_dependencies`, `evidence_policy_epoch_dependencies`, `evidence_artifact_state_dependencies`, `evidence_trust_basis_dependencies` |
+| Typed scopes | `evidence_scopes`, `run_workspace_evidence_scopes`, `task_workspace_evidence_scopes`, `candidate_evidence_scopes`, `artifact_evidence_scopes`, `evidence_scope_fingerprints`, `evidence_scope_run_workspace_fingerprints`, `evidence_scope_candidate_fingerprints`, `evidence_scope_artifact_state_versions` |
+| Artifacts | `evidence_artifacts`, `evidence_produced_artifacts`, `artifact_source_records`, `artifact_imports`, `evidence_entry_artifacts` |
+| Artifact state and retention | `artifact_state_observations`, `artifact_state_evaluations`, `artifact_state_decisions`, `artifact_state_versions`, `artifact_state_current_evaluations`, `artifact_retention_requests`, `artifact_retention_decisions` |
+| Reruns and producer attempts | `evidence_rerun_requests`, `evidence_producer_attempts`, `evidence_producer_workers`, `evidence_producer_process_jobs`, `evidence_producer_model_attempts`, `evidence_producer_tool_invocations`, `evidence_rerun_starts`, `evidence_rerun_results` |
+| Run-workspace fingerprints | `run_workspace_fingerprints`, `run_workspace_fingerprint_observations`, `run_workspace_fingerprint_evaluations`, `run_workspace_fingerprint_decisions`, `run_workspace_fingerprint_current_evaluations` |
+| Run-workspace baselines | `run_workspace_baseline_observations`, `run_workspace_baseline_evaluations`, `run_workspace_baseline_decisions`, `run_workspace_baseline_current_evaluations` |
+| Worker deltas | `worker_deltas`, `worker_delta_observations`, `worker_delta_files`, `worker_delta_evaluations`, `worker_delta_decisions`, `worker_delta_current_evaluations` |
+| Tests | `test_observations`, `test_evaluations`, `test_decisions`, `test_current_evaluations` |
+| Completion | `completion_observations`, `completion_evaluations`, `completion_decisions`, `completion_current_evaluations` |
+| Findings | `findings`, `finding_observations`, `finding_evaluations`, `finding_recheck_observations`, `finding_recheck_evaluations`, `finding_recheck_decisions`, `finding_recheck_current_evaluations`, `finding_decisions`, `finding_current_evaluations` |
+| Effects | `recovery_journals`, `recovery_journal_records`, `effect_observations`, `effect_reconciliation_evaluations`, `effect_decisions`, `effect_current_evaluations` |
+| Recovery | `recovery_observations`, `recovery_evaluations`, `recovery_decisions`, `recovery_current_evaluations`, `safety_proofs` |
+| Candidates | `candidate_fingerprints`, `candidate_deltas`, `candidate_delta_members`, `candidate_delta_files`, `candidate_review_observations`, `candidate_review_evaluations`, `candidate_review_blockers`, `candidate_review_decisions`, `candidate_review_current_evaluations` |
+| Integration applicability | `integration_target_observations`, `integration_applicability_evaluations`, `integration_applicability_decisions`, `integration_applicability_current_evaluations` |
+| Compound code anchors | `compound_code_anchors`, `anchor_resolution_observations`, `anchor_resolution_candidates`, `anchor_resolution_evaluations`, `anchor_resolution_decisions`, `anchor_resolution_current_evaluations`, `anchor_historical_queries`, `anchor_historical_observations`, `anchor_historical_evaluations` |
+
+### Keys And Constraints
+
+- Key `evidence_entries` by `(project_id, evidence_entry_id)`. Make `(project_id, project_sequence, entry_ordinal)` unique, reference the exact command receipt and Writer generation, and store family, record kind, schema version, observed and recorded times, and record digest metadata. Do not make the digest unique.
+- Give every family observation, evaluation, and decision an opaque family identity plus a unique `(project_id, evidence_entry_id)` foreign key to the common envelope. Require the envelope family and record kind to match exactly. Enforce one typed payload per entry in the owner transaction and during opening integrity checks.
+- Key `evidence_scopes` by `(project_id, evidence_scope_id)` with a closed scope kind. Give each typed child a one-to-one root foreign key and make `run_workspace_id`, `worker_id`, `candidate_delta_id`, or `artifact_id` unique in its applicable child. `run_workspace_evidence_scopes` and `task_workspace_evidence_scopes` use composite `RunWorkspaceId` foreign keys to Execution's `run_workspaces`, never ADR 0006's application `workspaces`. Enforce exactly one typed child in the creating transaction and during opening integrity checks.
+- Key `evidence_scope_fingerprints` by `(project_id, evidence_scope_fingerprint_id)`, reference one exact `EvidenceScopeId`, and store fingerprint kind and creation Project sequence. Require exactly one typed fingerprint child: Run-workspace and Task-workspace bindings reference `run_workspace_fingerprints`, Candidate bindings reference `candidate_fingerprints`, and Artifact bindings reference `artifact_state_versions`. A fingerprint binding must agree with its scope child and Project.
+- Key `evidence_entry_dependencies` and `evidence_entry_fingerprints` by their owning entry plus non-negative position. The first table references another exact Evidence entry earlier in `(project_sequence, entry_ordinal)` order; the second references an exact `evidence_scope_fingerprints` row. Make the exact dependency or fingerprint role unique within one entry and reject self-reference or cycles. These two structural links do not substitute for the typed version dependencies below.
+- Key every typed dependency table by `(project_id, evaluation_evidence_entry_id, dependency_ordinal)`, require the owner entry to be an evaluation, and make its exact typed target unique within that evaluation. `evidence_subject_version_dependencies` stores a closed subject kind, non-negative subject version, and nullable typed IDs for Run, Worker, Run workspace, Finding, Candidate, Artifact, Integration target, Compound code anchor, or contract aggregate; exactly one typed ID is populated and a composite foreign key reaches that owner's exact version. Family migrations add a typed column, check arm, foreign key, and reverse index together rather than falling back to a generic subject string.
+- Key `evidence_evaluators` by `(project_id, evaluator_id)`. Key immutable `evidence_evaluator_versions` by `(project_id, evaluator_version_id)`, reference one Evaluator, and store semantic version, implementation-hash algorithm, and implementation hash; make their exact Evaluator-version-hash tuple unique without treating the hash as identity. Key `evidence_evaluator_current_versions` by Evaluator and store current evaluator version, exact implementation-hash algorithm and hash, accepted command receipt, `current_version`, Project sequence, and Writer generation. `evidence_evaluator_dependencies` references the complete immutable tuple through a real composite foreign key, so changing code under a reused semantic version still creates a different dependency and invalidates prior applicability.
+- Key `evidence_rule_sets` by `(project_id, rule_set_id)` and immutable `evidence_rule_versions` by rule set and non-negative version, with optional immutable child rule identities. `evidence_rule_version_dependencies` references that exact rule-set version and optional rule. `evidence_capability_version_dependencies` references the exact canonical Capability-version row. Neither table permits a bare name or payload-only version.
+- In `evidence_approved_limit_dependencies`, store a closed owner kind, exactly one Delegation-plan revision or Run-policy-epoch ID, and the accepted limits fingerprint; composite foreign keys bind the selected owner. `evidence_policy_epoch_dependencies` separately references `(project_id, run_id, run_policy_epoch_id)` so a new Run authority epoch is directly discoverable even when its limit values are unchanged. `evidence_trust_basis_dependencies` references the exact immutable `(project_id, trust_basis_evidence_entry_id)` row in `evidence_trust_bases`.
+- Key `evidence_trust_bases` one-to-one by `(project_id, evidence_entry_id)`. Store the typed source classification, authority, policy or rule version, and optional prior family-decision Evidence entry. Store no mutable trust flag on `evidence_entries`.
+- Key `evidence_artifacts` by `(project_id, artifact_id)` and store the closed origin kind `evidence-produced` or `imported-source`; the root has no producer column. Key `evidence_produced_artifacts` one-to-one by Artifact and reference exactly one producing Evidence entry. Key immutable `artifact_source_records` by `(project_id, artifact_source_record_id)` with a closed source kind, logical source-system or Repository reference, revision, stable relative identifier, original producer and time when known, and declared source digest.
+- Key `artifact_imports` by `(project_id, artifact_import_id)`, make Artifact identity and `(project_id, importer_command_receipt_id, import_ordinal)` unique, and reference exactly one imported-source Artifact, one source record, and one importer trust-basis Evidence entry. Require exactly one provenance child matching the Artifact origin kind in the creating transaction and opening integrity checks. Key `evidence_entry_artifacts` by entry, role, and position with a real Artifact foreign key; an `imported-by` link records use by the importer but never becomes original production. Digest, size, and media type are integrity metadata, not identity and not unique.
+- Key Artifact-state observations, evaluations, and decisions by opaque identity and unique Evidence entry. Key `artifact_state_versions` by `(project_id, artifact_state_version_id)`, make `(project_id, artifact_id, state_version)` unique, and reference one exact Artifact scope, observation, evaluation, and accepted decision. Key `artifact_state_current_evaluations` by `(project_id, artifact_evidence_scope_id, artifact_id)` and point it to the exact current state version; composite foreign keys require that version's evaluation and accepted decision to equal the row's current pointers. `evidence_artifact_state_dependencies` references the complete Artifact-and-state-version tuple used by its owning evaluation.
+- Key `artifact_retention_requests` by opaque identity, make request command receipt unique, and store the expected Artifact-state version plus reason. Key `artifact_retention_decisions` by opaque identity, make request and decision command receipt unique, reference the same Artifact as the request, and store the closed action `approve-removal` or `reject-removal`. Approval requires the no-live-dependency proofs and any later removal state references that exact decision and Recovery Journal.
+- Key `evidence_rerun_requests` by `(project_id, evidence_rerun_request_id)`, make the request command receipt unique, and reference the prior evaluation's Evidence entry. Key `evidence_producer_attempts` by `(project_id, evidence_producer_attempt_id)`, store producer kind and start Project sequence, and require exactly one one-to-one typed producer child. Each child references the exact Execution Worker, `process_jobs` row, Model-attempt owner row, or Tool-invocation owner row without copying its lifecycle state.
+- Key `evidence_rerun_starts` one-to-one by rerun request and producer attempt and make its start command receipt unique. An effectful start also references the exact Recovery Journal and its durable `started` record through composite foreign keys. Key `evidence_rerun_results` one-to-one by producer attempt and reference one terminal family-observation Evidence entry. An accepted request that never starts has neither row; a started attempt without a result retains its start row and is interrupted or uncertain rather than not started.
+- Key `run_workspace_fingerprints` by `(project_id, run_workspace_fingerprint_id)` with real composite references to Execution's `run_workspaces` and `run_workspace_resources`. Do not make equal fingerprint values unique. Make each complete fingerprint observation reference exactly one fingerprint; non-captured verdicts reference none.
+- Make one fingerprint evaluation current per Run-workspace Evidence scope by keying `run_workspace_fingerprint_current_evaluations` on `(project_id, run_workspace_evidence_scope_id)`. Make one primary baseline evaluation current on the same exact scope in its separate family table.
+- Key `worker_deltas` by `(project_id, worker_delta_id)`, make `(project_id, worker_id)` unique, and bind the stable identity to the exact Run, Worker, Delegation task, Task-workspace `EvidenceScopeId`, and sealed input fingerprint. This is an identity row, not an Evidence-entry payload. Explicit delta-capture or evaluation reruns reuse it; a terminal Worker retry follows ADR 0007 and creates a new Worker with a new Worker-delta identity.
+- Key `worker_delta_observations` by `(project_id, worker_delta_observation_id)`. Give each observation a unique Evidence entry, `command_id`, and command receipt, and reference the stable Worker delta, exact subject versions, Task-workspace scope, input and result `EvidenceScopeFingerprintId` values, optional `EvidenceRerunRequestId`, artifacts, and observed Project sequence. An explicit-rerun observation must also reference the exact `EvidenceProducerAttemptId`; an initial non-rerun observation uses its ordinary attributed producer envelope. Make both `(project_id, command_id)` and `(project_id, command_receipt_id)` unique and permit many observations per Worker delta.
+- Require every `worker-delta` observation entry to have exactly one `worker_delta_observations` payload and no other family payload. The stable `worker_deltas` row may exist with rejected observation history but never substitutes for that payload or an accepted evaluation.
+- Key `worker_delta_files` by Worker-delta observation and non-negative position, with normalized old and new paths and change kind. Make each position unique and reject duplicate normalized effective paths inside one observation. Do not attach mutable file rows directly to `worker_deltas` or infer a complete observation from file-row count when its verdict is truncated or broken.
+- Require every `worker_delta_evaluations` row to reference exactly one Worker-delta observation and the same stable Worker delta, subject, Task-workspace scope, input fingerprint, result fingerprint, and Command lineage. Key `worker_delta_current_evaluations` by `(project_id, task_workspace_evidence_scope_id, worker_id)` and point it to the accepted observation's evaluation; a rejected rerun advances only latest pointers under the general rerun rules.
+- Key `test_current_evaluations` by `(project_id, run_id, evidence_scope_id, test_contract_revision_id, test_check_id)`. Key `completion_current_evaluations` by `(project_id, run_id, evidence_scope_id, completion_contract_revision_id)`. Use composite foreign keys so the scope belongs to the same Run and the referenced contract revision and child check belong to the same Project and aggregate.
+- Key `findings` by `(project_id, finding_id)` and bind the stable rule, exact `EvidenceScopeId`, subject, first accepted fingerprint, and originating Run. Key both `finding_recheck_current_evaluations` and `finding_current_evaluations` by `(project_id, evidence_scope_id, finding_id)`. Every recheck references the exact Finding and a later or equal relevant fingerprint; `RECHECK_CHANGED` cannot reuse the identity for a materially different claim, and a recheck decision cannot alter Finding disposition without a separate Finding decision in the same declared transaction.
+- Key `recovery_journals` by `(project_id, recovery_journal_id)` and make the owned effect identity unique. Key records by journal and non-negative ordinal; permit one intent and one `started` record per effect identity while retaining all terminal observations and reconciliation attempts. Key `effect_current_evaluations` by `(project_id, evidence_scope_id, effect_id)` and `recovery_current_evaluations` by `(project_id, run_id, run_workspace_evidence_scope_id)`.
+- Key `candidate_fingerprints` by `(project_id, candidate_fingerprint_id)` and bind algorithm, canonicalization version, value, and exact Candidate version without making the value unique. Key `candidate_deltas` by `(project_id, candidate_delta_id)`, make `(project_id, run_id, candidate_version)` unique, and reference one Candidate fingerprint. Use deferred composite references so one transaction can create the Candidate identity, version, and fingerprint without exposing an incomplete row.
+- Key Candidate members by Candidate and position, make each selected `worker_delta_id` unique within the Candidate, and reference the exact accepted `worker_delta_observation_id` and `worker_delta_evaluation_id`. Require every member to share the Candidate's Project, Run, source baseline lineage, and accepted complete delta verdict. A later accepted Worker-delta observation never rewrites membership; its reverse dependency makes the existing Candidate review stale. Key `candidate_delta_files` by Candidate and non-negative position, reject duplicate normalized effective paths, and bind the materialized file set to the Candidate fingerprint. Key Candidate current review by `(project_id, candidate_evidence_scope_id, candidate_delta_id)`.
+- Require each Candidate evaluation to store exactly one closed Candidate verdict. Key `candidate_review_blockers` by Candidate evaluation and blocker kind, and make each closed kind unique within that evaluation. `CANDIDATE_BLOCKED` requires one or more blocker rows and every other Candidate verdict prohibits them. Candidate decision rows store only `accept-evaluation`, `reject-evaluation`, `supersede-evaluation`, or `invalidate-evaluation`; a current-row foreign key can target only an `accept-evaluation` decision whose evaluation, Candidate, scope, and version all match.
+- Key Integration applicability current evaluations by `(project_id, candidate_evidence_scope_id, candidate_delta_id, integration_target_id)`. Require Candidate, current accepted Candidate evaluation, separate user-authorization record, target, target fingerprint, and any Integration attempt to belong to the same Project. `INTEGRATION_ALREADY_APPLIED` requires a unique exact Candidate-and-target Integration proof; hash equality alone is insufficient.
+- Key Compound code anchors by `(project_id, compound_code_anchor_id)` and require one immutable captured `EvidenceScopeId` plus one captured `EvidenceScopeFingerprintId` belonging to that scope. Key resolution observations and candidates by anchor and attempt, with non-negative candidate position. Each observation stores one target `EvidenceScopeId`, one required requested target `EvidenceScopeFingerprintId`, and one nullable evaluated target `EvidenceScopeFingerprintId`; every populated target fingerprint belongs to that target scope.
+- Key current anchor resolution by `(project_id, compound_code_anchor_id, target_evidence_scope_id)` and store captured source fingerprint, requested target fingerprint, and nullable evaluated authoritative target fingerprint separately. A current resolution cannot point to `ANCHOR_STALE` unless both target fingerprint IDs exist and differ. A null evaluated target fingerprint permits only the exact missing or broken verdict justified by its observation.
+- Require `anchor_resolution_observations` and `anchor_resolution_evaluations` to carry mode `current-location`; their verdict check excludes `ANCHOR_HISTORICAL_ONLY`. Key `anchor_historical_queries` by `(project_id, anchor_historical_query_id)`, make `(project_id, command_receipt_id, query_ordinal)` unique, and bind the immutable captured scope and fingerprint from the anchor. Key each historical observation and evaluation by its opaque identity plus a unique query foreign key; require mode `historical-captured`, permit `ANCHOR_HISTORICAL_ONLY` only after captured-byte and integrity verification, and otherwise preserve exact invalid, missing, broken, or truncated results. Historical tables have no decision or current table and no foreign key capable of advancing `anchor_resolution_current_evaluations`.
+- On every `*_current_evaluations` table, store `current_version`, nullable `current_evaluation_id`, nullable `current_evaluation_entry_id`, nullable `current_decision_id`, required `latest_evaluation_id`, required `latest_evaluation_entry_id`, required `latest_decision_id`, nullable current verdict, exact input fingerprints, `EvaluatorId`, `EvaluatorVersionId`, evaluator implementation-hash algorithm and hash, rule versions, Project sequence, and Writer generation. Current fields may be null only before the first accepted evaluation. Composite foreign keys must prove that every populated evaluation, accepted decision, subject, and scope agree; the current decision must accept that exact current evaluation.
+
+#### Current-Evaluation Key Audit
+
+| Current family | Exact primary key |
+| --- | --- |
+| Run-workspace fingerprint and baseline | `(project_id, run_workspace_evidence_scope_id)` |
+| Worker delta | `(project_id, task_workspace_evidence_scope_id, worker_id)` |
+| Test check | `(project_id, run_id, evidence_scope_id, test_contract_revision_id, test_check_id)` |
+| Completion | `(project_id, run_id, evidence_scope_id, completion_contract_revision_id)` |
+| Finding and Finding recheck | `(project_id, evidence_scope_id, finding_id)` |
+| Effect reconciliation | `(project_id, evidence_scope_id, effect_id)` |
+| Recovery | `(project_id, run_id, run_workspace_evidence_scope_id)` |
+| Candidate review | `(project_id, candidate_evidence_scope_id, candidate_delta_id)` |
+| Integration applicability | `(project_id, candidate_evidence_scope_id, candidate_delta_id, integration_target_id)` |
+| Current-location anchor resolution | `(project_id, compound_code_anchor_id, target_evidence_scope_id)` |
+| Artifact state | `(project_id, artifact_evidence_scope_id, artifact_id)` |
+
+Every family key therefore contains the exact Evidence scope directly or a typed scope column with a composite foreign key to it. A sibling Task workspace, Candidate, or Run workspace cannot replace another scope's current row. Historical anchor queries are append-only query results and intentionally have no current-evaluation key.
+
+### Atomic Commands And Transactions
+
+- Expose family-specific versioned commands following `Record<Family>Observation`, `Decide<Family>Evaluation`, `Invalidate<Family>CurrentEvaluation`, and `Request<Family>Rerun` roles, plus `Start<Family>ProducerAttempt` and the query-only `QueryAnchorHistory`. Do not expose a generic Evidence write, verdict setter, current-evaluation pointer mover, or public batch.
+- `Record<Family>Observation` atomically writes the command receipt, common entry, typed observation, trust basis, structural Evidence-entry dependencies, fingerprint and artifact links, and any newly created immutable Artifact, fingerprint, delta, Candidate, Finding, anchor, or journal identity in its declared write set. Creating an Artifact with available bytes also writes its Artifact scope, produced or imported provenance child, initial state observation and evaluation, exact accepted state decision, state version, and current-state row atomically; an import records its source record, importer receipt, and trust basis without claiming the importer produced the source bytes.
+- `RecordWorkerDeltaObservation` creates `WorkerDeltaId` only when the first observation command for that Worker is applied; a later evaluation may still reject that observation without deleting the identity. Every later explicit rerun requires a request Command ID, start Command ID and durable producer attempt, result-recording Command ID, and observation identity, reuses the stable Worker delta, and appends its own file rows, artifacts, input and result fingerprints. An idempotent duplicate appends nothing.
+- `Decide<Family>Evaluation` atomically writes the evaluation entry and typed payload, family decision entry and action, every typed dependency used, and latest pointers. When the action accepts that exact evaluation, the same transaction compare-and-sets the current row and advances current pointers. Rejection never advances current; supersession or invalidation changes current only with an exact replacement evaluation and accepting decision in that transaction. An accepted evaluation cannot commit without its materialized-current update, and a materialized-current update cannot commit without its newly inserted exact accepted evaluation decision.
+- A command changing authoritative subject, evaluator identity, evaluator version or implementation hash, rule, Capability, approved-limit, policy-epoch, Artifact state, or trust-basis input first queries the corresponding reverse index under the fenced Writer transaction, joins dependent entry IDs to each family's `current_evaluation_entry_id`, and fixes that exact affected-row set before mutation. The command commits the input change and one family-specific invalidation for every still-current row together. If the declared fan-out limit is exceeded or any compare-and-set fails, the whole command rejects before changing either input or Evidence; there is no window where an old favorable evaluation remains authoritative for a changed input.
+- `Invalidate<Family>CurrentEvaluation` requires the exact changed dependency and expected current version. It appends and accepts the family's stale, conflicting, missing, or broken evaluation in the same transaction; it never clears a favorable pointer to an unexplained null. The transaction writes dependencies for the new non-favorable evaluation so a later input change remains discoverable.
+- `QueryAnchorHistory` atomically writes its receipt, one historical query, observation, and evaluation against the anchor's immutable captured scope and fingerprint. It never writes an anchor-resolution decision, a `latest_*` pointer, or any row in `anchor_resolution_current_evaluations`.
+- Candidate construction atomically writes one Candidate identity and version, its exact ordered Worker-delta membership, materialized file rows, construction observation, Candidate evaluation, exact `accept-evaluation` decision, typed dependencies, and Candidate current evaluation. It cannot read live Worker worktrees or accept a member whose current delta is rejected, stale, conflicting, broken, or truncated.
+- Recovery settlement atomically appends its journal observation, effect-reconciliation evaluation and exact accepted decision, recovery evaluation and exact accepted decision, typed dependencies, safety proof when earned, and every affected current evaluation. A started uncertain effect cannot be retried, checkpointed as safe, converted to no effect, or made current through separate writes.
+- Fence every Evidence transaction with the current Writer generation and canonical command receipt. A stale expected materialized version rejects the command without partial Evidence writes. Unexpected transaction failure remains a distinct internal failure and cannot become a family rejection verdict.
+
+### Direct Queries And Required Indexes
+
+- Use each `*_current_evaluations` primary key for the authoritative current query. Consumers never replay entries or select the latest timestamp to infer authority.
+- Index every family evaluation and decision by its exact subject key plus descending Project sequence so history for one Run workspace, Worker, test check, Run completion contract, Finding, effect, recovery scope, Candidate, Integration target, anchor, or Artifact is direct.
+- Index `evidence_entry_dependencies` by `(project_id, dependency_evidence_entry_id, owner_evidence_entry_id)` and `evidence_entry_fingerprints` by `(project_id, evidence_scope_fingerprint_id, owner_evidence_entry_id)`. Index each supported typed subject discriminator partially by `(project_id, <typed_subject_id>, subject_version, evaluation_evidence_entry_id)`. Index evaluator dependencies by `(project_id, evaluator_id, evaluator_version_id, implementation_hash_algorithm, implementation_hash, evaluation_evidence_entry_id)`, rule dependencies by `(project_id, rule_set_id, rule_set_version, evaluation_evidence_entry_id)`, Capability dependencies by `(project_id, capability_id, capability_version, evaluation_evidence_entry_id)`, approved-limit dependencies by their typed owner and limits fingerprint, policy dependencies by `(project_id, run_id, run_policy_epoch_id, evaluation_evidence_entry_id)`, Artifact dependencies by `(project_id, artifact_id, artifact_state_version_id, evaluation_evidence_entry_id)`, and trust dependencies by `(project_id, trust_basis_evidence_entry_id, evaluation_evidence_entry_id)`.
+- Index `current_evaluation_entry_id` on every `*_current_evaluations` table. These indexes are the second half of reverse invalidation: a dependency match affects authority only when its evaluation entry is still the current pointer. Index scope fingerprints by scope and descending Project sequence.
+- Index `evidence_entry_artifacts` and `evidence_produced_artifacts` by Artifact and producing entry respectively. Index source records by source kind, logical source or Repository, revision, and stable relative identifier; index imports by source record, importer command receipt, and importer trust basis. Index Artifact-state versions by Artifact and descending state version, current state by verdict, retention requests by Artifact and settlement, and retention decisions by Artifact and action. These paths answer provenance and current byte usability without treating a digest as identity.
+- Index rerun starts by producer attempt and start Project sequence, each typed producer child by its owning Worker, Process job, Model attempt, or Tool invocation, and rerun results by terminal observation. A direct anti-join from starts to results finds started-unsettled attempts for recovery; accepted requests without starts remain a separate direct query.
+- Index Run-workspace fingerprints by Run workspace and descending Project sequence; Worker-delta observations by stable Worker delta and descending Project sequence, with unique Command-ID and receipt indexes serving direct command lookup; Worker deltas by Run and Delegation task; Candidate members by Worker delta plus selected observation; Candidate deltas by Run and version; Finding current evaluations by originating Run and current Finding verdict; effect journals by Process job or external-effect identity; anchor captures by captured scope, captured scope fingerprint, Repository binding, commit, blob, normalized path, and normalized text hash.
+- Index current-location anchor-resolution observations by anchor, target `EvidenceScopeId`, and descending Project sequence. The current-resolution primary key covers exact anchor-and-target lookup; requested and evaluated target fingerprints remain stored values rather than competing current keys. Index historical queries and evaluations separately by anchor, captured scope, and descending Project sequence, plus unique command-receipt lookup; no historical index targets a current table.
+- Index Integration applicability by Candidate scope and target, and test and completion current rows by Run plus Evidence scope. Primary and unique constraints already cover direct identity and current-scope lookup; do not duplicate them with speculative indexes.
+- Do not index opaque JSON, content digests merely for deduplication, producer time for authority, or generalized graph reachability. Full-text artifact search, cross-family analytics, and retention scans require measured query and volume evidence before adding indexes.
+
+### Issue 63 Closure
+
+| Ticket requirement | Explicit answer |
+| --- | --- |
+| Physical and domain aggregates | The closed Evidence families, typed scope and fingerprint identities, table families, and owner rules above define repeatable observations, evaluations, decisions, evaluators, producer attempts, Artifact state and provenance, anchors, fingerprints, stable Worker deltas, Candidate deltas, effects, recovery, and applicability. |
+| Stable identities | Every ledger entry and durable domain aggregate, including evaluator version, producer attempt, and Artifact-state version, has an opaque Project-scoped identity; hashes are integrity values only. |
+| Scope-safe current authority | Every materialized current primary key contains its exact `EvidenceScopeId` or typed scope ID; sibling Task workspaces, Candidates, and Run workspaces cannot overwrite one another. |
+| Current versus append-only records | Observations, evaluations, decisions, rerun records, and dependencies are append-only; each exact authoritative family scope has one atomic materialized current-evaluation row. Historical anchor queries are explicitly query-only and have no current row. |
+| Exact verdict meanings | Every required family has a closed prefixed verdict table; no verdict is shared across families. |
+| Full anchor-resolution matrix | Current-location resolution separates immutable captured source scope and fingerprint from requested and authoritative target fingerprints; stale compares only the two target fingerprints. Stable semantic content at a changed path or range, including pure line drift, is moved; exact, moved, and changed are mutually exclusive. Historical-captured queries cannot advance current-location authority. |
+| Unchanged-fingerprint reruns | Command duplicates append nothing; accepted requests without starts are distinct from durable started producer attempts, and started attempts without terminal results remain interrupted or uncertain. Worker-delta reruns retain one WorkerDelta identity while appending command-bound attempts, observations, and file payloads. |
+| Typed reverse invalidation | Exact subject, evaluator identity/version/hash, rule-set, Capability, approved-limit, policy-epoch, Artifact-state, and trust-basis link tables plus reverse indexes locate affected current evaluations; the input change and all applicable invalidations settle atomically. |
+| Artifact provenance and state | Produced Artifacts reference their producing Evidence entry; imported, historical, and research Artifacts preserve source and importer provenance. Versioned current availability, integrity, retention, journalled removal, and reverse invalidation prevent unavailable, missing, removed, corrupt, or broken bytes from remaining clean Evidence. |
+| Candidate verdict and decision separation | Candidate verdicts describe technical acceptability, required changes, blockers, freshness, uncertainty, or failure. Evidence decision actions apply only to proposed evaluations; user review and Change requests remain separate typed authority. |
+| Atomic current decisions | Every current advancement, including Candidate construction, recovery, and Artifact state, inserts the exact evaluation and accepted decision in the same transaction; rejection never advances current. |
+| Workspace table ownership | ADR 0006 application `workspaces` and ADR 0008 Execution `run_workspaces` are distinct; every Evidence `RunWorkspaceId` foreign key targets `run_workspaces`. |
+| Direct queries and indexes | Exact current keys, current-entry joins, history paths, typed reverse dependency lookup, producer-start recovery, current Artifact state, discriminated provenance, and only required indexes are specified. |
+| Execution ownership | Execution retains Run workspaces, Workers, Process jobs, coordination, and dispatch; Model and Tool adapters retain their invocation lifecycles. Evidence references those producers, receives attributed observations, and alone decides Evidence truth. |
+
+## Consequences
+
+- Evidence history remains immutable and explainable while each accepted current evaluation is fast to query and cannot drift from its ledger under normal writes.
+- Parallel Task-workspace proof stays local, and a combined Candidate must earn its own review and validation instead of inheriting a misleading collection of green branch results.
+- Closed family verdicts make failure behavior precise without creating a false universal pass/fail language.
+- Explicit rerun requests preserve both command idempotency and the fact that a deliberate repeated observation is new history, even when inputs and outcome are identical.
+- Opaque identities and hashes serve different purposes: identities preserve domain continuity and history, while hashes prove exact content and reproducibility.
+- Concrete typed tables, atomic decisions, composite constraints, and required indexes are more verbose than one generic Evidence table, but keep invalid cross-family authority difficult to represent.
+- Numeric artifact-retention thresholds, result-size limits, measured cross-family analytics, and the exact UI projection remain with later requirements. They cannot weaken the explicit retention decision, journalled removal, Artifact-state, invalidation, or authority contracts decided here.
+
+## References
+
+- `.rpiv/artifacts/solutions/2026-08-26_03-57-45_ticket-63-evidence-ledger-architecture.md`
+- `.rpiv/artifacts/research/2026-08-20_20-03-59_v1-program-requirements-coverage.md`
+- `docs/adr/0006-physical-persistence-layout.md`
+- `docs/adr/0007-supervised-execution-aggregate-ownership.md`
+- `docs/adr/0008-run-workspace-mutation-lease-and-process-job-lifecycle.md`
+- GitHub issues `#1`, `#19`, `#54`, and `#63`

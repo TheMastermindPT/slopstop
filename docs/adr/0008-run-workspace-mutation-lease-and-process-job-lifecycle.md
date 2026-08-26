@@ -98,7 +98,7 @@ Execution adds these owner tables to `slopstop.db` under ADR 0006's Project-scop
 | Coordination | `run_workspace_read_claims`, `run_workspace_mutation_leases`, `run_workspace_mutation_lease_releases`, `run_workspace_checkpoints` |
 | Process job | `process_jobs`, `process_job_effect_scopes`, `process_job_status_transitions`, `process_job_status_transition_conditions`, `process_job_outputs` |
 
-- Make the Run reference unique in `run_workspaces`, keep current status and resource binding directly queryable, and point every Run-workspace resource, claim, lease, checkpoint, and Process-job foreign key to `(project_id, run_workspace_id)`. None references ADR 0006 application `workspaces`.
+- Make the Run reference unique in `run_workspaces`, keep current status and resource binding directly queryable, and point every Run-workspace resource, claim, lease, checkpoint, and Process-job foreign key to `(project_id, run_workspace_id)`. Key resource coordination by Project and exact resource key. None references ADR 0006 application `workspaces`.
 - Reserve the `run_workspace*` family for Execution. Ticket #61 may extend its schema when implementing the boundary, but it must preserve the distinct identity and cannot rename or reuse application `workspaces` as a Run workspace.
 - Keep Evidence-owned fingerprints, deltas, Journal entries, reconciliations, and safety proofs in Evidence tables defined by its own decision. Execution tables hold exact composite references without copying their payloads or authority.
 - Keep machine-local location and invocation details redacted or installation-local as required by the portable-export contract. No portable package may expose a full local path or credential value.
