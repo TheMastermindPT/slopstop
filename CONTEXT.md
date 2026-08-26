@@ -10,6 +10,10 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Project restore | A staged, verified activation of a Project backup for the same Project and database lineages that preserves the previously active generation. |
 | Project export | A portable Project backup stored outside application data for reinstall or machine transfer; it excludes machine-local paths and raw credentials. |
 | Project snapshot | One immutable backup or export with its own opaque identity, sealed manifest, and checksums over an exact Storage generation. |
+| Application registry | Reconstructible installation-local location and active-generation data used to find and operate Storage; it is never canonical Project truth. |
+| Canonical database | The Project's `slopstop.db`, which owns directly queryable current state, immutable Accepted revisions, command settlement, and Canonical events without requiring event replay. |
+| Runtime database | The separately owned `mastra.db`, whose private runtime state cannot decide canonical Project truth. |
+| Database lineage | The opaque identity of one canonical or runtime database history, preserved by same-Project restore and replaced only by a contract that explicitly permits it. |
 | Canonical recovery package | An explicitly incomplete package containing verified canonical Project truth when runtime persistence is unavailable; it opens only in safe mode and requires explicit runtime reset before normal use. |
 | Persistence health | The independent healthy, migration-required, recovery-required, missing, corrupt, identity-conflict, unsupported-newer, unavailable, or broken state of one canonical or runtime database. |
 | Storage generation | One activated physical pairing of canonical and runtime Project persistence; restore, import, or runtime reset creates a new generation without redefining Project identity. |
@@ -33,6 +37,11 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Board admission policy | The versioned canonical policy that decides which typed event references enter a Waypoint Board and which of those also appear in the Project activity feed. |
 | Board read position | The monotonic highest contiguous Board position confirmed as presented in one scope; the Project feed and each Waypoint keep independent positions. |
 | Typed command | A validated request that may change canonical state through the coordinator. |
+| Command receipt | The durable applied, unchanged, or rejected settlement of the first distinct Typed-command fingerprint under one Project and command identity. |
+| Canonical event | An append-only fact emitted only by an applied command for audit and integration; current Project state never depends on replaying it. |
+| Accepted revision | An immutable, explicitly accepted version of canonical aggregate content to which directly queryable current state may point. |
+| Writer generation | A durable fencing identity acquired under the operating-system writer lease and checked by every canonical command settlement. |
+| Runtime handoff | A versioned immutable request crossing from canonical outbox to the runtime inbox through at-least-once delivery, stable reservation, and evidence-backed reconciliation. |
 | Compound code anchor | A Git-, text-, symbol-, syntax-, and optional LSP-backed code reference registered by the harness. |
 | Verified memory | A durable claim accepted through evidence and policy, with provenance, scope, confidence, and invalidation rules. |
 | Memory Topic | A stable project-local organizer for related Verified Memories; it has navigational metadata but no trust state, and each memory has one primary topic. |
