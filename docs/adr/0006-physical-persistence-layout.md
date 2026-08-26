@@ -52,7 +52,7 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 | Runtime handoff | `runtime_handoffs`, `runtime_handoff_attempts`, `runtime_acknowledgements`, `runtime_outcomes` |
 | Migration metadata | `schema_metadata` |
 
-- Keep Identity-owned `workspaces` for the application Workspace protocol used by Conversation, Frame, and Memory projections. It is not an Execution checkout or Run workspace. ADR 0008 owns the separate `run_workspaces` physical family; no foreign key may use one identity in place of the other.
+- Keep Identity-owned `workspaces` for the application Workspace protocol used by Conversation, Frame, and Memory projections. It is not an Execution checkout or Run workspace. ADRs 0008 and 0015 own the separate logical `run_workspaces` family and its typed physical-resource children; no foreign key may use one identity in place of the other.
 - Keep conversation and Frame-draft rows durable in `slopstop.db`, but outside canonical command sequence, revision, and event authority until an explicit accepted command turns a proposal into canonical state.
 - Do not create empty tables for program behavior still owned by Execution, Evidence, Memory, Language, or Frame. ADR 0009 defines the Execution invocation-context family, but its migration still lands only with its first behavior. Other migrations add owner-specific entities and status-transition tables later while following this key and revision contract. Exact Capability catalogue acceptance, Project enablement, and ADR 0011 Run policy epochs remain distinct owner records; a Project-profile child stores an exact accepted Capability-version reference rather than collapsing those gates.
 
@@ -68,7 +68,7 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 
 - Keep current status columns on the aggregate that owns them. Persist append-only transitions in owner-specific tables with real composite foreign keys, never in one polymorphic status table.
 - Record status family and version, axis, prior and next state, cause code, command receipt, actor, Project sequence, and entity version. Store ordered, de-duplicated condition codes in private transition-condition rows.
-- Use Project transition rows for Project lifecycle and onboarding readiness, and Waypoint transition rows for Waypoint status. Registry location and persistence transitions remain installation-owned in `application.db`. Run, Worker, Control-request, Process-job, and ADR 0014 Finding owners use equivalent owner-specific rows with real entity foreign keys; future Integration lifecycle follows the same rule. The Finding root's current state/class/decision/version tuple and its append-only decisions and transitions settle atomically.
+- Use Project transition rows for Project lifecycle and onboarding readiness, and Waypoint transition rows for Waypoint status. Registry location and persistence transitions remain installation-owned in `application.db`. Run, Worker, Control-request, Process-job, ADR 0014 Finding, and ADR 0015 Composition, Run-resource, Candidate user-review, and Integration owners use equivalent owner-specific rows with real entity foreign keys. The Finding root's current state/class/decision/version tuple and its append-only decisions and transitions settle atomically.
 - Keep Action availability as a derived live projection. It is never accepted or persisted as a status decision.
 
 ### Map Constraints
