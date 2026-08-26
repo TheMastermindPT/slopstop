@@ -79,6 +79,7 @@ SlopStop treats project intent, execution attempts, and model conversations as s
 - Portable exports use authenticated encryption by default and never contain raw credentials or machine-local paths. Automatic backup or generation retention waits for measured limits; v1 deletion is explicit.
 - Test-first preferred is the default discipline. Behavior uses red-green at an agreed public seam, followed by a separate review/refactor gate.
 - Workers do not nest. Repository reads that become evidence, mutations, commands, analyzers, Git operations, and external effects belong to attributed workers.
+- Each Waypoint has at most one nonterminal Run, each Run has one logical Waypoint parent, and each Delegation task has at most one nonterminal Worker attempt. Runtime and model outputs remain attributed proposals; only typed coordinator commands, independent Evidence authority, and proven recovery records can move canonical execution state.
 - Automatic model fallback, silent isolation downgrade, and failure-to-clean degradation are prohibited.
 - Live debugger implementation follows the first resilient proof; its safety seam is designed earlier.
 

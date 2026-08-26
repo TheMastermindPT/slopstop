@@ -24,11 +24,17 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Feature | A durable objective container with its own Frame record, goals, constraints, revisions, and Waypoint star system. |
 | Waypoint | A durable project objective represented as a planet; never an agent session or temporary worker task. |
 | Application coordinator | Deterministic software that owns canonical project state, scheduling, policy, budgets, and recovery. |
-| Waypoint parent | A resumable AI supervisor for one active Waypoint run. |
-| Worker | A bounded, attributed, non-nesting agent session that performs evidence, repository, validation, or review work. |
-| Run | One supervised attempt to perform an Action on a Waypoint. |
+| Waypoint parent | The single logical AI supervisor of one Run, preserving identity across safe restart, resume, compaction, runtime session replacement, and model changes. |
+| Worker | One bounded, attributed, non-nesting attempt to perform an exact Delegation task. |
+| Run | One supervised attempt to perform an exact Action version on one Waypoint. |
+| Run slot | The current exclusive claim that permits at most one nonterminal Run for a Waypoint without adding execution state to the Waypoint aggregate. |
 | Action | A reusable capability such as Frame, Research, Implement, or Validate; not a mandatory pipeline stage. |
+| Action availability | A versioned live projection of whether one Action is available, blocked, unavailable, or broken for one Waypoint; it is recalculated from authoritative inputs and never set directly. |
 | Delegation plan | The just-in-time, user-approved worker roles, tasks, tools, budgets, dependencies, models, and risks for a run. |
+| Delegation task | One immutable task inside an accepted Delegation plan revision; Worker retries preserve the task identity while creating new Worker identities. |
+| Control request | One durable steering, pause, resume, redirect, retry, cancellation, Change request, Model change, or Side question intent targeted at a Run, its Waypoint parent, or one Worker. |
+| Model attempt | One append-only attributed model invocation linked to an exact Run, parent or Worker, prompt, Context record, policy epoch, Capability versions, provider, model, settings, limits, and result. |
+| Run policy epoch | One immutable approved authority basis for Run dispatches; later restriction still applies live, while added power requires another approved epoch. |
 | Evidence gate | The check that accepted, current evidence is sufficient before implementation side effects begin. |
 | Completion contract | The observable checks and evidence required before a Waypoint may complete. |
 | Board | The canonical append-only index of ordered references to one Waypoint's conversation messages and approved typed events; it owns neither source content nor presentation. |
@@ -59,7 +65,7 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 
 ## Status Families
 
-Waypoint, run, worker, action, process-job, finding, onboarding-readiness, Project-lifecycle, storage-operation, and persistence-health statuses are separate fixed models. Do not reuse one family's status to stand in for another.
+Waypoint, Run, Worker, Control request, Process job, Finding, Integration, onboarding readiness, Project lifecycle, Storage operation, and persistence health statuses are separate fixed models. Action availability is a separate derived projection. Do not reuse one family's state to stand in for another.
 
 ## Graphs
 
