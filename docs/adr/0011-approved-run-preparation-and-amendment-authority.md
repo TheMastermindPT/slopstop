@@ -180,6 +180,7 @@ Every effect identity whose Recovery Journal reached `started` receives exactly 
 | `conflicting` | Complete inputs disagree or composition is not deterministic. Require replanning. |
 | `missing` | Required authority or bytes are conclusively unavailable. Never substitute empty content. |
 | `uncertain` | A started effect has no proved terminal outcome. Enter or retain recovery. |
+| `exhausted` | An exact ADR 0014 validation or remediation limit has no remaining authority. Preserve every Finding and close affected dispatch with `FINDING_REMEDIATION_EXHAUSTED` until an approved amendment or user decision changes authority. |
 | `broken` | Parsing, integrity, DAG validation, index rebuild, evaluator execution, or authoritative lookup failed. Emit a distinct diagnostic and never report ready, clean, or no impact. |
 
 A safe preparation stop occurs before proposal dispatch and needs no effect recovery. A hard execution stop closes affected dispatch when current authority or safety is lost. Any uncertain started effect moves or keeps the Run in `recovery-required`; no approval, amendment, retry, Resolver, or dispatch may degrade that state to a clean block.

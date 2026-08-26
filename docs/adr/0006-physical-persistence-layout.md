@@ -68,7 +68,7 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 
 - Keep current status columns on the aggregate that owns them. Persist append-only transitions in owner-specific tables with real composite foreign keys, never in one polymorphic status table.
 - Record status family and version, axis, prior and next state, cause code, command receipt, actor, Project sequence, and entity version. Store ordered, de-duplicated condition codes in private transition-condition rows.
-- Use Project transition rows for Project lifecycle and onboarding readiness, and Waypoint transition rows for Waypoint status. Registry location and persistence transitions remain installation-owned in `application.db`. Future Run, Worker, Control-request, Process-job, Finding, and Integration owners add equivalent tables with their own entity foreign keys.
+- Use Project transition rows for Project lifecycle and onboarding readiness, and Waypoint transition rows for Waypoint status. Registry location and persistence transitions remain installation-owned in `application.db`. Run, Worker, Control-request, Process-job, and ADR 0014 Finding owners use equivalent owner-specific rows with real entity foreign keys; future Integration lifecycle follows the same rule. The Finding root's current state/class/decision/version tuple and its append-only decisions and transitions settle atomically.
 - Keep Action availability as a derived live projection. It is never accepted or persisted as a status decision.
 
 ### Map Constraints
