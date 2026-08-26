@@ -52,6 +52,7 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 | Migration metadata | `schema_metadata` |
 
 - Keep conversation and Frame-draft rows durable in `slopstop.db`, but outside canonical command sequence, revision, and event authority until an explicit accepted command turns a proposal into canonical state.
+- The Identity-owned `workspaces` table names the application Workspace protocol used by Conversation, Frame, and Memory projections. It is not the Execution-owned Run-workspace aggregate and is never a target for `RunWorkspaceId` foreign keys.
 - Do not create empty tables for program behavior still owned by Execution, Evidence, Memory, Language, or Frame. Their migrations add owner-specific entities and status-transition tables later while following this key and revision contract. Exact Capability catalogue acceptance, Project enablement, and future Run policy epochs remain distinct owner records; a Project-profile child stores an exact accepted Capability-version reference rather than collapsing those gates.
 
 ### Commands And Canonical Events

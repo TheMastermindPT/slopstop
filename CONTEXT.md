@@ -35,6 +35,23 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Control request | One durable steering, pause, resume, redirect, retry, cancellation, Change request, Model change, or Side question intent targeted at a Run, its Waypoint parent, or one Worker. |
 | Model attempt | One append-only attributed model invocation linked to an exact Run, parent or Worker, prompt, Context record, policy epoch, Capability versions, provider, model, settings, limits, and result. |
 | Run policy epoch | One immutable approved authority basis for Run dispatches; later restriction still applies live, while added power requires another approved epoch. |
+| Evidence family | One bounded proof domain with one typed subject and scope model and closed observation, evaluation, decision, and verdict meanings; a verdict has no meaning outside its family. |
+| Trust basis | The immutable source classification, assessing authority, policy or rule version, and optional prior decision that determine whether one Evidence entry may be used for its declared scope; it is separate from the entry's domain verdict. |
+| Evidence envelope | The narrow structural metadata shared by every Evidence entry: stable identity and version, attributed producer, typed subject and scope, exact fingerprints and artifact references, time, trust basis, and integrity; it contains no verdict. |
+| Evidence observation | One immutable family-owned account of what an attributed producer reported for an exact subject, scope, and input. |
+| Evidence evaluation | One immutable family-owned interpretation of exact observations, dependencies, fingerprints, evaluator identity, evaluator version and implementation hash, rule versions, and limits. |
+| Evidence decision | One immutable family-owned acceptance, rejection, invalidation, supersession, or other authoritative interpretation of an exact evaluation. |
+| Evidence current evaluation | The accepted family evaluation presently authoritative for one exact subject and `EvidenceScopeId`; a scope-keyed materialized pointer advances atomically with its append-only evaluation and decision history. |
+| Evidence artifact | One bounded local output with opaque durable identity, immutable integrity expectations, truncation-at-production state, and discriminated provenance as either Evidence-produced or imported-source; a separate Artifact state version records current availability, integrity, and retention. |
+| Artifact source record | One immutable logical account of the original source, revision, stable relative identifier, timestamp, producer, and declared digest for an imported, historical, or research Artifact; importer identity and trust remain separate attributed facts. |
+| Artifact state version | One immutable accepted evaluation of an exact Artifact's availability, integrity, and retention state; evaluations consuming its bytes depend on that exact version, while removal never deletes provenance or history. |
+| Evidence evaluator version | One immutable implementation of a stable evaluator identity, fixed by version and implementation hash; a changed implementation invalidates evaluations that depended on the earlier version. |
+| Evidence producer attempt | One durable Evidence capture-attempt identity recorded before an explicit rerun producer starts; it references but never replaces the Execution Worker, Process-job, Model-attempt, Tool-invocation, or Recovery-Journal lifecycle. |
+| Evidence scope | One stable typed identity for a Run workspace, Task workspace, Candidate, or Artifact scope; changing state creates another scope fingerprint without changing the scope identity. |
+| Evidence scope fingerprint | One immutable typed state identity bound to an exact Evidence scope; Run-workspace and Task-workspace scopes reference repository-state fingerprints, Candidate scopes reference Candidate fingerprints, and Artifact scopes reference Artifact state versions. |
+| Task workspace | The Evidence scope for one immutable Delegation task and Worker attempt over one exact Run workspace, sealed input snapshot, accepted start fingerprint, result fingerprint, and attributed producer; it is not another checkout or Execution aggregate. |
+| Candidate scope | The Evidence scope for one materialized Candidate delta, its source baseline and Candidate fingerprints, and its exact selected Worker deltas; Task-workspace green Evidence is not Completion Evidence for the combination. |
+| Candidate evaluation | One technical Evidence verdict for an exact Candidate: acceptable, changes required, blocked, stale, uncertain, or broken; user approval, rejection, and Change requests are separate canonical actions. |
 | Evidence gate | The check that accepted, current evidence is sufficient before implementation side effects begin. |
 | Completion contract | The observable checks and evidence required before a Waypoint may complete. |
 | Board | The canonical append-only index of ordered references to one Waypoint's conversation messages and approved typed events; it owns neither source content nor presentation. |
@@ -53,7 +70,7 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Run-workspace resource | The physical current checkout or managed worktree identified by Git administration and Repository binding rather than path alone; several read-only Run workspaces may reference it. |
 | Read claim | A short-lived Process-job claim permitting observation of one Run-workspace resource at one accepted fingerprint. |
 | Mutation lease | The durable exclusive grant allowing one Worker to perform declared mutations on one Run-workspace resource; it never expires or releases solely because time passed or a process stopped. |
-| Compound code anchor | A Git-, text-, symbol-, syntax-, and optional LSP-backed code reference registered by the harness. |
+| Compound code anchor | A Git-, text-, symbol-, syntax-, and optional LSP-backed code reference registered against one exact typed Evidence scope and captured scope fingerprint; historical inspection never changes its separate current-location authority. |
 | Verified memory | A durable claim accepted through evidence and policy, with provenance, scope, confidence, and invalidation rules. |
 | Memory Topic | A stable project-local organizer for related Verified Memories; it has navigational metadata but no trust state, and each memory has one primary topic. |
 | Memory Revision | An immutable version of a Verified Memory's claim, scope, and evidence dependencies; a semantic edit creates a new revision and removes the prior accepted revision from trusted retrieval until the replacement is accepted. |
@@ -62,10 +79,13 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Capability catalogue | The provenance-aware inventory of skills, tools, prompts, analyzers, servers, and extensions that may become available. |
 | Recovery journal | Evidence-owned durable write-ahead records of effect intent, start, terminal observation, and reconciliation used to distinguish completed, failed, and uncertain side effects. |
 | Uncertain side effect | An operation known to have started but lacking durable proof of completion; it cannot be replayed automatically. |
-| Workspace fingerprint | A Git, diff, and untracked-file identity binding evidence to the code state it evaluated. |
+| Run-workspace fingerprint | A Git, diff, and untracked-file identity binding Evidence to the exact Run-workspace state it evaluated. |
+| Worker delta | One stable identity per Worker for changes between its sealed input and results; explicit reruns append command-bound observations and never rewrite or replace the identity. |
+| Candidate fingerprint | The immutable content identity of one exact materialized Candidate version; it verifies Candidate state but never replaces Candidate identity. |
+| Candidate delta | One closed, materialized set of explicitly selected Worker changes with its own identity and fingerprint, ready for final review and possible Integration. |
 | Declared effect set | The versioned file, Git, local-artifact, external-service, and credential scopes that one authorized action may affect. |
 | Process job | One coordinator-owned operating-system process attempt with a bounded invocation, output, lifecycle, effect declaration, and durable attribution. |
-| Safe checkpoint | An Execution record referencing Evidence proof that dispatch is closed, no mutating process or uncertain effect remains, and the final Workspace fingerprint is accepted. |
+| Safe checkpoint | An Execution record referencing Evidence proof that dispatch is closed, no mutating process or uncertain effect remains, and the final Run-workspace fingerprint is accepted. |
 | Resume capsule | Persisted context sufficient to continue an interrupted run without guessing or repeating uncertain effects. |
 | Resume checkpoint | A Safe checkpoint plus the exact Resume capsule, policy, Capability, budget, approval, and availability inputs needed to continue a Run. |
 | Language Intelligence Service | Workspace-isolated LSP lifecycle, synchronization, diagnostics, semantic navigation, and mutation proposals. |
@@ -73,7 +93,7 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 
 ## Status Families
 
-Waypoint, Run, Worker, Control request, Run workspace, Process job, Finding, Integration, onboarding readiness, Project lifecycle, Storage operation, and persistence health statuses are separate fixed models. Action availability is a separate derived projection. Do not reuse one family's state to stand in for another.
+Waypoint, Run, Worker, Control request, Run workspace, Process job, Finding, Integration, onboarding readiness, Project lifecycle, Storage operation, and persistence health statuses are separate fixed models. Action availability is a separate derived projection. Each Evidence family has its own versioned observation, evaluation, decision, and verdict vocabulary; there is no universal Evidence verdict. Do not reuse one family's state to stand in for another.
 
 ## Graphs
 

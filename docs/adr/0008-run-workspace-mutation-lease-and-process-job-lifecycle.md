@@ -6,7 +6,7 @@
 
 ## Context
 
-ADR 0007 gives each Run an exact workspace reference and fingerprint waterline, but deliberately leaves workspace mechanics, Process jobs, and effect records to a dedicated owner decision. The product must support observation of the current checkout, explicitly authorized editing of that checkout, and isolated Git worktrees without allowing concurrent workers, external edits, process failure, or application restart to blur attribution. ADR 0005 also requires uncertain effects to remain visible, and ADR 0006 reserves canonical workspace storage without fixing its owner behavior.
+ADR 0007 gives each Run an exact workspace reference and fingerprint waterline, but deliberately leaves workspace mechanics, Process jobs, and effect records to a dedicated owner decision. The product must support observation of the current checkout, explicitly authorized editing of that checkout, and isolated Git worktrees without allowing concurrent workers, external edits, process failure, or application restart to blur attribution. ADR 0005 also requires uncertain effects to remain visible. ADR 0006's Identity-owned `workspaces` table belongs to the application Workspace protocol; this decision therefore uses separate Execution-owned Run-workspace tables.
 
 The existing `Workspace` protocol is the application boundary for Conversation, Frame, and Memory projections. This decision therefore names the execution aggregate `Run workspace`; future types use `RunWorkspaceId` rather than overloading that protocol name.
 
@@ -91,11 +91,11 @@ Execution adds these owner tables to `slopstop.db` under ADR 0006's Project-scop
 
 | Family | Tables |
 | --- | --- |
-| Run workspace | `workspaces`, `workspace_resources`, `workspace_status_transitions`, `workspace_status_transition_conditions` |
-| Coordination | `workspace_read_claims`, `mutation_leases`, `mutation_lease_releases`, `workspace_checkpoints` |
+| Run workspace | `run_workspaces`, `run_workspace_resources`, `run_workspace_status_transitions`, `run_workspace_status_transition_conditions` |
+| Coordination | `run_workspace_read_claims`, `mutation_leases`, `mutation_lease_releases`, `run_workspace_checkpoints` |
 | Process job | `process_jobs`, `process_job_effect_scopes`, `process_job_status_transitions`, `process_job_status_transition_conditions`, `process_job_outputs` |
 
-- Make the Run reference unique in `workspaces`, keep current status and resource binding directly queryable, and key resource coordination by Project and exact resource key.
+- Make the Run reference unique in `run_workspaces`, keep current status and resource binding directly queryable, and key resource coordination by Project and exact resource key. Every `RunWorkspaceId` foreign key targets this Execution table, never ADR 0006's application `workspaces` table.
 - Keep Evidence-owned fingerprints, deltas, Journal entries, reconciliations, and safety proofs in Evidence tables defined by its own decision. Execution tables hold exact composite references without copying their payloads or authority.
 - Keep machine-local location and invocation details redacted or installation-local as required by the portable-export contract. No portable package may expose a full local path or credential value.
 
