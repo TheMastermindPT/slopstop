@@ -16,6 +16,7 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 - `research/2026-08-20_20-03-59_v1-program-requirements-coverage.md` maps confirmed requirements, including supervised agent-runtime, context, model-unavailability, and no-fallback behavior, to proposed v1 programs, cross-cutting invariants, and explicit non-goals.
 - `research/2026-08-22_workspace-ux-patterns.md` compares primary-source patterns for graph navigation, workspace sidebars and panels, settings access, model selection, and a night-blue inspector hierarchy.
 - `research/2026-08-25_14-22-52_workspace-production-boundaries.md` traces current and missing production seams for Conversation, Frame, Review, response-bound Context records, and Memory projections. It identifies a future separate Execution-owned Worker-attempt context record but does not define ADR 0008 Run-workspace or effect-recovery semantics.
+- `research/2026-08-26_17-25-29_evidence-result-size-limits.md` measures local repository proxies, documents the confidence limits behind ticket `#78`, and recommends the provisional Evidence result-limit profile later accepted and completed by ADR 0019.
 
 ## Solutions
 
