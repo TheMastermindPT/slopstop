@@ -186,5 +186,5 @@ Use stable diagnostics `LANGUAGE_CAPABILITY_UNAVAILABLE`, `LANGUAGE_RESOURCE_SCO
 
 - The concrete server and adapter selection remains revisable until separately published.
 - ADR 0019 fixes the provisional measured Evidence result-size policy, Language-family applicability, direct authority, counting, exhaustion, and promotion gate.
-- Evidence-to-Memory invalidation events and the Convergence proof bundle remain separate tickets.
+- ADR 0017 owns Evidence-to-Memory invalidation events, terminal Memory staleness, and trusted-read freshness. The Convergence proof bundle remains a separate ticket.
 - Debug Adapter Protocol observations remain post-proof work.

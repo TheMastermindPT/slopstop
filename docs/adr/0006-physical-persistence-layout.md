@@ -49,6 +49,7 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 | Board | `board_admission_policy_versions`, `board_entries`, `board_message_sources`, `board_execution_sources`, `board_supersessions`, `board_read_positions` |
 | Durable workspace | `conversations`, `conversation_branches`, `conversation_messages`, `conversation_context_records`, `frame_drafts` |
 | Execution invocation context | `invocation_context_records`, `invocation_context_sources`, `invocation_context_transformations`, `invocation_context_retrievals`, `invocation_context_recent_turn_slices`, `invocation_context_compactions`, `invocation_context_artifacts` |
+| Evidence-to-Memory invalidation | ADR 0017 replacement-event, Memory dependency, trust-transition, settlement, and consumer-failure tables |
 | Runtime handoff | `runtime_handoffs`, `runtime_handoff_attempts`, `runtime_acknowledgements`, `runtime_outcomes` |
 | Migration metadata | `schema_metadata` |
 
@@ -62,6 +63,7 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 - Return the original receipt for an exact retry without allocating a new sequence. A reused command ID with a different fingerprint creates one durable `IDEMPOTENCY_CONFLICT` rejection receipt per distinct conflicting fingerprint.
 - Persist applied, unchanged, and rejected settlements. Give rejected receipts one structured `command_rejections` row. Unexpected command failures remain non-durable failures and cannot masquerade as rejections.
 - Insert Canonical events only for applied receipts. Key events by `(project_id, event_id)`, make `(project_id, project_sequence, event_ordinal)` unique, and bind every event to its receipt, aggregate identity, aggregate version, event type/version, immutable payload, and payload hash. All events from one applied receipt share its Project sequence.
+- ADR 0017 requires an `evidence-current-evaluation-replaced` relational child whenever one `slopstop.db` Evidence transaction replaces non-null current authority. The current advance, accepted decision, Canonical event, typed child, and payload hash settle together. Later Memory settlement appends a directly queryable trust transition and does not emit another Canonical event.
 - Fence settlement against the current `writer_fence` generation. Stamp the receipt with that durable Writer generation; revisions, transitions, and events trace their authority through the receipt. The operating-system lease remains the only permission to acquire Writer authority.
 
 ### Status Storage
@@ -118,14 +120,16 @@ The accepted Project identity, command settlement, profile, onboarding, status, 
 - Treat size and SHA-256 as exact proof for sealed staged generations and snapshots. If an activated database later changes, retain the checksum only as an explicitly labelled activation baseline; never present it as a hash of current live content.
 - Use packaged, generated Drizzle migrations as the executable migration ledger for schemas owned by SlopStop. Keep `schema_metadata` directly readable before normal ORM access with database kind, format version, schema version, and last migration identity. Do not use schema push or `PRAGMA user_version` as authority.
 - Let the Mastra adapter migrate only its prefixed handoff tables and let Mastra own its private schema. Record both runtime migration heads in the manifest without making either one canonical Project state.
-- Compose migrations from ordered trust-spine, onboarding, map-and-contract, Board-and-conversation, and runtime-handoff modules. A migration cannot depend on an optional future owner or remove shared history when a module is retired.
+- Compose migrations from ordered trust-spine, onboarding, map-and-contract, Board-and-conversation, Evidence-and-Memory-invalidation, and runtime-handoff modules. A migration cannot depend on an optional future owner or remove shared history when a module is retired.
 - Open a Storage only after checking manifest compatibility, cross-file identities, migration metadata, foreign-key integrity, domain invariants including the `blocks` graph, and registry agreement. A genuine failure enters the exact read-only safe-mode state; it never degrades to an empty or clean Project.
+- Opening integrity also proves that every non-initial `slopstop.db` Evidence current replacement has one exact typed ADR 0017 event and that event and settlement records agree with their relational members. Unreadable rows, broken foreign keys, or a Canonical Evidence event mismatch enter Project safe mode. A readable, structurally bound Memory Revision whose own digest or dependency-set count/hash fails is isolated as Memory `broken` under ADR 0017 instead of blocking unrelated Project state.
 
 ### Required Indexes
 
 - Use primary and unique indexes for all identities, aggregate revision numbers, current revision references, command idempotency keys, Project sequences, event ordinals, Board positions, source references, supersession links, ordered child positions, and runtime request hashes.
 - Index current Features by Project and archive state; current Waypoints by Project, Feature, status, and archive state; and current relationships by source, target, type, and active state. Use a partial unique index for active normalized relationship endpoints.
 - Index status transitions by owner and descending Project sequence; receipts and events by Project sequence; Board entries by Project position and Waypoint plus position; read positions by exact scope; conversations by scope, branch, and cursor; onboarding records by source, semantic dependency fingerprint, decision, reuse, and readiness; and registry records by Project, Storage, generation, normalized location, and operation state.
+- Index Evidence replacement events by source order and prior or replacement authority; mandatory Memory dependencies by exact Evidence evaluation and decision; Memory trust by revision; settlements by Event ID and hash; and unresolved consumer failures by affected revision.
 - Add no full-text or speculative JSON indexes in this decision. Full-text search needs separate volume, ranking, privacy, and migration requirements.
 
 ## Consequences

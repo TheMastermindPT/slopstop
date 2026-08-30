@@ -22,6 +22,7 @@ ADR 0015 later replaces ADR 0008's Worker-only mutation lease with one Repositor
 - Keep the immutable declaration structural and exact. A changed target, scope, resource key, final argument hash, Capability, policy epoch, approval, budget, Evidence-result limit, idempotency key, cancellation behavior, or proof requirement creates a new command and Effect identity. Headroom requires ADR 0019's exact attributed user decision in this direct owner. No adapter may widen the declaration after intent is durable.
 - Let the deterministic Application coordinator invoke owner-specific commands and the single canonical Writer transaction. Logical table ownership does not grant another process a writer or allow Execution to decide Evidence truth.
 - Keep ADR 0010's `effect_current_evaluations` row as the only current Effect outcome. Do not add `EffectOutcomeHead`, effect status, recovered flag, terminal flag, successful flag, or another current pointer in Execution, the Recovery Journal, a reconciler, or a projection.
+- ADR 0017's same-database Evidence-to-Memory event settlement has no external or physical side effect. It creates no Effect, Recovery Journal, Safety proof, compensation, abandonment, or uncertain-side-effect state; canonical ledger failure belongs to Project persistence recovery.
 
 ### Closed Effect Subjects
 
