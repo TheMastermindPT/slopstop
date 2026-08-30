@@ -47,7 +47,7 @@ A sealed Run approval proposal references only authority already owned by accept
 - exact current Evidence evaluation decisions, Evidence scope fingerprints, Artifact-state versions, trust bases, and prior accepted Worker-result selections;
 - exact predecessor epoch, accepted plan revision, and Run-profile revision for an amendment;
 - exact compatible Run amendment request, contained Model-change Control requests, and immutable proposal-child classifications for every prior task, Worker, result, carried result, and Recovery-Journal-started effect when applicable;
-- exact budget, cost, token, time, retry, remediation, output, and concurrency proposal values owned by this decision, plus one canonical limits fingerprint;
+- exact budget, cost, token, time, retry, remediation, output, and concurrency proposal values owned by this decision, plus ADR 0019's immutable Evidence-result policy identity/version/fingerprint, complete resolved values, canonical limits fingerprint, and exact user headroom decision when any resolved value exceeds the accepted local-balanced default;
 - canonical encoding version, profile and discipline-resolution fingerprints, amendment classification-set hash when applicable, proposal manifest hash, Writer generation, Project sequence, and submission receipt.
 
 The proposal's comprehension result is a sealed condition over the exact currently owned Waypoint and contract revisions, not a foreign key to a separate Comprehension-checkpoint aggregate. Prompt compiler sources, visible tools, provider capability reports, and per-invocation budgets remain ADR 0009-owned inputs and are pinned when a Sealed Invocation is prepared.
@@ -166,7 +166,7 @@ Every effect identity whose Recovery Journal reached `started` receives exactly 
 
 - Compute dispatch authority as the intersection of the immutable current epoch and separately owned current live ceilings, revocations, availability, Control requests, budget waterlines, workspace facts, Evidence, and safety conditions.
 - A later restriction applies immediately without another approval and never rewrites the epoch. Removing it restores at most authority already present in that epoch after exact recovery and applicability checks.
-- Added power always requires another approved epoch. This includes a broader task, fan-out group, tool, capability, effect scope, workspace mode, provider/model permission, result input, budget, relaxed limit, or reduced approval requirement.
+- Added power always requires another approved epoch. This includes a broader task, fan-out group, tool, capability, effect scope, workspace mode, provider/model permission, result input, budget, ADR 0019 Evidence-result headroom, any other relaxed limit, or reduced approval requirement. A producer, evaluator, retry, environment variable, or profile-name switch cannot grant that headroom.
 - A runtime component may narrow its own action below current authority but cannot persist that choice as policy or later widen above live restrictions without re-evaluation.
 
 ### Unresolved Conditions And Stop Semantics
