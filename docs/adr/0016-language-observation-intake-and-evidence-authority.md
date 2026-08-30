@@ -186,5 +186,5 @@ Use stable diagnostics `LANGUAGE_CAPABILITY_UNAVAILABLE`, `LANGUAGE_RESOURCE_SCO
 
 - The concrete server and adapter selection remains revisable until separately published.
 - Measured Evidence result-size defaults belong to ticket 78.
-- Evidence-to-Memory invalidation events and the Convergence proof bundle remain separate tickets.
+- ADR 0017 owns Evidence-to-Memory invalidation events, terminal Memory staleness, and trusted-read freshness. The Convergence proof bundle remains a separate ticket.
 - Debug Adapter Protocol observations remain post-proof work.
