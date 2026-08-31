@@ -182,6 +182,7 @@ Implementation must prove through public family commands and direct queries:
 - Non-Run Evidence and each Integration stage now have direct immutable limit owners.
 - The first Integration fingerprint no longer depends circularly on an approval that itself requires that fingerprint.
 - A measurable promotion gate keeps provisional local defaults honest.
+- ADR 0020 uses a separate bundle-level profile for manifest assembly and validation. It references family policies and usages without adding a sixth direct Evidence-limit owner or changing family exhaustion semantics.
 
 ### Negative
 
@@ -209,4 +210,5 @@ Implementation must prove through public family commands and direct queries:
 - [ADR 0014: Finding Validation, Remediation, And Recheck Authority](0014-finding-validation-remediation-and-recheck-authority.md)
 - [ADR 0015: Parallel Worker Candidate Composition And Exact Integration](0015-parallel-worker-candidate-composition-and-exact-integration.md)
 - [ADR 0016: Language Observation Intake And Evidence Authority](0016-language-observation-intake-and-evidence-authority.md)
+- [ADR 0020: Convergence Proof Bundle And Direct Validity Authority](0020-convergence-proof-bundle-and-direct-validity-authority.md)
 - [Standing decision: degrade distinguishes broken](../../.rpiv/decisions/degrade-distinguishes-broken.md)

@@ -523,6 +523,7 @@ Every family key therefore contains the exact Evidence scope directly or a typed
 - ADR 0017 owns same-database Evidence-to-Memory invalidation and direct trusted-read freshness.
 - ADR 0018 owns numeric Artifact-retention thresholds, capacity reservations, counted population, purpose policy, byte holds, hold-free age, and proposal actions.
 - ADR 0019 owns Evidence result-size limits, their direct authorities, and measured promotion gate. Measured cross-family product analytics beyond bounded retention calibration and result-limit telemetry, plus the exact UI projection, remain with later requirements. None may weaken the explicit retention decision, journalled removal, Artifact-state, invalidation, or authority contracts decided here.
+- ADR 0020 owns bounded Convergence proof-bundle assembly and direct validity. It references this ADR's exact family current keys and generic replacement events without adding an Evidence family, verdict, current pointer, or decision authority.
 
 ## References
 
@@ -534,4 +535,5 @@ Every family key therefore contains the exact Evidence scope directly or a typed
 - `docs/adr/0017-evidence-to-memory-invalidation-and-trusted-read-authority.md`
 - `docs/adr/0018-artifact-retention-quotas-reservations-and-explicit-removal.md`
 - `docs/adr/0019-measured-evidence-result-limits-and-approval-authority.md`
+- `docs/adr/0020-convergence-proof-bundle-and-direct-validity-authority.md`
 - GitHub issues `#1`, `#19`, `#54`, and `#63`

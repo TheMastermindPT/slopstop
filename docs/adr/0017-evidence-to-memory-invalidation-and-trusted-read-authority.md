@@ -180,6 +180,7 @@ Required direct indexes cover replacement events by Project order and prior or r
 - Trusted reads pay a bounded relational validation cost proportional to returned revisions and their mandatory dependencies.
 - Stale history, exact causes, duplicate deliveries, and consumer failures remain inspectable without giving event replay authority.
 - The contract adds tables and indexes, but avoids a distributed transaction, duplicate Evidence truth, or global Memory outage for one attributable consumer failure.
+- ADR 0020 may use the generic replacement event and exact previous-authority tuple to explain a stale Convergence proof-bundle member. It adds no bundle-specific Evidence event and never substitutes event delivery for direct validity.
 
 ## References
 
@@ -189,6 +190,7 @@ Required direct indexes cover replacement events by Project order and prior or r
 - `docs/adr/0010-typed-evidence-ledgers-and-atomic-current-evaluations.md`
 - `docs/adr/0013-effect-reconciliation-and-recovery-journal.md`
 - `docs/adr/0016-language-observation-intake-and-evidence-authority.md`
+- `docs/adr/0020-convergence-proof-bundle-and-direct-validity-authority.md`
 - `.rpiv/decisions/degrade-distinguishes-broken.md`
 - `.rpiv/artifacts/research/2026-08-20_20-03-59_v1-program-requirements-coverage.md`
 - [Issue #13: Charter the verified-memory program](https://github.com/TheMastermindPT/slopstop/issues/13)
