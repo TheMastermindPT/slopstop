@@ -1,17 +1,35 @@
+import { fileURLToPath } from "node:url";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
+import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import type { ForgeConfig } from "@electron-forge/shared-types";
+
+const packagedMigrationResources = fileURLToPath(
+  new URL("./.vite/build/harness-migrations", import.meta.url),
+);
+const stagedMigrationResources = /^\/\.vite\/build\/harness-migrations(?:\/|$)/;
+
+function ignorePackagedFile(file: string): boolean {
+  if (!file) {
+    return false;
+  }
+
+  return !file.startsWith("/.vite") || stagedMigrationResources.test(file);
+}
 
 const config: ForgeConfig = {
   packagerConfig: {
     appBundleId: "dev.slopstop.desktop",
     asar: true,
     executableName: "SlopStop",
+    extraResource: [packagedMigrationResources],
+    ignore: ignorePackagedFile,
   },
   rebuildConfig: {},
   makers: [],
   plugins: [
+    new AutoUnpackNativesPlugin({}),
     new VitePlugin({
       build: [
         {

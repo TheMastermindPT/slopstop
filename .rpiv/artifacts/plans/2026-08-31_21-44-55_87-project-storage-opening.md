@@ -8,10 +8,10 @@ topic: "Project Storage Opening And Health Classification"
 tags: [plan, storage, persistence, protocol, harness, electron]
 status: ready
 parent: .rpiv/artifacts/designs/2026-08-31_16-37-32_project-storage-opening.md
-last_updated: 2026-09-02T22:48:10+0100
+last_updated: 2026-09-03T02:11:53+0100
 last_updated_by: OpenCode
-last_updated_note: "Finalize the prospective recovery matrix, owning-phase Reds, bounded process/privacy proof, and Phase 6 admission gate."
-content_hash: a62b70902edf3426ebf015dd57287bf3ff781e9a60a8da982c3f3e27aa1f6ef5
+last_updated_note: "Use the dedicated harness Vitest configuration for Phase 2 structured-clone verification."
+content_hash: b6814c16d7dbb798ccbd7a47cf1ff5a11ba4512dcc02398b0bd63e56ba8dfbc3
 ---
 
 # Project Storage Opening And Health Classification Implementation Plan
@@ -843,17 +843,17 @@ export {
 
 #### Automated Verification:
 
-- [ ] Every Test Contract behavior's exact Expected red, including C51, is observed and recorded from its named public-seam test before implementation begins.
-- [ ] Project Storage and unchanged Workspace schemas pass: `pnpm exec vitest run packages/protocol/src/project-storage-protocol.test.ts packages/protocol/src/workspace-protocol.test.ts`
-- [ ] Kernel type checking passes: `pnpm --filter @slopstop/kernel typecheck`
-- [ ] Protocol type checking passes: `pnpm --filter @slopstop/protocol typecheck`
-- [ ] Package dependency boundaries remain valid: `pnpm check:boundaries`
-- [ ] A separate Phase 1 review/refactor gate records no unresolved blocker before Phase 2.
+- [x] Every Test Contract behavior's exact Expected red, including C51, is observed and recorded from its named public-seam test before implementation begins.
+- [x] Project Storage and unchanged Workspace schemas pass: `pnpm exec vitest run packages/protocol/src/project-storage-protocol.test.ts packages/protocol/src/workspace-protocol.test.ts`
+- [x] Kernel type checking passes: `pnpm --filter @slopstop/kernel typecheck`
+- [x] Protocol type checking passes: `pnpm --filter @slopstop/protocol typecheck`
+- [x] Package dependency boundaries remain valid: `pnpm check:boundaries`
+- [x] A separate Phase 1 review/refactor gate records no unresolved blocker before Phase 2.
 
 #### Manual Verification:
 
-- [ ] Inspect public exports and confirm no filesystem path, libSQL type, Workspace capability, or projection revision appears in the Project Storage surface.
-- [ ] Inspect every result branch and confirm it echoes its request for later process correlation.
+- [x] Inspect public exports and confirm no filesystem path, libSQL type, Workspace capability, or projection revision appears in the Project Storage surface.
+- [x] Inspect every result branch and confirm it echoes its request for later process correlation.
 
 ---
 
@@ -2083,22 +2083,22 @@ export {
 
 #### Automated Verification:
 
-- [ ] Every Test Contract behavior's exact Expected red, including process fatal privacy, is observed and recorded from its named public-seam test before implementation begins.
-- [ ] Protocol and harness unit tests pass: `pnpm exec vitest run packages/protocol/src/protocol.test.ts apps/harness/src/project-storage-application.test.ts apps/harness/src/harness-runtime.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-fatal-diagnostics.test.ts`
-- [ ] Structured-clone integration passes: `pnpm exec vitest run apps/harness/tests/integration/harness-runtime.integration.test.ts`
-- [ ] Protocol type checking passes: `pnpm --filter @slopstop/protocol typecheck`
-- [ ] Harness type checking passes: `pnpm --filter @slopstop/harness typecheck`
-- [ ] Static cleanup audit finds no retained floating runtime stop: searching `apps/harness/src/harness-runtime.test.ts` and `apps/harness/tests/integration/harness-runtime.integration.test.ts` finds no bare `stop();`, and all integration port closes follow `await stop();`.
-- [ ] Package dependency boundaries remain valid: `pnpm check:boundaries`
-- [ ] A separate Phase 2 review/refactor gate records no unresolved blocker before Phase 3.
+- [x] Every Test Contract behavior's exact Expected red, including process fatal privacy, is observed and recorded from its named public-seam test before implementation begins.
+- [x] Protocol and harness unit tests pass: `pnpm exec vitest run packages/protocol/src/protocol.test.ts apps/harness/src/project-storage-application.test.ts apps/harness/src/harness-runtime.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-fatal-diagnostics.test.ts`
+- [x] Structured-clone integration passes: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/harness-runtime.integration.test.ts`
+- [x] Protocol type checking passes: `pnpm --filter @slopstop/protocol typecheck`
+- [x] Harness type checking passes: `pnpm --filter @slopstop/harness typecheck`
+- [x] Static cleanup audit finds no retained floating runtime stop: searching `apps/harness/src/harness-runtime.test.ts` and `apps/harness/tests/integration/harness-runtime.integration.test.ts` finds no bare `stop();`, and all integration port closes follow `await stop();`.
+- [x] Package dependency boundaries remain valid: `pnpm check:boundaries`
+- [x] A separate Phase 2 review/refactor gate records no unresolved blocker before Phase 3.
 
 #### Manual Verification:
 
-- [ ] Inspect the exhaustive runtime switch and confirm every accepted v3 command has one result event path and uses transport `messageId`, not `createRequestId`, for `causationId`.
-- [ ] Inspect production composition and confirm bootstrap remains path-free and no registry, filesystem, libSQL, or Drizzle behavior has entered this slice.
-- [ ] Confirm `not-registered` appears only in a validated ready owner result and never in no-store/unavailable conversion.
-- [ ] Confirm runtime and process shutdown expose one retained Promise, detach intake once, and convert shutdown rejection only at process entry with the generic path-free message.
-- [ ] Confirm uncaught exceptions and unhandled rejections expose only stable code/value-kind metadata and never raw values, messages, stacks, source, environment data, or paths.
+- [x] Inspect the exhaustive runtime switch and confirm every accepted v3 command has one result event path and uses transport `messageId`, not `createRequestId`, for `causationId`.
+- [x] Inspect production composition and confirm bootstrap remains path-free and no registry, filesystem, libSQL, or Drizzle behavior has entered this slice.
+- [x] Confirm `not-registered` appears only in a validated ready owner result and never in no-store/unavailable conversion.
+- [x] Confirm runtime and process shutdown expose one retained Promise, detach intake once, and convert shutdown rejection only at process entry with the generic path-free message.
+- [x] Confirm uncaught exceptions and unhandled rejections expose only stable code/value-kind metadata and never raw values, messages, stacks, source, environment data, or paths.
 
 ---
 
@@ -6614,23 +6614,23 @@ Regenerate the lockfile from the exact catalog pins. Review that `@libsql/client
 
 #### Automated Verification:
 
-- [ ] Every Test Contract behavior's exact Expected red, including C52-C54 and generated-tree reproducibility, is observed and recorded from its named public-seam test before implementation begins.
-- [ ] Migration, manifest, schema-expression, transaction, store, and reproducibility unit contracts pass: `pnpm exec vitest run apps/harness/src/storage/generated-migrations.test.ts apps/harness/src/storage/project-storage-manifest.test.ts apps/harness/src/storage/sqlite-schema-expression.test.ts apps/harness/src/storage/project-storage-node-adapters.test.ts apps/harness/src/storage/project-storage-store.test.ts apps/harness/scripts/check-generated-migrations.test.mjs`
-- [ ] Real libSQL creation and same-name schema mutation matrix pass: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-create.integration.test.ts`
-- [ ] Generated migrations are reproducible under the complete before/after tree check: `pnpm --filter @slopstop/harness db:generate:check`
-- [ ] Focused harness mutation proof passes at or above the configured 80 break threshold with no `NoCoverage` mutant: `pnpm test:mutation:project-storage:harness`
-- [ ] Harness type checking passes: `pnpm --filter @slopstop/harness typecheck`
-- [ ] Package dependency boundaries remain valid: `pnpm check:boundaries`
-- [ ] Architecture model remains valid: `pnpm check:architecture`
-- [ ] A separate Phase 3 review/refactor gate records no unresolved blocker before Phase 4.
+- [x] Every Test Contract behavior's exact Expected red, including C52-C54 and generated-tree reproducibility, is observed and recorded from its named public-seam test before implementation begins.
+- [x] Migration, manifest, schema-expression, transaction, store, and reproducibility unit contracts pass: `pnpm exec vitest run apps/harness/src/storage/generated-migrations.test.ts apps/harness/src/storage/project-storage-manifest.test.ts apps/harness/src/storage/sqlite-schema-expression.test.ts apps/harness/src/storage/project-storage-node-adapters.test.ts apps/harness/src/storage/project-storage-store.test.ts apps/harness/scripts/check-generated-migrations.test.mjs`
+- [x] Real libSQL creation and same-name schema mutation matrix pass: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-create.integration.test.ts`
+- [x] Generated migrations are reproducible under the complete before/after tree check: `pnpm --filter @slopstop/harness db:generate:check`
+- [x] Focused harness mutation proof passes at or above the configured 80 break threshold with no `NoCoverage` mutant: `pnpm test:mutation:project-storage:harness`
+- [x] Harness type checking passes: `pnpm --filter @slopstop/harness typecheck`
+- [x] Package dependency boundaries remain valid: `pnpm check:boundaries`
+- [x] Architecture model remains valid: `pnpm check:architecture`
+- [x] A separate Phase 3 review/refactor gate records no unresolved blocker before Phase 4.
 
 #### Manual Verification:
 
-- [ ] Inspect all three generated migration directories and confirm exactly eight domain tables, the declared exact CHECK expressions/index predicates/foreign keys, and no `__drizzle_migrations` or future-owner table.
-- [ ] Inspect the schema tokenizer and confirm it performs no algebraic rewriting, constant folding, commutative reordering, literal rewriting, or name-only fallback.
-- [ ] Inspect the Node adapter and confirm all local database URLs use `pathToFileURL`, generated SQL is loaded only below the trusted migration root, and no remove/copy fallback exists.
-- [ ] Inspect every creation error path and confirm it retains rows/files as witnesses, emits no full path in diagnostics, and never reports clean absence.
-- [ ] Confirm the complete request fingerprint is lifecycle-fenced before first registry inspection, every recheck receives the same value, replay compares stored authority exactly, and direct normalized-path location lookup does not depend on a generation join.
+- [x] Inspect all three generated migration directories and confirm exactly eight domain tables, the declared exact CHECK expressions/index predicates/foreign keys, and no `__drizzle_migrations` or future-owner table.
+- [x] Inspect the schema tokenizer and confirm it performs no algebraic rewriting, constant folding, commutative reordering, literal rewriting, or name-only fallback.
+- [x] Inspect the Node adapter and confirm all local database URLs use `pathToFileURL`, generated SQL is loaded only below the trusted migration root, and no remove/copy fallback exists.
+- [x] Inspect every creation error path and confirm it retains rows/files as witnesses, emits no full path in diagnostics, and never reports clean absence.
+- [x] Confirm the complete request fingerprint is lifecycle-fenced before first registry inspection, every recheck receives the same value, replay compares stored authority exactly, and direct normalized-path location lookup does not depend on a generation join.
 
 ---
 
@@ -8825,26 +8825,26 @@ it("drains a pending open and aggregates its late release failure before registr
 
 #### Automated Verification:
 
-- [ ] Every Test Contract behavior's exact Expected red is observed and recorded from its named public-seam test before implementation begins.
-- [ ] Real libSQL opening matrix passes through structured clone: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-open.integration.test.ts`
-- [ ] Session lifecycle passes through structured clone: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts`
-- [ ] Pure opening and aggregate-release contracts pass: `pnpm exec vitest run apps/harness/src/storage/project-storage-opening.test.ts apps/harness/src/storage/project-storage-node-adapters.test.ts`
-- [ ] Store creation/witness unit regressions remain green after removing the transitional no-opening test: `pnpm exec vitest run apps/harness/src/storage/project-storage-store.test.ts`
-- [ ] Creation regressions remain green: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-create.integration.test.ts`
-- [ ] Harness type checking passes: `pnpm --filter @slopstop/harness typecheck`
-- [ ] Package dependency boundaries remain valid: `pnpm check:boundaries`
-- [ ] Architecture model remains valid: `pnpm check:architecture`
-- [ ] A separate Phase 4 review/refactor gate records no unresolved blocker before Phase 5.
+- [ ] Every Test Contract behavior's exact Expected red is observed and recorded from its named public-seam test before implementation begins. Validation found five Phase 4 behaviors recorded only as `Existing Green`; they cannot be repaired retroactively.
+- [x] Real libSQL opening matrix passes through structured clone: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-open.integration.test.ts apps/harness/tests/integration/project-storage-open-recovery.integration.test.ts apps/harness/tests/integration/project-storage-open-initialization.integration.test.ts`
+- [x] Session lifecycle passes through structured clone: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts`
+- [x] Pure opening and aggregate-release contracts pass: `pnpm exec vitest run apps/harness/src/storage/project-storage-opening.test.ts apps/harness/src/storage/project-storage-node-adapters.test.ts`
+- [x] Store creation/witness unit regressions remain green after removing the transitional no-opening test: `pnpm exec vitest run apps/harness/src/storage/project-storage-store.test.ts`
+- [x] Creation regressions remain green: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-create.integration.test.ts`
+- [x] Harness type checking passes: `pnpm --filter @slopstop/harness typecheck`
+- [x] Package dependency boundaries remain valid: `pnpm check:boundaries`
+- [x] Architecture model remains valid: `pnpm check:architecture`
+- [x] A separate Phase 4 review/refactor gate records no unresolved blocker before Phase 5.
 
 #### Manual Verification:
 
-- [ ] Inspect the opening chain and confirm it resolves only the registered active generation, never follows symlinks, selects an older generation, creates an absent `application.db`, migrates, repairs, deletes, or compares mutable database bytes with activation baselines.
-- [ ] Inspect the runtime probe and confirm it reads only SlopStop-owned adapter metadata/identity plus SQLite FK/integrity facts, never Mastra-private schema.
-- [ ] Confirm only `SQLITE_CORRUPT` and `SQLITE_NOTADB` map to corrupt, while every unexpected probe failure maps to the stable broken diagnostic without caught text or paths.
-- [ ] Inspect the store surface and confirm safe-mode retains only opaque release handles and exposes no mutation method or libSQL/Drizzle client.
-- [ ] Confirm every admitted open/create/close settles before final cleanup; every open/reopen/close/stop path releases each successfully opened client once; canonical release precedes runtime release; late-release, retained-session, and registry failures are attempted-all and ordered; async stop settles only after operation/create drain and registry close; and no Project operation closes another Project's session.
-- [ ] Confirm the selected active generation has exactly one matching ordinary directory and no root-level database/sidecar witness before manifest or database probing begins.
-- [ ] Confirm application opening authority and integrity checks complete before `inspectRegistryOpening` can return selected, recovery-required, or not-registered, so authority unavailable/broken/corrupt always wins without mutation or path disclosure.
+- [x] Inspect the opening chain and confirm it resolves only the registered active generation, never follows symlinks, selects an older generation, creates an absent `application.db`, migrates, repairs, deletes, or compares mutable database bytes with activation baselines.
+- [x] Inspect the runtime probe and confirm it reads only SlopStop-owned adapter metadata/identity plus SQLite FK/integrity facts, never Mastra-private schema.
+- [x] Confirm only `SQLITE_CORRUPT` and `SQLITE_NOTADB` map to corrupt, while every unexpected probe failure maps to the stable broken diagnostic without caught text or paths.
+- [x] Inspect the store surface and confirm safe-mode retains only opaque release handles and exposes no mutation method or libSQL/Drizzle client.
+- [x] Confirm every admitted open/create/close settles before final cleanup; every open/reopen/close/stop path releases each successfully opened client once; canonical release precedes runtime release; late-release, retained-session, and registry failures are attempted-all and ordered; async stop settles only after operation/create drain and registry close; and no Project operation closes another Project's session.
+- [x] Confirm the selected active generation has exactly one matching ordinary directory and no root-level database/sidecar witness before manifest or database probing begins.
+- [x] Confirm application opening authority and integrity checks complete before `inspectRegistryOpening` can return selected, recovery-required, or not-registered, so authority unavailable/broken/corrupt always wins without mutation or path disclosure.
 
 ---
 
@@ -10444,30 +10444,30 @@ startBootstrap();
 
 #### Automated Verification:
 
-- [ ] Every Test Contract behavior's exact Expected red is observed and recorded from its named public-seam test before implementation begins.
-- [ ] Bootstrap protocol contract, including shutdown-timeout diagnostic, passes: `pnpm exec vitest run packages/protocol/src/protocol.test.ts`
-- [ ] Checked-in migrations remain reproducible before staging: `pnpm --filter @slopstop/harness db:generate:check`
-- [ ] Development harness build creates the exact migration bootstrap root before Desktop composition: `pnpm --filter @slopstop/desktop exec vite build --config vite.harness.config.ts`
-- [ ] Main bridge, root derivation, supervisor, retained shutdown, bounded logs, Sentry sanitization, and unchanged Workspace bridge pass: `pnpm exec vitest run apps/desktop/src/main/project-storage-bridge.test.ts apps/desktop/src/main/project-storage-bootstrap.test.ts apps/desktop/src/main/harness-supervisor.test.ts apps/desktop/src/main/desktop-shutdown.test.ts apps/desktop/src/main/bounded-log-destination.test.ts apps/desktop/src/main/logger.test.ts apps/desktop/src/main/crash-reporting.test.ts apps/desktop/src/main/workspace-bridge.test.ts`
-- [ ] Production composition passes through the transport port: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/process-bootstrap.integration.test.ts`
-- [ ] Existing renderer API lock remains exact: `pnpm exec vitest run apps/desktop/src/main/package-smoke-verifier.test.ts`
-- [ ] Focused Desktop mutation proof passes at or above the configured 80 break threshold with no `NoCoverage` mutant: `pnpm test:mutation:project-storage:desktop`
-- [ ] Protocol, harness, and desktop type checking passes: `pnpm --filter @slopstop/protocol typecheck && pnpm --filter @slopstop/harness typecheck && pnpm --filter @slopstop/desktop typecheck`
-- [ ] Package dependency boundaries remain valid: `pnpm check:boundaries`
-- [ ] Architecture model remains valid: `pnpm check:architecture`
-- [ ] A separate Phase 5 review/refactor gate records no unresolved blocker before Phase 6 admission.
+- [ ] Every Test Contract behavior's exact Expected red is observed and recorded from its named public-seam test before implementation begins. Validation found trusted URL/composition, migration staging, bridge behavior, and bounded-log behaviors without prospective recovery Red records; they cannot be repaired retroactively.
+- [x] Bootstrap protocol contract, including shutdown-timeout diagnostic, passes: `pnpm exec vitest run packages/protocol/src/protocol.test.ts`
+- [x] Checked-in migrations remain reproducible before staging: `pnpm --filter @slopstop/harness db:generate:check`
+- [x] Development harness build creates the exact migration bootstrap root before Desktop composition: `pnpm --filter @slopstop/desktop exec vite build --config vite.harness.config.ts`
+- [x] Main bridge, root derivation, supervisor, retained shutdown, bounded logs, Sentry sanitization, and unchanged Workspace bridge pass: `pnpm exec vitest run apps/desktop/src/main/project-storage-bridge.test.ts apps/desktop/src/main/project-storage-bootstrap.test.ts apps/desktop/src/main/harness-supervisor.test.ts apps/desktop/src/main/desktop-shutdown.test.ts apps/desktop/src/main/bounded-log-destination.test.ts apps/desktop/src/main/logger.test.ts apps/desktop/src/main/crash-reporting.test.ts apps/desktop/src/main/workspace-bridge.test.ts`
+- [x] Production composition passes through the transport port: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/process-bootstrap.integration.test.ts`
+- [x] Existing renderer API lock remains exact: `pnpm exec vitest run apps/desktop/src/main/package-smoke-verifier.test.ts`
+- [x] Focused Desktop mutation proof passes at or above the configured 80 break threshold with no `NoCoverage` mutant: `pnpm test:mutation:project-storage:desktop`
+- [x] Protocol, harness, and desktop type checking passes: `pnpm --filter @slopstop/protocol typecheck && pnpm --filter @slopstop/harness typecheck && pnpm --filter @slopstop/desktop typecheck`
+- [x] Package dependency boundaries remain valid: `pnpm check:boundaries`
+- [x] Architecture model remains valid: `pnpm check:architecture`
+- [x] A separate Phase 5 review/refactor gate records no unresolved blocker before Phase 6 admission.
 
 #### Manual Verification:
 
-- [ ] Inspect preload, shared desktop API, and IPC registration and confirm Project Storage has no renderer method, channel, handler, or Node/Electron exposure.
-- [ ] Inspect every logger and diagnostic path and confirm bootstrap roots, full paths, migration SQL, database contents, caught error text, harness stdout/stderr text, and process error locations never enter logs or protocol results.
-- [ ] Confirm every serialized Desktop JSONL record is valid and at most 8 KiB, runtime retention contains only one at-most-5-MiB active file plus one at-most-5-MiB archive, and rotation works during one process lifetime on Windows.
-- [ ] Confirm Sentry remains disabled without both environment consent and DSN and every outgoing frame omits `abs_path`, source context, vars, and full paths.
-- [ ] Confirm the supervisor stores one immutable parsed bootstrap, reuses it across automatic/manual retry, transfers a fresh port each spawn, and sends handshake only after session attachment.
-- [ ] Confirm `start()` is a no-op while shutdown is pending or terminal exit is unconfirmed, clears the retained stop lifecycle only after confirmed completed shutdown, and a later stop awaits the replacement child rather than returning the previous Promise.
-- [ ] Confirm process entry has one validated composition path, converts URLs with `fileURLToPath`, rejects overlapping roots, does not initialize Storage before a create command, and reuses the generic async stop-rejection boundary already owned and tested in Phase 2.
-- [ ] Compare `apps/harness/drizzle` with `.vite/build/harness-migrations` recursively and confirm identical relative paths and bytes, with no Phase 5 native dependency staging or `.vite/build/node_modules` tree.
-- [ ] Confirm every quit/package-smoke failure path stops Project Storage bridge, Workspace bridge, and then the supervisor idempotently; terminal shutdown timeout exits nonzero and never claims stopped.
+- [x] Inspect preload, shared desktop API, and IPC registration and confirm Project Storage has no renderer method, channel, handler, or Node/Electron exposure.
+- [x] Inspect every logger and diagnostic path and confirm bootstrap roots, full paths, migration SQL, database contents, caught error text, harness stdout/stderr text, and process error locations never enter logs or protocol results.
+- [x] Confirm every serialized Desktop JSONL record is valid and at most 8 KiB, runtime retention contains only one at-most-5-MiB active file plus one at-most-5-MiB archive, and rotation works during one process lifetime on Windows.
+- [x] Confirm Sentry remains disabled without both environment consent and DSN and every outgoing frame omits `abs_path`, source context, vars, and full paths.
+- [x] Confirm the supervisor stores one immutable parsed bootstrap, reuses it across automatic/manual retry, transfers a fresh port each spawn, and sends handshake only after session attachment.
+- [x] Confirm `start()` is a no-op while shutdown is pending or terminal exit is unconfirmed, clears the retained stop lifecycle only after confirmed completed shutdown, and a later stop awaits the replacement child rather than returning the previous Promise.
+- [x] Confirm process entry has one validated composition path, converts URLs with `fileURLToPath`, rejects overlapping roots, does not initialize Storage before a create command, and reuses the generic async stop-rejection boundary already owned and tested in Phase 2.
+- [x] Compare `apps/harness/drizzle` with `.vite/build/harness-migrations` recursively and confirm identical relative paths and bytes, with no Phase 5 native dependency staging or `.vite/build/node_modules` tree.
+- [x] Confirm every quit/package-smoke failure path stops Project Storage bridge, Workspace bridge, and then the supervisor idempotently; terminal shutdown timeout exits nonzero and never claims stopped.
 
 ---
 
@@ -11533,30 +11533,30 @@ Regenerate the lockfile from the Phase 6 catalog additions and review the target
 
 #### Automated Verification:
 
-- [ ] Every Test Contract behavior's exact Expected red is observed and recorded from its named public-seam test before implementation begins.
-- [ ] Existing renderer boundary lock remains exact: `pnpm exec vitest run apps/desktop/src/main/package-smoke-verifier.test.ts`
-- [ ] Generated migrations remain reproducible before staging: `pnpm --filter @slopstop/harness db:generate:check`
-- [ ] Focused harness mutation proof remains green: `pnpm test:mutation:project-storage:harness`
-- [ ] Focused Desktop mutation proof remains green: `pnpm test:mutation:project-storage:desktop`
-- [ ] Desktop packaging code type checks: `pnpm --filter @slopstop/desktop typecheck`
-- [ ] Fast repository gate passes: `pnpm check`
-- [ ] Real harness/process persistence integration passes: `pnpm test:integration`
-- [ ] Architecture boundaries remain valid: `pnpm check:architecture`
-- [ ] Target package contains native/resources and passes both public-seam proofs: `pnpm package:smoke`
-- [ ] A separate Phase 6 review/refactor gate records no unresolved blocker.
-- [ ] Deep repository gate passes: `pnpm check:deep`
+- [x] Every Test Contract behavior's exact Expected red is observed and recorded from its named public-seam test before implementation begins.
+- [x] Existing renderer boundary lock remains exact: `pnpm exec vitest run apps/desktop/src/main/package-smoke-verifier.test.ts`
+- [x] Generated migrations remain reproducible before staging: `pnpm --filter @slopstop/harness db:generate:check`
+- [x] Focused harness mutation proof has an accepted terminal disposition: `pnpm test:mutation:project-storage:harness` passed before Phase 6; another run was explicitly waived after focused post-review Red/Green proof.
+- [x] Focused Desktop mutation proof has an accepted terminal disposition: the retained equivalent proof and explicit no-rerun waiver are recorded below.
+- [x] Desktop packaging code type checks: `pnpm --filter @slopstop/desktop typecheck`
+- [x] Fast repository gate passes: `pnpm check`
+- [x] Real harness/process persistence integration passes: `pnpm test:integration`
+- [x] Architecture boundaries remain valid: `pnpm check:architecture`
+- [x] Target package contains native/resources and passes both public-seam proofs: `pnpm package:smoke`
+- [x] A separate Phase 6 review/refactor gate records no unresolved blocker.
+- [x] Deep repository gate passes: `pnpm check:deep`
 - [ ] Final plan audit passes: `/rpiv:validate .rpiv/artifacts/plans/2026-08-31_21-44-55_87-project-storage-opening.md`
 
 #### Manual Verification:
 
-- [ ] Inspect the package and confirm SQL/journals exist only under `resources/harness-migrations`, while target `.node` files exist under `resources/app.asar.unpacked`; no migration or native binding is loaded from the source repository or development hoist.
-- [ ] Confirm Forge preserves `asar: true`, keeps the fuses plugin terminal, and uses the optionless auto-unpack plugin before the Vite plugin.
-- [ ] Confirm `libsql` is a direct harness dependency, Desktop declares only its packaging plugin, and all Storage imports and behavior remain in the harness.
-- [ ] Confirm package-smoke runs every scenario/root/token/marker parser and guard branch before the valid matrix; omitted environment keys are deleted, the absolute non-symlink root, 256-bit token, regular non-symlink exact marker, and marker-only first-launch root are validated synchronously before `app.whenReady()`, logs, Storage derivation, or `app.setPath`; each invalid child closes before cleanup, emits only the exact generic failure, exposes neither prepared nor launched root/token, and leaves Storage absent.
-- [ ] Confirm `project-storage-package-smoke.ts` is bridge-only, accepts only the three strict scenarios, imports no `node:fs`, accepts no persistence path, and never creates, deletes, repairs, or stages persistence bytes.
-- [ ] Confirm the E2E fixture waits for each child `close` before unlinking only the healthy generation's `mastra.db`, exclusively writing the fixed staging witness, removing an external symlink marker target, or recursively removing a root; the symlink target is never inside the authorized root and child stderr is bounded and never echoed.
-- [ ] Confirm success waits for renderer and Storage proofs together, while every package-smoke failure and normal quit stops Project Storage bridge, Workspace bridge, and supervisor idempotently.
-- [ ] Confirm preload, renderer bundle, IPC channel vocabulary, and the exact six-method renderer API remain unchanged.
+- [x] Inspect the package and confirm SQL/journals exist only under `resources/harness-migrations`, while target `.node` files exist under `resources/app.asar.unpacked`; no migration or native binding is loaded from the source repository or development hoist.
+- [x] Confirm Forge preserves `asar: true`, keeps the fuses plugin terminal, and uses the optionless auto-unpack plugin before the Vite plugin.
+- [x] Confirm `libsql` is a direct harness dependency, Desktop declares only its packaging plugin, and all Storage imports and behavior remain in the harness.
+- [x] Confirm package-smoke runs every scenario/root/token/marker parser and guard branch before the valid matrix; omitted environment keys are deleted, the absolute non-symlink root, 256-bit token, regular non-symlink exact marker, and marker-only first-launch root are validated synchronously before `app.whenReady()`, logs, Storage derivation, or `app.setPath`; each invalid child closes before cleanup, emits only the exact generic failure, exposes neither prepared nor launched root/token, and leaves Storage absent.
+- [x] Confirm `project-storage-package-smoke.ts` is bridge-only, accepts only the three strict scenarios, imports no `node:fs`, accepts no persistence path, and never creates, deletes, repairs, or stages persistence bytes.
+- [x] Confirm the E2E fixture waits for each child `close` before unlinking only the healthy generation's `mastra.db`, exclusively writing the fixed staging witness, removing an external symlink marker target, or recursively removing a root; the symlink target is never inside the authorized root and child stderr is bounded and never echoed.
+- [x] Confirm success waits for renderer and Storage proofs together, while every package-smoke failure and normal quit stops Project Storage bridge, Workspace bridge, and supervisor idempotently.
+- [x] Confirm preload, renderer bundle, IPC channel vocabulary, and the exact six-method renderer API remain unchanged.
 
 ## Testing Strategy
 
@@ -11623,6 +11623,12 @@ Each behavior-changing phase follows the repository's strict red-green sequence 
 - Added one clause-level disposition for every existing Phase 1-5 behavior. Project Storage result forwarding is the sole behavior-preserving pre-existing Green and receives rerun-only proof; every other genuine behavior is redone in the isolated worktree.
 - Added phase-owned harness fatal privacy, Desktop child-output privacy, bounded terminal shutdown, bounded JSONL records/retention, Sentry `abs_path` removal, complete migration-tree reproducibility, separate harness/Desktop mutation gates, and main-process-to-harness packaged Storage proof.
 - Kept every retained or revised Phase 1-5 automated and manual criterion unchecked. Phase 6 remains blocked until all prospective Phase 1-5 proof and terminal commands pass.
+
+## Follow-up: 2026-09-03T02:11:53+0100
+
+- Corrected only Phase 2's structured-clone verification command to select `apps/harness/vitest.integration.config.ts`; the root Vitest project intentionally includes `apps/harness/src/**/*.test.ts` but not `apps/harness/tests/integration/**/*.test.ts`.
+- Verification before revision: the former bare command exited `1` with `No test files found`; the dedicated-config command passed the existing integration suite with 3 tests.
+- Project Storage behavior, phase ownership, Test Contracts, and implementation scope are unchanged.
 
 ## Plan Review (Step 4)
 
@@ -11776,17 +11782,18 @@ _Independent post-finalization review by artifact-code-reviewer and artifact-cov
 - Mutation: unavailable for this phase; `stryker.config.json` has a generic mutation gate but its explicit `mutate` list contains no Phase 3 storage source, so running it would not assess this implementation.
 - Code Health: every changed Phase 3 file scored 10.0 after splitting exact activation checks into focused authority predicates. The repository-wide pre-commit safeguard remains failed only by four pre-existing oversized Phase 1/2 test methods (`harness-runtime.test.ts`, `protocol.test.ts`, `harness-runtime.integration.test.ts`, and `project-storage-application.test.ts`); no Phase 3 file is degraded.
 - Review: independent claim verification confirmed lifecycle drain/witness semantics, exact activation authority, Transaction A recheck, database lineage verification, and exact crash-prefix preservation; its initial overbroad post-stop concern was dismissed after the atomic staging-witness contract was pinned by test.
+- Mutation follow-up (2026-09-03): the first complete locked five-file run was Red at 72.87% with 72 `NoCoverage` mutants. Exact public-seam oracles were added for null fatal-value classification, conservative SQLite hexadecimal/decimal/exponent/quoted/JSON token identity, malformed schema metadata, and safe-mode diagnostics; one scanner-impossible adjacent-token depth guard was removed as a behavior-preserving refactor. The final `pnpm test:mutation:project-storage:harness` run exited 0 at 93.40% with 532 killed, 77 timed out, 43 survived, 512 ignored, and zero `NoCoverage` mutants. The focused 46-test unit run, `pnpm check`, `pnpm test:integration`, migration reproducibility, architecture validation, and `git diff --check` pass. CodeScene first identified the new test router at complexity 10; splitting query selection from execution removed the finding, and the final pre-commit safeguard passed all 59 eligible changed files.
 
 ### Phase 4: Opening Health And Session Lifecycle
 - Behavior: Clean absence, filesystem-only recovery, exact active-generation selection, manifest admission, and independent canonical/runtime health classification are non-mutating and cross the real structured-clone seam.
-  - Green: opening integration passes 30/30, covering known-older, recovery witnesses, missing/invalid/corrupt databases, identity conflict, unsupported newer, unavailable, unexpected SQL failure, corruption precedence, application-authority failures, and all reachable manifest outcomes.
+  - Green: the split opening integration suites pass 50/50, covering known-older, recovery witnesses, missing/invalid/corrupt databases, identity conflict, unsupported newer, unavailable, unexpected SQL failure, corruption precedence, application-authority failures, all reachable manifest outcomes, shared initialization, and runtime-owner isolation from Mastra-private schema.
 - Behavior: Sessions retain only opaque read-write/safe-mode release handles and deterministically release on reopen, close, stop, reverse completion, and late stop races.
-  - Green: lifecycle integration passes 7/7, including admitted create/close drain, late opening release, ordered aggregate shutdown failure, and cross-Project isolation.
+  - Green: lifecycle integration passes 18/18, including admitted create/close drain, late opening release, ordered aggregate shutdown failure, and cross-Project isolation.
 - Behavior: Existing and mutable application-client acquisition share one retryable initialization, retain before initialization, close failed candidates once, remove only a newly created failed authority, and preserve path-free public diagnostics.
   - Green: focused adapter and opening tests pass, including absent/single-client release success, canonical-before-runtime aggregate release, and already-closed transaction failure preservation.
-- Verification: focused storage unit contracts pass 85/85 after the opening-module extraction; Project Storage creation/opening/lifecycle integration contracts pass 76/76; `pnpm check` passes with 190 unit tests; harness typecheck, dependency boundaries, and architecture validation pass.
+- Verification: focused storage unit contracts pass 93/93 after the opening-module extraction; Project Storage creation/opening/lifecycle integration contracts pass 128/128; `pnpm check` passes with 211 unit tests; harness typecheck, dependency boundaries, architecture validation, and `git diff --check` pass.
 - Mutation: added `stryker.project-storage.config.json` and `apps/harness/vitest.project-storage-mutation.config.ts` because repeated CLI `--mutate` flags selected only the last file and the default Vitest config omitted integration tests. The final risk-based classifier run passed at 100.00% with 103/103 mutants detected and no survivors or uncovered mutants. The complete pre-extraction target exceeded a 20-minute execution budget, and the store-only target reached 89% execution before the same timeout; neither timed-out run produced a valid score, so whole-storage mutation remains explicitly unassessed rather than reported clean.
-- Code Health: `project-storage-node-adapters.ts` improved from 5.7 to 10.0 by extracting application-client ownership, registry/manifest opening, and database opening probes. Every changed Phase 4 source and test file now scores 10.0. CodeScene installation passes 5/5. The working-tree safeguard remains failed only by the four previously recorded oversized Phase 1/2 test methods; no Phase 4 file is degraded.
+- Code Health: `project-storage-node-adapters.ts` improved from 5.7 to 10.0 by extracting application-client ownership, registry/manifest opening, and database opening probes. Every changed Phase 4 source and test file now scores 10.0. CodeScene installation passes 5/5, and the final working-tree safeguard passes all 70 eligible changed files with no findings.
 
 ### Phase 5: Electron Main Bridge And Trusted Bootstrap
 - Behavior: Harness bootstrap accepts only strict plain local file URLs for both trusted roots. - Test: `accepts only plain local file URLs as trusted harness roots` (`packages/protocol/src/protocol.test.ts`)
@@ -11826,3 +11833,276 @@ _Independent post-finalization review by artifact-code-reviewer and artifact-cov
 - Test-lint: Biome format and lint pass through `pnpm check`; the repository exposes no separate test-theater script or ast-grep rule pack.
 - Mutation: not run; repository policy keeps mutation explicit and risk-based, and Phase 5 defines no plan-scoped mutation command.
 - Code Health: all reviewed changed Phase 5 production TypeScript files score 10.0. `process-bootstrap.ts`, `project-storage-bridge.ts`, and `harness-supervisor.ts` improved to 10 after focused complexity/duplication refactors; the two Phase 5 test findings also improved to 10. The pre-commit safeguard now reports only the four previously recorded oversized Phase 1/2 tests and no Phase 5 degradation; `vite.harness.config.ts` is not assessable.
+
+### Recovery Phase 1: Project Storage Identities And Protocol (2026-09-03)
+- Baseline: branch `feat/ticket-87-project-storage` was created at clean commit `f4685df`, then fast-forwarded to accepted artifact commit `3d138c3`; worktree `slopstop-ticket-87` had zero source changes before the first test edit. C51 was added and observed first. The other four named tests were then added and observed before any production edit.
+- Behavior: Every blocked create reason accepts exactly its authoritative diagnostic and rejects both alternatives. - Test: `binds every blocked create reason to exactly one diagnostic` (`packages/protocol/src/project-storage-protocol.test.ts`)
+  - Red: `pnpm exec vitest run packages/protocol/src/project-storage-protocol.test.ts -t "binds every blocked create reason to exactly one diagnostic"` -> `ProjectStorageCreateResultSchema must be exported from the protocol package: expected undefined to be defined`.
+  - Green: same command -> 1 test passed, 4 skipped.
+- Behavior: Project and Storage identity schemas accept lowercase RFC 4122 UUID text and reject malformed, nil-version, and uppercase identities. - Test: `validates Project Storage identities` (`packages/protocol/src/project-storage-protocol.test.ts`)
+  - Red: `pnpm exec vitest run packages/protocol/src/project-storage-protocol.test.ts -t "validates Project Storage identities"` -> `StorageIdSchema must be exported from the protocol package: expected undefined to be defined`.
+  - Green: same command -> 1 test passed, 4 skipped.
+- Behavior: Open results represent healthy, safe-mode, legitimate absence, unavailable, and broken as mutually exclusive strict branches. - Test: `rejects contradictory Project Storage open results` (`packages/protocol/src/project-storage-protocol.test.ts`)
+  - Red: `pnpm exec vitest run packages/protocol/src/project-storage-protocol.test.ts -t "rejects contradictory Project Storage open results"` -> `ProjectStorageOpenResultSchema must be exported from the protocol package: expected undefined to be defined`.
+  - Green: same command -> 1 test passed, 4 skipped.
+- Behavior: Database health diagnostics cannot contradict their health status. - Test: `binds health diagnostics to exact statuses` (`packages/protocol/src/project-storage-protocol.test.ts`)
+  - Red: `pnpm exec vitest run packages/protocol/src/project-storage-protocol.test.ts -t "binds health diagnostics to exact statuses"` -> `ProjectDatabaseHealthSchema must be exported from the protocol package: expected undefined to be defined`.
+  - Green: same command -> 1 test passed, 4 skipped.
+- Behavior: Create results preserve the durable request and exact blocked reason without failure success fields, while close remains strict and request-correlated. - Test: `validates create and close result branches` (`packages/protocol/src/project-storage-protocol.test.ts`)
+  - Red: `pnpm exec vitest run packages/protocol/src/project-storage-protocol.test.ts -t "validates create and close result branches"` -> `ProjectStorageCloseResultSchema must be exported from the protocol package: expected undefined to be defined`; C51 had already proved the create-result schema absent.
+  - Green: same command -> 1 test passed, 4 skipped.
+- Test-lint: unavailable; the repository exposes no test-theater script or ast-grep rule pack. Biome formatting and lint checks on all seven changed files passed.
+- Mutation: unavailable for Phase 1; the accepted plan reserves focused mutation gates for Phases 3 and 5 and exposes no Phase 1 plan-scoped mutation command.
+- Code Health: `packages/protocol/src/workspace-protocol.ts` remained 10.0; new `domain-identity-schema.ts` and `project-storage-protocol.ts` scored 10.0; type-only/barrel files were not assessable. `project-storage-protocol.test.ts` improved 9.6 -> moved immutable fixtures to module scope -> 10.0, eliminating both Large Method findings. The pre-commit safeguard passed all 7 eligible files with no issues.
+- Verification: `pnpm exec vitest run packages/protocol/src/project-storage-protocol.test.ts packages/protocol/src/workspace-protocol.test.ts` -> 18 tests passed; kernel and protocol typechecks passed; `pnpm check:boundaries` reported no violations; `git diff --check` passed.
+- Manual: Project Storage exports contain no filesystem path, libSQL type, Workspace capability, or projection revision. Every open, create, and close result branch requires its operation-specific request schema.
+- Review/refactor: independent final review found no blockers or concerns after exhaustive branch/identity coverage and the CodeScene fixture extraction.
+
+### Recovery Phase 2: Harness Application Port And Dispatch (2026-09-03)
+- Verification-command correction: the former bare structured-clone command exited `1` with `No test files found` because the root Vitest project excludes `apps/harness/tests/integration/**`; the plan was revised and revalidated to use `--config apps/harness/vitest.integration.config.ts` before Phase 2 test implementation.
+- Behavior: Protocol v3 round-trips Project Storage commands and correlated result events while rejecting protocol v2. - Test: `round-trips Project Storage envelopes under protocol version 3` (`packages/protocol/src/protocol.test.ts`)
+  - Red: targeted run -> `TypeError: createProjectOpenCommand is not a function`.
+  - Green: targeted run -> 1 test passed, 10 skipped.
+- Behavior: The no-store application echoes each exact request as unavailable and delegates stop without inventing absence. - Test: `echoes every unavailable request and delegates stop` (`apps/harness/src/project-storage-application.test.ts`)
+  - Red: targeted run -> missing `./project-storage-application.js`; no tests collected.
+  - Green: targeted run -> 1 test passed, 2 skipped.
+- Behavior: Owner absence, malformed/mismatched output, and owner failure remain distinct. - Test: `keeps unavailable, invalid, and failed owner outcomes distinct` (`apps/harness/src/project-storage-application.test.ts`)
+  - Red: targeted run -> missing `./project-storage-application.js`; no tests collected.
+  - Green: targeted run -> 1 test passed, 2 skipped.
+- Behavior: Project Storage commands dispatch sequentially with exact unavailable events. - Test: `dispatches Project Storage commands sequentially with exact unavailable results` (`apps/harness/src/harness-runtime.test.ts`)
+  - Red: targeted run -> `TypeError: createUnavailableProjectStorageApplication is not a function`.
+  - Green: targeted run -> 1 test passed, 10 skipped.
+- Behavior: Rejected Project dispatch emits one neutral correlated internal failure without caught text. - Test: `reports a neutral internal failure when Project dispatch throws` (`apps/harness/src/harness-runtime.test.ts`)
+  - Red: targeted run -> `TypeError: createProjectOpenCommand is not a function`.
+  - Green: targeted run -> 1 test passed, 10 skipped.
+- Behavior: Project Storage envelopes survive the real structured-clone seam. - Test: `round-trips all unavailable Project Storage commands over structured clone` (`apps/harness/tests/integration/harness-runtime.integration.test.ts`)
+  - Red: dedicated-config targeted run -> `TypeError: createUnavailableProjectStorageApplication is not a function`.
+  - Green: dedicated-config targeted run -> 1 test passed, 3 skipped.
+- Behavior: Runtime stop detaches intake once and exposes one retained Project Storage stop Promise. - Test: `stops intake before exposing one observable Project Storage stop promise` (`apps/harness/src/harness-runtime.test.ts`)
+  - Red: targeted run repeated `stopMessages`/`stopNotifications`, never called Project Storage stop, and leaked an unhandled rejected Promise.
+  - Green: targeted run -> 1 test passed, 10 skipped.
+- Behavior: Every retained runtime cleanup observes async stop before teardown. - Tests: retained unit and integration runtime suites.
+  - Red: pre-edit inspection found 11 bare `stop();` calls and four synchronous unit declarations.
+  - Green: static search found no bare `stop();`; every integration port close follows `await stop();`.
+- Behavior: Port-close shutdown observes rejection once and forwards only the generic process diagnostic. - Test: `observes one runtime shutdown rejection without forwarding its cause` (`apps/harness/src/process-shutdown.test.ts`)
+  - Red: targeted run -> missing `./process-shutdown.js`; no tests collected.
+  - Green: targeted run -> 1 test passed.
+- Behavior: Harness fatal values become bounded metadata only. - Test: `reports process fatal values as metadata only` (`apps/harness/src/process-fatal-diagnostics.test.ts`)
+  - Red: targeted run -> missing `./process-fatal-diagnostics.js`; no tests collected.
+  - Green: targeted run -> 1 test passed.
+- Review Red: `retains synchronous shutdown failures while attempting every cleanup` threw `private intake shutdown failure`, and `converts a synchronous runtime shutdown throw once` leaked `C:\\private\\project\\synchronous.db` synchronously.
+- Review Green: runtime installs its retained Promise before cleanup, attempts inbound/notification/Storage cleanup once in order, preserves deterministic failures, and process close retains its observation before invoking stop; both focused tests pass.
+- Test-lint: unavailable; the repository exposes no test-theater script or ast-grep rule pack. Biome passed all 14 Phase 2 changed code/test files.
+- Mutation: unavailable for Phase 2; the accepted plan reserves focused mutation gates for later phases and exposes no Phase 2 plan-scoped mutation command.
+- Code Health: `protocol.ts`, `harness-runtime.ts`, `process-fatal-diagnostics.ts`, `process-shutdown.ts`, and `process-entry.ts` scored 10.0. `project-storage-application.ts` improved 9.09 -> replaced duplicated per-operation factories and six-argument helpers with one typed operation contract -> 10.0. `protocol.test.ts` improved after fixture extraction -> 10.0; `harness-runtime.test.ts` scored 10.0. The final pre-commit safeguard passed all 20 eligible files with no issues.
+- Verification: required protocol/harness unit command -> 29 tests passed; corrected dedicated-config integration command -> 4 tests passed; protocol and harness typechecks passed; `pnpm check:boundaries` reported no violations; `git diff --check` passed.
+- Manual: every accepted v3 command has one result path and Project event causation uses transport `messageId`; no-store composition is path-free and contains no persistence adapter; only validated ready owner output can carry `not-registered`; shutdown failures become one generic process diagnostic; fatal handlers emit only stable code/value-kind metadata.
+- Review/refactor: the first independent review found the synchronous shutdown blocker above; the post-fix re-review found no remaining blocker or concern.
+
+### Recovery Phase 3: Staged Creation And Witness Guard (2026-09-03)
+- Behavior: Manifest v1 owns one deterministic strict first-generation representation. - Test: `serializes the exact initial manifest and rejects non-v1 shapes` (`apps/harness/src/storage/project-storage-manifest.test.ts`)
+  - Red: the public manifest parser/serializer was absent, so the exact v1 fixture could not be parsed or serialized.
+  - Green: the focused manifest contract passes.
+- Behavior: Generated migration authority applies only a known pending suffix and every generated-resource guard fails closed. - Tests: `applies only known pending migrations and rejects inconsistent authority`; `rejects generated migration guard: $name`; `reproduces the complete generated migration tree`
+  - Red: migration ownership, complete tree comparison, and stable generated-resource guard diagnostics were absent.
+  - Green: all migration authority/resource cases and the complete before/after tree check pass.
+- Behavior: Transaction failures roll back, preserve ordered dual failures internally, close once, and expose only one path-free public failure. - Test: `preserves %s and rollback failures internally while exposing one generic failure`
+  - Red: rollback failure replaced the operation/commit failure and did not preserve an ordered aggregate cause.
+  - Green: operation and commit cases retain both causes in order, close once, and expose no caught details.
+- Behavior: Clean creation produces eight exact domain tables, one sealed generation, agreeing identities/baselines, and strict lowercase UUID authority. - Tests: `creates a sealed initial generation under the deterministic Project namespace`; `creates exactly eight domain tables with valid SQLite integrity`; `enforces exact lowercase UUID segments in the real application schema`
+  - Red: persistent creation, the database triplet, manifest, generated schemas, and segment-exact UUID checks did not exist.
+  - Green: all real-libSQL creation and strict identity assertions pass.
+- Behavior: Exact CHECK expressions, partial-index predicates, and complete foreign keys remain authoritative even when object names are unchanged. - Tests: `compares SQLite expressions by conservative token identity`; `rejects one same-name altered $name through real SQLite metadata`
+  - Red: C52-C54 same-name CHECK/predicate/foreign-key mutations were accepted because comparison used incomplete object identity.
+  - Green: token-preserving formatting rewrites pass while every same-name semantic mutation returns its exact missing-authority diagnostic before allocation.
+- Behavior: Every registry/filesystem witness, including direct orphan normalized-path locations, blocks before allocation or absent-authority initialization. - Tests: `blocks the $name witness without allocating`; `blocks an orphan location at the deterministic Project path before allocation`; `blocks a filesystem witness before initializing application.db`
+  - Red: witness inspection was absent and location discovery depended on generation joins.
+  - Green: every witness kind preserves state and blocks with zero forbidden mutation.
+- Behavior: Complete request fingerprints, replay/conflict precedence, installation serialization, and incomplete requests remain mutually distinct. - Tests: `passes the exact request fingerprint to the first registry inspection`; `creates once, replays exactly, and rejects conflicting reuse without mutation`; `treats an active replay fingerprint mismatch as broken authority`; `serializes installation-wide create decisions before allocation`; `applies request and registration precedence before witness inspection`; `blocks an incomplete exact request without cleanup or reallocation`
+  - Red: complete fingerprint ownership, replay validation, precedence, and installation locking were absent or ordered incorrectly.
+  - Green: all named store and real-libSQL replay tests pass with exact mutation-free outcomes.
+- Behavior: Transaction A rechecks authority after acquiring its write transaction; Transaction B and sealed databases require exact final authority. - Tests: `rechecks create authority inside the staging transaction`; activation and sealed-lineage disagreement cases
+  - Red: competing authority committed after the optimistic read produced `broken/PROJECT_STORAGE_OWNER_FAILED` instead of `blocked/PROJECT_STORAGE_IDEMPOTENCY_CONFLICT`; activation and lineage disagreement could reach `created`.
+  - Green: Transaction A returns the committed conflict before inserts, and activation/sealed verification reject every authority disagreement.
+- Behavior: Every creation checkpoint retains its exact durable prefix and deterministic restart result. - Test: `preserves witnesses and refuses cleanup after $checkpoint`
+  - Red: no failure-injectable staged creation state machine existed.
+  - Green: all checkpoint rows/directories and retry outcomes match the locked matrix without cleanup, copy, resume, or replacement allocation.
+- Behavior: Stop closes admission immediately, drains admitted create work, awaits asynchronous registry cleanup, retains one Promise, and surfaces cleanup failure. - Tests: `keeps opening unavailable and closes the no-session owner idempotently`; `retains delayed asynchronous registry failure in the shared stop promise`
+  - Red: the real `SerialLock` invoked async drain cleanup without awaiting it, so stop settled before registry close and lost its rejection.
+  - Green: the shared stop Promise remains pending through delayed cleanup and rejects with the exact ordered shutdown aggregate.
+- Review Red: exact active authority accepted lower format/schema versions paired with the current migration ID; Transaction A inspected only before its write transaction; async registry cleanup escaped the drain Promise; keyed Project locks were retained for owner lifetime.
+- Review Green: exact current versions are mandatory and covered through real replay; Transaction A performs an in-transaction recheck; `runAfterPending` awaits cleanup; keyed locks retain only active/queued users and delete the exact idle entry. Independent re-review returned `NO_FINDINGS`.
+- Test-lint: unavailable; the repository exposes no separate test-theater script or ast-grep rule pack. Biome formatting and lint pass through `pnpm check`.
+- Mutation: `pnpm test:mutation:project-storage:harness` exited 0 at 92.18% with 533 killed, 68 timed out, 51 survived, 512 ignored, and zero `NoCoverage` mutants against the locked five-file scope.
+- Code Health: `project-storage-node-adapters.ts`, `serial-lock.ts`, `project-storage-store.test.ts`, and `project-storage-create.integration.test.ts` each score 10.0; the final pre-commit safeguard passed all 59 eligible changed files with no findings.
+- Verification: the exact Phase 3 unit command passes 68 tests; the exact creation integration command passes 60 tests; migration reproducibility, harness typecheck, package boundaries, architecture validation, `pnpm check`, and `git diff --check` pass.
+- Manual: independent claim verification confirmed the eight-table migration authority, conservative tokenizer, trusted-root/path-to-file-URL adapter constraints, witness retention/path privacy, and lifecycle-fenced exact fingerprint/direct-location behavior. A failure before any staging mutation intentionally has no witness to retain and permits the locked clean retry; the failed operation itself remains broken, never clean.
+
+### Recovery Phase 4: Opening Health And Session Lifecycle (2026-09-03, complete)
+- Behavior: Recognized SQLite corruption and unexpected probe failures remain distinct stable health outcomes. - Test: `keeps corrupt and broken probe outcomes distinct` (`apps/harness/src/storage/project-storage-opening.test.ts`)
+  - Red: `pnpm exec vitest run apps/harness/src/storage/project-storage-opening.test.ts -t "keeps corrupt and broken probe outcomes distinct"` -> the public classifier module was absent and the test suite failed to import `./project-storage-opening.js`.
+  - Green: the same focused command -> 1 test passed with exact `DATABASE_CORRUPT/Database integrity validation failed.` and `DATABASE_BROKEN/Database authority is internally inconsistent.` results.
+- Behavior: A healthy created generation opens read-write through the real MessageChannel seam after live canonical bytes diverge from the immutable activation baseline, and explicit close releases both retained database clients without durable mutation. - Test: `opens a healthy created generation without comparing mutable bytes to baselines` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-open.integration.test.ts -t "opens a healthy created generation without comparing mutable bytes to baselines"` -> expected `opened/read-write/healthy`; received the Phase 3 transitional `unavailable` result.
+  - Green: the same focused command -> 1 test passed. The test proves the canonical hash differs from the manifest activation baseline, snapshots application/manifest/canonical/runtime bytes and directory entries, asserts exact echoed request and identity, renames both generation databases after close but before stop to prove release, and observes an unchanged final snapshot.
+- Plan mismatch decision: the developer selected `Follow the plan`. The implementation preserves the locked intent while adapting release/session handles to `Promise<void>` because the real local libSQL client closes asynchronously, and uses SQLite `user_version` as a non-authority physical-byte mutation because the current canonical schema has no mutable domain row.
+- Review/refactor: the first independent slice review found four test-strength gaps; exact request/identity assertions, application-root snapshotting, and pre-stop release probes for both databases closed them. The final independent review returned `NO_FINDINGS`. Code Health exposed temporary 9.68/8.81 scores; moving generic release ownership into `project-storage-opening.ts` and flattening authority predicates restored both touched production files to 10.0.
+- Behavior: A selected generation with an absent canonical database opens in retained safe mode with canonical `DATABASE_MISSING` and independently healthy runtime evidence, without repair or mutation. - Test: `opens in safe mode when the canonical database is missing` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: the focused integration command expected the safe-mode health pair but received a top-level `broken` result. The Red also timed out during cleanup because the rejecting canonical branch let the sibling runtime probe populate its client slot after cleanup had started.
+  - Green: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-open.integration.test.ts -t "opens in safe mode when the canonical database is missing"` -> 1 test passed. Missing is returned as probe evidence, both probe promises settle before any rejection is propagated, the retained runtime client is releasable before stop, and the absent-file snapshot remains unchanged.
+- Review/refactor: the first independent missing-case review found the sibling-probe leak hazard in `Promise.all`; tuple `Promise.allSettled` plus delayed propagation closed it, and the final independent review returned `NO_FINDINGS`. Opening-specific pure decisions were extracted to restore `project-storage-node-adapters.ts` from a temporary 9.38 Code Health score to 10.0; `project-storage-opening.ts` remains 10.0.
+- Behavior: A selected canonical file that real SQLite reports as not-a-database opens in retained safe mode with canonical `DATABASE_CORRUPT` and independently healthy runtime evidence, while nearby, suffixed, unexpected, and absent error codes are not widened to corruption. - Tests: `maps recognized SQLite not-a-database failure only to corrupt` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`) and `Project Storage Node error classification` (`apps/harness/src/storage/project-storage-node-errors.test.ts`)
+  - Red: the focused integration command expected canonical corrupt/runtime healthy safe mode but received a top-level `broken` result.
+  - Green: the same focused integration command passed after exact `SQLITE_CORRUPT`/`SQLITE_NOTADB` recognition was added at the Node error boundary; the complete opening integration file passes 3/3 and proves both retained database handles release before stop with unchanged damaged state.
+- Review/refactor: the first independent corrupt-case review found that only real `SQLITE_NOTADB` and no negative near-code cases were proved. The pure contract now covers both exact recognized codes and rejects suffixed, nearby, unexpected, and absent codes; the final independent review returned `NO_FINDINGS`. Moving the generic opening-file presence check to the filesystem-authority owner restored the temporary 9.38 adapter score; all touched files score Code Health 10.0.
+- Behavior: An unexpected canonical probe SQL failure becomes stable per-database `DATABASE_BROKEN`, preserves independently healthy runtime evidence, releases both retained clients, and exposes neither the local root nor caught text. - Test: `maps an unexpected probe SQL failure to the stable broken diagnostic` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: after dropping canonical `schema_metadata`, the focused integration expected broken/healthy safe mode but received a top-level `broken` owner result.
+  - Green: the focused command passed after non-recognized probe failures became per-database broken evidence; the complete opening integration passes 4/4 with unchanged-state and pre-stop release proof.
+- Review/refactor: the independent broken-case review returned `NO_FINDINGS`. A shared existing-canonical safe-mode assertion removed test duplication while strengthening both corruption and broken cases with exact identity, path privacy, dual-client release, and snapshot checks; both adapter and integration test score Code Health 10.0.
+- Behavior: A filesystem-only Project witness with no canonical database cannot degrade to clean absence; opening returns exact recovery-required health for both database roles with fully nullable identity, no path disclosure, no database creation, and unchanged state. - Test: `classifies a filesystem-only witness as recovery-required without initializing` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: the focused integration expected recovery-required/recovery-required safe mode but received `not-registered` because clean absence ignored the existing Project directory.
+  - Green: the focused command passed after filesystem evidence was joined with registry evidence before clean-absence classification.
+- Behavior: A Project with neither registry nor filesystem witnesses returns exact `not-registered` without creating the Project root or either database. - Test: `observes clean absence without creating application.db` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: the focused integration expected `not-registered` but received a top-level `broken` result because application authority was required even when `application.db` was absent.
+  - Green: the focused command passed after application opening represented a genuinely absent authority and only accepted it when every Project-specific registry/filesystem witness was absent.
+- Review/refactor: the first independent absence review found that partial payload matching did not exclude extra public identity fields and that neither result explicitly proved path privacy. Exact whole-payload equality and serialized-root exclusion closed all four gaps; the final independent review returned `NO_FINDINGS`. `project-storage-opening.ts`, `project-storage-node-adapters.ts`, and the opening integration test each score Code Health 10.0.
+- Behavior: A location row at the normalized Project root is the same prior-state witness for create and open: create remains blocked and open returns exact fully-null recovery evidence without creating the target Project root. - Test: `uses one orphan location witness consistently for create and open` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: create correctly returned `blocked/prior-state-witness`, but open returned `not-registered` because its clean-absence query omitted direct locations.
+  - Green: opening now joins registration, generation, direct-location, and filesystem evidence before classifying absence; the focused test and full opening file pass with unchanged application state and no path disclosure.
+- Behavior: A registration with the schema-valid all-null active triple opens in recovery mode with its known Storage ID and null generation/lineage IDs. - Test: `opens an incomplete registration in recovery mode with partial identity` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: opening sent the incomplete registration through active-create validation and returned top-level `broken/PROJECT_STORAGE_OWNER_FAILED`.
+  - Green: registered recovery classification now precedes active authority selection; exact payload, close, stop, path privacy, and unchanged-state assertions pass.
+- Behavior: A selected active generation coexisting with a registry and filesystem staging generation opens in recovery mode while projecting identity only from the registration-selected active generation. - Test: `opens in recovery mode when an active generation has staging residue` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: opening required exactly one generation through create-time authority validation and returned top-level `broken/PROJECT_STORAGE_OWNER_FAILED`.
+  - Green: staging evidence is classified before exclusive active selection; exact dual recovery health, active identity, close/stop, path privacy, and complete durable snapshot assertions pass.
+- Review/refactor: each registry-recovery slice received an independent final `NO_FINDINGS` review. Pure unregistered and registered recovery decisions moved to `project-storage-opening.ts`, and the redundant generation-to-creation mapper was removed, restoring both production modules and the integration test to Code Health 10.0.
+- Verification: opening integration passes 9/9; related opening/adapter/error units pass 43/43; the creation regression passes 60/60; `pnpm check` passes formatting, lint, workspace typechecks, 186 unit tests, and package boundaries; `git diff --check` passes. Phase 4 remains in progress; no phase-level Success Criterion is checked yet.
+- Behavior: Real opening classifies every database-health family independently without mutating registry, manifest, canonical, or runtime authority. - Test: `classifies $name independently without mutation` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-open.integration.test.ts -t "classifies .* independently without mutation"` -> 8 cases passed and canonical open-access failed because the injected `SQLITE_CANTOPEN` path returned `opened/read-write/healthy` instead of `safe-mode/unavailable/DATABASE_UNAVAILABLE`.
+  - Green: the same focused command -> 9 cases passed with exact known-older, recovery-required, missing, corrupt, identity-conflict, unsupported-newer, unavailable, broken, and runtime-corrupt health pairs plus complete unchanged-state and path-privacy assertions. The supporting unavailable-code unit suite passes 20/20.
+- Review/refactor: the first independent matrix review found that the filesystem presence probe escaped per-database classification, the injected failure preceded rather than wrapped client acquisition, and failed fixture creation could leak its runtime. Moving presence inspection inside the probe boundary, wrapping the actual client opener, adding exact positive/negative availability-code coverage, and stopping fixture creation in `finally` resolved all findings; the final independent review returned `NO_FINDINGS`.
+- Behavior: Corruption takes precedence when an otherwise valid known-older canonical database also fails real SQLite integrity checking. - Test: `reports corrupt when a known-older database also fails integrity` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: the focused integration command received canonical `broken/DATABASE_BROKEN` instead of exact `corrupt/DATABASE_CORRUPT` while runtime remained healthy.
+  - Green: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-open.integration.test.ts -t "reports corrupt when a known-older database also fails integrity"` -> 1 test passed. A successor canonical migration makes the live database known-older while an inconsistent freelist header makes real `PRAGMA integrity_check` fail; opening preserves the complete durable snapshot and emits no root.
+- Review/refactor: opening now carries observed foreign-key violation count and exact integrity rows into the pure classifier, while creation and sealed verification retain the same strict throwing validator. The independent slice review returned `NO_FINDINGS`.
+- Behavior: Existing application authority that is unavailable, malformed, or internally contradictory remains a top-level owner failure and never degrades to clean absence or per-database safe mode. - Test: `keeps application authority $name distinct from absence` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: the focused four-case integration command passed all malformed-authority cases but the injected existing-application access failure was ignored and returned `opened/read-write` instead of `unavailable/PROJECT_STORAGE_UNAVAILABLE`.
+  - Green: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-open.integration.test.ts -t "keeps application authority .* distinct from absence"` -> 4 tests passed with exact top-level payloads for access failure, malformed metadata, malformed rows, and disagreeing active pointers; all snapshots remain unchanged.
+- Review/refactor: the first independent review found partial payload matching could admit per-database fields and raw path checks missed JSON-escaped Windows paths. Exact payload equality plus one encoded-secret privacy helper now exclude Project health fields, roots, and injected caught text on every opening case; the final independent review returned `NO_FINDINGS`.
+- Behavior: Application integrity is authoritative before any Project recovery outcome. - Test: `checks application integrity before returning Project recovery evidence` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: the focused integration command returned top-level broken as required but exposed the generic `Database foreign-key integrity validation failed.` message instead of the locked application-authority diagnostic.
+  - Green: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-open.integration.test.ts -t "checks application integrity before returning Project recovery evidence"` -> 1 test passed with exact `broken/PROJECT_STORAGE_OWNER_FAILED/Project Storage application authority has foreign-key violations.`, unchanged complete durable state, and no root disclosure.
+- Review/refactor: a dedicated non-mutating application integrity validator now owns the application-specific messages while creation and generation verification remain on the strict generic validator. The independent slice review returned `NO_FINDINGS`.
+- Behavior: Contradictory active registration, generation, and location authority is broken even when recovery evidence is also present. - Test: `treats contradictory active location authority as broken without mutation` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: the focused integration command returned the generic `Registered Project Storage authority is inconsistent.` diagnostic instead of exact `Project Storage authority is internally inconsistent.`.
+  - Green: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts apps/harness/tests/integration/project-storage-open.integration.test.ts -t "treats contradictory active location authority as broken without mutation"` -> 1 test passed with exact top-level payload, unchanged durable state, and neither root nor contradictory location disclosed.
+- Review/refactor: the first independent review found the test did not force broken to take precedence over a reachable recovery branch and active-row selection could be query-order dependent. Adding a staging filesystem witness and requiring at most one active generation makes both decisions explicit and deterministic; the final review returned `NO_FINDINGS`.
+- Behavior: Opening requires the selected active generation to be the only ordinary generation and rejects root-level database witnesses before database probing. - Tests: `requires recovery when an orphan generation accompanies the active generation`; `requires recovery for root-level %s witness beside the active generation` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: the focused three-case `-t "requires recovery"` integration run returned top-level `broken/Project Storage opening authority is incomplete.` for the extra generation directory, root canonical database, and root runtime sidecar instead of retained recovery safe mode.
+  - Green: the same focused command -> 3 tests passed with exact selected identity and dual recovery health, unchanged complete namespace snapshots, path privacy, and a fail-fast client opener proving neither selected database was opened.
+- Review/refactor: the first review found filesystem recovery could mask malformed registry authority and the pre-authority scan did not prove a final witness check. Registered authority now validates before filesystem recovery, and a second complete registry/filesystem selection runs immediately before manifest/database opening while the shared per-Project lock excludes every SlopStop-owned namespace mutation. The final review returned `NO_FINDINGS`; arbitrary unsynchronized external writers remain outside the declared lock boundary because opening is prohibited from creating a lock marker.
+- Verification: the complete opening integration file passes 30/30 after all health-precedence and recovery-witness slices were combined.
+- Behavior: Reopening one Project releases only its previous session; close is idempotent, another Project remains retained, and repeated stop calls share one promise while releasing each remaining session and the registry exactly once. - Test: `reopens one Project without closing another and releases every session once` (`apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts`)
+  - Existing Green: the focused structured-clone command passed 1/1 because the earlier healthy-opening Red introduced the per-Project retained-session map, replacement release, idempotent close, and shared stop promise needed by this exact lifecycle regression.
+- Behavior: Shutdown releases retained Project sessions by open admission order even when independent opens complete in reverse. - Test: `releases retained sessions by admission after opens complete in reverse` (`apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts`)
+  - Red: the focused structured-clone command observed release order `["B", "A"]` instead of `["A", "B"]` because the session map recorded completion order.
+  - Green: the same focused command passed after open admission received an explicit monotonic sequence and shutdown sorted retained sessions by that sequence; the store unit suite remained green at 25/25.
+- Review/refactor: the first review found concurrent test listeners both consumed the first response, so response waits now correlate through protocol causation IDs and assert each echoed Project ID. The final independent review returned `NO_FINDINGS`; the separately planned admitted-operation drain remains the next lifecycle slice.
+- Behavior: Session and registry close failures are attempted in order and reported through the one shared shutdown promise. - Test: `reports every session and registry failure through one shared stop promise` (`apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts`)
+  - Existing Green: the focused structured-clone command passed 1/1 because the prior retained-session implementation already attempted every close, preserved session-before-registry error order, emitted `Project Storage shutdown failed.`, and memoized the shutdown promise.
+- Behavior: Shutdown fences new work, drains an already-admitted close before releasing its session and registry, and reports a session release failure from an operation pending when shutdown began. - Tests: `drains an already-admitted deferred close before registry shutdown`; `reports a failed release from an admitted close through shutdown` (`apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts`)
+  - Red: the deferred-close command released the retained session before its lock gate; after initial tracking was added, the failure command received the expected broken close response but the shared stop promise incorrectly resolved.
+  - Green: the full lifecycle integration file passes 5/5 after accepted operations gained explicit settlement records, stop snapshotted and drained those records before session/registry release, and pending operation failures were folded into the shutdown aggregate in admission order. The store unit suite remains green at 25/25.
+- Review/refactor: the first drain review found that a rejected close could be discarded and the test gate could deadlock cleanup. A gated failing-release regression, fail-safe test release, and shutdown-scoped operation records resolved those findings. A second review rejected lifetime failure retention from already-settled calls; stop now snapshots only operations pending when admission closes. The final independent review returned `NO_FINDINGS`.
+- Behavior: When stop wins a race with a pending open, the late candidate is never retained, is released exactly once, and yields the stable unavailable response; if release fails, the open reports the stable opening-release diagnostic while shutdown aggregates the original cleanup error before stopping the registry. - Tests: `releases a late opening candidate when stop wins the race`; `drains a pending open and aggregates its late release failure before registry stop`; `aggregates a real unavailable failure from an opening pending at stop` (`apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts`)
+  - Red: the successful race returned unavailable but leaked the candidate; after candidate release was added, the failed race exposed generic `Project Storage owner failed.` instead of `Project Storage opening release failed.`. The typed-unavailability review regression then showed that class-wide filtering incorrectly let shutdown resolve after a real adapter unavailable failure.
+  - Green: the complete lifecycle integration file passes 8/8. Raw admitted operations are tracked before application-facing mapping; late release failure uses a stable broken wrapper whose original cause enters the stop aggregate, and only the owner store's exact private stopped sentinel is excluded from shutdown failures.
+- Review/refactor: reviews found class-wide unavailable suppression and two deferred-test cleanup paths that could mask assertions as teardown timeouts. Sentinel identity and fail-safe deferred resolution closed all findings; the final independent review returned `NO_FINDINGS`. The store unit suite remains green at 25/25.
+- Behavior: Stop fences all nine durable create boundaries, drains the installation-wide create lock before registry shutdown, rejects post-stop operations before they enter a Project lock, and leaves retry-visible staging witnesses or the exact activated replay. - Test: `stops create after $boundary without crossing the next durable boundary` (`apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts`)
+  - Existing Green: the 9-case real-libSQL structured-clone matrix passed after the preceding close/open drain Reds introduced generalized admitted-operation tracking. Each held dependency finishes its permitted atomic work, while explicit event prefixes prove no later durable dependency is entered; pre-activation retries return `blocked/prior-state-witness`, and activation retry returns the fixed four-identity created replay.
+- Behavior: Registry failure after a held create exits and the post-create drain is acquired rejects the original repeated stop promise with one ordered shutdown aggregate. - Test: `rejects the retained stop promise when registry shutdown fails after create drain` (`apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts`)
+  - Existing Green: the focused command passed 1/1 with exact promise identity, pending-before-release proof, unavailable create response, and `AggregateError("Project Storage shutdown failed.")` containing only the injected registry failure.
+- Review/refactor: the first review found that Project namespace creation was not observed, create-lock exit was inferred rather than recorded, and retry assertion failure could leak a runtime. An intermediate `projectDirectory` event, explicit create-finished/after-drain/registry-stop ordering, and `finally`-guarded retry shutdown closed all gaps. The final independent review returned `NO_FINDINGS`.
+- Behavior: Opening release attempts canonical then runtime once in fixed slot order and preserves both close failures in one ordered aggregate. - Test: `releases canonical then runtime regardless of probe completion order` (`apps/harness/src/storage/project-storage-node-adapters.test.ts`)
+  - Existing Green: the complete adapter unit file passes 41/41; repeated release returns the retained promise, calls both clients exactly once in canonical/runtime order, and rejects with exact `Project Storage database release failed.` errors `[canonicalFailure, runtimeFailure]`.
+- Behavior: Existing and mutable application-client acquisition retain before initialization, clear before one failed close attempt, preserve initialization/close errors internally, expose only generic owner failure publicly, share one in-flight initializer across Projects, and clear only a failed attempt before one successful retry. - Tests: `retains then closes a failing %s application client exactly once`; `preserves application initialization and close failures in order` (`apps/harness/src/storage/project-storage-node-adapters.test.ts`); `normalizes %s application initialization failure at the owner boundary`; `shares one deferred application-client initialization across Projects`; `clears only the failed shared initialization and retries once` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: both public paths exposed adapter-specific authority messages instead of generic `Project Storage owner failed.`; mutable failure also left a new empty `application.db`. Review then exposed that a caller arriving after candidate retention could bypass the in-flight initializer by reading `applicationClient` first.
+  - Green: the four focused initialization integration cases pass, and adapter/store units pass 66/66. A dedicated broken-error subtype remains specific to direct adapters but crosses the owner into the generic application catch; only a newly created, still-empty plain candidate whose close succeeded is removed. Acquisition now prefers the shared initialization promise before the retained client, failed shared attempts close once and clear their promise slot, retry initializes once, and registry stop closes only the successful retained client.
+- Review/refactor: reviews required a real late-caller race, real existing/mutable adapter path coverage, fail-safe cleanup, and an unambiguous close-failure type. Launching the second inspection after initializer start with a bounded pending oracle, adding real-path tests, outer `finally` cleanup, and `ApplicationClientInitializationCloseError` closed all findings. The final independent review returned `NO_FINDINGS`; failed close remains attempted exactly once and is never retried, per the accepted contract.
+- Behavior: Runtime opening validates only SlopStop-owned adapter schema objects while allowing unrelated Mastra-private tables, checks, indexes, foreign keys, views, and triggers; a trigger attached to an owned runtime table remains forbidden even when SQLite preserves a case-varied target spelling. - Tests: `ignores Mastra-private runtime schema while validating adapter authority`; `classifies 'case-varied trigger on a runtime adapter table' independently without mutation` (`apps/harness/tests/integration/project-storage-open.integration.test.ts`)
+  - Red: the private-schema case returned top-level `broken` because opening required the complete runtime database table/object set to equal SlopStop's adapter schema. After owner-scoped validation was introduced, the case-varied owned trigger returned `opened/read-write/healthy`; the first case-insensitive fix then exposed an un-awaited schema-verification rejection as top-level `broken/PROJECT_STORAGE_OWNER_FAILED/Database contains a forbidden schema object.` instead of per-database broken health.
+  - Green: the focused two-case command passes. Runtime owner verification queries only the two declared adapter table definitions and their checks/indexes/foreign keys, rejects triggers attached to those tables with case-insensitive SQLite identity, ignores unrelated private schema objects, and awaits the completion probe inside the classifier catch so schema failures become path-free `DATABASE_BROKEN` evidence. Canonical opening and creation/sealed verification continue using exact whole-owner schema validation.
+- Review/refactor: the first independent manual verifier exposed whole-table-set inspection. The focused slice review then found the case-varied trigger bypass and missing private CHECK/index/FK coverage; both were pinned Red and fixed. Its database-wide `foreign_key_check`/`integrity_check` objection was rejected because the accepted contract explicitly requires those SQLite integrity facts independently of schema ownership. Final independent re-review returned `NO_FINDINGS`.
+- Final verification: split opening integration passes 50/50; lifecycle integration passes 18/18; creation integration passes 60/60; focused opening/adapter/application-client/error/store units pass 93/93; `pnpm check` passes formatting, lint, all workspace typechecks, 211 unit tests, and package boundaries; architecture validation and `git diff --check` pass.
+- Manual verification: all seven Phase 4 manual criteria were inspected against the exact temp worktree. The runtime-schema inspection defect found during that gate was fixed and re-reviewed; exact error-code mapping remains distinct from intentional corruption classification based on SQLite integrity facts.
+- Code Health: every reviewed Phase 4 production and split integration-test file scores 10.0. The final CodeScene working-tree safeguard passes all 70 eligible changed files with no findings.
+- Phase status: complete. Every automated, manual, review/refactor, and Code Health criterion is evidenced before Phase 5 admission.
+
+### Recovery Phase 5: Electron Main Bridge And Trusted Bootstrap (2026-09-04, complete)
+- Behavior: Packaged and development desktop composition derives schema-validated private Storage and migration resource URLs, and every initial/retried utility process receives the same parsed bootstrap before handshake. - Tests: `derives private Storage and development/package migration roots`; `sends the same validated trusted roots to initial and retried harnesses`.
+  - Red: the bootstrap derivation module was absent; the supervisor later attempted to parse/post only `{ kind: "harness.connect" }` and failed with both trusted URL fields missing.
+  - Green: bootstrap derivation passes 1/1; the final supervisor suite passes 19/19 with exact immutable bootstrap reuse, no trusted-root logging, and a late-spawn shutdown guard.
+- Behavior: Strict bootstrap accepts only plain local file URLs, and persistent process composition rejects lexical and filesystem-alias overlap before persistence mutation. - Tests: `accepts only plain local file URLs as trusted harness roots`; `apps/harness/tests/integration/process-bootstrap.integration.test.ts`.
+  - Green: the protocol suite and dedicated process-bootstrap integration pass with malformed/encoded/network URL rejection, both-direction overlap rejection, alias rejection, not-registered/create/open/close results, path privacy, and awaited stop.
+- Behavior: Development harness build stages the checked-in generated migration tree byte-for-byte without native dependency staging.
+  - Green: `pnpm --filter @slopstop/desktop exec vite build --config vite.harness.config.ts` passes; `git diff --no-index --exit-code -- "apps/harness/drizzle" "apps/desktop/.vite/build/harness-migrations"` reports no difference; no `.node` file or `.vite/build/node_modules` tree exists.
+- Behavior: One Main-only Project Storage bridge shares the supervisor session with Workspace while retaining independent open/create/close correlation and stable transport failure mapping. Project result traffic remains status-neutral and no renderer/preload/shared API exposes Project Storage or a persistence path.
+  - Green: Project Storage bridge, shared session, Workspace regression, supervisor result-forwarding, renderer API, and preload tests pass in the final 99-test focused run. Static searches find no `ProjectStorage`, `project-storage`, or `project.open/create/close` surface under renderer, preload, or shared desktop API.
+- Behavior: Supervisor stop retains one Promise, detaches the session and output/error observers first, permits natural exit through 4,999 ms, kills at 5,000 ms only if still live, continues awaiting actual exit, blocks late spawn/start/retry during shutdown, and permits a distinct later stop only after completed restart.
+  - Red: the updated retained live test observed immediate `child.kill()` during stop instead of the required natural-exit grace. Review regressions then observed a late spawn reconnecting, an active stop being cleared by `retry()`, and raw startup exceptions entering logs.
+  - Green: the final 19-test supervisor suite covers natural exit, timeout kill ordering, pending settlement after kill, observer cleanup, retained identity, late-spawn and retry fences, completed-stop restart, timer cancellation, and metadata-only startup/process diagnostics.
+- Behavior: Electron quit, startup failure, and package-smoke failure use one retained desktop shutdown that stops Project Storage and Workspace bridges before awaiting supervisor exit; normal quit re-enters exactly once only after completion and shutdown rejection uses nonzero exit.
+  - Red: `desktop-shutdown.test.ts` could not import the absent coordinator.
+  - Green: all 3 desktop-shutdown tests pass with exact Project Storage -> Workspace -> supervisor order, retained Promise identity, deferred quit, allowed quit re-entry, and failure exit.
+- Logging: bounded JSONL retains one current file plus one archive at at most 5 MiB each, replaces records above 8 KiB with valid controlled JSON, reconciles partial/oversized restart state, prevents canonical Pino metadata spoofing, and redacts top-level and nested secret variants. Harness output, process failures, startup failures, and bootstrap failures record only bounded metadata/stable text.
+  - Green: bounded destination and logger suites pass in the final focused run; the CodeScene refactor split restart/retention scenarios without changing their assertions.
+- Review/refactor: the first final-scope review found active-stop retry and late-spawn races plus raw exception logging in supervisor/Main. Focused Red tests reproduced all supervisor findings; guards and stable diagnostic metadata resolved them, Main stderr became generic, and the independent final re-review returned `NO_FINDINGS`.
+- Code Health: `harness-supervisor.ts`, `desktop-shutdown.ts`, `main.ts`, `process-bootstrap.ts`, `harness-supervisor.test.ts`, and `logger.test.ts` each score 10.0 after focused status-neutral dispatch, physical-root traversal, and test-scenario extractions. CodeScene installation passes 5/5 and the final pre-commit safeguard passes all 91 eligible changed files with zero findings.
+- Verification: the final focused Phase 5 command passes 12 files/99 tests; the dedicated harness integration command passes 2 files/7 tests; `pnpm check` passes format, lint, all workspace typechecks, 34 unit files/247 tests, and package boundaries; `pnpm check:architecture` validates all 3 architecture files; `git diff --check` passes.
+- Mutation: not run; repository policy keeps mutation explicit and risk-based, and Phase 5 defines no plan-scoped mutation command.
+- Phase status: complete. Every current Phase 5 automated, manual privacy, review/refactor, staging, and Code Health criterion is evidenced before Phase 6 admission.
+
+### Recovery Phase 5 Correction: Terminal, Privacy, And Mutation Closure (2026-09-04, complete)
+- Correction: the preceding Phase 5 completion entry predates the accepted recovery amendments for the post-kill terminal deadline, Sentry `abs_path` removal, exact retained Desktop shutdown controller, and focused Desktop mutation gate. This entry supersedes its incomplete verification claims without deleting historical evidence.
+- Behavior: a non-exiting utility process is killed only after the five-second grace, rejects the retained stop Promise at the ten-second terminal deadline with exact `HARNESS_SHUTDOWN_TIMEOUT`, remains quarantined through any late exit, and never reports stopped without confirmed exit. - Tests: `kills after grace and rejects after the terminal exit deadline`; protocol diagnostic coverage.
+  - Red: the retained shutdown Promise remained pending indefinitely after kill and the protocol rejected the missing diagnostic code.
+  - Green: focused protocol and supervisor tests pass with exact 4,999/5,000/9,999/10,000 ms boundaries, one kill, one rejection, start/retry fencing, and late-exit cleanup.
+- Behavior: one Desktop shutdown chain owns bridge stop order, supervisor settlement, normal quit re-entry, explicit exit, and nonzero failure fallback. - Tests: all six `desktop-shutdown.test.ts` cases.
+  - Red: the controller was absent; subsequent review tests proved overlapping quit/explicit-exit requests could invoke two terminal actions.
+  - Green: one retained terminal Promise gives explicit exit precedence while pending and invokes exactly one `quit` or `exit` action.
+- Behavior: protocol-failed children retain identity until confirmed exit, suppress stale transport/output/error activity, and accept at most one deferred manual retry without overlapping the replacement process.
+  - Red: immediate retry discarded the live child identity and spawned a replacement; removing the last `error` listener made a late process error throw.
+  - Green: `queues a protocol-failed child retry until confirmed exit` and shutdown/error-guard coverage pass; shutdown cancels a queued retry.
+- Behavior: every outgoing Sentry exception/thread frame and debug image removes absolute paths and source context while sparse SDK event structures remain accepted.
+  - Red: thread `frame.abs_path`, debug-image `code_file`/`debug_file`, and context values survived `beforeSend`.
+  - Green: five crash-reporting tests pass with basename-only exception/thread/debug-image metadata and disabled-by-default consent/DSN behavior.
+- Behavior: failed archive replacement and failed old-archive cleanup preserve the prior active/archive pair rather than leaving an unrecoverable intermediate rotation.
+  - Red: injected cleanup failure left no active log and retained `.1.previous`.
+  - Green: six bounded-destination tests pass, including interrupted-state reconciliation and both rollback paths.
+- Test-lint: unavailable; the repository exposes no test-theater lint command or ast-grep rule pack.
+- Mutation: the initial Desktop run passed the 80% threshold at 82.07% but exposed uncovered recovery branches. Strengthened tests produced a retained report with 411 killed, 62 survived, 1 timeout, and zero `NoCoverage` mutants (86.92%); that run used Stryker related-test pruning and therefore executed four relevant files. `related:false` now guarantees the accepted five-file configuration, and the complete configured non-mutation suite passes. The user explicitly accepted this equivalent proof and waived another Stryker execution in this session.
+- Review/refactor: two independent reviewers found child overlap/error-listener races, duplicate terminal actions, incomplete Sentry path surfaces, rotation cleanup corruption, and related-test pruning. Each finding received focused Red/Green coverage; both final re-reviews returned `NO_FINDINGS`. Oversized retained-file deletion remains intentional to bound startup memory on untrusted legacy input.
+- Code Health: final production scores are `protocol.ts` 10.0, `harness-supervisor.ts` 10.0, `desktop-shutdown.ts` 10.0, `main.ts` 10.0, `bounded-log-destination.ts` 10.0, and `crash-reporting.ts` 9.68. The final CodeScene safeguard passes all 94 eligible changed files with no quality-gate failure.
+- Verification: the exact Phase 5 Desktop command passes 8 files/74 tests before the final review refinements; final `pnpm check` passes formatting, lint, workspace typechecks, 34 unit files/258 tests, and package boundaries. Harness integration passes 7 files/135 tests; the exact process-bootstrap integration passes 3/3; protocol passes 13/13; package-smoke verifier passes 1/1; generated migrations, architecture, staged migration byte identity, and `git diff --check` pass.
+- Manual verification: renderer, preload, and shared API searches expose no Project Storage or trusted-root surface; staged output contains only `harness-migrations` and no native `.node` artifact; metadata-only diagnostics, bounded logs, Sentry path sanitization, immutable bootstrap reuse, terminal fencing, persistent process composition, and ordered quit/exit paths were inspected and independently reviewed.
+- Phase status: complete. The corrected Phase 5 contract and accepted equivalent mutation evidence satisfy Phase 6 admission.
+
+### Recovery Phase 6: Native Packaging And Packaged Storage Proof (2026-09-04, implementation complete)
+- Admission: the corrected Phase 1-5 ledgers, clause dispositions, review gates, generated-migration proof, harness mutation result, accepted Desktop mutation-equivalent result, fast/integration/architecture gates, and manual privacy checks were green before Phase 6 production work began.
+- Behavior: the packaged application carries directly readable generated resources for all three database owners plus only the current target's unpacked native libSQL binding. - Test: `package preflight rejects missing Storage resources` (`apps/desktop/tests/e2e/package-smoke.mjs`).
+  - Red: the Phase 5 package had no terminal native/resource preflight capable of proving packaged migrations and a target binding independently of the development hoist.
+  - Green: package preflight passes before launch. Artifact inspection finds nine files under `resources/harness-migrations`, exactly one unpacked file at `.vite/build/node_modules/@libsql/win32-x64-msvc/index.node`, 141 `@libsql` JavaScript entries inside ASAR, and zero migration entries inside ASAR.
+- Packaging decision: the developer explicitly accepted staging the complete harness-owned runtime JavaScript dependency graph before Forge packaging rather than maintaining the plan's narrower raw-loader-only staging description. Forge places that JavaScript closure inside ASAR and auto-unpacks only the native binding; Desktop still declares no libSQL/Drizzle dependency and owns no persistence behavior.
+- Behavior: strict authorization rejects every invalid scenario/root/token/marker shape before readiness or Storage mutation, then three closed packaged children jointly prove renderer isolation and bridge-only absence/create/open/close, missing-runtime safe mode, and witnessed-staging refusal. - Test: `pnpm package:smoke`.
+  - Red: the retained package smoke proved renderer isolation only and accepted no token-bound exclusive marker or Project Storage scenario matrix.
+  - Green: the invalid matrix emits only exact `Package smoke authorization failed.\n`, exposes no root/token, leaves Storage absent, and waits for child close before cleanup; the valid matrix exits 0 and prints exactly `Packaged SlopStop validated renderer isolation and Project Storage.`
+- Portability review Red/Green: an eval-launched worker resolved its fallback dependency root from the child's unrelated `cwd`; resolution now begins at `import.meta.dirname`, and the real child-process regression exits cleanly. Package isolation could cross Windows volumes and fail `rename` with `EXDEV`; its temporary parent is now beside the workspace, outside the worktree on the same volume. Both fixes received independent `NO_FINDINGS` re-review.
+- Whole-worktree review Red/Green: opening accepted a known but non-current application migration as current; a real non-mutating test first received `opened` and now receives exact top-level broken authority. The initial strict fix then made `upgrades known older application authority before creating` receive `broken` instead of `created`; authority checks are now explicitly `known` for pre-create/witness inspection and `current` for read-only opening and pre-activation validation, so both tests pass. Independent final re-review found no remaining finding.
+- Whole-worktree review Red/Green: transaction close could replace an operation-plus-rollback aggregate. `preserves operation, rollback, and close failures` now retains exact `[operation, rollback, close]` causes behind `Project Storage transaction rollback failed.` and closes once. A fatal worker could leave its process/native client alive while the pool admitted a replacement; `terminates a fatally invalid worker before replacing its native client` now proves termination settles before a replacement executes. Both focused fixes received independent `NO_FINDINGS` re-review.
+- Validation review Red/Green: a synchronous Project Storage bridge stop failure skipped Workspace bridge and harness cleanup. `attempts every cleanup and preserves failures in order` first observed only `project-storage`; Desktop shutdown now attempts Project Storage, Workspace, and harness cleanup in order, preserves a sole failure by identity, and aggregates multiple failures as `Desktop shutdown failed.` in deterministic order. The complete shutdown suite, Desktop typecheck, CodeScene review, and independent re-review pass with no finding.
+- Review/refactor: the Phase 6 package/config refactors and all three whole-worktree findings were reviewed against the actual temp worktree. No blocker or concern remains. The deep-review helper's omission of untracked files was detected, so final review used direct tracked and untracked inspection rather than treating its partial range as complete.
+- Code Health: every latest reviewed source and test involved in the final authority, transaction, and worker fixes scores 10.0. The final CodeScene safeguard passes all 105 eligible changed files out of 126 modified files; its sole reported result is an improvement in `crash-reporting.ts`, with no quality-gate failure.
+- Verification: final post-review `pnpm check:deep` passes formatting, lint, all workspace typechecks, 35 unit files/264 tests, boundaries, 42 merged-coverage files/401 tests, 7 integration files/137 tests, Knip, zero duplication, architecture validation, four packaged Electron journeys, and relocated packaged launch. Coverage is 90.24% statements, 84.15% branches, 91.16% functions, and 91.31% lines. Exact `pnpm package:smoke` also passes after a fresh package build.
+- Manual verification: Forge retains ASAR and terminal fuses with native unpack before Vite; Harness directly owns `libsql`; Desktop owns only packaging integration; package smoke is bridge-only and close-owned; no checkout path appears in `harness.cjs`; renderer/preload contain no Project Storage surface; Desktop source imports neither libSQL nor Drizzle.
+- Mutation disposition: no terminal mutation rerun was performed, by explicit user direction. The accepted pre-Phase 6 harness result and Phase 5 Desktop equivalent result remain recorded above; final focused Red/Green tests, independent reviews, CodeScene, full integration, coverage, deep, and installed-package gates were rerun after the whole-worktree fixes.
+- Phase status: implementation, review, package proof, and non-mutation verification are complete. Strict final plan validation remains blocked by the recorded Phase 4/5 chronological Red gaps and the accepted mutation rerun waiver.

@@ -1,6 +1,12 @@
 import {
+  createProjectCloseCommand,
+  createProjectCreateCommand,
+  createProjectOpenCommand,
   createWorkspaceIntentCommand,
   createWorkspaceQueryCommand,
+  ProjectStorageCloseRequestSchema,
+  ProjectStorageCreateRequestSchema,
+  ProjectStorageOpenRequestSchema,
   protocolVersion,
   WorkspaceIntentResultSchema,
   WorkspaceIntentSchema,
@@ -12,8 +18,10 @@ import {
 } from "@slopstop/protocol";
 import { describe, expect, it, vi } from "vitest";
 import {
+  createUnavailableProjectStorageApplication,
   createUnavailableWorkspaceApplication,
   type HarnessTransport,
+  type ProjectStorageApplication,
   type StopHarnessRuntime,
   startHarnessRuntime,
   type WorkspaceApplication,
@@ -115,11 +123,44 @@ function startRuntime(transport: TestTransport): StopHarnessRuntime {
   let generatedId = 2;
   return startHarnessRuntime({
     transport,
+    projectStorageApplication: createUnavailableProjectStorageApplication(),
     workspaceApplication: createUnavailableWorkspaceApplication(),
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
     now: () => "2026-08-14T12:00:01.000Z",
   });
+}
+
+function projectStorageCommands() {
+  const projectId = "00000000-0000-4000-8000-000000000010";
+  const openRequest = ProjectStorageOpenRequestSchema.parse({ projectId });
+  const createRequest = ProjectStorageCreateRequestSchema.parse({
+    projectId,
+    createRequestId: "00000000-0000-4000-8000-000000000011",
+  });
+  const closeRequest = ProjectStorageCloseRequestSchema.parse({ projectId });
+  const open = createProjectOpenCommand(
+    {
+      messageId: "00000000-0000-4000-8000-000000000100",
+      sentAt: "2026-08-14T12:00:00.000Z",
+    },
+    openRequest,
+  );
+  const create = createProjectCreateCommand(
+    {
+      messageId: "00000000-0000-4000-8000-000000000101",
+      sentAt: "2026-08-14T12:00:00.000Z",
+    },
+    createRequest,
+  );
+  const close = createProjectCloseCommand(
+    {
+      messageId: "00000000-0000-4000-8000-000000000102",
+      sentAt: "2026-08-14T12:00:00.000Z",
+    },
+    closeRequest,
+  );
+  return { close, closeRequest, create, createRequest, open, openRequest };
 }
 
 describe("harness runtime transport", () => {
@@ -175,7 +216,7 @@ describe("harness runtime transport", () => {
       ),
     ).toHaveLength(1);
 
-    stop();
+    await stop();
   });
 
   it("sequences concurrent workspace responses when they emit", async () => {
@@ -197,6 +238,7 @@ describe("harness runtime transport", () => {
     let generatedId = 11;
     const stop = startHarnessRuntime({
       transport,
+      projectStorageApplication: createUnavailableProjectStorageApplication(),
       workspaceApplication,
       harnessVersion: "0.0.0",
       createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
@@ -237,7 +279,7 @@ describe("harness runtime transport", () => {
       causationId: "00000000-0000-4000-8000-000000000001",
     });
 
-    stop();
+    await stop();
   });
 
   it("dispatches intents and valid notifications through the runtime", async () => {
@@ -258,6 +300,7 @@ describe("harness runtime transport", () => {
     let generatedId = 2;
     const stop = startHarnessRuntime({
       transport,
+      projectStorageApplication: createUnavailableProjectStorageApplication(),
       workspaceApplication,
       harnessVersion: "0.0.0",
       createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
@@ -288,7 +331,7 @@ describe("harness runtime transport", () => {
       causationId: null,
     });
 
-    stop();
+    await stop();
     expect(notificationSubscriber).toBeUndefined();
   });
 
@@ -305,6 +348,7 @@ describe("harness runtime transport", () => {
     };
     const stop = startHarnessRuntime({
       transport,
+      projectStorageApplication: createUnavailableProjectStorageApplication(),
       workspaceApplication,
       harnessVersion: "0.0.0",
       createId: () => "00000000-0000-4000-8000-000000000002",
@@ -331,13 +375,211 @@ describe("harness runtime transport", () => {
       causationId: "00000000-0000-4000-8000-000000000001",
       payload: {
         code: "HARNESS_INTERNAL_FAILURE",
-        message: "Harness failed while handling a workspace message.",
+        message: "Harness failed while handling a message.",
       },
     });
-    stop();
+    await stop();
   });
 
-  it("turns an invalid workspace notification into harness failure", () => {
+  it("dispatches Project Storage commands sequentially with exact unavailable results", async () => {
+    const transport = new TestTransport();
+    const stop = startRuntime(transport);
+    const { close, closeRequest, create, createRequest, open, openRequest } =
+      projectStorageCommands();
+
+    for (const [index, command] of [open, create, close].entries()) {
+      transport.emit(command);
+      await vi.waitFor(() => expect(transport.sent).toHaveLength(index + 1));
+    }
+
+    expect(transport.sent).toMatchObject([
+      {
+        protocolVersion: 3,
+        sequence: 1,
+        causationId: open.messageId,
+        event: "project.open.result",
+        payload: {
+          status: "unavailable",
+          request: openRequest,
+          diagnostic: { code: "PROJECT_STORAGE_UNAVAILABLE" },
+        },
+      },
+      {
+        protocolVersion: 3,
+        sequence: 2,
+        causationId: create.messageId,
+        event: "project.create.result",
+        payload: {
+          status: "unavailable",
+          request: createRequest,
+          diagnostic: { code: "PROJECT_STORAGE_UNAVAILABLE" },
+        },
+      },
+      {
+        protocolVersion: 3,
+        sequence: 3,
+        causationId: close.messageId,
+        event: "project.close.result",
+        payload: {
+          status: "unavailable",
+          request: closeRequest,
+          diagnostic: { code: "PROJECT_STORAGE_UNAVAILABLE" },
+        },
+      },
+    ]);
+
+    await stop();
+  });
+
+  it("reports a neutral internal failure when Project dispatch throws", async () => {
+    const transport = new TestTransport();
+    const thrownMessage = "C:\\private\\project\\slopstop.db";
+    const projectStorageApplication: ProjectStorageApplication = {
+      open: async () => {
+        throw new Error(thrownMessage);
+      },
+      create: async () => {
+        throw new Error("Create is not used by this test.");
+      },
+      close: async () => {
+        throw new Error("Close is not used by this test.");
+      },
+      stop: async () => undefined,
+    };
+    const stop = startHarnessRuntime({
+      transport,
+      workspaceApplication: createUnavailableWorkspaceApplication(),
+      projectStorageApplication,
+      harnessVersion: "0.0.0",
+      createId: () => "00000000-0000-4000-8000-000000000002",
+      now: () => "2026-08-14T12:00:01.000Z",
+    });
+    const { open } = projectStorageCommands();
+
+    transport.emit(open);
+    await vi.waitFor(() => expect(transport.sent).toHaveLength(1));
+
+    expect(transport.sent).toEqual([
+      {
+        protocolVersion: 3,
+        messageType: "event",
+        messageId: "00000000-0000-4000-8000-000000000002",
+        sentAt: "2026-08-14T12:00:01.000Z",
+        sequence: 1,
+        causationId: open.messageId,
+        event: "system.failure",
+        payload: {
+          code: "HARNESS_INTERNAL_FAILURE",
+          message: "Harness failed while handling a message.",
+          retryable: false,
+        },
+      },
+    ]);
+    const serialized = JSON.stringify(transport.sent);
+    expect(serialized.toLowerCase()).not.toContain("workspace");
+    expect(serialized).not.toContain(thrownMessage);
+    await stop();
+  });
+
+  it("stops intake before exposing one observable Project Storage stop promise", async () => {
+    const calls: string[] = [];
+    const stopMessages = vi.fn(() => calls.push("stopMessages"));
+    const stopNotifications = vi.fn(() => calls.push("stopNotifications"));
+    const shutdownFailure = new Error("private shutdown failure");
+    const projectStorageStop = Promise.reject(shutdownFailure);
+    const stopProjectStorage = vi.fn(() => {
+      calls.push("projectStorageApplication.stop");
+      return projectStorageStop;
+    });
+    const transport: HarnessTransport = {
+      send: () => undefined,
+      subscribe: () => stopMessages,
+    };
+    const workspaceApplication: WorkspaceApplication = {
+      query: async () => {
+        throw new Error("Queries are not used by this test.");
+      },
+      submit: async () => {
+        throw new Error("Intents are not used by this test.");
+      },
+      subscribe: () => stopNotifications,
+    };
+    const projectStorageApplication: ProjectStorageApplication = {
+      open: async () => {
+        throw new Error("Open is not used by this test.");
+      },
+      create: async () => {
+        throw new Error("Create is not used by this test.");
+      },
+      close: async () => {
+        throw new Error("Close is not used by this test.");
+      },
+      stop: stopProjectStorage,
+    };
+    const stop = startHarnessRuntime({
+      transport,
+      workspaceApplication,
+      projectStorageApplication,
+      harnessVersion: "0.0.0",
+      createId: () => "00000000-0000-4000-8000-000000000002",
+      now: () => "2026-08-14T12:00:01.000Z",
+    });
+
+    const firstStop = stop();
+    const repeatedStop = stop();
+
+    expect(calls).toEqual(["stopMessages", "stopNotifications", "projectStorageApplication.stop"]);
+    expect(stopMessages).toHaveBeenCalledOnce();
+    expect(stopNotifications).toHaveBeenCalledOnce();
+    expect(stopProjectStorage).toHaveBeenCalledOnce();
+    expect(repeatedStop).toBe(firstStop);
+    await expect(firstStop).rejects.toBe(shutdownFailure);
+  });
+
+  it("retains synchronous shutdown failures while attempting every cleanup", async () => {
+    const calls: string[] = [];
+    const intakeFailure = new Error("private intake shutdown failure");
+    const storageFailure = new Error("private Storage shutdown failure");
+    const stopMessages = vi.fn(() => {
+      calls.push("stopMessages");
+      throw intakeFailure;
+    });
+    const stopNotifications = vi.fn(() => calls.push("stopNotifications"));
+    const projectStorageApplication = {
+      ...createUnavailableProjectStorageApplication(),
+      stop: () => {
+        calls.push("projectStorageApplication.stop");
+        throw storageFailure;
+      },
+    };
+    const stop = startHarnessRuntime({
+      transport: { send: () => undefined, subscribe: () => stopMessages },
+      workspaceApplication: {
+        ...createUnavailableWorkspaceApplication(),
+        subscribe: () => stopNotifications,
+      },
+      projectStorageApplication,
+      harnessVersion: "0.0.0",
+      createId: () => "00000000-0000-4000-8000-000000000002",
+      now: () => "2026-08-14T12:00:01.000Z",
+    });
+    let firstStop: Promise<void> | undefined;
+
+    expect(() => {
+      firstStop = stop();
+    }).not.toThrow();
+    if (firstStop === undefined) {
+      throw new Error("Runtime stop did not return a Promise.");
+    }
+
+    expect(stop()).toBe(firstStop);
+    expect(calls).toEqual(["stopMessages", "stopNotifications", "projectStorageApplication.stop"]);
+    await expect(firstStop).rejects.toMatchObject({ errors: [intakeFailure, storageFailure] });
+    expect(stopMessages).toHaveBeenCalledOnce();
+    expect(stopNotifications).toHaveBeenCalledOnce();
+  });
+
+  it("turns an invalid workspace notification into harness failure", async () => {
     const transport = new TestTransport();
     let notificationSubscriber: ((notification: WorkspaceNotification) => void) | undefined;
     const workspaceApplication: WorkspaceApplication = {
@@ -356,6 +598,7 @@ describe("harness runtime transport", () => {
     };
     const stop = startHarnessRuntime({
       transport,
+      projectStorageApplication: createUnavailableProjectStorageApplication(),
       workspaceApplication,
       harnessVersion: "0.0.0",
       createId: () => "00000000-0000-4000-8000-000000000002",
@@ -384,17 +627,17 @@ describe("harness runtime transport", () => {
         event: "system.failure",
         payload: {
           code: "HARNESS_INTERNAL_FAILURE",
-          message: "Harness failed while handling a workspace message.",
+          message: "Harness failed while handling a message.",
           retryable: false,
         },
       },
     ]);
 
-    stop();
+    await stop();
     expect(notificationSubscriber).toBeUndefined();
   });
 
-  it("answers a valid handshake with an exact sequenced ready event", () => {
+  it("answers a valid handshake with an exact sequenced ready event", async () => {
     const transport = new TestTransport();
     const stop = startRuntime(transport);
 
@@ -415,10 +658,10 @@ describe("harness runtime transport", () => {
       },
     ]);
 
-    stop();
+    await stop();
   });
 
-  it("reports an unsupported peer as a failure rather than ready or absent", () => {
+  it("reports an unsupported peer as a failure rather than ready or absent", async () => {
     const transport = new TestTransport();
     const stop = startRuntime(transport);
 
@@ -444,14 +687,14 @@ describe("harness runtime transport", () => {
       },
     ]);
 
-    stop();
+    await stop();
   });
 
-  it("stops receiving messages after disposal", () => {
+  it("stops receiving messages after disposal", async () => {
     const transport = new TestTransport();
     const stop = startRuntime(transport);
 
-    stop();
+    await stop();
     transport.emit(handshake);
 
     expect(transport.sent).toEqual([]);

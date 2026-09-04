@@ -2,13 +2,26 @@ import { describe, expect, it } from "vitest";
 import {
   createFailureEvent,
   createHandshakeCommand,
+  createProjectCloseCommand,
+  createProjectCloseResultEvent,
+  createProjectCreateCommand,
+  createProjectCreateResultEvent,
+  createProjectOpenCommand,
+  createProjectOpenResultEvent,
   createReadyEvent,
   createWorkspaceIntentCommand,
   createWorkspaceIntentResultEvent,
   createWorkspaceProjectionInvalidatedEvent,
   createWorkspaceQueryCommand,
   createWorkspaceQueryResultEvent,
+  HarnessBootstrapSchema,
+  HarnessStatusSchema,
   MessageIdSchema,
+  ProjectIdSchema,
+  ProjectStorageCloseRequestSchema,
+  ProjectStorageCreateRequestIdSchema,
+  ProjectStorageCreateRequestSchema,
+  ProjectStorageOpenRequestSchema,
   parseDesktopMessage,
   parseHarnessMessage,
   protocolVersion,
@@ -20,6 +33,74 @@ import {
   WorkspaceQuerySchema,
 } from "./index.js";
 
+it("accepts the terminal harness shutdown diagnostic", () => {
+  expect(
+    HarnessStatusSchema.parse({
+      state: "degraded",
+      attempt: 1,
+      diagnostic: {
+        code: "HARNESS_SHUTDOWN_TIMEOUT",
+        message: "Harness shutdown timed out.",
+      },
+    }),
+  ).toBeDefined();
+});
+
+it("accepts only plain local file URLs as trusted harness roots", () => {
+  expect(
+    HarnessBootstrapSchema.parse({
+      kind: "harness.connect",
+      applicationStorageRootUrl: "file:///C:/Users/example/AppData/SlopStop/storage",
+      migrationResourcesRootUrl: "file:///C:/Program%20Files/SlopStop/harness-migrations",
+    }),
+  ).toBeDefined();
+
+  for (const invalid of [
+    { applicationStorageRootUrl: "https://example.invalid/storage" },
+    { applicationStorageRootUrl: "file://server/share/storage" },
+    { applicationStorageRootUrl: "file:////server/share/storage" },
+    { applicationStorageRootUrl: "file:///\\\\server/share/storage" },
+    { applicationStorageRootUrl: "file:///%5C%5Cserver/share/storage" },
+    { applicationStorageRootUrl: "file:///C:%2Fstorage" },
+    { applicationStorageRootUrl: "file:///C:/%" },
+    { applicationStorageRootUrl: "file:///C:/%2" },
+    { applicationStorageRootUrl: "file:///C:/%GG" },
+    { applicationStorageRootUrl: "file:///\t/server/share/storage" },
+    { applicationStorageRootUrl: "file:///C:/stor\nage" },
+    { applicationStorageRootUrl: " file:///C:/storage" },
+    { applicationStorageRootUrl: "file:///C:/storage\n" },
+    { applicationStorageRootUrl: "file://user:password@localhost/storage" },
+    { migrationResourcesRootUrl: "file:///C:/migrations?version=1" },
+    { applicationStorageRootUrl: "file:///C:/storage#fragment" },
+    { migrationResourcesRootUrl: "not-a-url" },
+  ]) {
+    expect(
+      HarnessBootstrapSchema.safeParse({
+        kind: "harness.connect",
+        applicationStorageRootUrl: "file:///C:/storage",
+        migrationResourcesRootUrl: "file:///C:/migrations",
+        ...invalid,
+      }).success,
+    ).toBe(false);
+  }
+  expect(HarnessBootstrapSchema.safeParse({ kind: "harness.connect" }).success).toBe(false);
+  expect(
+    HarnessBootstrapSchema.safeParse({
+      kind: "harness.disconnect",
+      applicationStorageRootUrl: "file:///C:/storage",
+      migrationResourcesRootUrl: "file:///C:/migrations",
+    }).success,
+  ).toBe(false);
+  expect(
+    HarnessBootstrapSchema.safeParse({
+      kind: "harness.connect",
+      applicationStorageRootUrl: "file:///C:/storage",
+      migrationResourcesRootUrl: "file:///C:/migrations",
+      unexpected: true,
+    }).success,
+  ).toBe(false);
+});
+
 const validHandshake = {
   protocolVersion,
   messageType: "command",
@@ -28,6 +109,12 @@ const validHandshake = {
   command: "system.handshake",
   payload: {
     desktopVersion: "0.0.0",
+  },
+} as const;
+const storageUnavailable = {
+  diagnostic: {
+    code: "PROJECT_STORAGE_UNAVAILABLE",
+    message: "Project Storage owner is unavailable.",
   },
 } as const;
 
@@ -64,23 +151,111 @@ function workspaceExchange() {
   return { command, event, query, result };
 }
 
+function projectStorageExchanges() {
+  const sentAt = "2026-08-14T12:00:00.000Z";
+  const projectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000010");
+  const createRequestId = ProjectStorageCreateRequestIdSchema.parse(
+    "00000000-0000-4000-8000-000000000011",
+  );
+  const openRequest = ProjectStorageOpenRequestSchema.parse({ projectId });
+  const createRequest = ProjectStorageCreateRequestSchema.parse({ projectId, createRequestId });
+  const closeRequest = ProjectStorageCloseRequestSchema.parse({ projectId });
+  const open = createProjectOpenCommand(
+    { messageId: "00000000-0000-4000-8000-000000000021", sentAt },
+    openRequest,
+  );
+  const create = createProjectCreateCommand(
+    { messageId: "00000000-0000-4000-8000-000000000022", sentAt },
+    createRequest,
+  );
+  const close = createProjectCloseCommand(
+    { messageId: "00000000-0000-4000-8000-000000000023", sentAt },
+    closeRequest,
+  );
+  return [
+    {
+      command: open,
+      commandName: "project.open",
+      event: createProjectOpenResultEvent(
+        {
+          messageId: "00000000-0000-4000-8000-000000000031",
+          sentAt,
+          sequence: 1,
+          causationId: open.messageId,
+        },
+        { status: "unavailable", request: openRequest, ...storageUnavailable },
+      ),
+      eventName: "project.open.result",
+    },
+    {
+      command: create,
+      commandName: "project.create",
+      event: createProjectCreateResultEvent(
+        {
+          messageId: "00000000-0000-4000-8000-000000000032",
+          sentAt,
+          sequence: 2,
+          causationId: create.messageId,
+        },
+        { status: "unavailable", request: createRequest, ...storageUnavailable },
+      ),
+      eventName: "project.create.result",
+    },
+    {
+      command: close,
+      commandName: "project.close",
+      event: createProjectCloseResultEvent(
+        {
+          messageId: "00000000-0000-4000-8000-000000000033",
+          sentAt,
+          sequence: 3,
+          causationId: close.messageId,
+        },
+        { status: "unavailable", request: closeRequest, ...storageUnavailable },
+      ),
+      eventName: "project.close.result",
+    },
+  ] as const;
+}
+
 describe("desktop protocol parsing", () => {
-  it("parses workspace commands and correlated result events under protocol version 2", () => {
+  it("parses workspace commands and correlated result events under protocol version 3", () => {
     const { command, event, query, result } = workspaceExchange();
 
-    expect(protocolVersion).toBe(2);
+    expect(protocolVersion).toBe(3);
     expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
     expect(command).toMatchObject({
-      protocolVersion: 2,
+      protocolVersion: 3,
       messageId: "00000000-0000-4000-8000-000000000001",
       payload: query,
     });
     expect(parseHarnessMessage(event)).toEqual({ ok: true, value: event });
     expect(event).toMatchObject({
-      protocolVersion: 2,
+      protocolVersion: 3,
       causationId: command.messageId,
       payload: result,
     });
+  });
+
+  it("round-trips Project Storage envelopes under protocol version 3", () => {
+    expect(protocolVersion).toBe(3);
+    for (const { command, commandName, event, eventName } of projectStorageExchanges()) {
+      expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
+      expect(parseHarnessMessage(event)).toEqual({ ok: true, value: event });
+      expect(command.command).toBe(commandName);
+      expect(event).toMatchObject({
+        event: eventName,
+        causationId: command.messageId,
+        payload: { request: command.payload },
+      });
+      expect(parseDesktopMessage({ ...command, protocolVersion: 2 })).toEqual({
+        ok: false,
+        error: {
+          code: "PROTOCOL_VERSION_UNSUPPORTED",
+          issues: [{ code: "unsupported_value", path: "protocolVersion" }],
+        },
+      });
+    }
   });
 
   it("rejects incompatible and unknown workspace envelopes", () => {

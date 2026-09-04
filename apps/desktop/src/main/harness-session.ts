@@ -95,8 +95,16 @@ export class HarnessSession implements HarnessSessionClient {
   }
 
   #emit(event: HarnessSessionEvent): void {
+    const failures: unknown[] = [];
     for (const listener of this.#listeners) {
-      listener(event);
+      try {
+        listener(event);
+      } catch (error) {
+        failures.push(error);
+      }
     }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1)
+      throw new AggregateError(failures, "Harness session subscribers failed.");
   }
 }

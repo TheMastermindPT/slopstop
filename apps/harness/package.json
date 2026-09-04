@@ -8,10 +8,22 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "db:generate": "pnpm db:generate:application && pnpm db:generate:canonical && pnpm db:generate:runtime",
+    "db:generate:application": "drizzle-kit generate --config drizzle.application.config.ts",
+    "db:generate:canonical": "drizzle-kit generate --config drizzle.canonical.config.ts",
+    "db:generate:check": "node scripts/check-generated-migrations.mjs",
+    "db:generate:runtime": "drizzle-kit generate --config drizzle.runtime.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@libsql/client": "catalog:",
     "@slopstop/protocol": "workspace:*",
-    "pino": "catalog:"
+    "drizzle-orm": "catalog:",
+    "libsql": "catalog:",
+    "pino": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "drizzle-kit": "catalog:"
   }
 }

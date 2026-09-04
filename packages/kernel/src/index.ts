@@ -1,4 +1,11 @@
 export type {
+  CanonicalDatabaseLineageId,
+  ProjectStorageCreateRequestId,
+  RuntimeDatabaseLineageId,
+  StorageGenerationId,
+  StorageId,
+} from "./project-storage-identifiers.js";
+export type {
   AcceptedRevisionId,
   ContextProposalId,
   ContextRecordId,

@@ -16,9 +16,11 @@ overrides:
 
 catalog:
   "@biomejs/biome": 2.5.8
+  "@libsql/client": 0.17.4
   "@commitlint/cli": 21.2.2
   "@commitlint/config-conventional": 21.2.2
   "@electron-forge/cli": 7.11.2
+  "@electron-forge/plugin-auto-unpack-natives": 7.11.2
   "@electron-forge/plugin-fuses": 7.11.2
   "@electron-forge/plugin-vite": 7.11.2
   "@electron-forge/shared-types": 7.11.2
@@ -37,12 +39,15 @@ catalog:
   "@vitejs/plugin-react": 6.0.5
   "@vitest/coverage-v8": 4.1.10
   dependency-cruiser: 18.2.0
+  drizzle-kit: 0.31.10
+  drizzle-orm: 0.45.2
   electron: 43.4.0
   husky: 9.1.7
   jscpd: 5.0.15
   jsdom: 30.0.1
-  knip: 6.32.2
+  knip: 6.34.0
   likec4: 1.59.2
+  libsql: 0.5.29
   lint-staged: 17.3.0
   pino: 10.3.1
   pino-pretty: 13.1.3

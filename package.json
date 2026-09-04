@@ -28,10 +28,12 @@
     "postinstall": "pnpm --filter @slopstop/desktop exec install-electron",
     "prepare": "husky",
     "test": "pnpm test:unit",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --config vitest.coverage.config.ts",
     "test:e2e": "pnpm --filter @slopstop/desktop test:e2e",
     "test:integration": "vitest run --config apps/harness/vitest.integration.config.ts",
     "test:mutation": "stryker run",
+    "test:mutation:project-storage:desktop": "pnpm exec stryker run stryker.project-storage-desktop.config.json",
+    "test:mutation:project-storage:harness": "pnpm exec stryker run stryker.project-storage.config.json",
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "typecheck": "pnpm -r --if-present typecheck"

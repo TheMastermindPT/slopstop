@@ -1,5 +1,4 @@
 import type {
-  DomainIdentity,
   AcceptedRevisionId as KernelAcceptedRevisionId,
   ContextProposalId as KernelContextProposalId,
   ContextRecordId as KernelContextRecordId,
@@ -11,19 +10,15 @@ import type {
   MemoryProposalId as KernelMemoryProposalId,
   MemoryRevisionId as KernelMemoryRevisionId,
   MemoryTopicId as KernelMemoryTopicId,
-  ProjectId as KernelProjectId,
   ReviewAnnotationId as KernelReviewAnnotationId,
   WaypointId as KernelWaypointId,
   WorkspaceProjectionRevision as KernelWorkspaceProjectionRevision,
 } from "@slopstop/kernel";
-import { isDomainIdentity, isWorkspaceProjectionRevision } from "@slopstop/kernel";
+import { isWorkspaceProjectionRevision } from "@slopstop/kernel";
 import { z } from "zod";
+import { domainIdentitySchema, ProjectIdSchema } from "./domain-identity-schema.js";
 
-function domainIdentitySchema<T extends DomainIdentity<string>>() {
-  return z.custom<T>((value) => isDomainIdentity(value));
-}
-
-export const ProjectIdSchema = domainIdentitySchema<KernelProjectId>();
+export { ProjectIdSchema };
 export type ProjectId = z.infer<typeof ProjectIdSchema>;
 export const WaypointIdSchema = domainIdentitySchema<KernelWaypointId>();
 export type WaypointId = z.infer<typeof WaypointIdSchema>;

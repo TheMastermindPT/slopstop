@@ -12,6 +12,7 @@
       "!!**/.rpiv/decisions/*.md",
       "!!**/.vite",
       "!!**/coverage",
+      "!!**/drizzle",
       "!!**/node_modules",
       "!!**/out",
       "!!**/playwright-report",

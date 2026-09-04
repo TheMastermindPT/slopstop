@@ -14,11 +14,9 @@ import {
   WorkspaceQueryResultSchema,
   type WorkspaceScope,
 } from "@slopstop/protocol";
-import type {
-  HarnessSessionClient,
-  HarnessSessionEvent,
-  HarnessSessionSendResult,
-} from "./harness-session.js";
+import { requestHarness } from "./harness-pending-request.js";
+import { harnessSendFailureMessage } from "./harness-send-failure.js";
+import type { HarnessSessionClient, HarnessSessionEvent } from "./harness-session.js";
 
 type PendingQuery = Readonly<{
   kind: "query";
@@ -74,17 +72,6 @@ function brokenIntent(capability: WorkspaceCapability, message: string): Workspa
     capability,
     diagnostic: { code: "WORKSPACE_TRANSPORT_FAILED", message },
   });
-}
-
-function sendFailureMessage(result: Exclude<HarnessSessionSendResult, { ok: true }>): string {
-  switch (result.error.code) {
-    case "HARNESS_SESSION_UNAVAILABLE":
-      return "Harness session is unavailable.";
-    case "HARNESS_SESSION_MESSAGE_INVALID":
-      return "Desktop created an invalid harness message.";
-    case "HARNESS_SESSION_SEND_FAILED":
-      return "Harness session send failed.";
-  }
 }
 
 function revisionKey(capability: WorkspaceCapability, scope: WorkspaceScope): string {
@@ -160,24 +147,18 @@ class WorkspaceBridge implements WorkspaceBridgeClient {
       return Promise.resolve(broken("Workspace bridge is stopped."));
     }
 
-    let command: DesktopMessage;
-    try {
-      command = createCommand();
-    } catch {
-      return Promise.resolve(broken("Desktop created an invalid harness message."));
-    }
-
-    return new Promise((resolve) => {
-      if (this.#pending.has(command.messageId)) {
-        resolve(broken("Harness request identity collided."));
-        return;
-      }
-      this.#pending.set(command.messageId, createPending(resolve));
-      const sent = this.#session.send(command);
-      if (!sent.ok) {
-        this.#pending.delete(command.messageId);
-        resolve(broken(sendFailureMessage(sent)));
-      }
+    return requestHarness({
+      pending: this.#pending,
+      createCommand,
+      createPending,
+      broken,
+      send: (command, resolve) => {
+        const sent = this.#session.send(command);
+        if (!sent.ok) {
+          this.#pending.delete(command.messageId);
+          resolve(broken(harnessSendFailureMessage(sent)));
+        }
+      },
     });
   }
 
