@@ -151,6 +151,11 @@ async function launchPackagedApp({ root, token, scenario }) {
       ...process.env,
       SLOPSTOP_PACKAGE_SMOKE: "1",
     };
+    if (process.env["CI"] === "true") {
+      env.SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS = "1";
+    } else {
+      delete env.SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS;
+    }
     delete env.NODE_OPTIONS;
     delete env.NODE_PATH;
     for (const [key, value] of [
@@ -235,6 +240,7 @@ async function launchPackagedApp({ root, token, scenario }) {
 
 async function launchScenario(root, token, scenario) {
   const launch = await launchPackagedApp({ root, token, scenario });
+  const proofFailure = /^Package smoke proof failed at ([a-z-]+)\.\n$/u.exec(launch.stderr);
   const failedCheck = [
     [!launch.closed, "did not close"],
     [launch.spawnFailed, "failed to launch"],
@@ -246,6 +252,7 @@ async function launchScenario(root, token, scenario) {
     [launch.code !== 0, "exited nonzero"],
   ].find(([failed]) => failed);
   if (failedCheck !== undefined) {
+    activeSmokeStage = `${scenario} scenario ${proofFailure?.[1] ?? failedCheck[1]}`;
     throw new Error(`Packaged SlopStop ${scenario} scenario ${failedCheck[1]}.`);
   }
 }

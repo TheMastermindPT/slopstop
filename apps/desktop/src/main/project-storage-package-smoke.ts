@@ -16,6 +16,32 @@ export type ProjectStoragePackageSmokeScenario =
   | "missing-runtime"
   | "witnessed-staging";
 
+type ProjectStoragePackageSmokeFailureStage =
+  | "absent-project-open"
+  | "healthy-project-create"
+  | "healthy-project-open"
+  | "healthy-canonical-health"
+  | "healthy-runtime-health"
+  | "healthy-project-close"
+  | "missing-runtime-open"
+  | "missing-runtime-canonical-health"
+  | "missing-runtime-health"
+  | "missing-runtime-close"
+  | "witness-project-open"
+  | "witness-canonical-health"
+  | "witness-runtime-health"
+  | "witness-project-close"
+  | "witness-project-create"
+  | "witness-create-reason";
+
+class ProjectStoragePackageSmokeError extends Error {
+  override readonly name = "ProjectStoragePackageSmokeError";
+
+  constructor(readonly stage: ProjectStoragePackageSmokeFailureStage) {
+    super("Packaged Project Storage smoke failed.");
+  }
+}
+
 export function parseProjectStoragePackageSmokeScenario(
   value: unknown,
 ): ProjectStoragePackageSmokeScenario {
@@ -29,50 +55,62 @@ export function parseProjectStoragePackageSmokeScenario(
   }
 }
 
-function requireSmoke(condition: boolean): asserts condition {
+function requireSmoke(
+  condition: boolean,
+  stage: ProjectStoragePackageSmokeFailureStage,
+): asserts condition {
   if (!condition) {
-    throw new Error("Packaged Project Storage smoke failed.");
+    throw new ProjectStoragePackageSmokeError(stage);
   }
+}
+
+export function projectStoragePackageSmokeFailureStage(
+  error: unknown,
+): ProjectStoragePackageSmokeFailureStage | undefined {
+  return error instanceof ProjectStoragePackageSmokeError ? error.stage : undefined;
 }
 
 async function runBootstrapScenario(bridge: ProjectStorageBridgeClient): Promise<void> {
   const absent = await bridge.open({ projectId: absentProjectId });
-  requireSmoke(absent.status === "not-registered");
+  requireSmoke(absent.status === "not-registered", "absent-project-open");
   const created = await bridge.create({
     projectId: healthyProjectId,
     createRequestId: healthyCreateRequestId,
   });
-  requireSmoke(created.status === "created");
+  requireSmoke(created.status === "created", "healthy-project-create");
   const healthy = await bridge.open({ projectId: healthyProjectId });
-  requireSmoke(healthy.status === "opened");
-  requireSmoke(healthy.canonicalHealth.status === "healthy");
-  requireSmoke(healthy.runtimeHealth.status === "healthy");
+  requireSmoke(healthy.status === "opened", "healthy-project-open");
+  requireSmoke(healthy.canonicalHealth.status === "healthy", "healthy-canonical-health");
+  requireSmoke(healthy.runtimeHealth.status === "healthy", "healthy-runtime-health");
   const closed = await bridge.close({ projectId: healthyProjectId });
-  requireSmoke(closed.status === "closed");
+  requireSmoke(closed.status === "closed", "healthy-project-close");
 }
 
 async function runMissingRuntimeScenario(bridge: ProjectStorageBridgeClient): Promise<void> {
   const safeMode = await bridge.open({ projectId: healthyProjectId });
-  requireSmoke(safeMode.status === "safe-mode");
-  requireSmoke(safeMode.canonicalHealth.status === "healthy");
-  requireSmoke(safeMode.runtimeHealth.status === "missing");
+  requireSmoke(safeMode.status === "safe-mode", "missing-runtime-open");
+  requireSmoke(safeMode.canonicalHealth.status === "healthy", "missing-runtime-canonical-health");
+  requireSmoke(safeMode.runtimeHealth.status === "missing", "missing-runtime-health");
   const closed = await bridge.close({ projectId: healthyProjectId });
-  requireSmoke(closed.status === "closed");
+  requireSmoke(closed.status === "closed", "missing-runtime-close");
 }
 
 async function runWitnessedStagingScenario(bridge: ProjectStorageBridgeClient): Promise<void> {
   const witnessOpen = await bridge.open({ projectId: witnessProjectId });
-  requireSmoke(witnessOpen.status === "safe-mode");
-  requireSmoke(witnessOpen.canonicalHealth.status === "recovery-required");
-  requireSmoke(witnessOpen.runtimeHealth.status === "recovery-required");
+  requireSmoke(witnessOpen.status === "safe-mode", "witness-project-open");
+  requireSmoke(
+    witnessOpen.canonicalHealth.status === "recovery-required",
+    "witness-canonical-health",
+  );
+  requireSmoke(witnessOpen.runtimeHealth.status === "recovery-required", "witness-runtime-health");
   const closed = await bridge.close({ projectId: witnessProjectId });
-  requireSmoke(closed.status === "closed");
+  requireSmoke(closed.status === "closed", "witness-project-close");
   const witnessCreate = await bridge.create({
     projectId: witnessProjectId,
     createRequestId: witnessCreateRequestId,
   });
-  requireSmoke(witnessCreate.status === "blocked");
-  requireSmoke(witnessCreate.reason === "prior-state-witness");
+  requireSmoke(witnessCreate.status === "blocked", "witness-project-create");
+  requireSmoke(witnessCreate.reason === "prior-state-witness", "witness-create-reason");
 }
 
 export async function runProjectStoragePackageSmoke(

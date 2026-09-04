@@ -36,7 +36,10 @@ import {
   createProjectStorageBridge,
   type ProjectStorageBridgeClient,
 } from "./project-storage-bridge.js";
-import { runProjectStoragePackageSmoke } from "./project-storage-package-smoke.js";
+import {
+  projectStoragePackageSmokeFailureStage,
+  runProjectStoragePackageSmoke,
+} from "./project-storage-package-smoke.js";
 import { configureSessionSecurity, lockNavigation } from "./security.js";
 import { createWorkspaceBridge, type WorkspaceBridgeClient } from "./workspace-bridge.js";
 
@@ -107,6 +110,22 @@ const runPackageSmokeIfReady = (): void => {
       });
       const proofResults = await Promise.allSettled([rendererProof, storageProof]);
       if (proofResults.some((result) => result.status === "rejected")) {
+        if (process.env["SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS"] === "1") {
+          const [rendererResult, storageResult] = proofResults;
+          const storageStage =
+            storageResult?.status === "rejected"
+              ? projectStoragePackageSmokeFailureStage(storageResult.reason)
+              : undefined;
+          const failureStage =
+            rendererResult?.status === "rejected"
+              ? storageStage === undefined
+                ? "renderer"
+                : `renderer-and-storage-${storageStage}`
+              : storageStage === undefined
+                ? "storage"
+                : `storage-${storageStage}`;
+          process.stderr.write(`Package smoke proof failed at ${failureStage}.\n`);
+        }
         await desktopShutdown.requestExit(1);
         return;
       }
