@@ -239,8 +239,15 @@ async function launchPackagedApp({ root, token, scenario }) {
 }
 
 async function launchScenario(root, token, scenario) {
-  const launch = await launchPackagedApp({ root, token, scenario });
-  const proofFailure = /^Package smoke proof failed at ([a-z-]+)\.\n$/u.exec(launch.stderr);
+  let launch;
+  try {
+    launch = await launchPackagedApp({ root, token, scenario });
+  } catch {
+    activeSmokeStage = `${scenario} scenario launch rejected`;
+    throw new Error(`Packaged SlopStop ${scenario} scenario launch rejected.`);
+  }
+  const proofFailure = /^Package smoke proof failed at ([a-z-]+)\.$/mu.exec(launch.stderr);
+  const startupFailed = launch.stderr.includes("SlopStop failed to start.\n");
   const failedCheck = [
     [!launch.closed, "did not close"],
     [launch.spawnFailed, "failed to launch"],
@@ -252,7 +259,8 @@ async function launchScenario(root, token, scenario) {
     [launch.code !== 0, "exited nonzero"],
   ].find(([failed]) => failed);
   if (failedCheck !== undefined) {
-    activeSmokeStage = `${scenario} scenario ${proofFailure?.[1] ?? failedCheck[1]}`;
+    const failure = proofFailure?.[1] ?? (startupFailed ? "startup failed" : failedCheck[1]);
+    activeSmokeStage = `${scenario} scenario ${failure}`;
     throw new Error(`Packaged SlopStop ${scenario} scenario ${failedCheck[1]}.`);
   }
 }
@@ -602,6 +610,7 @@ async function runPackageSmoke() {
       await createStagingWitness(root);
       activeSmokeStage = "witnessed-staging scenario";
       await launchScenario(root, token, "witnessed-staging");
+      activeSmokeStage = "application database audit";
       await assertApplicationDatabase(root);
     } finally {
       if (cleanupSafe) {
