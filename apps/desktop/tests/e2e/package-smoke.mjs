@@ -28,6 +28,7 @@ const generationIdPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 let cleanupSafe = true;
 let activePackageOutput;
+let activeSmokeStage = "package preflight";
 
 function packagedArchitecture() {
   return process.arch === "arm" ? "armv7l" : process.arch;
@@ -368,6 +369,7 @@ const invalidAuthorizationCases = [
 ];
 
 async function runInvalidAuthorizationCase(testCase) {
+  activeSmokeStage = `invalid authorization: ${testCase.name}`;
   const fixture = await createAuthorizedSmokeRoot();
   try {
     await testCase.prepare?.(fixture);
@@ -427,6 +429,7 @@ async function assertRejectedAuthorizationLaunch({
 }
 
 async function runSymlinkAuthorizationCaseIfSupported() {
+  activeSmokeStage = "invalid authorization: symlink marker";
   const fixture = await createAuthorizedSmokeRoot();
   const externalTargetRoot = await mkdtemp(
     path.join(os.tmpdir(), "slopstop-package-smoke-marker-target-"),
@@ -469,6 +472,7 @@ async function runSymlinkAuthorizationCaseIfSupported() {
 }
 
 async function runRootSymlinkAuthorizationCaseIfSupported() {
+  activeSmokeStage = "invalid authorization: symlink root";
   const fixture = await createAuthorizedSmokeRoot();
   const linkParent = await mkdtemp(path.join(os.tmpdir(), "slopstop-package-smoke-root-link-"));
   const linkedRoot = path.join(linkParent, "authorized-root");
@@ -572,18 +576,24 @@ async function assertApplicationDatabase(root) {
 }
 
 async function runPackageSmoke() {
+  activeSmokeStage = "package isolation";
   const restorePackagedOutput = await isolatePackagedOutput();
   try {
+    activeSmokeStage = "package resource preflight";
     await assertPackagedStorageResources();
     await runInvalidAuthorizationMatrix();
+    activeSmokeStage = "authorized root creation";
     const { root, token } = await createAuthorizedSmokeRoot();
 
     try {
+      activeSmokeStage = "bootstrap scenario";
       await launchScenario(root, token, "bootstrap");
       const generationRoot = await inspectHealthyGeneration(root);
       await removeClosedRuntimeDatabase(generationRoot);
+      activeSmokeStage = "missing-runtime scenario";
       await launchScenario(root, token, "missing-runtime");
       await createStagingWitness(root);
+      activeSmokeStage = "witnessed-staging scenario";
       await launchScenario(root, token, "witnessed-staging");
       await assertApplicationDatabase(root);
     } finally {
@@ -600,6 +610,10 @@ try {
   await runPackageSmoke();
   process.stdout.write("Packaged SlopStop validated renderer isolation and Project Storage.\n");
 } catch {
-  process.stderr.write("Packaged SlopStop smoke failed.\n");
+  const message =
+    process.env["CI"] === "true"
+      ? `Packaged SlopStop smoke failed at ${activeSmokeStage}.\n`
+      : "Packaged SlopStop smoke failed.\n";
+  process.stderr.write(message);
   process.exitCode = 1;
 }
