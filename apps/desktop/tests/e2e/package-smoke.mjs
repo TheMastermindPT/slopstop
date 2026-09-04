@@ -248,13 +248,15 @@ async function launchScenario(root, token, scenario) {
   }
   const proofFailure = /^Package smoke proof failed at ([a-z-]+)\.$/mu.exec(launch.stderr);
   const startupFailed = launch.stderr.includes("SlopStop failed to start.\n");
+  const capturedOutput = `${launch.stdout}\n${launch.stderr}`;
+  const exposedPrivateInput = [root, token].some((value) => capturedOutput.includes(value));
   const failedCheck = [
     [!launch.closed, "did not close"],
     [launch.spawnFailed, "failed to launch"],
     [launch.timedOut, "timed out"],
     [launch.stderrOverflow, "stderr exceeded its bound"],
     [launch.stdoutOverflow, "stdout exceeded its bound"],
-    [launch.stderr !== "", "emitted stderr"],
+    [exposedPrivateInput, "exposed private smoke input"],
     [launch.stdout.trim() !== "", "emitted stdout"],
     [launch.code !== 0, "exited nonzero"],
   ].find(([failed]) => failed);
