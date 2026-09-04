@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import {
   createHandshakeCommand,
+  type HarnessBootstrap,
   HarnessBootstrapSchema,
   type HarnessMessage,
   type HarnessStatus,
@@ -18,27 +19,42 @@ import {
 } from "./harness-session.js";
 
 const handshakeTimeoutMs = 5_000;
+const harnessShutdownGraceMs = 5_000;
 const maxAutomaticAttempts = 3;
 const restartBaseDelayMs = 250;
+const statusNeutralEvents: ReadonlySet<HarnessMessage["event"]> = new Set([
+  "project.open.result",
+  "project.create.result",
+  "project.close.result",
+  "workspace.intent.result",
+  "workspace.projection.invalidated",
+  "workspace.query.result",
+]);
 
 type StatusListener = (status: HarnessStatus) => void;
 
 export class HarnessSupervisor {
+  readonly #bootstrap: HarnessBootstrap;
   readonly #entryPath: string;
+  readonly #errorGuards = new Map<UtilityProcess, () => void>();
   readonly #logger: Logger;
   readonly #listeners = new Set<StatusListener>();
+  readonly #observationCleanup = new Map<UtilityProcess, () => void>();
   #attempt = 0;
   #child: UtilityProcess | undefined;
   #handshakeTimer: NodeJS.Timeout | undefined;
+  #manualRetryPending = false;
   #restartBlocked = false;
   #restartTimer: NodeJS.Timeout | undefined;
   readonly #session = new HarnessSession();
   #status: HarnessStatus = { state: "stopped" };
+  #stopPromise: Promise<void> | undefined;
   #stopping = false;
 
-  constructor(entryPath: string, logger: Logger) {
+  constructor(entryPath: string, logger: Logger, bootstrap: HarnessBootstrap) {
     this.#entryPath = entryPath;
     this.#logger = logger;
+    this.#bootstrap = HarnessBootstrapSchema.parse(bootstrap);
     this.#session.subscribe((event) => {
       this.#handleSessionEvent(event);
     });
@@ -53,42 +69,50 @@ export class HarnessSupervisor {
   }
 
   retry(): RetryHarnessResult {
-    if (this.#status.state !== "crashed") {
-      return {
-        ok: false,
-        error: {
-          code: "HARNESS_RETRY_UNAVAILABLE",
-          message: "Harness retry is available only after automatic recovery stops.",
-        },
-      };
-    }
+    const unavailable = {
+      ok: false,
+      error: {
+        code: "HARNESS_RETRY_UNAVAILABLE",
+        message: "Harness retry is available only after automatic recovery stops.",
+      },
+    } as const;
+    if (this.#stopping) return unavailable;
+    if (this.#status.state !== "crashed") return unavailable;
 
-    this.#clearTimers();
-    this.#session.detach();
-    this.#child = undefined;
-    this.#attempt = 0;
-    this.#restartBlocked = false;
-    this.#stopping = false;
-    this.#spawn();
+    if (this.#child === undefined) {
+      this.#restartAfterFailure();
+    } else {
+      this.#manualRetryPending = true;
+    }
     return { ok: true };
   }
 
   start(): void {
-    if (this.#child !== undefined || this.#restartTimer !== undefined) {
-      return;
-    }
+    if (this.#child !== undefined) return;
+    if (this.#restartTimer !== undefined) return;
+    if (this.#stopping) return;
 
-    this.#stopping = false;
+    this.#stopPromise = undefined;
     this.#spawn();
   }
 
-  stop(): void {
+  stop(): Promise<void> {
+    if (this.#stopPromise !== undefined) return this.#stopPromise;
     this.#stopping = true;
-    this.#clearTimers();
+    this.#manualRetryPending = false;
     this.#session.detach();
-    this.#child?.kill();
-    this.#child = undefined;
-    this.#setStatus({ state: "stopped" });
+    this.#clearTimers();
+    const child = this.#child;
+    if (child === undefined) {
+      this.#setStatus({ state: "stopped" });
+      this.#stopping = false;
+      this.#stopPromise = Promise.resolve();
+      return this.#stopPromise;
+    }
+    this.#removeChildObservation(child);
+    this.#guardChildErrors(child);
+    this.#stopPromise = this.#stopChild(child);
+    return this.#stopPromise;
   }
 
   subscribe(listener: StatusListener): () => void {
@@ -109,7 +133,48 @@ export class HarnessSupervisor {
     }
   }
 
+  #stopChild(child: UtilityProcess): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      let gracefulTimer: NodeJS.Timeout | undefined;
+      let terminalTimer: NodeJS.Timeout | undefined;
+      let terminalTimedOut = false;
+      const finish = (): void => {
+        if (gracefulTimer !== undefined) clearTimeout(gracefulTimer);
+        if (terminalTimer !== undefined) clearTimeout(terminalTimer);
+        if (this.#child === child) this.#child = undefined;
+        if (terminalTimedOut) {
+          this.#stopping = false;
+          return;
+        }
+        this.#setStatus({ state: "stopped" });
+        this.#stopping = false;
+        resolve();
+      };
+      child.once("exit", finish);
+      gracefulTimer = setTimeout(() => {
+        try {
+          child.kill();
+        } catch {
+          // The terminal deadline remains authoritative when kill itself fails.
+        }
+        terminalTimer = setTimeout(() => {
+          terminalTimedOut = true;
+          this.#setStatus({
+            state: "degraded",
+            attempt: this.#attempt,
+            diagnostic: {
+              code: "HARNESS_SHUTDOWN_TIMEOUT",
+              message: "Harness shutdown timed out.",
+            },
+          });
+          reject(new Error("Harness shutdown timed out."));
+        }, harnessShutdownGraceMs);
+      }, harnessShutdownGraceMs);
+    });
+  }
+
   #handleHarnessMessage(message: HarnessMessage): void {
+    if (statusNeutralEvents.has(message.event)) return;
     switch (message.event) {
       case "system.failure":
         this.#restartBlocked = true;
@@ -122,7 +187,10 @@ export class HarnessSupervisor {
             message: message.payload.message,
           },
         });
-        this.#child?.kill();
+        if (this.#child !== undefined) {
+          this.#quarantineChild(this.#child);
+          this.#child.kill();
+        }
         return;
       case "system.ready":
         if (this.#handshakeTimer !== undefined) {
@@ -134,10 +202,6 @@ export class HarnessSupervisor {
           attempt: this.#attempt,
           harnessVersion: message.payload.harnessVersion,
         });
-        return;
-      case "workspace.intent.result":
-      case "workspace.projection.invalidated":
-      case "workspace.query.result":
         return;
     }
   }
@@ -157,7 +221,10 @@ export class HarnessSupervisor {
             message: "Harness returned an invalid or incompatible protocol message.",
           },
         });
-        this.#child?.kill();
+        if (this.#child !== undefined) {
+          this.#quarantineChild(this.#child);
+          this.#child.kill();
+        }
         return;
       case "message":
         this.#handleHarnessMessage(event.message);
@@ -176,7 +243,11 @@ export class HarnessSupervisor {
       this.#handshakeTimer = undefined;
     }
 
-    if (this.#stopping || this.#restartBlocked) {
+    if (this.#stopping) {
+      return;
+    }
+    if (this.#restartBlocked) {
+      if (this.#manualRetryPending) this.#restartAfterFailure();
       return;
     }
 
@@ -218,14 +289,26 @@ export class HarnessSupervisor {
     }
   }
 
+  #restartAfterFailure(): void {
+    this.#manualRetryPending = false;
+    this.#clearTimers();
+    this.#session.detach();
+    this.#attempt = 0;
+    this.#restartBlocked = false;
+    this.#spawn();
+  }
+
   #createChild(): UtilityProcess | undefined {
     try {
       return utilityProcess.fork(this.#entryPath, [], {
         serviceName: "SlopStop Harness",
         stdio: "pipe",
       });
-    } catch (error) {
-      this.#logger.error({ error, attempt: this.#attempt }, "Harness process failed to start.");
+    } catch {
+      this.#logger.error(
+        { attempt: this.#attempt, code: "HARNESS_START_FAILED" },
+        "Harness process failed to start.",
+      );
       this.#setStatus({
         state: "crashed",
         attempt: this.#attempt,
@@ -240,27 +323,73 @@ export class HarnessSupervisor {
   }
 
   #observeChild(child: UtilityProcess): void {
-    child.stdout?.on("data", (chunk: Buffer) => {
-      this.#logger.info({ output: chunk.toString("utf8").trimEnd() }, "Harness output.");
-    });
-    child.stderr?.on("data", (chunk: Buffer) => {
-      this.#logger.error({ output: chunk.toString("utf8").trimEnd() }, "Harness error output.");
-    });
-    child.once("error", (type, location) => {
-      this.#logger.error({ type, location }, "Harness process reported a fatal error.");
+    const attempt = this.#attempt;
+    const observeOutput = (stream: "stdout" | "stderr", chunk: Buffer): void => {
+      const metadata = { attempt, stream, bytes: chunk.byteLength };
+      if (stream === "stdout") {
+        this.#logger.info(metadata, "Harness process output observed.");
+      } else {
+        this.#logger.error(metadata, "Harness process output observed.");
+      }
+    };
+    const onStdout = (chunk: Buffer) => observeOutput("stdout", chunk);
+    const onStderr = (chunk: Buffer) => observeOutput("stderr", chunk);
+    const onError = () => {
+      this.#logger.error(
+        { attempt, code: "HARNESS_PROCESS_ERROR" },
+        "Harness process reported a fatal error.",
+      );
+    };
+    child.stdout?.on("data", onStdout);
+    child.stderr?.on("data", onStderr);
+    child.once("error", onError);
+    this.#observationCleanup.set(child, () => {
+      child.stdout?.off("data", onStdout);
+      child.stderr?.off("data", onStderr);
+      child.off("error", onError);
     });
     child.once("exit", (exitCode) => {
+      this.#removeChildObservation(child);
+      this.#removeChildErrorGuard(child);
       this.#handleProcessExit(child, exitCode);
     });
     child.once("spawn", () => {
+      if (this.#stopping || this.#child !== child) return;
       this.#connectChild(child);
     });
+  }
+
+  #removeChildObservation(child: UtilityProcess): void {
+    const cleanup = this.#observationCleanup.get(child);
+    if (cleanup === undefined) return;
+    this.#observationCleanup.delete(child);
+    cleanup();
+  }
+
+  #guardChildErrors(child: UtilityProcess): void {
+    if (this.#errorGuards.has(child)) return;
+    const ignoreError = () => {};
+    this.#errorGuards.set(child, ignoreError);
+    child.on("error", ignoreError);
+  }
+
+  #removeChildErrorGuard(child: UtilityProcess): void {
+    const guard = this.#errorGuards.get(child);
+    if (guard === undefined) return;
+    this.#errorGuards.delete(child);
+    child.off("error", guard);
+  }
+
+  #quarantineChild(child: UtilityProcess): void {
+    this.#session.detach();
+    this.#removeChildObservation(child);
+    this.#guardChildErrors(child);
   }
 
   #connectChild(child: UtilityProcess): void {
     const { port1, port2 } = new MessageChannelMain();
     this.#session.attach(port2);
-    child.postMessage(HarnessBootstrapSchema.parse({ kind: "harness.connect" }), [port1]);
+    child.postMessage(this.#bootstrap, [port1]);
     const handshake = this.#session.send(
       createHandshakeCommand(
         {
@@ -285,6 +414,7 @@ export class HarnessSupervisor {
           message: "Harness handshake could not be sent.",
         },
       });
+      this.#quarantineChild(child);
       child.kill();
       return;
     }

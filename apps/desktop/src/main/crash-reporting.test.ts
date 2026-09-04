@@ -12,11 +12,20 @@ import { initializeCrashReporting, reportHarnessCrash } from "./crash-reporting.
 type SanitizedEvent = {
   breadcrumbs?: unknown;
   contexts?: unknown;
+  debug_meta?: {
+    images?: Array<{
+      type: "sourcemap" | "wasm";
+      code_file: string;
+      debug_file?: string;
+      debug_id: string;
+    }>;
+  };
   exception?: {
     values?: Array<{
       value?: string;
       stacktrace?: {
         frames?: Array<{
+          abs_path?: string;
           filename?: string;
           context_line?: string;
           post_context?: string[];
@@ -31,8 +40,31 @@ type SanitizedEvent = {
   message?: string;
   request?: unknown;
   server_name?: string;
+  threads?: {
+    values: Array<{
+      stacktrace?: {
+        frames?: Array<{
+          abs_path?: string;
+          filename?: string;
+          context_line?: string;
+          vars?: Record<string, unknown>;
+        }>;
+      };
+    }>;
+  };
   user?: unknown;
 };
+
+function enabledBeforeSend(): (event: SanitizedEvent) => SanitizedEvent {
+  vi.stubEnv("SLOPSTOP_SENTRY_CONSENT", "1");
+  vi.stubEnv("SLOPSTOP_SENTRY_DSN", "https://public@example.invalid/1");
+  expect(initializeCrashReporting()).toBe(true);
+  const options = sentryMocks.init.mock.calls[0]?.[0] as
+    | { beforeSend(event: SanitizedEvent): SanitizedEvent }
+    | undefined;
+  if (options === undefined) throw new Error("Expected Sentry initialization options.");
+  return options.beforeSend;
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -55,13 +87,7 @@ describe("crash reporting", () => {
   });
 
   it("removes sensitive fields and full paths before sending", () => {
-    vi.stubEnv("SLOPSTOP_SENTRY_CONSENT", "1");
-    vi.stubEnv("SLOPSTOP_SENTRY_DSN", "https://public@example.invalid/1");
-
-    expect(initializeCrashReporting()).toBe(true);
-    const options = sentryMocks.init.mock.calls[0]?.[0] as
-      | { beforeSend(event: SanitizedEvent): SanitizedEvent }
-      | undefined;
+    const beforeSend = enabledBeforeSend();
     const event: SanitizedEvent = {
       breadcrumbs: [{}],
       contexts: {},
@@ -78,6 +104,7 @@ describe("crash reporting", () => {
             stacktrace: {
               frames: [
                 {
+                  abs_path: "C:\\private\\workspace\\main.ts",
                   filename: "C:\\private\\workspace\\main.ts",
                   context_line: "secret",
                   post_context: ["secret"],
@@ -92,7 +119,7 @@ describe("crash reporting", () => {
       },
     };
 
-    expect(options?.beforeSend(event)).toEqual({
+    expect(beforeSend(event)).toEqual({
       message: "Redacted application error",
       exception: {
         values: [
@@ -106,6 +133,82 @@ describe("crash reporting", () => {
     expect(sentryMocks.init).toHaveBeenCalledWith(
       expect.objectContaining({ sendDefaultPii: false }),
     );
+    expect(JSON.stringify(event)).not.toContain("abs_path");
+  });
+
+  it("removes full paths from threads and debug images", () => {
+    const beforeSend = enabledBeforeSend();
+    const event: SanitizedEvent = {
+      debug_meta: {
+        images: [
+          {
+            type: "sourcemap",
+            code_file: "C:\\private\\workspace\\bundle.js",
+            debug_id: "public-source-map",
+          },
+          {
+            type: "wasm",
+            code_file: "C:\\private\\workspace\\module.wasm",
+            debug_file: "C:\\private\\workspace\\module.debug.wasm",
+            debug_id: "public-wasm",
+          },
+        ],
+      },
+      threads: {
+        values: [
+          {
+            stacktrace: {
+              frames: [
+                {
+                  abs_path: "C:\\private\\workspace\\worker.ts",
+                  filename: "C:\\private\\workspace\\worker.ts",
+                  context_line: "secret",
+                  vars: { token: "secret" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+
+    expect(beforeSend(event)).toEqual({
+      debug_meta: {
+        images: [
+          {
+            type: "sourcemap",
+            code_file: "bundle.js",
+            debug_id: "public-source-map",
+          },
+          {
+            type: "wasm",
+            code_file: "module.wasm",
+            debug_file: "module.debug.wasm",
+            debug_id: "public-wasm",
+          },
+        ],
+      },
+      threads: {
+        values: [{ stacktrace: { frames: [{ filename: "worker.ts" }] } }],
+      },
+    });
+    expect(JSON.stringify(event)).not.toContain("C:\\private");
+  });
+
+  it("accepts sparse exception and thread structures", () => {
+    const beforeSend = enabledBeforeSend();
+
+    expect(beforeSend({})).toEqual({});
+    expect(beforeSend({ exception: {} })).toEqual({ exception: {} });
+    expect(beforeSend({ exception: { values: [{}] } })).toEqual({
+      exception: { values: [{}] },
+    });
+    expect(beforeSend({ exception: { values: [{ stacktrace: {} }] } })).toEqual({
+      exception: { values: [{ stacktrace: {} }] },
+    });
+    expect(beforeSend({ threads: { values: [{}] } })).toEqual({
+      threads: { values: [{}] },
+    });
   });
 
   it("reports only the harness exit code", () => {

@@ -1,0 +1,460 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "d9311d0e-0314-4851-81ea-203f3b16472a",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "schema_metadata": {
+      "name": "schema_metadata",
+      "columns": {
+        "metadata_key": {
+          "name": "metadata_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "database_kind": {
+          "name": "database_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "format_version": {
+          "name": "format_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_migration_id": {
+          "name": "last_migration_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "application_metadata_key": {
+          "name": "application_metadata_key",
+          "value": "\"schema_metadata\".\"metadata_key\" = 'application'"
+        },
+        "application_metadata_kind": {
+          "name": "application_metadata_kind",
+          "value": "\"schema_metadata\".\"database_kind\" = 'application'"
+        },
+        "application_format_nonnegative": {
+          "name": "application_format_nonnegative",
+          "value": "\"schema_metadata\".\"format_version\" >= 0"
+        },
+        "application_schema_nonnegative": {
+          "name": "application_schema_nonnegative",
+          "value": "\"schema_metadata\".\"schema_version\" >= 0"
+        },
+        "application_migration_nonempty": {
+          "name": "application_migration_nonempty",
+          "value": "length(trim(\"schema_metadata\".\"last_migration_id\")) > 0"
+        }
+      }
+    },
+    "storage_generations": {
+      "name": "storage_generations",
+      "columns": {
+        "storage_id": {
+          "name": "storage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generation_id": {
+          "name": "generation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "canonical_lineage_id": {
+          "name": "canonical_lineage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "runtime_lineage_id": {
+          "name": "runtime_lineage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "create_request_id": {
+          "name": "create_request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "create_request_fingerprint": {
+          "name": "create_request_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generation_directory_name": {
+          "name": "generation_directory_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "creation_state": {
+          "name": "creation_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "storage_generations_create_request_uq": {
+          "name": "storage_generations_create_request_uq",
+          "columns": [
+            "create_request_id"
+          ],
+          "isUnique": true
+        },
+        "storage_generations_directory_uq": {
+          "name": "storage_generations_directory_uq",
+          "columns": [
+            "storage_id",
+            "generation_directory_name"
+          ],
+          "isUnique": true
+        },
+        "storage_generations_one_active_uq": {
+          "name": "storage_generations_one_active_uq",
+          "columns": [
+            "storage_id"
+          ],
+          "isUnique": true,
+          "where": "\"storage_generations\".\"creation_state\" = 'active'"
+        },
+        "storage_generations_project_idx": {
+          "name": "storage_generations_project_idx",
+          "columns": [
+            "project_id"
+          ],
+          "isUnique": false
+        },
+        "storage_generations_state_idx": {
+          "name": "storage_generations_state_idx",
+          "columns": [
+            "storage_id",
+            "creation_state"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "storage_generations_location_fk": {
+          "name": "storage_generations_location_fk",
+          "tableFrom": "storage_generations",
+          "tableTo": "storage_locations",
+          "columnsFrom": [
+            "storage_id",
+            "location_id"
+          ],
+          "columnsTo": [
+            "storage_id",
+            "location_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_generations_pk": {
+          "columns": [
+            "storage_id",
+            "generation_id"
+          ],
+          "name": "storage_generations_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "storage_generations_storage_id_uuid": {
+          "name": "storage_generations_storage_id_uuid",
+          "value": "\n    length(\"storage_generations\".\"storage_id\") = 36\n    and \"storage_generations\".\"storage_id\" = lower(\"storage_generations\".\"storage_id\")\n    and substr(\"storage_generations\".\"storage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"storage_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"storage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"storage_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"storage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"storage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"storage_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"storage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"storage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"storage_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"storage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_generation_id_uuid": {
+          "name": "storage_generations_generation_id_uuid",
+          "value": "\n    length(\"storage_generations\".\"generation_id\") = 36\n    and \"storage_generations\".\"generation_id\" = lower(\"storage_generations\".\"generation_id\")\n    and substr(\"storage_generations\".\"generation_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"generation_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"generation_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"generation_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"generation_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"generation_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"generation_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"generation_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"generation_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"generation_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"generation_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_project_id_uuid": {
+          "name": "storage_generations_project_id_uuid",
+          "value": "\n    length(\"storage_generations\".\"project_id\") = 36\n    and \"storage_generations\".\"project_id\" = lower(\"storage_generations\".\"project_id\")\n    and substr(\"storage_generations\".\"project_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"project_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"project_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"project_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"project_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"project_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"project_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"project_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"project_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"project_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"project_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_location_id_uuid": {
+          "name": "storage_generations_location_id_uuid",
+          "value": "\n    length(\"storage_generations\".\"location_id\") = 36\n    and \"storage_generations\".\"location_id\" = lower(\"storage_generations\".\"location_id\")\n    and substr(\"storage_generations\".\"location_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"location_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"location_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"location_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"location_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"location_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"location_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"location_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"location_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"location_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"location_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_canonical_lineage_uuid": {
+          "name": "storage_generations_canonical_lineage_uuid",
+          "value": "\n    length(\"storage_generations\".\"canonical_lineage_id\") = 36\n    and \"storage_generations\".\"canonical_lineage_id\" = lower(\"storage_generations\".\"canonical_lineage_id\")\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_runtime_lineage_uuid": {
+          "name": "storage_generations_runtime_lineage_uuid",
+          "value": "\n    length(\"storage_generations\".\"runtime_lineage_id\") = 36\n    and \"storage_generations\".\"runtime_lineage_id\" = lower(\"storage_generations\".\"runtime_lineage_id\")\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_create_request_uuid": {
+          "name": "storage_generations_create_request_uuid",
+          "value": "\n    length(\"storage_generations\".\"create_request_id\") = 36\n    and \"storage_generations\".\"create_request_id\" = lower(\"storage_generations\".\"create_request_id\")\n    and substr(\"storage_generations\".\"create_request_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"create_request_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"create_request_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"create_request_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"create_request_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"create_request_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"create_request_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"create_request_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"create_request_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"create_request_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"create_request_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_fingerprint_sha256": {
+          "name": "storage_generations_fingerprint_sha256",
+          "value": "\n        length(\"storage_generations\".\"create_request_fingerprint\") = 64\n        and \"storage_generations\".\"create_request_fingerprint\" = lower(\"storage_generations\".\"create_request_fingerprint\")\n        and \"storage_generations\".\"create_request_fingerprint\" not glob '*[^0-9a-f]*'\n      "
+        },
+        "storage_generations_directory_identity": {
+          "name": "storage_generations_directory_identity",
+          "value": "\"storage_generations\".\"generation_directory_name\" = \"storage_generations\".\"generation_id\""
+        },
+        "storage_generations_activation_time": {
+          "name": "storage_generations_activation_time",
+          "value": "\n        (\"storage_generations\".\"creation_state\" = 'active' and \"storage_generations\".\"activated_at\" is not null)\n        or (\"storage_generations\".\"creation_state\" = 'staging' and \"storage_generations\".\"activated_at\" is null)\n      "
+        }
+      }
+    },
+    "storage_locations": {
+      "name": "storage_locations",
+      "columns": {
+        "storage_id": {
+          "name": "storage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "normalized_path": {
+          "name": "normalized_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "location_state": {
+          "name": "location_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "storage_locations_normalized_path_uq": {
+          "name": "storage_locations_normalized_path_uq",
+          "columns": [
+            "normalized_path"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "storage_locations_pk": {
+          "columns": [
+            "storage_id",
+            "location_id"
+          ],
+          "name": "storage_locations_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "storage_locations_storage_id_uuid": {
+          "name": "storage_locations_storage_id_uuid",
+          "value": "\n    length(\"storage_locations\".\"storage_id\") = 36\n    and \"storage_locations\".\"storage_id\" = lower(\"storage_locations\".\"storage_id\")\n    and substr(\"storage_locations\".\"storage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"storage_id\", 9, 1) = '-'\n    and substr(\"storage_locations\".\"storage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"storage_id\", 14, 1) = '-'\n    and substr(\"storage_locations\".\"storage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_locations\".\"storage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"storage_id\", 19, 1) = '-'\n    and substr(\"storage_locations\".\"storage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_locations\".\"storage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"storage_id\", 24, 1) = '-'\n    and substr(\"storage_locations\".\"storage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_locations_location_id_uuid": {
+          "name": "storage_locations_location_id_uuid",
+          "value": "\n    length(\"storage_locations\".\"location_id\") = 36\n    and \"storage_locations\".\"location_id\" = lower(\"storage_locations\".\"location_id\")\n    and substr(\"storage_locations\".\"location_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"location_id\", 9, 1) = '-'\n    and substr(\"storage_locations\".\"location_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"location_id\", 14, 1) = '-'\n    and substr(\"storage_locations\".\"location_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_locations\".\"location_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"location_id\", 19, 1) = '-'\n    and substr(\"storage_locations\".\"location_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_locations\".\"location_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"location_id\", 24, 1) = '-'\n    and substr(\"storage_locations\".\"location_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_locations_state": {
+          "name": "storage_locations_state",
+          "value": "\"storage_locations\".\"location_state\" in ('staging', 'committed')"
+        }
+      }
+    },
+    "storage_registrations": {
+      "name": "storage_registrations",
+      "columns": {
+        "storage_id": {
+          "name": "storage_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "active_generation_id": {
+          "name": "active_generation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "active_location_id": {
+          "name": "active_location_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "storage_registrations_project_uq": {
+          "name": "storage_registrations_project_uq",
+          "columns": [
+            "project_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "storage_registrations_active_generation_fk": {
+          "name": "storage_registrations_active_generation_fk",
+          "tableFrom": "storage_registrations",
+          "tableTo": "storage_generations",
+          "columnsFrom": [
+            "storage_id",
+            "active_generation_id"
+          ],
+          "columnsTo": [
+            "storage_id",
+            "generation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "storage_registrations_active_location_fk": {
+          "name": "storage_registrations_active_location_fk",
+          "tableFrom": "storage_registrations",
+          "tableTo": "storage_locations",
+          "columnsFrom": [
+            "storage_id",
+            "active_location_id"
+          ],
+          "columnsTo": [
+            "storage_id",
+            "location_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "storage_registrations_storage_id_uuid": {
+          "name": "storage_registrations_storage_id_uuid",
+          "value": "\n    length(\"storage_registrations\".\"storage_id\") = 36\n    and \"storage_registrations\".\"storage_id\" = lower(\"storage_registrations\".\"storage_id\")\n    and substr(\"storage_registrations\".\"storage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"storage_id\", 9, 1) = '-'\n    and substr(\"storage_registrations\".\"storage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"storage_id\", 14, 1) = '-'\n    and substr(\"storage_registrations\".\"storage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_registrations\".\"storage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"storage_id\", 19, 1) = '-'\n    and substr(\"storage_registrations\".\"storage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_registrations\".\"storage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"storage_id\", 24, 1) = '-'\n    and substr(\"storage_registrations\".\"storage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_registrations_project_id_uuid": {
+          "name": "storage_registrations_project_id_uuid",
+          "value": "\n    length(\"storage_registrations\".\"project_id\") = 36\n    and \"storage_registrations\".\"project_id\" = lower(\"storage_registrations\".\"project_id\")\n    and substr(\"storage_registrations\".\"project_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"project_id\", 9, 1) = '-'\n    and substr(\"storage_registrations\".\"project_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"project_id\", 14, 1) = '-'\n    and substr(\"storage_registrations\".\"project_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_registrations\".\"project_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"project_id\", 19, 1) = '-'\n    and substr(\"storage_registrations\".\"project_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_registrations\".\"project_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"project_id\", 24, 1) = '-'\n    and substr(\"storage_registrations\".\"project_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_registrations_active_pair": {
+          "name": "storage_registrations_active_pair",
+          "value": "\n        (\n          \"storage_registrations\".\"active_generation_id\" is null\n          and \"storage_registrations\".\"active_location_id\" is null\n          and \"storage_registrations\".\"activated_at\" is null\n        )\n        or (\n          \"storage_registrations\".\"active_generation_id\" is not null\n          and \"storage_registrations\".\"active_location_id\" is not null\n          and \"storage_registrations\".\"activated_at\" is not null\n        )\n      "
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

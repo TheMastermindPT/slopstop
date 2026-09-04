@@ -1,7 +1,13 @@
 import { MessageChannel, type MessagePort } from "node:worker_threads";
 import {
+  createProjectCloseCommand,
+  createProjectCreateCommand,
+  createProjectOpenCommand,
   createWorkspaceIntentCommand,
   createWorkspaceQueryCommand,
+  ProjectStorageCloseRequestSchema,
+  ProjectStorageCreateRequestSchema,
+  ProjectStorageOpenRequestSchema,
   protocolVersion,
   WorkspaceIntentResultSchema,
   WorkspaceIntentSchema,
@@ -12,6 +18,7 @@ import {
 } from "@slopstop/protocol";
 import { describe, expect, it } from "vitest";
 import {
+  createUnavailableProjectStorageApplication,
   createUnavailableWorkspaceApplication,
   type HarnessTransport,
   startHarnessRuntime,
@@ -70,12 +77,41 @@ function startRuntimeFixture(workspaceApplication: WorkspaceApplication) {
   let generatedId = 2;
   const stop = startHarnessRuntime({
     transport: transportFor(port1),
+    projectStorageApplication: createUnavailableProjectStorageApplication(),
     workspaceApplication,
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
     now: () => "2026-08-14T12:00:01.000Z",
   });
   return { port1, port2, stop };
+}
+
+function projectStorageCommandCases() {
+  const projectId = "00000000-0000-4000-8000-000000000010";
+  const openRequest = ProjectStorageOpenRequestSchema.parse({ projectId });
+  const createRequest = ProjectStorageCreateRequestSchema.parse({
+    projectId,
+    createRequestId: "00000000-0000-4000-8000-000000000011",
+  });
+  const closeRequest = ProjectStorageCloseRequestSchema.parse({ projectId });
+  const metadata = (suffix: string) => ({
+    messageId: `00000000-0000-4000-8000-${suffix}`,
+    sentAt: "2026-08-14T12:00:00.000Z",
+  });
+  return [
+    {
+      command: createProjectOpenCommand(metadata("000000000100"), openRequest),
+      event: "project.open.result",
+    },
+    {
+      command: createProjectCreateCommand(metadata("000000000101"), createRequest),
+      event: "project.create.result",
+    },
+    {
+      command: createProjectCloseCommand(metadata("000000000102"), closeRequest),
+      event: "project.close.result",
+    },
+  ] as const;
 }
 
 const memoryIntent = WorkspaceIntentSchema.parse({
@@ -133,7 +169,7 @@ describe("harness message channel integration", () => {
       },
     });
 
-    stop();
+    await stop();
     port1.close();
     port2.close();
   });
@@ -198,7 +234,7 @@ describe("harness message channel integration", () => {
       },
     });
 
-    stop();
+    await stop();
     expect(notificationSubscriber).toBeUndefined();
     port1.close();
     port2.close();
@@ -228,7 +264,38 @@ describe("harness message channel integration", () => {
       payload: { harnessVersion: "0.0.0" },
     });
 
-    stop();
+    await stop();
+    port1.close();
+    port2.close();
+  });
+
+  it("round-trips all unavailable Project Storage commands over structured clone", async () => {
+    const { port1, port2, stop } = startRuntimeFixture(createUnavailableWorkspaceApplication());
+    const cases = projectStorageCommandCases();
+
+    for (const [index, { command, event }] of cases.entries()) {
+      const response = nextMessage(port2);
+      port2.postMessage(command);
+      await expect(response).resolves.toEqual({
+        protocolVersion: 3,
+        messageType: "event",
+        messageId: `00000000-0000-4000-8000-${String(index + 2).padStart(12, "0")}`,
+        sentAt: "2026-08-14T12:00:01.000Z",
+        sequence: index + 1,
+        causationId: command.messageId,
+        event,
+        payload: {
+          status: "unavailable",
+          request: command.payload,
+          diagnostic: {
+            code: "PROJECT_STORAGE_UNAVAILABLE",
+            message: "Project Storage owner is unavailable.",
+          },
+        },
+      });
+    }
+
+    await stop();
     port1.close();
     port2.close();
   });

@@ -39,6 +39,21 @@ describe("HarnessSession", () => {
     expect(events).toHaveLength(2);
   });
 
+  it("delivers an event to every subscriber before propagating listener failures", () => {
+    const session = new HarnessSession();
+    const port = new FakePort();
+    const events: HarnessSessionEvent[] = [];
+    session.subscribe(() => {
+      throw new Error("first subscriber failed");
+    });
+    session.subscribe((event) => events.push(event));
+    session.attach(port);
+    const ready = createReadyEvent(eventMetadata, "0.0.0");
+
+    expect(() => port.emit("message", { data: ready })).toThrow("first subscriber failed");
+    expect(events).toEqual([{ type: "message", message: ready }]);
+  });
+
   it("owns one active message port", () => {
     const session = new HarnessSession();
     const portA = new FakePort();

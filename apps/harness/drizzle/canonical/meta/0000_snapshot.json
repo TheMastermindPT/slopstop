@@ -1,0 +1,157 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "eac61728-4dd5-4367-a639-9992bf1ef5cf",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "schema_metadata": {
+      "name": "schema_metadata",
+      "columns": {
+        "metadata_key": {
+          "name": "metadata_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "database_kind": {
+          "name": "database_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "format_version": {
+          "name": "format_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_migration_id": {
+          "name": "last_migration_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "canonical_metadata_key": {
+          "name": "canonical_metadata_key",
+          "value": "\"schema_metadata\".\"metadata_key\" = 'canonical'"
+        },
+        "canonical_metadata_kind": {
+          "name": "canonical_metadata_kind",
+          "value": "\"schema_metadata\".\"database_kind\" = 'canonical'"
+        },
+        "canonical_format_nonnegative": {
+          "name": "canonical_format_nonnegative",
+          "value": "\"schema_metadata\".\"format_version\" >= 0"
+        },
+        "canonical_schema_nonnegative": {
+          "name": "canonical_schema_nonnegative",
+          "value": "\"schema_metadata\".\"schema_version\" >= 0"
+        },
+        "canonical_migration_nonempty": {
+          "name": "canonical_migration_nonempty",
+          "value": "length(trim(\"schema_metadata\".\"last_migration_id\")) > 0"
+        }
+      }
+    },
+    "storage_identity": {
+      "name": "storage_identity",
+      "columns": {
+        "identity_key": {
+          "name": "identity_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "storage_id": {
+          "name": "storage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generation_id": {
+          "name": "generation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "canonical_database_lineage_id": {
+          "name": "canonical_database_lineage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "canonical_identity_singleton": {
+          "name": "canonical_identity_singleton",
+          "value": "\"storage_identity\".\"identity_key\" = 'storage'"
+        },
+        "canonical_identity_project_uuid": {
+          "name": "canonical_identity_project_uuid",
+          "value": "\n    length(\"storage_identity\".\"project_id\") = 36\n    and \"storage_identity\".\"project_id\" = lower(\"storage_identity\".\"project_id\")\n    and substr(\"storage_identity\".\"project_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"project_id\", 9, 1) = '-'\n    and substr(\"storage_identity\".\"project_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"project_id\", 14, 1) = '-'\n    and substr(\"storage_identity\".\"project_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_identity\".\"project_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"project_id\", 19, 1) = '-'\n    and substr(\"storage_identity\".\"project_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_identity\".\"project_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"project_id\", 24, 1) = '-'\n    and substr(\"storage_identity\".\"project_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "canonical_identity_storage_uuid": {
+          "name": "canonical_identity_storage_uuid",
+          "value": "\n    length(\"storage_identity\".\"storage_id\") = 36\n    and \"storage_identity\".\"storage_id\" = lower(\"storage_identity\".\"storage_id\")\n    and substr(\"storage_identity\".\"storage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"storage_id\", 9, 1) = '-'\n    and substr(\"storage_identity\".\"storage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"storage_id\", 14, 1) = '-'\n    and substr(\"storage_identity\".\"storage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_identity\".\"storage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"storage_id\", 19, 1) = '-'\n    and substr(\"storage_identity\".\"storage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_identity\".\"storage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"storage_id\", 24, 1) = '-'\n    and substr(\"storage_identity\".\"storage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "canonical_identity_generation_uuid": {
+          "name": "canonical_identity_generation_uuid",
+          "value": "\n    length(\"storage_identity\".\"generation_id\") = 36\n    and \"storage_identity\".\"generation_id\" = lower(\"storage_identity\".\"generation_id\")\n    and substr(\"storage_identity\".\"generation_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"generation_id\", 9, 1) = '-'\n    and substr(\"storage_identity\".\"generation_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"generation_id\", 14, 1) = '-'\n    and substr(\"storage_identity\".\"generation_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_identity\".\"generation_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"generation_id\", 19, 1) = '-'\n    and substr(\"storage_identity\".\"generation_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_identity\".\"generation_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"generation_id\", 24, 1) = '-'\n    and substr(\"storage_identity\".\"generation_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "canonical_identity_lineage_uuid": {
+          "name": "canonical_identity_lineage_uuid",
+          "value": "\n    length(\"storage_identity\".\"canonical_database_lineage_id\") = 36\n    and \"storage_identity\".\"canonical_database_lineage_id\" = lower(\"storage_identity\".\"canonical_database_lineage_id\")\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 9, 1) = '-'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 14, 1) = '-'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 19, 1) = '-'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 24, 1) = '-'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

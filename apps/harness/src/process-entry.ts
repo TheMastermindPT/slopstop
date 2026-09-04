@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
-import { HarnessBootstrapSchema } from "@slopstop/protocol";
 import pino from "pino";
-import { type HarnessTransport, startHarnessRuntime } from "./harness-runtime.js";
-import { createUnavailableWorkspaceApplication } from "./workspace-application.js";
+import type { HarnessTransport, StopHarnessRuntime } from "./harness-runtime.js";
+import { startHarnessProcessRuntime } from "./process-bootstrap.js";
+import { createHarnessFatalHandlers } from "./process-fatal-diagnostics.js";
+import { createHarnessPortCloseHandler } from "./process-shutdown.js";
 
 type UtilityMessageEvent = Readonly<{
   data: unknown;
@@ -41,6 +41,11 @@ function failStartup(message: string): never {
   process.exit(1);
 }
 
+function failShutdown(message: "Harness shutdown failed."): never {
+  logger.fatal({ code: "HARNESS_SHUTDOWN_FAILED" }, message);
+  process.exit(1);
+}
+
 function createTransport(port: UtilityMessagePort): HarnessTransport {
   return {
     send: (message) => {
@@ -58,6 +63,13 @@ function createTransport(port: UtilityMessagePort): HarnessTransport {
   };
 }
 
+const fatalHandlers = createHarnessFatalHandlers({
+  fatal: (metadata, message) => logger.fatal(metadata, message),
+  exit: (code) => {
+    process.exit(code);
+  },
+});
+
 const utilityProcess = process as UtilityProcess;
 const parentPort = utilityProcess.parentPort;
 
@@ -66,35 +78,32 @@ if (parentPort === undefined) {
 }
 
 parentPort.once("message", (event) => {
-  const bootstrap = HarnessBootstrapSchema.safeParse(event.data);
   const port = event.ports[0];
-
-  if (!bootstrap.success || port === undefined) {
+  if (port === undefined) {
     failStartup("Harness received an invalid bootstrap message.");
   }
 
-  const stopRuntime = startHarnessRuntime({
-    transport: createTransport(port),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
-    harnessVersion: "0.0.0",
-    createId: randomUUID,
-    now: () => new Date().toISOString(),
-  });
+  let stopRuntime: StopHarnessRuntime;
+  try {
+    stopRuntime = startHarnessProcessRuntime({
+      bootstrap: event.data,
+      transport: createTransport(port),
+    });
+  } catch {
+    failStartup("Harness received an invalid bootstrap message.");
+  }
 
-  port.on("close", () => {
-    stopRuntime();
-    logger.info("Harness message port closed.");
-  });
+  port.on(
+    "close",
+    createHarnessPortCloseHandler({
+      stopRuntime,
+      succeeded: (message) => logger.info(message),
+      failed: failShutdown,
+    }),
+  );
   port.start();
   logger.info("Harness message port connected.");
 });
 
-process.on("uncaughtException", (error) => {
-  logger.fatal({ error }, "Harness encountered an uncaught exception.");
-  process.exit(1);
-});
-
-process.on("unhandledRejection", (reason) => {
-  logger.fatal({ reason }, "Harness encountered an unhandled rejection.");
-  process.exit(1);
-});
+process.on("uncaughtException", fatalHandlers.uncaughtException);
+process.on("unhandledRejection", fatalHandlers.unhandledRejection);

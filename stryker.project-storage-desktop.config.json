@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": [
+    "apps/desktop/src/main/harness-supervisor.ts",
+    "apps/desktop/src/main/bounded-log-destination.ts",
+    "apps/desktop/src/main/logger.ts",
+    "apps/desktop/src/main/crash-reporting.ts"
+  ],
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "apps/desktop/vitest.project-storage-mutation.config.ts",
+    "related": false
+  },
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
+  "incremental": false,
+  "concurrency": 4,
+  "reporters": ["json", "html"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/project-storage-desktop.html"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  }
+}

@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@electron-forge/cli": "catalog:",
+    "@electron-forge/plugin-auto-unpack-natives": "catalog:",
     "@electron-forge/plugin-fuses": "catalog:",
     "@electron-forge/plugin-vite": "catalog:",
     "@electron-forge/shared-types": "catalog:",

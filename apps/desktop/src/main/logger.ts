@@ -2,27 +2,30 @@ import fs from "node:fs";
 import path from "node:path";
 import pino, { type Logger } from "pino";
 import pretty from "pino-pretty";
+import { boundLogRecord, createBoundedLogDestination } from "./bounded-log-destination.js";
 
-const maxLogBytes = 5 * 1024 * 1024;
-
-function rotateLog(logPath: string): void {
-  if (!fs.existsSync(logPath) || fs.statSync(logPath).size < maxLogBytes) {
-    return;
-  }
-
-  const previousLogPath = `${logPath}.1`;
-  fs.rmSync(previousLogPath, { force: true });
-  fs.renameSync(logPath, previousLogPath);
-}
+const sensitiveLogFields = [
+  "accessToken",
+  "access_token",
+  "apiKey",
+  "api_key",
+  "authorization",
+  "password",
+  "privateKey",
+  "private_key",
+  "refreshToken",
+  "refresh_token",
+  "secret",
+  "token",
+];
 
 export function createMainLogger(logDirectory: string, isPackaged: boolean): Logger {
   fs.mkdirSync(logDirectory, { recursive: true });
   const logPath = path.join(logDirectory, "slopstop.jsonl");
-  rotateLog(logPath);
 
   const streams: pino.StreamEntry[] = [
     {
-      stream: pino.destination({ dest: logPath, mkdir: true, sync: false }),
+      stream: createBoundedLogDestination(logPath),
     },
   ];
 
@@ -37,9 +40,10 @@ export function createMainLogger(logDirectory: string, isPackaged: boolean): Log
       base: { service: "desktop-main" },
       level: process.env["SLOPSTOP_LOG_LEVEL"] ?? "info",
       redact: {
-        paths: ["*.apiKey", "*.authorization", "*.password", "*.secret", "*.token"],
+        paths: sensitiveLogFields.flatMap((field) => [field, `*.${field}`]),
         censor: "[redacted]",
       },
+      hooks: { streamWrite: boundLogRecord },
     },
     pino.multistream(streams),
   );

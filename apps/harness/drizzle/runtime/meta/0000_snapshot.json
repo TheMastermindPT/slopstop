@@ -1,0 +1,157 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "d4b2fad3-4e84-4737-8e46-ce21f5382718",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "slopstop_runtime_schema_metadata": {
+      "name": "slopstop_runtime_schema_metadata",
+      "columns": {
+        "metadata_key": {
+          "name": "metadata_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "database_kind": {
+          "name": "database_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "format_version": {
+          "name": "format_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_migration_id": {
+          "name": "last_migration_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "runtime_metadata_key": {
+          "name": "runtime_metadata_key",
+          "value": "\"slopstop_runtime_schema_metadata\".\"metadata_key\" = 'slopstop-runtime-adapter'"
+        },
+        "runtime_metadata_kind": {
+          "name": "runtime_metadata_kind",
+          "value": "\"slopstop_runtime_schema_metadata\".\"database_kind\" = 'runtime-adapter'"
+        },
+        "runtime_format_nonnegative": {
+          "name": "runtime_format_nonnegative",
+          "value": "\"slopstop_runtime_schema_metadata\".\"format_version\" >= 0"
+        },
+        "runtime_schema_nonnegative": {
+          "name": "runtime_schema_nonnegative",
+          "value": "\"slopstop_runtime_schema_metadata\".\"schema_version\" >= 0"
+        },
+        "runtime_migration_nonempty": {
+          "name": "runtime_migration_nonempty",
+          "value": "length(trim(\"slopstop_runtime_schema_metadata\".\"last_migration_id\")) > 0"
+        }
+      }
+    },
+    "slopstop_runtime_storage_identity": {
+      "name": "slopstop_runtime_storage_identity",
+      "columns": {
+        "identity_key": {
+          "name": "identity_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "storage_id": {
+          "name": "storage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generation_id": {
+          "name": "generation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "runtime_database_lineage_id": {
+          "name": "runtime_database_lineage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "runtime_identity_singleton": {
+          "name": "runtime_identity_singleton",
+          "value": "\"slopstop_runtime_storage_identity\".\"identity_key\" = 'storage'"
+        },
+        "runtime_identity_project_uuid": {
+          "name": "runtime_identity_project_uuid",
+          "value": "\n    length(\"slopstop_runtime_storage_identity\".\"project_id\") = 36\n    and \"slopstop_runtime_storage_identity\".\"project_id\" = lower(\"slopstop_runtime_storage_identity\".\"project_id\")\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 9, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 14, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 15, 1) glob '[1-8]'\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 19, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 20, 1) glob '[89ab]'\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 24, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"project_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "runtime_identity_storage_uuid": {
+          "name": "runtime_identity_storage_uuid",
+          "value": "\n    length(\"slopstop_runtime_storage_identity\".\"storage_id\") = 36\n    and \"slopstop_runtime_storage_identity\".\"storage_id\" = lower(\"slopstop_runtime_storage_identity\".\"storage_id\")\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 9, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 14, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 15, 1) glob '[1-8]'\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 19, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 20, 1) glob '[89ab]'\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 24, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"storage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "runtime_identity_generation_uuid": {
+          "name": "runtime_identity_generation_uuid",
+          "value": "\n    length(\"slopstop_runtime_storage_identity\".\"generation_id\") = 36\n    and \"slopstop_runtime_storage_identity\".\"generation_id\" = lower(\"slopstop_runtime_storage_identity\".\"generation_id\")\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 9, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 14, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 15, 1) glob '[1-8]'\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 19, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 20, 1) glob '[89ab]'\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 24, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"generation_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "runtime_identity_lineage_uuid": {
+          "name": "runtime_identity_lineage_uuid",
+          "value": "\n    length(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\") = 36\n    and \"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\" = lower(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\")\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 9, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 14, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 15, 1) glob '[1-8]'\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 19, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 20, 1) glob '[89ab]'\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 24, 1) = '-'\n    and substr(\"slopstop_runtime_storage_identity\".\"runtime_database_lineage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

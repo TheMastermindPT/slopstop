@@ -11,12 +11,18 @@
         "src/preload/preload.ts",
         "src/renderer/prototype/main.tsx",
         "tests/e2e/**/*.{mjs,ts}",
+        "vitest.project-storage-mutation.config.ts",
         "vite.*.config.ts"
       ],
       "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "*.config.ts"]
     },
     "apps/harness": {
-      "entry": ["src/process-entry.ts"],
+      "entry": [
+        "drizzle.*.config.ts",
+        "src/process-entry.ts",
+        "src/storage/{application,canonical,runtime}-schema.ts"
+      ],
+      "ignoreDependencies": ["libsql"],
       "project": ["src/**/*.ts", "tests/**/*.ts"]
     },
     "packages/kernel": {
