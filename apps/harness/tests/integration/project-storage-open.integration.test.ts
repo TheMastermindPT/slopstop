@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { cp, mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -14,6 +15,7 @@ import {
   createTemporaryApplicationRoot,
   fixedCreationIds,
   projectStorageIntegrationTimeout,
+  sha256File,
 } from "./project-storage-create-fixture.js";
 import {
   type ApplicationRootPath,
@@ -86,75 +88,125 @@ async function expectBrokenOpenWithoutMutation(
   expect(await inspectDurableProjectStorageState(input.root)).toEqual(before);
 }
 
-async function createMigrationRootWithCanonicalSuccessor(): Promise<string> {
-  const fixtureRoot = await createTemporaryApplicationRoot();
-  const migrationRoot = path.join(fixtureRoot, "drizzle");
-  await cp(checkedInMigrationRoot, migrationRoot, { recursive: true });
-  const copiedInitialMigration = path.join(
-    migrationRoot,
-    "canonical",
-    "0000_fat_doctor_octopus.sql",
-  );
-  const initialSource = await readFile(copiedInitialMigration, "utf8");
-  const predecessorSource = initialSource.replace(
-    /,\n\tCONSTRAINT "canonical_migration_nonempty" CHECK\(length\(trim\("schema_metadata"\."last_migration_id"\)\) > 0\)/u,
-    "",
-  );
-  if (predecessorSource === initialSource) {
-    throw new Error("Canonical predecessor fixture did not change schema.");
-  }
-  await writeFile(copiedInitialMigration, predecessorSource);
-  await writeFile(
-    path.join(migrationRoot, "canonical", "0001_opening_probe.sql"),
-    `ALTER TABLE schema_metadata RENAME TO schema_metadata_legacy;
---> statement-breakpoint
-CREATE TABLE schema_metadata (
-  metadata_key text PRIMARY KEY NOT NULL,
-  database_kind text NOT NULL,
-  format_version integer NOT NULL,
-  schema_version integer NOT NULL,
-  last_migration_id text NOT NULL,
-  CONSTRAINT canonical_metadata_key CHECK(schema_metadata.metadata_key = 'canonical'),
-  CONSTRAINT canonical_metadata_kind CHECK(schema_metadata.database_kind = 'canonical'),
-  CONSTRAINT canonical_format_nonnegative CHECK(schema_metadata.format_version >= 0),
-  CONSTRAINT canonical_schema_nonnegative CHECK(schema_metadata.schema_version >= 0),
-  CONSTRAINT canonical_migration_nonempty CHECK(length(trim(schema_metadata.last_migration_id)) > 0)
+const historicalMigrationPath = path.join(
+  checkedInMigrationRoot,
+  "canonical",
+  "0000_fat_doctor_octopus.sql",
 );
---> statement-breakpoint
-INSERT INTO schema_metadata SELECT * FROM schema_metadata_legacy;
---> statement-breakpoint
-DROP TABLE schema_metadata_legacy;
-`,
+const historicalMetadata = {
+  metadata_key: "canonical",
+  database_kind: "canonical",
+  format_version: 1,
+  schema_version: 1,
+  last_migration_id: "0000_fat_doctor_octopus",
+};
+
+async function seedGenerationOneCanonical(root: ApplicationRootPath): Promise<void> {
+  const paths = generationPaths(root);
+  const manifest = parseProjectStorageManifest(await readFile(paths.manifest, "utf8"));
+  const source = await readFile(historicalMigrationPath, "utf8");
+  expect(createHash("sha256").update(source).digest("hex")).toBe(
+    "e21883d8c39eb5012a6df799fb8d2f5182e9050bf3546e48bde57f90abf3942c",
   );
+  await rm(paths.canonical);
+  const database = new DatabaseSync(paths.canonical);
+  try {
+    database.exec(source);
+    database
+      .prepare("INSERT INTO schema_metadata VALUES (?, ?, ?, ?, ?)")
+      .run("canonical", "canonical", 1, 1, "0000_fat_doctor_octopus");
+    database
+      .prepare("INSERT INTO storage_identity VALUES (?, ?, ?, ?, ?, ?)")
+      .run(
+        "storage",
+        openRequest.projectId,
+        fixedCreationIds.storageId,
+        fixedCreationIds.generationId,
+        fixedCreationIds.canonicalDatabaseLineageId,
+        manifest.createdAt,
+      );
+    expect(database.prepare("SELECT * FROM schema_metadata").all()).toEqual([historicalMetadata]);
+    expect(
+      database.prepare("SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name").all(),
+    ).toEqual([{ name: "schema_metadata" }, { name: "storage_identity" }]);
+  } finally {
+    database.close();
+  }
+  const bytes = await readFile(paths.canonical);
   await writeFile(
-    path.join(migrationRoot, "canonical", "meta", "_journal.json"),
-    `${JSON.stringify(
-      {
-        version: "7",
-        dialect: "sqlite",
-        entries: [
-          {
-            idx: 0,
-            version: "6",
-            when: 1788404225621,
-            tag: "0000_fat_doctor_octopus",
-            breakpoints: true,
-          },
-          {
-            idx: 1,
-            version: "6",
-            when: 1788404225622,
-            tag: "0001_opening_probe",
-            breakpoints: true,
-          },
-        ],
+    paths.manifest,
+    serializeProjectStorageManifest({
+      ...manifest,
+      canonical: {
+        ...manifest.canonical,
+        formatVersion: 1,
+        schemaVersion: 1,
+        lastMigrationId: "0000_fat_doctor_octopus",
+        activationBaseline: {
+          algorithm: "sha256",
+          sizeBytes: bytes.byteLength,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+        },
       },
-      null,
-      2,
-    )}\n`,
+    }),
   );
-  return migrationRoot;
 }
+
+async function historicalOpeningHashes(root: ApplicationRootPath) {
+  const paths = generationPaths(root);
+  const database = new DatabaseSync(paths.canonical, { readOnly: true });
+  let metadata: string;
+  try {
+    metadata = JSON.stringify(
+      database
+        .prepare(
+          "SELECT metadata_key, database_kind, format_version, schema_version, last_migration_id FROM schema_metadata ORDER BY metadata_key",
+        )
+        .all(),
+    );
+  } finally {
+    database.close();
+  }
+  return Promise.all([
+    sha256File(paths.canonical),
+    createHash("sha256").update(metadata).digest("hex"),
+    sha256File(paths.manifest),
+    sha256File(historicalMigrationPath),
+  ]);
+}
+
+it(
+  "reports generation 1 as migration-required without mutation",
+  async () => {
+    const root = await createHealthyProjectStorageFixture();
+    await seedGenerationOneCanonical(root);
+    const before = await historicalOpeningHashes(root);
+    const runtime = await createStorageRuntimeForRoot(root);
+    let result: unknown;
+    try {
+      result = await runtime.open(openRequest);
+    } finally {
+      await runtime.stop();
+    }
+    expect(payloadOf(result)).toEqual({
+      status: "safe-mode",
+      request: openRequest,
+      mode: "safe-mode",
+      identity: openedIdentity,
+      canonicalHealth: {
+        status: "migration-required",
+        diagnostic: {
+          code: "DATABASE_MIGRATION_REQUIRED",
+          message: "Database migration is required.",
+        },
+      },
+      runtimeHealth: healthyHealth,
+    });
+    expect(await historicalOpeningHashes(root)).toEqual(before);
+    expect(before[3]).toBe("e21883d8c39eb5012a6df799fb8d2f5182e9050bf3546e48bde57f90abf3942c");
+  },
+  projectStorageIntegrationTimeout,
+);
 
 async function createMigrationRootWithApplicationSuccessor(): Promise<string> {
   const fixtureRoot = await createTemporaryApplicationRoot();
@@ -189,30 +241,6 @@ async function createMigrationRootWithApplicationSuccessor(): Promise<string> {
     )}\n`,
   );
   return migrationRoot;
-}
-
-function seedKnownOlderCanonicalSchema(root: ApplicationRootPath): void {
-  const database = new DatabaseSync(generationPaths(root).canonical);
-  try {
-    database.exec(`
-      ALTER TABLE schema_metadata RENAME TO schema_metadata_current;
-      CREATE TABLE schema_metadata (
-        metadata_key text PRIMARY KEY NOT NULL,
-        database_kind text NOT NULL,
-        format_version integer NOT NULL,
-        schema_version integer NOT NULL,
-        last_migration_id text NOT NULL,
-        CONSTRAINT canonical_metadata_key CHECK(schema_metadata.metadata_key = 'canonical'),
-        CONSTRAINT canonical_metadata_kind CHECK(schema_metadata.database_kind = 'canonical'),
-        CONSTRAINT canonical_format_nonnegative CHECK(schema_metadata.format_version >= 0),
-        CONSTRAINT canonical_schema_nonnegative CHECK(schema_metadata.schema_version >= 0)
-      );
-      INSERT INTO schema_metadata SELECT * FROM schema_metadata_current;
-      DROP TABLE schema_metadata_current;
-    `);
-  } finally {
-    database.close();
-  }
 }
 
 async function seedIncompleteGeneration(root: ApplicationRootPath): Promise<void> {
@@ -309,8 +337,8 @@ const openingHealthCases = [
   {
     name: "canonical known-older authority",
     seed: async (root) => {
-      seedKnownOlderCanonicalSchema(root);
-      return { migrationResourcesRoot: await createMigrationRootWithCanonicalSuccessor() };
+      await seedGenerationOneCanonical(root);
+      return undefined;
     },
     expectedIdentity: openedIdentity,
     expectedCanonical: migrationRequiredHealth,
@@ -777,11 +805,10 @@ it(
   "reports corrupt when a known-older database also fails integrity",
   async () => {
     const root = await createHealthyProjectStorageFixture();
-    const migrationResourcesRoot = await createMigrationRootWithCanonicalSuccessor();
+    await seedGenerationOneCanonical(root);
     await seedCanonicalIntegrityFailure(root);
     await expectSafeModeWithoutMutation({
       root,
-      runtimeOptions: { migrationResourcesRoot },
       identity: openedIdentity,
       canonicalHealth: corruptHealth,
       runtimeHealth: healthyHealth,

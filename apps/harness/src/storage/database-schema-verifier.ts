@@ -1,6 +1,7 @@
 import type { InArgs, InStatement } from "@libsql/client";
 import { z } from "zod";
 import type {
+  ColumnSpec,
   DatabaseSpec,
   ForeignKeySpec,
   NamedCheckSpec,
@@ -61,6 +62,15 @@ const tableNameRowSchema = z.strictObject({ name: z.string().min(1) });
 const tableSqlRowSchema = z.strictObject({
   tableName: z.string().min(1),
   sql: z.string().min(1),
+});
+const columnMetadataRowSchema = z.strictObject({
+  cid: sqlIntegerSchema,
+  name: z.string().min(1),
+  type: z.string(),
+  notNull: sqlIntegerSchema.refine((value) => value === 0 || value === 1),
+  defaultValue: z.string().nullable(),
+  primaryKey: sqlIntegerSchema,
+  hidden: sqlIntegerSchema,
 });
 const indexMetadataRowSchema = z.strictObject({
   name: z.string().min(1),
@@ -274,6 +284,27 @@ async function requireNoForbiddenSchemaObjectsForTables(
   }
 }
 
+async function readColumns(
+  client: SchemaExecutor,
+  tables: readonly string[],
+): Promise<readonly ColumnSpec[]> {
+  const columns: ColumnSpec[] = [];
+  for (const table of tables) {
+    const rows = columnMetadataRowSchema.array().parse(
+      resultObjects(
+        await client.execute({
+          sql: `SELECT cid, name, type, "notnull" AS "notNull",
+        dflt_value AS defaultValue, pk AS primaryKey, hidden
+        FROM pragma_table_xinfo(?) ORDER BY cid`,
+          args: [table],
+        }),
+      ),
+    );
+    columns.push(...rows.map((row) => ({ table, ...row })));
+  }
+  return columns;
+}
+
 function topLevelWhere(source: string): number | undefined {
   return scanSqliteSchemaTokens({ source }).find(
     (token) => token.depth === 0 && isUnquotedSqliteKeyword({ token, keyword: "where" }),
@@ -388,6 +419,19 @@ function expressionIdentity(expression: string): string {
   return JSON.stringify(canonicalizeSqliteSchemaExpression(expression));
 }
 
+function columnKey(columnSpec: ColumnSpec): string {
+  return JSON.stringify([
+    columnSpec.table,
+    columnSpec.cid,
+    columnSpec.name,
+    columnSpec.type,
+    columnSpec.notNull,
+    columnSpec.defaultValue,
+    columnSpec.primaryKey,
+    columnSpec.hidden,
+  ]);
+}
+
 function checkKey(check: NamedCheckSpec): string {
   return JSON.stringify([check.table, check.name, expressionIdentity(check.expression)]);
 }
@@ -427,20 +471,28 @@ async function verifyDeclaredSchemaObjects(
   if (!equalStrings(actualTables, expectedTables)) {
     throw new ProjectStorageBrokenError("Database contains an unexpected table set.");
   }
-  const [checks, indexes, foreignKeys] = await Promise.all([
+  const [columns, checks, indexes, foreignKeys] = await Promise.all([
+    readColumns(client, spec.tables),
     readNamedChecks(client),
     readIndexes(client, spec.tables),
     readForeignKeys(client, spec.tables),
   ]);
-  requireExpectedSchemaObjects({ checks, indexes, foreignKeys, spec });
+  requireExpectedSchemaObjects({ columns, checks, indexes, foreignKeys, spec });
 }
 
 function requireExpectedSchemaObjects(input: {
+  columns: readonly ColumnSpec[];
   checks: readonly NamedCheckSpec[];
   indexes: readonly MutableIndex[];
   foreignKeys: readonly ObservedForeignKey[];
   spec: DatabaseSpec;
 }): void {
+  requireExactObjectKeys(
+    input.columns.map(columnKey),
+    input.spec.columns.map(columnKey),
+    "Database required column definition is missing.",
+    "Database contains an unexpected column definition.",
+  );
   requireExactObjectKeys(
     input.checks.map(checkKey),
     input.spec.checks.map(checkKey),
@@ -469,11 +521,13 @@ async function verifyOwnedSchemaObjects(client: SchemaExecutor, spec: DatabaseSp
   if (!equalStrings(actualTables, expectedTables)) {
     throw new ProjectStorageBrokenError("Database required table is missing.");
   }
-  const [indexes, foreignKeys] = await Promise.all([
+  const [columns, indexes, foreignKeys] = await Promise.all([
+    readColumns(client, spec.tables),
     readIndexes(client, spec.tables),
     readForeignKeys(client, spec.tables),
   ]);
   requireExpectedSchemaObjects({
+    columns,
     checks: definitions.flatMap((definition) => checksFromDefinition(definition)),
     indexes,
     foreignKeys,

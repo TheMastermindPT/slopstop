@@ -471,6 +471,19 @@ async function databaseIdentityMatches(
   ].every(Boolean);
 }
 
+async function insertCanonicalProjectState(
+  client: LocalClient,
+  creation: AllocatedCreation,
+): Promise<void> {
+  const result = await client.execute({
+    sql: `INSERT INTO project_state
+      (project_id, last_project_sequence, last_writer_generation, created_at, updated_at)
+      VALUES (?, 0, 0, ?, ?)`,
+    args: [creation.projectId, creation.createdAt, creation.createdAt],
+  });
+  assertRowsAffected(result.rowsAffected, "Canonical Project state was not inserted exactly once.");
+}
+
 async function buildDatabase(
   databasePath: string,
   spec: typeof databaseSpecs.canonical | typeof databaseSpecs.runtime,
@@ -496,6 +509,7 @@ async function buildDatabase(
         expectedSchemaVersion: spec.schemaVersion,
         migrations,
       });
+      if (spec.databaseKind === "canonical") await insertCanonicalProjectState(client, creation);
       await insertDatabaseIdentity(client, spec, creation);
       await requireDeclaredSchemaObjects(client, spec);
       const metadata = await requireCurrentMetadata(client, spec, migrations);
@@ -1322,6 +1336,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
       });
       return {
         projectRoot,
+
         staging: generationPaths(path.join(projectRoot, `.staging-${generationId}`)),
         active: generationPaths(path.join(projectRoot, generationId)),
       };

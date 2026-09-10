@@ -34,9 +34,15 @@ import {
   sha256File,
 } from "./project-storage-create-fixture.js";
 import {
+  canonicalConstraintCases,
+  canonicalGenerationTwoTables,
+  canonicalTableCounts,
+  expectCreatedCanonicalSchema,
   type SqlTransform,
   sameNameSchemaMutationCases,
   schemaObjectOmissionCases,
+  schemaProbeColumns,
+  seedCanonicalConstraintAuthority,
   sqliteExecutor,
 } from "./project-storage-schema-cases.js";
 
@@ -191,10 +197,12 @@ async function readDatabaseCheck(databasePath: string) {
 }
 
 it(
-  "creates exactly eight domain tables with valid SQLite integrity",
+  "creates the exact canonical generation-2 schema",
   async () => {
     const root = await createTemporaryApplicationRoot();
-    const runtime = await createStorageRuntimeForRoot(root);
+    const runtime = await createStorageRuntimeForRoot(root, {
+      clockNow: () => "2026-09-04T12:00:00.000Z",
+    });
     await expect(runtime.create(createRequest)).resolves.toMatchObject({
       event: "project.create.result",
       payload: { status: "created", mode: "read-write" },
@@ -210,16 +218,23 @@ it(
     const canonicalPath = path.join(generationDirectory, "slopstop.db");
     const runtimePath = path.join(generationDirectory, "mastra.db");
 
+    const canonical = new DatabaseSync(canonicalPath);
+    try {
+      await expectCreatedCanonicalSchema(canonical, {
+        ...fixedCreationIds,
+        projectId: createRequest.projectId,
+      });
+    } finally {
+      canonical.close();
+    }
+
     await expect(readTableNames(applicationPath)).resolves.toEqual([
       "schema_metadata",
       "storage_generations",
       "storage_locations",
       "storage_registrations",
     ]);
-    await expect(readTableNames(canonicalPath)).resolves.toEqual([
-      "schema_metadata",
-      "storage_identity",
-    ]);
+    await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalGenerationTwoTables);
     await expect(readTableNames(runtimePath)).resolves.toEqual([
       "slopstop_runtime_schema_metadata",
       "slopstop_runtime_storage_identity",
@@ -235,6 +250,46 @@ it(
       { foreignKeys: 1, violations: [], integrity: ["ok"] },
       { foreignKeys: 1, violations: [], integrity: ["ok"] },
     ]);
+  },
+  projectStorageIntegrationTimeout,
+);
+
+it(
+  "enforces canonical generation-2 trust-spine constraints",
+  async () => {
+    const root = await createTemporaryApplicationRoot();
+    const runtime = await createStorageRuntimeForRoot(root);
+    try {
+      await expect(runtime.create(createRequest)).resolves.toMatchObject({
+        payload: expectedCreatedResult,
+      });
+    } finally {
+      await runtime.stop();
+    }
+    const canonicalPath = createdGenerationPaths({ root }).canonical;
+    await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalGenerationTwoTables);
+    const database = new DatabaseSync(canonicalPath);
+    try {
+      database.exec("PRAGMA foreign_keys = ON");
+      seedCanonicalConstraintAuthority(database);
+      const before = canonicalTableCounts(database);
+      expect(before).toEqual([1, 0, 3, 0, 1, 1, 1, 0, 3, 0, 0]);
+      for (const scenario of canonicalConstraintCases) {
+        database.exec("SAVEPOINT invalid_case");
+        try {
+          const statement = database.prepare(scenario.sql);
+          expect(() => statement.run(), scenario.name).toThrow(scenario.failure);
+          expect(canonicalTableCounts(database), scenario.name).toEqual(before);
+        } finally {
+          database.exec("ROLLBACK TO invalid_case; RELEASE invalid_case");
+        }
+        expect(canonicalTableCounts(database), scenario.name).toEqual(before);
+      }
+      expect(database.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+      expect(database.prepare("PRAGMA integrity_check").all()).toEqual([{ integrity_check: "ok" }]);
+    } finally {
+      database.close();
+    }
   },
   projectStorageIntegrationTimeout,
 );
@@ -344,6 +399,19 @@ it("ignores CHECK-like text inside SQL literals", async () => {
   const spec = {
     ...databaseSpecs.canonical,
     tables: ["parent", "child"],
+    columns: [
+      ...schemaProbeColumns,
+      {
+        table: "child",
+        cid: 2,
+        name: "note",
+        type: "TEXT",
+        notNull: 0,
+        defaultValue: "'CONSTRAINT child_parent_nonempty CHECK (length(parent_id) > 0)'",
+        primaryKey: 0,
+        hidden: 0,
+      },
+    ],
     checks: [
       {
         table: "child",
@@ -382,6 +450,7 @@ it("rejects unexpected unnamed CHECK constraints", async () => {
     spec: {
       ...databaseSpecs.canonical,
       tables: ["parent", "child"],
+      columns: schemaProbeColumns,
       checks: [],
       indexes: [],
       foreignKeys: [],
@@ -400,6 +469,9 @@ it("compares exact quoted index names without trimming", async () => {
     spec: {
       ...databaseSpecs.canonical,
       tables: ["child"],
+      columns: schemaProbeColumns.filter(
+        (column) => column.table === "child" && column.name === "id",
+      ),
       checks: [],
       indexes: [
         {
@@ -430,6 +502,9 @@ it.each([
     spec: {
       ...databaseSpecs.canonical,
       tables: ["child"],
+      columns: schemaProbeColumns.filter(
+        (column) => column.table === "child" && column.name === "id",
+      ),
       checks: [],
       indexes: [],
       foreignKeys: [],
@@ -477,6 +552,7 @@ it.each(schemaObjectUnexpectedCases)(
       spec: {
         ...databaseSpecs.canonical,
         tables: ["parent", "child"],
+        columns: schemaProbeColumns,
         checks: [],
         indexes: [],
         foreignKeys: [],

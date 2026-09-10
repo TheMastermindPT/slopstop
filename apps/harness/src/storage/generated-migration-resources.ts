@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { lstat, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
@@ -243,8 +244,52 @@ function createdObjects(tokens: readonly SqliteSchemaToken[]): readonly CreatedO
   return objects;
 }
 
-function requireAuthorizedSql(sources: readonly string[], spec: DatabaseSpec): void {
+function requireCanonicalRebuild(input: {
+  sources: readonly string[];
+  migrations: readonly GeneratedMigration[];
+  spec: DatabaseSpec;
+}): void {
+  const invalid: () => never = () => {
+    throw new ProjectStorageBrokenError("Generated canonical storage identity rebuild is invalid.");
+  };
+  const predecessor = input.sources[0];
+  const original = input.migrations[0];
+  const successor = input.migrations[1];
+  if (predecessor === undefined) invalid();
+  if (original === undefined) invalid();
+  if (successor === undefined) invalid();
+  const authorityAgrees = [
+    input.spec.resourceKind === "canonical",
+    input.spec.databaseKind === "canonical",
+    input.spec.metadataKey === "canonical",
+    input.spec.metadataTable === "schema_metadata",
+    input.spec.formatVersion === 1,
+    input.spec.schemaVersion === 2,
+    !input.spec.tables.includes("__new_storage_identity"),
+    input.migrations.length === 2,
+    input.sources.length === 2,
+    original.migrationId === "0000_fat_doctor_octopus",
+    successor.migrationId === "0001_canonical_project_writer",
+  ].every(Boolean);
+  if (!authorityAgrees) invalid();
+  // Pins identify the reviewed executable proposal, never caller-supplied metadata.
+  const predecessorHash = createHash("sha256").update(predecessor).digest("hex");
+  const successorHash = createHash("sha256")
+    .update(JSON.stringify(successor.statements))
+    .digest("hex");
+  if (predecessorHash !== "e21883d8c39eb5012a6df799fb8d2f5182e9050bf3546e48bde57f90abf3942c")
+    invalid();
+  if (successorHash !== "e3a917fc5c7e2bc5a5a20ae9c50160cd072d6b49a35856530cc0118fbbca5b14")
+    invalid();
+}
+
+function requireAuthorizedSql(
+  sources: readonly string[],
+  spec: DatabaseSpec,
+  migrations: readonly GeneratedMigration[],
+): void {
   const createdTables = new Set<string>();
+  let hasRebuildCandidate = false;
   for (const source of sources) {
     const tokens = scanSqliteSchemaTokens({ source });
     if (
@@ -259,11 +304,22 @@ function requireAuthorizedSql(sources: readonly string[], spec: DatabaseSpec): v
       if (object.kind === "trigger" || object.kind === "view") {
         throw new ProjectStorageBrokenError("Generated migration creates a forbidden object.");
       }
+      if (
+        object.name === "__new_storage_identity" &&
+        spec.resourceKind === "canonical" &&
+        spec.databaseKind === "canonical"
+      ) {
+        hasRebuildCandidate = true;
+        continue;
+      }
       if (!spec.tables.includes(object.name)) {
         throw new ProjectStorageBrokenError("Generated migration creates an unknown table.");
       }
       createdTables.add(object.name);
     }
+  }
+  if (hasRebuildCandidate || (spec.resourceKind === "canonical" && spec.schemaVersion === 2)) {
+    requireCanonicalRebuild({ sources, migrations, spec });
   }
   if (!equalStrings(sortedStrings(createdTables), sortedStrings(spec.tables))) {
     throw new ProjectStorageBrokenError("Generated migration table authority is incomplete.");
@@ -302,7 +358,7 @@ async function loadGeneratedMigrationResources(
   requireOrderedJournal(journal);
   await requireExactResources({ kindRoot, journal });
   const loaded = await readSqlMigrations({ kindRoot, journal });
-  requireAuthorizedSql(loaded.sources, spec);
+  requireAuthorizedSql(loaded.sources, spec, loaded.migrations);
   return loaded.migrations;
 }
 

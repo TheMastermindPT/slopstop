@@ -1,9 +1,19 @@
 export type {
   CanonicalDatabaseLineageId,
+  CanonicalEventOrdinal,
+  CommandId,
+  ProjectActivationId,
+  ProjectSequence,
   ProjectStorageCreateRequestId,
   RuntimeDatabaseLineageId,
   StorageGenerationId,
   StorageId,
+  WriterGeneration,
+} from "./project-storage-identifiers.js";
+export {
+  isCanonicalEventOrdinal,
+  isProjectSequence,
+  isWriterGeneration,
 } from "./project-storage-identifiers.js";
 export type {
   AcceptedRevisionId,

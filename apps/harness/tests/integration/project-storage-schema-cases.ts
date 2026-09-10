@@ -1,9 +1,234 @@
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
 import type { InArgs, InStatement } from "@libsql/client";
+import { expect } from "vitest";
+import type { ColumnSpec } from "../../src/storage/project-storage-database-specs.js";
 import {
   type DatabaseSpec,
   databaseSpecs,
+  requireDeclaredSchemaObjects,
 } from "../../src/storage/project-storage-node-adapters.js";
+
+export const canonicalGenerationTwoTables = [
+  "canonical_events",
+  "command_idempotency",
+  "command_receipts",
+  "command_rejections",
+  "project_state",
+  "schema_metadata",
+  "storage_identity",
+  "writer_fence",
+  "writer_generations",
+  "writer_handoffs",
+  "writer_recovery_records",
+] as const;
+
+const project = "00000000-0000-4000-8000-000000000010";
+const instant = "2026-09-04T12:00:00.000Z";
+const identity = (suffix: number) => `00000000-0000-4000-8000-${String(suffix).padStart(12, "0")}`;
+const digest = "a".repeat(64);
+const otherDigest = "b".repeat(64);
+
+function writerInsert(input: { generation: number; projectId?: string; token?: string }): string {
+  const { generation, projectId = project, token = digest } = input;
+  return `INSERT INTO writer_generations VALUES ('${projectId}', ${generation}, '${identity(20 + generation)}', '${token}', '${instant}', NULL)`;
+}
+
+function receiptInsert(
+  id: number,
+  sequence: number,
+  outcome: string,
+  fingerprint = digest,
+): string {
+  return `INSERT INTO command_receipts VALUES ('${project}', '${identity(id)}', '${identity(id + 10)}', 'fixture.command', 1, '${fingerprint}', '${outcome}', ${sequence}, 1, '${instant}')`;
+}
+
+function eventInsert(input: {
+  id: number;
+  receipt: number;
+  sequence: number;
+  aggregateVersion?: number;
+}): string {
+  const { id, receipt, sequence, aggregateVersion = 1 } = input;
+  return `INSERT INTO canonical_events VALUES ('${project}', '${identity(id)}', '${identity(receipt)}', 'applied', ${sequence}, 0, 'fixture', '${identity(70)}', ${aggregateVersion}, 'fixture.event', 1, '{}', '${digest}', '${instant}')`;
+}
+
+function fenceInsert(state: string, release: string, token = digest): string {
+  return `INSERT INTO writer_fence VALUES ('${project}', 1, '${token}', '${state}', '${instant}', ${release})`;
+}
+
+export function seedCanonicalConstraintAuthority(database: DatabaseSync): void {
+  for (const generation of [1, 2, 3]) database.exec(writerInsert({ generation }));
+  database.exec(receiptInsert(40, 1, "applied"));
+  database.exec(receiptInsert(41, 2, "unchanged"));
+  database.exec(receiptInsert(42, 3, "rejected"));
+  database.exec(eventInsert({ id: 60, receipt: 40, sequence: 1 }));
+}
+
+export function canonicalTableCounts(database: DatabaseSync): readonly number[] {
+  return canonicalGenerationTwoTables.map((table) =>
+    Number(database.prepare(`SELECT count(*) AS count FROM ${table}`).get()?.["count"]),
+  );
+}
+
+export async function expectCreatedCanonicalSchema(
+  canonical: DatabaseSync,
+  identity: Readonly<{
+    projectId: string;
+    storageId: string;
+    generationId: string;
+    canonicalDatabaseLineageId: string;
+  }>,
+): Promise<void> {
+  expect(canonical.prepare("SELECT * FROM schema_metadata").all()).toEqual([
+    {
+      metadata_key: "canonical",
+      database_kind: "canonical",
+      format_version: 1,
+      schema_version: 2,
+      last_migration_id: "0001_canonical_project_writer",
+    },
+  ]);
+  expect(canonical.prepare("SELECT * FROM project_state").all()).toEqual([
+    {
+      project_id: "00000000-0000-4000-8000-000000000010",
+      last_project_sequence: 0,
+      last_writer_generation: 0,
+      created_at: "2026-09-04T12:00:00.000Z",
+      updated_at: "2026-09-04T12:00:00.000Z",
+    },
+  ]);
+  expect(canonical.prepare("SELECT * FROM storage_identity").all()).toEqual([
+    {
+      identity_key: "storage",
+      project_id: identity.projectId,
+      storage_id: identity.storageId,
+      generation_id: identity.generationId,
+      canonical_database_lineage_id: identity.canonicalDatabaseLineageId,
+      created_at: "2026-09-04T12:00:00.000Z",
+    },
+  ]);
+  expect(canonicalTableCounts(canonical)).toEqual([0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
+  expect(databaseSpecs.canonical.columns).toHaveLength(81);
+  expect(databaseSpecs.canonical.checks).toHaveLength(62);
+  expect(databaseSpecs.canonical.indexes).toHaveLength(15);
+  expect(databaseSpecs.canonical.foreignKeys).toHaveLength(11);
+  await expect(
+    requireDeclaredSchemaObjects(sqliteExecutor(canonical), databaseSpecs.canonical),
+  ).resolves.toBeUndefined();
+}
+
+const checkFailure = /^CHECK constraint failed:/u;
+const foreignKeyFailure = /^FOREIGN KEY constraint failed/u;
+const uniqueFailure = /^UNIQUE constraint failed:/u;
+
+export const canonicalConstraintCases = [
+  {
+    name: "invalid Project UUID",
+    sql: `INSERT INTO project_state VALUES ('invalid', 0, 0, '${instant}', '${instant}')`,
+    failure: checkFailure,
+  },
+  {
+    name: "malformed token digest",
+    sql: writerInsert({ generation: 4, token: "not-a-digest" }),
+    failure: checkFailure,
+  },
+  {
+    name: "malformed command fingerprint",
+    sql: receiptInsert(43, 4, "applied", "invalid"),
+    failure: checkFailure,
+  },
+  {
+    name: "orphan Writer generation",
+    sql: writerInsert({ generation: 4, projectId: identity(99) }),
+    failure: foreignKeyFailure,
+  },
+  {
+    name: "fence generation/token mismatch",
+    sql: fenceInsert("active", "NULL", otherDigest),
+    failure: foreignKeyFailure,
+  },
+  { name: "invalid fence state", sql: fenceInsert("paused", "NULL"), failure: checkFailure },
+  {
+    name: "active fence released",
+    sql: fenceInsert("active", `'${instant}'`),
+    failure: checkFailure,
+  },
+  {
+    name: "released fence without time",
+    sql: fenceInsert("released", "NULL"),
+    failure: checkFailure,
+  },
+  {
+    name: "initial handoff with predecessor",
+    sql: `INSERT INTO writer_handoffs VALUES ('${project}', '${identity(80)}', 1, 2, 'initial', '${instant}')`,
+    failure: checkFailure,
+  },
+  {
+    name: "clean handoff without predecessor",
+    sql: `INSERT INTO writer_handoffs VALUES ('${project}', '${identity(80)}', NULL, 2, 'clean', '${instant}')`,
+    failure: checkFailure,
+  },
+  {
+    name: "uncertain recovery without command",
+    sql: `INSERT INTO writer_recovery_records VALUES ('${project}', '${identity(81)}', 1, 'commit-uncertain', NULL, NULL, '${instant}', NULL, NULL, NULL)`,
+    failure: checkFailure,
+  },
+  {
+    name: "abandoned recovery with command",
+    sql: `INSERT INTO writer_recovery_records VALUES ('${project}', '${identity(81)}', 1, 'abandoned-active-fence', '${identity(50)}', '${digest}', '${instant}', NULL, NULL, NULL)`,
+    failure: checkFailure,
+  },
+  {
+    name: "non-increasing resolver generation",
+    sql: `INSERT INTO writer_recovery_records VALUES ('${project}', '${identity(81)}', 2, 'abandoned-active-fence', NULL, NULL, '${instant}', 'generation-superseded', 1, '${instant}')`,
+    failure: checkFailure,
+  },
+  {
+    name: "duplicate Project sequence",
+    sql: receiptInsert(43, 1, "applied"),
+    failure: uniqueFailure,
+  },
+  {
+    name: "idempotency/receipt command mismatch",
+    sql: `INSERT INTO command_idempotency VALUES ('${project}', '${identity(51)}', '${digest}', '${identity(40)}', '${instant}')`,
+    failure: foreignKeyFailure,
+  },
+  {
+    name: "idempotency/receipt fingerprint mismatch",
+    sql: `INSERT INTO command_idempotency VALUES ('${project}', '${identity(50)}', '${otherDigest}', '${identity(40)}', '${instant}')`,
+    failure: foreignKeyFailure,
+  },
+  {
+    name: "rejection of applied receipt",
+    sql: `INSERT INTO command_rejections VALUES ('${project}', '${identity(40)}', 'rejected', 1, 'FIXTURE_REJECTED', 0, '{}', '${digest}')`,
+    failure: foreignKeyFailure,
+  },
+  {
+    name: "event on unchanged receipt",
+    sql: eventInsert({ id: 61, receipt: 41, sequence: 2 }),
+    failure: foreignKeyFailure,
+  },
+  {
+    name: "duplicate event ordinal",
+    sql: eventInsert({ id: 61, receipt: 40, sequence: 1 }),
+    failure: uniqueFailure,
+  },
+  {
+    name: "fractional Project sequence",
+    sql: `UPDATE project_state SET last_project_sequence = 0.5 WHERE project_id = '${project}'`,
+    failure: checkFailure,
+  },
+  {
+    name: "fractional Writer generation",
+    sql: `INSERT INTO writer_generations VALUES ('${project}', 1.5, '${identity(24)}', '${digest}', '${instant}', NULL)`,
+    failure: checkFailure,
+  },
+  {
+    name: "fractional aggregate version",
+    sql: eventInsert({ id: 61, receipt: 40, sequence: 1, aggregateVersion: 1.5 }),
+    failure: checkFailure,
+  },
+] as const;
 
 export function sqliteExecutor(database: DatabaseSync) {
   const primitiveSqliteInput = (value: unknown): SQLInputValue | undefined => {
@@ -40,6 +265,39 @@ export function sqliteExecutor(database: DatabaseSync) {
   };
 }
 
+export const schemaProbeColumns = [
+  {
+    table: "parent",
+    cid: 0,
+    name: "id",
+    type: "TEXT",
+    notNull: 0,
+    defaultValue: null,
+    primaryKey: 1,
+    hidden: 0,
+  },
+  {
+    table: "child",
+    cid: 0,
+    name: "id",
+    type: "TEXT",
+    notNull: 0,
+    defaultValue: null,
+    primaryKey: 1,
+    hidden: 0,
+  },
+  {
+    table: "child",
+    cid: 1,
+    name: "parent_id",
+    type: "TEXT",
+    notNull: 0,
+    defaultValue: null,
+    primaryKey: 0,
+    hidden: 0,
+  },
+] as const satisfies readonly ColumnSpec[];
+
 export const schemaObjectOmissionCases = [
   {
     name: "CHECK constraint",
@@ -47,6 +305,7 @@ export const schemaObjectOmissionCases = [
     spec: {
       ...databaseSpecs.canonical,
       tables: ["parent", "child"],
+      columns: schemaProbeColumns,
       checks: [
         {
           table: "child",
@@ -64,6 +323,7 @@ export const schemaObjectOmissionCases = [
     spec: {
       ...databaseSpecs.canonical,
       tables: ["parent", "child"],
+      columns: schemaProbeColumns,
       checks: [],
       indexes: [
         {
@@ -84,6 +344,7 @@ export const schemaObjectOmissionCases = [
     spec: {
       ...databaseSpecs.canonical,
       tables: ["parent", "child"],
+      columns: schemaProbeColumns,
       checks: [],
       indexes: [],
       foreignKeys: [

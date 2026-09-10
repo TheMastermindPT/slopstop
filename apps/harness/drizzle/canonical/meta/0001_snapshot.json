@@ -1,0 +1,1337 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "24bedaf0-303c-4130-9955-bd3a25cf80f3",
+  "prevId": "eac61728-4dd5-4367-a639-9992bf1ef5cf",
+  "tables": {
+    "canonical_events": {
+      "name": "canonical_events",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "receipt_id": {
+          "name": "receipt_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "receipt_outcome": {
+          "name": "receipt_outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "project_sequence": {
+          "name": "project_sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_ordinal": {
+          "name": "event_ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "aggregate_type": {
+          "name": "aggregate_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "aggregate_id": {
+          "name": "aggregate_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "aggregate_version": {
+          "name": "aggregate_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "event_version": {
+          "name": "event_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_json": {
+          "name": "payload_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_hash": {
+          "name": "payload_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "canonical_events_sequence_ordinal_uq": {
+          "name": "canonical_events_sequence_ordinal_uq",
+          "columns": [
+            "project_id",
+            "project_sequence",
+            "event_ordinal"
+          ],
+          "isUnique": true
+        },
+        "canonical_events_receipt_idx": {
+          "name": "canonical_events_receipt_idx",
+          "columns": [
+            "project_id",
+            "receipt_id"
+          ],
+          "isUnique": false
+        },
+        "canonical_events_aggregate_idx": {
+          "name": "canonical_events_aggregate_idx",
+          "columns": [
+            "project_id",
+            "aggregate_type",
+            "aggregate_id",
+            "aggregate_version"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "canonical_events_receipt_fk": {
+          "name": "canonical_events_receipt_fk",
+          "tableFrom": "canonical_events",
+          "tableTo": "command_receipts",
+          "columnsFrom": [
+            "project_id",
+            "receipt_id",
+            "receipt_outcome",
+            "project_sequence"
+          ],
+          "columnsTo": [
+            "project_id",
+            "receipt_id",
+            "outcome",
+            "project_sequence"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "canonical_events_pk": {
+          "columns": [
+            "project_id",
+            "event_id"
+          ],
+          "name": "canonical_events_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "canonical_events_id_uuid": {
+          "name": "canonical_events_id_uuid",
+          "value": "\n    length(\"canonical_events\".\"event_id\") = 36\n    and \"canonical_events\".\"event_id\" = lower(\"canonical_events\".\"event_id\")\n    and substr(\"canonical_events\".\"event_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"canonical_events\".\"event_id\", 9, 1) = '-'\n    and substr(\"canonical_events\".\"event_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"canonical_events\".\"event_id\", 14, 1) = '-'\n    and substr(\"canonical_events\".\"event_id\", 15, 1) glob '[1-8]'\n    and substr(\"canonical_events\".\"event_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"canonical_events\".\"event_id\", 19, 1) = '-'\n    and substr(\"canonical_events\".\"event_id\", 20, 1) glob '[89ab]'\n    and substr(\"canonical_events\".\"event_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"canonical_events\".\"event_id\", 24, 1) = '-'\n    and substr(\"canonical_events\".\"event_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "canonical_events_outcome": {
+          "name": "canonical_events_outcome",
+          "value": "\"canonical_events\".\"receipt_outcome\" = 'applied'"
+        },
+        "canonical_events_sequence_positive_safe": {
+          "name": "canonical_events_sequence_positive_safe",
+          "value": "\n    typeof(\"canonical_events\".\"project_sequence\") = 'integer'\n    and \"canonical_events\".\"project_sequence\" > 0\n    and \"canonical_events\".\"project_sequence\" <= 9007199254740991\n  "
+        },
+        "canonical_events_ordinal_nonnegative_safe": {
+          "name": "canonical_events_ordinal_nonnegative_safe",
+          "value": "\n    typeof(\"canonical_events\".\"event_ordinal\") = 'integer'\n    and \"canonical_events\".\"event_ordinal\" >= 0\n    and \"canonical_events\".\"event_ordinal\" <= 9007199254740991\n  "
+        },
+        "canonical_events_aggregate_type_nonempty": {
+          "name": "canonical_events_aggregate_type_nonempty",
+          "value": "length(trim(\"canonical_events\".\"aggregate_type\")) > 0"
+        },
+        "canonical_events_aggregate_id_uuid": {
+          "name": "canonical_events_aggregate_id_uuid",
+          "value": "\n    length(\"canonical_events\".\"aggregate_id\") = 36\n    and \"canonical_events\".\"aggregate_id\" = lower(\"canonical_events\".\"aggregate_id\")\n    and substr(\"canonical_events\".\"aggregate_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"canonical_events\".\"aggregate_id\", 9, 1) = '-'\n    and substr(\"canonical_events\".\"aggregate_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"canonical_events\".\"aggregate_id\", 14, 1) = '-'\n    and substr(\"canonical_events\".\"aggregate_id\", 15, 1) glob '[1-8]'\n    and substr(\"canonical_events\".\"aggregate_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"canonical_events\".\"aggregate_id\", 19, 1) = '-'\n    and substr(\"canonical_events\".\"aggregate_id\", 20, 1) glob '[89ab]'\n    and substr(\"canonical_events\".\"aggregate_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"canonical_events\".\"aggregate_id\", 24, 1) = '-'\n    and substr(\"canonical_events\".\"aggregate_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "canonical_events_aggregate_version_positive_safe": {
+          "name": "canonical_events_aggregate_version_positive_safe",
+          "value": "\n    typeof(\"canonical_events\".\"aggregate_version\") = 'integer'\n    and \"canonical_events\".\"aggregate_version\" > 0\n    and \"canonical_events\".\"aggregate_version\" <= 9007199254740991\n  "
+        },
+        "canonical_events_type_nonempty": {
+          "name": "canonical_events_type_nonempty",
+          "value": "length(trim(\"canonical_events\".\"event_type\")) > 0"
+        },
+        "canonical_events_version_positive_safe": {
+          "name": "canonical_events_version_positive_safe",
+          "value": "\n    typeof(\"canonical_events\".\"event_version\") = 'integer'\n    and \"canonical_events\".\"event_version\" > 0\n    and \"canonical_events\".\"event_version\" <= 9007199254740991\n  "
+        },
+        "canonical_events_payload_nonempty": {
+          "name": "canonical_events_payload_nonempty",
+          "value": "length(trim(\"canonical_events\".\"payload_json\")) > 0"
+        },
+        "canonical_events_payload_sha256": {
+          "name": "canonical_events_payload_sha256",
+          "value": "\n    length(\"canonical_events\".\"payload_hash\") = 64\n    and \"canonical_events\".\"payload_hash\" = lower(\"canonical_events\".\"payload_hash\")\n    and \"canonical_events\".\"payload_hash\" not glob '*[^0-9a-f]*'\n  "
+        }
+      }
+    },
+    "project_state": {
+      "name": "project_state",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_project_sequence": {
+          "name": "last_project_sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_writer_generation": {
+          "name": "last_writer_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "project_state_project_uuid": {
+          "name": "project_state_project_uuid",
+          "value": "\n    length(\"project_state\".\"project_id\") = 36\n    and \"project_state\".\"project_id\" = lower(\"project_state\".\"project_id\")\n    and substr(\"project_state\".\"project_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"project_state\".\"project_id\", 9, 1) = '-'\n    and substr(\"project_state\".\"project_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"project_state\".\"project_id\", 14, 1) = '-'\n    and substr(\"project_state\".\"project_id\", 15, 1) glob '[1-8]'\n    and substr(\"project_state\".\"project_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"project_state\".\"project_id\", 19, 1) = '-'\n    and substr(\"project_state\".\"project_id\", 20, 1) glob '[89ab]'\n    and substr(\"project_state\".\"project_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"project_state\".\"project_id\", 24, 1) = '-'\n    and substr(\"project_state\".\"project_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "project_state_sequence_nonnegative_safe": {
+          "name": "project_state_sequence_nonnegative_safe",
+          "value": "\n    typeof(\"project_state\".\"last_project_sequence\") = 'integer'\n    and \"project_state\".\"last_project_sequence\" >= 0\n    and \"project_state\".\"last_project_sequence\" <= 9007199254740991\n  "
+        },
+        "project_state_writer_generation_nonnegative_safe": {
+          "name": "project_state_writer_generation_nonnegative_safe",
+          "value": "\n    typeof(\"project_state\".\"last_writer_generation\") = 'integer'\n    and \"project_state\".\"last_writer_generation\" >= 0\n    and \"project_state\".\"last_writer_generation\" <= 9007199254740991\n  "
+        }
+      }
+    },
+    "schema_metadata": {
+      "name": "schema_metadata",
+      "columns": {
+        "metadata_key": {
+          "name": "metadata_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "database_kind": {
+          "name": "database_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "format_version": {
+          "name": "format_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_migration_id": {
+          "name": "last_migration_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "canonical_metadata_key": {
+          "name": "canonical_metadata_key",
+          "value": "\"schema_metadata\".\"metadata_key\" = 'canonical'"
+        },
+        "canonical_metadata_kind": {
+          "name": "canonical_metadata_kind",
+          "value": "\"schema_metadata\".\"database_kind\" = 'canonical'"
+        },
+        "canonical_format_nonnegative": {
+          "name": "canonical_format_nonnegative",
+          "value": "\"schema_metadata\".\"format_version\" >= 0"
+        },
+        "canonical_schema_nonnegative": {
+          "name": "canonical_schema_nonnegative",
+          "value": "\"schema_metadata\".\"schema_version\" >= 0"
+        },
+        "canonical_migration_nonempty": {
+          "name": "canonical_migration_nonempty",
+          "value": "length(trim(\"schema_metadata\".\"last_migration_id\")) > 0"
+        }
+      }
+    },
+    "storage_identity": {
+      "name": "storage_identity",
+      "columns": {
+        "identity_key": {
+          "name": "identity_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "storage_id": {
+          "name": "storage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generation_id": {
+          "name": "generation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "canonical_database_lineage_id": {
+          "name": "canonical_database_lineage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "canonical_storage_identity_project_fk": {
+          "name": "canonical_storage_identity_project_fk",
+          "tableFrom": "storage_identity",
+          "tableTo": "project_state",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "project_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "canonical_storage_identity_pk": {
+          "columns": [
+            "project_id",
+            "identity_key"
+          ],
+          "name": "canonical_storage_identity_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "canonical_identity_singleton": {
+          "name": "canonical_identity_singleton",
+          "value": "\"storage_identity\".\"identity_key\" = 'storage'"
+        },
+        "canonical_identity_project_uuid": {
+          "name": "canonical_identity_project_uuid",
+          "value": "\n    length(\"storage_identity\".\"project_id\") = 36\n    and \"storage_identity\".\"project_id\" = lower(\"storage_identity\".\"project_id\")\n    and substr(\"storage_identity\".\"project_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"project_id\", 9, 1) = '-'\n    and substr(\"storage_identity\".\"project_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"project_id\", 14, 1) = '-'\n    and substr(\"storage_identity\".\"project_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_identity\".\"project_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"project_id\", 19, 1) = '-'\n    and substr(\"storage_identity\".\"project_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_identity\".\"project_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"project_id\", 24, 1) = '-'\n    and substr(\"storage_identity\".\"project_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "canonical_identity_storage_uuid": {
+          "name": "canonical_identity_storage_uuid",
+          "value": "\n    length(\"storage_identity\".\"storage_id\") = 36\n    and \"storage_identity\".\"storage_id\" = lower(\"storage_identity\".\"storage_id\")\n    and substr(\"storage_identity\".\"storage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"storage_id\", 9, 1) = '-'\n    and substr(\"storage_identity\".\"storage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"storage_id\", 14, 1) = '-'\n    and substr(\"storage_identity\".\"storage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_identity\".\"storage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"storage_id\", 19, 1) = '-'\n    and substr(\"storage_identity\".\"storage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_identity\".\"storage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"storage_id\", 24, 1) = '-'\n    and substr(\"storage_identity\".\"storage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "canonical_identity_generation_uuid": {
+          "name": "canonical_identity_generation_uuid",
+          "value": "\n    length(\"storage_identity\".\"generation_id\") = 36\n    and \"storage_identity\".\"generation_id\" = lower(\"storage_identity\".\"generation_id\")\n    and substr(\"storage_identity\".\"generation_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"generation_id\", 9, 1) = '-'\n    and substr(\"storage_identity\".\"generation_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"generation_id\", 14, 1) = '-'\n    and substr(\"storage_identity\".\"generation_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_identity\".\"generation_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"generation_id\", 19, 1) = '-'\n    and substr(\"storage_identity\".\"generation_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_identity\".\"generation_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"generation_id\", 24, 1) = '-'\n    and substr(\"storage_identity\".\"generation_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "canonical_identity_lineage_uuid": {
+          "name": "canonical_identity_lineage_uuid",
+          "value": "\n    length(\"storage_identity\".\"canonical_database_lineage_id\") = 36\n    and \"storage_identity\".\"canonical_database_lineage_id\" = lower(\"storage_identity\".\"canonical_database_lineage_id\")\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 9, 1) = '-'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 14, 1) = '-'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 19, 1) = '-'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 24, 1) = '-'\n    and substr(\"storage_identity\".\"canonical_database_lineage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        }
+      }
+    },
+    "command_idempotency": {
+      "name": "command_idempotency",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "command_id": {
+          "name": "command_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "original_command_fingerprint": {
+          "name": "original_command_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "original_receipt_id": {
+          "name": "original_receipt_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "command_idempotency_receipt_uq": {
+          "name": "command_idempotency_receipt_uq",
+          "columns": [
+            "project_id",
+            "original_receipt_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "command_idempotency_receipt_fk": {
+          "name": "command_idempotency_receipt_fk",
+          "tableFrom": "command_idempotency",
+          "tableTo": "command_receipts",
+          "columnsFrom": [
+            "project_id",
+            "original_receipt_id",
+            "command_id",
+            "original_command_fingerprint"
+          ],
+          "columnsTo": [
+            "project_id",
+            "receipt_id",
+            "command_id",
+            "command_fingerprint"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "command_idempotency_pk": {
+          "columns": [
+            "project_id",
+            "command_id"
+          ],
+          "name": "command_idempotency_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "command_idempotency_command_uuid": {
+          "name": "command_idempotency_command_uuid",
+          "value": "\n    length(\"command_idempotency\".\"command_id\") = 36\n    and \"command_idempotency\".\"command_id\" = lower(\"command_idempotency\".\"command_id\")\n    and substr(\"command_idempotency\".\"command_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"command_idempotency\".\"command_id\", 9, 1) = '-'\n    and substr(\"command_idempotency\".\"command_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"command_idempotency\".\"command_id\", 14, 1) = '-'\n    and substr(\"command_idempotency\".\"command_id\", 15, 1) glob '[1-8]'\n    and substr(\"command_idempotency\".\"command_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"command_idempotency\".\"command_id\", 19, 1) = '-'\n    and substr(\"command_idempotency\".\"command_id\", 20, 1) glob '[89ab]'\n    and substr(\"command_idempotency\".\"command_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"command_idempotency\".\"command_id\", 24, 1) = '-'\n    and substr(\"command_idempotency\".\"command_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "command_idempotency_fingerprint_sha256": {
+          "name": "command_idempotency_fingerprint_sha256",
+          "value": "\n    length(\"command_idempotency\".\"original_command_fingerprint\") = 64\n    and \"command_idempotency\".\"original_command_fingerprint\" = lower(\"command_idempotency\".\"original_command_fingerprint\")\n    and \"command_idempotency\".\"original_command_fingerprint\" not glob '*[^0-9a-f]*'\n  "
+        }
+      }
+    },
+    "command_receipts": {
+      "name": "command_receipts",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "receipt_id": {
+          "name": "receipt_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "command_id": {
+          "name": "command_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "command_type": {
+          "name": "command_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "command_version": {
+          "name": "command_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "command_fingerprint": {
+          "name": "command_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "project_sequence": {
+          "name": "project_sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "writer_generation": {
+          "name": "writer_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "command_receipts_command_fingerprint_uq": {
+          "name": "command_receipts_command_fingerprint_uq",
+          "columns": [
+            "project_id",
+            "command_id",
+            "command_fingerprint"
+          ],
+          "isUnique": true
+        },
+        "command_receipts_project_sequence_uq": {
+          "name": "command_receipts_project_sequence_uq",
+          "columns": [
+            "project_id",
+            "project_sequence"
+          ],
+          "isUnique": true
+        },
+        "command_receipts_idempotency_binding_uq": {
+          "name": "command_receipts_idempotency_binding_uq",
+          "columns": [
+            "project_id",
+            "receipt_id",
+            "command_id",
+            "command_fingerprint"
+          ],
+          "isUnique": true
+        },
+        "command_receipts_settlement_binding_uq": {
+          "name": "command_receipts_settlement_binding_uq",
+          "columns": [
+            "project_id",
+            "receipt_id",
+            "outcome",
+            "project_sequence"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "command_receipts_writer_generation_fk": {
+          "name": "command_receipts_writer_generation_fk",
+          "tableFrom": "command_receipts",
+          "tableTo": "writer_generations",
+          "columnsFrom": [
+            "project_id",
+            "writer_generation"
+          ],
+          "columnsTo": [
+            "project_id",
+            "writer_generation"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "command_receipts_pk": {
+          "columns": [
+            "project_id",
+            "receipt_id"
+          ],
+          "name": "command_receipts_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "command_receipts_id_uuid": {
+          "name": "command_receipts_id_uuid",
+          "value": "\n    length(\"command_receipts\".\"receipt_id\") = 36\n    and \"command_receipts\".\"receipt_id\" = lower(\"command_receipts\".\"receipt_id\")\n    and substr(\"command_receipts\".\"receipt_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"command_receipts\".\"receipt_id\", 9, 1) = '-'\n    and substr(\"command_receipts\".\"receipt_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"command_receipts\".\"receipt_id\", 14, 1) = '-'\n    and substr(\"command_receipts\".\"receipt_id\", 15, 1) glob '[1-8]'\n    and substr(\"command_receipts\".\"receipt_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"command_receipts\".\"receipt_id\", 19, 1) = '-'\n    and substr(\"command_receipts\".\"receipt_id\", 20, 1) glob '[89ab]'\n    and substr(\"command_receipts\".\"receipt_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"command_receipts\".\"receipt_id\", 24, 1) = '-'\n    and substr(\"command_receipts\".\"receipt_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "command_receipts_command_uuid": {
+          "name": "command_receipts_command_uuid",
+          "value": "\n    length(\"command_receipts\".\"command_id\") = 36\n    and \"command_receipts\".\"command_id\" = lower(\"command_receipts\".\"command_id\")\n    and substr(\"command_receipts\".\"command_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"command_receipts\".\"command_id\", 9, 1) = '-'\n    and substr(\"command_receipts\".\"command_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"command_receipts\".\"command_id\", 14, 1) = '-'\n    and substr(\"command_receipts\".\"command_id\", 15, 1) glob '[1-8]'\n    and substr(\"command_receipts\".\"command_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"command_receipts\".\"command_id\", 19, 1) = '-'\n    and substr(\"command_receipts\".\"command_id\", 20, 1) glob '[89ab]'\n    and substr(\"command_receipts\".\"command_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"command_receipts\".\"command_id\", 24, 1) = '-'\n    and substr(\"command_receipts\".\"command_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "command_receipts_type_nonempty": {
+          "name": "command_receipts_type_nonempty",
+          "value": "length(trim(\"command_receipts\".\"command_type\")) > 0"
+        },
+        "command_receipts_version_positive_safe": {
+          "name": "command_receipts_version_positive_safe",
+          "value": "\n    typeof(\"command_receipts\".\"command_version\") = 'integer'\n    and \"command_receipts\".\"command_version\" > 0\n    and \"command_receipts\".\"command_version\" <= 9007199254740991\n  "
+        },
+        "command_receipts_fingerprint_sha256": {
+          "name": "command_receipts_fingerprint_sha256",
+          "value": "\n    length(\"command_receipts\".\"command_fingerprint\") = 64\n    and \"command_receipts\".\"command_fingerprint\" = lower(\"command_receipts\".\"command_fingerprint\")\n    and \"command_receipts\".\"command_fingerprint\" not glob '*[^0-9a-f]*'\n  "
+        },
+        "command_receipts_outcome": {
+          "name": "command_receipts_outcome",
+          "value": "\"command_receipts\".\"outcome\" in ('applied', 'unchanged', 'rejected')"
+        },
+        "command_receipts_sequence_positive_safe": {
+          "name": "command_receipts_sequence_positive_safe",
+          "value": "\n    typeof(\"command_receipts\".\"project_sequence\") = 'integer'\n    and \"command_receipts\".\"project_sequence\" > 0\n    and \"command_receipts\".\"project_sequence\" <= 9007199254740991\n  "
+        },
+        "command_receipts_writer_generation_positive_safe": {
+          "name": "command_receipts_writer_generation_positive_safe",
+          "value": "\n    typeof(\"command_receipts\".\"writer_generation\") = 'integer'\n    and \"command_receipts\".\"writer_generation\" > 0\n    and \"command_receipts\".\"writer_generation\" <= 9007199254740991\n  "
+        }
+      }
+    },
+    "command_rejections": {
+      "name": "command_rejections",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "receipt_id": {
+          "name": "receipt_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "receipt_outcome": {
+          "name": "receipt_outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "project_sequence": {
+          "name": "project_sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "rejection_code": {
+          "name": "rejection_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "retryable": {
+          "name": "retryable",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "details_json": {
+          "name": "details_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "details_hash": {
+          "name": "details_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "command_rejections_receipt_fk": {
+          "name": "command_rejections_receipt_fk",
+          "tableFrom": "command_rejections",
+          "tableTo": "command_receipts",
+          "columnsFrom": [
+            "project_id",
+            "receipt_id",
+            "receipt_outcome",
+            "project_sequence"
+          ],
+          "columnsTo": [
+            "project_id",
+            "receipt_id",
+            "outcome",
+            "project_sequence"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "command_rejections_pk": {
+          "columns": [
+            "project_id",
+            "receipt_id"
+          ],
+          "name": "command_rejections_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "command_rejections_outcome": {
+          "name": "command_rejections_outcome",
+          "value": "\"command_rejections\".\"receipt_outcome\" = 'rejected'"
+        },
+        "command_rejections_sequence_positive_safe": {
+          "name": "command_rejections_sequence_positive_safe",
+          "value": "\n    typeof(\"command_rejections\".\"project_sequence\") = 'integer'\n    and \"command_rejections\".\"project_sequence\" > 0\n    and \"command_rejections\".\"project_sequence\" <= 9007199254740991\n  "
+        },
+        "command_rejections_code_nonempty": {
+          "name": "command_rejections_code_nonempty",
+          "value": "length(trim(\"command_rejections\".\"rejection_code\")) > 0"
+        },
+        "command_rejections_retryable_boolean": {
+          "name": "command_rejections_retryable_boolean",
+          "value": "\"command_rejections\".\"retryable\" in (0, 1)"
+        },
+        "command_rejections_details_nonempty": {
+          "name": "command_rejections_details_nonempty",
+          "value": "length(trim(\"command_rejections\".\"details_json\")) > 0"
+        },
+        "command_rejections_details_sha256": {
+          "name": "command_rejections_details_sha256",
+          "value": "\n    length(\"command_rejections\".\"details_hash\") = 64\n    and \"command_rejections\".\"details_hash\" = lower(\"command_rejections\".\"details_hash\")\n    and \"command_rejections\".\"details_hash\" not glob '*[^0-9a-f]*'\n  "
+        }
+      }
+    },
+    "writer_fence": {
+      "name": "writer_fence",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "writer_generation": {
+          "name": "writer_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_digest": {
+          "name": "token_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "released_at": {
+          "name": "released_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "writer_fence_generation_fk": {
+          "name": "writer_fence_generation_fk",
+          "tableFrom": "writer_fence",
+          "tableTo": "writer_generations",
+          "columnsFrom": [
+            "project_id",
+            "writer_generation",
+            "token_digest"
+          ],
+          "columnsTo": [
+            "project_id",
+            "writer_generation",
+            "token_digest"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "writer_fence_generation_positive_safe": {
+          "name": "writer_fence_generation_positive_safe",
+          "value": "\n    typeof(\"writer_fence\".\"writer_generation\") = 'integer'\n    and \"writer_fence\".\"writer_generation\" > 0\n    and \"writer_fence\".\"writer_generation\" <= 9007199254740991\n  "
+        },
+        "writer_fence_token_sha256": {
+          "name": "writer_fence_token_sha256",
+          "value": "\n    length(\"writer_fence\".\"token_digest\") = 64\n    and \"writer_fence\".\"token_digest\" = lower(\"writer_fence\".\"token_digest\")\n    and \"writer_fence\".\"token_digest\" not glob '*[^0-9a-f]*'\n  "
+        },
+        "writer_fence_state": {
+          "name": "writer_fence_state",
+          "value": "\"writer_fence\".\"state\" in ('active', 'released')"
+        },
+        "writer_fence_release_shape": {
+          "name": "writer_fence_release_shape",
+          "value": "\n        (\"writer_fence\".\"state\" = 'active' and \"writer_fence\".\"released_at\" is null)\n        or (\"writer_fence\".\"state\" = 'released' and \"writer_fence\".\"released_at\" is not null)\n      "
+        }
+      }
+    },
+    "writer_generations": {
+      "name": "writer_generations",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "writer_generation": {
+          "name": "writer_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "activation_id": {
+          "name": "activation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_digest": {
+          "name": "token_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "acquired_at": {
+          "name": "acquired_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "released_at": {
+          "name": "released_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "writer_generations_activation_uq": {
+          "name": "writer_generations_activation_uq",
+          "columns": [
+            "project_id",
+            "activation_id"
+          ],
+          "isUnique": true
+        },
+        "writer_generations_fence_uq": {
+          "name": "writer_generations_fence_uq",
+          "columns": [
+            "project_id",
+            "writer_generation",
+            "token_digest"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "writer_generations_project_fk": {
+          "name": "writer_generations_project_fk",
+          "tableFrom": "writer_generations",
+          "tableTo": "project_state",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "project_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "writer_generations_pk": {
+          "columns": [
+            "project_id",
+            "writer_generation"
+          ],
+          "name": "writer_generations_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "writer_generations_generation_positive_safe": {
+          "name": "writer_generations_generation_positive_safe",
+          "value": "\n    typeof(\"writer_generations\".\"writer_generation\") = 'integer'\n    and \"writer_generations\".\"writer_generation\" > 0\n    and \"writer_generations\".\"writer_generation\" <= 9007199254740991\n  "
+        },
+        "writer_generations_activation_uuid": {
+          "name": "writer_generations_activation_uuid",
+          "value": "\n    length(\"writer_generations\".\"activation_id\") = 36\n    and \"writer_generations\".\"activation_id\" = lower(\"writer_generations\".\"activation_id\")\n    and substr(\"writer_generations\".\"activation_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"writer_generations\".\"activation_id\", 9, 1) = '-'\n    and substr(\"writer_generations\".\"activation_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"writer_generations\".\"activation_id\", 14, 1) = '-'\n    and substr(\"writer_generations\".\"activation_id\", 15, 1) glob '[1-8]'\n    and substr(\"writer_generations\".\"activation_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"writer_generations\".\"activation_id\", 19, 1) = '-'\n    and substr(\"writer_generations\".\"activation_id\", 20, 1) glob '[89ab]'\n    and substr(\"writer_generations\".\"activation_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"writer_generations\".\"activation_id\", 24, 1) = '-'\n    and substr(\"writer_generations\".\"activation_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "writer_generations_token_sha256": {
+          "name": "writer_generations_token_sha256",
+          "value": "\n    length(\"writer_generations\".\"token_digest\") = 64\n    and \"writer_generations\".\"token_digest\" = lower(\"writer_generations\".\"token_digest\")\n    and \"writer_generations\".\"token_digest\" not glob '*[^0-9a-f]*'\n  "
+        }
+      }
+    },
+    "writer_handoffs": {
+      "name": "writer_handoffs",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "handoff_id": {
+          "name": "handoff_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "from_writer_generation": {
+          "name": "from_writer_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "to_writer_generation": {
+          "name": "to_writer_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "writer_handoffs_to_generation_uq": {
+          "name": "writer_handoffs_to_generation_uq",
+          "columns": [
+            "project_id",
+            "to_writer_generation"
+          ],
+          "isUnique": true
+        },
+        "writer_handoffs_from_generation_idx": {
+          "name": "writer_handoffs_from_generation_idx",
+          "columns": [
+            "project_id",
+            "from_writer_generation"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "writer_handoffs_from_generation_fk": {
+          "name": "writer_handoffs_from_generation_fk",
+          "tableFrom": "writer_handoffs",
+          "tableTo": "writer_generations",
+          "columnsFrom": [
+            "project_id",
+            "from_writer_generation"
+          ],
+          "columnsTo": [
+            "project_id",
+            "writer_generation"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "writer_handoffs_to_generation_fk": {
+          "name": "writer_handoffs_to_generation_fk",
+          "tableFrom": "writer_handoffs",
+          "tableTo": "writer_generations",
+          "columnsFrom": [
+            "project_id",
+            "to_writer_generation"
+          ],
+          "columnsTo": [
+            "project_id",
+            "writer_generation"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "writer_handoffs_pk": {
+          "columns": [
+            "project_id",
+            "handoff_id"
+          ],
+          "name": "writer_handoffs_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "writer_handoffs_id_uuid": {
+          "name": "writer_handoffs_id_uuid",
+          "value": "\n    length(\"writer_handoffs\".\"handoff_id\") = 36\n    and \"writer_handoffs\".\"handoff_id\" = lower(\"writer_handoffs\".\"handoff_id\")\n    and substr(\"writer_handoffs\".\"handoff_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"writer_handoffs\".\"handoff_id\", 9, 1) = '-'\n    and substr(\"writer_handoffs\".\"handoff_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"writer_handoffs\".\"handoff_id\", 14, 1) = '-'\n    and substr(\"writer_handoffs\".\"handoff_id\", 15, 1) glob '[1-8]'\n    and substr(\"writer_handoffs\".\"handoff_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"writer_handoffs\".\"handoff_id\", 19, 1) = '-'\n    and substr(\"writer_handoffs\".\"handoff_id\", 20, 1) glob '[89ab]'\n    and substr(\"writer_handoffs\".\"handoff_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"writer_handoffs\".\"handoff_id\", 24, 1) = '-'\n    and substr(\"writer_handoffs\".\"handoff_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "writer_handoffs_from_generation_positive_safe": {
+          "name": "writer_handoffs_from_generation_positive_safe",
+          "value": "\"writer_handoffs\".\"from_writer_generation\" is null or (\n    typeof(\"writer_handoffs\".\"from_writer_generation\") = 'integer'\n    and \"writer_handoffs\".\"from_writer_generation\" > 0\n    and \"writer_handoffs\".\"from_writer_generation\" <= 9007199254740991\n  )"
+        },
+        "writer_handoffs_to_generation_positive_safe": {
+          "name": "writer_handoffs_to_generation_positive_safe",
+          "value": "\n    typeof(\"writer_handoffs\".\"to_writer_generation\") = 'integer'\n    and \"writer_handoffs\".\"to_writer_generation\" > 0\n    and \"writer_handoffs\".\"to_writer_generation\" <= 9007199254740991\n  "
+        },
+        "writer_handoffs_kind": {
+          "name": "writer_handoffs_kind",
+          "value": "\"writer_handoffs\".\"kind\" in ('initial', 'clean', 'recovery')"
+        },
+        "writer_handoffs_predecessor_shape": {
+          "name": "writer_handoffs_predecessor_shape",
+          "value": "\n        (\"writer_handoffs\".\"kind\" = 'initial' and \"writer_handoffs\".\"from_writer_generation\" is null)\n        or (\"writer_handoffs\".\"kind\" in ('clean', 'recovery') and \"writer_handoffs\".\"from_writer_generation\" is not null)\n      "
+        },
+        "writer_handoffs_generation_order": {
+          "name": "writer_handoffs_generation_order",
+          "value": "\"writer_handoffs\".\"from_writer_generation\" is null or \"writer_handoffs\".\"to_writer_generation\" > \"writer_handoffs\".\"from_writer_generation\""
+        }
+      }
+    },
+    "writer_recovery_records": {
+      "name": "writer_recovery_records",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "recovery_record_id": {
+          "name": "recovery_record_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "writer_generation": {
+          "name": "writer_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "command_id": {
+          "name": "command_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "command_fingerprint": {
+          "name": "command_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "resolution": {
+          "name": "resolution",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "resolved_by_writer_generation": {
+          "name": "resolved_by_writer_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "writer_recovery_records_generation_uq": {
+          "name": "writer_recovery_records_generation_uq",
+          "columns": [
+            "project_id",
+            "writer_generation"
+          ],
+          "isUnique": true
+        },
+        "writer_recovery_records_unresolved_uq": {
+          "name": "writer_recovery_records_unresolved_uq",
+          "columns": [
+            "project_id"
+          ],
+          "isUnique": true,
+          "where": "\"writer_recovery_records\".\"resolution\" is null"
+        },
+        "writer_recovery_records_command_idx": {
+          "name": "writer_recovery_records_command_idx",
+          "columns": [
+            "project_id",
+            "command_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "writer_recovery_records_generation_fk": {
+          "name": "writer_recovery_records_generation_fk",
+          "tableFrom": "writer_recovery_records",
+          "tableTo": "writer_generations",
+          "columnsFrom": [
+            "project_id",
+            "writer_generation"
+          ],
+          "columnsTo": [
+            "project_id",
+            "writer_generation"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "writer_recovery_records_resolver_fk": {
+          "name": "writer_recovery_records_resolver_fk",
+          "tableFrom": "writer_recovery_records",
+          "tableTo": "writer_generations",
+          "columnsFrom": [
+            "project_id",
+            "resolved_by_writer_generation"
+          ],
+          "columnsTo": [
+            "project_id",
+            "writer_generation"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "writer_recovery_records_pk": {
+          "columns": [
+            "project_id",
+            "recovery_record_id"
+          ],
+          "name": "writer_recovery_records_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "writer_recovery_records_id_uuid": {
+          "name": "writer_recovery_records_id_uuid",
+          "value": "\n    length(\"writer_recovery_records\".\"recovery_record_id\") = 36\n    and \"writer_recovery_records\".\"recovery_record_id\" = lower(\"writer_recovery_records\".\"recovery_record_id\")\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 9, 1) = '-'\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 14, 1) = '-'\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 15, 1) glob '[1-8]'\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 19, 1) = '-'\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 20, 1) glob '[89ab]'\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 24, 1) = '-'\n    and substr(\"writer_recovery_records\".\"recovery_record_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "writer_recovery_records_generation_positive_safe": {
+          "name": "writer_recovery_records_generation_positive_safe",
+          "value": "\n    typeof(\"writer_recovery_records\".\"writer_generation\") = 'integer'\n    and \"writer_recovery_records\".\"writer_generation\" > 0\n    and \"writer_recovery_records\".\"writer_generation\" <= 9007199254740991\n  "
+        },
+        "writer_recovery_records_reason": {
+          "name": "writer_recovery_records_reason",
+          "value": "\"writer_recovery_records\".\"reason\" in ('commit-uncertain', 'abandoned-active-fence')"
+        },
+        "writer_recovery_records_command_uuid": {
+          "name": "writer_recovery_records_command_uuid",
+          "value": "\"writer_recovery_records\".\"command_id\" is null or (\n    length(\"writer_recovery_records\".\"command_id\") = 36\n    and \"writer_recovery_records\".\"command_id\" = lower(\"writer_recovery_records\".\"command_id\")\n    and substr(\"writer_recovery_records\".\"command_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"writer_recovery_records\".\"command_id\", 9, 1) = '-'\n    and substr(\"writer_recovery_records\".\"command_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"writer_recovery_records\".\"command_id\", 14, 1) = '-'\n    and substr(\"writer_recovery_records\".\"command_id\", 15, 1) glob '[1-8]'\n    and substr(\"writer_recovery_records\".\"command_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"writer_recovery_records\".\"command_id\", 19, 1) = '-'\n    and substr(\"writer_recovery_records\".\"command_id\", 20, 1) glob '[89ab]'\n    and substr(\"writer_recovery_records\".\"command_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"writer_recovery_records\".\"command_id\", 24, 1) = '-'\n    and substr(\"writer_recovery_records\".\"command_id\", 25, 12) not glob '*[^0-9a-f]*'\n  )"
+        },
+        "writer_recovery_records_fingerprint_sha256": {
+          "name": "writer_recovery_records_fingerprint_sha256",
+          "value": "\"writer_recovery_records\".\"command_fingerprint\" is null or (\n    length(\"writer_recovery_records\".\"command_fingerprint\") = 64\n    and \"writer_recovery_records\".\"command_fingerprint\" = lower(\"writer_recovery_records\".\"command_fingerprint\")\n    and \"writer_recovery_records\".\"command_fingerprint\" not glob '*[^0-9a-f]*'\n  )"
+        },
+        "writer_recovery_records_command_shape": {
+          "name": "writer_recovery_records_command_shape",
+          "value": "\n        (\n          \"writer_recovery_records\".\"reason\" = 'commit-uncertain'\n          and \"writer_recovery_records\".\"command_id\" is not null\n          and \"writer_recovery_records\".\"command_fingerprint\" is not null\n        )\n        or (\n          \"writer_recovery_records\".\"reason\" = 'abandoned-active-fence'\n          and \"writer_recovery_records\".\"command_id\" is null\n          and \"writer_recovery_records\".\"command_fingerprint\" is null\n        )\n      "
+        },
+        "writer_recovery_records_resolution": {
+          "name": "writer_recovery_records_resolution",
+          "value": "\n        \"writer_recovery_records\".\"resolution\" is null\n        or (\n          \"writer_recovery_records\".\"reason\" = 'commit-uncertain'\n          and \"writer_recovery_records\".\"resolution\" in ('receipt-found', 'receipt-absent')\n        )\n        or (\n          \"writer_recovery_records\".\"reason\" = 'abandoned-active-fence'\n          and \"writer_recovery_records\".\"resolution\" = 'generation-superseded'\n        )\n      "
+        },
+        "writer_recovery_records_resolution_shape": {
+          "name": "writer_recovery_records_resolution_shape",
+          "value": "\n        (\n          \"writer_recovery_records\".\"resolution\" is null\n          and \"writer_recovery_records\".\"resolved_by_writer_generation\" is null\n          and \"writer_recovery_records\".\"resolved_at\" is null\n        )\n        or (\n          \"writer_recovery_records\".\"resolution\" is not null\n          and \"writer_recovery_records\".\"resolved_by_writer_generation\" is not null\n          and \"writer_recovery_records\".\"resolved_at\" is not null\n        )\n      "
+        },
+        "writer_recovery_records_resolver_order": {
+          "name": "writer_recovery_records_resolver_order",
+          "value": "\n        \"writer_recovery_records\".\"resolved_by_writer_generation\" is null\n        or (\n          \n    typeof(\"writer_recovery_records\".\"resolved_by_writer_generation\") = 'integer'\n    and \"writer_recovery_records\".\"resolved_by_writer_generation\" > 0\n    and \"writer_recovery_records\".\"resolved_by_writer_generation\" <= 9007199254740991\n  \n          and \"writer_recovery_records\".\"resolved_by_writer_generation\" > \"writer_recovery_records\".\"writer_generation\"\n        )\n      "
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
