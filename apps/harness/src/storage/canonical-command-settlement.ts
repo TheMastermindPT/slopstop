@@ -121,12 +121,18 @@ export async function settleFirstCanonicalCommand(
   input: Readonly<{
     transaction: LocalLibsqlTransaction;
     command: CanonicalCommandSnapshot;
+    fingerprint: string;
     writerGeneration: WriterGeneration;
     dependencies: CanonicalSettlementDependencies;
   }>,
 ): Promise<CanonicalCommandSettlementResult> {
   const { transaction: tx, command, dependencies } = input;
-  const prior = await readCanonicalSettlement(tx, command, input.writerGeneration);
+  const prior = await readCanonicalSettlement(
+    tx,
+    command,
+    input.writerGeneration,
+    input.fingerprint,
+  );
   if (prior.status === "settled" || prior.status === "sequence-exhausted") return prior;
   const { projectSequence } = prior;
   const decision =
@@ -156,7 +162,7 @@ export async function settleFirstCanonicalCommand(
     transaction: tx,
     receipt,
     events,
-    fingerprint: hashCanonicalJson(command),
+    fingerprint: input.fingerprint,
     original: prior.status === "new",
   });
   return { status: "settled", receipt };

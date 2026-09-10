@@ -10,6 +10,7 @@ import {
   type LocalLibsqlClient,
   type LocalLibsqlTransaction,
 } from "../../src/storage/local-libsql-worker-client.js";
+import { runClassifiedWriteTransaction } from "../../src/storage/project-storage-transaction.js";
 import {
   appliedReceipt,
   canonicalCommandAggregateId,
@@ -25,6 +26,90 @@ import {
   unchangedText,
 } from "./canonical-command-fixture.js";
 import { createConformanceCounterCommand } from "./conformance-counter-command.js";
+
+function observeDeferredCommit(client: LocalLibsqlClient, calls: string[]) {
+  let commitError: unknown;
+  return {
+    error: () => commitError,
+    async transaction() {
+      const transaction = await client.transaction("write");
+      return {
+        get closed() {
+          return transaction.closed;
+        },
+        execute: transaction.execute.bind(transaction),
+        async commit() {
+          calls.push("commit");
+          try {
+            await transaction.commit();
+          } catch (error) {
+            commitError = error;
+            expect(transaction.closed).toBe(false);
+            throw error;
+          }
+        },
+        async rollback() {
+          await transaction.rollback();
+          calls.push("rollback acknowledged");
+        },
+        async close() {
+          await transaction.close();
+          calls.push("close acknowledged");
+        },
+      };
+    },
+  };
+}
+
+it("classifies a real deferred foreign key commit failure as uncertain", async () => {
+  const file = await createCanonicalCommandDatabase();
+  const client = createWorkerLocalLibsqlClient(file, "generation");
+  const calls: string[] = [];
+  const observed = observeDeferredCommit(client, calls);
+  try {
+    await client.execute("PRAGMA foreign_keys = ON");
+    await client.execute("CREATE TABLE parent (id TEXT PRIMARY KEY)");
+    await client.execute(`CREATE TABLE child (
+      id TEXT PRIMARY KEY,
+      parent_id TEXT NOT NULL,
+      FOREIGN KEY (parent_id) REFERENCES parent(id) DEFERRABLE INITIALLY DEFERRED
+    )`);
+    const outcome = await runClassifiedWriteTransaction(observed, async (transaction) => {
+      const inserted = await transaction.execute({
+        sql: "INSERT INTO child (id, parent_id) VALUES (?, ?)",
+        args: ["child", "missing-parent"],
+      });
+      expect(inserted.rowsAffected).toBe(1);
+      calls.push("insert acknowledged");
+    });
+    const commitError = observed.error();
+    expect(commitError).toBeInstanceOf(Error);
+    expect(calls).toEqual([
+      "insert acknowledged",
+      "commit",
+      "rollback acknowledged",
+      "close acknowledged",
+    ]);
+    const reader = createWorkerLocalLibsqlClient(file, "generation");
+    try {
+      expect((await reader.execute("SELECT id,parent_id FROM child")).rows).toEqual([]);
+    } finally {
+      await reader.close();
+    }
+    expect(outcome).toEqual({
+      status: "failed",
+      stage: "commit",
+      commit: "uncertain",
+      primaryError: commitError,
+      error: commitError,
+    });
+    if (outcome.status !== "failed") throw new Error("Expected commit failure");
+    expect(outcome.error).toBe(commitError);
+    expect(outcome.primaryError).toBe(commitError);
+  } finally {
+    await client.close();
+  }
+});
 
 const selectCounter = {
   sql: "SELECT value,entity_version FROM conformance_counter WHERE project_id=? AND counter_id=?",

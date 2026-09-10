@@ -44,21 +44,14 @@ import { createWorkerLocalLibsqlClient } from "../../src/storage/local-libsql-wo
 import { createNodeProjectStorageDependencies } from "../../src/storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
 import { createUnavailableWorkspaceApplication } from "../../src/workspace-application.js";
-import type { SettlementObservation } from "./canonical-command-fixture.js";
+import type { SettlementObservation } from "./canonical-command-database-fixture.js";
+import { settlementFixtureTime } from "./canonical-command-database-fixture.js";
 import {
-  activateSwitchSource,
   checkedInMigrationRoot,
   fixedCreationIds,
-  sourceReleaseOrder,
-  switchCommandFailure,
-  switchCommands,
   switchDeferred,
-  switchFixture,
-  switchRequests,
-  switchTarget,
-  targetAcquireOrder,
   transportFor,
-} from "./project-storage-create-fixture.js";
+} from "./project-storage-runtime-fixture.js";
 
 export const settlementNewEpoch = ProjectActivationIdSchema.parse(
   "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
@@ -174,62 +167,6 @@ export function holdMigratedSettlement(
   return { release, ready, error };
 }
 
-export async function expectMigratedSwitchDrain(
-  outcome: "current" | "stale" | "rejected",
-  stage: "begin" | "sql" = "begin",
-) {
-  const f = switchFixture(true);
-  await activateSwitchSource(f);
-  const held = holdMigratedSettlement(f.projects.A.real, outcome, stage);
-  const first = f.owner.execute(switchCommands.A);
-  const join = f.owner.execute(switchCommands.A);
-  const failures = Promise.allSettled([first, join]);
-  try {
-    expect(await f.owner.execute(switchCommands.ASecond)).toEqual({
-      status: "command-busy",
-      projectId: switchCommands.ASecond.projectId,
-      activationId: switchCommands.ASecond.activationId,
-      commandId: switchCommands.ASecond.command.commandId,
-      diagnostic: {
-        code: "COMMAND_IN_PROGRESS",
-        message: "Another command is in progress.",
-        retryable: true,
-      },
-    });
-    const switching = f.owner.switchProject(switchRequests.AB);
-    expect(await f.owner.execute(switchCommands.A)).toEqual(
-      switchCommandFailure("coordinator-unavailable"),
-    );
-    await held.ready;
-    expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(1);
-    expect(f.log).toEqual([]);
-    expect(f.clock).toHaveBeenCalledTimes(0);
-    held.release();
-    const expected =
-      outcome === "current"
-        ? migratedUnsupported(switchCommands.A)
-        : switchCommandFailure("stale-writer");
-    expect(await failures).toEqual(
-      outcome === "rejected"
-        ? [
-            { status: "rejected", reason: held.error },
-            { status: "rejected", reason: held.error },
-          ]
-        : [
-            { status: "fulfilled", value: expected },
-            { status: "fulfilled", value: expected },
-          ],
-    );
-    expect(await switching).toEqual(switchTarget());
-    expect(f.log).toEqual([...sourceReleaseOrder, ...targetAcquireOrder]);
-    expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(1);
-  } finally {
-    held.release();
-    await failures;
-    await f.owner.stop();
-  }
-}
-
 export function createMigratedSettlement(projectId: ProjectId) {
   let file: string | undefined;
   let repository: CanonicalCommandRepository | undefined;
@@ -247,7 +184,7 @@ export function createMigratedSettlement(projectId: ProjectId) {
     observation,
     activate: async (input: Parameters<CanonicalCommandRepositoryFactory["activate"]>[0]) => {
       const { createCanonicalCommandDatabase, observedSettlementClient } = await import(
-        "./canonical-command-fixture.js"
+        "./canonical-command-database-fixture.js"
       );
       const factory = createCanonicalCommandRepositoryFactory({
         registry: createCanonicalCommandRegistry([]),
@@ -340,7 +277,6 @@ export function createMigratedSettlement(projectId: ProjectId) {
   };
 }
 
-export const settlementFixtureTime = "2026-09-05T12:00:01.000Z";
 export function migratedUnsupported(request: CanonicalProjectCommandRequest, generation = 1) {
   return {
     status: "settled",
@@ -609,7 +545,7 @@ export async function createSettlementComposition(extended = true) {
     settlementRows,
     settlementT0,
     settlementT1,
-  } = await import("./canonical-command-fixture.js");
+  } = await import("./canonical-command-database-fixture.js");
   const file = await createCanonicalCommandDatabase(extended);
   const root = path.resolve(file, "../../../..");
   const storage = createProjectStorageOwner(

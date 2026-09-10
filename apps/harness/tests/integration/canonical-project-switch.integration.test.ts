@@ -5,7 +5,6 @@ import { CanonicalWriterLeaseError } from "../../src/storage/canonical-writer-le
 import { createOpeningRelease } from "../../src/storage/project-storage-opening.js";
 import {
   busyCommand,
-  expectMigratedSwitchDrain,
   holdMigratedSettlement,
   migratedUnsupported,
 } from "./conformance-counter-command.js";
@@ -32,6 +31,62 @@ import {
   switchTimes,
   targetAcquireOrder,
 } from "./project-storage-create-fixture.js";
+
+async function expectMigratedSwitchDrain(
+  outcome: "current" | "stale" | "rejected",
+  stage: "begin" | "sql" = "begin",
+) {
+  const f = switchFixture(true);
+  await activateSwitchSource(f);
+  const held = holdMigratedSettlement(f.projects.A.real, outcome, stage);
+  const first = f.owner.execute(switchCommands.A);
+  const join = f.owner.execute(switchCommands.A);
+  const failures = Promise.allSettled([first, join]);
+  try {
+    expect(await f.owner.execute(switchCommands.ASecond)).toEqual({
+      status: "command-busy",
+      projectId: switchCommands.ASecond.projectId,
+      activationId: switchCommands.ASecond.activationId,
+      commandId: switchCommands.ASecond.command.commandId,
+      diagnostic: {
+        code: "COMMAND_IN_PROGRESS",
+        message: "Another command is in progress.",
+        retryable: true,
+      },
+    });
+    const switching = f.owner.switchProject(switchRequests.AB);
+    expect(await f.owner.execute(switchCommands.A)).toEqual(
+      switchCommandFailure("coordinator-unavailable"),
+    );
+    await held.ready;
+    expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(1);
+    expect(f.log).toEqual([]);
+    expect(f.clock).toHaveBeenCalledTimes(0);
+    held.release();
+    const expected =
+      outcome === "current"
+        ? migratedUnsupported(switchCommands.A)
+        : switchCommandFailure("stale-writer");
+    expect(await failures).toEqual(
+      outcome === "rejected"
+        ? [
+            { status: "rejected", reason: held.error },
+            { status: "rejected", reason: held.error },
+          ]
+        : [
+            { status: "fulfilled", value: expected },
+            { status: "fulfilled", value: expected },
+          ],
+    );
+    expect(await switching).toEqual(switchTarget());
+    expect(f.log).toEqual([...sourceReleaseOrder, ...targetAcquireOrder]);
+    expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(1);
+  } finally {
+    held.release();
+    await failures;
+    await f.owner.stop();
+  }
+}
 
 it.each(["current", "stale", "rejected"] as const)(
   "waits for all admitted fence checks before switching ownership",

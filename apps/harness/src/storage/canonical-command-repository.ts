@@ -1,24 +1,40 @@
 import type { ProjectActivationId, ProjectId, WriterGeneration } from "@slopstop/protocol";
-import {
-  ProjectActivationIdSchema,
-  ProjectIdSchema,
-  WriterGenerationSchema,
-} from "@slopstop/protocol";
+import { WriterGenerationSchema } from "@slopstop/protocol";
 import { z } from "zod";
 import {
+  type CanonicalCommandSnapshot,
   canonicalChangedOnce as changedOnce,
   CanonicalSha256Schema as digestSchema,
+  hashCanonicalJson,
   canonicalResultObjects as objects,
   canonicalExactlyOne as one,
   readCanonicalCommandSnapshot,
 } from "../canonical-json.js";
+import {
+  coherentCanonicalWriterRelease as coherentRelease,
+  currentCanonicalSettlementFence as currentSettlementFence,
+  canonicalWriterFenceSchema as fenceSchema,
+  readCanonicalWriterFence,
+  canonicalWriterUtcInstantSchema as utcInstantSchema,
+} from "./canonical-command-ledger.js";
 import type {
   CanonicalCommandSettlementResult,
   CanonicalSettlementDependencies,
 } from "./canonical-command-settlement.js";
 import { settleFirstCanonicalCommand } from "./canonical-command-settlement.js";
+import {
+  type CanonicalUncertaintyDescriptor,
+  inspectCanonicalRecovery,
+  type PreparedCanonicalUncertainty,
+  prepareCanonicalUncertainty,
+  recordCanonicalUncertainty,
+  resolveCanonicalRecovery,
+} from "./canonical-writer-recovery.js";
 import type { LocalLibsqlClient, LocalLibsqlTransaction } from "./local-libsql-worker-client.js";
-import { withWriteTransaction } from "./project-storage-transaction.js";
+import {
+  runClassifiedWriteTransaction,
+  withWriteTransaction,
+} from "./project-storage-transaction.js";
 
 export const WriterCapabilityTokenSchema = digestSchema.brand<"WriterCapabilityToken">();
 export type WriterCapabilityToken = z.infer<typeof WriterCapabilityTokenSchema>;
@@ -82,46 +98,13 @@ export class CanonicalCommandRepositoryError extends Error {
   }
 }
 
-const utcInstantSchema = z.iso
-  .datetime({ offset: true })
-  .refine((value) => /T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u.test(value));
 const identitySchema = z.uuid().refine((value) => value === value.toLowerCase());
 const summarySchema = z.strictObject({
   last: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   count: z.number().int().nonnegative(),
   maximum: WriterGenerationSchema.nullable(),
 });
-const fenceSchema = z.strictObject({
-  generation: WriterGenerationSchema,
-  tokenDigest: digestSchema,
-  state: z.enum(["active", "released"]),
-  activatedAt: utcInstantSchema,
-  releasedAt: utcInstantSchema.nullable(),
-  generationNumber: WriterGenerationSchema.nullable(),
-  generationDigest: digestSchema.nullable(),
-  generationAcquiredAt: utcInstantSchema.nullable(),
-  generationReleasedAt: utcInstantSchema.nullable(),
-});
-type PriorFence = z.infer<typeof fenceSchema>;
-const settlementFenceSchema = fenceSchema.extend({
-  projectId: ProjectIdSchema,
-  generationProjectId: ProjectIdSchema,
-  generationActivationId: ProjectActivationIdSchema,
-  generationNumber: WriterGenerationSchema,
-  generationDigest: digestSchema,
-  generationAcquiredAt: utcInstantSchema,
-});
-
-function normalizedUtc(value: string): string {
-  const [seconds, fraction = ""] = utcInstantSchema.parse(value).slice(0, -1).split(".");
-  return `${seconds}.${fraction.replace(/0+$/u, "")}`;
-}
-function coherentRelease(fence: PriorFence): boolean {
-  if (fence.state === "active")
-    return fence.releasedAt === null && fence.generationReleasedAt === null;
-  if (fence.releasedAt === null || fence.generationReleasedAt === null) return false;
-  return normalizedUtc(fence.releasedAt) === normalizedUtc(fence.generationReleasedAt);
-}
+type PriorFence = NonNullable<Awaited<ReturnType<typeof readCanonicalWriterFence>>>;
 
 function configuredClient(client: LocalLibsqlClient): LocalLibsqlClient {
   return {
@@ -144,7 +127,7 @@ function configuredClient(client: LocalLibsqlClient): LocalLibsqlClient {
 async function readFenceRows(
   executor: Pick<LocalLibsqlClient, "execute">,
   projectId: ProjectId,
-): Promise<PriorFence[]> {
+): Promise<z.infer<typeof fenceSchema>[]> {
   return fenceSchema.array().parse(
     objects(
       await executor.execute({
@@ -157,42 +140,6 @@ async function readFenceRows(
         args: [projectId],
       }),
     ),
-  );
-}
-
-async function currentSettlementFence(
-  tx: LocalLibsqlTransaction,
-  projectId: ProjectId,
-  generation: WriterGeneration,
-  digest: string,
-): Promise<boolean> {
-  const rows = settlementFenceSchema.array().parse(
-    objects(
-      await tx.execute({
-        sql: `SELECT f.project_id AS projectId, f.writer_generation AS generation,
-      f.token_digest AS tokenDigest, f.state, f.activated_at AS activatedAt, f.released_at AS releasedAt,
-      g.project_id AS generationProjectId, g.activation_id AS generationActivationId,
-      g.writer_generation AS generationNumber, g.token_digest AS generationDigest,
-      g.acquired_at AS generationAcquiredAt, g.released_at AS generationReleasedAt
-      FROM writer_fence AS f LEFT JOIN writer_generations AS g
-      ON g.project_id=f.project_id AND g.writer_generation=f.writer_generation WHERE f.project_id=?`,
-        args: [projectId],
-      }),
-    ),
-  );
-  if (rows.length === 0) return false;
-  const fence = one(rows);
-  const coherent = [
-    fence.projectId === projectId,
-    fence.generationProjectId === projectId,
-    fence.generation === fence.generationNumber,
-    fence.tokenDigest === fence.generationDigest,
-    normalizedUtc(fence.activatedAt) === normalizedUtc(fence.generationAcquiredAt),
-    coherentRelease(fence),
-  ].every(Boolean);
-  if (!coherent) throw new Error("Canonical settlement fence authority is inconsistent.");
-  return (
-    fence.state === "active" && fence.generation === generation && fence.tokenDigest === digest
   );
 }
 
@@ -231,7 +178,12 @@ async function priorFence(
     coherentRelease(fence),
   ].every(Boolean);
   if (!coherent) throw new Error("Prior Writer state is inconsistent.");
-  return fence;
+  const checked = one(
+    [await readCanonicalWriterFence(tx, projectId)].filter((row) => row !== undefined),
+  );
+  if (checked.generation !== summary.last)
+    throw new Error("Prior Writer fence is missing or inconsistent.");
+  return checked;
 }
 
 type ActivationTransaction = Readonly<{
@@ -245,10 +197,11 @@ async function recordHandoff(
   context: ActivationTransaction,
   generation: WriterGeneration,
   previous: PriorFence | undefined,
+  recovering: boolean,
 ): Promise<void> {
   const { tx, input, dependencies } = context;
-  const kind =
-    previous === undefined ? "initial" : previous.state === "active" ? "recovery" : "clean";
+  let kind = "initial";
+  if (previous !== undefined) kind = recovering ? "recovery" : "clean";
   changedOnce(
     await tx.execute({
       sql: "INSERT INTO writer_handoffs (project_id,handoff_id,from_writer_generation,to_writer_generation,kind,recorded_at) VALUES (?,?,?,?,?,?)",
@@ -264,18 +217,24 @@ async function recordHandoff(
   );
 }
 
-async function recordAbandonment(
+async function recordRecovery(
   context: ActivationTransaction,
   generation: WriterGeneration,
   previous: PriorFence,
+  recovery: Awaited<ReturnType<typeof inspectCanonicalRecovery>>,
 ): Promise<void> {
   const { tx, input, dependencies } = context;
-  changedOnce(
-    await tx.execute({
-      sql: "UPDATE writer_generations SET released_at=? WHERE project_id=? AND writer_generation=? AND token_digest=? AND released_at IS NULL",
-      args: [input.activatedAt, input.projectId, previous.generation, previous.tokenDigest],
-    }),
-  );
+  if (previous.state === "active")
+    changedOnce(
+      await tx.execute({
+        sql: "UPDATE writer_generations SET released_at=? WHERE project_id=? AND writer_generation=? AND token_digest=? AND released_at IS NULL",
+        args: [input.activatedAt, input.projectId, previous.generation, previous.tokenDigest],
+      }),
+    );
+  if (recovery !== undefined) {
+    await resolveCanonicalRecovery(tx, recovery, generation, input.activatedAt);
+    return;
+  }
   changedOnce(
     await tx.execute({
       sql: `INSERT INTO writer_recovery_records (project_id,recovery_record_id,writer_generation,reason,command_id,command_fingerprint,observed_at,resolution,resolved_by_writer_generation,resolved_at)
@@ -295,6 +254,7 @@ async function recordAbandonment(
 async function activateFence(context: ActivationTransaction): Promise<WriterGeneration> {
   const { tx, input, digest } = context;
   const previous = await priorFence(tx, input.projectId);
+  const recovery = await inspectCanonicalRecovery(tx, input.projectId, previous);
   const last = previous?.generation ?? 0;
   const generation = WriterGenerationSchema.parse(last + 1);
   changedOnce(
@@ -309,8 +269,10 @@ async function activateFence(context: ActivationTransaction): Promise<WriterGene
       args: [input.projectId, generation, input.activationId, digest, input.activatedAt],
     }),
   );
-  if (previous?.state === "active") await recordAbandonment(context, generation, previous);
-  await recordHandoff(context, generation, previous);
+  const recovering = previous?.state === "active" || recovery !== undefined;
+  if (previous !== undefined && recovering)
+    await recordRecovery(context, generation, previous, recovery);
+  await recordHandoff(context, generation, previous, recovering);
   if (previous === undefined) {
     changedOnce(
       await tx.execute({
@@ -382,9 +344,10 @@ class CanonicalTransactionOwner {
     }
   }
 
-  async close(): Promise<void> {
+  async close(beforeClose: () => Promise<void> = async () => {}): Promise<void> {
     await this.exclusively(async () => {
       if (this.closed) return;
+      await beforeClose();
       await this.client.close();
       this.closed = true;
     });
@@ -392,13 +355,16 @@ class CanonicalTransactionOwner {
 }
 
 class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
+  private uncertainty: CanonicalUncertaintyDescriptor | undefined;
+  private uncertaintyRecorded = false;
+  private preparedUncertainty: PreparedCanonicalUncertainty | undefined;
   constructor(
     private readonly input: CanonicalRepositoryActivationInput & {
       writerGeneration: WriterGeneration;
     },
     private readonly owner: CanonicalTransactionOwner,
     private readonly sha256Text: (text: string) => Promise<string>,
-    private readonly settlement: CanonicalSettlementDependencies,
+    private readonly settlement: CanonicalCommandRepositoryFactoryDependencies,
   ) {}
   get projectId(): ProjectId {
     return this.input.projectId;
@@ -408,27 +374,39 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
   }
 
   async settle(commandText: string): Promise<CanonicalCommandSettlementResult> {
+    if (this.uncertainty !== undefined)
+      throw new Error("Canonical Writer requires uncertainty recovery.");
     const command = readCanonicalCommandSnapshot(commandText);
     if (command.projectId !== this.projectId)
       throw new Error("Settlement Project does not match its repository.");
     if (this.owner.hasUnfinishedTransaction)
       throw new Error("Canonical Writer transaction is already owned.");
-    return this.owner.exclusively(async () => {
-      const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
-      return withWriteTransaction<LocalLibsqlTransaction, CanonicalCommandSettlementResult>(
-        this.owner,
-        async (tx) => {
-          if (!(await currentSettlementFence(tx, this.projectId, this.writerGeneration, digest)))
-            return { status: "stale-writer" };
-          return settleFirstCanonicalCommand({
-            transaction: tx,
-            command,
-            writerGeneration: this.writerGeneration,
-            dependencies: this.settlement,
-          });
-        },
-      );
+    return this.owner.exclusively(() => this.settleOwned(command));
+  }
+
+  private async settleOwned(
+    command: CanonicalCommandSnapshot,
+  ): Promise<CanonicalCommandSettlementResult> {
+    const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
+    const fingerprint = hashCanonicalJson(command);
+    const outcome = await runClassifiedWriteTransaction<
+      LocalLibsqlTransaction,
+      CanonicalCommandSettlementResult
+    >(this.owner, async (tx) => {
+      if (!(await currentSettlementFence(tx, this.projectId, this.writerGeneration, digest)))
+        return { status: "stale-writer" };
+      return settleFirstCanonicalCommand({
+        transaction: tx,
+        command,
+        fingerprint,
+        writerGeneration: this.writerGeneration,
+        dependencies: this.settlement,
+      });
     });
+    if (outcome.status === "succeeded") return outcome.result;
+    if (outcome.commit === "uncertain")
+      this.uncertainty = Object.freeze({ commandId: command.commandId, fingerprint });
+    throw outcome.error;
   }
 
   async verifyFence(): Promise<WriterFenceCheck> {
@@ -457,6 +435,7 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
       return await this.owner.exclusively(async () => {
         const time = utcInstantSchema.parse(releasedAt);
         const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
+        if ((await this.recordUncertainty(digest)).status === "stale") return { status: "stale" };
         return await withWriteTransaction<LocalLibsqlTransaction, WriterFenceCheck>(
           this.owner,
           async (tx) => {
@@ -483,10 +462,33 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
 
   async close(): Promise<void> {
     try {
-      await this.owner.close();
+      await this.owner.close(async () => {
+        if (this.uncertainty === undefined || this.uncertaintyRecorded) return;
+        const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
+        if ((await this.recordUncertainty(digest)).status === "stale")
+          throw new Error("Canonical Writer uncertainty authority is stale.");
+      });
     } catch (cause) {
       throw new CanonicalCommandRepositoryError("WRITER_REPOSITORY_CLOSE_FAILED", { cause });
     }
+  }
+
+  private async recordUncertainty(digest: string): Promise<WriterFenceCheck> {
+    if (this.uncertainty === undefined || this.uncertaintyRecorded) return { status: "current" };
+    this.preparedUncertainty ??= prepareCanonicalUncertainty(
+      {
+        ...this.uncertainty,
+        projectId: this.projectId,
+        writerGeneration: this.writerGeneration,
+      },
+      this.settlement,
+    );
+    const record = this.preparedUncertainty;
+    const result = await withWriteTransaction(this.owner, (tx) =>
+      recordCanonicalUncertainty(tx, record, digest),
+    );
+    if (result.status === "current") this.uncertaintyRecorded = true;
+    return result.status === "current" ? { status: "current" } : { status: "stale" };
   }
 }
 
