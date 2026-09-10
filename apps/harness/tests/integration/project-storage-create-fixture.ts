@@ -48,6 +48,7 @@ import {
 import type { ProjectStorageActivationOutcome } from "../../src/project-storage-application.js";
 import {
   type CanonicalCommandRepositoryActivationResult,
+  type CanonicalCommandRepositoryFactory,
   WriterCapabilityTokenSchema,
   type WriterFenceCheck,
 } from "../../src/storage/canonical-command-repository.js";
@@ -64,6 +65,7 @@ import {
   type CreationCheckpoint,
   createProjectStorageOwner,
 } from "../../src/storage/project-storage-store.js";
+import { createMigratedSettlement } from "./conformance-counter-command.js";
 
 export const checkedInMigrationRoot = path.resolve(import.meta.dirname, "../../drizzle");
 export const projectStorageIntegrationTimeout = 15_000;
@@ -557,30 +559,77 @@ function switchStorageResult(name: SwitchProjectName) {
   if (result.status !== "opened") throw new Error("Invalid S4 Storage fixture.");
   return result;
 }
+function switchRepositoryPorts(
+  name: SwitchProjectName,
+  observations: ReturnType<typeof switchObservations>,
+  realCommands: boolean,
+) {
+  const real = createMigratedSettlement(switchProjects[name].projectId);
+  const run = (stage: string) => observations.run(`${name}.${stage}`);
+  const repository = {
+    projectId: switchProjects[name].projectId,
+    writerGeneration: WriterGenerationSchema.parse(1),
+    settle: vi.fn((text: string) => {
+      if (!realCommands) throw new Error("Unexpected lifecycle-only settlement.");
+      return real.settle(text);
+    }),
+    verifyFence: vi.fn(async (): Promise<WriterFenceCheck> => {
+      throw new Error("Unexpected direct verification in settlement composition.");
+    }),
+    releaseFence: vi.fn(async (time: string): Promise<WriterFenceCheck> => {
+      await observations.run(`${name}.fence`, `${name}.fence@${time}`);
+      return realCommands ? real.releaseFence(time) : { status: "current" };
+    }),
+    close: vi.fn(async () => {
+      await run("repository.close");
+      await real.close();
+    }),
+  };
+  let generation = 0;
+  return {
+    real,
+    repository,
+    activate: vi.fn(
+      async (
+        input: Parameters<CanonicalCommandRepositoryFactory["activate"]>[0],
+      ): Promise<CanonicalCommandRepositoryActivationResult> => {
+        await observations.run(
+          `${name}.repository.activate`,
+          `${name}.repository.activate@${input.activatedAt}`,
+        );
+        const result = realCommands
+          ? await real.activate(input)
+          : {
+              status: "activated" as const,
+              writerGeneration: WriterGenerationSchema.parse(++generation),
+              repository,
+            };
+        if (result.status !== "activated") return result;
+        return {
+          status: "activated",
+          repository,
+          writerGeneration: result.writerGeneration,
+        };
+      },
+    ),
+  };
+}
 function switchProjectPorts(
   name: SwitchProjectName,
   observations: ReturnType<typeof switchObservations>,
+  realCommands: boolean,
 ) {
+  const ports = switchRepositoryPorts(name, observations, realCommands);
   const run = (stage: string) => observations.run(`${name}.${stage}`);
   const session = {
     mode: "read-write" as const,
     result: switchStorageResult(name),
     canonicalDatabasePath: `${name}/slopstop.db`,
     writerLeasePath: `${name}/writer.lock`,
-    close: vi.fn(() => run("storage.close")),
-  };
-  const repository = {
-    projectId: switchProjects[name].projectId,
-    writerGeneration: WriterGenerationSchema.parse(1),
-    verifyFence: vi.fn(async (): Promise<WriterFenceCheck> => {
-      observations.all.push(`${name}.verify`);
-      return { status: "current" };
+    close: vi.fn(async () => {
+      await run("storage.close");
+      await ports.real.closeStorage();
     }),
-    releaseFence: vi.fn(async (time: string): Promise<WriterFenceCheck> => {
-      await observations.run(`${name}.fence`, `${name}.fence@${time}`);
-      return { status: "current" };
-    }),
-    close: vi.fn(() => run("repository.close")),
   };
   const descriptor = { fd: { A: 11, B: 12, C: 13 }[name], close: vi.fn(() => run("lease.close")) };
   const native = {
@@ -590,10 +639,9 @@ function switchProjectPorts(
     unlock: vi.fn(() => observations.touch(`${name}.lease.unlock`)),
   };
   const leases = createCanonicalWriterLeaseFactory(native);
-  let generation = 0;
   return {
+    ...ports,
     session,
-    repository,
     native,
     descriptor,
     storage: vi.fn(async (): Promise<ProjectStorageActivationOutcome> => {
@@ -604,29 +652,14 @@ function switchProjectPorts(
       observations.touch(`${name}.lease.acquire`);
       return leases.acquire(session.writerLeasePath);
     }),
-    activate: vi.fn(
-      async (input: {
-        activatedAt: string;
-      }): Promise<CanonicalCommandRepositoryActivationResult> => {
-        await observations.run(
-          `${name}.repository.activate`,
-          `${name}.repository.activate@${input.activatedAt}`,
-        );
-        return {
-          status: "activated",
-          repository,
-          writerGeneration: WriterGenerationSchema.parse(++generation),
-        };
-      },
-    ),
   };
 }
-export function switchFixture() {
+export function switchFixture(realCommands = false) {
   const observations = switchObservations();
   const projects = {
-    A: switchProjectPorts("A", observations),
-    B: switchProjectPorts("B", observations),
-    C: switchProjectPorts("C", observations),
+    A: switchProjectPorts("A", observations, realCommands),
+    B: switchProjectPorts("B", observations, realCommands),
+    C: switchProjectPorts("C", observations, realCommands),
   };
   let selected: SwitchProjectName = "A";
   const allocated = { A: 0, B: 0, C: 0 };
@@ -647,7 +680,9 @@ export function switchFixture() {
     },
     leases: { acquire: vi.fn(() => projects[selected].lease()) },
     repositories: {
-      activate: vi.fn((input: { activatedAt: string }) => projects[selected].activate(input)),
+      activate: vi.fn((input: Parameters<CanonicalCommandRepositoryFactory["activate"]>[0]) =>
+        projects[selected].activate(input),
+      ),
     },
     createActivationId: vi.fn(() => {
       observations.touch(`${selected}.activation-id`);
@@ -831,13 +866,12 @@ export function switchChannel(
       await nextTurn();
     },
     async expectEvents(expected: unknown[]) {
-      // Assert emission before waiting for delivery: absent dispatch fails here, never by timeout.
-      expect(sent).toEqual(expected);
       if (received.length < expected.length) {
         const arrival = switchDeferred<void>();
         arrivals.set(expected.length, arrival);
         await arrival.promise;
       }
+      expect(sent).toEqual(expected);
       expect(received).toEqual(expected);
       for (const envelope of received)
         expect(parseHarnessMessage(envelope)).toEqual({ ok: true, value: envelope });

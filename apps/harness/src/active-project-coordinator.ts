@@ -589,20 +589,16 @@ export function createActiveProjectCoordinator(
       if (active.activationId !== request.activationId)
         return commandFailure(request, "stale-activation");
       if (active.access === "read-only") return commandFailure(request, "read-only");
-      const operation = active.writer.verifyFence();
+      const submission = active.writer.settle(request.command);
+      if (submission.status === "completed") return submission.result;
+      const operation = submission.result;
       const completion = operation.then(
         () => undefined,
         () => undefined,
       );
       admitted.add(completion);
       try {
-        const fence = await operation;
-        const status = {
-          current: "settlement-unavailable",
-          stale: "stale-writer",
-          broken: "broken",
-        } as const;
-        return commandFailure(request, status[fence.status]);
+        return await operation;
       } finally {
         await completion;
         admitted.delete(completion);

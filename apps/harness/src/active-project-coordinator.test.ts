@@ -9,6 +9,10 @@ import {
 } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
 import {
+  createMigratedSettlement,
+  migratedUnsupported,
+} from "../tests/integration/conformance-counter-command.js";
+import {
   activateSwitchSource,
   expectNoSwitchAcquisition,
   newAEpoch,
@@ -30,6 +34,7 @@ import {
 import * as coordinators from "./active-project-coordinator.js";
 import type { ProjectStorageActivationOutcome } from "./project-storage-application.js";
 import {
+  type CanonicalCommandRepository,
   type CanonicalCommandRepositoryActivationResult,
   CanonicalCommandRepositoryError,
   WriterCapabilityTokenSchema,
@@ -126,7 +131,23 @@ function openedResult() {
   return result;
 }
 
-function fixture() {
+async function unexpectedSettlement(): Promise<never> {
+  throw new Error("Unexpected coordinator lifecycle settlement.");
+}
+
+async function activateCoordinatorRepository(
+  realCommands: boolean,
+  real: ReturnType<typeof createMigratedSettlement>,
+  repository: CanonicalCommandRepository,
+  input: Parameters<typeof real.activate>[0],
+): Promise<CanonicalCommandRepositoryActivationResult> {
+  if (!realCommands)
+    return { status: "activated", repository, writerGeneration: repository.writerGeneration };
+  const result = await real.activate(input);
+  return result.status === "activated" ? { ...result, repository } : result;
+}
+
+function coordinatorObservations() {
   const calls: string[] = [];
   const faults = new Map<string, unknown>();
   const touch = (stage: string) => {
@@ -137,23 +158,36 @@ function fixture() {
       throw error;
     }
   };
+  return { calls, faults, touch };
+}
+
+function fixture(realCommands = false) {
+  const real = createMigratedSettlement(projectId);
+  const { calls, faults, touch } = coordinatorObservations();
   const result = openedResult();
   const session = {
     mode: "read-write" as const,
     result,
     canonicalDatabasePath: "active/slopstop.db",
     writerLeasePath: "project/.slopstop-writer.lock",
-    close: vi.fn(async () => touch("storage")),
+    close: vi.fn(async () => {
+      touch("storage");
+      await real.closeStorage();
+    }),
   };
   const repository = {
     projectId,
     writerGeneration: WriterGenerationSchema.parse(1),
+    settle: vi.fn((text: string) => (realCommands ? real.settle(text) : unexpectedSettlement())),
     verifyFence: vi.fn(async (): Promise<WriterFenceCheck> => ({ status: "current" })),
     releaseFence: vi.fn(async (): Promise<WriterFenceCheck> => {
       touch("fence");
-      return { status: "current" };
+      return realCommands ? real.releaseFence("2026-09-05T12:00:04.000Z") : { status: "current" };
     }),
-    close: vi.fn(async () => touch("repository")),
+    close: vi.fn(async () => {
+      touch("repository");
+      await real.close();
+    }),
   };
   const lease = { release: vi.fn(async () => touch("lease")) };
   const dependencies = {
@@ -168,12 +202,8 @@ function fixture() {
       ),
     },
     repositories: {
-      activate: vi.fn(
-        async (): Promise<CanonicalCommandRepositoryActivationResult> => ({
-          status: "activated",
-          repository,
-          writerGeneration: repository.writerGeneration,
-        }),
+      activate: vi.fn((input: Parameters<typeof real.activate>[0]) =>
+        activateCoordinatorRepository(realCommands, real, repository, input),
       ),
     },
     createActivationId: vi.fn(() => activationId),
@@ -192,6 +222,7 @@ function fixture() {
     calls,
     faults,
     touch,
+    real,
   };
 }
 
@@ -318,7 +349,7 @@ function deferred<Value>() {
 }
 
 it("admits Typed commands in Project, activation, access, then fence order", async () => {
-  const f = fixture();
+  const f = fixture(true);
   expect(await f.owner.execute(command)).toEqual(failure("inactive"));
   const pending = deferred<ProjectStorageActivationOutcome>();
   const entered = deferred<void>();
@@ -341,12 +372,17 @@ it("admits Typed commands in Project, activation, access, then fence order", asy
   };
   expect(await f.owner.execute(wrong)).toEqual(failure("project-mismatch", wrong));
   expect(await f.owner.execute(stale)).toEqual(failure("stale-activation", stale));
-  expect(f.repository.verifyFence).not.toHaveBeenCalled();
-  expect(await f.owner.execute(command)).toEqual(failure("settlement-unavailable"));
-  f.repository.verifyFence.mockResolvedValueOnce({ status: "stale" });
+  expect(f.repository.settle).not.toHaveBeenCalled();
+  expect(await f.owner.execute(command)).toEqual(migratedUnsupported(command));
+  f.real.observation.after = (sql, rows) =>
+    sql.includes("FROM writer_fence") ? { ...rows, rows: [] } : rows;
   expect(await f.owner.execute(command)).toEqual(failure("stale-writer"));
-  f.repository.verifyFence.mockRejectedValueOnce(new Error("secret command payload"));
-  expect(await f.owner.execute(command)).toEqual(failure("broken"));
+  const sentinel = new Error("secret command payload");
+  f.real.observation.after = () => {
+    throw sentinel;
+  };
+  await expect(f.owner.execute(command)).rejects.toBe(sentinel);
+  delete f.real.observation.after;
   const closing = deferred<void>();
   const closeEntered = deferred<void>();
   f.session.close.mockImplementationOnce(async () => {
@@ -532,7 +568,7 @@ async function arrangeIneligibleSource(
 it.each(ineligibleSources)(
   "rejects ineligible switch sources before touching dependencies",
   async (state) => {
-    const f = switchFixture();
+    const f = switchFixture(state === "wrong-project" || state === "wrong-epoch");
     const switchProject = requireSwitch(f.owner);
     const expected = await arrangeIneligibleSource(f, state);
     f.reset();
@@ -548,11 +584,11 @@ it.each(ineligibleSources)(
     }
     if (state === "wrong-project")
       expect(await f.owner.execute(switchCommands.B)).toEqual(
-        switchCommandFailure("settlement-unavailable", switchCommands.B),
+        migratedUnsupported(switchCommands.B),
       );
     if (state === "wrong-epoch")
       expect(await f.owner.execute(switchCommands.ANew)).toEqual(
-        switchCommandFailure("settlement-unavailable", switchCommands.ANew),
+        migratedUnsupported(switchCommands.ANew),
       );
     if (state === "failed-acquisition")
       expect(await f.owner.execute(switchCommands.A)).toEqual(
@@ -565,7 +601,7 @@ it.each(ineligibleSources)(
 it.each(["switch", "activate", "stop", "initial"] as const)(
   "closes command admission in the same turn as lifecycle enqueue",
   async (operation) => {
-    const f = switchFixture();
+    const f = switchFixture(operation === "switch" || operation === "activate");
     if (operation !== "initial") await activateSwitchSource(f);
     const startSwitch = () => requireSwitch(f.owner)(switchRequests.AB);
     const actions = {
@@ -577,12 +613,12 @@ it.each(["switch", "activate", "stop", "initial"] as const)(
     const lifecycle = actions[operation]();
     const command = f.owner.execute(switchCommands.A);
     expect(await command).toEqual(switchCommandFailure("coordinator-unavailable"));
-    expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(0);
+    expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(0);
     const result = await lifecycle;
     if (operation === "switch") {
       expect(result).toEqual(switchTarget());
       expect(await f.owner.execute(switchCommands.B)).toEqual(
-        switchCommandFailure("settlement-unavailable", switchCommands.B),
+        migratedUnsupported(switchCommands.B),
       );
       expect(await f.owner.execute(switchCommands.A)).toEqual(
         switchCommandFailure("project-mismatch"),
@@ -591,7 +627,7 @@ it.each(["switch", "activate", "stop", "initial"] as const)(
     if (operation === "activate") {
       expect(result).toEqual(switchAlreadyActive("B"));
       expect(await f.owner.execute(switchCommands.A)).toEqual(
-        switchCommandFailure("settlement-unavailable"),
+        migratedUnsupported(switchCommands.A),
       );
     }
     if (operation === "initial") expect(result).toEqual(switchActive("A"));
@@ -602,12 +638,12 @@ it.each(["switch", "activate", "stop", "initial"] as const)(
 it.each(["A.fence", "B.storage.acquire"])(
   "closes command admission in the same turn as lifecycle enqueue",
   async (stage) => {
-    const f = switchFixture();
+    const f = switchFixture(true);
     const switchProject = requireSwitch(f.owner);
     await activateSwitchSource(f);
     const hold = f.hold(stage);
     const switching = observeSwitchPromise(switchProject(switchRequests.AB));
-    await nextTurn();
+    await hold.entered;
     expect(f.all).toContain(stage);
     expect(switching.isSettled()).toBe(false);
     for (const input of [switchCommands.A, switchCommands.B]) {
@@ -615,14 +651,12 @@ it.each(["A.fence", "B.storage.acquire"])(
         switchCommandFailure("coordinator-unavailable", input),
       );
     }
-    expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(0);
-    expect(f.projects.B.repository.verifyFence).toHaveBeenCalledTimes(0);
+    expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(0);
+    expect(f.projects.B.repository.settle).toHaveBeenCalledTimes(0);
     expect(f.projects.A.storage).toHaveBeenCalledTimes(1);
     hold.resolve();
     expect(await switching.promise).toEqual(switchTarget());
-    expect(await f.owner.execute(switchCommands.B)).toEqual(
-      switchCommandFailure("settlement-unavailable", switchCommands.B),
-    );
+    expect(await f.owner.execute(switchCommands.B)).toEqual(migratedUnsupported(switchCommands.B));
     expect(await f.owner.execute(switchCommands.A)).toEqual(
       switchCommandFailure("project-mismatch"),
     );

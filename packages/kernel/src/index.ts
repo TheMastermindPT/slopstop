@@ -1,7 +1,9 @@
 export type {
   CanonicalDatabaseLineageId,
+  CanonicalEventId,
   CanonicalEventOrdinal,
   CommandId,
+  CommandReceiptId,
   ProjectActivationId,
   ProjectSequence,
   ProjectStorageCreateRequestId,

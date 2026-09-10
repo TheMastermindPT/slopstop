@@ -1,18 +1,28 @@
+import { createHash } from "node:crypto";
 import { mkdir, symlink } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MessageChannel } from "node:worker_threads";
 import {
+  type CanonicalCommandReceipt,
+  CanonicalCommandReceiptSchema,
+  CanonicalProjectActivationRequestSchema,
+  CanonicalProjectCommandRequestSchema,
   createHandshakeCommand,
+  createProjectActivateCommand,
   createProjectCloseCommand,
+  createProjectCommand,
   createProjectCreateCommand,
   createProjectOpenCommand,
   ProjectStorageCloseRequestSchema,
+  ProjectStorageCreateRequestSchema,
   ProjectStorageOpenRequestSchema,
+  parseHarnessMessage,
 } from "@slopstop/protocol";
-import { expect, it } from "vitest";
+import { assert, expect, it } from "vitest";
 import type { StopHarnessRuntime } from "../../src/harness-runtime.js";
 import { startHarnessProcessRuntime } from "../../src/process-bootstrap.js";
+import { createWorkerLocalLibsqlClient } from "../../src/storage/local-libsql-worker-client.js";
 import {
   checkedInMigrationRoot,
   createRequest,
@@ -43,6 +53,7 @@ function createProcessTransportFixture() {
   return {
     transport: transportFor(port1),
     received,
+    exchange,
     handshake: () => exchange(createHandshakeCommand(metadata(), "0.0.0")),
     open: () => exchange(createProjectOpenCommand(metadata(), openRequest)),
     create: () => exchange(createProjectCreateCommand(metadata(), createRequest)),
@@ -53,6 +64,204 @@ function createProcessTransportFixture() {
     },
   };
 }
+
+async function readBootstrapSettlement(file: string) {
+  const client = createWorkerLocalLibsqlClient(file, "generation");
+  try {
+    const tables = [
+      "command_receipts",
+      "command_idempotency",
+      "command_rejections",
+      "canonical_events",
+      "project_state",
+    ] as const;
+    const rows = [];
+    for (const table of tables) {
+      rows.push((await client.execute(`SELECT * FROM ${table}`)).rows);
+    }
+    return rows;
+  } finally {
+    await client.close();
+  }
+}
+
+function bootstrapEvent(raw: unknown) {
+  const parsed = parseHarnessMessage(raw);
+  assert(parsed.ok, "Bootstrap response must be a valid protocol envelope.");
+  assert(parsed.value.messageType === "event", "Bootstrap response must be an event.");
+  return parsed.value;
+}
+
+async function createBootstrapCommand(session: ReturnType<typeof createProcessTransportFixture>) {
+  const projectId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
+  const request = ProjectStorageCreateRequestSchema.parse({
+    projectId,
+    createRequestId: "44444444-4444-4444-8444-444444444500",
+  });
+  await session.handshake();
+  const created = bootstrapEvent(
+    await session.exchange(
+      createProjectCreateCommand(
+        {
+          messageId: "11111111-1111-4111-8111-111111111500",
+          sentAt,
+        },
+        request,
+      ),
+    ),
+  );
+  assert(created.event === "project.create.result");
+  assert(created.payload.status === "created");
+  const activated = bootstrapEvent(
+    await session.exchange(
+      createProjectActivateCommand(
+        {
+          messageId: "11111111-1111-4111-8111-111111111501",
+          sentAt,
+        },
+        CanonicalProjectActivationRequestSchema.parse({ projectId }),
+      ),
+    ),
+  );
+  assert(activated.event === "project.activate.result");
+  assert(activated.payload.status === "active");
+  expect(activated.payload.access).toBe("read-write");
+  return {
+    generationId: created.payload.identity.generationId,
+    command: CanonicalProjectCommandRequestSchema.parse({
+      projectId,
+      activationId: activated.payload.activationId,
+      command: {
+        commandId: "44444444-4444-4444-8444-444444444501",
+        type: "conformance.counter.set",
+        version: 1,
+        payload: { value: 7, meta: { b: 2, a: 1 }, tags: ["x", "y"] },
+      },
+    }),
+  };
+}
+
+async function expectBootstrapSettlementRows(file: string, receipt: CanonicalCommandReceipt) {
+  const { projectId, commandId, receiptId, settledAt } = receipt;
+  const fingerprint = createHash("sha256")
+    .update(
+      '{"commandId":"44444444-4444-4444-8444-444444444501","fingerprintVersion":1,"payload":{"meta":{"a":1,"b":2},"tags":["x","y"],"value":7},"projectId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1","type":"conformance.counter.set","version":1}',
+    )
+    .digest("hex");
+  const rows = await readBootstrapSettlement(file);
+  expect(rows.slice(0, 4)).toEqual([
+    [
+      [
+        projectId,
+        receiptId,
+        commandId,
+        "conformance.counter.set",
+        1,
+        fingerprint,
+        "rejected",
+        1,
+        1,
+        settledAt,
+      ],
+    ],
+    [[projectId, commandId, fingerprint, receiptId, settledAt]],
+    [
+      [
+        projectId,
+        receiptId,
+        "rejected",
+        1,
+        "COMMAND_TYPE_UNSUPPORTED",
+        0,
+        '{"version":1}',
+        createHash("sha256").update('{"version":1}').digest("hex"),
+      ],
+    ],
+    [],
+  ]);
+  assert(rows[4]?.length === 1, "Bootstrap must retain exactly one Project state row.");
+  expect(rows[4][0]?.slice(0, 3)).toEqual([projectId, 1, 1]);
+  return rows;
+}
+
+function expectUnsupportedBootstrapReceipt(value: unknown) {
+  const receipt = CanonicalCommandReceiptSchema.parse(value);
+  expect(receipt).toEqual({
+    receiptId: receipt.receiptId,
+    projectId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+    commandId: "44444444-4444-4444-8444-444444444501",
+    commandType: "conformance.counter.set",
+    commandVersion: 1,
+    outcome: "rejected",
+    projectSequence: 1,
+    writerGeneration: 1,
+    settledAt: receipt.settledAt,
+    events: [],
+    rejection: { code: "COMMAND_TYPE_UNSUPPORTED", retryable: false },
+  });
+  return receipt;
+}
+
+it(
+  "settles an unsupported command through the bootstrap-composed empty registry",
+  async () => {
+    const applicationStorageRoot = await createTemporaryApplicationRoot();
+    const session = createProcessTransportFixture();
+    let stop: StopHarnessRuntime | undefined;
+    try {
+      stop = startHarnessProcessRuntime({
+        bootstrap: {
+          kind: "harness.connect",
+          applicationStorageRootUrl: pathToFileURL(applicationStorageRoot).href,
+          migrationResourcesRootUrl: pathToFileURL(checkedInMigrationRoot).href,
+        },
+        transport: session.transport,
+      });
+      const { command, generationId } = await createBootstrapCommand(session);
+      const { projectId } = command;
+      const file = path.join(
+        applicationStorageRoot,
+        "projects",
+        projectId,
+        generationId,
+        "slopstop.db",
+      );
+      const messageId = "11111111-1111-4111-8111-111111111502";
+      const result = bootstrapEvent(
+        await session.exchange(createProjectCommand({ messageId, sentAt }, command)),
+      );
+      assert(result.event === "project.command.result");
+      expect(result.payload.status).toBe("settled");
+      assert(result.payload.status === "settled");
+      const receipt = expectUnsupportedBootstrapReceipt(result.payload.receipt);
+      expect(result.payload).toEqual({
+        status: "settled",
+        projectId,
+        activationId: command.activationId,
+        commandId: command.command.commandId,
+        receipt,
+      });
+      expect(result.causationId).toBe(messageId);
+      const beforeRetry = await expectBootstrapSettlementRows(file, receipt);
+      const retryId = "11111111-1111-4111-8111-111111111504";
+      const retry = bootstrapEvent(
+        await session.exchange(createProjectCommand({ messageId: retryId, sentAt }, command)),
+      );
+      expect(retry.event).toBe("project.command.result");
+      expect(retry.payload).toEqual(result.payload);
+      expect(retry.causationId).toBe(retryId);
+      expect(retry.sequence).toBe(result.sequence + 1);
+      expect(await readBootstrapSettlement(file)).toEqual(beforeRetry);
+    } finally {
+      try {
+        await Promise.resolve(stop?.());
+      } finally {
+        session.closePorts();
+      }
+    }
+  },
+  projectStorageIntegrationTimeout,
+);
 
 it(
   "composes persistent Project Storage from validated trusted roots",

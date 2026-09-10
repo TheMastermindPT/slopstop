@@ -1,4 +1,7 @@
-import type { CanonicalProjectSwitchResult } from "@slopstop/protocol";
+import type {
+  CanonicalProjectCommandResult,
+  CanonicalProjectSwitchResult,
+} from "@slopstop/protocol";
 import {
   CanonicalProjectActivationResultSchema,
   CanonicalProjectCommandRequestSchema,
@@ -13,6 +16,7 @@ import {
   switchApplicationResults as switchResults,
   switchApplicationTargets as switchTargets,
 } from "../tests/integration/project-storage-create-fixture.js";
+import type { ActiveProjectCoordinator } from "./active-project-coordinator.js";
 import * as applications from "./canonical-project-application.js";
 
 const request = CanonicalProjectCommandRequestSchema.parse({
@@ -44,6 +48,304 @@ const result = CanonicalProjectCommandResultSchema.parse({
   },
 });
 const otherId = "00000000-0000-4000-8000-000000000021";
+
+function settledResult(outcome: "applied" | "unchanged" | "rejected" = "applied") {
+  const parsed = CanonicalProjectCommandResultSchema.parse({
+    status: "settled",
+    projectId: request.projectId,
+    activationId: request.activationId,
+    commandId: request.command.commandId,
+    receipt: {
+      receiptId: "66666666-6666-4666-8666-666666666501",
+      projectId: request.projectId,
+      commandId: request.command.commandId,
+      commandType: request.command.type,
+      commandVersion: request.command.version,
+      outcome,
+      projectSequence: 1,
+      writerGeneration: 1,
+      settledAt: "2026-09-05T12:00:01.000Z",
+      events:
+        outcome === "applied"
+          ? [{ eventId: "77777777-7777-4777-8777-777777777501", eventOrdinal: 0 }]
+          : [],
+      ...(outcome === "rejected"
+        ? { rejection: { code: "TEST_COUNTER_REJECTED", retryable: false } }
+        : {}),
+    },
+  });
+  if (parsed.status !== "settled") throw new Error("Expected a settled fixture.");
+  return structuredClone(parsed);
+}
+
+function commandApplication(value: CanonicalProjectCommandResult) {
+  const owner = {
+    activate: async () => activation,
+    switchProject: unexpectedSwitch,
+    execute: vi.fn<ActiveProjectCoordinator["execute"]>(async () => value),
+    stop: vi.fn(async () => undefined),
+  } satisfies ActiveProjectCoordinator;
+  return { owner, app: applications.createCanonicalProjectApplication(owner) };
+}
+
+it.each(["applied", "unchanged", "rejected"] as const)(
+  "G13 exact %s receipt with historical generation and time is valid (regression)",
+  async (outcome) => {
+    const value = settledResult(outcome);
+    const current = structuredClone(request);
+    Reflect.set(current, "activationId", "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2");
+    Reflect.set(value, "activationId", current.activationId);
+    const { app } = commandApplication(value);
+    expect(await app.execute(current)).toEqual(value);
+  },
+);
+
+it.each(["commandType", "commandVersion"] as const)(
+  "G13 rejects schema-valid receipt %s not belonging to the original request",
+  async (key) => {
+    const value = settledResult();
+    Reflect.set(value.receipt, key, key === "commandType" ? "fixture.other" : 2);
+    expect(CanonicalProjectCommandResultSchema.parse(value)).toEqual(value);
+    const { app } = commandApplication(value);
+    await invalidResult(() => app.execute(request));
+  },
+);
+
+it.each(["projectId", "commandId", "activationId"] as const)(
+  "G13 rejects coherent outer and receipt %s drift (regression)",
+  async (key) => {
+    const value = settledResult();
+    Reflect.set(value, key, otherId);
+    if (key !== "activationId") Reflect.set(value.receipt, key, otherId);
+    expect(CanonicalProjectCommandResultSchema.parse(value)).toEqual(value);
+    const { app } = commandApplication(value);
+    await invalidResult(() => app.execute(request));
+  },
+);
+
+describe.each(["result", "receipt", "event", "rejection"] as const)(
+  "G13 strict %s boundary (regression)",
+  (boundary) => {
+    it.each([
+      "payload",
+      "eventPayload",
+      "commandFingerprint",
+      "writerToken",
+      "tokenDigest",
+      "path",
+      "cause",
+      "error",
+    ])("rejects private %s instead of stripping it", async (key) => {
+      const value = settledResult(boundary === "rejection" ? "rejected" : "applied");
+      const targets = {
+        result: value,
+        receipt: value.receipt,
+        event: value.receipt.events[0],
+        rejection: value.receipt.outcome === "rejected" ? value.receipt.rejection : undefined,
+      };
+      const target = targets[boundary];
+      if (target === undefined) throw new Error("Missing strict boundary fixture.");
+      Reflect.set(target, key, "private command C:\\private\\slopstop.db");
+      const { app } = commandApplication(value);
+      await invalidResult(() => app.execute(request));
+    });
+  },
+);
+
+it.each([
+  ["receiptId", "66666666-6666-4666-8666-66666666650A"],
+  ["receiptId", "00000000-0000-0000-0000-000000000000"],
+  ["receiptId", "invalid"],
+  ["projectId", otherId],
+  ["commandId", otherId],
+  ["projectSequence", 0],
+  ["projectSequence", 0.5],
+  ["projectSequence", Number.MAX_SAFE_INTEGER + 1],
+  ["writerGeneration", 0],
+  ["settledAt", "2026-09-05T12:00:01+00:00"],
+  ["settledAt", "2026-09-05T12:00Z"],
+  ["commandVersion", 0],
+  ["commandVersion", -1],
+] as const)("G13 malformed receipt %s=%s is sanitized (regression)", async (key, replacement) => {
+  const value = settledResult();
+  Reflect.set(value.receipt, key, replacement);
+  const { app } = commandApplication(value);
+  await invalidResult(() => app.execute(request));
+});
+
+it.each([
+  "duplicate event",
+  "ordinal gap",
+  "events on unchanged",
+  "events on rejected",
+  "rejection on applied",
+  "rejection on unchanged",
+  "missing rejection",
+])("G13 invalid outcome children %s fail strictly (regression)", async (change) => {
+  const value = settledResult(
+    change.includes("rejected") || change === "missing rejection"
+      ? "rejected"
+      : change.includes("unchanged")
+        ? "unchanged"
+        : "applied",
+  );
+  const event = { eventId: "77777777-7777-4777-8777-777777777501", eventOrdinal: 0 };
+  if (change === "duplicate event")
+    Reflect.set(value.receipt, "events", [event, { ...event, eventOrdinal: 1 }]);
+  else if (change === "ordinal gap")
+    Reflect.set(value.receipt, "events", [{ ...event, eventOrdinal: 1 }]);
+  else if (change.startsWith("events on")) Reflect.set(value.receipt, "events", [event]);
+  else if (change === "missing rejection") Reflect.deleteProperty(value.receipt, "rejection");
+  else Reflect.set(value.receipt, "rejection", { code: "TEST_COUNTER_REJECTED", retryable: false });
+  const { app } = commandApplication(value);
+  await invalidResult(() => app.execute(request));
+});
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((yes) => {
+    resolve = yes;
+  });
+  return { promise, resolve };
+}
+
+describe.each(["projectId", "activationId", "commandId", "type", "version"] as const)(
+  "G13 immutable request %s",
+  (key) => {
+    it.each(["original", "mutated"] as const)(
+      "binds a held %s receipt to the pre-await meaning",
+      async (returned) => {
+        const current = structuredClone(request);
+        const value = settledResult();
+        const hold = deferred<CanonicalProjectCommandResult>();
+        const { app, owner } = commandApplication(value);
+        owner.execute.mockImplementation(() => hold.promise);
+        const pending = app.execute(current);
+        const mutations = {
+          projectId: {
+            target: current,
+            replacement: otherId,
+            results: [
+              [value, "projectId"],
+              [value.receipt, "projectId"],
+            ],
+          },
+          activationId: {
+            target: current,
+            replacement: otherId,
+            results: [[value, "activationId"]],
+          },
+          commandId: {
+            target: current.command,
+            replacement: otherId,
+            results: [
+              [value, "commandId"],
+              [value.receipt, "commandId"],
+            ],
+          },
+          type: {
+            target: current.command,
+            replacement: "fixture.other",
+            results: [[value.receipt, "commandType"]],
+          },
+          version: {
+            target: current.command,
+            replacement: 2,
+            results: [[value.receipt, "commandVersion"]],
+          },
+        } as const;
+        const mutation = mutations[key];
+        Reflect.set(mutation.target, key, mutation.replacement);
+        if (returned === "mutated") {
+          for (const [target, field] of mutation.results)
+            Reflect.set(target, field, mutation.replacement);
+        }
+        hold.resolve(value);
+        if (returned === "original") expect(await pending).toEqual(value);
+        else await invalidResult(() => pending);
+        expect(owner.execute).toHaveBeenCalledOnce();
+        expect(owner.execute.mock.calls[0]?.[0]).toBe(current);
+      },
+    );
+  },
+);
+
+it("G13 preserves original non-durable correlation across caller mutation", async () => {
+  const current = structuredClone(request);
+  const hold = deferred<CanonicalProjectCommandResult>();
+  const { app, owner } = commandApplication(result);
+  owner.execute.mockImplementation(() => hold.promise);
+  const pending = app.execute(current);
+  Reflect.set(current, "projectId", otherId);
+  Reflect.set(current, "activationId", otherId);
+  Reflect.set(current.command, "commandId", otherId);
+  hold.resolve(result);
+  expect(await pending).toEqual(result);
+});
+
+it("G13 captures metadata before a synchronous owner mutation", async () => {
+  const current = structuredClone(request);
+  const value = settledResult();
+  const { app, owner } = commandApplication(value);
+  owner.execute.mockImplementation((received) => {
+    Reflect.set(received.command, "type", "fixture.other");
+    return Promise.resolve(value);
+  });
+  expect(await app.execute(current)).toEqual(value);
+});
+
+it("G13 does not read or serialize command payload before coordinator admission (regression)", async () => {
+  const current = structuredClone(request);
+  const readPayload = vi.fn(() => {
+    throw new Error("Payload belongs to admitted Writer capture.");
+  });
+  Object.defineProperty(current.command, "payload", { enumerable: true, get: readPayload });
+  const { app, owner } = commandApplication(result);
+  expect(await app.execute(current)).toEqual(result);
+  expect(readPayload).not.toHaveBeenCalled();
+  expect(owner.execute.mock.calls[0]?.[0]).toBe(current);
+});
+
+it.each(["synchronous throw", "asynchronous rejection"] as const)(
+  "G13 %s preserves owner sentinel identity (regression)",
+  async (mode) => {
+    const { app, owner } = commandApplication(result);
+    const sentinel = new Error("C:\\private\\slopstop.db private command");
+    if (mode === "synchronous throw")
+      owner.execute.mockImplementation(() => {
+        throw sentinel;
+      });
+    else owner.execute.mockRejectedValue(sentinel);
+    await expect(app.execute(request)).rejects.toBe(sentinel);
+  },
+);
+
+it.each([
+  ["command-busy", "COMMAND_IN_PROGRESS", "Another command is in progress.", true],
+  ["writer-unavailable", "WRITER_UNAVAILABLE", "The Writer requires explicit reactivation.", false],
+  ["sequence-exhausted", "PROJECT_SEQUENCE_EXHAUSTED", "The Project sequence is exhausted.", false],
+] as const)(
+  "G13 non-durable %s validates exact diagnostic without a receipt (regression)",
+  async (status, code, message, retryable) => {
+    const value = CanonicalProjectCommandResultSchema.parse({
+      status,
+      projectId: request.projectId,
+      activationId: request.activationId,
+      commandId: request.command.commandId,
+      diagnostic: { code, message, retryable },
+    });
+    const { app, owner } = commandApplication(value);
+    expect(await app.execute(request)).toEqual(value);
+    for (const change of [
+      { ...value, diagnostic: { code, message, retryable: !retryable } },
+      { ...value, diagnostic: { code: "WRONG_CODE", message, retryable } },
+      { ...value, receipt: settledResult().receipt },
+    ]) {
+      Reflect.set(owner, "execute", async () => change);
+      await invalidResult(() => app.execute(request));
+    }
+  },
+);
 
 async function invalidResult(operation: () => Promise<unknown>): Promise<void> {
   const error: unknown = await operation().then(

@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HarnessBootstrapSchema, ProjectActivationIdSchema } from "@slopstop/protocol";
 import { createActiveProjectCoordinator } from "./active-project-coordinator.js";
+import { createCanonicalCommandRegistry } from "./canonical-command-registry.js";
 import { createCanonicalProjectApplication } from "./canonical-project-application.js";
 import {
   type HarnessTransport,
@@ -93,6 +94,10 @@ export function startHarnessProcessRuntime(
     storage: projectStorageOwner,
     leases: createNodeCanonicalWriterLeaseFactory(),
     repositories: createCanonicalCommandRepositoryFactory({
+      registry: createCanonicalCommandRegistry([]),
+      createReceiptId: randomUUID,
+      createEventId: randomUUID,
+      now,
       openClient: (databasePath) => createWorkerLocalLibsqlClient(databasePath, "generation"),
       sha256Text: async (text) => createHash("sha256").update(text).digest("hex"),
       createHandoffId: randomUUID,

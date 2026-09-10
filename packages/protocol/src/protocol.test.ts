@@ -562,6 +562,76 @@ describe("desktop protocol parsing", () => {
   });
 });
 
+describe("S5 G2 receipt envelopes", () => {
+  const receipt = {
+    receiptId: "66666666-6666-4666-8666-666666666501",
+    projectId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+    commandId: "44444444-4444-4444-8444-444444444501",
+    commandType: "conformance.counter.set",
+    commandVersion: 1,
+    outcome: "applied",
+    projectSequence: 1,
+    writerGeneration: 1,
+    settledAt: "2026-09-05T12:00:01.000Z",
+    events: [
+      { eventId: "77777777-7777-4777-8777-777777777501", eventOrdinal: 0 },
+      { eventId: "77777777-7777-4777-8777-777777777502", eventOrdinal: 1 },
+    ],
+  };
+  const payload = {
+    status: "settled",
+    projectId: receipt.projectId,
+    activationId: "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+    commandId: receipt.commandId,
+    receipt,
+  };
+  const envelope = {
+    protocolVersion: 4,
+    messageType: "event",
+    messageId: "99999999-9999-4999-8999-999999999501",
+    sentAt: "2026-09-05T12:00:06.000Z",
+    sequence: 1,
+    causationId: "11111111-1111-4111-8111-111111111501",
+    event: "project.command.result",
+    payload,
+  };
+  it("validates settled receipts and new non-durable result branches: v4 envelope", () => {
+    expect(parseHarnessMessage(envelope)).toEqual({ ok: true, value: envelope });
+  });
+  it.each([
+    {
+      ...envelope,
+      payload: {
+        ...payload,
+        receipt: { ...receipt, projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
+      },
+    },
+    {
+      ...envelope,
+      payload: {
+        ...payload,
+        receipt: { ...receipt, commandId: "44444444-4444-4444-8444-444444444502" },
+      },
+    },
+    { ...envelope, payload: { ...payload, receipt: { ...receipt, payload: { private: true } } } },
+    {
+      ...envelope,
+      payload: {
+        ...payload,
+        diagnostic: { code: "PRIVATE", message: "private", retryable: false },
+      },
+    },
+  ])(
+    "validates settled receipts and new non-durable result branches: invalid envelope %#",
+    (invalid) => {
+      const parsed = parseHarnessMessage(invalid);
+      expect(parsed.ok).toBe(false);
+      if (parsed.ok) throw new Error("Invalid receipt envelope was accepted.");
+      expect(parsed.error.code).toBe("PROTOCOL_MESSAGE_INVALID");
+    },
+  );
+});
+
 const switchRequest = {
   from: {
     projectId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",

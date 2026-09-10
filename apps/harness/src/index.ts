@@ -3,6 +3,20 @@ export type {
   ActiveProjectCoordinatorDependencies,
 } from "./active-project-coordinator.js";
 export { createActiveProjectCoordinator } from "./active-project-coordinator.js";
+export type {
+  CanonicalCommandDecision,
+  CanonicalCommandRegistry,
+  CanonicalCommandTransaction,
+  CanonicalEventInput,
+  PreparedCanonicalCommand,
+  RegisteredCanonicalCommand,
+} from "./canonical-command-registry.js";
+export {
+  CanonicalCommandDecisionSchema,
+  CanonicalEventInputSchema,
+  createCanonicalCommandRegistry,
+  defineCanonicalCommand,
+} from "./canonical-command-registry.js";
 export type { CanonicalProjectApplication } from "./canonical-project-application.js";
 export { createCanonicalProjectApplication } from "./canonical-project-application.js";
 export type { HarnessTransport, StopHarnessRuntime } from "./harness-runtime.js";

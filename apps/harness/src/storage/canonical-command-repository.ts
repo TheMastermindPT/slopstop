@@ -1,14 +1,25 @@
 import type { ProjectActivationId, ProjectId, WriterGeneration } from "@slopstop/protocol";
-import { WriterGenerationSchema } from "@slopstop/protocol";
+import {
+  ProjectActivationIdSchema,
+  ProjectIdSchema,
+  WriterGenerationSchema,
+} from "@slopstop/protocol";
 import { z } from "zod";
+import {
+  canonicalChangedOnce as changedOnce,
+  CanonicalSha256Schema as digestSchema,
+  canonicalResultObjects as objects,
+  canonicalExactlyOne as one,
+  readCanonicalCommandSnapshot,
+} from "../canonical-json.js";
 import type {
-  LocalLibsqlClient,
-  LocalLibsqlResultSet,
-  LocalLibsqlTransaction,
-} from "./local-libsql-worker-client.js";
+  CanonicalCommandSettlementResult,
+  CanonicalSettlementDependencies,
+} from "./canonical-command-settlement.js";
+import { settleFirstCanonicalCommand } from "./canonical-command-settlement.js";
+import type { LocalLibsqlClient, LocalLibsqlTransaction } from "./local-libsql-worker-client.js";
 import { withWriteTransaction } from "./project-storage-transaction.js";
 
-const digestSchema = z.string().regex(/^[0-9a-f]{64}$/u);
 export const WriterCapabilityTokenSchema = digestSchema.brand<"WriterCapabilityToken">();
 export type WriterCapabilityToken = z.infer<typeof WriterCapabilityTokenSchema>;
 export type WriterFenceCheck = Readonly<{ status: "current" }> | Readonly<{ status: "stale" }>;
@@ -16,6 +27,7 @@ export interface CanonicalCommandRepository {
   readonly projectId: ProjectId;
   readonly writerGeneration: WriterGeneration;
   verifyFence(): Promise<WriterFenceCheck>;
+  settle(commandText: string): Promise<CanonicalCommandSettlementResult>;
   releaseFence(releasedAt: string): Promise<WriterFenceCheck>;
   close(): Promise<void>;
 }
@@ -35,12 +47,13 @@ export type CanonicalCommandRepositoryActivationResult =
       error: Error & { code: CanonicalCommandRepositoryFailureCode };
       cleanup?: Readonly<{ close(): Promise<void> }>;
     }>;
-export type CanonicalCommandRepositoryFactoryDependencies = Readonly<{
-  openClient(path: string): LocalLibsqlClient;
-  sha256Text(value: string): Promise<string>;
-  createHandoffId(): string;
-  createRecoveryRecordId(): string;
-}>;
+export type CanonicalCommandRepositoryFactoryDependencies = CanonicalSettlementDependencies &
+  Readonly<{
+    openClient(path: string): LocalLibsqlClient;
+    sha256Text(value: string): Promise<string>;
+    createHandoffId(): string;
+    createRecoveryRecordId(): string;
+  }>;
 export type CanonicalRepositoryActivationInput = Readonly<{
   canonicalDatabasePath: string;
   projectId: ProjectId;
@@ -90,22 +103,15 @@ const fenceSchema = z.strictObject({
   generationReleasedAt: utcInstantSchema.nullable(),
 });
 type PriorFence = z.infer<typeof fenceSchema>;
+const settlementFenceSchema = fenceSchema.extend({
+  projectId: ProjectIdSchema,
+  generationProjectId: ProjectIdSchema,
+  generationActivationId: ProjectActivationIdSchema,
+  generationNumber: WriterGenerationSchema,
+  generationDigest: digestSchema,
+  generationAcquiredAt: utcInstantSchema,
+});
 
-function objects(result: LocalLibsqlResultSet): unknown[] {
-  return result.rows.map((row) =>
-    Object.fromEntries(result.columns.map((column, index) => [column, row[index]])),
-  );
-}
-function one<T>(rows: readonly T[]): T {
-  const row = rows[0];
-  if (rows.length !== 1 || row === undefined)
-    throw new Error("Canonical Writer authority must contain exactly one row.");
-  return row;
-}
-function changedOnce(result: LocalLibsqlResultSet): void {
-  if (result.rowsAffected !== 1)
-    throw new Error("Canonical Writer row was not changed exactly once.");
-}
 function normalizedUtc(value: string): string {
   const [seconds, fraction = ""] = utcInstantSchema.parse(value).slice(0, -1).split(".");
   return `${seconds}.${fraction.replace(/0+$/u, "")}`;
@@ -151,6 +157,42 @@ async function readFenceRows(
         args: [projectId],
       }),
     ),
+  );
+}
+
+async function currentSettlementFence(
+  tx: LocalLibsqlTransaction,
+  projectId: ProjectId,
+  generation: WriterGeneration,
+  digest: string,
+): Promise<boolean> {
+  const rows = settlementFenceSchema.array().parse(
+    objects(
+      await tx.execute({
+        sql: `SELECT f.project_id AS projectId, f.writer_generation AS generation,
+      f.token_digest AS tokenDigest, f.state, f.activated_at AS activatedAt, f.released_at AS releasedAt,
+      g.project_id AS generationProjectId, g.activation_id AS generationActivationId,
+      g.writer_generation AS generationNumber, g.token_digest AS generationDigest,
+      g.acquired_at AS generationAcquiredAt, g.released_at AS generationReleasedAt
+      FROM writer_fence AS f LEFT JOIN writer_generations AS g
+      ON g.project_id=f.project_id AND g.writer_generation=f.writer_generation WHERE f.project_id=?`,
+        args: [projectId],
+      }),
+    ),
+  );
+  if (rows.length === 0) return false;
+  const fence = one(rows);
+  const coherent = [
+    fence.projectId === projectId,
+    fence.generationProjectId === projectId,
+    fence.generation === fence.generationNumber,
+    fence.tokenDigest === fence.generationDigest,
+    normalizedUtc(fence.activatedAt) === normalizedUtc(fence.generationAcquiredAt),
+    coherentRelease(fence),
+  ].every(Boolean);
+  if (!coherent) throw new Error("Canonical settlement fence authority is inconsistent.");
+  return (
+    fence.state === "active" && fence.generation === generation && fence.tokenDigest === digest
   );
 }
 
@@ -296,13 +338,67 @@ async function activateFence(context: ActivationTransaction): Promise<WriterGene
   return generation;
 }
 
+class CanonicalTransactionOwner {
+  private busy = false;
+  private closed = false;
+  private unfinished: LocalLibsqlTransaction | undefined;
+
+  constructor(readonly client: LocalLibsqlClient) {}
+
+  get hasUnfinishedTransaction(): boolean {
+    return this.unfinished !== undefined;
+  }
+
+  private async closeTransaction(): Promise<void> {
+    const tx = this.unfinished;
+    if (tx === undefined) return;
+    await tx.close();
+    if (!tx.closed) throw new Error("Canonical Writer transaction close was not acknowledged.");
+    this.unfinished = undefined;
+  }
+
+  async transaction(mode: "write"): Promise<LocalLibsqlTransaction> {
+    const tx = await this.client.transaction(mode);
+    this.unfinished = tx;
+    return {
+      get closed() {
+        return tx.closed;
+      },
+      execute: (statement, args) => tx.execute(statement, args),
+      commit: () => tx.commit(),
+      rollback: () => tx.rollback(),
+      close: () => this.closeTransaction(),
+    };
+  }
+
+  async exclusively<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.busy) throw new Error("Canonical Writer transaction is already owned.");
+    this.busy = true;
+    try {
+      await this.closeTransaction();
+      return await operation();
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  async close(): Promise<void> {
+    await this.exclusively(async () => {
+      if (this.closed) return;
+      await this.client.close();
+      this.closed = true;
+    });
+  }
+}
+
 class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
   constructor(
     private readonly input: CanonicalRepositoryActivationInput & {
       writerGeneration: WriterGeneration;
     },
-    private readonly client: LocalLibsqlClient,
+    private readonly owner: CanonicalTransactionOwner,
     private readonly sha256Text: (text: string) => Promise<string>,
+    private readonly settlement: CanonicalSettlementDependencies,
   ) {}
   get projectId(): ProjectId {
     return this.input.projectId;
@@ -311,10 +407,34 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
     return this.input.writerGeneration;
   }
 
+  async settle(commandText: string): Promise<CanonicalCommandSettlementResult> {
+    const command = readCanonicalCommandSnapshot(commandText);
+    if (command.projectId !== this.projectId)
+      throw new Error("Settlement Project does not match its repository.");
+    if (this.owner.hasUnfinishedTransaction)
+      throw new Error("Canonical Writer transaction is already owned.");
+    return this.owner.exclusively(async () => {
+      const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
+      return withWriteTransaction<LocalLibsqlTransaction, CanonicalCommandSettlementResult>(
+        this.owner,
+        async (tx) => {
+          if (!(await currentSettlementFence(tx, this.projectId, this.writerGeneration, digest)))
+            return { status: "stale-writer" };
+          return settleFirstCanonicalCommand({
+            transaction: tx,
+            command,
+            writerGeneration: this.writerGeneration,
+            dependencies: this.settlement,
+          });
+        },
+      );
+    });
+  }
+
   async verifyFence(): Promise<WriterFenceCheck> {
     try {
       const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
-      const rows = await readFenceRows(this.client, this.projectId);
+      const rows = await readFenceRows(this.owner.client, this.projectId);
       if (rows.length === 0) return { status: "stale" };
       const row = one(rows);
       const current = [
@@ -334,22 +454,27 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
 
   async releaseFence(releasedAt: string): Promise<WriterFenceCheck> {
     try {
-      const time = utcInstantSchema.parse(releasedAt);
-      const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
-      return await withWriteTransaction(this.client, async (tx) => {
-        const fence = await tx.execute({
-          sql: "UPDATE writer_fence SET state='released', released_at=? WHERE project_id=? AND writer_generation=? AND token_digest=? AND state='active' AND released_at IS NULL",
-          args: [time, this.projectId, this.writerGeneration, digest],
-        });
-        if (fence.rowsAffected === 0) return { status: "stale" };
-        changedOnce(fence);
-        changedOnce(
-          await tx.execute({
-            sql: "UPDATE writer_generations SET released_at=? WHERE project_id=? AND writer_generation=? AND token_digest=? AND released_at IS NULL",
-            args: [time, this.projectId, this.writerGeneration, digest],
-          }),
+      return await this.owner.exclusively(async () => {
+        const time = utcInstantSchema.parse(releasedAt);
+        const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
+        return await withWriteTransaction<LocalLibsqlTransaction, WriterFenceCheck>(
+          this.owner,
+          async (tx) => {
+            const fence = await tx.execute({
+              sql: "UPDATE writer_fence SET state='released', released_at=? WHERE project_id=? AND writer_generation=? AND token_digest=? AND state='active' AND released_at IS NULL",
+              args: [time, this.projectId, this.writerGeneration, digest],
+            });
+            if (fence.rowsAffected === 0) return { status: "stale" };
+            changedOnce(fence);
+            changedOnce(
+              await tx.execute({
+                sql: "UPDATE writer_generations SET released_at=? WHERE project_id=? AND writer_generation=? AND token_digest=? AND released_at IS NULL",
+                args: [time, this.projectId, this.writerGeneration, digest],
+              }),
+            );
+            return { status: "current" };
+          },
         );
-        return { status: "current" };
       });
     } catch (cause) {
       throw new CanonicalCommandRepositoryError("WRITER_FENCE_RELEASE_FAILED", { cause });
@@ -358,7 +483,7 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
 
   async close(): Promise<void> {
     try {
-      await this.client.close();
+      await this.owner.close();
     } catch (cause) {
       throw new CanonicalCommandRepositoryError("WRITER_REPOSITORY_CLOSE_FAILED", { cause });
     }
@@ -367,9 +492,16 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
 
 async function failedActivation(
   cause: unknown,
-  client: LocalLibsqlClient | undefined,
+  client: CanonicalTransactionOwner | undefined,
 ): Promise<CanonicalCommandRepositoryActivationResult> {
   if (client !== undefined) {
+    if (client.hasUnfinishedTransaction) {
+      return {
+        status: "broken",
+        cleanup: { close: () => client.close() },
+        error: new CanonicalCommandRepositoryError("WRITER_REPOSITORY_CLOSE_FAILED", { cause }),
+      };
+    }
     try {
       await client.close();
     } catch (closeError) {
@@ -396,15 +528,20 @@ export function createCanonicalCommandRepositoryFactory(
 ): CanonicalCommandRepositoryFactory {
   return {
     activate: async (input) => {
-      let client: LocalLibsqlClient | undefined;
+      let client: CanonicalTransactionOwner | undefined;
       try {
-        client = configuredClient(dependencies.openClient(input.canonicalDatabasePath));
+        const owner = new CanonicalTransactionOwner(
+          configuredClient(dependencies.openClient(input.canonicalDatabasePath)),
+        );
+        client = owner;
         const writerToken = WriterCapabilityTokenSchema.parse(input.writerToken);
         const activatedAt = utcInstantSchema.parse(input.activatedAt);
         const digest = digestSchema.parse(await dependencies.sha256Text(writerToken));
         const validated = { ...input, writerToken, activatedAt };
-        const writerGeneration = await withWriteTransaction(client, (tx) =>
-          activateFence({ tx, input: validated, digest, dependencies }),
+        const writerGeneration = await owner.exclusively(() =>
+          withWriteTransaction(owner, (tx) =>
+            activateFence({ tx, input: validated, digest, dependencies }),
+          ),
         );
         return {
           status: "activated",
@@ -413,6 +550,7 @@ export function createCanonicalCommandRepositoryFactory(
             { ...validated, writerGeneration },
             client,
             dependencies.sha256Text,
+            dependencies,
           ),
         };
       } catch (cause) {

@@ -7,6 +7,8 @@ export type RuntimeDatabaseLineageId = DomainIdentity<"RuntimeDatabaseLineageId"
 export type ProjectStorageCreateRequestId = DomainIdentity<"ProjectStorageCreateRequestId">;
 export type ProjectActivationId = DomainIdentity<"ProjectActivationId">;
 export type CommandId = DomainIdentity<"CommandId">;
+export type CommandReceiptId = DomainIdentity<"CommandReceiptId">;
+export type CanonicalEventId = DomainIdentity<"CanonicalEventId">;
 
 declare const writerGenerationBrand: unique symbol;
 export type WriterGeneration = number & {

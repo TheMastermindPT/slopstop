@@ -13,6 +13,7 @@ import {
 } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { createActiveProjectCoordinator } from "../../src/active-project-coordinator.js";
+import { createCanonicalCommandRegistry } from "../../src/canonical-command-registry.js";
 import { createCanonicalProjectApplication } from "../../src/canonical-project-application.js";
 import { startHarnessRuntime } from "../../src/harness-runtime.js";
 import { startHarnessProcessRuntime } from "../../src/process-bootstrap.js";
@@ -26,6 +27,7 @@ import {
 import { createNodeProjectStorageDependencies } from "../../src/storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
 import { createUnavailableWorkspaceApplication } from "../../src/workspace-application.js";
+import { productionSettlementRows } from "./conformance-counter-command.js";
 import {
   checkedInMigrationRoot,
   createRequest,
@@ -34,6 +36,16 @@ import {
   fixedCreationIds,
   transportFor,
 } from "./project-storage-create-fixture.js";
+
+const unexpectedSettlementValue = (): never => {
+  throw new Error("Unexpected activation-only settlement dependency.");
+};
+const activationOnlySettlementDependencies = {
+  registry: createCanonicalCommandRegistry([]),
+  createReceiptId: unexpectedSettlementValue,
+  createEventId: unexpectedSettlementValue,
+  now: unexpectedSettlementValue,
+};
 
 it("configures every canonical activation and release transaction", async () => {
   const create = repositories.createCanonicalCommandRepositoryFactory;
@@ -74,6 +86,7 @@ it("configures every canonical activation and release transaction", async () => 
   try {
     await poison();
     const factory = create({
+      ...activationOnlySettlementDependencies,
       openClient: () => observed,
       sha256Text: async (value) => createHash("sha256").update(value).digest("hex"),
       createHandoffId: () => "00000000-0000-4000-8000-000000000051",
@@ -326,6 +339,7 @@ async function productionTransport() {
   };
   return {
     sent,
+    root,
     exchange,
     delivery: () =>
       new Promise<void>((resolve) => {
@@ -371,14 +385,17 @@ it("composes exclusive activation through production bootstrap", async () => {
       event: "project.command.result",
       payload: { status: "inactive", diagnostic: { code: "PROJECT_INACTIVE" } },
     });
-    expect(
-      await exchange(
-        createProjectCreateCommand(
-          { ...metadata, messageId: "00000000-0000-4000-8000-000000000103" },
-          createRequest,
-        ),
+    const created = await exchange(
+      createProjectCreateCommand(
+        { ...metadata, messageId: "00000000-0000-4000-8000-000000000103" },
+        createRequest,
       ),
-    ).toMatchObject({ event: "project.create.result", payload: { status: "created" } });
+    );
+    expect(created).toMatchObject({
+      event: "project.create.result",
+      payload: { status: "created" },
+    });
+    const file = createdCanonicalFile(f.root, created);
     expect(await exchange(createProjectCommand(metadata, input))).toMatchObject({
       event: "project.command.result",
       payload: { status: "inactive" },
@@ -403,21 +420,99 @@ it("composes exclusive activation through production bootstrap", async () => {
       throw new Error("Activation envelope invalid.");
     if (parsed.value.payload.status !== "active")
       throw new Error("Activation did not become active.");
-    expect(
-      await exchange(
-        createProjectCommand(metadata, {
-          ...input,
-          activationId: parsed.value.payload.activationId,
-        }),
-      ),
-    ).toMatchObject({
-      event: "project.command.result",
-      payload: {
-        status: "settlement-unavailable",
-        diagnostic: { code: "COMMAND_SETTLEMENT_UNAVAILABLE" },
-      },
-    });
+    const executed = await exchange(
+      createProjectCommand(metadata, {
+        ...input,
+        activationId: parsed.value.payload.activationId,
+      }),
+    );
+    await expectProductionCommand(
+      executed,
+      { ...input, activationId: parsed.value.payload.activationId },
+      file,
+    );
   } finally {
     await f.stop();
   }
 });
+
+function createdCanonicalFile(root: string, created: unknown) {
+  const creation = parseHarnessMessage(created);
+  if (!creation.ok) throw new Error("Invalid creation.");
+  if (creation.value.event !== "project.create.result")
+    throw new Error("Unexpected creation event.");
+  if (creation.value.payload.status !== "created") throw new Error("Project was not created.");
+  return path.join(
+    root,
+    "projects",
+    bootstrapInput.projectId,
+    creation.value.payload.identity.generationId,
+    "slopstop.db",
+  );
+}
+
+async function expectProductionCommand(
+  executed: unknown,
+  input: typeof bootstrapInput,
+  file: string,
+) {
+  const settlement = parseHarnessMessage(executed);
+  if (!settlement.ok) throw new Error("Invalid command result.");
+  if (settlement.value.event !== "project.command.result")
+    throw new Error("Unexpected command event.");
+  const result = settlement.value.payload;
+  expect(result.status).toBe("settled");
+  if (result.status !== "settled") throw new Error("Command did not settle.");
+  expect(result).toEqual({
+    status: "settled",
+    projectId: input.projectId,
+    activationId: input.activationId,
+    commandId: input.command.commandId,
+    receipt: {
+      receiptId: result.receipt.receiptId,
+      projectId: input.projectId,
+      commandId: input.command.commandId,
+      commandType: "fixture.noop",
+      commandVersion: 1,
+      outcome: "rejected",
+      projectSequence: 1,
+      writerGeneration: 1,
+      settledAt: result.receipt.settledAt,
+      events: [],
+      rejection: { code: "COMMAND_TYPE_UNSUPPORTED", retryable: false },
+    },
+  });
+  expect(executed).toMatchObject({
+    event: "project.command.result",
+    payload: {
+      status: "settled",
+      receipt: { rejection: { code: "COMMAND_TYPE_UNSUPPORTED", retryable: false } },
+    },
+  });
+  const rows = await productionSettlementRows(file);
+  const r = result.receipt;
+  const fingerprint = createHash("sha256")
+    .update(
+      '{"commandId":"00000000-0000-4000-8000-000000000012","fingerprintVersion":1,"payload":{},"projectId":"00000000-0000-4000-8000-000000000010","type":"fixture.noop","version":1}',
+    )
+    .digest("hex");
+  expect(rows["command_receipts"]).toEqual([
+    [
+      input.projectId,
+      r.receiptId,
+      input.command.commandId,
+      "fixture.noop",
+      1,
+      fingerprint,
+      "rejected",
+      1,
+      1,
+      r.settledAt,
+    ],
+  ]);
+  expect(rows["command_idempotency"]).toEqual([
+    [input.projectId, input.command.commandId, fingerprint, r.receiptId, r.settledAt],
+  ]);
+  expect(rows["command_rejections"]).toHaveLength(1);
+  expect(rows["canonical_events"]).toEqual([]);
+}

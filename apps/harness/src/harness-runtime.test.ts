@@ -1009,6 +1009,7 @@ import {
   type CanonicalProjectSwitchResult,
   CanonicalProjectSwitchResultSchema,
 } from "@slopstop/protocol";
+import { migratedUnsupported } from "../tests/integration/conformance-counter-command.js";
 import {
   activateSwitchSource,
   expectInvalidSwitchRuntime,
@@ -1019,6 +1020,7 @@ import {
   switchApplicationTargets,
   switchCommandFailure,
   switchCommands,
+  switchDeferred,
   switchEvent,
   switchFixture,
   switchInternalFailure,
@@ -1032,10 +1034,25 @@ import {
   switchTarget,
 } from "../tests/integration/project-storage-create-fixture.js";
 
+async function observeRuntimeSend(transport: TestTransport, trigger: () => void) {
+  const emitted = switchDeferred<void>();
+  const original = transport.send.bind(transport);
+  const observer = vi.spyOn(transport, "send").mockImplementationOnce((message) => {
+    original(message);
+    emitted.resolve();
+  });
+  try {
+    trigger();
+    await emitted.promise;
+  } finally {
+    observer.mockRestore();
+  }
+}
+
 it.each(switchRuntimeLifecycles)(
   "closes command admission in the same turn as lifecycle enqueue: runtime $kind",
   async ({ kind, message, event }) => {
-    const f = switchFixture();
+    const f = switchFixture(kind === "activate");
     if (kind !== "initial activate") await activateSwitchSource(f);
     const transport = new TestTransport();
     const stop = startHarnessRuntime(switchRuntimeOptions(f.owner, transport));
@@ -1054,19 +1071,14 @@ it.each(switchRuntimeLifecycles)(
       ];
       if (event !== undefined) expected.push(event);
       expect(transport.sent).toEqual(expected);
-      expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(0);
+      expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(0);
       if (kind === "activate") {
-        transport.emit(switchMessages.A);
-        await nextTurn();
+        await observeRuntimeSend(transport, () => transport.emit(switchMessages.A));
         expected.push(
-          switchEvent(
-            3,
-            403,
-            "project.command.result",
-            switchCommandFailure("settlement-unavailable"),
-          ),
+          switchEvent(3, 403, "project.command.result", migratedUnsupported(switchCommands.A)),
         );
         expect(transport.sent).toEqual(expected);
+        expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(1);
       }
     } finally {
       await stop();
@@ -1077,14 +1089,14 @@ it.each(switchRuntimeLifecycles)(
 it.each(["A.fence", "B.storage.acquire"])(
   "closes command admission in the same turn as lifecycle enqueue: held runtime %s",
   async (stage) => {
-    const f = switchFixture();
+    const f = switchFixture(true);
     await activateSwitchSource(f);
     const hold = f.hold(stage);
     const transport = new TestTransport();
     const stop = startHarnessRuntime(switchRuntimeOptions(f.owner, transport));
     try {
       transport.emit(switchMessages.switch);
-      await nextTurn();
+      await hold.entered;
       expect(f.all).toContain(stage);
       expect(transport.sent).toEqual([]);
       transport.emit(switchMessages.A);
@@ -1105,21 +1117,14 @@ it.each(["A.fence", "B.storage.acquire"])(
         ),
       ];
       expect(transport.sent).toEqual(expected);
-      expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(0);
-      expect(f.projects.B.repository.verifyFence).toHaveBeenCalledTimes(0);
-      hold.resolve();
-      await nextTurn();
+      expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(0);
+      expect(f.projects.B.repository.settle).toHaveBeenCalledTimes(0);
+      await observeRuntimeSend(transport, hold.resolve);
       expected.push(switchEvent(3, 402, "project.switch.result", switchTarget()));
       expect(transport.sent).toEqual(expected);
-      transport.emit(switchMessages.B);
-      await nextTurn();
+      await observeRuntimeSend(transport, () => transport.emit(switchMessages.B));
       expected.push(
-        switchEvent(
-          4,
-          404,
-          "project.command.result",
-          switchCommandFailure("settlement-unavailable", switchCommands.B),
-        ),
+        switchEvent(4, 404, "project.command.result", migratedUnsupported(switchCommands.B)),
       );
       transport.emit(switchMessages.A);
       await nextTurn();
@@ -1127,6 +1132,8 @@ it.each(["A.fence", "B.storage.acquire"])(
         switchEvent(5, 403, "project.command.result", switchCommandFailure("project-mismatch")),
       );
       expect(transport.sent).toEqual(expected);
+      expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(0);
+      expect(f.projects.B.repository.settle).toHaveBeenCalledTimes(1);
     } finally {
       hold.resolve();
       await stop();

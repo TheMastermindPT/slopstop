@@ -482,3 +482,392 @@ describe.each(switchFailures)("switch failure $status/$diagnostic.code", (result
     ]);
   });
 });
+
+describe("S5 finite JSON payloads", () => {
+  it("preserves finite JSON edge values without prototype assignment: own data", () => {
+    const payload: unknown = JSON.parse(
+      '{"__proto__":{"x":1},"10":10,"2":2,"text":"  e\\u0301  ","n":-0}',
+    );
+    const parsed = protocol.TypedCommandSchema.parse({ ...commandRequest.command, payload });
+    expect(parsed.payload).toEqual(payload);
+    if (parsed.payload === null || typeof parsed.payload !== "object") {
+      throw new Error("Expected an object payload.");
+    }
+    expect(Object.hasOwn(parsed.payload, "__proto__")).toBe(true);
+    expect(Object.hasOwn(parsed.payload, "x")).toBe(false);
+    expect(Reflect.get(parsed.payload, "x")).toBeUndefined();
+  });
+
+  it.each([null, true, false, "", "  text  ", 0, -0, 0.125, [], {}])(
+    "preserves finite JSON edge values without prototype assignment: valid %j",
+    (payload) => {
+      expect(
+        protocol.TypedCommandSchema.parse({ ...commandRequest.command, payload }).payload,
+      ).toEqual(payload);
+    },
+  );
+
+  it("preserves finite JSON edge values without prototype assignment: shared acyclic data", () => {
+    const shared = { n: 1 };
+    const payload = { left: shared, right: shared };
+    expect(
+      protocol.TypedCommandSchema.parse({ ...commandRequest.command, payload }).payload,
+    ).toEqual({ left: { n: 1 }, right: { n: 1 } });
+  });
+
+  it.each([NaN, Infinity, -Infinity, undefined, 1n, () => undefined, Symbol("invalid")])(
+    "preserves finite JSON edge values without prototype assignment: invalid own proto %s",
+    (value) => {
+      const payload: object = JSON.parse('{"__proto__":null}');
+      Reflect.set(payload, "__proto__", value);
+      expect(
+        protocol.TypedCommandSchema.safeParse({ ...commandRequest.command, payload }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    { name: "sparse array", make: () => new Array(1) },
+    { name: "extra array property", make: () => Object.assign([1], { extra: 2 }) },
+    { name: "array symbol", make: () => Object.assign([1], { [Symbol("extra")]: 2 }) },
+    { name: "hidden property", make: () => Object.defineProperty({}, "hidden", { value: 1 }) },
+    { name: "symbol property", make: () => ({ [Symbol("hidden")]: 1 }) },
+    { name: "date", make: () => new Date("2026-09-05T12:00:00Z") },
+    {
+      name: "accessor",
+      make: () =>
+        Object.defineProperty({}, "value", {
+          enumerable: true,
+          get: () => {
+            throw new Error("JSON parsing must not invoke accessors.");
+          },
+        }),
+    },
+    {
+      name: "cycle",
+      make: () => {
+        const value: Record<string, unknown> = {};
+        value["self"] = value;
+        return value;
+      },
+    },
+  ])(
+    "preserves finite JSON edge values without prototype assignment: rejects $name",
+    ({ make }) => {
+      expect(
+        protocol.TypedCommandSchema.safeParse({
+          ...commandRequest.command,
+          payload: make(),
+        }).success,
+      ).toBe(false);
+    },
+  );
+});
+
+const appliedReceipt = {
+  receiptId: "66666666-6666-4666-8666-666666666501",
+  projectId: sourceProjectId,
+  commandId: "44444444-4444-4444-8444-444444444501",
+  commandType: "conformance.counter.set",
+  commandVersion: 1,
+  outcome: "applied",
+  projectSequence: 1,
+  writerGeneration: 1,
+  settledAt: "2026-09-05T12:00:01.000Z",
+  events: [
+    { eventId: "77777777-7777-4777-8777-777777777501", eventOrdinal: 0 },
+    { eventId: "77777777-7777-4777-8777-777777777502", eventOrdinal: 1 },
+  ],
+};
+const unchangedReceipt = {
+  ...appliedReceipt,
+  receiptId: "66666666-6666-4666-8666-666666666502",
+  commandId: "44444444-4444-4444-8444-444444444502",
+  projectSequence: 2,
+  settledAt: "2026-09-05T12:00:02.000Z",
+  outcome: "unchanged",
+  events: [],
+};
+const rejectedReceipt = {
+  ...appliedReceipt,
+  receiptId: "66666666-6666-4666-8666-666666666503",
+  commandId: "44444444-4444-4444-8444-444444444503",
+  projectSequence: 3,
+  settledAt: "2026-09-05T12:00:03.000Z",
+  outcome: "rejected",
+  events: [],
+  rejection: { code: "TEST_COUNTER_REJECTED", retryable: false },
+};
+const settledResult = {
+  status: "settled",
+  projectId: appliedReceipt.projectId,
+  activationId: switchRequest.from.activationId,
+  commandId: appliedReceipt.commandId,
+  receipt: appliedReceipt,
+};
+const settlementFailures = [
+  ["command-busy", "COMMAND_IN_PROGRESS", "Another command is in progress.", true],
+  ["writer-unavailable", "WRITER_UNAVAILABLE", "The Writer requires explicit reactivation.", false],
+  ["sequence-exhausted", "PROJECT_SEQUENCE_EXHAUSTED", "The Project sequence is exhausted.", false],
+] as const;
+const invalidReceiptIds = [
+  "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAA1",
+  "00000000-0000-0000-0000-000000000000",
+  "ffffffff-ffff-ffff-ffff-ffffffffffff",
+  "not-a-uuid",
+];
+const invalidPositiveOrders = [0, -1, 0.5, Number.MAX_SAFE_INTEGER + 1];
+const privateReceiptKeys = [
+  "extra",
+  "payload",
+  "eventPayload",
+  "commandFingerprint",
+  "writerToken",
+  "tokenDigest",
+  "path",
+  "cause",
+  "exceptionDetails",
+];
+
+describe("S5 G2 receipt protocol", () => {
+  it.each([appliedReceipt, unchangedReceipt, rejectedReceipt])(
+    "validates settled receipts and new non-durable result branches: exact $outcome",
+    (receipt) => {
+      expect(schema("CanonicalCommandReceiptSchema").parse(receipt)).toEqual(receipt);
+      const result = { ...settledResult, commandId: receipt.commandId, receipt };
+      expect(protocol.CanonicalProjectCommandResultSchema.parse(result)).toEqual(result);
+    },
+  );
+
+  it("validates settled receipts and new non-durable result branches: old receipt under new epoch", () => {
+    const result = { ...settledResult, activationId: "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2" };
+    expect(protocol.CanonicalProjectCommandResultSchema.parse(result)).toEqual(result);
+  });
+
+  it.each(["projectId", "commandId"])(
+    "validates settled receipts and new non-durable result branches: correlation %s",
+    (key) => {
+      const result = changedField(settledResult, ["receipt"], key, otherProjectId);
+      expect(protocol.CanonicalProjectCommandResultSchema.safeParse(result).success).toBe(false);
+    },
+  );
+
+  it.each(settlementFailures)(
+    "validates settled receipts and new non-durable result branches: %s",
+    (status, code, message, retryable) => {
+      const result = {
+        status,
+        projectId: sourceProjectId,
+        activationId: switchRequest.from.activationId,
+        commandId: appliedReceipt.commandId,
+        diagnostic: { code, message, retryable },
+      };
+      expect(protocol.CanonicalProjectCommandResultSchema.parse(result)).toEqual(result);
+    },
+  );
+
+  describe.each(settlementFailures)("non-durable %s", (status, code, message, retryable) => {
+    const result = {
+      status,
+      projectId: sourceProjectId,
+      activationId: switchRequest.from.activationId,
+      commandId: appliedReceipt.commandId,
+      diagnostic: { code, message, retryable },
+    };
+    it.each([
+      { ...result, diagnostic: { ...result.diagnostic, retryable: !retryable } },
+      { ...result, diagnostic: { ...result.diagnostic, code: "UNKNOWN_CODE" } },
+      { ...result, receipt: appliedReceipt },
+      ...settlementFailures
+        .filter((failure) => failure[1] !== code)
+        .map((failure) => ({
+          ...result,
+          diagnostic: { ...result.diagnostic, code: failure[1] },
+        })),
+      ...privateReceiptKeys.flatMap((key) => [
+        { ...result, [key]: "private" },
+        { ...result, diagnostic: { ...result.diagnostic, [key]: "private" } },
+      ]),
+    ])("rejects invalid non-durable variant %#", (invalid) => {
+      expect(protocol.CanonicalProjectCommandResultSchema.safeParse(invalid).success).toBe(false);
+    });
+  });
+
+  describe.each(["receiptId", "projectId", "commandId"])("receipt identity %s", (key) => {
+    it.each(invalidReceiptIds)("rejects %s", (value) => {
+      rejectsField(schema("CanonicalCommandReceiptSchema"), { ...appliedReceipt, [key]: value }, [
+        key,
+      ]);
+    });
+  });
+
+  describe.each(["projectSequence", "writerGeneration", "commandVersion"])(
+    "receipt order %s",
+    (key) => {
+      it.each(invalidPositiveOrders)("rejects %s", (value) => {
+        rejectsField(schema("CanonicalCommandReceiptSchema"), { ...appliedReceipt, [key]: value }, [
+          key,
+        ]);
+      });
+      it("preserves the maximum safe integer", () => {
+        const value = { ...appliedReceipt, [key]: Number.MAX_SAFE_INTEGER };
+        expect(schema("CanonicalCommandReceiptSchema").parse(value)).toEqual(value);
+      });
+    },
+  );
+
+  it.each(["", " ", " conformance.counter.set", "conformance.counter.set "])(
+    "rejects receipt command type %j without normalization",
+    (commandType) => {
+      rejectsField(schema("CanonicalCommandReceiptSchema"), { ...appliedReceipt, commandType }, [
+        "commandType",
+      ]);
+    },
+  );
+
+  it.each([
+    {
+      name: "duplicate identity",
+      events: [appliedReceipt.events[0], { ...appliedReceipt.events[0], eventOrdinal: 1 }],
+    },
+    { name: "reversed order", events: [...appliedReceipt.events].reverse() },
+    {
+      name: "gap",
+      events: [appliedReceipt.events[0], { ...appliedReceipt.events[1], eventOrdinal: 2 }],
+    },
+    { name: "starts at one", events: [appliedReceipt.events[1]] },
+    ...[-1, 0.5, Number.MAX_SAFE_INTEGER + 1].map((eventOrdinal) => ({
+      name: `ordinal ${eventOrdinal}`,
+      events: [{ ...appliedReceipt.events[0], eventOrdinal }],
+    })),
+    ...invalidReceiptIds.map((eventId) => ({
+      name: `identity ${eventId}`,
+      events: [{ eventId, eventOrdinal: 0 }],
+    })),
+  ])("rejects event references: $name", ({ events }) => {
+    expect(
+      schema("CanonicalCommandReceiptSchema").safeParse({ ...appliedReceipt, events }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    { ...appliedReceipt, events: [] },
+    { ...rejectedReceipt, rejection: { code: "COUNTER_POLICY_REJECTED", retryable: true } },
+    ...["IDEMPOTENCY_CONFLICT", "COMMAND_TYPE_UNSUPPORTED", "COMMAND_PAYLOAD_INVALID"].map(
+      (code) => ({ ...rejectedReceipt, rejection: { code, retryable: false } }),
+    ),
+    { ...rejectedReceipt, rejection: { code: "A", retryable: false } },
+    { ...rejectedReceipt, rejection: { code: `A${"_".repeat(63)}`, retryable: false } },
+  ])("preserves valid receipt variant %#", (receipt) => {
+    expect(schema("CanonicalCommandReceiptSchema").parse(receipt)).toEqual(receipt);
+  });
+
+  it.each([
+    { ...unchangedReceipt, events: appliedReceipt.events },
+    { ...rejectedReceipt, events: appliedReceipt.events },
+    { ...appliedReceipt, rejection: rejectedReceipt.rejection },
+    { ...unchangedReceipt, rejection: rejectedReceipt.rejection },
+    { ...unchangedReceipt, outcome: "rejected" },
+    { ...appliedReceipt, outcome: "unknown" },
+    ...["IDEMPOTENCY_CONFLICT", "COMMAND_TYPE_UNSUPPORTED", "COMMAND_PAYLOAD_INVALID"].map(
+      (code) => ({ ...rejectedReceipt, rejection: { code, retryable: true } }),
+    ),
+    ...["", "lower_case", " CODE", "CODE ", "1CODE", "CODE-DASH", "A".repeat(65)].map((code) => ({
+      ...rejectedReceipt,
+      rejection: { code, retryable: false },
+    })),
+    { ...rejectedReceipt, rejection: { code: "COUNTER_POLICY_REJECTED" } },
+    { ...rejectedReceipt, rejection: { code: "COUNTER_POLICY_REJECTED", retryable: "false" } },
+  ])("rejects mutually exclusive receipt/rejection variant %#", (receipt) => {
+    expect(schema("CanonicalCommandReceiptSchema").safeParse(receipt).success).toBe(false);
+  });
+
+  describe.each(privateReceiptKeys)("private field %s", (key) => {
+    it.each([
+      { name: "result", value: { ...settledResult, [key]: "private" } },
+      {
+        name: "receipt",
+        value: { ...settledResult, receipt: { ...appliedReceipt, [key]: "private" } },
+      },
+      {
+        name: "rejection",
+        value: {
+          ...settledResult,
+          commandId: rejectedReceipt.commandId,
+          receipt: {
+            ...rejectedReceipt,
+            rejection: { ...rejectedReceipt.rejection, [key]: "private" },
+          },
+        },
+      },
+      {
+        name: "event reference",
+        value: {
+          ...settledResult,
+          receipt: {
+            ...appliedReceipt,
+            events: [{ ...appliedReceipt.events[0], [key]: "private" }, appliedReceipt.events[1]],
+          },
+        },
+      },
+    ])("rejects $name without stripping", ({ value }) => {
+      expect(protocol.CanonicalProjectCommandResultSchema.safeParse(value).success).toBe(false);
+      if (value.receipt !== appliedReceipt) {
+        expect(schema("CanonicalCommandReceiptSchema").safeParse(value.receipt).success).toBe(
+          false,
+        );
+      }
+    });
+  });
+
+  it.each([appliedReceipt, unchangedReceipt, rejectedReceipt])(
+    "freezes $outcome receipt and every nested property",
+    (receipt) => {
+      const parsed: unknown = schema("CanonicalCommandReceiptSchema").parse(receipt);
+      if (typeof parsed !== "object" || parsed === null)
+        throw new Error("Expected receipt object.");
+      expect(Object.isFrozen(parsed)).toBe(true);
+      expect(Reflect.set(parsed, "settledAt", "changed")).toBe(false);
+      expect(Reflect.deleteProperty(parsed, "commandId")).toBe(false);
+      const events: unknown = Reflect.get(parsed, "events");
+      if (!Array.isArray(events)) throw new Error("Expected event list.");
+      expect(Object.isFrozen(events)).toBe(true);
+      expect(() => events.push({ eventId: "new", eventOrdinal: 2 })).toThrow(TypeError);
+      expect(Reflect.set(events, "0", {})).toBe(false);
+      for (const event of events) {
+        expect(Object.isFrozen(event)).toBe(true);
+        expect(Reflect.set(event, "eventOrdinal", 99)).toBe(false);
+      }
+      if (Object.hasOwn(parsed, "rejection")) {
+        const rejection: object = Reflect.get(parsed, "rejection");
+        expect(Object.isFrozen(rejection)).toBe(true);
+        expect(Reflect.set(rejection, "retryable", true)).toBe(false);
+      }
+      expect(parsed).toEqual(receipt);
+    },
+  );
+
+  it.each(["2026-09-05T12:00:00Z", "2026-09-05T12:00:00.123Z", "2026-09-05T12:00:00.123456Z"])(
+    "requires seconds in settlement clocks and persisted receipt instants: preserves %s",
+    (settledAt) => {
+      expect(schema("CanonicalSettlementTimeSchema").parse(settledAt)).toBe(settledAt);
+      const receipt = { ...appliedReceipt, settledAt };
+      expect(schema("CanonicalCommandReceiptSchema").parse(receipt)).toEqual(receipt);
+    },
+  );
+  it.each([
+    "2026-09-05T12:00Z",
+    "2026-09-05T12:00:00+00:00",
+    "2026-09-05T12:00:00",
+    "2026-02-30T12:00:00Z",
+    "2026-09-05T12:00:00+01:00",
+  ])(
+    "requires seconds in settlement clocks and persisted receipt instants: rejects %s",
+    (settledAt) => {
+      expect(schema("CanonicalSettlementTimeSchema").safeParse(settledAt).success).toBe(false);
+      rejectsField(schema("CanonicalCommandReceiptSchema"), { ...appliedReceipt, settledAt }, [
+        "settledAt",
+      ]);
+    },
+  );
+});

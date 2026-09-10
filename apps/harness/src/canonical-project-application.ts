@@ -26,14 +26,25 @@ export class CanonicalProjectApplicationError extends Error {
   }
 }
 
+type CommandCorrelation = Pick<CanonicalProjectCommandRequest, "projectId" | "activationId"> & {
+  command: Pick<CanonicalProjectCommandRequest["command"], "commandId" | "type" | "version">;
+};
+
 function commandMatches(
   result: CanonicalProjectCommandResult,
-  request: CanonicalProjectCommandRequest,
+  request: CommandCorrelation,
 ): boolean {
   return [
     result.projectId === request.projectId,
     result.activationId === request.activationId,
     result.commandId === request.command.commandId,
+    result.status !== "settled" ||
+      [
+        result.receipt.projectId === request.projectId,
+        result.receipt.commandId === request.command.commandId,
+        result.receipt.commandType === request.command.type,
+        result.receipt.commandVersion === request.command.version,
+      ].every(Boolean),
   ].every(Boolean);
 }
 
@@ -58,12 +69,22 @@ export function createCanonicalProjectApplication(
             result.request.to.projectId === request.to.projectId,
           ].every(Boolean),
       ),
-    execute: async (request) =>
-      validatedResult(
+    execute: async (request) => {
+      const expected: CommandCorrelation = {
+        projectId: request.projectId,
+        activationId: request.activationId,
+        command: {
+          commandId: request.command.commandId,
+          type: request.command.type,
+          version: request.command.version,
+        },
+      };
+      return validatedResult(
         CanonicalProjectCommandResultSchema,
         await coordinator.execute(request),
-        (result) => commandMatches(result, request),
-      ),
+        (result) => commandMatches(result, expected),
+      );
+    },
     stop: () => coordinator.stop(),
   };
 }

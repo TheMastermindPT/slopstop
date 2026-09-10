@@ -1,11 +1,14 @@
 import { setImmediate as nextTurn } from "node:timers/promises";
 import { expect, it } from "vitest";
-import {
-  CanonicalCommandRepositoryError,
-  type WriterFenceCheck,
-} from "../../src/storage/canonical-command-repository.js";
+import { CanonicalCommandRepositoryError } from "../../src/storage/canonical-command-repository.js";
 import { CanonicalWriterLeaseError } from "../../src/storage/canonical-writer-lease.js";
 import { createOpeningRelease } from "../../src/storage/project-storage-opening.js";
+import {
+  busyCommand,
+  expectMigratedSwitchDrain,
+  holdMigratedSettlement,
+  migratedUnsupported,
+} from "./conformance-counter-command.js";
 import {
   activateSwitchSource,
   expectNoSwitchAcquisition,
@@ -20,7 +23,6 @@ import {
   switchBrokenTarget,
   switchCommandFailure,
   switchCommands,
-  switchDeferred,
   switchFixture,
   switchProjects,
   switchReleaseFailure,
@@ -33,75 +35,11 @@ import {
 
 it.each(["current", "stale", "rejected"] as const)(
   "waits for all admitted fence checks before switching ownership",
-  async (outcome) => {
-    const f = switchFixture();
-    const switchProject = requireSwitch(f.owner);
-    await activateSwitchSource(f);
-    const first = switchDeferred<WriterFenceCheck>();
-    const second = switchDeferred<WriterFenceCheck>();
-    f.projects.A.repository.verifyFence
-      .mockImplementationOnce(() => first.promise)
-      .mockImplementationOnce(() => second.promise);
-    const command1 = observeSwitchPromise(f.owner.execute(switchCommands.A));
-    const command2 = observeSwitchPromise(f.owner.execute(switchCommands.ASecond));
-    const switching = observeSwitchPromise(switchProject(switchRequests.AB));
-    expect(await f.owner.execute(switchCommands.A)).toEqual(
-      switchCommandFailure("coordinator-unavailable"),
-    );
-    expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(2);
-    expect(command1.isSettled()).toBe(false);
-    expect(command2.isSettled()).toBe(false);
-    expect(f.log).toEqual([]);
-    const status =
-      outcome === "rejected"
-        ? "broken"
-        : outcome === "stale"
-          ? "stale-writer"
-          : "settlement-unavailable";
-    if (outcome === "rejected") first.reject(new Error("private rejected fence"));
-    else first.resolve({ status: outcome });
-    expect(await command1.promise).toEqual(switchCommandFailure(status));
-    await nextTurn();
-    expect(command2.isSettled()).toBe(false);
-    expect(switching.isSettled()).toBe(false);
-    expect(f.log).toEqual([]);
-    if (outcome === "rejected") second.reject(new Error("private rejected fence"));
-    else second.resolve({ status: outcome });
-    expect(await command2.promise).toEqual(switchCommandFailure(status, switchCommands.ASecond));
-    expect(await switching.promise).toEqual(switchTarget());
-    expect(f.log).toEqual([...sourceReleaseOrder, ...targetAcquireOrder]);
-    await f.owner.stop();
-  },
+  (outcome) => expectMigratedSwitchDrain(outcome),
 );
 
 it("waits for all admitted fence checks before switching ownership", async () => {
-  const f = switchFixture();
-  const switchProject = requireSwitch(f.owner);
-  await activateSwitchSource(f);
-  const held = switchDeferred<WriterFenceCheck>();
-  f.projects.A.repository.verifyFence
-    .mockImplementationOnce(() => held.promise)
-    .mockImplementationOnce(() => {
-      // This throws in the repository call itself, not after awaiting a promise.
-      throw new Error("private broken fence");
-    });
-  const first = observeSwitchPromise(f.owner.execute(switchCommands.A));
-  const thrown = f.owner.execute(switchCommands.ASecond);
-  const switching = observeSwitchPromise(switchProject(switchRequests.AB));
-  expect(await thrown).toEqual(switchCommandFailure("broken", switchCommands.ASecond));
-  expect(await f.owner.execute(switchCommands.A)).toEqual(
-    switchCommandFailure("coordinator-unavailable"),
-  );
-  await nextTurn();
-  expect(first.isSettled()).toBe(false);
-  expect(switching.isSettled()).toBe(false);
-  expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(2);
-  expect(f.log).toEqual([]);
-  held.resolve({ status: "current" });
-  expect(await first.promise).toEqual(switchCommandFailure("settlement-unavailable"));
-  expect(await switching.promise).toEqual(switchTarget());
-  expect(f.log).toEqual([...sourceReleaseOrder, ...targetAcquireOrder]);
-  await f.owner.stop();
+  await expectMigratedSwitchDrain("rejected", "sql");
 });
 
 it.each(["A.fence", "A.repository.close", "A.lease.close", "A.storage.close"])(
@@ -186,7 +124,7 @@ function retryTimes(f: SwitchFixture) {
 it.each(releaseCases)(
   "retains the source epoch and resumes only unfinished switch release stages",
   async (row) => {
-    const f = switchFixture();
+    const f = switchFixture(true);
     const switchProject = requireSwitch(f.owner);
     injectReleaseFailure(f, row);
     await activateSwitchSource(f);
@@ -230,9 +168,7 @@ it.each(releaseCases)(
     expect(f.projects.A.native.unlock).toHaveBeenCalledTimes(
       row.stage === "A.lease.unlock" ? 3 : 1,
     );
-    expect(await f.owner.execute(switchCommands.B)).toEqual(
-      switchCommandFailure("settlement-unavailable", switchCommands.B),
-    );
+    expect(await f.owner.execute(switchCommands.B)).toEqual(migratedUnsupported(switchCommands.B));
     expect(failure).toEqual(switchReleaseFailure(row.code));
     await f.owner.stop();
   },
@@ -281,7 +217,7 @@ it.each(["canonical", "runtime"] as const)(
 );
 
 it("reactivates the same Project with a new activation epoch", async () => {
-  const f = switchFixture();
+  const f = switchFixture(true);
   const switchProject = requireSwitch(f.owner);
   await activateSwitchSource(f);
   expect(await switchProject(switchRequests.AA)).toEqual(
@@ -294,11 +230,11 @@ it("reactivates the same Project with a new activation epoch", async () => {
   expect(f.projects.A.storage).toHaveBeenCalledTimes(2);
   expect(f.projects.A.lease).toHaveBeenCalledTimes(2);
   expect(await f.owner.execute(switchCommands.A)).toEqual(switchCommandFailure("stale-activation"));
-  expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(0);
+  expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(0);
   expect(await f.owner.execute(switchCommands.ANew)).toEqual(
-    switchCommandFailure("settlement-unavailable", switchCommands.ANew),
+    migratedUnsupported(switchCommands.ANew, 2),
   );
-  expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(1);
+  expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(1);
   f.reset();
   expect(await switchProject(switchRequests.AA)).toEqual(
     switchSourceFailure("stale-activation", switchRequests.AA),
@@ -448,7 +384,7 @@ function expectTargetResources(f: SwitchFixture, kind: (typeof targetCases)[numb
 it.each(targetCases)(
   "returns the exact target activation outcome without rolling back released A",
   async (kind) => {
-    const f = switchFixture();
+    const f = switchFixture(kind === "writable");
     const switchProject = requireSwitch(f.owner);
     await activateSwitchSource(f);
     const target = targetOutcome(f, kind);
@@ -461,14 +397,10 @@ it.each(targetCases)(
     expect(await f.owner.execute(switchCommands.A)).toEqual(
       switchCommandFailure(active ? "project-mismatch" : "inactive"),
     );
-    const status =
-      kind === "writable"
-        ? "settlement-unavailable"
-        : kind === "contended"
-          ? "read-only"
-          : "inactive";
     expect(await f.owner.execute(switchCommands.B)).toEqual(
-      switchCommandFailure(status, switchCommands.B),
+      kind === "writable"
+        ? migratedUnsupported(switchCommands.B)
+        : switchCommandFailure(kind === "contended" ? "read-only" : "inactive", switchCommands.B),
     );
     expectTargetResources(f, kind);
     if (!active) {
@@ -567,11 +499,10 @@ it.each(failedCleanupCases)(
 it.each(["switch", "stop"] as const)(
   "preserves owned resources when the release clock throws",
   async (operation) => {
-    const f = switchFixture();
+    const f = switchFixture(true);
     const switchProject = operation === "switch" ? requireSwitch(f.owner) : undefined;
     await activateSwitchSource(f);
-    const held = switchDeferred<WriterFenceCheck>();
-    f.projects.A.repository.verifyFence.mockImplementationOnce(() => held.promise);
+    const held = holdMigratedSettlement(f.projects.A.real, "current");
     const admitted = f.owner.execute(switchCommands.A);
     const error = new Error("private release clock");
     f.clock
@@ -586,18 +517,18 @@ it.each(["switch", "stop"] as const)(
         : f.owner.stop();
     const rejected = expect(lifecycle).rejects.toBe(error);
     if (operation === "stop") expect(f.owner.stop()).toBe(lifecycle);
-    await nextTurn();
+    await held.ready;
     expect(f.clock).toHaveBeenCalledTimes(0);
     expect(f.log).toEqual([]);
-    held.resolve({ status: "current" });
+    held.release();
     const admittedResult = await admitted;
     await rejected;
     expect(f.log).toEqual([]);
     expectNoSwitchAcquisition(f);
     const executable = await f.owner.execute(switchCommands.A);
-    expect(executable.status).toBe("settlement-unavailable");
-    expect(executable).toEqual(switchCommandFailure("settlement-unavailable"));
-    expect(admittedResult).toEqual(switchCommandFailure("settlement-unavailable"));
+    expect(executable.status).toBe("settled");
+    expect(executable).toEqual(migratedUnsupported(switchCommands.A));
+    expect(admittedResult).toEqual(migratedUnsupported(switchCommands.A));
     f.times(switchTimes.T1, switchTimes.T2);
     if (switchProject !== undefined)
       expect(await switchProject(switchRequests.AB)).toEqual(switchTarget());
@@ -699,20 +630,18 @@ async function expectQueuedSwitchOutcome(
   expect(f.projects.A.session.close).toHaveBeenCalledTimes(1);
   if (scenario === "writable") {
     expect(f.projects.B.activate).toHaveBeenCalledTimes(1);
-    expect(await f.owner.execute(switchCommands.B)).toEqual(
-      switchCommandFailure("settlement-unavailable", switchCommands.B),
-    );
+    expect(await f.owner.execute(switchCommands.B)).toEqual(migratedUnsupported(switchCommands.B));
   }
   if (scenario === "same-project")
     expect(await f.owner.execute(switchCommands.ANew)).toEqual(
-      switchCommandFailure("settlement-unavailable", switchCommands.ANew),
+      migratedUnsupported(switchCommands.ANew, 2),
     );
 }
 
 it.each(queuedSwitchCases)(
   "revalidates queued switch sources against the preceding lifecycle result",
   async (scenario) => {
-    const f = switchFixture();
+    const f = switchFixture(scenario === "writable" || scenario === "same-project");
     const switchProject = requireSwitch(f.owner);
     await activateSwitchSource(f);
     const hold = f.hold("A.fence");
@@ -788,7 +717,7 @@ it.each([
 ] as const)(
   "orders stop and activation behind switching without reopening admission",
   async (scenario) => {
-    const f = switchFixture();
+    const f = switchFixture(scenario === "wrong-source" || scenario === "activate-rejected");
     const switchProject = requireSwitch(f.owner);
     await activateSwitchSource(f);
     if (scenario === "stop-first") {
@@ -804,7 +733,7 @@ it.each([
       expect(await rejected).toEqual(switchSourceFailure("project-mismatch", wrong));
       expect(await valid).toEqual(switchTarget());
       expect(await f.owner.execute(switchCommands.B)).toEqual(
-        switchCommandFailure("settlement-unavailable", switchCommands.B),
+        migratedUnsupported(switchCommands.B),
       );
     } else if (scenario === "failed-stop") {
       f.faults.set("A.repository.close", [new Error("private stop failure")]);
@@ -843,9 +772,7 @@ async function queuedActivation(
   if (scenario === "activate-rejected") {
     expectNoSwitchAcquisition(f, "C");
     expect(f.projects.B.session.close).toHaveBeenCalledTimes(0);
-    expect(await f.owner.execute(switchCommands.B)).toEqual(
-      switchCommandFailure("settlement-unavailable", switchCommands.B),
-    );
+    expect(await f.owner.execute(switchCommands.B)).toEqual(migratedUnsupported(switchCommands.B));
   } else {
     expect(f.projects.C.storage).toHaveBeenCalledTimes(1);
     expect(f.log).toEqual([
@@ -877,7 +804,7 @@ import {
 } from "./project-storage-create-fixture.js";
 
 it("round-trips safe switching through real runtime application coordinator and Writer", async () => {
-  const f = switchFixture();
+  const f = switchFixture(true);
   const storage = {
     ...createUnavailableProjectStorageApplication(),
     stop: vi.fn(async () => f.touch("storage.stop")),
@@ -897,16 +824,11 @@ it("round-trips safe switching through real runtime application coordinator and 
     await channel.expectEvents(expected);
     await channel.post(switchMessages.B);
     expected.push(
-      switchEvent(
-        4,
-        404,
-        "project.command.result",
-        switchCommandFailure("settlement-unavailable", switchCommands.B),
-      ),
+      switchEvent(4, 404, "project.command.result", migratedUnsupported(switchCommands.B)),
     );
     await channel.expectEvents(expected);
-    expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(0);
-    expect(f.projects.B.repository.verifyFence).toHaveBeenCalledTimes(1);
+    expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(0);
+    expect(f.projects.B.repository.settle).toHaveBeenCalledTimes(1);
   } finally {
     await channel.stop();
   }
@@ -1019,21 +941,6 @@ it("contains unexpected target exceptions without restoring the source over Mess
 import { createProjectCommand } from "@slopstop/protocol";
 import { switchMetadata } from "./project-storage-create-fixture.js";
 
-const admittedFenceStatuses = {
-  current: "settlement-unavailable",
-  stale: "stale-writer",
-  rejected: "broken",
-} as const;
-type AdmittedFenceOutcome = keyof typeof admittedFenceStatuses;
-
-function settleAdmittedFence(
-  check: ReturnType<typeof switchDeferred<WriterFenceCheck>>,
-  outcome: AdmittedFenceOutcome,
-) {
-  if (outcome === "rejected") check.reject(new Error("private rejected fence"));
-  else check.resolve({ status: outcome });
-}
-
 async function expectAdmittedDrainHeld(
   f: SwitchFixture,
   channel: ReturnType<typeof switchChannel>,
@@ -1043,7 +950,7 @@ async function expectAdmittedDrainHeld(
   expect(f.log).toEqual([]);
   expect(f.clock).toHaveBeenCalledTimes(0);
   expectNoSwitchAcquisition(f);
-  expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(2);
+  expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(1);
 }
 
 it.each([
@@ -1054,61 +961,57 @@ it.each([
 ] as const)(
   "waits for all admitted fence checks before switching ownership over real runtime MessagePorts: $first/$second",
   async ({ first: firstOutcome, second: secondOutcome }) => {
-    const f = switchFixture();
-    const first = switchDeferred<WriterFenceCheck>();
-    const second = switchDeferred<WriterFenceCheck>();
+    const f = switchFixture(true);
+    const outcome = secondOutcome === "rejected" ? "rejected" : firstOutcome;
+    let held: ReturnType<typeof holdMigratedSettlement> | undefined;
     const channel = switchChannel(f.owner);
     const expected = [switchEvent(1, 401, "project.activate.result", switchActive("A"))];
     try {
       await activateSwitchChannel(f, channel);
-      f.projects.A.repository.verifyFence
-        .mockImplementationOnce(() => first.promise)
-        .mockImplementationOnce(() => second.promise);
+      held = holdMigratedSettlement(
+        f.projects.A.real,
+        outcome,
+        firstOutcome === "current" ? "sql" : "begin",
+      );
       await channel.post(switchMessages.A);
-      await channel.post(createProjectCommand(switchMetadata(407), switchCommands.ASecond));
+      await channel.post(createProjectCommand(switchMetadata(407), switchCommands.A));
+      await held.ready;
+      await channel.post(createProjectCommand(switchMetadata(409), switchCommands.ASecond));
+      expected.push(
+        switchEvent(2, 409, "project.command.result", busyCommand(switchCommands.ASecond)),
+      );
       await expectAdmittedDrainHeld(f, channel, expected);
       await channel.post(switchMessages.switch);
       await expectAdmittedDrainHeld(f, channel, expected);
       await channel.post(createProjectCommand(switchMetadata(408), switchCommands.A));
       expected.push(
         switchEvent(
-          2,
+          3,
           408,
           "project.command.result",
           switchCommandFailure("coordinator-unavailable"),
         ),
       );
       await expectAdmittedDrainHeld(f, channel, expected);
-      settleAdmittedFence(first, firstOutcome);
-      await nextTurn();
+      held?.release();
+      const result =
+        outcome === "current"
+          ? migratedUnsupported(switchCommands.A)
+          : switchCommandFailure("stale-writer");
+      const event = outcome === "rejected" ? "request.failure" : "project.command.result";
+      const payload = outcome === "rejected" ? switchInternalFailure : result;
       expected.push(
-        switchEvent(
-          3,
-          403,
-          "project.command.result",
-          switchCommandFailure(admittedFenceStatuses[firstOutcome]),
-        ),
-      );
-      await expectAdmittedDrainHeld(f, channel, expected);
-      settleAdmittedFence(second, secondOutcome);
-      await nextTurn();
-      expected.push(
-        switchEvent(
-          4,
-          407,
-          "project.command.result",
-          switchCommandFailure(admittedFenceStatuses[secondOutcome], switchCommands.ASecond),
-        ),
-        switchEvent(5, 402, "project.switch.result", switchTarget()),
+        switchEvent(4, 403, event, payload),
+        switchEvent(5, 407, event, payload),
+        switchEvent(6, 402, "project.switch.result", switchTarget()),
       );
       await channel.expectEvents(expected);
       expect(f.log).toEqual([...sourceReleaseOrder, ...targetAcquireOrder]);
-      expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(2);
+      expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(1);
       expect(f.projects.A.repository.releaseFence).toHaveBeenCalledExactlyOnceWith(switchTimes.T1);
       expect(f.projects.B.storage).toHaveBeenCalledTimes(1);
     } finally {
-      first.resolve({ status: "current" });
-      second.resolve({ status: "current" });
+      held?.release();
       await channel.stop();
     }
     expect(f.log).toEqual([

@@ -970,7 +970,6 @@ import {
   sourceReleaseOrder,
   switchActive,
   switchChannel,
-  switchCommandFailure,
   switchCommands,
   switchEvent,
   switchFixture,
@@ -983,7 +982,7 @@ import {
 } from "./project-storage-create-fixture.js";
 
 it("switches activation ownership without closing ordinary Storage sessions", async () => {
-  const f = switchFixture();
+  const f = switchFixture(true);
   const storage = ordinarySwitchStorage(f);
   for (const name of ["A", "B"] as const)
     expect(await storage.application.open({ projectId: switchProjects[name].projectId })).toEqual(
@@ -1019,15 +1018,10 @@ it("switches activation ownership without closing ordinary Storage sessions", as
     expect(f.projects.B.session.close).toHaveBeenCalledTimes(0);
     await channel.post(switchMessages.B);
     expected.push(
-      switchEvent(
-        4,
-        404,
-        "project.command.result",
-        switchCommandFailure("settlement-unavailable", switchCommands.B),
-      ),
+      switchEvent(4, 404, "project.command.result", migratedUnsupported(switchCommands.B)),
     );
     await channel.expectEvents(expected);
-    expect(f.projects.B.repository.verifyFence).toHaveBeenCalledTimes(1);
+    expect(f.projects.B.repository.settle).toHaveBeenCalledTimes(1);
   } finally {
     await channel.stop();
   }
@@ -1048,3 +1042,5 @@ it("switches activation ownership without closing ordinary Storage sessions", as
   expect(f.projects.B.session.close).toHaveBeenCalledTimes(1);
   expect(storage.registryStop).toHaveBeenCalledTimes(1);
 });
+
+import { migratedUnsupported } from "./conformance-counter-command.js";

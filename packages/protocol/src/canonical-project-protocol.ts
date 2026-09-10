@@ -1,9 +1,13 @@
 import type {
+  CanonicalEventId as KernelCanonicalEventId,
+  CanonicalEventOrdinal as KernelCanonicalEventOrdinal,
   CommandId as KernelCommandId,
+  CommandReceiptId as KernelCommandReceiptId,
   ProjectActivationId as KernelProjectActivationId,
+  ProjectSequence as KernelProjectSequence,
   WriterGeneration as KernelWriterGeneration,
 } from "@slopstop/kernel";
-import { isWriterGeneration } from "@slopstop/kernel";
+import { isCanonicalEventOrdinal, isProjectSequence, isWriterGeneration } from "@slopstop/kernel";
 import { z } from "zod";
 import {
   domainIdentitySchema,
@@ -31,6 +35,93 @@ export const WriterGenerationSchema = z.custom<KernelWriterGeneration>(
   { message: "Writer generation must be a positive safe integer." },
 );
 export type WriterGeneration = z.infer<typeof WriterGenerationSchema>;
+
+export const CommandReceiptIdSchema = lowercaseDomainIdentitySchema(
+  domainIdentitySchema<KernelCommandReceiptId>(),
+);
+export type CommandReceiptId = z.infer<typeof CommandReceiptIdSchema>;
+export const CanonicalEventIdSchema = lowercaseDomainIdentitySchema(
+  domainIdentitySchema<KernelCanonicalEventId>(),
+);
+export type CanonicalEventId = z.infer<typeof CanonicalEventIdSchema>;
+export const ProjectSequenceSchema = z.custom<KernelProjectSequence>(
+  (value) => typeof value === "number" && isProjectSequence(value),
+);
+export type ProjectSequence = z.infer<typeof ProjectSequenceSchema>;
+export const CanonicalEventOrdinalSchema = z.custom<KernelCanonicalEventOrdinal>(
+  (value) => typeof value === "number" && isCanonicalEventOrdinal(value),
+);
+export type CanonicalEventOrdinal = z.infer<typeof CanonicalEventOrdinalSchema>;
+export const CanonicalSettlementTimeSchema = z.iso
+  .datetime({ offset: true })
+  .refine((value) => /T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u.test(value), {
+    message: "Settlement time must include seconds and use UTC Z notation.",
+  });
+
+export const SystemCommandRejectionCodeSchema = z.enum([
+  "IDEMPOTENCY_CONFLICT",
+  "COMMAND_TYPE_UNSUPPORTED",
+  "COMMAND_PAYLOAD_INVALID",
+]);
+export const CommandRejectionCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{0,63}$/u);
+export const CommandRejectionSchema = z
+  .strictObject({
+    code: CommandRejectionCodeSchema,
+    retryable: z.boolean(),
+  })
+  .refine(
+    (value) => !SystemCommandRejectionCodeSchema.safeParse(value.code).success || !value.retryable,
+    { message: "System command rejections are not retryable." },
+  )
+  .readonly();
+export type CommandRejection = z.infer<typeof CommandRejectionSchema>;
+
+export const CommandReceiptMetadataSchema = z.strictObject({
+  receiptId: CommandReceiptIdSchema,
+  projectId: ProjectIdSchema,
+  commandId: CommandIdSchema,
+  commandType: z
+    .string()
+    .min(1)
+    .refine((value) => value === value.trim()),
+  commandVersion: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  projectSequence: ProjectSequenceSchema,
+  writerGeneration: WriterGenerationSchema,
+  settledAt: CanonicalSettlementTimeSchema,
+});
+const eventReferenceSchema = z
+  .strictObject({
+    eventId: CanonicalEventIdSchema,
+    eventOrdinal: CanonicalEventOrdinalSchema,
+  })
+  .readonly();
+const eventReferencesSchema = z
+  .array(eventReferenceSchema)
+  .refine(
+    (events) =>
+      new Set(events.map((event) => event.eventId)).size === events.length &&
+      events.every((event, index) => event.eventOrdinal === index),
+    { message: "Event references must be unique and in contiguous ordinal order." },
+  )
+  .readonly();
+export const CanonicalCommandReceiptSchema = z
+  .discriminatedUnion("outcome", [
+    CommandReceiptMetadataSchema.extend({
+      outcome: z.literal("applied"),
+      events: eventReferencesSchema,
+    }),
+    CommandReceiptMetadataSchema.extend({
+      outcome: z.literal("unchanged"),
+      events: z.tuple([]).readonly(),
+    }),
+    CommandReceiptMetadataSchema.extend({
+      outcome: z.literal("rejected"),
+      events: z.tuple([]).readonly(),
+      rejection: CommandRejectionSchema,
+    }),
+  ])
+  .readonly();
+export type CanonicalCommandReceipt = z.infer<typeof CanonicalCommandReceiptSchema>;
 
 const diagnosticSchema = z.strictObject({
   code: z.string().min(1),
@@ -133,11 +224,63 @@ export type CanonicalProjectActivationResult = z.infer<
   typeof CanonicalProjectActivationResultSchema
 >;
 
+function isFiniteJson(value: unknown, ancestors: Set<object>): boolean {
+  if (value === null) return true;
+  switch (typeof value) {
+    case "string":
+    case "boolean":
+      return true;
+    case "number":
+      return Number.isFinite(value);
+    case "object":
+      return isFiniteJsonContainer(value, ancestors);
+    default:
+      return false;
+  }
+}
+
+function isJsonContainer(value: object): boolean {
+  if (Array.isArray(value)) return true;
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function isFiniteJsonMember(value: object, key: string | symbol, ancestors: Set<object>): boolean {
+  if (typeof key !== "string") return false;
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (descriptor === undefined) return false;
+  if (!descriptor.enumerable || !("value" in descriptor)) return false;
+  const child: unknown = descriptor.value;
+  return isFiniteJson(child, ancestors);
+}
+
+function isFiniteJsonContainer(value: object, ancestors: Set<object>): boolean {
+  if (ancestors.has(value) || !isJsonContainer(value)) return false;
+  const keys = Reflect.ownKeys(value);
+  if (Array.isArray(value)) {
+    if (keys.pop() !== "length") return false;
+    if (keys.length !== value.length) return false;
+    if (!keys.every((key, index) => key === String(index))) return false;
+  }
+  ancestors.add(value);
+  try {
+    return keys.every((key) => isFiniteJsonMember(value, key, ancestors));
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+export const CanonicalJsonValueSchema = z.custom<z.infer<ReturnType<typeof z.json>>>(
+  (value) => isFiniteJson(value, new Set()),
+  { message: "Value must be finite JSON data." },
+);
+export type CanonicalJsonValue = z.infer<typeof CanonicalJsonValueSchema>;
+
 export const TypedCommandSchema = z.strictObject({
   commandId: CommandIdSchema,
   type: z.string().trim().min(1),
   version: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
-  payload: z.json(),
+  payload: CanonicalJsonValueSchema,
 });
 export type TypedCommand = z.infer<typeof TypedCommandSchema>;
 export const CanonicalProjectCommandRequestSchema = z.strictObject({
@@ -154,6 +297,8 @@ export const CanonicalProjectCommandDiagnosticCodeSchema = z.enum([
   "WRITER_FENCE_STALE",
   "WRITER_FENCE_CHECK_FAILED",
   "COMMAND_SETTLEMENT_UNAVAILABLE",
+  "COMMAND_IN_PROGRESS",
+  "PROJECT_SEQUENCE_EXHAUSTED",
   "PROJECT_COORDINATOR_UNAVAILABLE",
 ]);
 export type CanonicalProjectCommandDiagnosticCode = z.infer<
@@ -172,16 +317,34 @@ function commandOutcomeSchema<
     diagnostic: diagnosticSchema.extend({ code: z.literal(code), retryable: z.literal(retryable) }),
   });
 }
-export const CanonicalProjectCommandResultSchema = z.discriminatedUnion("status", [
-  commandOutcomeSchema("inactive", "PROJECT_INACTIVE", false),
-  commandOutcomeSchema("project-mismatch", "PROJECT_NOT_ACTIVE", false),
-  commandOutcomeSchema("stale-activation", "PROJECT_ACTIVATION_STALE", false),
-  commandOutcomeSchema("read-only", "WRITER_UNAVAILABLE", true),
-  commandOutcomeSchema("stale-writer", "WRITER_FENCE_STALE", false),
-  commandOutcomeSchema("broken", "WRITER_FENCE_CHECK_FAILED", false),
-  commandOutcomeSchema("settlement-unavailable", "COMMAND_SETTLEMENT_UNAVAILABLE", false),
-  commandOutcomeSchema("coordinator-unavailable", "PROJECT_COORDINATOR_UNAVAILABLE", false),
-]);
+export const CanonicalProjectCommandResultSchema = z
+  .discriminatedUnion("status", [
+    z.strictObject({
+      status: z.literal("settled"),
+      projectId: ProjectIdSchema,
+      activationId: ProjectActivationIdSchema,
+      commandId: CommandIdSchema,
+      receipt: CanonicalCommandReceiptSchema,
+    }),
+    commandOutcomeSchema("command-busy", "COMMAND_IN_PROGRESS", true),
+    commandOutcomeSchema("writer-unavailable", "WRITER_UNAVAILABLE", false),
+    commandOutcomeSchema("sequence-exhausted", "PROJECT_SEQUENCE_EXHAUSTED", false),
+    commandOutcomeSchema("inactive", "PROJECT_INACTIVE", false),
+    commandOutcomeSchema("project-mismatch", "PROJECT_NOT_ACTIVE", false),
+    commandOutcomeSchema("stale-activation", "PROJECT_ACTIVATION_STALE", false),
+    commandOutcomeSchema("read-only", "WRITER_UNAVAILABLE", true),
+    commandOutcomeSchema("stale-writer", "WRITER_FENCE_STALE", false),
+    commandOutcomeSchema("broken", "WRITER_FENCE_CHECK_FAILED", false),
+    commandOutcomeSchema("settlement-unavailable", "COMMAND_SETTLEMENT_UNAVAILABLE", false),
+    commandOutcomeSchema("coordinator-unavailable", "PROJECT_COORDINATOR_UNAVAILABLE", false),
+  ])
+  .refine(
+    (result) =>
+      result.status !== "settled" ||
+      (result.receipt.projectId === result.projectId &&
+        result.receipt.commandId === result.commandId),
+    { path: ["receipt"], message: "Receipt must match command result correlation." },
+  );
 export type CanonicalProjectCommandResult = z.infer<typeof CanonicalProjectCommandResultSchema>;
 
 export const CanonicalProjectSwitchRequestSchema = z.strictObject({

@@ -6,12 +6,12 @@ branch: main
 repository: slopstop
 topic: canonical-project-writer
 tags: [design, project-writer, canonical-storage, typed-command, fencing, protocol]
-status: ready
+status: in-review
 parent: .rpiv/artifacts/research/2026-09-02_19-16-24_harness-capabilities-and-next-step.md
-last_updated: 2026-09-07T14:27:53+0100
+last_updated: 2026-09-07T19:24:49+0100
 last_updated_by: OpenCode
-last_updated_note: "User approved reviewed S4 B8/B15 scheduling contract bbe441879e65 and resumed implementation; original oracles and prior evidence preserved."
-content_hash: 2e819aad228920cc0e4655328554cb2c32fba52ec17937b9c8d3d742dac51d5a
+last_updated_note: "User chose Apply all for S5 intent F1-F3; appended dependency, temporal-authority and real-facade corrections pending fresh intent review and exact-contract approval."
+content_hash: 66361e4867e8d1c9991b939af796067f6fdc941b120631fa6b5c3a01ef55aecc
 ---
 
 # Design: Canonical Project Writer
@@ -12811,7 +12811,126 @@ Integration self-review used read-only file inspection and text searches, not ex
 - Accepted S1-S3 and their original integration target remain unchanged. The current S4 protocol candidate was frozen before this revision at `C:/Users/pedro/AppData/Local/Temp/opencode/slopstop-s4-protocol-20260907/manifest.json`, SHA-256 `b6f2e01c6643325cad14197feef404f61e1de0af0c9bc17f6212894426d9b74a`, with full patch SHA-256 `ca8a1f84f62df6ca81c89b227e7517e785f82eccf7aea203e81a72a42b73cf5c`. New contract identity and independent intent review are recorded in the linked execution evidence. Prior intent review of the changed scheduling is superseded; renewed intent review and exact-contract approval are required before S4-G2. No S4 candidate acceptance has occurred.
 - S5-S7 remain deferred. The known future S6 diagnostic and Expected Red preflight questions do not widen S4. No code, fixture, dependency, runtime retry policy, native proof, migration, staging, commit, push, merge, or global configuration change is part of this revision.
 
+## Follow-up: 2026-09-07T18:31:14+0100
+
+### S5 Revision Authority And Preservation
+
+- The user authorized document-only S5 contract reconciliation, followed by independent intent review and exact-contract human approval before any S5 source or test authoring/execution. This follow-up is proposed intent, not implementation approval, observed Red/Green, candidate acceptance, or integration consent. The current workspace remains `C:/Users/pedro/Documents/GitHub/slopstop`, branch `feat/canonical-project-writer`; original target is `main` at `59fb35be2b35a3e8d9f02ac4d274dc83f4fad468`.
+- Accepted S4 is the uncommitted snapshot manifest `49bb455e50145cc0bf06206dfef843e830849138bca1be3634a71c9ec27604ce`, not HEAD. Its frozen raw design SHA-256 is separately `7d42003d238dd994188137d47f0e5ba2123de482a3fc54c8de85349486a23508`. The current design deliberately differs only by this document revision; neither accepted pin is replaced. External acceptance remains at `C:/Users/pedro/AppData/Local/Temp/opencode/slopstop-s4-review-20260907.md`, heading `Human Acceptance: 2026-09-07T18:11:02+0100`.
+- This append supersedes only conflicting S5 execution scheduling, baseline-relative Expected Red claims, and the narrow fixture inventory interpretation below. Every original S1-S7 section, exact S5 Oracle and named test/location, pinned value, exclusion, prior follow-up and evidence remains verbatim. No S6/S7 behavior is reopened. Historical S5 design approvals do not approve this correction: renewed independent intent reviews and human approval of the new bound S5 contract are pending.
+- Original S5 section SHA-256 before revision is `f62fa2b8cb281aefbb00e54ebcce69499e41a89079ef7cd9a2fb6fcadfd2739b`; Decisions is `07d84892f9ba33f34c550a6c0256d17435376c3bbe690e0053616b28f8f63883`. Both raw and normalized-LF hashes agree and must remain unchanged. The append-only S5 evidence record linked below owns the new contract binding recipe, measured identity and review status; frontmatter and evidence are excluded from that contract identity.
+
+### S5 Stable Behavior And Seam Map
+
+There are exactly 29 original Behavior blocks. Assign `S5.B1` through `S5.B29` in their original document order; suffixes identify scenario/public-seam checks, not new behaviors or replacement oracles. Preserve the exact named family and its original test locations; append seam/scenario labels where a family needs multiple runnable cases. `J` = canonical JSON, `P` = protocol parse/envelope, `G` = registry, `R` = public repository (unit and real-worker integration remain distinct), `W` = Writer, `C` = coordinator, `A` = application, `T` = real MessagePort pipeline, `D` = worker driver, `B` = actual bootstrap. Additional composed portions use the already-listed settlement/runtime integration files, not new test files or private seams.
+
+| Stable ID | Exact Original Named Test | Public Checks |
+| --- | --- | --- |
+| S5.B1 | `characterizes real worker savepoint rollback release and outer commit` | D |
+| S5.B2 | `canonicalizes submitted command content without changing its meaning` | J bytes/hash; R persistence, replay and conflict |
+| S5.B3 | `preserves finite JSON edge values without prototype assignment` | J direct values; P preservation and envelope rejection |
+| S5.B4 | `freezes submission meaning before asynchronous repository work` | J snapshot; A same-stack request capture through real composition; R output-copy persistence through composition |
+| S5.B5 | `binds typed payload definitions and rejects duplicate registrations` | G construction, schema-only inference/type probes, preparation and runtime capability |
+| S5.B6 | `persists applied counter state receipt original pointer and ordered events atomically` | R exact receipt/rows; T correlated result/rows |
+| S5.B7 | `rolls back unchanged handler writes and persists only settlement` | R |
+| S5.B8 | `rolls back rejected handler writes and hashes safe rejection metadata` | R decision validation, rollback and rejection rows |
+| S5.B9 | `durably rejects unsupported definitions and invalid handler payloads` | R durable decisions/retry precedence; P/C admission; T composition |
+| S5.B10 | `replays exact receipts across repository and activation replacement` | R replacement/replay; C epoch admission; T reactivation |
+| S5.B11 | `persists distinct conflicts without changing original command authority` | R |
+| S5.B12 | `joins exact simultaneous commands and rejects distinct work as busy` | W promise identity/slot; C completion tracking; T one transaction/handler and no backlog |
+| S5.B13 | `allocates one safe Project sequence per first settlement and replays at the bound` | R sequence/bound/corruption; W/C busy/stale exclusions in composition |
+| S5.B14 | `fences settlement before mutations and distinguishes malformed authority` | R transactional fence/direct-call rejection; W stale mapping/blocking |
+| S5.B15 | `fails closed on broken original idempotency authority` | R unit/decorated-result and actual-row proof |
+| S5.B16 | `rejects corrupted replay children and conflicting receipts` | R unit/decorated-result and actual-row proof |
+| S5.B17 | `rolls back known settlement body faults at every mutation stage` | R exact rollback; W blocking; T causation-scoped failure |
+| S5.B18 | `revokes handler capabilities and observes swallowed or unawaited SQL failure` | R revocation/drain/output copy/rollback; T privacy/resource order |
+| S5.B19 | `blocks a Writer after settlement error without guessing commit outcome` | W sentinel/blocking; A propagation; T joined failures and uncertain commit observations |
+| S5.B20 | `drains settlement before retryable Writer release and retains failed transaction close` | R retained transaction; W closing/drain/retry; T full release order |
+| S5.B21 | `configures every canonical write connection and retains unfinished ownership` | R configuration/ownership; D detached connections; W failure consequence |
+| S5.B22 | `switches only after the admitted settlement and joins complete` | C FIFO/barrier/drain; T real switching and explicit retry |
+| S5.B23 | `validates settled receipts and new non-durable result branches` | P receipt/result/envelope; A original-request binding |
+| S5.B24 | `requires seconds in settlement clocks and persisted receipt instants` | P time; R input-clock/rollback/replay; W/T failure consequence |
+| S5.B25 | `rejects nil and max aggregate identities in handler events and replay rows` | G event input; R post-write failure and replay |
+| S5.B26 | `round-trips durable settlement and replay over real MessagePorts` | T exact four-event journey |
+| S5.B27 | `durably rejects commands with the production empty registry` | T manually composed real production Storage and empty registry |
+| S5.B28 | `isolates settlement failure from unrelated pending requests` | A invalid-result variant; T settlement failure and runtime isolation |
+| S5.B29 | `settles an unsupported command through the bootstrap-composed empty registry` | B real bootstrap dependencies, transport and actual rows |
+
+### S5 Baseline And Fixture Correction
+
+- Accepted `storage/canonical-command-repository.ts:120-135,335-353,394-416` already configures each write transaction through `configuredClient`, setting foreign keys/busy timeout and verifying foreign keys before BEGIN. B21's initial-connection-only Expected Red premise is superseded. Existing configuration, valid/failing observations already rejected, direct `verifyFence`, lifecycle barriers, and runtime failure isolation are characterization where already supported, not fabricated new Reds. B21 still requires every exact settlement/retry/release connection oracle, duplicate-alias/row-width rejection, concurrent ownership and retained-close proof; identify and observe the missing behavior at its actual seam before changing it.
+- Add `apps/harness/tests/integration/project-storage-create-fixture.ts` and `apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts` to the S5 MODIFY test/fixture inventory. The shared file contains canonical switch repositories/journeys as well as Storage-only helpers (`switchProjectPorts`/`switchFixture` at lines 560/624); the lifecycle file's `switches activation ownership without closing ordinary Storage sessions` at line 985 consumes them and asserts the obsolete healthy command result/verification call. This is a narrow canonical-only migration, not permission to rewrite unrelated Storage tests.
+- Keep Storage-only activate/execute/switch throwing stubs, required `switchProject`, Workspace behavior, real Storage owner and independently retained ordinary versus activation sessions unchanged in meaning. Preserve exact lifecycle/source/epoch/release ordering and independent close counts. Replace only canonical healthy command/fence-check observations with declared real registered settlement or durable unsupported and independent row proof. Ordinary `project.open`/`project.close` must not close the activation session, and switching must not close ordinary sessions. Do not substitute canned healthy receipts or a shared fake session to make those journeys pass.
+- Adapt canonical shared consumers to the two already-declared new fixture modules; new counter DDL, definitions, settlement holds and SQL decorators remain there. Verify real generation-2 schema before extending the fixture database; afterward use its explicit Storage activation port, never the production exact-schema opener on an extended database. B27/B29 keep unextended production databases and the real Storage owner/opener. Lifecycle-only repository literals receive required explicitly throwing unexpected-settlement methods; settled diagnostics are narrowed. No optional/backcompat fallback or production test registration is permitted.
+
+### S5 Bounded Execution Order
+
+These are ordered scheduling envelopes, not shared implementation batches or new slices. After exact-contract approval, B1 remains the first executable driver-only gate with its unchanged command and stop-on-failure rule; author it without any S5 production import. Thereafter execute one runnable bounded scenario (or one coherent parameterized scenario) Red -> minimal Green -> separate review/refactor per loop. The complete original Oracle paragraphs remain the sole exact expectations, including all adverse variants; the table only assigns their portions and prerequisites.
+
+| Order | Envelope | Checks And Prerequisites |
+| --- | --- | --- |
+| G0 | Driver/baseline | B1.D first; existing configuration/fence/lifecycle/runtime characterizations. Prepared production schema precedes fixture extension. |
+| G1 | Submitted JSON | B3.P/J, B2.J, B4.J; separate parser preservation from direct serializer/snapshot checks. |
+| G2 | Receipt contract | B23.P, B24.P; only necessary type/export scaffolding, no repository settlement prerequisite. |
+| G3 | Registry | B5.G, B25.G; type probes and runtime capability/preparation remain distinct checks. |
+| G4 | Transaction ownership | B21.R, B20.R activation/release ownership portions; existing configuration is preserved. Settlement portions follow their enabling path. |
+| G5 | First applied | B14.R then B6.R including zero events; attach B17 mutation-stage faults, B24.R input clocks, B25.R handler events and B4/B18 output-copy checks before their respective enabling changes. |
+| G6 | Original applied replay | B10.R applied, B2.R reordering, B15.R original authority, B16.R applied children, B24.R replay time, B25.R replay IDs; valid lookup and each validation family use separate loops. |
+| G7 | Unchanged | B7.R, B10.R unchanged, B16.R unchanged children; B18 held issued-SQL drain and B17 savepoint rollback/release faults accompany the relevant savepoint changes. |
+| G8 | Rejected | B8.R, B10.R rejected, B16.R rejection children and B17 rejection-insert faults; retain both retryability values and every malformed decision case. |
+| G9 | Conflicts | B11.R, B2.R changed-content/default/transform distinctions, B16.R conflict validation; original pointer and replacement/replay are retained. |
+| G10 | Durable admission rejection | B9.R; conflict support already exists for corrected same-ID input, and original replay precedes definition/schema changes. |
+| G11 | Bounds/remaining faults | B13.R; complete B17/B18 cases not yet exercised. Already-enabled safeguards use their earlier exact causal proof, not later absence-based Reds. |
+| G12 | Writer | Forwarding/B14.W, then B12.W, B19.W, B20.W in separate loops; B17.W/B21.W consequences accompany the relevant change. |
+| G13 | Application | B23.A, B4.A and B19.A; adversarial typed public-port results prove validation/propagation, never replace real healthy journey proof. |
+| G14 | Coordinator/composition | B6.T, B9.P/C/T, B10.C/T, B12.C/T, B13 composed exclusions, B22.C/T, B26.T, B27.T; separate routing, join/busy tracking and lifecycle drainage loops. Migrate canonical activation/switch/ordinary-session consumers here. |
+| G15 | Failure composition | Complete B4 composed mutation, B17.T, B18.T, B19.T, B20.T, B21 settlement configuration/consequence, B24.W/T and B28.A/T checks using their earlier enabling-change proof where applicable. |
+| G16 | Bootstrap | B29.B real factory/transport/rows; its first behavioral observation must precede any earlier bootstrap wiring that can satisfy it, not wait for this final-composition envelope. |
+| G17 | Final scope | Every existing S5 automated/manual gate plus the narrow fixture delta; no global/deep/build/package/install/mutation/native-crash or S6/S7 expansion. |
+
+- Before a change can satisfy multiple necessary shared-behavior checks, author and observe those runnable checks individually at their public seams before that enabling change; do not gather the entire slice into one all-tests Red/implementation batch. Move only prerequisite-ready observations earlier. Attach each Red to its exact scenario, seam, pre-change identity and enabling change. No repository stage may demand absent application/runtime settlement to reach Green.
+- Later composition checks still run every original assertion at their own real seam. They may link exact earlier lower-seam causal Red/Green proof for the same behavior plus current composed Green, never claim the lower seam alone proves runtime wiring, invent a later absent-feature Red, or waive new behavior. Any genuinely new composition behavior gets its own observed Red before implementation. If unexpectedly Green with no earlier relevant Red, stop and reconcile the proof/contract before proceeding; never deliberately regress production or call missing evidence exempt.
+- Use minimal compilable public-interface scaffolding only when needed to reach behavioral Red: contract-valid unsatisfied typed results where available, otherwise an explicit unimplemented throw. Missing imports, type/setup failures, timeouts and private-state/raw-source assertions are not behavioral Red. Type-only brands/exports and required dependency/member wiring with no behavior are separately recorded wiring work, not settlement proof. Actual bootstrap registry/factory/clock/ID routing may enable B29: observe its real unsupported-settlement oracle before that change, even if signatures force wiring earlier. No fake healthy receipt, widened temporary result union, optional dependency or test-handler bootstrap fallback is allowed.
+- Preserve all exact B29 constraints, including real `startHarnessProcessRuntime`, no substituted application/registry/repository/clock/identity generators, only its explicitly allowed generated receipt/time values, actual returned activation, fingerprint/row/retry/causation proof and awaited stop. B27 is not a substitute. Keep all B17/B19 distinctions between known-body rollback and commit/timeout/close-after-commit uncertainty, every validation/corruption exclusion, all B1 compatibility limits and every separate repository/Writer/application/runtime check unchanged.
+- Existing Automated Verification and Manual Verification remain binding and unchecked here. The lifecycle integration file already belongs to the final Storage regression command; retain the command while classifying only its canonical consumer as migrated rather than claiming the entire file unchanged. No original oracle is displaced by a scheduling summary. Complete Architecture and File Map are bound as cumulative projections, not live source or permission to implement later-slice deltas. Current source and this narrowly scoped execution correction govern baseline attribution; broader projection conflicts require reconciliation, not silent implementation.
+
+## Follow-up: 2026-09-07T19:24:49+0100
+
+### S5 Applied Intent Corrections
+
+- The user explicitly chose `Apply all` for F1, F2 and F3 in the separate S5 evidence's `Plan Review (S5 Execution Correction)`. This authorizes this document-only correction, not the resulting contract hash, dependency reconciliation, source/tests, or implementation. Required fresh independent intent reviews and human exact-contract approval remain pending; the document stays `in-review`. No reviewer is dispatched by this author.
+- Preserve the complete original S1-S7 sections/oracles, earlier follow-up `2026-09-07T18:31:14+0100`, failed intent review and v1 packet verbatim. This append supersedes only the three conflicting provisions below, including their cumulative Architecture/File Map projections; all other boundaries, exact expectations, evidence obligations, B1 driver gate, B29 pre-wiring observation and bounded red-green/review loops remain binding. Accepted S4 snapshot/design and original main target remain unchanged.
+
+### F1: Declared Kernel Dependency Prerequisite
+
+- Extend the future S5 MODIFY inventory to `apps/harness/package.json` and `pnpm-lock.yaml` solely to declare the harness dependency `@slopstop/kernel` as `workspace:*` and reconcile that workspace link/importer. This narrowly supersedes the original S5 manifest/install exclusions and the prior follow-up's corresponding exclusions. It permits reuse of the existing kernel `isDomainIdentity` through its declared package export; no copied identity regex, deep import or protocol re-export workaround.
+- Only after exact revised-contract approval and applicable build authorization, permit bounded pnpm install/link reconciliation for this existing workspace dependency. No version upgrades, external dependency additions, unrelated lockfile/importer changes, persistent package-manager configuration, or incidental native/build/package work is authorized. Inspect and stop/reconcile any resolution beyond that bounded delta rather than accepting broad lock churn. No manifest, lock or installed dependency changes happen during this document revision.
+- B1 remains the first executable behavior gate, driver-only and using the already-pinned installed driver, with its unchanged stop-on-failure rule. The dependency prerequisite follows successful B1 and must finish before G3 registry/kernel-import work. Record it separately as dependency/type wiring, not behavioral Red/Green; missing package resolution is never B5/B25 Red. This does not authorize early bootstrap behavior: B29's exact observation still precedes any wiring that could satisfy it.
+
+### F2: Full-Precision Settlement Fence Authority
+
+- Supersede only the projected `Date.parse` equality at `readCanonicalWriterFence` (original Architecture lines 3923-3936). Compare validated complete UTC instants at full supplied fractional precision, normalizing only equivalent trailing fractional zeros (including omitted versus all-zero fraction), with no millisecond conversion, truncation or rounding. Reuse one shared owner carrying the accepted `normalizedUtc` semantics from `storage/canonical-command-repository.ts:109-117`; preserve S3 activation/direct-fence/release semantics and characterize them before/after any behavior-preserving extraction. Do not change prior validators or normalize stored/replayed receipt text.
+- Extend S5.B14.R in its existing repository unit and real repository integration locations with the following independent binding cases before the enabling settlement-authority validation change in G5. For acquired/activated comparisons, test both active and released fence rows; for released/released comparisons, use coherent released rows with otherwise matching acquired/activated data. Keep Project/generation/token/shape valid and vary only the named pair, through real persisted rows where legal or the approved public SELECT-result decorator.
+
+| Pair Values (Complete UTC Text) | AcquiredAt Versus ActivatedAt | ReleasedAt Versus GenerationReleasedAt |
+| --- | --- | --- |
+| `2026-09-05T12:00:00.123456Z` versus `2026-09-05T12:00:00.123457Z` | Unexpected failure for active or released authority, never current or stale | Unexpected failure, never stale |
+| `2026-09-05T12:00:00.123456Z` versus `2026-09-05T12:00:00.1234560Z` | Equivalent binding; normal authority outcome | Equivalent binding; normal released-stale outcome |
+| `2026-09-05T12:00:00Z` versus `2026-09-05T12:00:00.000Z` | Equivalent binding; normal authority outcome | Equivalent binding; normal released-stale outcome |
+
+- Each differing-instant case fails unexpectedly before registry, handler, receipt/event ID or settlement-clock work, and preserves exact pre-call domain, state and ledger rows; no mutation is allowed. Retain the B14 Writer blocking and generic runtime failure consequences through their separately scheduled seams. Equivalent pairs preserve normal active/current settlement, well-formed authority-mismatch stale, and coherent released-stale behavior rather than making all authority fail. Keep the original B14 zero-row and every malformed-authority oracle unchanged. The new settlement comparison needs its own relevant Red before implementation; existing S3 precision support is characterization, not a fabricated Red. Any unexpectedly Green case without relevant earlier causal proof triggers the existing stop/reconcile rule.
+
+### F3: Production Facade Proof At First Settlement
+
+- Decompose only S5.B5's runtime own-key/context portion as `S5.B5.R` in G5, before creation of the real settlement-owned handler facade, alongside the first real handler settlement. Add `apps/harness/tests/integration/canonical-command-repository.integration.test.ts` as a permitted test location for that same original named family. Retain the registry test location and all B5.G inference, function-property NoInfer/type-capability, construction/duplicate-key, selection and preparation checks in G3 unchanged.
+- Through the real worker repository and fixture-registered handler, capture the actual public handler argument and its actual transaction facade: facade own keys are exactly `["execute"]`; context has exactly `projectId`, `payload`, `transaction`, with no additional string/symbol keys, correct Project identity and schema-produced payload, and the same observed facade. Preserve the original absence of terminal/client/token capabilities and all type probes. No fixture-supplied pretend facade or registry-only execution can satisfy this runtime proof. It inspects the public handler argument, not private repository state.
+- Author and observe this bounded B5.R case before the enabling real-facade change, using minimal unsatisfied typed scaffolding only if needed for a loaded behavioral Red. Its first settled result/independent rows must retain B6's real settlement proof. G3 never demands absent repository settlement to reach Green; later B18 revocation/drain checks remain separate, with relevant shared checks observed before their enabling changes. This seam correction changes no original B5 key/context oracle and creates no all-tests implementation batch.
+
+- Contract binding v2 retains the prior packet's first 20 bindings in order, with only binding 6's end heading changed to this exact follow-up heading so its prior `32a8ede271c02690185ac25c6ce0e13b327899acf97cab17a1795fb9cfa235de` bytes/hash remain unchanged; append this correction section as binding 21, ending immediately before `## TDD Evidence (implement)`. All other bound sections/files remain identical. New measured contract/raw-document identities and triage dispositions belong in append-only S5 evidence. Failed prior review is preserved, not relabelled passing; fresh exact-input review and human approval are still required before any dependency/source/test execution.
+
 ## TDD Evidence (implement)
+
+- S5 document reconciliation and pending intent-review/approval bindings: [separate append-only S5 evidence](../evidence/2026-09-07_canonical-project-writer-s5.md). No S5 behavioral execution is claimed.
 
 ### Phase 1: Correlated Request Failure
 

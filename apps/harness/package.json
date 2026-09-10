@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@libsql/client": "catalog:",
+    "@slopstop/kernel": "workspace:*",
     "@slopstop/protocol": "workspace:*",
     "drizzle-orm": "catalog:",
     "fs-native-extensions": "catalog:",
