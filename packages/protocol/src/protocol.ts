@@ -8,6 +8,10 @@ import {
   CanonicalProjectCommandRequestSchema,
   type CanonicalProjectCommandResult,
   CanonicalProjectCommandResultSchema,
+  type CanonicalProjectSwitchRequest,
+  CanonicalProjectSwitchRequestSchema,
+  type CanonicalProjectSwitchResult,
+  CanonicalProjectSwitchResultSchema,
 } from "./canonical-project-protocol.js";
 import type {
   ProjectStorageCloseRequest,
@@ -203,6 +207,11 @@ const WorkspaceProjectionInvalidatedEventSchema = z.strictObject({
 export const DesktopMessageSchema = z.discriminatedUnion("command", [
   z.strictObject({
     ...DesktopCommandMetadataSchema,
+    command: z.literal("project.switch"),
+    payload: CanonicalProjectSwitchRequestSchema,
+  }),
+  z.strictObject({
+    ...DesktopCommandMetadataSchema,
     command: z.literal("project.activate"),
     payload: CanonicalProjectActivationRequestSchema,
   }),
@@ -221,6 +230,11 @@ export const DesktopMessageSchema = z.discriminatedUnion("command", [
 export type DesktopMessage = z.infer<typeof DesktopMessageSchema>;
 
 export const HarnessMessageSchema = z.discriminatedUnion("event", [
+  z.strictObject({
+    ...HarnessEventMetadataSchema,
+    event: z.literal("project.switch.result"),
+    payload: CanonicalProjectSwitchResultSchema,
+  }),
   z.strictObject({
     ...HarnessEventMetadataSchema,
     event: z.literal("project.activate.result"),
@@ -431,6 +445,20 @@ export function createProjectCommandResultEvent(
   result: CanonicalProjectCommandResult,
 ): HarnessMessage {
   return createEvent(metadata, "project.command.result", result);
+}
+
+export function createProjectSwitchCommand(
+  metadata: CommandMetadata,
+  request: CanonicalProjectSwitchRequest,
+): DesktopMessage {
+  return createCommand(metadata, "project.switch", request);
+}
+
+export function createProjectSwitchResultEvent(
+  metadata: EventMetadata,
+  result: CanonicalProjectSwitchResult,
+): HarnessMessage {
+  return createEvent(metadata, "project.switch.result", result);
 }
 
 export function createProjectOpenCommand(

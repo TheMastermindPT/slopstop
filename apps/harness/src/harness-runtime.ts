@@ -4,6 +4,7 @@ import {
   createProjectCommandResultEvent,
   createProjectCreateResultEvent,
   createProjectOpenResultEvent,
+  createProjectSwitchResultEvent,
   createReadyEvent,
   createRequestFailureEvent,
   createSystemFailureEvent,
@@ -56,14 +57,18 @@ function runtimeShutdownFailure(failures: readonly unknown[]): unknown {
 
 type CanonicalProjectMessage = Extract<
   DesktopMessage,
-  { command: "project.activate" | "project.command" }
+  { command: "project.activate" | "project.switch" | "project.command" }
 >;
 type ProjectStorageMessage = Extract<
   DesktopMessage,
   { command: "project.open" | "project.create" | "project.close" }
 >;
 function isCanonicalProjectMessage(message: DesktopMessage): message is CanonicalProjectMessage {
-  return message.command === "project.activate" || message.command === "project.command";
+  return (
+    message.command === "project.activate" ||
+    message.command === "project.switch" ||
+    message.command === "project.command"
+  );
 }
 function isProjectStorageMessage(message: DesktopMessage): message is ProjectStorageMessage {
   return ["project.open", "project.create", "project.close"].includes(message.command);
@@ -106,6 +111,11 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
       const result = await options.canonicalProjectApplication.activate(message.payload);
       options.transport.send(
         createProjectActivateResultEvent(nextMetadata(message.messageId), result),
+      );
+    } else if (message.command === "project.switch") {
+      const result = await options.canonicalProjectApplication.switchProject(message.payload);
+      options.transport.send(
+        createProjectSwitchResultEvent(nextMetadata(message.messageId), result),
       );
     } else {
       const result = await options.canonicalProjectApplication.execute(message.payload);

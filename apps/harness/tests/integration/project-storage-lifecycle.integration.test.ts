@@ -111,6 +111,9 @@ function unusedCanonicalApplication() {
     activate: async () => {
       throw new Error("Canonical activation is unused by this fixture.");
     },
+    switchProject: async () => {
+      throw new Error("Unexpected canonical Project switch in this fixture.");
+    },
     execute: async () => {
       throw new Error("Canonical command is unused by this fixture.");
     },
@@ -959,4 +962,89 @@ it("rejects the retained stop promise when registry shutdown fails after create 
     "after-create-drain-entered",
     "registry-stop",
   ]);
+});
+
+import {
+  activateSwitchChannel,
+  ordinarySwitchStorage,
+  sourceReleaseOrder,
+  switchActive,
+  switchChannel,
+  switchCommandFailure,
+  switchCommands,
+  switchEvent,
+  switchFixture,
+  switchMessages,
+  switchMetadata,
+  switchProjects,
+  switchTarget,
+  switchTimes,
+  targetAcquireOrder,
+} from "./project-storage-create-fixture.js";
+
+it("switches activation ownership without closing ordinary Storage sessions", async () => {
+  const f = switchFixture();
+  const storage = ordinarySwitchStorage(f);
+  for (const name of ["A", "B"] as const)
+    expect(await storage.application.open({ projectId: switchProjects[name].projectId })).toEqual(
+      f.projects[name].session.result,
+    );
+  const channel = switchChannel(f.owner, storage.application);
+  try {
+    await activateSwitchChannel(f, channel);
+    await channel.post(switchMessages.switch);
+    const expected = [
+      switchEvent(1, 401, "project.activate.result", switchActive("A")),
+      switchEvent(2, 402, "project.switch.result", switchTarget()),
+    ];
+    await channel.expectEvents(expected);
+    expect(f.log).toEqual([...sourceReleaseOrder, ...targetAcquireOrder]);
+    expect(f.projects.A.session.close).toHaveBeenCalledTimes(1);
+    expect(f.projects.B.session.close).toHaveBeenCalledTimes(0);
+    expect(storage.ordinary.A).toHaveBeenCalledTimes(0);
+    expect(storage.ordinary.B).toHaveBeenCalledTimes(0);
+    await channel.post(
+      createProjectCloseCommand(switchMetadata(406), { projectId: switchProjects.A.projectId }),
+    );
+    expected.push(
+      switchEvent(3, 406, "project.close.result", {
+        status: "closed",
+        request: { projectId: switchProjects.A.projectId },
+      }),
+    );
+    await channel.expectEvents(expected);
+    expect(storage.ordinary.A).toHaveBeenCalledTimes(1);
+    expect(storage.ordinary.B).toHaveBeenCalledTimes(0);
+    expect(f.projects.A.session.close).toHaveBeenCalledTimes(1);
+    expect(f.projects.B.session.close).toHaveBeenCalledTimes(0);
+    await channel.post(switchMessages.B);
+    expected.push(
+      switchEvent(
+        4,
+        404,
+        "project.command.result",
+        switchCommandFailure("settlement-unavailable", switchCommands.B),
+      ),
+    );
+    await channel.expectEvents(expected);
+    expect(f.projects.B.repository.verifyFence).toHaveBeenCalledTimes(1);
+  } finally {
+    await channel.stop();
+  }
+  expect(f.log).toEqual([
+    ...sourceReleaseOrder,
+    ...targetAcquireOrder,
+    "ordinary.A.close",
+    `B.fence@${switchTimes.T5}`,
+    "B.repository.close",
+    "B.lease.unlock",
+    "B.lease.close",
+    "B.storage.close",
+    "ordinary.B.close",
+    "registry.stop",
+  ]);
+  expect(storage.ordinary.A).toHaveBeenCalledTimes(1);
+  expect(storage.ordinary.B).toHaveBeenCalledTimes(1);
+  expect(f.projects.B.session.close).toHaveBeenCalledTimes(1);
+  expect(storage.registryStop).toHaveBeenCalledTimes(1);
 });

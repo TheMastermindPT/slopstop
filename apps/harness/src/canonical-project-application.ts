@@ -3,15 +3,19 @@ import type {
   CanonicalProjectActivationResult,
   CanonicalProjectCommandRequest,
   CanonicalProjectCommandResult,
+  CanonicalProjectSwitchRequest,
+  CanonicalProjectSwitchResult,
 } from "@slopstop/protocol";
 import {
   CanonicalProjectActivationResultSchema,
   CanonicalProjectCommandResultSchema,
+  CanonicalProjectSwitchResultSchema,
 } from "@slopstop/protocol";
 import type { z } from "zod";
 import type { ActiveProjectCoordinator } from "./active-project-coordinator.js";
 export interface CanonicalProjectApplication {
   activate(request: CanonicalProjectActivationRequest): Promise<CanonicalProjectActivationResult>;
+  switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
   execute(request: CanonicalProjectCommandRequest): Promise<CanonicalProjectCommandResult>;
   stop(): Promise<void>;
 }
@@ -42,6 +46,17 @@ export function createCanonicalProjectApplication(
         CanonicalProjectActivationResultSchema,
         await coordinator.activate(request),
         (result) => result.request.projectId === request.projectId,
+      ),
+    switchProject: async (request) =>
+      validatedResult(
+        CanonicalProjectSwitchResultSchema,
+        await coordinator.switchProject(request),
+        (result) =>
+          [
+            result.request.from.projectId === request.from.projectId,
+            result.request.from.activationId === request.from.activationId,
+            result.request.to.projectId === request.to.projectId,
+          ].every(Boolean),
       ),
     execute: async (request) =>
       validatedResult(

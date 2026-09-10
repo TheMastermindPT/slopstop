@@ -1,3 +1,4 @@
+import { setImmediate as nextTurn } from "node:timers/promises";
 import {
   type CanonicalProjectCommandRequest,
   CanonicalProjectCommandRequestSchema,
@@ -7,6 +8,25 @@ import {
   WriterGenerationSchema,
 } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
+import {
+  activateSwitchSource,
+  expectNoSwitchAcquisition,
+  newAEpoch,
+  observeSwitchPromise,
+  requireSwitch,
+  switchActive,
+  switchAlreadyActive,
+  switchBrokenTarget,
+  switchCommandFailure,
+  switchCommands,
+  switchFixture,
+  switchProjects,
+  switchReleaseFailure,
+  switchRequests,
+  switchSourceFailure,
+  switchTarget,
+  switchTimes,
+} from "../tests/integration/project-storage-create-fixture.js";
 import * as coordinators from "./active-project-coordinator.js";
 import type { ProjectStorageActivationOutcome } from "./project-storage-application.js";
 import {
@@ -59,10 +79,10 @@ const commandFailures = {
   "stale-activation": ["PROJECT_ACTIVATION_STALE", "The command activation is stale.", false],
   "read-only": ["WRITER_UNAVAILABLE", "The active Project has no write authority.", true],
   "stale-writer": ["WRITER_FENCE_STALE", "The active Writer fence is stale.", false],
-  broken: ["WRITER_FENCE_CHECK_FAILED", "Canonical Writer fence verification failed.", false],
+  broken: ["WRITER_FENCE_CHECK_FAILED", "The active Writer fence could not be verified.", false],
   "settlement-unavailable": [
     "COMMAND_SETTLEMENT_UNAVAILABLE",
-    "Canonical command settlement is not available.",
+    "Typed-command settlement is not available in this release slice.",
     false,
   ],
   "coordinator-unavailable": ["PROJECT_COORDINATOR_UNAVAILABLE", unavailableMessage, false],
@@ -447,11 +467,286 @@ it("retains a repository client when failed activation cleanup cannot close it",
         request,
         diagnostic: {
           code: "WRITER_FENCE_ACTIVATION_FAILED",
-          message: "Canonical Writer fence activation failed.",
+          message: "Writer fence could not be activated.",
           retryable: false,
         },
       });
       expect(f.calls).toEqual(["repository-cleanup", "lease", "storage"]);
     }
+  }
+});
+
+const ineligibleSources = [
+  "inactive",
+  "stopped",
+  "wrong-project",
+  "wrong-epoch",
+  "failed-acquisition",
+] as const;
+async function arrangeIneligibleSource(
+  f: ReturnType<typeof switchFixture>,
+  state: (typeof ineligibleSources)[number],
+) {
+  let expected: "inactive" | "coordinator-unavailable" | "project-mismatch" | "stale-activation" =
+    "inactive";
+  if (state === "stopped") {
+    await f.owner.stop();
+    expected = "coordinator-unavailable";
+  }
+  if (state === "wrong-project") {
+    expect(await f.owner.activate(switchRequests.AB.to)).toEqual(switchActive("B"));
+    expected = "project-mismatch";
+  }
+  if (state === "wrong-epoch") {
+    f.dependencies.createActivationId.mockReturnValueOnce(newAEpoch);
+    expect(await f.owner.activate(switchRequests.AA.to)).toEqual({
+      ...switchActive("A"),
+      activationId: newAEpoch,
+    });
+    expected = "stale-activation";
+  }
+  if (state === "failed-acquisition") {
+    f.faults.set("A.repository.close", [new Error("private failed acquisition close")]);
+    f.projects.A.activate.mockImplementationOnce(async () => {
+      try {
+        await f.projects.A.repository.close();
+      } catch {
+        return {
+          status: "broken",
+          error: new CanonicalCommandRepositoryError("WRITER_REPOSITORY_CLOSE_FAILED"),
+          cleanup: { close: f.projects.A.repository.close },
+        };
+      }
+      throw new Error("Expected acquisition cleanup failure.");
+    });
+    expect(await f.owner.activate(switchRequests.AA.to)).toEqual({
+      ...switchBrokenTarget("WRITER_REPOSITORY_CLOSE_FAILED"),
+      request: switchRequests.AA.to,
+    });
+    expect(f.projects.A.repository.close).toHaveBeenCalledTimes(1);
+    expected = "coordinator-unavailable";
+  }
+  return expected;
+}
+
+it.each(ineligibleSources)(
+  "rejects ineligible switch sources before touching dependencies",
+  async (state) => {
+    const f = switchFixture();
+    const switchProject = requireSwitch(f.owner);
+    const expected = await arrangeIneligibleSource(f, state);
+    f.reset();
+    expect(await switchProject(switchRequests.AB)).toEqual(switchSourceFailure(expected));
+    expect(f.all).toEqual([]);
+    const altered = {
+      ...switchRequests.AB,
+      from: { ...switchProjects.A, activationId: newAEpoch },
+    };
+    if (state === "wrong-project" || state === "failed-acquisition") {
+      expect(await switchProject(altered)).toEqual(switchSourceFailure(expected, altered));
+      expect(f.all).toEqual([]);
+    }
+    if (state === "wrong-project")
+      expect(await f.owner.execute(switchCommands.B)).toEqual(
+        switchCommandFailure("settlement-unavailable", switchCommands.B),
+      );
+    if (state === "wrong-epoch")
+      expect(await f.owner.execute(switchCommands.ANew)).toEqual(
+        switchCommandFailure("settlement-unavailable", switchCommands.ANew),
+      );
+    if (state === "failed-acquisition")
+      expect(await f.owner.execute(switchCommands.A)).toEqual(
+        switchCommandFailure("coordinator-unavailable"),
+      );
+    await f.owner.stop();
+  },
+);
+
+it.each(["switch", "activate", "stop", "initial"] as const)(
+  "closes command admission in the same turn as lifecycle enqueue",
+  async (operation) => {
+    const f = switchFixture();
+    if (operation !== "initial") await activateSwitchSource(f);
+    const startSwitch = () => requireSwitch(f.owner)(switchRequests.AB);
+    const actions = {
+      switch: startSwitch,
+      activate: () => f.owner.activate(switchRequests.AB.to),
+      stop: () => f.owner.stop(),
+      initial: () => f.owner.activate(switchRequests.AA.to),
+    };
+    const lifecycle = actions[operation]();
+    const command = f.owner.execute(switchCommands.A);
+    expect(await command).toEqual(switchCommandFailure("coordinator-unavailable"));
+    expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(0);
+    const result = await lifecycle;
+    if (operation === "switch") {
+      expect(result).toEqual(switchTarget());
+      expect(await f.owner.execute(switchCommands.B)).toEqual(
+        switchCommandFailure("settlement-unavailable", switchCommands.B),
+      );
+      expect(await f.owner.execute(switchCommands.A)).toEqual(
+        switchCommandFailure("project-mismatch"),
+      );
+    }
+    if (operation === "activate") {
+      expect(result).toEqual(switchAlreadyActive("B"));
+      expect(await f.owner.execute(switchCommands.A)).toEqual(
+        switchCommandFailure("settlement-unavailable"),
+      );
+    }
+    if (operation === "initial") expect(result).toEqual(switchActive("A"));
+    await f.owner.stop();
+  },
+);
+
+it.each(["A.fence", "B.storage.acquire"])(
+  "closes command admission in the same turn as lifecycle enqueue",
+  async (stage) => {
+    const f = switchFixture();
+    const switchProject = requireSwitch(f.owner);
+    await activateSwitchSource(f);
+    const hold = f.hold(stage);
+    const switching = observeSwitchPromise(switchProject(switchRequests.AB));
+    await nextTurn();
+    expect(f.all).toContain(stage);
+    expect(switching.isSettled()).toBe(false);
+    for (const input of [switchCommands.A, switchCommands.B]) {
+      expect(await f.owner.execute(input)).toEqual(
+        switchCommandFailure("coordinator-unavailable", input),
+      );
+    }
+    expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(0);
+    expect(f.projects.B.repository.verifyFence).toHaveBeenCalledTimes(0);
+    expect(f.projects.A.storage).toHaveBeenCalledTimes(1);
+    hold.resolve();
+    expect(await switching.promise).toEqual(switchTarget());
+    expect(await f.owner.execute(switchCommands.B)).toEqual(
+      switchCommandFailure("settlement-unavailable", switchCommands.B),
+    );
+    expect(await f.owner.execute(switchCommands.A)).toEqual(
+      switchCommandFailure("project-mismatch"),
+    );
+    await f.owner.stop();
+  },
+);
+
+it.each(["switch", "stop"] as const)(
+  "requires exact retained source authority for an explicit switch retry",
+  async (retry) => {
+    const f = switchFixture();
+    const switchProject = requireSwitch(f.owner);
+    await activateSwitchSource(f);
+    f.faults.set("A.repository.close", [new Error("private close")]);
+    const failed = await switchProject(switchRequests.AB);
+    expect(failed).toEqual(switchReleaseFailure("WRITER_REPOSITORY_CLOSE_FAILED"));
+    f.reset();
+    const wrong = { ...switchRequests.AB, from: switchProjects.C };
+    const stale = { ...switchRequests.AB, from: { ...switchProjects.A, activationId: newAEpoch } };
+    expect(await switchProject(wrong)).toEqual(switchSourceFailure("project-mismatch", wrong));
+    expect(await switchProject(stale)).toEqual(switchSourceFailure("stale-activation", stale));
+    expect(f.all).toEqual([]);
+    expect(f.projects.A.repository.close).toHaveBeenCalledTimes(1);
+    f.clock.mockReset().mockReturnValue(switchTimes.T5);
+    f.times(switchTimes.T3, switchTimes.T5);
+    if (retry === "switch") {
+      expect(await switchProject(switchRequests.AC)).toEqual(
+        switchTarget(switchActive("C"), switchRequests.AC),
+      );
+      expect(f.projects.C.storage).toHaveBeenCalledTimes(1);
+    } else {
+      await f.owner.stop();
+      expectNoSwitchAcquisition(f, "C");
+    }
+    await nextTurn();
+    expect(f.projects.A.repository.close).toHaveBeenCalledTimes(2);
+    expectNoSwitchAcquisition(f);
+    expect(failed).toEqual(switchReleaseFailure("WRITER_REPOSITORY_CLOSE_FAILED"));
+    await f.owner.stop();
+  },
+);
+
+import {
+  expectFailedSwitchOwnership,
+  injectSwitchCleanupClock,
+  injectSwitchException,
+  sourceReleaseOrder,
+  switchCleanupFailures,
+  switchExceptionCases,
+  switchPrivateFailure,
+  targetAcquireOrder,
+} from "../tests/integration/project-storage-create-fixture.js";
+import { createCanonicalProjectApplication } from "./canonical-project-application.js";
+
+it.each(switchExceptionCases)(
+  "contains unexpected target exceptions without restoring the source: $stage",
+  async (row) => {
+    for (const seam of ["coordinator", "application"]) {
+      const f = switchFixture();
+      await activateSwitchSource(f);
+      const error = new Error(switchPrivateFailure);
+      injectSwitchException(f, row.stage, error);
+      const app = createCanonicalProjectApplication(f.owner);
+      const operation = seam === "coordinator" ? f.owner : app;
+      await expect(operation.switchProject(switchRequests.AB)).rejects.toBe(error);
+      expect(f.log).toEqual([...sourceReleaseOrder, ...row.attempted, ...row.cleanup]);
+      const settled = [...f.all];
+      await nextTurn();
+      expect(f.all).toEqual(settled);
+      for (const input of [switchCommands.A, switchCommands.B])
+        expect(await operation.execute(input)).toEqual(switchCommandFailure("inactive", input));
+      expect(f.projects.A.storage).toHaveBeenCalledTimes(1);
+      expect(f.projects.B.repository.close).toHaveBeenCalledTimes(0);
+      expect(f.projects.B.repository.releaseFence).toHaveBeenCalledTimes(0);
+      await operation.stop();
+      expect(f.log).toEqual([...sourceReleaseOrder, ...row.attempted, ...row.cleanup]);
+    }
+  },
+);
+
+it.each(switchCleanupFailures)(
+  "contains unexpected target exceptions without restoring the source: cleanup $stage",
+  async (row) => {
+    for (const seam of ["coordinator", "application"]) {
+      const f = switchFixture();
+      await activateSwitchSource(f);
+      injectSwitchException(f, "repository.activate", new Error(switchPrivateFailure));
+      f.faults.set(row.stage, [new Error("private cleanup failure")]);
+      const operation =
+        seam === "coordinator" ? f.owner : createCanonicalProjectApplication(f.owner);
+      expect(await operation.switchProject(switchRequests.AB)).toEqual(
+        switchTarget(switchBrokenTarget(row.code)),
+      );
+      const initial = [...sourceReleaseOrder, ...targetAcquireOrder, ...row.completed, row.stage];
+      expect(f.log).toEqual(initial);
+      await expectFailedSwitchOwnership(f);
+      await operation.stop();
+      expect(f.log).toEqual([...initial, ...row.remaining]);
+      expect(f.projects.B.storage).toHaveBeenCalledTimes(1);
+    }
+  },
+);
+
+it("contains unexpected target exceptions without restoring the source: cleanup clock identity", async () => {
+  for (const seam of ["coordinator", "application"]) {
+    const f = switchFixture();
+    await activateSwitchSource(f);
+    injectSwitchException(f, "repository.activate", new Error(switchPrivateFailure));
+    const clockError = new Error("private cleanup clock");
+    injectSwitchCleanupClock(f, clockError);
+    const operation = seam === "coordinator" ? f.owner : createCanonicalProjectApplication(f.owner);
+    await expect(operation.switchProject(switchRequests.AB)).rejects.toBe(clockError);
+    expect(f.clock).toHaveBeenCalledTimes(3);
+    expect(f.log).toEqual([...sourceReleaseOrder, ...targetAcquireOrder]);
+    await expectFailedSwitchOwnership(f);
+    expect(f.clock).toHaveBeenCalledTimes(3);
+    await operation.stop();
+    expect(f.clock).toHaveBeenCalledTimes(4);
+    expect(f.log).toEqual([
+      ...sourceReleaseOrder,
+      ...targetAcquireOrder,
+      "B.lease.unlock",
+      "B.lease.close",
+      "B.storage.close",
+    ]);
   }
 });

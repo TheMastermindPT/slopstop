@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import { z } from "zod";
+import type { CanonicalProjectSwitchRequest, CanonicalProjectSwitchResult } from "./index.js";
+import * as protocol from "./index.js";
 import {
   createHandshakeCommand,
   createProjectCloseCommand,
@@ -556,5 +559,163 @@ describe("desktop protocol parsing", () => {
         issues: [{ code: "unsupported_value", path: "protocolVersion" }],
       },
     });
+  });
+});
+
+const switchRequest = {
+  from: {
+    projectId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+    activationId: "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
+  },
+  to: { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
+};
+const switchCommandEnvelope = {
+  protocolVersion: 4,
+  messageType: "command",
+  messageId: "11111111-1111-4111-8111-111111111402",
+  sentAt: "2026-09-05T12:00:00.000Z",
+  command: "project.switch",
+  payload: switchRequest,
+};
+const switchResult = {
+  status: "target-result",
+  request: switchRequest,
+  target: {
+    status: "active",
+    request: { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
+    access: "read-write",
+    activationId: "ebbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2",
+    writerGeneration: 1,
+  },
+};
+const switchEventEnvelope = {
+  protocolVersion: 4,
+  messageType: "event",
+  messageId: "99999999-9999-4999-8999-999999999402",
+  sentAt: "2026-09-05T12:00:04.000Z",
+  sequence: 2,
+  causationId: switchCommandEnvelope.messageId,
+  event: "project.switch.result",
+  payload: switchResult,
+};
+
+describe.each([
+  { name: "A to B", payload: switchRequest },
+  {
+    name: "A to A",
+    payload: { ...switchRequest, to: { projectId: switchRequest.from.projectId } },
+  },
+])("switch transport $name", ({ payload }) => {
+  it("parses only strict source-qualified switch requests", () => {
+    const envelope = { ...switchCommandEnvelope, payload };
+    expect(parseDesktopMessage(envelope)).toEqual({ ok: true, value: envelope });
+  });
+});
+
+const malformedSwitchPayloads = [
+  { ...switchRequest, extra: true },
+  { ...switchRequest, from: { ...switchRequest.from, extra: true } },
+  { ...switchRequest, to: { ...switchRequest.to, extra: true } },
+  { ...switchRequest, to: { ...switchRequest.to, activationId: switchRequest.from.activationId } },
+  { to: switchRequest.to },
+  { ...switchRequest, from: { activationId: switchRequest.from.activationId } },
+  { ...switchRequest, from: { projectId: switchRequest.from.projectId } },
+  { ...switchRequest, to: {} },
+  ...(
+    [
+      { parent: "from", key: "projectId", value: switchRequest.from.projectId },
+      { parent: "from", key: "activationId", value: switchRequest.from.activationId },
+      { parent: "to", key: "projectId", value: switchRequest.to.projectId },
+    ] as const
+  ).flatMap(({ parent, key, value }) =>
+    ["not-a-uuid", "00000000-0000-0000-0000-000000000000", value.toUpperCase()].map((invalid) => ({
+      ...switchRequest,
+      [parent]: { ...switchRequest[parent], [key]: invalid },
+    })),
+  ),
+];
+
+describe.each(malformedSwitchPayloads.map((payload, index) => ({ payload, index })))(
+  "malformed switch transport $index",
+  ({ payload }) => {
+    it("parses only strict source-qualified switch requests", () => {
+      const parsed = parseDesktopMessage({ ...switchCommandEnvelope, payload });
+      expect(parsed.ok).toBe(false);
+      if (parsed.ok) throw new Error("Malformed switch transport was accepted.");
+      expect(parsed.error.code).toBe("PROTOCOL_MESSAGE_INVALID");
+    });
+  },
+);
+
+describe.each([
+  {
+    factoryName: "createProjectSwitchCommand",
+    schemaName: "CanonicalProjectSwitchRequestSchema",
+    metadata: { messageId: switchCommandEnvelope.messageId, sentAt: switchCommandEnvelope.sentAt },
+    payload: switchRequest,
+    envelope: switchCommandEnvelope,
+    parse: parseDesktopMessage,
+  },
+  {
+    factoryName: "createProjectSwitchResultEvent",
+    schemaName: "CanonicalProjectSwitchResultSchema",
+    metadata: {
+      messageId: switchEventEnvelope.messageId,
+      sentAt: switchEventEnvelope.sentAt,
+      sequence: 2,
+      causationId: switchCommandEnvelope.messageId,
+    },
+    payload: switchResult,
+    envelope: switchEventEnvelope,
+    parse: parseHarnessMessage,
+  },
+])(
+  "public switch factory $factoryName",
+  ({ factoryName, schemaName, metadata, payload, envelope, parse }) => {
+    it("round-trips exported protocol v4 switch factories", () => {
+      const factory: unknown = Reflect.get(protocol, factoryName);
+      expect(typeof factory).toBe("function");
+      if (typeof factory !== "function") throw new Error("Expected a public switch factory.");
+      const schema: unknown = Reflect.get(protocol, schemaName);
+      expect(schema).toBeInstanceOf(z.ZodType);
+      if (!(schema instanceof z.ZodType)) throw new Error("Expected a public switch schema.");
+      expect(schema.parse(payload)).toEqual(payload);
+      const actual: unknown = factory(metadata, schema.parse(payload));
+      expect(actual).toEqual(envelope);
+      expect(parse(actual)).toEqual({ ok: true, value: envelope });
+      expect(parse({ ...envelope, extra: true })).toEqual({
+        ok: false,
+        error: {
+          code: "PROTOCOL_MESSAGE_INVALID",
+          issues: [{ code: "unrecognized_keys", path: "$" }],
+        },
+      });
+      expect(parse({ ...envelope, protocolVersion: 3 })).toEqual({
+        ok: false,
+        error: {
+          code: "PROTOCOL_VERSION_UNSUPPORTED",
+          issues: [{ code: "unsupported_value", path: "protocolVersion" }],
+        },
+      });
+      expectTypeOf<CanonicalProjectSwitchRequest>().toEqualTypeOf<
+        z.infer<typeof protocol.CanonicalProjectSwitchRequestSchema>
+      >();
+      expectTypeOf<CanonicalProjectSwitchResult>().toEqualTypeOf<
+        z.infer<typeof protocol.CanonicalProjectSwitchResultSchema>
+      >();
+      expectTypeOf<
+        Parameters<typeof protocol.createProjectSwitchCommand>[1]
+      >().toEqualTypeOf<CanonicalProjectSwitchRequest>();
+      expectTypeOf<
+        Parameters<typeof protocol.createProjectSwitchResultEvent>[1]
+      >().toEqualTypeOf<CanonicalProjectSwitchResult>();
+    });
+  },
+);
+
+it("round-trips exported protocol v4 switch factories", () => {
+  expect(parseHarnessMessage(switchEventEnvelope)).toEqual({
+    ok: true,
+    value: switchEventEnvelope,
   });
 });

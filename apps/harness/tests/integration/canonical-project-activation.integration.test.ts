@@ -205,6 +205,9 @@ function activationTransport(
       if (fail) throw new Error("C:\\private\\project\\slopstop.db");
       return app.activate(request);
     },
+    switchProject: async () => {
+      throw new Error("Unexpected canonical Project switch in this fixture.");
+    },
     execute: async (request: Parameters<typeof app.execute>[0]) => {
       entered = true;
       if (fail) throw new Error("secret command payload");

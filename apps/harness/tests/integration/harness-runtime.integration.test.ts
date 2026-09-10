@@ -79,6 +79,10 @@ function workspaceApplicationWithNotifications(
   };
 }
 
+async function unexpectedCanonicalSwitch(): Promise<never> {
+  throw new Error("Unexpected canonical Project switch in this fixture.");
+}
+
 function startRuntimeFixture(
   workspaceApplication: WorkspaceApplication,
   projectStorageApplication: ProjectStorageApplication = createUnavailableProjectStorageApplication(),
@@ -90,6 +94,7 @@ function startRuntimeFixture(
       activate: async () => {
         throw new Error("Canonical activation is unused by this fixture.");
       },
+      switchProject: unexpectedCanonicalSwitch,
       execute: async () => {
         throw new Error("Canonical command is unused by this fixture.");
       },
@@ -438,6 +443,7 @@ function canonicalChannelFixture() {
       if (fail) throw new Error("C:\\private\\project\\slopstop.db");
       return activationResult;
     },
+    switchProject: unexpectedCanonicalSwitch,
     execute: async () => {
       if (fail) throw new Error("secret command payload");
       return commandResult;
@@ -505,3 +511,100 @@ function canonicalChannelFixture() {
     },
   };
 }
+
+import {
+  CanonicalProjectSwitchResultSchema,
+  type ProjectStorageOpenResult,
+} from "@slopstop/protocol";
+import { vi } from "vitest";
+import {
+  activateSwitchChannel,
+  sourceReleaseOrder,
+  switchActive,
+  switchChannel,
+  switchCommandFailure,
+  switchDeferred,
+  switchEvent,
+  switchFixture,
+  switchInternalFailure,
+  switchMessages,
+  switchPrivateFailure,
+  switchProjects,
+} from "./project-storage-create-fixture.js";
+
+function isolatedSwitchOwner(f: ReturnType<typeof switchFixture>, kind: string) {
+  if (kind === "owner exception") {
+    f.faults.set("B.storage.acquire", [new Error(switchPrivateFailure)]);
+    return f.owner;
+  }
+  f.projects.B.storage.mockImplementation(async () => {
+    await f.run("B.storage.acquire");
+    return {
+      status: "not-registered",
+      result: { status: "not-registered", request: { projectId: switchProjects.B.projectId } },
+    };
+  });
+  return {
+    ...f.owner,
+    switchProject: async (request: Parameters<typeof f.owner.switchProject>[0]) => {
+      const result = CanonicalProjectSwitchResultSchema.parse(await f.owner.switchProject(request));
+      Reflect.set(result, "writerToken", switchPrivateFailure);
+      return result;
+    },
+  };
+}
+
+it.each(["owner exception", "invalid result"])(
+  "isolates switch request failure from an unrelated pending Storage request: %s",
+  async (kind) => {
+    const f = switchFixture();
+    const pendingC = switchDeferred<ProjectStorageOpenResult>();
+    const storage = {
+      ...createUnavailableProjectStorageApplication(),
+      open: vi.fn(() => pendingC.promise),
+      stop: vi.fn(async () => undefined),
+    };
+    const channel = switchChannel(isolatedSwitchOwner(f, kind), storage);
+    try {
+      await activateSwitchChannel(f, channel);
+      await channel.post(switchMessages.openC);
+      expect(storage.open).toHaveBeenCalledExactlyOnceWith({
+        projectId: switchProjects.C.projectId,
+      });
+      expect(channel.sent).toEqual([
+        switchEvent(1, 401, "project.activate.result", switchActive("A")),
+      ]);
+      await channel.post(switchMessages.switch);
+      const expected = [
+        switchEvent(1, 401, "project.activate.result", switchActive("A")),
+        switchEvent(2, 402, "request.failure", switchInternalFailure),
+      ];
+      await channel.expectEvents(expected);
+      await nextTurn();
+      await channel.expectEvents(expected);
+      expect(storage.stop).toHaveBeenCalledTimes(0);
+      expect(f.log).toEqual([...sourceReleaseOrder, "B.storage.acquire"]);
+      const missing = {
+        status: "not-registered",
+        request: { projectId: switchProjects.C.projectId },
+      } as const;
+      pendingC.resolve(missing);
+      await nextTurn();
+      expected.push(switchEvent(3, 405, "project.open.result", missing));
+      await channel.expectEvents(expected);
+      await channel.post(switchMessages.A);
+      expected.push(
+        switchEvent(4, 403, "project.command.result", switchCommandFailure("inactive")),
+      );
+      await channel.expectEvents(expected);
+      expect(f.projects.A.storage).toHaveBeenCalledTimes(1);
+      expect(storage.stop).toHaveBeenCalledTimes(0);
+    } finally {
+      pendingC.resolve({
+        status: "not-registered",
+        request: { projectId: switchProjects.C.projectId },
+      });
+      await channel.stop();
+    }
+  },
+);

@@ -3,12 +3,15 @@ import type {
   CanonicalProjectActivationResult,
   CanonicalProjectCommandRequest,
   CanonicalProjectCommandResult,
+  CanonicalProjectSwitchRequest,
+  CanonicalProjectSwitchResult,
   ProjectActivationId,
 } from "@slopstop/protocol";
 import {
   type CanonicalProjectActivationDiagnosticCode,
   CanonicalProjectActivationResultSchema,
   CanonicalProjectCommandResultSchema,
+  CanonicalProjectSwitchResultSchema,
   type ProjectId,
 } from "@slopstop/protocol";
 import {
@@ -36,6 +39,7 @@ import {
 import { SerialLock } from "./storage/serial-lock.js";
 export interface ActiveProjectCoordinator {
   activate(request: CanonicalProjectActivationRequest): Promise<CanonicalProjectActivationResult>;
+  switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
   execute(request: CanonicalProjectCommandRequest): Promise<CanonicalProjectCommandResult>;
   stop(): Promise<void>;
 }
@@ -76,6 +80,7 @@ type State =
   | Readonly<{
       status: "releasing" | "release-failed";
       projectId: ProjectId;
+      activationId: ProjectActivationId | null;
       ownership: Ownership;
     }>;
 type ReleaseResult =
@@ -127,12 +132,12 @@ const commandDiagnostics = {
   },
   broken: {
     code: "WRITER_FENCE_CHECK_FAILED",
-    message: "Canonical Writer fence verification failed.",
+    message: "The active Writer fence could not be verified.",
     retryable: false,
   },
   "settlement-unavailable": {
     code: "COMMAND_SETTLEMENT_UNAVAILABLE",
-    message: "Canonical command settlement is not available.",
+    message: "Typed-command settlement is not available in this release slice.",
     retryable: false,
   },
   "coordinator-unavailable": {
@@ -141,6 +146,46 @@ const commandDiagnostics = {
     retryable: false,
   },
 } as const;
+const switchDiagnostics = {
+  inactive: {
+    code: "PROJECT_INACTIVE",
+    message: "No Project is active for switching.",
+    retryable: false,
+  },
+  "coordinator-unavailable": commandDiagnostics["coordinator-unavailable"],
+  "project-mismatch": {
+    code: "PROJECT_NOT_ACTIVE",
+    message: "The switch source Project is not active.",
+    retryable: false,
+  },
+  "stale-activation": {
+    code: "PROJECT_ACTIVATION_STALE",
+    message: "The switch source activation is stale.",
+    retryable: false,
+  },
+} as const;
+
+function switchRejection(state: State): keyof typeof switchDiagnostics | undefined {
+  if (state.status === "inactive") return "inactive";
+  if (state.status === "active") return undefined;
+  if (state.status === "release-failed" && state.activationId !== null) return undefined;
+  return "coordinator-unavailable";
+}
+
+function ownedActivation(state: State) {
+  if (state.status === "active") return state.activation;
+  if (state.status === "release-failed" || state.status === "releasing") return state;
+  throw new Error("Canonical Project lifecycle state is inconsistent.");
+}
+
+function rejectSwitchSource(state: State, request: CanonicalProjectSwitchRequest) {
+  const unavailable = switchRejection(state);
+  if (unavailable !== undefined) return unavailable;
+  const source = ownedActivation(state);
+  if (source.projectId !== request.from.projectId) return "project-mismatch";
+  if (source.activationId !== request.from.activationId) return "stale-activation";
+  return undefined;
+}
 function commandFailure(
   request: CanonicalProjectCommandRequest,
   status: keyof typeof commandDiagnostics,
@@ -314,10 +359,7 @@ async function failedRepository(
       { ...ownership, stage: "repository-cleanup", cleanup: repository.cleanup },
       "WRITER_REPOSITORY_CLOSE_FAILED",
     );
-  return context.failed(
-    "WRITER_FENCE_ACTIVATION_FAILED",
-    "Canonical Writer fence activation failed.",
-  );
+  return context.failed("WRITER_FENCE_ACTIVATION_FAILED", "Writer fence could not be activated.");
 }
 
 async function acquireWritable(
@@ -393,21 +435,36 @@ export function createActiveProjectCoordinator(
   const admitted = new Set<Promise<void>>();
   let state: State = { status: "inactive" };
   let stopAttempt: Promise<void> | undefined;
+  let pendingLifecycle = 0;
 
-  const release = async (projectId: ProjectId, ownership: Ownership): Promise<ReleaseResult> => {
-    state = { status: "releasing", projectId, ownership };
-    try {
-      await Promise.all([...admitted]);
-      const result = await releaseOwnership(ownership, dependencies.now());
-      state =
-        result.status === "released"
-          ? { status: "inactive" }
-          : { status: "release-failed", projectId, ownership: result.ownership };
-      return result;
-    } catch (error) {
-      state = { status: "release-failed", projectId, ownership };
-      throw error;
-    }
+  const enqueue = <Result>(operation: () => Promise<Result>): Promise<Result> => {
+    pendingLifecycle++;
+    return lifecycle.run(async () => {
+      try {
+        return await operation();
+      } finally {
+        pendingLifecycle--;
+      }
+    });
+  };
+
+  const release = async (
+    owned: Readonly<{
+      projectId: ProjectId;
+      activationId: ProjectActivationId | null;
+      ownership: Ownership;
+    }>,
+  ): Promise<ReleaseResult> => {
+    await Promise.all([...admitted]);
+    // Clock failure must leave the original active or retained state intact.
+    const time = dependencies.now();
+    state = { ...owned, status: "releasing" };
+    const result = await releaseOwnership(owned.ownership, time);
+    state =
+      result.status === "released"
+        ? { status: "inactive" }
+        : { ...owned, status: "release-failed", ownership: result.ownership };
+    return result;
   };
 
   const retainFailure = (
@@ -415,7 +472,12 @@ export function createActiveProjectCoordinator(
     ownership: Ownership,
     code: CanonicalProjectActivationDiagnosticCode,
   ): CanonicalProjectActivationResult => {
-    state = { status: "release-failed", projectId: request.projectId, ownership };
+    state = {
+      status: "release-failed",
+      projectId: request.projectId,
+      activationId: null,
+      ownership,
+    };
     return activationFailure(
       request,
       "broken",
@@ -424,7 +486,7 @@ export function createActiveProjectCoordinator(
     );
   };
 
-  const activate = async (
+  const activateWithinLifecycle = async (
     request: CanonicalProjectActivationRequest,
   ): Promise<CanonicalProjectActivationResult> => {
     const rejected = activationRejection(state, request);
@@ -438,7 +500,9 @@ export function createActiveProjectCoordinator(
         state = { status: "inactive" };
         return Promise.resolve({ status: "released" });
       }
-      cleanupAttempt = release(request.projectId, ownership);
+      const retained = { projectId: request.projectId, activationId: null, ownership };
+      state = { ...retained, status: "release-failed" };
+      cleanupAttempt = release(retained);
       return cleanupAttempt;
     };
     const failed = async (
@@ -482,17 +546,41 @@ export function createActiveProjectCoordinator(
       state = { status: "stopped" };
       return;
     }
-    if (current.status === "activating")
-      throw new Error("Canonical Project lifecycle state is inconsistent.");
-    const owned = current.status === "active" ? current.activation : current;
-    const result = await release(owned.projectId, owned.ownership);
+    const result = await release(ownedActivation(current));
     if (result.status === "failed") throw new Error("Canonical Project activation release failed.");
     state = { status: "stopped" };
   };
 
   return {
-    activate: (request) => lifecycle.run(() => activate(request)),
+    activate: (request) => enqueue(() => activateWithinLifecycle(request)),
+    switchProject: (request) =>
+      enqueue(async () => {
+        const rejected = rejectSwitchSource(state, request);
+        if (rejected !== undefined)
+          return CanonicalProjectSwitchResultSchema.parse({
+            status: rejected,
+            request,
+            diagnostic: switchDiagnostics[rejected],
+          });
+        const released = await release(ownedActivation(state));
+        if (released.status === "failed")
+          return CanonicalProjectSwitchResultSchema.parse({
+            status: "release-failed",
+            request,
+            diagnostic: {
+              code: released.code,
+              message: "Project activation resources could not be released.",
+              retryable: released.code !== "WRITER_FENCE_STALE",
+            },
+          });
+        return {
+          status: "target-result",
+          request,
+          target: await activateWithinLifecycle(request.to),
+        };
+      }),
     execute: async (request) => {
+      if (pendingLifecycle > 0) return commandFailure(request, "coordinator-unavailable");
       if (state.status === "inactive") return commandFailure(request, "inactive");
       if (state.status !== "active") return commandFailure(request, "coordinator-unavailable");
       const active = state.activation;
@@ -522,7 +610,7 @@ export function createActiveProjectCoordinator(
     },
     stop: () => {
       if (stopAttempt !== undefined) return stopAttempt;
-      const attempt = lifecycle.run(stop);
+      const attempt = enqueue(stop);
       stopAttempt = attempt;
       void attempt.catch(() => {
         if (stopAttempt === attempt) stopAttempt = undefined;

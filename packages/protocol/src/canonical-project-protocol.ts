@@ -183,3 +183,77 @@ export const CanonicalProjectCommandResultSchema = z.discriminatedUnion("status"
   commandOutcomeSchema("coordinator-unavailable", "PROJECT_COORDINATOR_UNAVAILABLE", false),
 ]);
 export type CanonicalProjectCommandResult = z.infer<typeof CanonicalProjectCommandResultSchema>;
+
+export const CanonicalProjectSwitchRequestSchema = z.strictObject({
+  from: z.strictObject({
+    projectId: ProjectIdSchema,
+    activationId: ProjectActivationIdSchema,
+  }),
+  to: CanonicalProjectActivationRequestSchema,
+});
+export type CanonicalProjectSwitchRequest = z.infer<typeof CanonicalProjectSwitchRequestSchema>;
+
+function switchOutcomeSchema<
+  const Status extends
+    | "inactive"
+    | "project-mismatch"
+    | "stale-activation"
+    | "coordinator-unavailable",
+  const Code extends CanonicalProjectCommandDiagnosticCode,
+>(status: Status, code: Code) {
+  return z.strictObject({
+    status: z.literal(status),
+    request: CanonicalProjectSwitchRequestSchema,
+    diagnostic: diagnosticSchema.extend({
+      code: z.literal(code),
+      retryable: z.literal(false),
+    }),
+  });
+}
+
+const switchReleaseDiagnosticSchema = z.union([
+  diagnosticSchema.extend({
+    code: CanonicalProjectActivationDiagnosticCodeSchema.extract(["WRITER_FENCE_STALE"]),
+    retryable: z.literal(false),
+  }),
+  diagnosticSchema.extend({
+    code: CanonicalProjectActivationDiagnosticCodeSchema.extract([
+      "WRITER_FENCE_RELEASE_FAILED",
+      "WRITER_REPOSITORY_CLOSE_FAILED",
+      "WRITER_LEASE_OPEN_FAILED",
+      "WRITER_LEASE_LOCK_FAILED",
+      "WRITER_LEASE_UNLOCK_FAILED",
+      "WRITER_LEASE_CLOSE_FAILED",
+      "PROJECT_STORAGE_RELEASE_FAILED",
+    ]),
+    retryable: z.literal(true),
+  }),
+]);
+
+export const CanonicalProjectSwitchResultSchema = z
+  .discriminatedUnion("status", [
+    z.strictObject({
+      status: z.literal("target-result"),
+      request: CanonicalProjectSwitchRequestSchema,
+      target: CanonicalProjectActivationResultSchema,
+    }),
+    switchOutcomeSchema("inactive", "PROJECT_INACTIVE"),
+    switchOutcomeSchema("project-mismatch", "PROJECT_NOT_ACTIVE"),
+    switchOutcomeSchema("stale-activation", "PROJECT_ACTIVATION_STALE"),
+    switchOutcomeSchema("coordinator-unavailable", "PROJECT_COORDINATOR_UNAVAILABLE"),
+    z.strictObject({
+      status: z.literal("release-failed"),
+      request: CanonicalProjectSwitchRequestSchema,
+      diagnostic: switchReleaseDiagnosticSchema,
+    }),
+  ])
+  .refine(
+    (result) =>
+      result.status !== "target-result" ||
+      result.target.request.projectId === result.request.to.projectId,
+    {
+      path: ["target", "request", "projectId"],
+      message: "Switch target Project must match the requested destination.",
+    },
+  );
+export type CanonicalProjectSwitchResult = z.infer<typeof CanonicalProjectSwitchResultSchema>;

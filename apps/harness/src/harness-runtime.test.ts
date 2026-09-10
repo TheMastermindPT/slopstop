@@ -146,6 +146,7 @@ function canonicalRuntimeFixture() {
   const calls: string[] = [];
   const application = {
     activate: vi.fn(async () => activationResult),
+    switchProject: unexpectedCanonicalSwitch,
     execute: vi.fn(async () => commandResult),
     stop: vi.fn(async () => {
       calls.push("canonical");
@@ -278,11 +279,16 @@ function deferred<T>() {
   };
 }
 
+async function unexpectedCanonicalSwitch(): Promise<never> {
+  throw new Error("Unexpected canonical Project switch in this fixture.");
+}
+
 function unusedCanonicalApplication() {
   return {
     activate: async () => {
       throw new Error("Canonical activation is unused by this fixture.");
     },
+    switchProject: unexpectedCanonicalSwitch,
     execute: async () => {
       throw new Error("Canonical command is unused by this fixture.");
     },
@@ -999,3 +1005,225 @@ describe("harness runtime transport", () => {
 });
 
 import { setImmediate as nextTurn } from "node:timers/promises";
+import {
+  type CanonicalProjectSwitchResult,
+  CanonicalProjectSwitchResultSchema,
+} from "@slopstop/protocol";
+import {
+  activateSwitchSource,
+  expectInvalidSwitchRuntime,
+  newAEpoch,
+  switchActive,
+  switchApplicationFailures,
+  switchApplicationResults,
+  switchApplicationTargets,
+  switchCommandFailure,
+  switchCommands,
+  switchEvent,
+  switchFixture,
+  switchInternalFailure,
+  switchMessages,
+  switchPrivateFailure,
+  switchProjects,
+  switchRequests,
+  switchResultBoundaries,
+  switchRuntimeLifecycles,
+  switchRuntimeOptions,
+  switchTarget,
+} from "../tests/integration/project-storage-create-fixture.js";
+
+it.each(switchRuntimeLifecycles)(
+  "closes command admission in the same turn as lifecycle enqueue: runtime $kind",
+  async ({ kind, message, event }) => {
+    const f = switchFixture();
+    if (kind !== "initial activate") await activateSwitchSource(f);
+    const transport = new TestTransport();
+    const stop = startHarnessRuntime(switchRuntimeOptions(f.owner, transport));
+    try {
+      const lifecycle = message === undefined ? f.owner.stop() : transport.emit(message);
+      transport.emit(switchMessages.A);
+      await lifecycle;
+      await nextTurn();
+      const expected = [
+        switchEvent(
+          1,
+          403,
+          "project.command.result",
+          switchCommandFailure("coordinator-unavailable"),
+        ),
+      ];
+      if (event !== undefined) expected.push(event);
+      expect(transport.sent).toEqual(expected);
+      expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(0);
+      if (kind === "activate") {
+        transport.emit(switchMessages.A);
+        await nextTurn();
+        expected.push(
+          switchEvent(
+            3,
+            403,
+            "project.command.result",
+            switchCommandFailure("settlement-unavailable"),
+          ),
+        );
+        expect(transport.sent).toEqual(expected);
+      }
+    } finally {
+      await stop();
+    }
+  },
+);
+
+it.each(["A.fence", "B.storage.acquire"])(
+  "closes command admission in the same turn as lifecycle enqueue: held runtime %s",
+  async (stage) => {
+    const f = switchFixture();
+    await activateSwitchSource(f);
+    const hold = f.hold(stage);
+    const transport = new TestTransport();
+    const stop = startHarnessRuntime(switchRuntimeOptions(f.owner, transport));
+    try {
+      transport.emit(switchMessages.switch);
+      await nextTurn();
+      expect(f.all).toContain(stage);
+      expect(transport.sent).toEqual([]);
+      transport.emit(switchMessages.A);
+      transport.emit(switchMessages.B);
+      await nextTurn();
+      const expected = [
+        switchEvent(
+          1,
+          403,
+          "project.command.result",
+          switchCommandFailure("coordinator-unavailable"),
+        ),
+        switchEvent(
+          2,
+          404,
+          "project.command.result",
+          switchCommandFailure("coordinator-unavailable", switchCommands.B),
+        ),
+      ];
+      expect(transport.sent).toEqual(expected);
+      expect(f.projects.A.repository.verifyFence).toHaveBeenCalledTimes(0);
+      expect(f.projects.B.repository.verifyFence).toHaveBeenCalledTimes(0);
+      hold.resolve();
+      await nextTurn();
+      expected.push(switchEvent(3, 402, "project.switch.result", switchTarget()));
+      expect(transport.sent).toEqual(expected);
+      transport.emit(switchMessages.B);
+      await nextTurn();
+      expected.push(
+        switchEvent(
+          4,
+          404,
+          "project.command.result",
+          switchCommandFailure("settlement-unavailable", switchCommands.B),
+        ),
+      );
+      transport.emit(switchMessages.A);
+      await nextTurn();
+      expected.push(
+        switchEvent(5, 403, "project.command.result", switchCommandFailure("project-mismatch")),
+      );
+      expect(transport.sent).toEqual(expected);
+    } finally {
+      hold.resolve();
+      await stop();
+    }
+  },
+);
+
+it.each(switchApplicationResults)(
+  "validates complete switch correlation and preserves owner exceptions: runtime original identities $name",
+  async ({ value }) => {
+    const changed = CanonicalProjectSwitchResultSchema.parse(value);
+    for (const [boundary, key, replacement] of [
+      [changed.request.from, "projectId", switchProjects.C.projectId],
+      [changed.request.from, "activationId", newAEpoch],
+      [changed.request.to, "projectId", switchProjects.C.projectId],
+    ] as const) {
+      const original: unknown = Reflect.get(boundary, key);
+      Reflect.set(boundary, key, replacement);
+      await expectInvalidSwitchRuntime(changed, new TestTransport());
+      Reflect.set(boundary, key, original);
+    }
+  },
+);
+it.each(switchApplicationResults)(
+  "validates complete switch correlation and preserves owner exceptions: runtime private fields $name",
+  async ({ value }) => {
+    const changed = CanonicalProjectSwitchResultSchema.parse(value);
+    for (const boundary of switchResultBoundaries(changed)) {
+      for (const key of [
+        "extra",
+        "writerToken",
+        "tokenDigest",
+        "canonicalDatabasePath",
+        "writerLeasePath",
+        "error",
+        "cause",
+      ]) {
+        Reflect.set(boundary, key, switchPrivateFailure);
+        await expectInvalidSwitchRuntime(changed, new TestTransport());
+        Reflect.deleteProperty(boundary, key);
+      }
+    }
+  },
+);
+it.each(switchApplicationTargets)(
+  "validates complete switch correlation and preserves owner exceptions: runtime nested identities $name",
+  async ({ target }) => {
+    const changed = CanonicalProjectSwitchResultSchema.parse(switchTarget(target));
+    if (changed.status !== "target-result") throw new Error("Expected a target fixture.");
+    Reflect.set(changed.target.request, "projectId", switchProjects.A.projectId);
+    await expectInvalidSwitchRuntime(changed, new TestTransport());
+    Reflect.set(changed.request.to, "projectId", switchProjects.C.projectId);
+    Reflect.set(changed.target.request, "projectId", switchProjects.C.projectId);
+    expect(CanonicalProjectSwitchResultSchema.parse(changed)).toEqual(changed);
+    await expectInvalidSwitchRuntime(changed, new TestTransport());
+  },
+);
+it.each(switchApplicationFailures)(
+  "validates complete switch correlation and preserves owner exceptions: runtime retryability $name",
+  async ({ value }) => {
+    const changed = CanonicalProjectSwitchResultSchema.parse(value);
+    if (changed.status === "target-result") throw new Error("Expected a failure fixture.");
+    Reflect.set(changed.diagnostic, "retryable", !changed.diagnostic.retryable);
+    await expectInvalidSwitchRuntime(changed, new TestTransport());
+  },
+);
+it("validates complete switch correlation and preserves owner exceptions: runtime read-only retryability", async () => {
+  const changed = CanonicalProjectSwitchResultSchema.parse(
+    switchTarget(switchActive("B", 1, "read-only")),
+  );
+  if (changed.status !== "target-result" || !("diagnostic" in changed.target))
+    throw new Error("Expected read-only fixture.");
+  Reflect.set(changed.target.diagnostic, "retryable", false);
+  await expectInvalidSwitchRuntime(changed, new TestTransport());
+});
+it.each(["throw", "reject"])(
+  "validates complete switch correlation and preserves owner exceptions: runtime owner %s",
+  async (kind) => {
+    const transport = new TestTransport();
+    const f = switchFixture();
+    const error = new Error(switchPrivateFailure);
+    const switchProject = vi.fn((): Promise<CanonicalProjectSwitchResult> => {
+      throw error;
+    });
+    if (kind === "reject") switchProject.mockRejectedValue(error);
+    const stop = startHarnessRuntime(
+      switchRuntimeOptions({ ...f.owner, switchProject }, transport),
+    );
+    try {
+      transport.emit(switchMessages.switch);
+      await nextTurn();
+      expect(transport.sent).toEqual([
+        switchEvent(1, 402, "request.failure", switchInternalFailure),
+      ]);
+      expect(switchProject).toHaveBeenCalledExactlyOnceWith(switchRequests.AB);
+    } finally {
+      await stop();
+    }
+  },
+);
