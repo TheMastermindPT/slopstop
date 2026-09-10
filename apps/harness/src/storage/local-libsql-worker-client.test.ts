@@ -10,6 +10,53 @@ import { createWorkerLocalLibsqlClient } from "./local-libsql-worker-client.js";
 
 const execFileAsync = promisify(execFile);
 
+function isClientCloseRequest(message: unknown): message is object {
+  if (typeof message !== "object" || message === null) return false;
+  if (!("operation" in message)) return false;
+  return message.operation === "close-client";
+}
+
+it("retries a rejected worker client close without reopening the client", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-close-retry-"));
+  const client = createWorkerLocalLibsqlClient(path.join(root, "retry.db"), "generation");
+  await client.execute("SELECT 1");
+  const original = Worker.prototype.postMessage;
+  let worker: Worker | undefined;
+  let closeRequests = 0;
+  const posting = vi.spyOn(Worker.prototype, "postMessage").mockImplementation(function (
+    this: Worker,
+    message: unknown,
+  ) {
+    if (isClientCloseRequest(message)) {
+      worker = this;
+      closeRequests += 1;
+      if (closeRequests === 1) {
+        Reflect.apply(original, this, [{ ...message, clientId: 2147483647 }]);
+        return;
+      }
+    }
+    Reflect.apply(original, this, [message]);
+  });
+  try {
+    const first = client.close();
+    expect(client.close()).toBe(first);
+    await expect(first).rejects.toThrow("Local libSQL client is unavailable.");
+    expect(closeRequests).toBe(1);
+    await expect(client.execute("SELECT 1")).rejects.toThrow("Local libSQL client is closed.");
+    await expect(client.transaction("write")).rejects.toThrow("Local libSQL client is closed.");
+    const retry = client.close();
+    await expect(retry).resolves.toBeUndefined();
+    expect(closeRequests).toBe(2);
+    expect(client.close()).toBe(retry);
+    expect(closeRequests).toBe(2);
+  } finally {
+    posting.mockRestore();
+    const [cleanup] = await Promise.allSettled([client.close()]);
+    if (cleanup?.status === "rejected") await worker?.terminate();
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+  }
+});
+
 it("keeps a failed real commit open for rollback", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-libsql-transaction-"));
   const client = createWorkerLocalLibsqlClient(path.join(root, "transaction.db"), "generation");

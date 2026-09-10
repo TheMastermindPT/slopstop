@@ -9,11 +9,52 @@ import { describe, expect, it, vi } from "vitest";
 import {
   classifyProjectDatabaseProbe,
   classifyProjectStorageOpening,
+  createOpeningRelease,
   openingVersionCompatibility,
   type ProjectDatabaseProbe,
 } from "./project-storage-opening.js";
 
 type PresentProbe = Extract<ProjectDatabaseProbe, { status: "present" }>;
+
+it("retries only unfinished opening database closes", async () => {
+  const failure = new Error("runtime close failed");
+  const canonical = { close: vi.fn(async () => undefined) };
+  const runtime = { close: vi.fn(async () => undefined).mockRejectedValueOnce(failure) };
+  const slots: { canonical: typeof canonical | undefined; runtime: typeof runtime | undefined } = {
+    canonical: undefined,
+    runtime: undefined,
+  };
+  const release = createOpeningRelease(slots);
+  slots.runtime = runtime;
+  slots.canonical = canonical;
+  const first = release();
+  expect(release()).toBe(first);
+  await expect(first).rejects.toMatchObject({
+    message: "Project Storage database release failed.",
+    errors: [failure],
+  });
+  await expect(release()).resolves.toBeUndefined();
+  await expect(release()).resolves.toBeUndefined();
+  expect(canonical.close).toHaveBeenCalledTimes(1);
+  expect(runtime.close).toHaveBeenCalledTimes(2);
+  const canonicalFailure = new Error("canonical close failed");
+  const both = createOpeningRelease({
+    canonical: {
+      close: async () => {
+        throw canonicalFailure;
+      },
+    },
+    runtime: {
+      close: async () => {
+        throw failure;
+      },
+    },
+  });
+  await expect(both()).rejects.toMatchObject({ errors: [canonicalFailure, failure] });
+  await expect(
+    createOpeningRelease({ canonical: undefined, runtime: undefined })(),
+  ).resolves.toBeUndefined();
+});
 
 function presentProbe(overrides: Partial<PresentProbe> = {}): PresentProbe {
   return {
@@ -148,5 +189,7 @@ it("retains the exact release handle for a selected blocked manifest", () => {
       },
     },
   });
+  expect("session" in classified).toBe(true);
+  if (!("session" in classified)) throw new Error("Expected a retained blocked opening.");
   expect(classified.session).toEqual({ mode: "safe-mode", close: release });
 });

@@ -13,6 +13,10 @@ strictDepBuilds: true
 
 overrides:
   "@electron/node-gyp": 10.2.0-electron.1
+  bare-module-resolve: 1.12.5
+
+minimumReleaseAgeExclude:
+  - bare-module-resolve@1.12.5
 
 catalog:
   "@biomejs/biome": 2.5.8
@@ -42,6 +46,7 @@ catalog:
   drizzle-kit: 0.31.10
   drizzle-orm: 0.45.2
   electron: 43.4.0
+  fs-native-extensions: 1.5.1
   husky: 9.1.7
   jscpd: 5.0.15
   jsdom: 30.0.1

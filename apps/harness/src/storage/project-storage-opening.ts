@@ -143,10 +143,16 @@ export type RetainedProjectStorageSession = Readonly<{
   close(): Promise<void>;
 }>;
 
-export type ClassifiedProjectStorageOpening = Readonly<{
-  result: ProjectStorageOpenResult;
-  session?: RetainedProjectStorageSession;
-}>;
+export type ClassifiedProjectStorageOpening =
+  | Readonly<{ result: Extract<ProjectStorageOpenResult, { status: "not-registered" }> }>
+  | Readonly<{
+      result: Extract<ProjectStorageOpenResult, { status: "opened" }>;
+      session: RetainedProjectStorageSession & { mode: "read-write" };
+    }>
+  | Readonly<{
+      result: Extract<ProjectStorageOpenResult, { status: "safe-mode" }>;
+      session: RetainedProjectStorageSession & { mode: "safe-mode" };
+    }>;
 
 type OpeningDatabaseClient = Readonly<{ close(): Promise<void> }>;
 export type OpeningDatabaseClients = Readonly<{
@@ -383,24 +389,38 @@ export function classifyProjectDatabaseProbe(probe: ProjectDatabaseProbe): Proje
   return { status: "healthy" };
 }
 
+async function closeOpeningClients(
+  openedClients: OpeningDatabaseClients,
+  closed: Record<keyof OpeningDatabaseClients, boolean>,
+): Promise<void> {
+  const errors: unknown[] = [];
+  for (const key of ["canonical", "runtime"] as const) {
+    const client = openedClients[key];
+    if (client === undefined) continue;
+    if (closed[key]) continue;
+    try {
+      await client.close();
+      closed[key] = true;
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  if (errors.length > 0) {
+    throw new AggregateError(errors, "Project Storage database release failed.");
+  }
+}
+
 export function createOpeningRelease(openedClients: OpeningDatabaseClients) {
   let releasePromise: Promise<void> | undefined;
+  const closed = { canonical: false, runtime: false };
   return (): Promise<void> => {
-    releasePromise ??= (async () => {
-      const errors: unknown[] = [];
-      for (const client of [openedClients.canonical, openedClients.runtime]) {
-        if (client === undefined) continue;
-        try {
-          await client.close();
-        } catch (error) {
-          errors.push(error);
-        }
-      }
-      if (errors.length > 0) {
-        throw new AggregateError(errors, "Project Storage database release failed.");
-      }
-    })();
-    return releasePromise;
+    if (releasePromise !== undefined) return releasePromise;
+    const attempt = closeOpeningClients(openedClients, closed);
+    releasePromise = attempt;
+    void attempt.catch(() => {
+      if (releasePromise === attempt) releasePromise = undefined;
+    });
+    return attempt;
   };
 }
 

@@ -106,6 +106,18 @@ afterEach(async () => {
   for (const runtime of runtimes) runtime.closePorts();
 });
 
+function unusedCanonicalApplication() {
+  return {
+    activate: async () => {
+      throw new Error("Canonical activation is unused by this fixture.");
+    },
+    execute: async () => {
+      throw new Error("Canonical command is unused by this fixture.");
+    },
+    stop: async () => undefined,
+  };
+}
+
 function nextMessage(port: MessagePort, causationId: string): Promise<unknown> {
   return new Promise((resolve) => {
     const listener = (message: unknown) => {
@@ -364,6 +376,7 @@ function createCreateBoundaryTransportFixture(
   let commandId = 700;
   const stop = startHarnessRuntime({
     transport: transportFor(port1),
+    canonicalProjectApplication: unusedCanonicalApplication(),
     workspaceApplication: createUnavailableWorkspaceApplication(),
     projectStorageApplication: application,
     harnessVersion: "0.0.0",
@@ -451,6 +464,7 @@ function createStorageTransportFixture(
   let commandId = 300;
   const stop = startHarnessRuntime({
     transport: transportFor(port1),
+    canonicalProjectApplication: unusedCanonicalApplication(),
     workspaceApplication: createUnavailableWorkspaceApplication(),
     projectStorageApplication: createProjectStorageApplication(
       createProjectStorageOwner(dependencies),
@@ -551,6 +565,29 @@ it("reopens one Project without closing another and releases every session once"
   expect(repeatedStop).toBe(firstStop);
   await firstStop;
   expect(releaseB).toHaveBeenCalledOnce();
+  expect(fixture.registryStop).toHaveBeenCalledOnce();
+});
+
+it("retains Project Storage sessions until close succeeds", async () => {
+  const failure = new Error("first close failed");
+  const release = vi.fn(async () => undefined).mockRejectedValueOnce(failure);
+  const fixture = createStorageTransportFixture({
+    openings: [[projectA, healthyOpeningEvidence(release)]],
+  });
+  await fixture.open(projectA);
+  await expect(fixture.close(projectA)).resolves.toMatchObject({
+    event: "project.close.result",
+    payload: {
+      status: "broken",
+      request: { projectId: projectA },
+      diagnostic: {
+        code: "PROJECT_STORAGE_OWNER_FAILED",
+        message: "Project Storage owner failed.",
+      },
+    },
+  });
+  await fixture.stop();
+  expect(release).toHaveBeenCalledTimes(2);
   expect(fixture.registryStop).toHaveBeenCalledOnce();
 });
 
@@ -716,7 +753,7 @@ it("reports a failed release from an admitted close through shutdown", async () 
     },
   });
   expectShutdownFailure(await stopResult, [releaseFailure]);
-  expect(releaseSession).toHaveBeenCalledOnce();
+  expect(releaseSession).toHaveBeenCalledTimes(2);
   expect(fixture.registryStop).toHaveBeenCalledOnce();
 });
 

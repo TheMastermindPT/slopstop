@@ -17,6 +17,33 @@ export type ProjectStorageOwnerOutcome =
   | Readonly<{ status: "unavailable"; message: string }>
   | Readonly<{ status: "broken"; message: string }>;
 
+export type ProjectStorageActivationSession =
+  | Readonly<{
+      mode: "read-write";
+      result: Extract<ProjectStorageOpenResult, { status: "opened" }>;
+      canonicalDatabasePath: string;
+      writerLeasePath: string;
+      close(): Promise<void>;
+    }>
+  | Readonly<{
+      mode: "safe-mode";
+      result: Extract<ProjectStorageOpenResult, { status: "safe-mode" }>;
+      close(): Promise<void>;
+    }>;
+export type ProjectStorageActivationOutcome =
+  | Readonly<{ status: "ready"; session: ProjectStorageActivationSession }>
+  | Readonly<{
+      status: "not-registered";
+      result: Extract<ProjectStorageOpenResult, { status: "not-registered" }>;
+    }>
+  | Readonly<{ status: "unavailable" | "broken"; message: string }>;
+export interface ProjectStorageActivationPort {
+  acquireActivation(request: ProjectStorageOpenRequest): Promise<ProjectStorageActivationOutcome>;
+}
+export interface ProjectStorageOwner
+  extends ProjectStorageOwnerPort,
+    ProjectStorageActivationPort {}
+
 export interface ProjectStorageOwnerPort {
   open(request: ProjectStorageOpenRequest): Promise<ProjectStorageOwnerOutcome>;
   create(request: ProjectStorageCreateRequest): Promise<ProjectStorageOwnerOutcome>;

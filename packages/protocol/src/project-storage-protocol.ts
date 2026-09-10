@@ -6,29 +6,29 @@ import type {
   StorageId as KernelStorageId,
 } from "@slopstop/kernel";
 import { z } from "zod";
-import { domainIdentitySchema, ProjectIdSchema } from "./domain-identity-schema.js";
+import {
+  domainIdentitySchema,
+  lowercaseDomainIdentitySchema,
+  ProjectIdSchema,
+} from "./domain-identity-schema.js";
 
-function lowercaseIdentitySchema<T extends string>(schema: z.ZodType<T>) {
-  return schema.refine((value) => value === value.toLowerCase(), {
-    message: "Identity must use lowercase UUID text.",
-  });
-}
-
-export const StorageIdSchema = lowercaseIdentitySchema(domainIdentitySchema<KernelStorageId>());
+export const StorageIdSchema = lowercaseDomainIdentitySchema(
+  domainIdentitySchema<KernelStorageId>(),
+);
 export type StorageId = z.infer<typeof StorageIdSchema>;
-export const StorageGenerationIdSchema = lowercaseIdentitySchema(
+export const StorageGenerationIdSchema = lowercaseDomainIdentitySchema(
   domainIdentitySchema<KernelStorageGenerationId>(),
 );
 export type StorageGenerationId = z.infer<typeof StorageGenerationIdSchema>;
-export const CanonicalDatabaseLineageIdSchema = lowercaseIdentitySchema(
+export const CanonicalDatabaseLineageIdSchema = lowercaseDomainIdentitySchema(
   domainIdentitySchema<KernelCanonicalDatabaseLineageId>(),
 );
 export type CanonicalDatabaseLineageId = z.infer<typeof CanonicalDatabaseLineageIdSchema>;
-export const RuntimeDatabaseLineageIdSchema = lowercaseIdentitySchema(
+export const RuntimeDatabaseLineageIdSchema = lowercaseDomainIdentitySchema(
   domainIdentitySchema<KernelRuntimeDatabaseLineageId>(),
 );
 export type RuntimeDatabaseLineageId = z.infer<typeof RuntimeDatabaseLineageIdSchema>;
-export const ProjectStorageCreateRequestIdSchema = lowercaseIdentitySchema(
+export const ProjectStorageCreateRequestIdSchema = lowercaseDomainIdentitySchema(
   domainIdentitySchema<KernelProjectStorageCreateRequestId>(),
 );
 export type ProjectStorageCreateRequestId = z.infer<typeof ProjectStorageCreateRequestIdSchema>;

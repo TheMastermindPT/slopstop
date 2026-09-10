@@ -1,7 +1,18 @@
+export type {
+  ActiveProjectCoordinator,
+  ActiveProjectCoordinatorDependencies,
+} from "./active-project-coordinator.js";
+export { createActiveProjectCoordinator } from "./active-project-coordinator.js";
+export type { CanonicalProjectApplication } from "./canonical-project-application.js";
+export { createCanonicalProjectApplication } from "./canonical-project-application.js";
 export type { HarnessTransport, StopHarnessRuntime } from "./harness-runtime.js";
 export { startHarnessRuntime } from "./harness-runtime.js";
 export type {
+  ProjectStorageActivationOutcome,
+  ProjectStorageActivationPort,
+  ProjectStorageActivationSession,
   ProjectStorageApplication,
+  ProjectStorageOwner,
   ProjectStorageOwnerOutcome,
   ProjectStorageOwnerPort,
 } from "./project-storage-application.js";

@@ -19,6 +19,7 @@
     "@libsql/client": "catalog:",
     "@slopstop/protocol": "workspace:*",
     "drizzle-orm": "catalog:",
+    "fs-native-extensions": "catalog:",
     "libsql": "catalog:",
     "pino": "catalog:",
     "zod": "catalog:"

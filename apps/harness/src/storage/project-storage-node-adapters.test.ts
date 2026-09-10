@@ -992,6 +992,7 @@ it("releases canonical then runtime regardless of probe completion order", async
     canonical: { close(): Promise<void> } | undefined;
     runtime: { close(): Promise<void> } | undefined;
   } = { canonical: undefined, runtime: undefined };
+  const release = createOpeningRelease(openedClients);
   const runtimeClose = vi.fn(async () => {
     releaseOrder.push("runtime");
     throw runtimeFailure;
@@ -1002,7 +1003,6 @@ it("releases canonical then runtime regardless of probe completion order", async
   });
   openedClients.runtime = { close: runtimeClose };
   openedClients.canonical = { close: canonicalClose };
-  const release = createOpeningRelease(openedClients);
 
   const firstRelease = release();
   const repeatedRelease = release();

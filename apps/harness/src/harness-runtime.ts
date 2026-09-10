@@ -1,5 +1,7 @@
 import {
+  createProjectActivateResultEvent,
   createProjectCloseResultEvent,
+  createProjectCommandResultEvent,
   createProjectCreateResultEvent,
   createProjectOpenResultEvent,
   createReadyEvent,
@@ -15,7 +17,7 @@ import {
   readMessageId,
   WorkspaceNotificationSchema,
 } from "@slopstop/protocol";
-
+import type { CanonicalProjectApplication } from "./canonical-project-application.js";
 import type { ProjectStorageApplication } from "./project-storage-application.js";
 import type { WorkspaceApplication } from "./workspace-application.js";
 
@@ -28,7 +30,7 @@ export type StopHarnessRuntime = () => Promise<void>;
 
 type HarnessRuntimeOptions = Readonly<{
   transport: HarnessTransport;
-
+  canonicalProjectApplication: CanonicalProjectApplication;
   projectStorageApplication: ProjectStorageApplication;
   workspaceApplication: WorkspaceApplication;
   harnessVersion: string;
@@ -52,11 +54,17 @@ function runtimeShutdownFailure(failures: readonly unknown[]): unknown {
     : new AggregateError(failures, "Harness runtime shutdown failed.");
 }
 
+type CanonicalProjectMessage = Extract<
+  DesktopMessage,
+  { command: "project.activate" | "project.command" }
+>;
 type ProjectStorageMessage = Extract<
   DesktopMessage,
   { command: "project.open" | "project.create" | "project.close" }
 >;
-
+function isCanonicalProjectMessage(message: DesktopMessage): message is CanonicalProjectMessage {
+  return message.command === "project.activate" || message.command === "project.command";
+}
 function isProjectStorageMessage(message: DesktopMessage): message is ProjectStorageMessage {
   return ["project.open", "project.create", "project.close"].includes(message.command);
 }
@@ -91,6 +99,20 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
       message: "Harness failed while handling a message.",
       retryable: false,
     });
+  };
+
+  const handleCanonicalProjectMessage = async (message: CanonicalProjectMessage): Promise<void> => {
+    if (message.command === "project.activate") {
+      const result = await options.canonicalProjectApplication.activate(message.payload);
+      options.transport.send(
+        createProjectActivateResultEvent(nextMetadata(message.messageId), result),
+      );
+    } else {
+      const result = await options.canonicalProjectApplication.execute(message.payload);
+      options.transport.send(
+        createProjectCommandResultEvent(nextMetadata(message.messageId), result),
+      );
+    }
   };
 
   const handleProjectStorageMessage = async (message: ProjectStorageMessage): Promise<void> => {
@@ -131,6 +153,7 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
       return;
     }
 
+    if (isCanonicalProjectMessage(parsed.value)) return handleCanonicalProjectMessage(parsed.value);
     if (isProjectStorageMessage(parsed.value)) return handleProjectStorageMessage(parsed.value);
     switch (parsed.value.command) {
       case "system.handshake":
@@ -190,6 +213,13 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
       failures.push(error);
     }
     void (async () => {
+      try {
+        await options.canonicalProjectApplication.stop();
+      } catch (error) {
+        failures.push(error);
+        settlement.reject(runtimeShutdownFailure(failures));
+        return;
+      }
       try {
         await options.projectStorageApplication.stop();
       } catch (error) {

@@ -58,6 +58,7 @@ const allPriorStateWitnessKinds: readonly PriorStateWitnessKind[] = [
   "generation-record",
   "project-root",
   "repository-marker",
+  "writer-lease",
   "manifest",
   "generation-directory",
   "canonical-database",
@@ -76,6 +77,7 @@ const allPriorStateWitnessKinds: readonly PriorStateWitnessKind[] = [
 function generationPaths() {
   return {
     projectRoot: "project",
+    writerLease: "project/.slopstop-writer.lock",
     staging: {
       root: "staging",
       canonicalDatabase: "staging/slopstop.db",
@@ -565,6 +567,139 @@ function deferred() {
   });
   return { promise, resolve };
 }
+
+function retainedSessionFixture() {
+  const fixture = lifecycleDependencies();
+  const failure = new Error("session close failed");
+  const release = vi.fn(async () => undefined).mockRejectedValueOnce(failure);
+  const evidence: ProjectStorageOpenEvidence = {
+    status: "selected-current",
+    identity: expectedCreatedResult.identity,
+    canonical: {
+      status: "present",
+      identityMatches: true,
+      format: "current",
+      migration: "current",
+      foreignKeysEnabled: true,
+      foreignKeyViolationCount: 0,
+      integrityRows: ["ok"],
+      domainInvariantsValid: true,
+    },
+    runtime: {
+      status: "present",
+      identityMatches: true,
+      format: "current",
+      migration: "current",
+      foreignKeysEnabled: true,
+      foreignKeyViolationCount: 0,
+      integrityRows: ["ok"],
+      domainInvariantsValid: true,
+    },
+    release,
+  };
+  const inspect = vi.fn(async (): Promise<ProjectStorageOpenEvidence> => evidence);
+  fixture.dependencies.opening = { inspect };
+  return {
+    ...fixture,
+    owner: createProjectStorageOwner(fixture.dependencies),
+    release,
+    failure,
+    inspect,
+    evidence,
+  };
+}
+
+async function acquireSession(owner: ReturnType<typeof createProjectStorageOwner>) {
+  const acquire = owner.acquireActivation;
+  expect(acquire).toBeTypeOf("function");
+  if (typeof acquire !== "function") throw new Error("Activation port is missing.");
+  const outcome = await acquire({ projectId: request.projectId });
+  expect(outcome).toMatchObject({
+    status: "ready",
+    session: {
+      mode: "read-write",
+      canonicalDatabasePath: "active/slopstop.db",
+      writerLeasePath: "project/.slopstop-writer.lock",
+    },
+  });
+  if (outcome.status !== "ready") throw new Error("Activation session is missing.");
+  const session = outcome.session;
+  expect(Object.keys(session).sort()).toEqual([
+    "canonicalDatabasePath",
+    "close",
+    "mode",
+    "result",
+    "writerLeasePath",
+  ]);
+  return () => session.close();
+}
+
+it("retains Project Storage sessions until close succeeds", async () => {
+  const ordinary = retainedSessionFixture();
+  await ordinary.owner.open({ projectId: request.projectId });
+  await expect(ordinary.owner.close({ projectId: request.projectId })).rejects.toBe(
+    ordinary.failure,
+  );
+  await ordinary.owner.stop();
+  expect(ordinary.release).toHaveBeenCalledTimes(2);
+  const activation = retainedSessionFixture();
+  const close = await acquireSession(activation.owner);
+  await expect(close()).rejects.toBe(activation.failure);
+  const ordinaryRelease = vi.fn(async () => undefined);
+  activation.inspect.mockResolvedValue({ ...activation.evidence, release: ordinaryRelease });
+  await activation.owner.open({ projectId: request.projectId });
+  expect(activation.release).toHaveBeenCalledTimes(1);
+  await activation.owner.close({ projectId: request.projectId });
+  expect(ordinaryRelease).toHaveBeenCalledTimes(1);
+  await activation.owner.stop();
+  await close();
+  await activation.owner.stop();
+  expect(activation.release).toHaveBeenCalledTimes(2);
+  expect(ordinaryRelease).toHaveBeenCalledTimes(1);
+});
+
+it.each([1, 2])(
+  "retains a late activation release across shutdown (%i failures)",
+  async (failures) => {
+    const f = retainedSessionFixture();
+    const entered = deferred();
+    const inspection = deferred();
+    const secondFailure = new Error("shutdown release failed");
+    if (failures === 2) f.release.mockRejectedValueOnce(secondFailure);
+    f.inspect.mockImplementationOnce(async () => {
+      entered.resolve();
+      await inspection.promise;
+      return f.evidence;
+    });
+    const acquisition = f.owner.acquireActivation({ projectId: request.projectId });
+    const acquisitionFailure = acquisition.then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    await entered.promise;
+    const stop = f.owner.stop();
+    const shutdownFailure = stop.then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(f.owner.stop()).toBe(stop);
+    inspection.resolve();
+    expect(await acquisitionFailure).toBe(f.failure);
+    const error = await shutdownFailure;
+    expect(f.release).toHaveBeenCalledTimes(2);
+    expect(error).toBeInstanceOf(AggregateError);
+    if (!(error instanceof AggregateError)) throw new Error("Expected retained shutdown errors.");
+    expect(error.message).toBe("Project Storage shutdown failed.");
+    expect(error.errors).toEqual(failures === 1 ? [f.failure] : [f.failure, secondFailure]);
+    expect(f.registryStop).toHaveBeenCalledTimes(1);
+    if (failures === 2) {
+      await f.owner.stop();
+      await f.owner.stop();
+      expect(f.release).toHaveBeenCalledTimes(3);
+      expect(f.registryStop).toHaveBeenCalledTimes(1);
+    } else expect(f.owner.stop()).toBe(stop);
+  },
+);
 
 it("retains delayed asynchronous registry failure in the shared stop promise", async () => {
   const fixture = lifecycleDependencies();

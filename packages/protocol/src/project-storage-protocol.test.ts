@@ -125,11 +125,17 @@ describe("Project Storage protocol", () => {
     for (const schema of storageIdentitySchemas) {
       expect(schema.safeParse(validStorageId).success).toBe(true);
       expect(schema.safeParse(validStorageId.toUpperCase()).success).toBe(false);
+      expect(schema.safeParse(validStorageId.toUpperCase()).error?.issues).toEqual([
+        { code: "custom", path: [], message: "Identity must use lowercase UUID text." },
+      ]);
       expect(schema.safeParse("00000000-0000-0000-0000-000000000000").success).toBe(false);
       expect(schema.safeParse("not-a-uuid").success).toBe(false);
     }
     expect(ProjectIdSchema.safeParse(validProjectId).success).toBe(true);
     expect(ProjectIdSchema.safeParse(validProjectId.toUpperCase()).success).toBe(false);
+    expect(ProjectIdSchema.safeParse(validProjectId.toUpperCase()).error?.issues).toEqual([
+      { code: "custom", path: [], message: "Project identity must use lowercase UUID text." },
+    ]);
     expect(ProjectIdSchema.safeParse("00000000-0000-0000-0000-000000000000").success).toBe(false);
     expect(ProjectIdSchema.safeParse("not-a-uuid").success).toBe(false);
   });

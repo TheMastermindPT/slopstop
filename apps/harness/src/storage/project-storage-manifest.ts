@@ -11,6 +11,7 @@ import { z } from "zod";
 export const projectStorageManifestFilename = "manifest.json";
 export const canonicalDatabaseFilename = "slopstop.db";
 export const runtimeDatabaseFilename = "mastra.db";
+export const canonicalWriterLeaseFilename = ".slopstop-writer.lock";
 
 const safeNonnegativeIntegerSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const utcInstantSchema = z.iso

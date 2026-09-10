@@ -47,6 +47,7 @@ import {
 } from "./project-storage-filesystem-authority.js";
 import {
   canonicalDatabaseFilename,
+  canonicalWriterLeaseFilename,
   type ProjectStorageManifestV1,
   parseProjectStorageManifest,
   projectStorageManifestFilename,
@@ -1336,7 +1337,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
       });
       return {
         projectRoot,
-
+        writerLease: path.join(projectRoot, canonicalWriterLeaseFilename),
         staging: generationPaths(path.join(projectRoot, `.staging-${generationId}`)),
         active: generationPaths(path.join(projectRoot, generationId)),
       };

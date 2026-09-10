@@ -510,8 +510,12 @@ class WorkerLocalLibsqlClient implements LocalLibsqlClient {
   close(): Promise<void> {
     if (this.#closePromise !== undefined) return this.#closePromise;
     this.#closing = true;
-    this.#closePromise = this.closeClient();
-    return this.#closePromise;
+    const attempt = this.closeClient();
+    this.#closePromise = attempt;
+    void attempt.catch(() => {
+      if (this.#closePromise === attempt) this.#closePromise = undefined;
+    });
+    return attempt;
   }
 
   private async closeClient(): Promise<void> {

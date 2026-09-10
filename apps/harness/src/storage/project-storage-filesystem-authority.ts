@@ -5,6 +5,7 @@ import { ProjectIdSchema, StorageGenerationIdSchema } from "@slopstop/protocol";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
 import {
   canonicalDatabaseFilename,
+  canonicalWriterLeaseFilename,
   projectStorageManifestFilename,
   runtimeDatabaseFilename,
 } from "./project-storage-manifest.js";
@@ -17,6 +18,7 @@ export const witnessOrder = [
   "generation-record",
   "project-root",
   "repository-marker",
+  "writer-lease",
   "manifest",
   "generation-directory",
   "canonical-database",
@@ -34,6 +36,7 @@ export const witnessOrder = [
 
 const reservedFileWitnesses = new Map<string, PriorStateWitnessKind>([
   [".slopstop-repository", "repository-marker"],
+  [canonicalWriterLeaseFilename, "writer-lease"],
   [projectStorageManifestFilename, "manifest"],
   [canonicalDatabaseFilename, "canonical-database"],
   [`${canonicalDatabaseFilename}-wal`, "canonical-wal"],
@@ -64,6 +67,10 @@ const rootDatabaseWitnessKinds = new Set<PriorStateWitnessKind>([
 ]);
 
 const maximumProjectDirectoryEntries = 256;
+const projectRootOnlyWitnessKinds = new Set<PriorStateWitnessKind>([
+  "repository-marker",
+  "writer-lease",
+]);
 const maximumGenerationDirectoryEntries = 16;
 
 export type FilesystemWitnessScan = Readonly<{
@@ -123,7 +130,7 @@ function generationFileWitnessKind(input: {
   if (kind === undefined) {
     throw new ProjectStorageBrokenError("Project Storage generation contains an unknown witness.");
   }
-  if (kind === "repository-marker") {
+  if (projectRootOnlyWitnessKinds.has(kind)) {
     throw new ProjectStorageBrokenError("Project Storage generation contains an unknown witness.");
   }
   return kind;

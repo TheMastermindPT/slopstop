@@ -153,6 +153,15 @@ export async function createStorageRuntimeForRoot(
   const { port1, port2 } = new MessageChannel();
   let generatedId = 100;
   const stopRuntime = startHarnessRuntime({
+    canonicalProjectApplication: {
+      activate: async () => {
+        throw new Error("Canonical activation is unused by this fixture.");
+      },
+      execute: async () => {
+        throw new Error("Canonical command is unused by this fixture.");
+      },
+      stop: async () => undefined,
+    },
     transport: transportFor(port1),
     workspaceApplication: createUnavailableWorkspaceApplication(),
     projectStorageApplication: await projectStorageApplicationForRoot(root, options),

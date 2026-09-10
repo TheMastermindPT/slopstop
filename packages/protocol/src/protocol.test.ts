@@ -219,6 +219,42 @@ function projectStorageExchanges() {
 }
 
 describe("desktop protocol parsing", () => {
+  it("parses canonical Project activation and command protocol branches", () => {
+    const request = { projectId: "00000000-0000-4000-8000-000000000010" };
+    const activation = { ...validHandshake, command: "project.activate", payload: request };
+    expect(parseDesktopMessage(activation)).toEqual({ ok: true, value: activation });
+    const result = {
+      protocolVersion: 4,
+      messageType: "event",
+      messageId: "00000000-0000-4000-8000-000000000002",
+      sentAt: validHandshake.sentAt,
+      sequence: 1,
+      causationId: validHandshake.messageId,
+      event: "project.activate.result",
+      payload: {
+        status: "active",
+        request,
+        access: "read-only",
+        activationId: "00000000-0000-4000-8000-000000000011",
+        writerGeneration: null,
+        diagnostic: {
+          code: "WRITER_UNAVAILABLE",
+          message: "Another SlopStop process holds Project write authority.",
+          retryable: true,
+        },
+      },
+    };
+    expect(parseHarnessMessage(result)).toEqual({ ok: true, value: result });
+    expect(
+      parseHarnessMessage({ ...result, payload: { ...result.payload, writerGeneration: 1 } }),
+    ).toEqual({
+      ok: false,
+      error: {
+        code: "PROTOCOL_MESSAGE_INVALID",
+        issues: [{ code: "invalid_union", path: "payload" }],
+      },
+    });
+  });
   it("parses only correctly scoped failure events at protocol version 4", () => {
     const requestFailure = {
       protocolVersion: 4,

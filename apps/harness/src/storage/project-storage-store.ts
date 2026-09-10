@@ -13,8 +13,10 @@ import type {
   StorageId,
 } from "@slopstop/protocol";
 import type {
+  ProjectStorageActivationOutcome,
+  ProjectStorageActivationSession,
+  ProjectStorageOwner,
   ProjectStorageOwnerOutcome,
-  ProjectStorageOwnerPort,
 } from "../project-storage-application.js";
 import { projectStorageCreateRequestFingerprintInput } from "./project-storage-create-request.js";
 import {
@@ -39,6 +41,7 @@ export type PriorStateWitnessKind =
   | "generation-record"
   | "project-root"
   | "repository-marker"
+  | "writer-lease"
   | "manifest"
   | "generation-directory"
   | "canonical-database"
@@ -100,6 +103,7 @@ type ProjectStorageGenerationPaths = Readonly<{
 
 type ProjectStoragePaths = Readonly<{
   projectRoot: string;
+  writerLease: string;
   staging: ProjectStorageGenerationPaths;
   active: ProjectStorageGenerationPaths;
 }>;
@@ -154,17 +158,14 @@ async function collectOperationShutdownErrors(
   return errors;
 }
 
-async function collectSessionShutdownErrors(input: {
-  sessions: ReadonlyMap<ProjectId, AdmittedProjectStorageSession>;
-  close(projectId: ProjectId): Promise<void>;
-}): Promise<unknown[]> {
+async function collectSessionShutdownErrors(
+  sessions: readonly Readonly<{ admissionOrder: number; close(): Promise<void> }>[],
+): Promise<unknown[]> {
   const errors: unknown[] = [];
-  const projects = [...input.sessions.entries()].sort(
-    ([, left], [, right]) => left.admissionOrder - right.admissionOrder,
-  );
-  for (const [projectId] of projects) {
+  const ordered = [...sessions].sort((left, right) => left.admissionOrder - right.admissionOrder);
+  for (const session of ordered) {
     try {
-      await input.close(projectId);
+      await session.close();
     } catch (error) {
       errors.push(error);
     }
@@ -483,14 +484,26 @@ async function createProjectStorage(
   });
 }
 
+function activationFailure(error: unknown): ProjectStorageActivationOutcome {
+  if (error instanceof ProjectStorageUnavailableError)
+    return { status: "unavailable", message: error.message };
+  if (error instanceof ProjectStorageBrokenError)
+    return { status: "broken", message: error.message };
+  throw error;
+}
+
 export function createProjectStorageOwner(
   dependencies: ProjectStorageStoreDependencies,
-): ProjectStorageOwnerPort {
+): ProjectStorageOwner {
   let stopped = false;
   let stopPromise: Promise<void> | undefined;
+  let registryClosed = false;
   let nextSessionAdmissionOrder = 0;
   let nextOperationAdmissionOrder = 0;
   const sessions = new Map<ProjectId, AdmittedProjectStorageSession>();
+  const activationSessions = new Set<
+    Readonly<{ admissionOrder: number; session: ProjectStorageActivationSession }>
+  >();
   const admittedOperations = new Set<AdmittedProjectStorageOperation>();
   const ownerStoppedError = new ProjectStorageUnavailableError("Project Storage owner is stopped.");
 
@@ -502,21 +515,19 @@ export function createProjectStorageOwner(
     },
   };
 
-  const stoppedOutcome = (): ProjectStorageOwnerOutcome => ({
-    status: "unavailable",
+  const stoppedOutcome = () => ({
+    status: "unavailable" as const,
     message: ownerStoppedError.message,
   });
 
   const closeSession = async (projectId: ProjectId): Promise<void> => {
     const admittedSession = sessions.get(projectId);
-    sessions.delete(projectId);
     await admittedSession?.session.close();
+    if (sessions.get(projectId) === admittedSession) sessions.delete(projectId);
   };
 
   const operate = async (
-    operation: () => Promise<
-      ProjectStorageOpenResult | ProjectStorageCreateResult | ProjectStorageCloseResult
-    >,
+    operation: () => Promise<ProjectStorageOperationResult>,
   ): Promise<ProjectStorageOwnerOutcome> => {
     try {
       const result = await operation();
@@ -536,9 +547,7 @@ export function createProjectStorageOwner(
     }
   };
 
-  const trackAdmittedOperation = (
-    operation: () => Promise<ProjectStorageOperationResult>,
-  ): Promise<ProjectStorageOwnerOutcome> => {
+  const trackAdmittedOperation = <Result>(operation: () => Promise<Result>): Promise<Result> => {
     const admissionOrder = nextOperationAdmissionOrder;
     nextOperationAdmissionOrder += 1;
     const pendingOperation = operation();
@@ -558,60 +567,146 @@ export function createProjectStorageOwner(
     } satisfies AdmittedProjectStorageOperation;
     admittedOperations.add(admittedOperation);
     void settlement.then(() => admittedOperations.delete(admittedOperation));
-    return operate(() => pendingOperation);
+    return pendingOperation;
+  };
+
+  const retainActivation = (
+    admissionOrder: number,
+    session: ProjectStorageActivationSession,
+  ): ProjectStorageActivationSession => {
+    let closed = false;
+    const retained = {
+      admissionOrder,
+      session: {
+        ...session,
+        close: async () => {
+          if (closed) return;
+          await session.close();
+          closed = true;
+          activationSessions.delete(retained);
+        },
+      },
+    };
+    activationSessions.add(retained);
+    return retained.session;
+  };
+
+  const acquireActivation = async (
+    request: ProjectStorageOpenRequest,
+  ): Promise<ProjectStorageActivationOutcome> => {
+    if (stopped) return stoppedOutcome();
+    const admissionOrder = nextSessionAdmissionOrder++;
+    try {
+      return await trackAdmittedOperation(() =>
+        dependencies.locks.forProject(request.projectId, async () => {
+          lifecycle.assertRunning();
+          const classified = classifyProjectStorageOpening(
+            request,
+            await dependencies.opening.inspect(request.projectId),
+          );
+          if (!("session" in classified)) {
+            lifecycle.assertRunning();
+            return { status: "not-registered", result: classified.result } as const;
+          }
+          let session: ProjectStorageActivationSession;
+          if (classified.result.status === "opened") {
+            const paths = dependencies.paths.forCreation(
+              request.projectId,
+              classified.result.identity.generationId,
+            );
+            session = {
+              mode: "read-write",
+              result: classified.result,
+              canonicalDatabasePath: paths.active.canonicalDatabase,
+              writerLeasePath: paths.writerLease,
+              close: classified.session.close,
+            };
+          } else {
+            session = {
+              mode: "safe-mode",
+              result: classified.result,
+              close: classified.session.close,
+            };
+          }
+          const retained = retainActivation(admissionOrder, session);
+          if (stopped) await retained.close();
+          lifecycle.assertRunning();
+          return { status: "ready", session: retained } as const;
+        }),
+      );
+    } catch (error) {
+      return activationFailure(error);
+    }
+  };
+
+  const closeRegistry = async (): Promise<void> => {
+    if (registryClosed) return;
+    await dependencies.locks.afterCreateDrain(async () => {
+      await dependencies.registry.stop();
+      registryClosed = true;
+    });
   };
 
   return {
+    acquireActivation,
     create: async (request) => {
       if (stopped) {
         return stoppedOutcome();
       }
-      return trackAdmittedOperation(() =>
-        dependencies.locks.forProject(request.projectId, async () => {
-          lifecycle.assertRunning();
-          const result = await createProjectStorage(request, dependencies, lifecycle);
-          lifecycle.assertRunning();
-          return result;
-        }),
+      return operate(() =>
+        trackAdmittedOperation(() =>
+          dependencies.locks.forProject(request.projectId, async () => {
+            lifecycle.assertRunning();
+            const result = await createProjectStorage(request, dependencies, lifecycle);
+            lifecycle.assertRunning();
+            return result;
+          }),
+        ),
       );
     },
     open: async (request: ProjectStorageOpenRequest) => {
       if (stopped) return stoppedOutcome();
       const admissionOrder = nextSessionAdmissionOrder;
       nextSessionAdmissionOrder += 1;
-      return trackAdmittedOperation(() =>
-        dependencies.locks.forProject(request.projectId, async () => {
-          await closeSession(request.projectId);
-          lifecycle.assertRunning();
-          const classified = classifyProjectStorageOpening(
-            request,
-            await dependencies.opening.inspect(request.projectId),
-          );
-          if (stopped && classified.session !== undefined) {
-            try {
-              await classified.session.close();
-            } catch (error) {
-              throw new ProjectStorageBrokenError("Project Storage opening release failed.", {
-                cause: error,
-              });
+      return operate(() =>
+        trackAdmittedOperation(() =>
+          dependencies.locks.forProject(request.projectId, async () => {
+            await closeSession(request.projectId);
+            lifecycle.assertRunning();
+            const classified = classifyProjectStorageOpening(
+              request,
+              await dependencies.opening.inspect(request.projectId),
+            );
+            if (!("session" in classified)) {
+              lifecycle.assertRunning();
+              return classified.result;
             }
-          }
-          lifecycle.assertRunning();
-          if (classified.session !== undefined) {
+            if (stopped) {
+              try {
+                await classified.session.close();
+              } catch (error) {
+                throw new ProjectStorageBrokenError("Project Storage opening release failed.", {
+                  cause: error,
+                });
+              }
+            }
+            lifecycle.assertRunning();
             sessions.set(request.projectId, { admissionOrder, session: classified.session });
-          }
-          return classified.result;
-        }),
+            return classified.result;
+          }),
+        ),
       );
     },
     close: async (request: ProjectStorageCloseRequest) => {
       if (stopped) return stoppedOutcome();
-      return trackAdmittedOperation(() =>
-        dependencies.locks.forProject(request.projectId, async () => {
-          lifecycle.assertRunning();
-          await closeSession(request.projectId);
-          return { status: "closed", request };
-        }),
+      return operate(() =>
+        trackAdmittedOperation(() =>
+          dependencies.locks.forProject(request.projectId, async () => {
+            lifecycle.assertRunning();
+            await closeSession(request.projectId);
+            return { status: "closed", request } as const;
+          }),
+        ),
       );
     },
     stop: () => {
@@ -619,21 +714,38 @@ export function createProjectStorageOwner(
         return stopPromise;
       }
       stopped = true;
-      stopPromise = (async () => {
+      const attempt = (async () => {
         const shutdownErrors = await collectOperationShutdownErrors(admittedOperations);
         shutdownErrors.push(
-          ...(await collectSessionShutdownErrors({ sessions, close: closeSession })),
+          ...(await collectSessionShutdownErrors([
+            ...[...sessions.entries()].map(([projectId, admitted]) => ({
+              admissionOrder: admitted.admissionOrder,
+              close: () => closeSession(projectId),
+            })),
+            ...[...activationSessions].map((admitted) => ({
+              admissionOrder: admitted.admissionOrder,
+              close: admitted.session.close,
+            })),
+          ])),
         );
         try {
-          await dependencies.locks.afterCreateDrain(() => dependencies.registry.stop());
+          await closeRegistry();
         } catch (error) {
           shutdownErrors.push(error);
         }
         if (shutdownErrors.length > 0) {
-          throw new AggregateError(shutdownErrors, "Project Storage shutdown failed.");
+          throw new AggregateError(
+            [...new Set(shutdownErrors)],
+            "Project Storage shutdown failed.",
+          );
         }
       })();
-      return stopPromise;
+      stopPromise = attempt;
+      void attempt.catch(() => {
+        if (sessions.size + activationSessions.size === 0) return;
+        if (stopPromise === attempt) stopPromise = undefined;
+      });
+      return attempt;
     },
   };
 }

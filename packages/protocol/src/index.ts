@@ -1,4 +1,28 @@
 export type {
+  CanonicalProjectActivationDiagnosticCode,
+  CanonicalProjectActivationRequest,
+  CanonicalProjectActivationResult,
+  CanonicalProjectCommandDiagnosticCode,
+  CanonicalProjectCommandRequest,
+  CanonicalProjectCommandResult,
+  CommandId,
+  ProjectActivationId,
+  TypedCommand,
+  WriterGeneration,
+} from "./canonical-project-protocol.js";
+export {
+  CanonicalProjectActivationDiagnosticCodeSchema,
+  CanonicalProjectActivationRequestSchema,
+  CanonicalProjectActivationResultSchema,
+  CanonicalProjectCommandDiagnosticCodeSchema,
+  CanonicalProjectCommandRequestSchema,
+  CanonicalProjectCommandResultSchema,
+  CommandIdSchema,
+  ProjectActivationIdSchema,
+  TypedCommandSchema,
+  WriterGenerationSchema,
+} from "./canonical-project-protocol.js";
+export type {
   CanonicalDatabaseLineageId,
   OpenedStorageIdentity,
   PersistenceHealth,
@@ -45,8 +69,12 @@ export type {
 } from "./protocol.js";
 export {
   createHandshakeCommand,
+  createProjectActivateCommand,
+  createProjectActivateResultEvent,
   createProjectCloseCommand,
   createProjectCloseResultEvent,
+  createProjectCommand,
+  createProjectCommandResultEvent,
   createProjectCreateCommand,
   createProjectCreateResultEvent,
   createProjectOpenCommand,

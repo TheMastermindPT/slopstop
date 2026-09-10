@@ -1,14 +1,22 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { lstatSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { HarnessBootstrapSchema } from "@slopstop/protocol";
+import { HarnessBootstrapSchema, ProjectActivationIdSchema } from "@slopstop/protocol";
+import { createActiveProjectCoordinator } from "./active-project-coordinator.js";
+import { createCanonicalProjectApplication } from "./canonical-project-application.js";
 import {
   type HarnessTransport,
   type StopHarnessRuntime,
   startHarnessRuntime,
 } from "./harness-runtime.js";
 import { createProjectStorageApplication } from "./project-storage-application.js";
+import {
+  createCanonicalCommandRepositoryFactory,
+  WriterCapabilityTokenSchema,
+} from "./storage/canonical-command-repository.js";
+import { createNodeCanonicalWriterLeaseFactory } from "./storage/canonical-writer-lease.js";
+import { createWorkerLocalLibsqlClient } from "./storage/local-libsql-worker-client.js";
 import { createNodeProjectStorageDependencies } from "./storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "./storage/project-storage-store.js";
 import { createUnavailableWorkspaceApplication } from "./workspace-application.js";
@@ -80,12 +88,27 @@ export function startHarnessProcessRuntime(
     }),
   );
 
+  const now = () => new Date().toISOString();
+  const coordinator = createActiveProjectCoordinator({
+    storage: projectStorageOwner,
+    leases: createNodeCanonicalWriterLeaseFactory(),
+    repositories: createCanonicalCommandRepositoryFactory({
+      openClient: (databasePath) => createWorkerLocalLibsqlClient(databasePath, "generation"),
+      sha256Text: async (text) => createHash("sha256").update(text).digest("hex"),
+      createHandoffId: randomUUID,
+      createRecoveryRecordId: randomUUID,
+    }),
+    createActivationId: () => ProjectActivationIdSchema.parse(randomUUID()),
+    createWriterToken: () => WriterCapabilityTokenSchema.parse(randomBytes(32).toString("hex")),
+    now,
+  });
   return startHarnessRuntime({
     transport: input.transport,
+    canonicalProjectApplication: createCanonicalProjectApplication(coordinator),
     workspaceApplication: createUnavailableWorkspaceApplication(),
     projectStorageApplication: createProjectStorageApplication(projectStorageOwner),
     harnessVersion: "0.0.0",
     createId: randomUUID,
-    now: () => new Date().toISOString(),
+    now,
   });
 }

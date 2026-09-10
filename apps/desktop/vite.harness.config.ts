@@ -105,7 +105,9 @@ async function collectRuntimePackages(): Promise<ReadonlyMap<string, string>> {
   };
 
   await Promise.all(
-    ["@libsql/client", "libsql", "zod"].map((packageName) => collect(packageName, harnessRoot)),
+    ["@libsql/client", "fs-native-extensions", "libsql", "zod"].map((packageName) =>
+      collect(packageName, harnessRoot),
+    ),
   );
   const libsqlRoot = packages.get("libsql");
   if (libsqlRoot === undefined) {
@@ -137,13 +139,15 @@ function stageHarnessRuntime(): Plugin {
 export default defineConfig({
   plugins: [stageHarnessRuntime()],
   build: {
+    outDir: ".vite/build",
+    emptyOutDir: false,
     lib: {
       entry: { harness: "../harness/src/process-entry.ts" },
       fileName: () => "harness.cjs",
       formats: ["cjs"],
     },
     rollupOptions: {
-      external: [...nodeBuiltins, "libsql"],
+      external: [...nodeBuiltins, "fs-native-extensions", "libsql"],
     },
   },
 });

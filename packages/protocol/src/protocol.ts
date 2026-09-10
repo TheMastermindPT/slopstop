@@ -1,5 +1,14 @@
 import { z } from "zod";
-
+import {
+  type CanonicalProjectActivationRequest,
+  CanonicalProjectActivationRequestSchema,
+  type CanonicalProjectActivationResult,
+  CanonicalProjectActivationResultSchema,
+  type CanonicalProjectCommandRequest,
+  CanonicalProjectCommandRequestSchema,
+  type CanonicalProjectCommandResult,
+  CanonicalProjectCommandResultSchema,
+} from "./canonical-project-protocol.js";
 import type {
   ProjectStorageCloseRequest,
   ProjectStorageCloseResult,
@@ -192,6 +201,16 @@ const WorkspaceProjectionInvalidatedEventSchema = z.strictObject({
 });
 
 export const DesktopMessageSchema = z.discriminatedUnion("command", [
+  z.strictObject({
+    ...DesktopCommandMetadataSchema,
+    command: z.literal("project.activate"),
+    payload: CanonicalProjectActivationRequestSchema,
+  }),
+  z.strictObject({
+    ...DesktopCommandMetadataSchema,
+    command: z.literal("project.command"),
+    payload: CanonicalProjectCommandRequestSchema,
+  }),
   HandshakeCommandSchema,
   ProjectOpenCommandSchema,
   ProjectCreateCommandSchema,
@@ -202,6 +221,16 @@ export const DesktopMessageSchema = z.discriminatedUnion("command", [
 export type DesktopMessage = z.infer<typeof DesktopMessageSchema>;
 
 export const HarnessMessageSchema = z.discriminatedUnion("event", [
+  z.strictObject({
+    ...HarnessEventMetadataSchema,
+    event: z.literal("project.activate.result"),
+    payload: CanonicalProjectActivationResultSchema,
+  }),
+  z.strictObject({
+    ...HarnessEventMetadataSchema,
+    event: z.literal("project.command.result"),
+    payload: CanonicalProjectCommandResultSchema,
+  }),
   ReadyEventSchema,
   RequestFailureEventSchema,
   SystemFailureEventSchema,
@@ -377,6 +406,31 @@ export function createHandshakeCommand(
   desktopVersion: string,
 ): DesktopMessage {
   return createCommand(metadata, "system.handshake", { desktopVersion });
+}
+
+export function createProjectActivateCommand(
+  metadata: CommandMetadata,
+  request: CanonicalProjectActivationRequest,
+): DesktopMessage {
+  return createCommand(metadata, "project.activate", request);
+}
+export function createProjectCommand(
+  metadata: CommandMetadata,
+  request: CanonicalProjectCommandRequest,
+): DesktopMessage {
+  return createCommand(metadata, "project.command", request);
+}
+export function createProjectActivateResultEvent(
+  metadata: EventMetadata,
+  result: CanonicalProjectActivationResult,
+): HarnessMessage {
+  return createEvent(metadata, "project.activate.result", result);
+}
+export function createProjectCommandResultEvent(
+  metadata: EventMetadata,
+  result: CanonicalProjectCommandResult,
+): HarnessMessage {
+  return createEvent(metadata, "project.command.result", result);
 }
 
 export function createProjectOpenCommand(
