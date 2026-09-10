@@ -1,8 +1,9 @@
 import {
-  createFailureEvent,
   createProjectCloseResultEvent,
   createProjectCreateResultEvent,
   createProjectOpenResultEvent,
+  createRequestFailureEvent,
+  createSystemFailureEvent,
   type DesktopMessage,
   DesktopMessageSchema,
   MessageIdSchema,
@@ -81,7 +82,7 @@ function transportBrokenCloseResult(message: string): ProjectStorageCloseResult 
 }
 
 function systemFailureEvent(message: string) {
-  return createFailureEvent(
+  return createSystemFailureEvent(
     {
       messageId: messageId(901),
       sentAt: "2026-08-14T12:00:01.000Z",
@@ -169,6 +170,64 @@ function bridgeWith(session: FakeHarnessSession, ids = [messageId(1), messageId(
     now: () => "2026-08-14T12:00:00.000Z",
   });
 }
+
+it("request failure settles only its correlated Project Storage operation", async () => {
+  const session = new FakeHarnessSession();
+  const bridge = bridgeWith(session, [
+    "00000000-0000-4000-8000-000000000301",
+    "00000000-0000-4000-8000-000000000302",
+  ]);
+  let createResult: ProjectStorageCreateResult | "pending" = "pending";
+  void bridge.create(createRequest).then((result) => {
+    createResult = result;
+  });
+  let openSettled = false;
+  const open = bridge.open(openRequest).then((result) => {
+    openSettled = true;
+    return result;
+  });
+  try {
+    session.emit({
+      type: "message",
+      message: createRequestFailureEvent(
+        {
+          messageId: messageId(901),
+          sentAt: "2026-08-14T12:00:01.000Z",
+          sequence: 1,
+          causationId: MessageIdSchema.parse("00000000-0000-4000-8000-000000000301"),
+        },
+        {
+          code: "HARNESS_INTERNAL_FAILURE",
+          message: "Harness failed while handling a message.",
+          retryable: false,
+        },
+      ),
+    });
+    await Promise.resolve();
+    expect(createResult).toEqual({
+      status: "broken",
+      request: {
+        projectId: "00000000-0000-4000-8000-000000000010",
+        createRequestId: "00000000-0000-4000-8000-000000000011",
+      },
+      diagnostic: {
+        code: "PROJECT_STORAGE_TRANSPORT_FAILED",
+        message: "Harness failed while handling a message.",
+      },
+    });
+    expect(openSettled).toBe(false);
+    session.emitProjectResult("00000000-0000-4000-8000-000000000302", {
+      kind: "open",
+      result: notRegisteredResult,
+    });
+    await expect(open).resolves.toEqual({
+      status: "not-registered",
+      request: { projectId: "00000000-0000-4000-8000-000000000010" },
+    });
+  } finally {
+    bridge.stop();
+  }
+});
 
 it("correlates out-of-order open, create, and close results", async () => {
   const session = new FakeHarnessSession();

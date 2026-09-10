@@ -191,6 +191,13 @@ class WorkspaceBridge implements WorkspaceBridgeClient {
     }
   }
 
+  #failRequest(causationId: string, message: string): void {
+    const request = this.#pending.get(causationId);
+    if (request === undefined) return;
+    this.#pending.delete(causationId);
+    this.#failPending(request, message);
+  }
+
   #failPending(request: PendingRequest, message: string): void {
     if (request.kind === "query") {
       request.resolve(brokenQuery(request.query, message));
@@ -216,6 +223,9 @@ class WorkspaceBridge implements WorkspaceBridgeClient {
     message: Extract<HarnessSessionEvent, { type: "message" }>["message"],
   ): void {
     switch (message.event) {
+      case "request.failure":
+        this.#failRequest(message.causationId, message.payload.message);
+        return;
       case "system.failure":
         this.#failAllPending(message.payload.message);
         return;

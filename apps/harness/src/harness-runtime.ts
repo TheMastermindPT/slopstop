@@ -1,17 +1,21 @@
 import {
-  createFailureEvent,
   createProjectCloseResultEvent,
   createProjectCreateResultEvent,
   createProjectOpenResultEvent,
   createReadyEvent,
+  createRequestFailureEvent,
+  createSystemFailureEvent,
   createWorkspaceIntentResultEvent,
   createWorkspaceProjectionInvalidatedEvent,
   createWorkspaceQueryResultEvent,
+  type DesktopMessage,
   type HarnessFailureCode,
+  type MessageId,
   parseDesktopMessage,
   readMessageId,
   WorkspaceNotificationSchema,
 } from "@slopstop/protocol";
+
 import type { ProjectStorageApplication } from "./project-storage-application.js";
 import type { WorkspaceApplication } from "./workspace-application.js";
 
@@ -24,6 +28,7 @@ export type StopHarnessRuntime = () => Promise<void>;
 
 type HarnessRuntimeOptions = Readonly<{
   transport: HarnessTransport;
+
   projectStorageApplication: ProjectStorageApplication;
   workspaceApplication: WorkspaceApplication;
   harnessVersion: string;
@@ -47,10 +52,19 @@ function runtimeShutdownFailure(failures: readonly unknown[]): unknown {
     : new AggregateError(failures, "Harness runtime shutdown failed.");
 }
 
+type ProjectStorageMessage = Extract<
+  DesktopMessage,
+  { command: "project.open" | "project.create" | "project.close" }
+>;
+
+function isProjectStorageMessage(message: DesktopMessage): message is ProjectStorageMessage {
+  return ["project.open", "project.create", "project.close"].includes(message.command);
+}
+
 export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarnessRuntime {
   let sequence = 0;
 
-  const nextMetadata = (causationId: string | null) => {
+  const nextMetadata = <CausationId extends MessageId | null>(causationId: CausationId) => {
     sequence += 1;
     return {
       messageId: options.createId(),
@@ -60,14 +74,48 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     };
   };
 
-  const sendInternalFailure = (causationId: string | null) => {
+  const sendFailure = (
+    causationId: MessageId | null,
+    failure: Readonly<{ code: HarnessFailureCode; message: string; retryable: boolean }>,
+  ): void => {
     options.transport.send(
-      createFailureEvent(nextMetadata(causationId), {
-        code: "HARNESS_INTERNAL_FAILURE",
-        message: "Harness failed while handling a message.",
-        retryable: false,
-      }),
+      causationId === null
+        ? createSystemFailureEvent(nextMetadata(null), failure)
+        : createRequestFailureEvent(nextMetadata(causationId), failure),
     );
+  };
+
+  const sendInternalFailure = (causationId: MessageId | null): void => {
+    sendFailure(causationId, {
+      code: "HARNESS_INTERNAL_FAILURE",
+      message: "Harness failed while handling a message.",
+      retryable: false,
+    });
+  };
+
+  const handleProjectStorageMessage = async (message: ProjectStorageMessage): Promise<void> => {
+    switch (message.command) {
+      case "project.open": {
+        const result = await options.projectStorageApplication.open(message.payload);
+        options.transport.send(
+          createProjectOpenResultEvent(nextMetadata(message.messageId), result),
+        );
+        return;
+      }
+      case "project.create": {
+        const result = await options.projectStorageApplication.create(message.payload);
+        options.transport.send(
+          createProjectCreateResultEvent(nextMetadata(message.messageId), result),
+        );
+        return;
+      }
+      case "project.close": {
+        const result = await options.projectStorageApplication.close(message.payload);
+        options.transport.send(
+          createProjectCloseResultEvent(nextMetadata(message.messageId), result),
+        );
+      }
+    }
   };
 
   const handleMessage = async (message: unknown): Promise<void> => {
@@ -75,35 +123,19 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     const causationId = readMessageId(message);
 
     if (!parsed.ok) {
-      options.transport.send(
-        createFailureEvent(nextMetadata(causationId), {
-          code: parsed.error.code,
-          message: failureMessages[parsed.error.code],
-          retryable: false,
-        }),
-      );
+      sendFailure(causationId, {
+        code: parsed.error.code,
+        message: failureMessages[parsed.error.code],
+        retryable: false,
+      });
       return;
     }
 
+    if (isProjectStorageMessage(parsed.value)) return handleProjectStorageMessage(parsed.value);
     switch (parsed.value.command) {
       case "system.handshake":
         options.transport.send(createReadyEvent(nextMetadata(causationId), options.harnessVersion));
         return;
-      case "project.open": {
-        const result = await options.projectStorageApplication.open(parsed.value.payload);
-        options.transport.send(createProjectOpenResultEvent(nextMetadata(causationId), result));
-        return;
-      }
-      case "project.create": {
-        const result = await options.projectStorageApplication.create(parsed.value.payload);
-        options.transport.send(createProjectCreateResultEvent(nextMetadata(causationId), result));
-        return;
-      }
-      case "project.close": {
-        const result = await options.projectStorageApplication.close(parsed.value.payload);
-        options.transport.send(createProjectCloseResultEvent(nextMetadata(causationId), result));
-        return;
-      }
       case "workspace.query": {
         const result = await options.workspaceApplication.query(parsed.value.payload);
         options.transport.send(createWorkspaceQueryResultEvent(nextMetadata(causationId), result));
@@ -157,25 +189,15 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     } catch (error) {
       failures.push(error);
     }
-    let storageStop: Promise<void> | undefined;
-    try {
-      storageStop = options.projectStorageApplication.stop();
-    } catch (error) {
-      failures.push(error);
-    }
-    void Promise.resolve(storageStop).then(
-      () => {
-        if (failures.length === 0) {
-          settlement.resolve();
-          return;
-        }
-        settlement.reject(runtimeShutdownFailure(failures));
-      },
-      (error: unknown) => {
+    void (async () => {
+      try {
+        await options.projectStorageApplication.stop();
+      } catch (error) {
         failures.push(error);
-        settlement.reject(runtimeShutdownFailure(failures));
-      },
-    );
+      }
+      if (failures.length === 0) settlement.resolve();
+      else settlement.reject(runtimeShutdownFailure(failures));
+    })();
     return stopPromise;
   };
 }

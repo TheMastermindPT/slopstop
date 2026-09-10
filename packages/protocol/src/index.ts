@@ -44,7 +44,6 @@ export type {
   RetryHarnessResult,
 } from "./protocol.js";
 export {
-  createFailureEvent,
   createHandshakeCommand,
   createProjectCloseCommand,
   createProjectCloseResultEvent,
@@ -53,6 +52,8 @@ export {
   createProjectOpenCommand,
   createProjectOpenResultEvent,
   createReadyEvent,
+  createRequestFailureEvent,
+  createSystemFailureEvent,
   createWorkspaceIntentCommand,
   createWorkspaceIntentResultEvent,
   createWorkspaceProjectionInvalidatedEvent,

@@ -23,6 +23,7 @@ const harnessShutdownGraceMs = 5_000;
 const maxAutomaticAttempts = 3;
 const restartBaseDelayMs = 250;
 const statusNeutralEvents: ReadonlySet<HarnessMessage["event"]> = new Set([
+  "request.failure",
   "project.open.result",
   "project.create.result",
   "project.close.result",

@@ -123,6 +123,7 @@ function startRuntime(transport: TestTransport): StopHarnessRuntime {
   let generatedId = 2;
   return startHarnessRuntime({
     transport,
+
     projectStorageApplication: createUnavailableProjectStorageApplication(),
     workspaceApplication: createUnavailableWorkspaceApplication(),
     harnessVersion: "0.0.0",
@@ -163,7 +164,95 @@ function projectStorageCommands() {
   return { close, closeRequest, create, createRequest, open, openRequest };
 }
 
+const invalidPayload = {
+  code: "PROTOCOL_MESSAGE_INVALID",
+  message: "Harness received an invalid protocol message.",
+  retryable: false,
+};
+const failureScopeCases = [
+  {
+    kind: "message",
+    input: {
+      protocolVersion: 4,
+      messageType: "command",
+      messageId: "00000000-0000-4000-8000-000000000202",
+      sentAt: "2026-08-14T12:00:00.000Z",
+      command: "unknown",
+      payload: {},
+    },
+    expected: {
+      event: "request.failure",
+      causationId: "00000000-0000-4000-8000-000000000202",
+      payload: invalidPayload,
+    },
+  },
+  {
+    kind: "message",
+    input: { invalid: true },
+    expected: { event: "system.failure", causationId: null, payload: invalidPayload },
+  },
+  {
+    kind: "notification",
+    input: { capability: "memory" },
+    expected: {
+      event: "system.failure",
+      causationId: null,
+      payload: {
+        code: "HARNESS_INTERNAL_FAILURE",
+        message: "Harness failed while handling a message.",
+        retryable: false,
+      },
+    },
+  },
+];
+
 describe("harness runtime transport", () => {
+  it("chooses failure scope from recoverable causation", async () => {
+    for (const testCase of failureScopeCases) {
+      const transport = new TestTransport();
+      const missingSubscriber = (_notification: WorkspaceNotification): void => {
+        throw new Error("Notification subscriber was not registered.");
+      };
+      let notify = missingSubscriber;
+      const stop = startHarnessRuntime({
+        transport,
+
+        projectStorageApplication: createUnavailableProjectStorageApplication(),
+        workspaceApplication: {
+          ...createUnavailableWorkspaceApplication(),
+          subscribe(listener) {
+            notify = listener;
+            return () => {
+              notify = missingSubscriber;
+            };
+          },
+        },
+        harnessVersion: "0.0.0",
+        createId: () => "00000000-0000-4000-8000-000000000002",
+        now: () => "2026-08-14T12:00:01.000Z",
+      });
+      try {
+        if (testCase.kind === "message") {
+          transport.emit(testCase.input);
+        } else {
+          Reflect.apply(notify, undefined, [testCase.input]);
+        }
+        expect(transport.sent).toEqual([
+          {
+            protocolVersion: 4,
+            messageType: "event",
+            messageId: "00000000-0000-4000-8000-000000000002",
+            sentAt: "2026-08-14T12:00:01.000Z",
+            sequence: 1,
+            ...testCase.expected,
+          },
+        ]);
+      } finally {
+        await stop();
+      }
+    }
+  });
+
   it("dispatches workspace queries without false system ready", async () => {
     const transport = new TestTransport();
     const stop = startRuntime(transport);
@@ -238,6 +327,7 @@ describe("harness runtime transport", () => {
     let generatedId = 11;
     const stop = startHarnessRuntime({
       transport,
+
       projectStorageApplication: createUnavailableProjectStorageApplication(),
       workspaceApplication,
       harnessVersion: "0.0.0",
@@ -300,6 +390,7 @@ describe("harness runtime transport", () => {
     let generatedId = 2;
     const stop = startHarnessRuntime({
       transport,
+
       projectStorageApplication: createUnavailableProjectStorageApplication(),
       workspaceApplication,
       harnessVersion: "0.0.0",
@@ -348,6 +439,7 @@ describe("harness runtime transport", () => {
     };
     const stop = startHarnessRuntime({
       transport,
+
       projectStorageApplication: createUnavailableProjectStorageApplication(),
       workspaceApplication,
       harnessVersion: "0.0.0",
@@ -371,7 +463,7 @@ describe("harness runtime transport", () => {
     );
     await vi.waitFor(() => expect(transport.sent).toHaveLength(1));
     expect(transport.sent[0]).toMatchObject({
-      event: "system.failure",
+      event: "request.failure",
       causationId: "00000000-0000-4000-8000-000000000001",
       payload: {
         code: "HARNESS_INTERNAL_FAILURE",
@@ -394,7 +486,7 @@ describe("harness runtime transport", () => {
 
     expect(transport.sent).toMatchObject([
       {
-        protocolVersion: 3,
+        protocolVersion: 4,
         sequence: 1,
         causationId: open.messageId,
         event: "project.open.result",
@@ -405,7 +497,7 @@ describe("harness runtime transport", () => {
         },
       },
       {
-        protocolVersion: 3,
+        protocolVersion: 4,
         sequence: 2,
         causationId: create.messageId,
         event: "project.create.result",
@@ -416,7 +508,7 @@ describe("harness runtime transport", () => {
         },
       },
       {
-        protocolVersion: 3,
+        protocolVersion: 4,
         sequence: 3,
         causationId: close.messageId,
         event: "project.close.result",
@@ -448,6 +540,7 @@ describe("harness runtime transport", () => {
     };
     const stop = startHarnessRuntime({
       transport,
+
       workspaceApplication: createUnavailableWorkspaceApplication(),
       projectStorageApplication,
       harnessVersion: "0.0.0",
@@ -461,13 +554,13 @@ describe("harness runtime transport", () => {
 
     expect(transport.sent).toEqual([
       {
-        protocolVersion: 3,
+        protocolVersion: 4,
         messageType: "event",
         messageId: "00000000-0000-4000-8000-000000000002",
         sentAt: "2026-08-14T12:00:01.000Z",
         sequence: 1,
         causationId: open.messageId,
-        event: "system.failure",
+        event: "request.failure",
         payload: {
           code: "HARNESS_INTERNAL_FAILURE",
           message: "Harness failed while handling a message.",
@@ -486,10 +579,9 @@ describe("harness runtime transport", () => {
     const stopMessages = vi.fn(() => calls.push("stopMessages"));
     const stopNotifications = vi.fn(() => calls.push("stopNotifications"));
     const shutdownFailure = new Error("private shutdown failure");
-    const projectStorageStop = Promise.reject(shutdownFailure);
     const stopProjectStorage = vi.fn(() => {
       calls.push("projectStorageApplication.stop");
-      return projectStorageStop;
+      return Promise.reject(shutdownFailure);
     });
     const transport: HarnessTransport = {
       send: () => undefined,
@@ -518,6 +610,7 @@ describe("harness runtime transport", () => {
     };
     const stop = startHarnessRuntime({
       transport,
+
       workspaceApplication,
       projectStorageApplication,
       harnessVersion: "0.0.0",
@@ -528,12 +621,19 @@ describe("harness runtime transport", () => {
     const firstStop = stop();
     const repeatedStop = stop();
 
-    expect(calls).toEqual(["stopMessages", "stopNotifications", "projectStorageApplication.stop"]);
+    expect(calls).toEqual(["stopMessages", "stopNotifications"]);
     expect(stopMessages).toHaveBeenCalledOnce();
     expect(stopNotifications).toHaveBeenCalledOnce();
-    expect(stopProjectStorage).toHaveBeenCalledOnce();
+    expect(stopProjectStorage).not.toHaveBeenCalled();
     expect(repeatedStop).toBe(firstStop);
     await expect(firstStop).rejects.toBe(shutdownFailure);
+    expect(calls).toEqual([
+      "stopMessages",
+      "stopNotifications",
+
+      "projectStorageApplication.stop",
+    ]);
+    expect(stopProjectStorage).toHaveBeenCalledOnce();
   });
 
   it("retains synchronous shutdown failures while attempting every cleanup", async () => {
@@ -554,6 +654,7 @@ describe("harness runtime transport", () => {
     };
     const stop = startHarnessRuntime({
       transport: { send: () => undefined, subscribe: () => stopMessages },
+
       workspaceApplication: {
         ...createUnavailableWorkspaceApplication(),
         subscribe: () => stopNotifications,
@@ -573,8 +674,14 @@ describe("harness runtime transport", () => {
     }
 
     expect(stop()).toBe(firstStop);
-    expect(calls).toEqual(["stopMessages", "stopNotifications", "projectStorageApplication.stop"]);
+    expect(calls).toEqual(["stopMessages", "stopNotifications"]);
     await expect(firstStop).rejects.toMatchObject({ errors: [intakeFailure, storageFailure] });
+    expect(calls).toEqual([
+      "stopMessages",
+      "stopNotifications",
+
+      "projectStorageApplication.stop",
+    ]);
     expect(stopMessages).toHaveBeenCalledOnce();
     expect(stopNotifications).toHaveBeenCalledOnce();
   });
@@ -598,6 +705,7 @@ describe("harness runtime transport", () => {
     };
     const stop = startHarnessRuntime({
       transport,
+
       projectStorageApplication: createUnavailableProjectStorageApplication(),
       workspaceApplication,
       harnessVersion: "0.0.0",
@@ -678,7 +786,7 @@ describe("harness runtime transport", () => {
         sentAt: "2026-08-14T12:00:01.000Z",
         sequence: 1,
         causationId: handshake.messageId,
-        event: "system.failure",
+        event: "request.failure",
         payload: {
           code: "PROTOCOL_VERSION_UNSUPPORTED",
           message: "Desktop and harness protocol versions are incompatible.",

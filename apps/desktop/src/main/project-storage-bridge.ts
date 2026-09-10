@@ -197,6 +197,9 @@ class ProjectStorageBridge implements ProjectStorageBridgeClient {
     message: Extract<HarnessSessionEvent, { type: "message" }>["message"],
   ): void {
     switch (message.event) {
+      case "request.failure":
+        this.#failRequest(message.causationId, message.payload.message);
+        return;
       case "system.failure":
         this.#failAll("Harness reported a failure.");
         return;
@@ -215,6 +218,13 @@ class ProjectStorageBridge implements ProjectStorageBridgeClient {
       case "workspace.query.result":
         return;
     }
+  }
+
+  #failRequest(causationId: string, message: string): void {
+    const pending = this.#pending.get(causationId);
+    if (pending === undefined) return;
+    this.#pending.delete(causationId);
+    this.#fail(pending, message);
   }
 
   #settle(causationId: string | null, expected: OperationKind, value: unknown): void {

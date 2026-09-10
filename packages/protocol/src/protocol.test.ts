@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  createFailureEvent,
   createHandshakeCommand,
   createProjectCloseCommand,
   createProjectCloseResultEvent,
@@ -9,6 +8,7 @@ import {
   createProjectOpenCommand,
   createProjectOpenResultEvent,
   createReadyEvent,
+  createSystemFailureEvent,
   createWorkspaceIntentCommand,
   createWorkspaceIntentResultEvent,
   createWorkspaceProjectionInvalidatedEvent,
@@ -219,26 +219,72 @@ function projectStorageExchanges() {
 }
 
 describe("desktop protocol parsing", () => {
-  it("parses workspace commands and correlated result events under protocol version 3", () => {
+  it("parses only correctly scoped failure events at protocol version 4", () => {
+    const requestFailure = {
+      protocolVersion: 4,
+      messageType: "event",
+      messageId: "00000000-0000-4000-8000-000000000101",
+      sentAt: "2026-09-04T12:00:00.000Z",
+      sequence: 7,
+      causationId: "00000000-0000-4000-8000-000000000102",
+      event: "request.failure",
+      payload: {
+        code: "HARNESS_INTERNAL_FAILURE",
+        message: "Harness failed while handling a message.",
+        retryable: false,
+      },
+    };
+    expect(parseHarnessMessage(requestFailure)).toEqual({ ok: true, value: requestFailure });
+    expect(parseHarnessMessage({ ...requestFailure, causationId: null })).toEqual({
+      ok: false,
+      error: {
+        code: "PROTOCOL_MESSAGE_INVALID",
+        issues: [{ code: "invalid_type", path: "causationId" }],
+      },
+    });
+    const systemFailure = { ...requestFailure, event: "system.failure", causationId: null };
+    expect(parseHarnessMessage(systemFailure)).toEqual({ ok: true, value: systemFailure });
+    expect(
+      parseHarnessMessage({
+        ...systemFailure,
+        causationId: "00000000-0000-4000-8000-000000000102",
+      }),
+    ).toEqual({
+      ok: false,
+      error: {
+        code: "PROTOCOL_MESSAGE_INVALID",
+        issues: [{ code: "invalid_type", path: "causationId" }],
+      },
+    });
+    expect(parseHarnessMessage({ ...requestFailure, protocolVersion: 3 })).toEqual({
+      ok: false,
+      error: {
+        code: "PROTOCOL_VERSION_UNSUPPORTED",
+        issues: [{ code: "unsupported_value", path: "protocolVersion" }],
+      },
+    });
+  });
+
+  it("parses workspace commands and correlated result events under protocol version 4", () => {
     const { command, event, query, result } = workspaceExchange();
 
-    expect(protocolVersion).toBe(3);
+    expect(protocolVersion).toBe(4);
     expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
     expect(command).toMatchObject({
-      protocolVersion: 3,
+      protocolVersion: 4,
       messageId: "00000000-0000-4000-8000-000000000001",
       payload: query,
     });
     expect(parseHarnessMessage(event)).toEqual({ ok: true, value: event });
     expect(event).toMatchObject({
-      protocolVersion: 3,
+      protocolVersion: 4,
       causationId: command.messageId,
       payload: result,
     });
   });
 
-  it("round-trips Project Storage envelopes under protocol version 3", () => {
-    expect(protocolVersion).toBe(3);
+  it("round-trips Project Storage envelopes under protocol version 4", () => {
+    expect(protocolVersion).toBe(4);
     for (const { command, commandName, event, eventName } of projectStorageExchanges()) {
       expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
       expect(parseHarnessMessage(event)).toEqual({ ok: true, value: event });
@@ -436,11 +482,14 @@ describe("desktop protocol parsing", () => {
       payload: { harnessVersion: "0.0.0" },
     });
     expect(
-      createFailureEvent(eventMetadata, {
-        code: "HARNESS_INTERNAL_FAILURE",
-        message: "Startup failed.",
-        retryable: false,
-      }),
+      createSystemFailureEvent(
+        { ...eventMetadata, causationId: null },
+        {
+          code: "HARNESS_INTERNAL_FAILURE",
+          message: "Startup failed.",
+          retryable: false,
+        },
+      ),
     ).toMatchObject({
       event: "system.failure",
       payload: { code: "HARNESS_INTERNAL_FAILURE" },

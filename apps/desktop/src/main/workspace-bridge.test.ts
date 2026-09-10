@@ -1,6 +1,7 @@
 import {
-  createFailureEvent,
   createReadyEvent,
+  createRequestFailureEvent,
+  createSystemFailureEvent,
   createWorkspaceIntentResultEvent,
   createWorkspaceProjectionInvalidatedEvent,
   createWorkspaceQueryResultEvent,
@@ -308,6 +309,63 @@ beforeEach(() => {
 });
 
 describe("WorkspaceBridge", () => {
+  it("request failure settles only its correlated Workspace request", async () => {
+    const session = new FakeSession();
+    const bridge = bridgeWith(session, [
+      "00000000-0000-4000-8000-000000000401",
+      "00000000-0000-4000-8000-000000000402",
+    ]);
+    let queryResult: WorkspaceQueryResult | "pending" = "pending";
+    void bridge.query(memoryQuery()).then((result) => {
+      queryResult = result;
+    });
+    let intentSettled = false;
+    const intent = bridge.submit(memoryIntent()).then((result) => {
+      intentSettled = true;
+      return result;
+    });
+    try {
+      session.emit({
+        type: "message",
+        message: createRequestFailureEvent(
+          {
+            messageId: id(901),
+            sentAt: "2026-08-14T12:00:01.000Z",
+            sequence: 1,
+            causationId: MessageIdSchema.parse("00000000-0000-4000-8000-000000000401"),
+          },
+          {
+            code: "HARNESS_INTERNAL_FAILURE",
+            message: "Harness failed while handling a message.",
+            retryable: false,
+          },
+        ),
+      });
+      await Promise.resolve();
+      expect(queryResult).toEqual({
+        status: "broken",
+        query: {
+          query: "memory-library.read",
+          projectId: "00000000-0000-4000-8000-000000000010",
+          cursor: null,
+        },
+        diagnostic: {
+          code: "WORKSPACE_TRANSPORT_FAILED",
+          message: "Harness failed while handling a message.",
+        },
+      });
+      expect(intentSettled).toBe(false);
+      emitIntentResult(
+        session,
+        "00000000-0000-4000-8000-000000000402",
+        WorkspaceIntentResultSchema.parse({ status: "forwarded", capability: "memory" }),
+      );
+      await expect(intent).resolves.toEqual({ status: "forwarded", capability: "memory" });
+    } finally {
+      bridge.stop();
+    }
+  });
+
   it("correlates out-of-order workspace responses", async () => {
     const session = new FakeSession();
     const bridge = bridgeWith(session);
@@ -548,7 +606,7 @@ describe("WorkspaceBridge", () => {
     } else if (failure === "failure") {
       session.emit({
         type: "message",
-        message: createFailureEvent(
+        message: createSystemFailureEvent(
           {
             messageId: id(902),
             sentAt: "2026-08-14T12:00:01.000Z",

@@ -1,11 +1,11 @@
 import { EventEmitter } from "node:events";
 import path from "node:path";
 import {
-  createFailureEvent,
   createProjectCloseResultEvent,
   createProjectCreateResultEvent,
   createProjectOpenResultEvent,
   createReadyEvent,
+  createSystemFailureEvent,
   createWorkspaceIntentResultEvent,
   createWorkspaceProjectionInvalidatedEvent,
   createWorkspaceQueryResultEvent,
@@ -15,6 +15,7 @@ import {
   ProjectStorageCloseRequestSchema,
   ProjectStorageCreateRequestSchema,
   ProjectStorageOpenRequestSchema,
+  protocolVersion,
   WorkspaceIntentResultSchema,
   WorkspaceNotificationSchema,
   WorkspaceQueryResultSchema,
@@ -184,6 +185,65 @@ afterEach(() => {
 });
 
 describe("HarnessSupervisor", () => {
+  it("keeps request failure status-neutral and reserves recovery for system failure", () => {
+    vi.useFakeTimers();
+    const child = new FakeChild();
+    const supervisor = supervisorWith([child]);
+    supervisor.start();
+    child.emit("spawn");
+    const channel = channels[0];
+    if (channel === undefined) throw new Error("Harness channel was not created.");
+    channel.port2.emit("message", { data: createReadyEvent(eventMetadata, "0.0.0") });
+    expect(supervisor.getStatus()).toEqual({
+      state: "ready",
+      attempt: 1,
+      harnessVersion: "0.0.0",
+    });
+
+    const failure = {
+      protocolVersion,
+      messageType: "event",
+      messageId: "00000000-0000-4000-8000-000000000003",
+      sentAt: "2026-08-14T12:00:02.000Z",
+      sequence: 2,
+      causationId: "00000000-0000-4000-8000-000000000501",
+      event: "request.failure",
+      payload: {
+        code: "HARNESS_INTERNAL_FAILURE",
+        message: "Harness failed while handling a message.",
+        retryable: false,
+      },
+    };
+    channel.port2.emit("message", { data: failure });
+    expect(supervisor.getStatus()).toEqual({
+      state: "ready",
+      attempt: 1,
+      harnessVersion: "0.0.0",
+    });
+    expect(child.kill).toHaveBeenCalledTimes(0);
+
+    channel.port2.emit("message", {
+      data: {
+        ...failure,
+        messageId: "00000000-0000-4000-8000-000000000004",
+        sequence: 3,
+        causationId: null,
+        event: "system.failure",
+      },
+    });
+    expect(supervisor.getStatus()).toEqual({
+      state: "crashed",
+      attempt: 1,
+      canRetry: true,
+      diagnostic: {
+        code: "HARNESS_PROTOCOL_ERROR",
+        message: "Harness failed while handling a message.",
+      },
+    });
+    expect(child.kill).toHaveBeenCalledTimes(1);
+    child.emit("exit", 1);
+  });
+
   it("records child process events as metadata only", () => {
     vi.useFakeTimers();
     const child = new FakeChild();
@@ -660,11 +720,14 @@ describe("HarnessSupervisor", () => {
     expect(crashReportingMocks.reportHarnessCrash).not.toHaveBeenCalled();
     secondChild.emit("spawn");
     channels[1]?.port2.emit("message", {
-      data: createFailureEvent(eventMetadata, {
-        code: "HARNESS_INTERNAL_FAILURE",
-        message: "Harness rejected startup.",
-        retryable: false,
-      }),
+      data: createSystemFailureEvent(
+        { ...eventMetadata, causationId: null },
+        {
+          code: "HARNESS_INTERNAL_FAILURE",
+          message: "Harness rejected startup.",
+          retryable: false,
+        },
+      ),
     });
 
     expect(supervisor.getStatus()).toMatchObject({

@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import type {
   ProjectStorageCloseRequest,
   ProjectStorageCloseResult,
@@ -30,7 +31,7 @@ import {
   WorkspaceQuerySchema,
 } from "./workspace-protocol.js";
 
-export const protocolVersion = 3 as const;
+export const protocolVersion = 4 as const;
 
 export const MessageIdSchema = z.uuid().brand<"MessageId">();
 export type MessageId = z.infer<typeof MessageIdSchema>;
@@ -137,14 +138,25 @@ export const HarnessFailureCodeSchema = z.enum([
 ]);
 export type HarnessFailureCode = z.infer<typeof HarnessFailureCodeSchema>;
 
-const FailureEventSchema = z.strictObject({
+const HarnessFailurePayloadSchema = z.strictObject({
+  code: HarnessFailureCodeSchema,
+  message: z.string().min(1),
+  retryable: z.boolean(),
+});
+type HarnessFailure = Readonly<z.infer<typeof HarnessFailurePayloadSchema>>;
+
+const RequestFailureEventSchema = z.strictObject({
   ...HarnessEventMetadataSchema,
+  causationId: MessageIdSchema,
+  event: z.literal("request.failure"),
+  payload: HarnessFailurePayloadSchema,
+});
+
+const SystemFailureEventSchema = z.strictObject({
+  ...HarnessEventMetadataSchema,
+  causationId: z.null(),
   event: z.literal("system.failure"),
-  payload: z.strictObject({
-    code: HarnessFailureCodeSchema,
-    message: z.string().min(1),
-    retryable: z.boolean(),
-  }),
+  payload: HarnessFailurePayloadSchema,
 });
 
 const ProjectOpenResultEventSchema = z.strictObject({
@@ -191,7 +203,8 @@ export type DesktopMessage = z.infer<typeof DesktopMessageSchema>;
 
 export const HarnessMessageSchema = z.discriminatedUnion("event", [
   ReadyEventSchema,
-  FailureEventSchema,
+  RequestFailureEventSchema,
+  SystemFailureEventSchema,
   ProjectOpenResultEventSchema,
   ProjectCreateResultEventSchema,
   ProjectCloseResultEventSchema,
@@ -420,13 +433,16 @@ export function createReadyEvent(metadata: EventMetadata, harnessVersion: string
   return createEvent(metadata, "system.ready", { harnessVersion });
 }
 
-export function createFailureEvent(
-  metadata: EventMetadata,
-  failure: Readonly<{
-    code: HarnessFailureCode;
-    message: string;
-    retryable: boolean;
-  }>,
+export function createRequestFailureEvent(
+  metadata: Omit<EventMetadata, "causationId"> & Readonly<{ causationId: MessageId }>,
+  failure: HarnessFailure,
+): HarnessMessage {
+  return createEvent(metadata, "request.failure", failure);
+}
+
+export function createSystemFailureEvent(
+  metadata: Omit<EventMetadata, "causationId"> & Readonly<{ causationId: null }>,
+  failure: HarnessFailure,
 ): HarnessMessage {
   return createEvent(metadata, "system.failure", failure);
 }

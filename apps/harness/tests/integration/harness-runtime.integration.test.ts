@@ -21,6 +21,7 @@ import {
   createUnavailableProjectStorageApplication,
   createUnavailableWorkspaceApplication,
   type HarnessTransport,
+  type ProjectStorageApplication,
   startHarnessRuntime,
   type WorkspaceApplication,
 } from "../../src/index.js";
@@ -72,12 +73,15 @@ function workspaceApplicationWithNotifications(
   };
 }
 
-function startRuntimeFixture(workspaceApplication: WorkspaceApplication) {
+function startRuntimeFixture(
+  workspaceApplication: WorkspaceApplication,
+  projectStorageApplication: ProjectStorageApplication = createUnavailableProjectStorageApplication(),
+) {
   const { port1, port2 } = new MessageChannel();
   let generatedId = 2;
   const stop = startHarnessRuntime({
     transport: transportFor(port1),
-    projectStorageApplication: createUnavailableProjectStorageApplication(),
+    projectStorageApplication,
     workspaceApplication,
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
@@ -132,6 +136,49 @@ const memoryNotification = WorkspaceNotificationSchema.parse({
 });
 
 describe("harness message channel integration", () => {
+  it("round-trips a request handler failure without escalating the process", async () => {
+    const { port1, port2, stop } = startRuntimeFixture(createUnavailableWorkspaceApplication(), {
+      ...createUnavailableProjectStorageApplication(),
+      open: async () => {
+        throw new Error("sensitive failure");
+      },
+    });
+    try {
+      const response = nextMessage(port2);
+      port2.postMessage(
+        createProjectOpenCommand(
+          {
+            messageId: "00000000-0000-4000-8000-000000000201",
+            sentAt: "2026-08-14T12:00:00.000Z",
+          },
+          ProjectStorageOpenRequestSchema.parse({
+            projectId: "00000000-0000-4000-8000-000000000010",
+          }),
+        ),
+      );
+      const result = await response;
+      expect(result).toEqual({
+        protocolVersion: 4,
+        messageType: "event",
+        messageId: "00000000-0000-4000-8000-000000000002",
+        sentAt: "2026-08-14T12:00:01.000Z",
+        sequence: 1,
+        causationId: "00000000-0000-4000-8000-000000000201",
+        event: "request.failure",
+        payload: {
+          code: "HARNESS_INTERNAL_FAILURE",
+          message: "Harness failed while handling a message.",
+          retryable: false,
+        },
+      });
+      expect(JSON.stringify(result)).not.toContain("sensitive failure");
+    } finally {
+      await stop();
+      port1.close();
+      port2.close();
+    }
+  });
+
   it("round-trips an unavailable workspace query over structured clone", async () => {
     const { port1, port2, stop } = startRuntimeFixture(createUnavailableWorkspaceApplication());
     const query = WorkspaceQuerySchema.parse({
@@ -277,7 +324,7 @@ describe("harness message channel integration", () => {
       const response = nextMessage(port2);
       port2.postMessage(command);
       await expect(response).resolves.toEqual({
-        protocolVersion: 3,
+        protocolVersion: 4,
         messageType: "event",
         messageId: `00000000-0000-4000-8000-${String(index + 2).padStart(12, "0")}`,
         sentAt: "2026-08-14T12:00:01.000Z",
