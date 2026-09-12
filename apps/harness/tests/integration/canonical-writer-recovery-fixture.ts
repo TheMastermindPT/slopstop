@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { ProjectActivationIdSchema, ProjectStorageOpenResultSchema } from "@slopstop/protocol";
+import { ProjectActivationIdSchema } from "@slopstop/protocol";
 import { expect, vi } from "vitest";
 import { createActiveProjectCoordinator } from "../../src/active-project-coordinator.js";
 import { createCanonicalCommandRegistry } from "../../src/canonical-command-registry.js";
@@ -32,8 +32,8 @@ import {
   settlementText,
   statementText,
 } from "./canonical-command-fixture.js";
+import { openedCanonicalStorageResult } from "./canonical-storage-selection-fixture.js";
 import { createConformanceCounterCommand } from "./conformance-counter-command.js";
-import { fixedCreationIds } from "./project-storage-create-fixture.js";
 
 export type RecoveryFixture = Awaited<ReturnType<typeof createRecoveryFixture>>;
 
@@ -371,19 +371,7 @@ export function recoveryStoragePort(
 ): ProjectStorageActivationPort {
   return {
     acquireActivation: async (request) => {
-      const result = ProjectStorageOpenResultSchema.parse({
-        status: "opened",
-        request,
-        mode: "read-write",
-        identity: {
-          storageId: fixedCreationIds.storageId,
-          generationId: fixedCreationIds.generationId,
-          canonicalDatabaseLineageId: fixedCreationIds.canonicalDatabaseLineageId,
-          runtimeDatabaseLineageId: fixedCreationIds.runtimeDatabaseLineageId,
-        },
-        canonicalHealth: { status: "healthy" },
-        runtimeHealth: { status: "healthy" },
-      });
+      const result = openedCanonicalStorageResult(request);
       if (result.status !== "opened") throw new Error("Recovery fixture Storage selection failed.");
       return {
         status: "ready",

@@ -420,13 +420,7 @@ it.each(["older", "future"] as const)(
       }
       const before = await f.snapshot();
       const calls = f.calls.length;
-      await expect(f.repository.releaseFence(recoveryReleaseTime)).rejects.toMatchObject({
-        code: "WRITER_FENCE_RELEASE_FAILED",
-      });
-      expect(
-        f.calls.slice(calls).filter((sql) => sql.startsWith("INSERT INTO writer_recovery_records")),
-      ).toEqual([]);
-      expect(await f.snapshot()).toEqual(before);
+      await expectReleaseWithoutNewMarker(f, calls, before);
     } finally {
       await f.raw.close();
     }
@@ -565,18 +559,26 @@ it.each([
           };
         return alterFence(result, changes);
       };
-      await expect(f.repository.releaseFence(recoveryReleaseTime)).rejects.toMatchObject({
-        code: "WRITER_FENCE_RELEASE_FAILED",
-      });
-      expect(
-        f.calls.slice(calls).filter((sql) => sql.startsWith("INSERT INTO writer_recovery_records")),
-      ).toEqual([]);
-      expect(await f.snapshot()).toEqual(before);
+      await expectReleaseWithoutNewMarker(f, calls, before);
     } finally {
       await f.raw.close();
     }
   },
 );
+
+async function expectReleaseWithoutNewMarker(
+  f: Awaited<ReturnType<typeof createRecoveryFixture>>,
+  calls: number,
+  before: Awaited<ReturnType<Awaited<ReturnType<typeof createRecoveryFixture>>["snapshot"]>>,
+): Promise<void> {
+  await expect(f.repository.releaseFence(recoveryReleaseTime)).rejects.toMatchObject({
+    code: "WRITER_FENCE_RELEASE_FAILED",
+  });
+  expect(
+    f.calls.slice(calls).filter((sql) => sql.startsWith("INSERT INTO writer_recovery_records")),
+  ).toEqual([]);
+  expect(await f.snapshot()).toEqual(before);
+}
 
 const brokenRecordingFences = [
   { generationProjectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },

@@ -267,7 +267,7 @@ async function expectAdmissionCorrection(f: Awaited<ReturnType<typeof createSett
   expectCorrectedRows(afterConflict, await f.snapshot(), applied);
 }
 
-export function conflictInput(entry: (typeof conflictCases)[number]) {
+function conflictInput(entry: (typeof conflictCases)[number]) {
   return snapshotCanonicalCommand(settlementRequest.projectId, {
     ...settlementRequest.command,
     type: entry.type,
@@ -296,7 +296,7 @@ export function conflictReceipt(
   };
 }
 
-export function expectConflictRows(
+function expectConflictRows(
   before: Awaited<ReturnType<typeof settlementRows>>,
   after: Awaited<ReturnType<typeof settlementRows>>,
   receipt: ReturnType<typeof conflictReceipt>,
@@ -407,7 +407,7 @@ export async function expectRawConflictDistinction(kind: "default" | "transform"
   }
 }
 
-export async function prepareConflict(f: Awaited<ReturnType<typeof createSettlementFixture>>) {
+async function prepareConflict(f: Awaited<ReturnType<typeof createSettlementFixture>>) {
   registerCounter(f);
   expect(await f.repository.settle(settlementText)).toEqual({
     status: "settled",
@@ -538,7 +538,7 @@ export const unchangedReceipt = {
   events: [],
 } as const;
 
-export const rejectedText = snapshotCanonicalCommand(settlementRequest.projectId, {
+const rejectedText = snapshotCanonicalCommand(settlementRequest.projectId, {
   commandId: CommandIdSchema.parse("44444444-4444-4444-8444-444444444503"),
   type: "conformance.counter.set",
   version: 1,
@@ -564,7 +564,7 @@ export const interleavedSequenceCases = [
   { text: conflictInput(conflictCases[0]), receipt: conflictReceipt(4) },
 ];
 
-export async function prepareRejected(
+async function prepareRejected(
   f: Awaited<ReturnType<typeof createSettlementFixture>>,
   retryable = false,
 ) {
@@ -586,7 +586,7 @@ export async function prepareRejected(
   return receipt;
 }
 
-export function expectRejectedRows(
+function expectRejectedRows(
   before: Awaited<ReturnType<typeof settlementRows>>,
   after: Awaited<ReturnType<typeof settlementRows>>,
   retryable: boolean,

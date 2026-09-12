@@ -202,6 +202,20 @@ function expectUnsupportedBootstrapReceipt(value: unknown) {
   return receipt;
 }
 
+function startTrustedBootstrap(
+  applicationStorageRoot: string,
+  session: ReturnType<typeof createProcessTransportFixture>,
+) {
+  return startHarnessProcessRuntime({
+    bootstrap: {
+      kind: "harness.connect",
+      applicationStorageRootUrl: pathToFileURL(applicationStorageRoot).href,
+      migrationResourcesRootUrl: pathToFileURL(checkedInMigrationRoot).href,
+    },
+    transport: session.transport,
+  });
+}
+
 it(
   "settles an unsupported command through the bootstrap-composed empty registry",
   async () => {
@@ -209,14 +223,7 @@ it(
     const session = createProcessTransportFixture();
     let stop: StopHarnessRuntime | undefined;
     try {
-      stop = startHarnessProcessRuntime({
-        bootstrap: {
-          kind: "harness.connect",
-          applicationStorageRootUrl: pathToFileURL(applicationStorageRoot).href,
-          migrationResourcesRootUrl: pathToFileURL(checkedInMigrationRoot).href,
-        },
-        transport: session.transport,
-      });
+      stop = startTrustedBootstrap(applicationStorageRoot, session);
       const { command, generationId } = await createBootstrapCommand(session);
       const { projectId } = command;
       const file = path.join(
@@ -271,14 +278,7 @@ it(
     let stop: StopHarnessRuntime | undefined;
 
     try {
-      stop = startHarnessProcessRuntime({
-        bootstrap: {
-          kind: "harness.connect",
-          applicationStorageRootUrl: pathToFileURL(applicationStorageRoot).href,
-          migrationResourcesRootUrl: pathToFileURL(checkedInMigrationRoot).href,
-        },
-        transport: session.transport,
-      });
+      stop = startTrustedBootstrap(applicationStorageRoot, session);
       await session.handshake();
       await expect(session.open()).resolves.toMatchObject({
         event: "project.open.result",

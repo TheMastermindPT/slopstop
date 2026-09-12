@@ -17,7 +17,7 @@ import {
   type ProjectStorageOpenResult,
   ProjectStorageOpenResultSchema,
 } from "@slopstop/protocol";
-import { requestHarness } from "./harness-pending-request.js";
+import { dispatchPendingHarnessEvent, requestHarness } from "./harness-pending-request.js";
 import { harnessSendFailureMessage } from "./harness-send-failure.js";
 import type { HarnessSessionClient, HarnessSessionEvent } from "./harness-session.js";
 
@@ -93,7 +93,11 @@ class ProjectStorageBridge implements ProjectStorageBridgeClient {
     this.#now = options.now;
     this.#session = options.session;
     this.#stopSessionSubscription = this.#session.subscribe((event) => {
-      this.#handleSessionEvent(event);
+      dispatchPendingHarnessEvent(event, {
+        failAll: (message) => this.#failAll(message),
+        failRequest: (causationId, message) => this.#failRequest(causationId, message),
+        message: (message) => this.#handleHarnessMessage(message),
+      });
     });
   }
 
@@ -180,25 +184,11 @@ class ProjectStorageBridge implements ProjectStorageBridgeClient {
     });
   }
 
-  #handleSessionEvent(event: HarnessSessionEvent): void {
-    switch (event.type) {
-      case "disconnected":
-        this.#failAll("Harness session disconnected.");
-        return;
-      case "protocol-error":
-        this.#failAll("Harness session received an invalid protocol message.");
-        return;
-      case "message":
-        this.#handleHarnessMessage(event.message);
-    }
-  }
-
   #handleHarnessMessage(
     message: Extract<HarnessSessionEvent, { type: "message" }>["message"],
   ): void {
     switch (message.event) {
       case "request.failure":
-        this.#failRequest(message.causationId, message.payload.message);
         return;
       case "system.failure":
         this.#failAll("Harness reported a failure.");

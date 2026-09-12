@@ -17,7 +17,7 @@
     "check:dead-code": "knip",
     "check:deep": "pnpm check:deep:portable && pnpm package:launch-smoke",
     "check:deep:portable": "pnpm check && pnpm test:coverage && pnpm test:integration && pnpm check:dead-code && pnpm check:duplicates && pnpm check:architecture && pnpm test:e2e",
-    "check:duplicates": "jscpd --config jscpd.json",
+    "check:duplicates": "node apps/harness/scripts/check-golden-sql.mjs && jscpd --config jscpd.json",
     "dev": "pnpm --filter @slopstop/desktop start",
     "format": "biome format --write .",
     "format:check": "biome format .",

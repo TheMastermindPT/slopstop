@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   lstat,
   mkdir,
   mkdtemp,
   readdir,
   readFile,
+  realpath,
   rename,
   rm,
   symlink,
@@ -14,12 +15,49 @@ import {
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import {
+  createRuntimeChallenge,
+  verifyRuntimeWitness,
+} from "../../src/main/package-smoke-runtime.ts";
 
 const smokeTimeoutMs = 30_000;
+const writerTimeoutMs = 120_000;
 const terminalCloseTimeoutMs = 5_000;
-const maxStderrCharacters = 4_000;
+const maxOutputBytes = 4_000;
 const markerFilename = ".slopstop-package-smoke.json";
 const authorizationFailureOutput = "Package smoke authorization failed.\n";
+const writerTerminalOutput = "Package smoke writer processes terminal.\n";
+const writerPassOutput = "Package smoke writer proof passed.\n";
+const writerFailureStages = new Set([
+  "native-preflight",
+  "spawn",
+  "handshake",
+  "transport",
+  "unexpected-message",
+  "inactive",
+  "activate",
+  "first-settlement",
+  "contention",
+  "read-only",
+  "hard-kill",
+  "takeover",
+  "replay",
+  "stale-activation",
+  "next-settlement",
+  "audit",
+  "stale-initialize",
+  "stale-release",
+  "stale-attempt",
+  "stale-finish",
+  "clean-stop",
+  "process-exit",
+  "stdio-drain",
+  "output-bound",
+  "cancelled",
+  "proof-deadline",
+  "cleanup",
+  "internal",
+]);
 const invalidRelativeSmokeRoot = "relative-smoke-root";
 const healthyProjectId = "00000000-0000-4000-8000-000000000101";
 const witnessProjectId = "00000000-0000-4000-8000-000000000103";
@@ -122,6 +160,72 @@ async function assertPackagedStorageResources() {
   const resources = packagedResourcesDirectory();
   await assertPackagedMigrations(resources);
   await assertPackagedNativeBindings(resources);
+  await assertWriterResources(resources);
+}
+
+// Published v1.5.1 pins, retained from the approved native-origin contract.
+const writerNativeHashes = {
+  "win32-x64": "dd3f8eb1d53441f151551c84a1211c79524b1eab74ff83ab93e68037f3997ba4",
+  "linux-x64": "13657db7ce92f823ee8066cc7244f3a475340707fc065fd4f5aceeebbfa898c3",
+  "linux-arm64": "895dd0dca09438454f28bba250bcafa3e69c937fe97ea46b1b6212dc3a81315c",
+  "darwin-x64": "973e4b2addf30901b955c75626ac153d3a37cebcfa621375bcd490f199884c8e",
+  "darwin-arm64": "1e93b74e556b7d1767d57fabb197d9d1df5641453967170537278f72ed46f018",
+};
+
+function requireResource(condition) {
+  if (!condition) throw new Error("Packaged SlopStop Writer resources are invalid.");
+}
+
+function archiveFile(bytes, headerSize, entry) {
+  requireResource(
+    entry && !entry.link && !entry.unpacked && Number.isSafeInteger(entry.size) && entry.size > 0,
+  );
+  const offset = Number(entry.offset);
+  requireResource(Number.isSafeInteger(offset) && offset >= 0);
+  const start = 8 + headerSize + offset;
+  requireResource(start + entry.size <= bytes.length);
+  return bytes.subarray(start, start + entry.size);
+}
+
+async function assertWriterArchive(resources) {
+  const bytes = await readFile(path.join(resources, "app.asar"));
+  const headerSize = bytes.readUInt32LE(4);
+  const jsonSize = bytes.readUInt32LE(12);
+  requireResource(jsonSize > 0 && jsonSize <= headerSize - 8);
+  const header = JSON.parse(bytes.toString("utf8", 16, 16 + jsonSize));
+  const files = header.files[".vite"].files.build.files;
+  requireResource(files);
+  archiveFile(bytes, headerSize, files["harness.cjs"]);
+  archiveFile(bytes, headerSize, files["writer-proof-fixture.cjs"]);
+  const chunks = Object.keys(files).filter((name) => name.endsWith(".cjs"));
+  requireResource(
+    chunks.some((name) => !["harness.cjs", "writer-proof-fixture.cjs", "main.cjs"].includes(name)),
+  );
+  for (const name of chunks) {
+    const source = archiveFile(bytes, headerSize, files[name]).toString("utf8");
+    for (const match of source.matchAll(/(?:require|import)\(["']\.\/([^"']+\.cjs)["']\)/gu)) {
+      archiveFile(bytes, headerSize, files[match[1]]);
+    }
+  }
+  const packageEntry = files.node_modules.files["fs-native-extensions"].files["package.json"];
+  const manifest = JSON.parse(archiveFile(bytes, headerSize, packageEntry).toString("utf8"));
+  requireResource(manifest.name === "fs-native-extensions" && manifest.version === "1.5.1");
+}
+
+async function assertWriterResources(resources) {
+  const target = `${process.platform}-${process.arch}`;
+  const binding = path.join(
+    resources,
+    "app.asar.unpacked/.vite/build/node_modules/fs-native-extensions/prebuilds",
+    target,
+    "fs-native-extensions.node",
+  );
+  const entry = await lstat(binding);
+  requireResource(entry.isFile() && !entry.isSymbolicLink() && entry.size > 0);
+  requireResource((await realpath(binding)) === binding);
+  const bytes = await readFile(binding);
+  requireResource(createHash("sha256").update(bytes).digest("hex") === writerNativeHashes[target]);
+  await assertWriterArchive(resources);
 }
 
 async function isolatePackagedOutput() {
@@ -144,8 +248,28 @@ async function isolatePackagedOutput() {
   };
 }
 
+function boundedOutput() {
+  let bytes = Buffer.alloc(0);
+  let overflow = false;
+  return {
+    append(chunk) {
+      const input = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+      overflow ||= bytes.length + input.length > maxOutputBytes;
+      bytes = Buffer.concat([bytes, input.subarray(0, maxOutputBytes - bytes.length)]);
+    },
+    get text() {
+      return bytes.toString("utf8");
+    },
+    get overflow() {
+      return overflow;
+    },
+  };
+}
+
 async function launchPackagedApp({ root, token, scenario }) {
   return new Promise((resolve) => {
+    const duration = scenario === "writer-proof" ? writerTimeoutMs : smokeTimeoutMs;
+    const deadline = performance.now() + duration;
     const executable = packagedExecutable();
     const env = {
       ...process.env,
@@ -174,10 +298,26 @@ async function launchPackagedApp({ root, token, scenario }) {
       env,
       stdio: ["ignore", "pipe", "pipe"],
     });
-    let standardOutput = "";
-    let stdoutOverflow = false;
-    let errorOutput = "";
-    let stderrOverflow = false;
+    let pid;
+    let exitCode;
+    let exited = false;
+    let stdoutEnded = false;
+    let stderrEnded = false;
+    child.once("spawn", () => {
+      pid = child.pid;
+    });
+    child.once("exit", (code) => {
+      exited = true;
+      exitCode = code;
+    });
+    child.stdout.once("end", () => {
+      stdoutEnded = true;
+    });
+    child.stderr.once("end", () => {
+      stderrEnded = true;
+    });
+    const standardOutput = boundedOutput();
+    const errorOutput = boundedOutput();
     let spawnFailed = false;
     let timedOut = false;
     let settled = false;
@@ -192,8 +332,13 @@ async function launchPackagedApp({ root, token, scenario }) {
     };
     const timeout = setTimeout(() => {
       timedOut = true;
-      child.kill("SIGKILL");
-    }, smokeTimeoutMs);
+      cleanupSafe = false;
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        // Main termination is best effort, never descendant terminal proof.
+      }
+    }, duration);
     const terminalTimeout = setTimeout(() => {
       cleanupSafe = false;
       child.stdout.destroy();
@@ -203,50 +348,107 @@ async function launchPackagedApp({ root, token, scenario }) {
         code: null,
         closed: false,
         spawnFailed,
-        stderr: errorOutput,
-        stderrOverflow,
-        stdout: standardOutput,
-        stdoutOverflow,
+        stderr: errorOutput.text,
+        stderrOverflow: errorOutput.overflow,
+        stdout: standardOutput.text,
+        stdoutOverflow: standardOutput.overflow,
         timedOut: true,
+        pid,
+        exited,
+        stdoutEnded,
+        stderrEnded,
       });
-    }, smokeTimeoutMs + terminalCloseTimeoutMs);
-    child.stdout.on("data", (chunk) => {
-      const combined = `${standardOutput}${String(chunk)}`;
-      stdoutOverflow ||= combined.length > maxStderrCharacters;
-      standardOutput = combined.slice(0, maxStderrCharacters);
-    });
-    child.stderr.on("data", (chunk) => {
-      const combined = `${errorOutput}${String(chunk)}`;
-      stderrOverflow ||= combined.length > maxStderrCharacters;
-      errorOutput = combined.slice(0, maxStderrCharacters);
-    });
+    }, duration + terminalCloseTimeoutMs);
+    child.stdout.on("data", standardOutput.append);
+    child.stderr.on("data", errorOutput.append);
     child.once("error", () => {
       spawnFailed = true;
     });
+    for (const stream of [child.stdout, child.stderr]) {
+      stream.once("error", () => {
+        spawnFailed = true;
+      });
+    }
     child.once("close", (code) => {
+      if (performance.now() >= deadline) {
+        timedOut = true;
+        cleanupSafe = false;
+      }
       settle({
         code,
         closed: true,
         spawnFailed,
-        stderr: errorOutput,
-        stderrOverflow,
-        stdout: standardOutput,
-        stdoutOverflow,
+        stderr: errorOutput.text,
+        stderrOverflow: errorOutput.overflow,
+        stdout: standardOutput.text,
+        stdoutOverflow: standardOutput.overflow,
         timedOut,
+        pid,
+        exited: exited && exitCode === code,
+        stdoutEnded,
+        stderrEnded,
       });
     });
   });
 }
 
+function cleanWriterTransport(launch) {
+  return [
+    launch.closed,
+    !launch.spawnFailed,
+    !launch.timedOut,
+    !launch.stderrOverflow,
+    !launch.stdoutOverflow,
+    launch.exited,
+    launch.stdoutEnded,
+    launch.stderrEnded,
+  ].every(Boolean);
+}
+
+function validWriterFailure(launch) {
+  const failedStage =
+    /^Package smoke writer processes terminal\.\nPackage smoke proof failed at writer-([a-z-]+)\.\n$/u.exec(
+      launch.stderr,
+    )?.[1];
+  return Number.isInteger(launch.code) && launch.code !== 0 && writerFailureStages.has(failedStage);
+}
+
+function writerCompletion(launch, runtime) {
+  const cleanTransport = cleanWriterTransport(launch) && matchesRuntimeStdout(launch, runtime);
+  const passed =
+    cleanTransport &&
+    launch.code === 0 &&
+    launch.stderr === writerTerminalOutput + writerPassOutput;
+  const failedTerminal = cleanTransport && validWriterFailure(launch);
+  cleanupSafe &&= passed || failedTerminal;
+  if (!passed) throw new Error("Packaged SlopStop Writer completion failed.");
+}
+function matchesRuntimeStdout(launch, runtime) {
+  return launch.stdout === (runtime.platform === "win32" ? "\r\n" : "");
+}
+async function launchWithRuntime(root, token, scenario) {
+  if (scenario !== "writer-proof")
+    return { launch: await launchPackagedApp({ root, token, scenario }) };
+  const binding = await createRuntimeChallenge({ root, executable: packagedExecutable() });
+  const launch = await launchPackagedApp({ root, token, scenario });
+  if (!cleanWriterTransport(launch)) throw new Error("Writer transport failed.");
+  return { launch, runtime: await verifyRuntimeWitness(binding, launch.pid) };
+}
+
 async function launchScenario(root, token, scenario) {
   let launch;
+  let runtime;
   try {
-    launch = await launchPackagedApp({ root, token, scenario });
+    ({ launch, runtime } = await launchWithRuntime(root, token, scenario));
   } catch {
+    if (scenario === "writer-proof") cleanupSafe = false;
     activeSmokeStage = `${scenario} scenario launch rejected`;
     throw new Error(`Packaged SlopStop ${scenario} scenario launch rejected.`);
   }
-  const proofFailure = /^Package smoke proof failed at ([a-z-]+)\.$/mu.exec(launch.stderr);
+  if (scenario === "writer-proof") {
+    writerCompletion(launch, runtime);
+    return;
+  }
   const startupFailed = launch.stderr.includes("SlopStop failed to start.\n");
   const capturedOutput = `${launch.stdout}\n${launch.stderr}`;
   const exposedPrivateInput = [root, token].some((value) => capturedOutput.includes(value));
@@ -261,7 +463,7 @@ async function launchScenario(root, token, scenario) {
     [launch.code !== 0, "exited nonzero"],
   ].find(([failed]) => failed);
   if (failedCheck !== undefined) {
-    const failure = proofFailure?.[1] ?? (startupFailed ? "startup failed" : failedCheck[1]);
+    const failure = startupFailed ? "startup failed" : failedCheck[1];
     activeSmokeStage = `${scenario} scenario ${failure}`;
     throw new Error(`Packaged SlopStop ${scenario} scenario ${failedCheck[1]}.`);
   }
@@ -385,7 +587,7 @@ const invalidAuthorizationCases = [
   },
 ];
 
-async function runInvalidAuthorizationCase(testCase) {
+async function runInvalidAuthorizationCase(testCase, scenario = "bootstrap") {
   activeSmokeStage = `invalid authorization: ${testCase.name}`;
   const fixture = await createAuthorizedSmokeRoot();
   try {
@@ -396,6 +598,7 @@ async function runInvalidAuthorizationCase(testCase) {
       token: fixture.token,
       scenario: "bootstrap",
     };
+    if (input.scenario === "bootstrap") input.scenario = scenario;
     const launch = await launchPackagedApp(input);
     const secrets = [fixture.root, fixture.token, input.root, input.token].filter(
       (value) => typeof value === "string",
@@ -445,7 +648,7 @@ async function assertRejectedAuthorizationLaunch({
   }
 }
 
-async function runSymlinkAuthorizationCaseIfSupported() {
+async function runSymlinkAuthorizationCaseIfSupported(scenario = "bootstrap") {
   activeSmokeStage = "invalid authorization: symlink marker";
   const fixture = await createAuthorizedSmokeRoot();
   const externalTargetRoot = await mkdtemp(
@@ -470,7 +673,7 @@ async function runSymlinkAuthorizationCaseIfSupported() {
     const launch = await launchPackagedApp({
       root: fixture.root,
       token: fixture.token,
-      scenario: "bootstrap",
+      scenario,
     });
     await assertRejectedAuthorizationLaunch({
       launch,
@@ -488,7 +691,7 @@ async function runSymlinkAuthorizationCaseIfSupported() {
   }
 }
 
-async function runRootSymlinkAuthorizationCaseIfSupported() {
+async function runRootSymlinkAuthorizationCaseIfSupported(scenario = "bootstrap") {
   activeSmokeStage = "invalid authorization: symlink root";
   const fixture = await createAuthorizedSmokeRoot();
   const linkParent = await mkdtemp(path.join(os.tmpdir(), "slopstop-package-smoke-root-link-"));
@@ -506,7 +709,7 @@ async function runRootSymlinkAuthorizationCaseIfSupported() {
     const launch = await launchPackagedApp({
       root: linkedRoot,
       token: fixture.token,
-      scenario: "bootstrap",
+      scenario,
     });
     await assertRejectedAuthorizationLaunch({
       launch,
@@ -530,15 +733,31 @@ async function runInvalidAuthorizationMatrix() {
   }
   await runSymlinkAuthorizationCaseIfSupported();
   await runRootSymlinkAuthorizationCaseIfSupported();
+  for (const testCase of invalidAuthorizationCases) {
+    if (testCase.name !== "non-marker-only bootstrap root") {
+      await runInvalidAuthorizationCase(testCase, "writer-proof");
+    }
+  }
+  await runSymlinkAuthorizationCaseIfSupported("writer-proof");
+  await runRootSymlinkAuthorizationCaseIfSupported("writer-proof");
 }
 
-function isPlainGenerationEntry(entries) {
-  if (entries.length !== 1) return false;
-  const entry = entries[0];
-  if (entry === undefined) return false;
+function isPlainGenerationEntry(entries, writerCompleted) {
+  const generations = entries.filter((entry) => generationIdPattern.test(entry.name));
+  const expectedCount = writerCompleted ? 2 : 1;
+  if (entries.length !== expectedCount || generations.length !== 1) return false;
+  if (writerCompleted) {
+    const lock = entries.find((entry) => entry.name === ".slopstop-writer.lock");
+    if (!isPlainFile(lock)) return false;
+  }
+  const entry = generations[0];
   if (!entry.isDirectory()) return false;
   if (entry.isSymbolicLink()) return false;
   return generationIdPattern.test(entry.name);
+}
+
+function isPlainFile(entry) {
+  return entry?.isFile() && !entry.isSymbolicLink();
 }
 
 function generationManifestAgrees(manifest, generationId) {
@@ -549,13 +768,13 @@ function generationManifestAgrees(manifest, generationId) {
   return manifest.generationId === generationId;
 }
 
-async function inspectHealthyGeneration(root) {
+async function inspectHealthyGeneration(root, writerCompleted = false) {
   const projectRoot = path.join(root, "storage", "projects", healthyProjectId);
   const entries = await readdir(projectRoot, { withFileTypes: true });
-  if (!isPlainGenerationEntry(entries)) {
+  if (!isPlainGenerationEntry(entries, writerCompleted)) {
     throw new Error("Packaged SlopStop did not create one plain active generation.");
   }
-  const entry = entries[0];
+  const entry = entries.find((entry) => generationIdPattern.test(entry.name));
   const generationRoot = path.join(projectRoot, entry.name);
   const generationEntry = await lstat(generationRoot);
   if (!generationEntry.isDirectory() || generationEntry.isSymbolicLink()) {
@@ -606,6 +825,16 @@ async function runPackageSmoke() {
       activeSmokeStage = "bootstrap scenario";
       await launchScenario(root, token, "bootstrap");
       const generationRoot = await inspectHealthyGeneration(root);
+      const originalManifest = await readFile(path.join(generationRoot, "manifest.json"), "utf8");
+      activeSmokeStage = "writer-proof scenario";
+      await launchScenario(root, token, "writer-proof");
+      const afterWriter = await inspectHealthyGeneration(root, true);
+      if (
+        afterWriter !== generationRoot ||
+        (await readFile(path.join(afterWriter, "manifest.json"), "utf8")) !== originalManifest
+      ) {
+        throw new Error("Packaged SlopStop Writer changed Storage identity.");
+      }
       await removeClosedRuntimeDatabase(generationRoot);
       activeSmokeStage = "missing-runtime scenario";
       await launchScenario(root, token, "missing-runtime");
@@ -626,7 +855,9 @@ async function runPackageSmoke() {
 
 try {
   await runPackageSmoke();
-  process.stdout.write("Packaged SlopStop validated renderer isolation and Project Storage.\n");
+  process.stdout.write(
+    "Packaged SlopStop validated renderer isolation, Project Storage, and Writer proof.\n",
+  );
 } catch {
   const message =
     process.env["CI"] === "true"

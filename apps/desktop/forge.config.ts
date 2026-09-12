@@ -43,7 +43,11 @@ const config: ForgeConfig = {
           target: "preload",
         },
         {
-          entry: { harness: "../harness/src/process-entry.ts" },
+          entry: {
+            harness: "../harness/src/process-entry.ts",
+            "writer-proof-fixture":
+              "../harness/tests/integration/canonical-writer-package-smoke-entry.ts",
+          },
           config: "vite.harness.config.ts",
           target: "main",
         },

@@ -45,6 +45,27 @@ export {
   WriterGenerationSchema,
 } from "./canonical-project-protocol.js";
 export type {
+  WriterProofControl,
+  WriterProofEvent,
+  WriterProofStart,
+} from "./canonical-writer-smoke-protocol.js";
+export {
+  WriterProofControlSchema,
+  WriterProofEventSchema,
+  WriterProofNativeMetadataSchema,
+  WriterProofNativeTargetSchema,
+  WriterProofStartSchema,
+  writerProofFirstCommand,
+  writerProofInactiveActivationId,
+  writerProofNativeBindingFilename,
+  writerProofNativePackageVersion,
+  writerProofNextCommand,
+  writerProofProjectId,
+  writerProofStaleCommand,
+  writerProofStaleCreateRequestId,
+  writerProofStaleProjectId,
+} from "./canonical-writer-smoke-protocol.js";
+export type {
   CanonicalDatabaseLineageId,
   OpenedStorageIdentity,
   PersistenceHealth,

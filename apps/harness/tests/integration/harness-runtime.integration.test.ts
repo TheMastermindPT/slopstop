@@ -1,9 +1,6 @@
 import { setImmediate as nextTurn } from "node:timers/promises";
 import { MessageChannel, type MessagePort } from "node:worker_threads";
 import {
-  CanonicalProjectActivationResultSchema,
-  CanonicalProjectCommandRequestSchema,
-  CanonicalProjectCommandResultSchema,
   createProjectActivateCommand,
   createProjectCloseCommand,
   createProjectCommand,
@@ -31,6 +28,10 @@ import {
   startHarnessRuntime,
   type WorkspaceApplication,
 } from "../../src/index.js";
+import {
+  createCanonicalRuntimeApplicationFixture,
+  unusedCanonicalApplication,
+} from "./canonical-runtime-application-fixture.js";
 
 function transportFor(port: MessagePort): HarnessTransport {
   return {
@@ -90,16 +91,7 @@ function startRuntimeFixture(
   const { port1, port2 } = new MessageChannel();
   let generatedId = 2;
   const stop = startHarnessRuntime({
-    canonicalProjectApplication: {
-      activate: async () => {
-        throw new Error("Canonical activation is unused by this fixture.");
-      },
-      switchProject: unexpectedCanonicalSwitch,
-      execute: async () => {
-        throw new Error("Canonical command is unused by this fixture.");
-      },
-      stop: async () => undefined,
-    },
+    canonicalProjectApplication: unusedCanonicalApplication(unexpectedCanonicalSwitch),
     transport: transportFor(port1),
     projectStorageApplication,
     workspaceApplication,
@@ -403,53 +395,23 @@ function canonicalChannelFixture() {
       return () => port1.off("message", observe);
     },
   };
-  const request = CanonicalProjectCommandRequestSchema.parse({
-    projectId: "00000000-0000-4000-8000-000000000010",
-    activationId: "00000000-0000-4000-8000-000000000011",
-    command: {
-      commandId: "00000000-0000-4000-8000-000000000012",
-      type: "fixture.noop",
-      version: 1,
-      payload: {},
-    },
-  });
-  const activationResult = CanonicalProjectActivationResultSchema.parse({
-    status: "active",
-    request: { projectId: request.projectId },
-    access: "read-only",
-    activationId: request.activationId,
-    writerGeneration: null,
-    diagnostic: {
-      code: "WRITER_UNAVAILABLE",
-      message: "Another SlopStop process holds Project write authority.",
-      retryable: true,
-    },
-  });
-  const commandResult = CanonicalProjectCommandResultSchema.parse({
-    status: "read-only",
-    projectId: request.projectId,
-    activationId: request.activationId,
-    commandId: request.command.commandId,
-    diagnostic: {
-      code: "WRITER_UNAVAILABLE",
-      message: "The active Project has no write authority.",
-      retryable: true,
-    },
-  });
   let fail = false;
   let sequence = 900;
-  const canonicalProjectApplication = {
-    activate: async () => {
+  const {
+    request,
+    activationResult,
+    commandResult,
+    application: canonicalProjectApplication,
+  } = createCanonicalRuntimeApplicationFixture({
+    beforeActivate: () => {
       if (fail) throw new Error("C:\\private\\project\\slopstop.db");
-      return activationResult;
     },
     switchProject: unexpectedCanonicalSwitch,
-    execute: async () => {
+    beforeExecute: () => {
       if (fail) throw new Error("secret command payload");
-      return commandResult;
     },
     stop: async () => undefined,
-  };
+  });
   const sentAt = "2026-09-04T12:00:00.000Z";
   const options = {
     transport,

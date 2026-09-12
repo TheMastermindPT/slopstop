@@ -14,6 +14,7 @@ import {
 } from "@slopstop/protocol";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
+import { runCanonicalWriterPackageSmoke } from "./canonical-writer-package-smoke.js";
 import { initializeCrashReporting } from "./crash-reporting.js";
 import { createDesktopShutdown } from "./desktop-shutdown.js";
 import { HarnessSupervisor, harnessEntryPath } from "./harness-supervisor.js";
@@ -24,6 +25,7 @@ import {
   PackageSmokeAuthorizationError,
   packageSmokeAuthorizationFailureMessage,
 } from "./package-smoke-authorization.js";
+import { prepareMainRuntimeWitness } from "./package-smoke-runtime.js";
 import {
   packageSmokeRendererScript,
   validatePackageSmokeResult,
@@ -62,6 +64,56 @@ let packageSmokeAuthorization: PackageSmokeAuthorization | undefined;
 let packageSmokeTask: Promise<void> | undefined;
 let smokeHarnessReady = false;
 let smokeWindow: BrowserWindow | undefined;
+let writerProofAbort: AbortController | undefined;
+const writerProofTerminalMessage = "Package smoke writer processes terminal.";
+const writerProofUnconfirmedMessage = "Package smoke writer process exit unconfirmed.";
+
+function writeWriterProofReport(text: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    process.stderr.write(text, (error) => {
+      if (error) reject(new Error("Writer proof terminal reporting failed."));
+      else resolve();
+    });
+  });
+}
+
+function reportUnconfirmedWriterProof(): void {
+  const text = `${writerProofUnconfirmedMessage}\nPackage smoke proof failed at writer-internal.\n`;
+  try {
+    process.stderr.write(text, () => app.exit(1));
+  } catch {
+    app.exit(1);
+  }
+}
+
+async function runPrivateWriterProof(
+  authorization: PackageSmokeAuthorization,
+  controller: AbortController,
+): Promise<void> {
+  const publishRuntime = await prepareMainRuntimeWitness({ root: authorization.root });
+  const result = await runCanonicalWriterPackageSmoke({
+    bootstrap: createProjectStorageHarnessBootstrap({
+      userDataRoot: authorization.root,
+      migrationResourcesRoot: projectStorageMigrationResourcesRoot({
+        isPackaged: app.isPackaged,
+        resourcesPath: process.resourcesPath,
+        mainBundleDirectory: __dirname,
+      }),
+    }),
+    mainBundleDirectory: __dirname,
+    resourcesPath: process.resourcesPath,
+    signal: controller.signal,
+  });
+  if (result.cleanupSafe) await publishRuntime();
+  const terminal = result.cleanupSafe ? writerProofTerminalMessage : writerProofUnconfirmedMessage;
+  const completion =
+    result.status === "passed"
+      ? "Package smoke writer proof passed."
+      : `Package smoke proof failed at writer-${result.stage}.`;
+  await writeWriterProofReport(`${terminal}\n${completion}\n`);
+  if (result.status === "passed") packageSmokeState = "passed";
+  app.exit(result.status === "passed" ? 0 : 1);
+}
 
 function readyPackageSmokeContext():
   | Readonly<{
@@ -110,22 +162,7 @@ const runPackageSmokeIfReady = (): void => {
       });
       const proofResults = await Promise.allSettled([rendererProof, storageProof]);
       if (proofResults.some((result) => result.status === "rejected")) {
-        if (process.env["SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS"] === "1") {
-          const [rendererResult, storageResult] = proofResults;
-          const storageStage =
-            storageResult?.status === "rejected"
-              ? projectStoragePackageSmokeFailureStage(storageResult.reason)
-              : undefined;
-          const failureStage =
-            rendererResult?.status === "rejected"
-              ? storageStage === undefined
-                ? "renderer"
-                : `renderer-and-storage-${storageStage}`
-              : storageStage === undefined
-                ? "storage"
-                : `storage-${storageStage}`;
-          process.stderr.write(`Package smoke proof failed at ${failureStage}.\n`);
-        }
+        reportPackageSmokeFailure(proofResults);
         await desktopShutdown.requestExit(1);
         return;
       }
@@ -136,6 +173,24 @@ const runPackageSmokeIfReady = (): void => {
     }
   })();
 };
+
+function reportPackageSmokeFailure(results: readonly PromiseSettledResult<unknown>[]): void {
+  if (process.env["SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS"] !== "1") return;
+  const [rendererResult, storageResult] = results;
+  const storageStage =
+    storageResult?.status === "rejected"
+      ? projectStoragePackageSmokeFailureStage(storageResult.reason)
+      : undefined;
+  const failureStage =
+    rendererResult?.status === "rejected"
+      ? storageStage === undefined
+        ? "renderer"
+        : `renderer-and-storage-${storageStage}`
+      : storageStage === undefined
+        ? "storage"
+        : `storage-${storageStage}`;
+  process.stderr.write(`Package smoke proof failed at ${failureStage}.\n`);
+}
 
 function broadcastHarnessStatus(status: HarnessStatus): void {
   const validated = HarnessStatusSchema.parse(status);
@@ -247,8 +302,14 @@ async function bootstrap(): Promise<void> {
     );
     packageSmokeAuthorization = authorization;
     packageSmokeState = "pending";
+    if (authorization.scenario === "writer-proof") writerProofAbort = new AbortController();
   }
   await app.whenReady();
+  if (packageSmokeAuthorization?.scenario === "writer-proof" && writerProofAbort !== undefined) {
+    packageSmokeTask = runPrivateWriterProof(packageSmokeAuthorization, writerProofAbort);
+    await packageSmokeTask;
+    return;
+  }
   app.setAppUserModelId("dev.slopstop.desktop");
   app.setAppLogsPath();
 
@@ -309,10 +370,16 @@ async function bootstrap(): Promise<void> {
 }
 
 app.on("before-quit", (event) => {
+  if (writerProofAbort !== undefined) {
+    event.preventDefault();
+    writerProofAbort.abort();
+    return;
+  }
   desktopShutdown.beforeQuit(event);
 });
 
 app.on("window-all-closed", () => {
+  if (writerProofAbort !== undefined) return;
   if (packageSmokeState === "pending") {
     if (packageSmokeTask === undefined) {
       packageSmokeTask = desktopShutdown.requestExit(1);
@@ -334,6 +401,10 @@ function startBootstrap(): void {
     try {
       await bootstrap();
     } catch (error: unknown) {
+      if (writerProofAbort !== undefined) {
+        reportUnconfirmedWriterProof();
+        return;
+      }
       process.stderr.write(
         `${
           error instanceof PackageSmokeAuthorizationError

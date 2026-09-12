@@ -19,11 +19,10 @@ import {
   fixedCreationIds,
 } from "./project-storage-runtime-fixture.js";
 
-export const settlementFixtureTime = "2026-09-05T12:00:01.000Z";
 export const canonicalCommandProjectId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 export const canonicalCommandAggregateId = "55555555-5555-4555-8555-555555555501";
 export const settlementT0 = "2026-09-05T12:00:00.000Z";
-export const settlementT1 = settlementFixtureTime;
+export const settlementT1 = "2026-09-05T12:00:01.000Z";
 export const settlementRequest = CanonicalProjectCommandRequestSchema.parse({
   projectId: canonicalCommandProjectId,
   activationId: "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",

@@ -29,21 +29,27 @@ import {
   settlementSwitch,
 } from "./conformance-counter-command.js";
 
+async function expectFirstAppliedSettlement(
+  f: Awaited<ReturnType<typeof createSettlementComposition>>,
+): Promise<void> {
+  expect(await f.activate()).toEqual(
+    settlementEvent(1, 1, "project.activate.result", settlementActivation()),
+  );
+  expect(await f.execute()).toEqual(
+    settlementEvent(
+      2,
+      2,
+      "project.command.result",
+      settledCommand(settlementRequest, appliedReceipt),
+    ),
+  );
+  expectAppliedRows(await f.snapshot());
+}
+
 it("persists applied counter state receipt original pointer and ordered events atomically", async () => {
   const f = await createSettlementComposition();
   try {
-    expect(await f.activate()).toEqual(
-      settlementEvent(1, 1, "project.activate.result", settlementActivation()),
-    );
-    expect(await f.execute()).toEqual(
-      settlementEvent(
-        2,
-        2,
-        "project.command.result",
-        settledCommand(settlementRequest, appliedReceipt),
-      ),
-    );
-    expectAppliedRows(await f.snapshot());
+    await expectFirstAppliedSettlement(f);
   } finally {
     await f.close();
   }
@@ -93,18 +99,7 @@ it.each(admissionCases)(
 it("round-trips durable settlement and replay over real MessagePorts", async () => {
   const f = await createSettlementComposition();
   try {
-    expect(await f.activate()).toEqual(
-      settlementEvent(1, 1, "project.activate.result", settlementActivation()),
-    );
-    expect(await f.execute()).toEqual(
-      settlementEvent(
-        2,
-        2,
-        "project.command.result",
-        settledCommand(settlementRequest, appliedReceipt),
-      ),
-    );
-    expectAppliedRows(await f.snapshot());
+    await expectFirstAppliedSettlement(f);
     expect(await f.switchProject()).toEqual(
       settlementEvent(3, 3, "project.switch.result", {
         status: "target-result",

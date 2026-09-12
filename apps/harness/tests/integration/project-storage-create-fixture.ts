@@ -113,47 +113,54 @@ export const switchCommands = {
   ANew: switchCommand("A", "3", newAEpoch),
   ASecond: switchCommand("A", "4"),
 };
+function expectedCommandDiagnostic<Code extends string, Retryable extends boolean>(
+  code: Code,
+  message: string,
+  retryable: Retryable,
+) {
+  return { code, message, retryable };
+}
 const switchCommandDiagnostics = {
-  "coordinator-unavailable": {
-    code: "PROJECT_COORDINATOR_UNAVAILABLE",
-    message: "Canonical Project coordination is unavailable.",
-    retryable: false,
-  },
-  inactive: {
-    code: "PROJECT_INACTIVE",
-    message: "No Project is active for Typed commands.",
-    retryable: false,
-  },
-  "project-mismatch": {
-    code: "PROJECT_NOT_ACTIVE",
-    message: "The command Project is not active.",
-    retryable: false,
-  },
-  "stale-activation": {
-    code: "PROJECT_ACTIVATION_STALE",
-    message: "The command activation is stale.",
-    retryable: false,
-  },
-  "read-only": {
-    code: "WRITER_UNAVAILABLE",
-    message: "The active Project has no write authority.",
-    retryable: true,
-  },
-  "stale-writer": {
-    code: "WRITER_FENCE_STALE",
-    message: "The active Writer fence is stale.",
-    retryable: false,
-  },
-  broken: {
-    code: "WRITER_FENCE_CHECK_FAILED",
-    message: "The active Writer fence could not be verified.",
-    retryable: false,
-  },
-  "settlement-unavailable": {
-    code: "COMMAND_SETTLEMENT_UNAVAILABLE",
-    message: "Typed-command settlement is not available in this release slice.",
-    retryable: false,
-  },
+  "coordinator-unavailable": expectedCommandDiagnostic(
+    "PROJECT_COORDINATOR_UNAVAILABLE",
+    "Canonical Project coordination is unavailable.",
+    false,
+  ),
+  inactive: expectedCommandDiagnostic(
+    "PROJECT_INACTIVE",
+    "No Project is active for Typed commands.",
+    false,
+  ),
+  "project-mismatch": expectedCommandDiagnostic(
+    "PROJECT_NOT_ACTIVE",
+    "The command Project is not active.",
+    false,
+  ),
+  "stale-activation": expectedCommandDiagnostic(
+    "PROJECT_ACTIVATION_STALE",
+    "The command activation is stale.",
+    false,
+  ),
+  "read-only": expectedCommandDiagnostic(
+    "WRITER_UNAVAILABLE",
+    "The active Project has no write authority.",
+    true,
+  ),
+  "stale-writer": expectedCommandDiagnostic(
+    "WRITER_FENCE_STALE",
+    "The active Writer fence is stale.",
+    false,
+  ),
+  broken: expectedCommandDiagnostic(
+    "WRITER_FENCE_CHECK_FAILED",
+    "The active Writer fence could not be verified.",
+    false,
+  ),
+  "settlement-unavailable": expectedCommandDiagnostic(
+    "COMMAND_SETTLEMENT_UNAVAILABLE",
+    "Typed-command settlement is not available in this release slice.",
+    false,
+  ),
 } as const;
 export function switchCommandFailure(
   status: keyof typeof switchCommandDiagnostics,

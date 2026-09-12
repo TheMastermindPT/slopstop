@@ -323,6 +323,27 @@ it.each([false, true])(
   },
 );
 
+async function expectInactiveRecoveryRuntime(
+  f: Awaited<ReturnType<typeof createRecoveryRuntime>>,
+  before: Awaited<ReturnType<Awaited<ReturnType<typeof createRecoveryRuntime>>["snapshot"]>>,
+): Promise<void> {
+  expect(await f.send(1, "project.command", settlementRequest)).toEqual(
+    recoveryEnvelope(1, 1, "project.command.result", recoveryCommandFailure("inactive")),
+  );
+  for (const dependency of [
+    f.acquire,
+    f.activate,
+    f.lease,
+    f.epoch,
+    f.token,
+    f.clock,
+    f.dependencies.sha256Text,
+    f.prepare,
+  ])
+    expect(dependency).not.toHaveBeenCalled();
+  expect(await f.snapshot()).toEqual(before);
+}
+
 it.each([false, true])(
   "S6 G5 B10 fresh runtime is inactive and preserves recovery history landed %s",
   async (landed) => {
@@ -341,21 +362,7 @@ it.each([false, true])(
     const before = await old.snapshot();
     const f = await createRecoveryRuntime(file, { next: true });
     try {
-      expect(await f.send(1, "project.command", settlementRequest)).toEqual(
-        recoveryEnvelope(1, 1, "project.command.result", recoveryCommandFailure("inactive")),
-      );
-      for (const dependency of [
-        f.acquire,
-        f.activate,
-        f.lease,
-        f.epoch,
-        f.token,
-        f.clock,
-        f.dependencies.sha256Text,
-        f.prepare,
-      ])
-        expect(dependency).not.toHaveBeenCalled();
-      expect(await f.snapshot()).toEqual(before);
+      await expectInactiveRecoveryRuntime(f, before);
       expect(
         await f.send(2, "project.activate", { projectId: settlementRequest.projectId }),
       ).toEqual(recoveryEnvelope(2, 2, "project.activate.result", recoveryActive(2)));
@@ -536,21 +543,7 @@ it.each(["acknowledged", "before", "after"] as const)(
     const before = await stopProductionRecovery(file, mode);
     const f = await createRecoveryRuntime(file, { production: true, next: true });
     try {
-      expect(await f.send(1, "project.command", settlementRequest)).toEqual(
-        recoveryEnvelope(1, 1, "project.command.result", recoveryCommandFailure("inactive")),
-      );
-      for (const dependency of [
-        f.acquire,
-        f.activate,
-        f.lease,
-        f.epoch,
-        f.token,
-        f.clock,
-        f.dependencies.sha256Text,
-        f.prepare,
-      ])
-        expect(dependency).not.toHaveBeenCalled();
-      expect(await f.snapshot()).toEqual(before);
+      await expectInactiveRecoveryRuntime(f, before);
       expect(
         await f.send(2, "project.activate", { projectId: settlementRequest.projectId }),
       ).toEqual(recoveryEnvelope(2, 2, "project.activate.result", recoveryActive(2)));

@@ -123,26 +123,38 @@ function assertPrivateKeysRejected(target: z.ZodType, values: readonly object[])
   }
 }
 
+function safeModeOutcome<Request extends object, Identity extends object, Health extends object>(
+  request: Request,
+  identity: Identity,
+  canonicalHealth: Health,
+) {
+  return {
+    status: "safe-mode",
+    request,
+    identity,
+    canonicalHealth,
+    runtimeHealth: { status: "healthy" },
+  };
+}
+
 function activationOutcomes(): object[] {
   return [
     writable,
     readOnly,
     { status: "not-registered", request },
-    {
-      status: "safe-mode",
+    safeModeOutcome(
       request,
-      identity: {
+      {
         storageId: null,
         generationId: null,
         canonicalDatabaseLineageId: null,
         runtimeDatabaseLineageId: null,
       },
-      canonicalHealth: {
+      {
         status: "missing",
         diagnostic: { code: "DATABASE_MISSING", message: "missing" },
       },
-      runtimeHealth: { status: "healthy" },
-    },
+    ),
     ...[
       ["rejected", "PROJECT_ALREADY_ACTIVE"],
       ["unavailable", "PROJECT_COORDINATOR_UNAVAILABLE"],
@@ -281,6 +293,43 @@ const writableSwitchTarget = {
   activationId: "ebbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2",
   writerGeneration: 1,
 };
+const switchDiagnosticCases = {
+  PROJECT_STORAGE_UNAVAILABLE: {
+    status: "unavailable",
+    message: "Project Storage is unavailable.",
+    retryable: true,
+  },
+  PROJECT_STORAGE_BROKEN: {
+    status: "broken",
+    message: "Project Storage activation failed.",
+    retryable: false,
+  },
+  WRITER_LEASE_OPEN_FAILED: {
+    status: "broken",
+    message: "Writer lease file could not be opened.",
+    retryable: false,
+  },
+  WRITER_LEASE_LOCK_FAILED: {
+    status: "broken",
+    message: "Writer lease could not be acquired.",
+    retryable: false,
+  },
+  WRITER_FENCE_ACTIVATION_FAILED: {
+    status: "broken",
+    message: "Writer fence could not be activated.",
+    retryable: false,
+  },
+  PROJECT_COORDINATOR_UNAVAILABLE: {
+    status: "unavailable",
+    message: "Canonical Project coordination is unavailable.",
+    retryable: false,
+  },
+  PROJECT_ALREADY_ACTIVE: {
+    status: "rejected",
+    message: "A Project activation already owns this harness session.",
+    retryable: false,
+  },
+};
 const switchTargets = [
   { name: "B_RW", value: writableSwitchTarget },
   {
@@ -300,45 +349,25 @@ const switchTargets = [
   },
   {
     name: "B_SAFE",
-    value: {
-      status: "safe-mode",
-      request: targetRequest,
-      identity: {
+    value: safeModeOutcome(
+      targetRequest,
+      {
         storageId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbc1",
         generationId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbc2",
         canonicalDatabaseLineageId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbc3",
         runtimeDatabaseLineageId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbc4",
       },
-      canonicalHealth: {
+      {
         status: "migration-required",
         diagnostic: {
           code: "DATABASE_MIGRATION_REQUIRED",
           message: "Database migration is required.",
         },
       },
-      runtimeHealth: { status: "healthy" },
-    },
+    ),
   },
   { name: "not-registered", value: { status: "not-registered", request: targetRequest } },
-  ...[
-    ["unavailable", "PROJECT_STORAGE_UNAVAILABLE", "Project Storage is unavailable.", true],
-    ["broken", "PROJECT_STORAGE_BROKEN", "Project Storage activation failed.", false],
-    ["broken", "WRITER_LEASE_OPEN_FAILED", "Writer lease file could not be opened.", false],
-    ["broken", "WRITER_LEASE_LOCK_FAILED", "Writer lease could not be acquired.", false],
-    ["broken", "WRITER_FENCE_ACTIVATION_FAILED", "Writer fence could not be activated.", false],
-    [
-      "unavailable",
-      "PROJECT_COORDINATOR_UNAVAILABLE",
-      "Canonical Project coordination is unavailable.",
-      false,
-    ],
-    [
-      "rejected",
-      "PROJECT_ALREADY_ACTIVE",
-      "A Project activation already owns this harness session.",
-      false,
-    ],
-  ].map(([status, code, message, retryable]) => ({
+  ...Object.entries(switchDiagnosticCases).map(([code, { status, message, retryable }]) => ({
     name: code,
     value: { status, request: targetRequest, diagnostic: { code, message, retryable } },
   })),

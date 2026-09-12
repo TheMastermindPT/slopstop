@@ -57,9 +57,9 @@ export const recoveryNextEpoch = ProjectActivationIdSchema.parse(
   "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
 );
 
-export const recoveryRetryTime = "2026-09-05T12:00:06.000Z";
+const recoveryRetryTime = "2026-09-05T12:00:06.000Z";
 
-export const recoveryRuntimeTime = "2026-09-05T12:01:00.000Z";
+const recoveryRuntimeTime = "2026-09-05T12:01:00.000Z";
 
 export const recoveryRetryReceipt = {
   ...appliedReceipt,

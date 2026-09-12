@@ -1,7 +1,10 @@
-import { ProjectIdSchema, ProjectStorageCreateRequestIdSchema } from "@slopstop/protocol";
+import {
+  writerProofProjectId as healthyProjectId,
+  ProjectIdSchema,
+  ProjectStorageCreateRequestIdSchema,
+} from "@slopstop/protocol";
 import type { ProjectStorageBridgeClient } from "./project-storage-bridge.js";
 
-const healthyProjectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000101");
 const absentProjectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000102");
 const witnessProjectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000103");
 const healthyCreateRequestId = ProjectStorageCreateRequestIdSchema.parse(
@@ -13,6 +16,7 @@ const witnessCreateRequestId = ProjectStorageCreateRequestIdSchema.parse(
 
 export type ProjectStoragePackageSmokeScenario =
   | "bootstrap"
+  | "writer-proof"
   | "missing-runtime"
   | "witnessed-staging";
 
@@ -47,6 +51,7 @@ export function parseProjectStoragePackageSmokeScenario(
 ): ProjectStoragePackageSmokeScenario {
   switch (value) {
     case "bootstrap":
+    case "writer-proof":
     case "missing-runtime":
     case "witnessed-staging":
       return value;
@@ -120,6 +125,8 @@ export async function runProjectStoragePackageSmoke(
   }>,
 ): Promise<void> {
   switch (input.scenario) {
+    case "writer-proof":
+      throw new Error("Writer proof requires the private process owner.");
     case "bootstrap":
       await runBootstrapScenario(input.bridge);
       return;

@@ -1,4 +1,29 @@
 import type { DesktopMessage } from "@slopstop/protocol";
+import type { HarnessSessionEvent } from "./harness-session.js";
+
+export function dispatchPendingHarnessEvent(
+  event: HarnessSessionEvent,
+  handlers: Readonly<{
+    failAll(message: string): void;
+    failRequest(causationId: string, message: string): void;
+    message(message: Extract<HarnessSessionEvent, { type: "message" }>["message"]): void;
+  }>,
+): void {
+  switch (event.type) {
+    case "disconnected":
+      handlers.failAll("Harness session disconnected.");
+      return;
+    case "protocol-error":
+      handlers.failAll("Harness session received an invalid protocol message.");
+      return;
+    case "message":
+      if (event.message.event === "request.failure") {
+        handlers.failRequest(event.message.causationId, event.message.payload.message);
+        return;
+      }
+      handlers.message(event.message);
+  }
+}
 
 function tryCreateHarnessCommand(createCommand: () => DesktopMessage): DesktopMessage | undefined {
   try {

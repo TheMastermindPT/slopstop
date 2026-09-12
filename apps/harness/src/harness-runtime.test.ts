@@ -1,7 +1,4 @@
 import {
-  CanonicalProjectActivationResultSchema,
-  CanonicalProjectCommandRequestSchema,
-  CanonicalProjectCommandResultSchema,
   createProjectActivateCommand,
   createProjectCloseCommand,
   createProjectCommand,
@@ -22,6 +19,10 @@ import {
   WorkspaceQuerySchema,
 } from "@slopstop/protocol";
 import { describe, expect, it, vi } from "vitest";
+import {
+  createCanonicalRuntimeApplicationFixture,
+  unusedCanonicalApplication as createUnusedCanonicalApplication,
+} from "../tests/integration/canonical-runtime-application-fixture.js";
 import {
   createUnavailableProjectStorageApplication,
   createUnavailableWorkspaceApplication,
@@ -110,48 +111,14 @@ class TestTransport implements HarnessTransport {
 
 function canonicalRuntimeFixture() {
   const transport = new TestTransport();
-  const request = CanonicalProjectCommandRequestSchema.parse({
-    projectId: "00000000-0000-4000-8000-000000000010",
-    activationId: "00000000-0000-4000-8000-000000000011",
-    command: {
-      commandId: "00000000-0000-4000-8000-000000000012",
-      type: "fixture.noop",
-      version: 1,
-      payload: {},
-    },
-  });
-  const activationResult = CanonicalProjectActivationResultSchema.parse({
-    status: "active",
-    request: { projectId: request.projectId },
-    access: "read-only",
-    activationId: request.activationId,
-    writerGeneration: null,
-    diagnostic: {
-      code: "WRITER_UNAVAILABLE",
-      message: "Another SlopStop process holds Project write authority.",
-      retryable: true,
-    },
-  });
-  const commandResult = CanonicalProjectCommandResultSchema.parse({
-    status: "read-only",
-    projectId: request.projectId,
-    activationId: request.activationId,
-    commandId: request.command.commandId,
-    diagnostic: {
-      code: "WRITER_UNAVAILABLE",
-      message: "The active Project has no write authority.",
-      retryable: true,
-    },
-  });
   const calls: string[] = [];
-  const application = {
-    activate: vi.fn(async () => activationResult),
-    switchProject: unexpectedCanonicalSwitch,
-    execute: vi.fn(async () => commandResult),
-    stop: vi.fn(async () => {
-      calls.push("canonical");
-    }),
-  };
+  const { request, activationResult, commandResult, application } =
+    createCanonicalRuntimeApplicationFixture({
+      switchProject: unexpectedCanonicalSwitch,
+      stop: vi.fn(async () => {
+        calls.push("canonical");
+      }),
+    });
   const storage = {
     ...createUnavailableProjectStorageApplication(),
     stop: vi.fn(async () => {
@@ -284,16 +251,7 @@ async function unexpectedCanonicalSwitch(): Promise<never> {
 }
 
 function unusedCanonicalApplication() {
-  return {
-    activate: async () => {
-      throw new Error("Canonical activation is unused by this fixture.");
-    },
-    switchProject: unexpectedCanonicalSwitch,
-    execute: async () => {
-      throw new Error("Canonical command is unused by this fixture.");
-    },
-    stop: async () => undefined,
-  };
+  return createUnusedCanonicalApplication(unexpectedCanonicalSwitch);
 }
 
 function startRuntime(transport: TestTransport): StopHarnessRuntime {

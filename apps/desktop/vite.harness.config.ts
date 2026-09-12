@@ -142,8 +142,12 @@ export default defineConfig({
     outDir: ".vite/build",
     emptyOutDir: false,
     lib: {
-      entry: { harness: "../harness/src/process-entry.ts" },
-      fileName: () => "harness.cjs",
+      entry: {
+        harness: "../harness/src/process-entry.ts",
+        "writer-proof-fixture":
+          "../harness/tests/integration/canonical-writer-package-smoke-entry.ts",
+      },
+      fileName: (_format, entryName) => `${entryName}.cjs`,
       formats: ["cjs"],
     },
     rollupOptions: {

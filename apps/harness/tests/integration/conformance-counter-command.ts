@@ -11,7 +11,6 @@ import {
   ProjectActivationIdSchema,
   type ProjectId,
   ProjectIdSchema,
-  ProjectStorageOpenResultSchema,
   parseHarnessMessage,
 } from "@slopstop/protocol";
 import { expect, vi } from "vitest";
@@ -45,10 +44,10 @@ import { createNodeProjectStorageDependencies } from "../../src/storage/project-
 import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
 import { createUnavailableWorkspaceApplication } from "../../src/workspace-application.js";
 import type { SettlementObservation } from "./canonical-command-database-fixture.js";
-import { settlementFixtureTime } from "./canonical-command-database-fixture.js";
+import { settlementT1 } from "./canonical-command-database-fixture.js";
+import { openedCanonicalStorageResult } from "./canonical-storage-selection-fixture.js";
 import {
   checkedInMigrationRoot,
-  fixedCreationIds,
   switchDeferred,
   transportFor,
 } from "./project-storage-runtime-fixture.js";
@@ -192,7 +191,7 @@ export function createMigratedSettlement(projectId: ProjectId) {
         createEventId: () => {
           throw new Error("Empty registry allocated event.");
         },
-        now: () => settlementFixtureTime,
+        now: () => settlementT1,
         openClient: (selected) =>
           observedSettlementClient(
             createWorkerLocalLibsqlClient(selected, "generation"),
@@ -244,11 +243,11 @@ export function createMigratedSettlement(projectId: ProjectId) {
             "rejected",
             1,
             r.writerGeneration,
-            settlementFixtureTime,
+            settlementT1,
           ],
         ]);
         expect(rows["command_idempotency"]).toEqual([
-          [projectId, r.commandId, fingerprint, r.receiptId, settlementFixtureTime],
+          [projectId, r.commandId, fingerprint, r.receiptId, settlementT1],
         ]);
         expect(rows["command_rejections"]).toEqual([
           [
@@ -278,25 +277,19 @@ export function createMigratedSettlement(projectId: ProjectId) {
 }
 
 export function migratedUnsupported(request: CanonicalProjectCommandRequest, generation = 1) {
-  return {
-    status: "settled",
+  return settledCommand(request, {
+    receiptId: "66666666-6666-4666-8666-666666666501",
     projectId: request.projectId,
-    activationId: request.activationId,
     commandId: request.command.commandId,
-    receipt: {
-      receiptId: "66666666-6666-4666-8666-666666666501",
-      projectId: request.projectId,
-      commandId: request.command.commandId,
-      commandType: request.command.type,
-      commandVersion: request.command.version,
-      outcome: "rejected",
-      projectSequence: 1,
-      writerGeneration: generation,
-      settledAt: settlementFixtureTime,
-      events: [],
-      rejection: { code: "COMMAND_TYPE_UNSUPPORTED", retryable: false },
-    },
-  };
+    commandType: request.command.type,
+    commandVersion: request.command.version,
+    outcome: "rejected",
+    projectSequence: 1,
+    writerGeneration: generation,
+    settledAt: settlementT1,
+    events: [],
+    rejection: { code: "COMMAND_TYPE_UNSUPPORTED", retryable: false },
+  });
 }
 
 type CompositionControls = {
@@ -599,19 +592,7 @@ export async function createSettlementComposition(extended = true) {
   const activationStorage: ProjectStorageActivationPort = extended
     ? {
         acquireActivation: async (request) => {
-          const result = ProjectStorageOpenResultSchema.parse({
-            status: "opened",
-            request,
-            mode: "read-write",
-            identity: {
-              storageId: fixedCreationIds.storageId,
-              generationId: fixedCreationIds.generationId,
-              canonicalDatabaseLineageId: fixedCreationIds.canonicalDatabaseLineageId,
-              runtimeDatabaseLineageId: fixedCreationIds.runtimeDatabaseLineageId,
-            },
-            canonicalHealth: { status: "healthy" },
-            runtimeHealth: { status: "healthy" },
-          });
+          const result = openedCanonicalStorageResult(request);
           if (result.status !== "opened") throw new Error("Expected prepared Storage identity.");
           return {
             status: "ready",

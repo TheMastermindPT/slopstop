@@ -411,6 +411,53 @@ function seedRejectedMemoryReceipt(db: DatabaseSync) {
   return commandId;
 }
 
+function transformMemoryResults(
+  client: LocalLibsqlClient,
+  transform: (statement: InStatement, result: LocalLibsqlResultSet) => LocalLibsqlResultSet,
+): void {
+  const transaction = client.transaction.bind(client);
+  vi.spyOn(client, "transaction").mockImplementation(async (mode) => {
+    const tx = await transaction(mode);
+    const execute = tx.execute.bind(tx);
+    vi.spyOn(tx, "execute").mockImplementation(async (statement, args) =>
+      transform(statement, await execute(statement, args)),
+    );
+    return tx;
+  });
+}
+
+function corruptMemoryColumn(
+  client: LocalLibsqlClient,
+  query: string,
+  field: string,
+  value: string | number | null,
+): void {
+  transformMemoryResults(client, (statement, result) => {
+    if (!sqlOf(statement).includes(query)) return result;
+    return {
+      ...result,
+      rows: result.rows.map((row) =>
+        result.columns.map((column, index) => (column === field ? value : (row[index] ?? null))),
+      ),
+    };
+  });
+}
+
+function replayCounterCommand(commandId: ReturnType<typeof seedAppliedMemoryReceipt>) {
+  return snapshotCanonicalCommand(projectId, {
+    commandId,
+    type: "conformance.counter.set",
+    version: 1,
+    payload: { value: 7 },
+  });
+}
+
+function expectGenuineReplayFailure(error: unknown): void {
+  expect(error).toBeInstanceOf(Error);
+  expect(error instanceof Error && error.message.includes("not implemented")).toBe(false);
+  expect(error).not.toEqual(new Error("Unexpected lifecycle settlement dependency."));
+}
+
 it.each([
   { field: "projectSequence", value: 2 },
   { field: "retryable", value: 2 },
@@ -423,33 +470,11 @@ it.each([
     const f = await memoryFixture();
     try {
       const commandId = seedRejectedMemoryReceipt(f.db);
-      const transaction = f.client.transaction.bind(f.client);
-      vi.spyOn(f.client, "transaction").mockImplementation(async (mode) => {
-        const tx = await transaction(mode);
-        const execute = tx.execute.bind(tx);
-        vi.spyOn(tx, "execute").mockImplementation(async (statement, args) => {
-          const result = await execute(statement, args);
-          if (!sqlOf(statement).includes("FROM command_rejections")) return result;
-          return {
-            ...result,
-            rows: result.rows.map((row) =>
-              result.columns.map((column, i) => (column === field ? value : (row[i] ?? null))),
-            ),
-          };
-        });
-        return tx;
-      });
+      corruptMemoryColumn(f.client, "FROM command_rejections", field, value);
       const before = f.snapshot();
-      const text = snapshotCanonicalCommand(projectId, {
-        commandId,
-        type: "conformance.counter.set",
-        version: 1,
-        payload: { value: 7 },
-      });
+      const text = replayCounterCommand(commandId);
       const error = await f.repository.settle(text).catch((error: unknown) => error);
-      expect(error).toBeInstanceOf(Error);
-      expect(error instanceof Error && error.message.includes("not implemented")).toBe(false);
-      expect(error).not.toEqual(new Error("Unexpected lifecycle settlement dependency."));
+      expectGenuineReplayFailure(error);
       expect(f.snapshot()).toBe(before);
     } finally {
       await f.repository.close();
@@ -510,26 +535,19 @@ it.each(["events", "rejections"])(
     const f = await memoryFixture();
     try {
       const commandId = seedAppliedMemoryReceipt(f.db);
-      const transaction = f.client.transaction.bind(f.client);
-      vi.spyOn(f.client, "transaction").mockImplementation(async (mode) => {
-        const tx = await transaction(mode);
-        const execute = tx.execute.bind(tx);
-        vi.spyOn(tx, "execute").mockImplementation(async (statement, args) => {
-          const result = await execute(statement, args);
-          if (sqlOf(statement).includes("FROM command_receipts"))
-            return {
-              ...result,
-              rows: result.rows.map((row) =>
-                result.columns.map((column, i) =>
-                  column === "outcome" ? "unchanged" : (row[i] ?? null),
-                ),
+      transformMemoryResults(f.client, (statement, result) => {
+        if (sqlOf(statement).includes("FROM command_receipts"))
+          return {
+            ...result,
+            rows: result.rows.map((row) =>
+              result.columns.map((column, i) =>
+                column === "outcome" ? "unchanged" : (row[i] ?? null),
               ),
-            };
-          if (child === "rejections" && sqlOf(statement).includes("FROM command_rejections"))
-            return { ...result, rows: [result.columns.map(() => null)] };
-          return result;
-        });
-        return tx;
+            ),
+          };
+        if (child === "rejections" && sqlOf(statement).includes("FROM command_rejections"))
+          return { ...result, rows: [result.columns.map(() => null)] };
+        return result;
       });
       const before = f.snapshot();
       const text = snapshotCanonicalCommand(projectId, {
@@ -565,38 +583,14 @@ it.each([
     const f = await memoryFixture();
     try {
       const commandId = seedAppliedMemoryReceipt(f.db);
-      const transaction = f.client.transaction.bind(f.client);
-      vi.spyOn(f.client, "transaction").mockImplementation(async (mode) => {
-        const tx = await transaction(mode);
-        const execute = tx.execute.bind(tx);
-        vi.spyOn(tx, "execute").mockImplementation(async (statement, args) => {
-          const result = await execute(statement, args);
-          if (!sqlOf(statement).includes(query)) return result;
-          return {
-            ...result,
-            rows: result.rows.map((row) =>
-              result.columns.map((column, index) =>
-                column === field ? value : (row[index] ?? null),
-              ),
-            ),
-          };
-        });
-        return tx;
-      });
+      corruptMemoryColumn(f.client, query, field, value);
       const before = f.snapshot();
-      const text = snapshotCanonicalCommand(projectId, {
-        commandId,
-        type: "conformance.counter.set",
-        version: 1,
-        payload: { value: 7 },
-      });
+      const text = replayCounterCommand(commandId);
       const error = await f.repository.settle(text).then(
         () => undefined,
         (error: unknown) => error,
       );
-      expect(error).toBeInstanceOf(Error);
-      expect(error instanceof Error && error.message.includes("not implemented")).toBe(false);
-      expect(error).not.toEqual(new Error("Unexpected lifecycle settlement dependency."));
+      expectGenuineReplayFailure(error);
       expect(f.snapshot()).toBe(before);
     } finally {
       await f.repository.close();
@@ -717,6 +711,21 @@ function corruptQuery(
   return result;
 }
 
+function transformTransactionResults(
+  tx: LocalLibsqlTransaction,
+  transform: (statement: InStatement, result: LocalLibsqlResultSet) => LocalLibsqlResultSet,
+): LocalLibsqlTransaction {
+  return {
+    get closed() {
+      return tx.closed;
+    },
+    execute: async (statement, args) => transform(statement, await tx.execute(statement, args)),
+    commit: () => tx.commit(),
+    rollback: () => tx.rollback(),
+    close: () => tx.close(),
+  };
+}
+
 async function verifyBrokenQueries(): Promise<void> {
   for (const mode of ["sql", "duplicate", "fence-count", "generation-count"] as const) {
     const f = await fixture();
@@ -735,16 +744,7 @@ async function verifyBrokenQueries(): Promise<void> {
         close: () => client.close(),
         transaction: async (mode) => {
           const tx = await client.transaction(mode);
-          return {
-            get closed() {
-              return tx.closed;
-            },
-            execute: async (statement, args) =>
-              transform(statement, await tx.execute(statement, args)),
-            commit: () => tx.commit(),
-            rollback: () => tx.rollback(),
-            close: () => tx.close(),
-          };
+          return transformTransactionResults(tx, transform);
         },
       };
     });
@@ -836,6 +836,37 @@ const configurationFaults = [
   { name: "begin", columns: [], rows: [] },
 ];
 
+async function expectNextActivationBroken(
+  f: Awaited<ReturnType<typeof fixture>>,
+  repository: Awaited<ReturnType<typeof activated>>,
+): Promise<void> {
+  await repository.close();
+  expect(await f.owner.activate(f.input(2))).toMatchObject({
+    status: "broken",
+    error: { code: "WRITER_FENCE_ACTIVATION_FAILED" },
+  });
+}
+
+function configurationFaultExecute(
+  client: LocalLibsqlClient,
+  fault: Pick<LocalLibsqlResultSet, "columns" | "rows"> & { name: string },
+  injecting: () => boolean,
+): LocalLibsqlClient["execute"] {
+  return async (statement, args) => {
+    const sql = sqlOf(statement);
+    const failureSql = new Map([
+      ["set-foreign-keys", "PRAGMA foreign_keys = ON"],
+      ["set-timeout", "PRAGMA busy_timeout = 5000"],
+      ["read-foreign-keys", "PRAGMA foreign_keys"],
+    ]).get(fault.name);
+    if (injecting() && sql === failureSql) throw new Error("configuration failed");
+    const result = await client.execute(statement, args);
+    return injecting() && sql === "PRAGMA foreign_keys" && fault.name !== "begin"
+      ? { ...result, columns: fault.columns, rows: fault.rows }
+      : result;
+  };
+}
+
 it.each(
   configurationFaults.flatMap((fault) =>
     ["activation", "release"].map((action) => ({ ...fault, action })),
@@ -847,19 +878,7 @@ it.each(
     let inject = false;
     let begins = 0;
     decorateClient(f, (client) => ({
-      execute: async (statement, args) => {
-        const sql = sqlOf(statement);
-        const failureSql = new Map([
-          ["set-foreign-keys", "PRAGMA foreign_keys = ON"],
-          ["set-timeout", "PRAGMA busy_timeout = 5000"],
-          ["read-foreign-keys", "PRAGMA foreign_keys"],
-        ]).get(name);
-        if (inject && sql === failureSql) throw new Error("configuration failed");
-        const result = await client.execute(statement, args);
-        return inject && sql === "PRAGMA foreign_keys" && name !== "begin"
-          ? { ...result, columns, rows }
-          : result;
-      },
+      execute: configurationFaultExecute(client, { name, columns, rows }, () => inject),
       close: () => client.close(),
       transaction: async (mode) => {
         begins++;
@@ -872,11 +891,7 @@ it.each(
       const before = f.snapshot();
       inject = true;
       if (action === "activation") {
-        await repository.close();
-        expect(await f.owner.activate(f.input(2))).toMatchObject({
-          status: "broken",
-          error: { code: "WRITER_FENCE_ACTIVATION_FAILED" },
-        });
+        await expectNextActivationBroken(f, repository);
       } else {
         await expect(repository.releaseFence(times[1])).rejects.toMatchObject({
           code: "WRITER_FENCE_RELEASE_FAILED",
@@ -921,16 +936,7 @@ it.each(rowShapeCases)(
       transaction: async (mode) => {
         begins++;
         const tx = await client.transaction(mode);
-        return {
-          get closed() {
-            return tx.closed;
-          },
-          execute: async (statement, args) =>
-            transform(statement, await tx.execute(statement, args)),
-          commit: () => tx.commit(),
-          rollback: () => tx.rollback(),
-          close: () => tx.close(),
-        };
+        return transformTransactionResults(tx, transform);
       },
     }));
     try {
@@ -938,11 +944,7 @@ it.each(rowShapeCases)(
       const before = f.snapshot();
       inject = true;
       if (action === "activation") {
-        await repository.close();
-        expect(await f.owner.activate(f.input(2))).toMatchObject({
-          status: "broken",
-          error: { code: "WRITER_FENCE_ACTIVATION_FAILED" },
-        });
+        await expectNextActivationBroken(f, repository);
       } else if (action === "release") {
         await expect(repository.releaseFence(times[1])).rejects.toMatchObject({
           code: "WRITER_FENCE_RELEASE_FAILED",

@@ -14,7 +14,7 @@ import {
   WorkspaceQueryResultSchema,
   type WorkspaceScope,
 } from "@slopstop/protocol";
-import { requestHarness } from "./harness-pending-request.js";
+import { dispatchPendingHarnessEvent, requestHarness } from "./harness-pending-request.js";
 import { harnessSendFailureMessage } from "./harness-send-failure.js";
 import type { HarnessSessionClient, HarnessSessionEvent } from "./harness-session.js";
 
@@ -115,7 +115,11 @@ class WorkspaceBridge implements WorkspaceBridgeClient {
     this.#now = options.now;
     this.#session = options.session;
     this.#stopSessionSubscription = this.#session.subscribe((event) => {
-      this.#handleSessionEvent(event);
+      dispatchPendingHarnessEvent(event, {
+        failAll: (message) => this.#failAllPending(message),
+        failRequest: (causationId, message) => this.#failRequest(causationId, message),
+        message: (message) => this.#handleHarnessMessage(message),
+      });
     });
   }
 
@@ -206,25 +210,11 @@ class WorkspaceBridge implements WorkspaceBridgeClient {
     }
   }
 
-  #handleSessionEvent(event: HarnessSessionEvent): void {
-    switch (event.type) {
-      case "disconnected":
-        this.#failAllPending("Harness session disconnected.");
-        return;
-      case "protocol-error":
-        this.#failAllPending("Harness session received an invalid protocol message.");
-        return;
-      case "message":
-        this.#handleHarnessMessage(event.message);
-    }
-  }
-
   #handleHarnessMessage(
     message: Extract<HarnessSessionEvent, { type: "message" }>["message"],
   ): void {
     switch (message.event) {
       case "request.failure":
-        this.#failRequest(message.causationId, message.payload.message);
         return;
       case "system.failure":
         this.#failAllPending(message.payload.message);

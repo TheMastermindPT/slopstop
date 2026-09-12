@@ -70,7 +70,7 @@ export type CanonicalCommandRepositoryFactoryDependencies = CanonicalSettlementD
     createHandoffId(): string;
     createRecoveryRecordId(): string;
   }>;
-export type CanonicalRepositoryActivationInput = Readonly<{
+type CanonicalRepositoryActivationInput = Readonly<{
   canonicalDatabasePath: string;
   projectId: ProjectId;
   activationId: ProjectActivationId;

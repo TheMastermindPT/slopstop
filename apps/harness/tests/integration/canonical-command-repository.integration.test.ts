@@ -334,16 +334,27 @@ it.each(["original", "reordered", "zero events"])(
       expect(Object.isFrozen(result.receipt)).toBe(true);
       expect(Object.isFrozen(result.receipt.events)).toBe(true);
       for (const event of result.receipt.events) expect(Object.isFrozen(event)).toBe(true);
-      expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
-      expect(f.dependencies.createReceiptId).not.toHaveBeenCalled();
-      expect(f.dependencies.createEventId).not.toHaveBeenCalled();
-      expect(f.dependencies.now).not.toHaveBeenCalled();
+      expectNoSettlementWork(f);
       expect(await f.snapshot()).toEqual(before);
     } finally {
       await f.close();
     }
   },
 );
+
+function expectNoSettlementWork(f: Awaited<ReturnType<typeof createSettlementFixture>>): void {
+  expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
+  expect(f.dependencies.createReceiptId).not.toHaveBeenCalled();
+  expect(f.dependencies.createEventId).not.toHaveBeenCalled();
+  expect(f.dependencies.now).not.toHaveBeenCalled();
+}
+
+function expectFenceFirst(f: Awaited<ReturnType<typeof createSettlementFixture>>): void {
+  expect(f.calls.slice(0, 2)).toEqual([
+    "begin:write",
+    expect.stringContaining("FROM writer_fence"),
+  ]);
+}
 
 const originalAuthorityCases: ReadonlyArray<
   readonly [
@@ -813,14 +824,8 @@ it.each(["missing", "released", "different-token"] as const)(
         status: "stale-writer",
       });
       expect(f.calls[0]).toBe("begin:write");
-      expect(f.calls.slice(0, 2)).toEqual([
-        "begin:write",
-        expect.stringContaining("FROM writer_fence"),
-      ]);
-      expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
-      expect(f.dependencies.createReceiptId).not.toHaveBeenCalled();
-      expect(f.dependencies.createEventId).not.toHaveBeenCalled();
-      expect(f.dependencies.now).not.toHaveBeenCalled();
+      expectFenceFirst(f);
+      expectNoSettlementWork(f);
       expect(await f.snapshot()).toEqual(before);
     } finally {
       await f.close();
@@ -873,14 +878,8 @@ it.each(malformedFenceCases)(
       );
       expect(error).toBeInstanceOf(Error);
       expect(error).not.toBe(authorityPassed);
-      expect(f.calls.slice(0, 2)).toEqual([
-        "begin:write",
-        expect.stringContaining("FROM writer_fence"),
-      ]);
-      expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
-      expect(f.dependencies.createReceiptId).not.toHaveBeenCalled();
-      expect(f.dependencies.createEventId).not.toHaveBeenCalled();
-      expect(f.dependencies.now).not.toHaveBeenCalled();
+      expectFenceFirst(f);
+      expectNoSettlementWork(f);
       expect(await f.snapshot()).toEqual(before);
     } finally {
       await f.close();
@@ -909,10 +908,7 @@ it.each(["duplicates", "duplicate aliases", "row width", "SQL exception"])(
       );
       expect(error).toBeInstanceOf(Error);
       if (shape === "SQL exception") expect(error).toBe(sentinel);
-      expect(f.calls.slice(0, 2)).toEqual([
-        "begin:write",
-        expect.stringContaining("FROM writer_fence"),
-      ]);
+      expectFenceFirst(f);
       expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
       expect(await f.snapshot()).toEqual(before);
     } finally {
@@ -936,6 +932,19 @@ const authorityTimeCases = fractionalPairs.flatMap(([name, left, right, equal]) 
   })),
 );
 
+async function expectRetainedTransactionCleanup(
+  f: Awaited<ReturnType<typeof createSettlementFixture>>,
+): Promise<void> {
+  const calls = [...f.calls];
+  await expect(f.repository.settle(settlementText)).rejects.toThrow(
+    "Canonical Writer transaction is already owned.",
+  );
+  expect(f.calls).toEqual(calls);
+  delete f.observation.close;
+  await f.repository.close();
+  expect(f.calls).toEqual([...calls, "close"]);
+}
+
 it("fences settlement before mutations and distinguishes malformed authority: retained close requires explicit lifecycle cleanup", async () => {
   const f = await createSettlementFixture();
   const closeFailure = new Error("retained transaction close failure");
@@ -946,14 +955,7 @@ it("fences settlement before mutations and distinguishes malformed authority: re
       throw closeFailure;
     };
     await expect(f.repository.settle(settlementText)).rejects.toBe(closeFailure);
-    const calls = [...f.calls];
-    await expect(f.repository.settle(settlementText)).rejects.toThrow(
-      "Canonical Writer transaction is already owned.",
-    );
-    expect(f.calls).toEqual(calls);
-    delete f.observation.close;
-    await f.repository.close();
-    expect(f.calls).toEqual([...calls, "close"]);
+    await expectRetainedTransactionCleanup(f);
   } finally {
     delete f.observation.close;
     await f.close();
@@ -1047,6 +1049,15 @@ it("fences settlement before mutations and distinguishes malformed authority: co
   }
 });
 
+async function expectMalformedHandlerRollback(
+  f: Awaited<ReturnType<typeof createSettlementFixture>>,
+  invalid: (typeof malformedHandlerDecisions)[number][1],
+): Promise<void> {
+  registerCounter(f, async (context) => malformedDecision(invalid(await applyCounter(context))));
+  await knownBodyFailure(f);
+  expect(f.calls.some((sql) => sql.startsWith("UPDATE conformance_counter"))).toBe(true);
+}
+
 it.each(
   malformedHandlerDecisions.filter(
     ([name]) => name === "nil aggregate" || name === "max aggregate",
@@ -1056,11 +1067,7 @@ it.each(
   async (_name, invalid) => {
     const f = await createSettlementFixture();
     try {
-      registerCounter(f, async (context) =>
-        malformedDecision(invalid(await applyCounter(context))),
-      );
-      await knownBodyFailure(f);
-      expect(f.calls.some((sql) => sql.startsWith("UPDATE conformance_counter"))).toBe(true);
+      await expectMalformedHandlerRollback(f, invalid);
     } finally {
       await f.close();
     }
@@ -1157,14 +1164,7 @@ it("drains settlement before retryable Writer release and retains failed transac
     await expect(f.repository.settle(settlementText)).rejects.toBe(sentinel);
     expectAppliedRows(await f.snapshot());
     expect(f.calls).not.toContain("rollback");
-    const calls = [...f.calls];
-    await expect(f.repository.settle(settlementText)).rejects.toThrow(
-      "Canonical Writer transaction is already owned.",
-    );
-    expect(f.calls).toEqual(calls);
-    delete f.observation.close;
-    await f.repository.close();
-    expect(f.calls).toEqual([...calls, "close"]);
+    await expectRetainedTransactionCleanup(f);
   } finally {
     delete f.observation.close;
     await f.close();
@@ -1176,11 +1176,7 @@ it.each(malformedHandlerDecisions)(
   async (_name, invalid) => {
     const f = await createSettlementFixture();
     try {
-      registerCounter(f, async (context) =>
-        malformedDecision(invalid(await applyCounter(context))),
-      );
-      await knownBodyFailure(f);
-      expect(f.calls.some((sql) => sql.startsWith("UPDATE conformance_counter"))).toBe(true);
+      await expectMalformedHandlerRollback(f, invalid);
     } finally {
       await f.close();
     }
