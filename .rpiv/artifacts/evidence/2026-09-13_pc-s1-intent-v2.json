@@ -1,0 +1,27 @@
+{
+  "mode": "intent",
+  "workflow_path": "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/candidate-workflow.md",
+  "artifact_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+  "slice_id": "PC-S1",
+  "repository_path": "C:/Users/pedro/Documents/GitHub/slopstop",
+  "base_commit": "97678d2a131daaf0791822ed3f5a7c3977ee7e7c",
+  "content_hash": "15d5cc9583d1379710cefd6a6b6d79801b21f513a731d872e5d9251f9d26acde",
+  "identity_scheme": "Full raw-byte SHA-256 bindings. The effective contract is current v2 amendment plus unchanged clauses in the immutable v1 snapshot; v2 explicitly replaces named clauses. Verify every direct binding plus the inherited binding map below. Code remains at base_commit; no source candidate exists.",
+  "bindings": {
+    ".rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md": "cfdfe1b215b102187135fc62c45b96895ef5a0647e9911989d2720b86511d069",
+    ".rpiv/artifacts/evidence/2026-09-12_pc-s1-intent-v1-brief.md": "24d799c3d4d126f4ff7ecb60b16f6b72a862532ece8e568dbff6e33b65dd116f",
+    ".rpiv/artifacts/evidence/2026-09-12_pc-s1-intent-v1.json": "34298109e9b7ce23c6afa02145a5f619ab634fce019e07d0d7ad7d1159569acb"
+  },
+  "inherited_bindings": {
+    "packet_path": ".rpiv/artifacts/evidence/2026-09-12_pc-s1-intent-v1.json",
+    "map": "bindings",
+    "exclude_original_path": ".rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+    "rule": "Verify all other 19 original path/hash pairs unchanged. The excluded v1 brief binding is verified at its direct-bound immutable snapshot path above. All v1 authority files remain required, not just linked optionally."
+  },
+  "evidence_paths": [
+    ".rpiv/artifacts/evidence/2026-09-12_pc-s1-intent-v1-review.md",
+    ".rpiv/artifacts/evidence/2026-09-10_canonical-project-writer-s7.md"
+  ],
+  "developer_decision": "After being asked explicitly, developer approved effective Git local-configuration reads including external include references, prohibition of disclosure/helper/network activity, and correction of all v1 findings. This is permission to revise intent, not acceptance of v2 or build/integration authority.",
+  "review_instructions": "Independent read-only v2 re-review of the complete effective PC-S1 intent, not implementation certification. Verify direct and inherited bindings before/after; compare current source to base_commit. Read the frozen v1 clauses with exact v2 replacements and relevant real seams. Check whether v1 findings are actually resolved and whether amendments introduce new gaps. Return explicit mode, verified identity/count, inspection/gate outcome and severity-tagged rows with exact current-v2 or frozen-v1 file:line refs. No edits, tests/builds, Git/GitHub mutation or reading another role's current response. Parent persists results. Missing implementation execution is not a defect in intent; unresolved required contract/platform/authority is."
+}

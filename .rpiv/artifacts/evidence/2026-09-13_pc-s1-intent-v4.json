@@ -1,0 +1,35 @@
+{
+  "mode": "intent",
+  "workflow_path": "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/candidate-workflow.md",
+  "artifact_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+  "slice_id": "PC-S1",
+  "repository_path": "C:/Users/pedro/Documents/GitHub/slopstop",
+  "base_commit": "97678d2a131daaf0791822ed3f5a7c3977ee7e7c",
+  "content_hash": "62f60b4067a9f9fcb60e33192d37d3b9ec3ee5dec47505584dd3078cecd3217e",
+  "bindings": {
+    ".rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md": "b3ea5c1e4a88b44e6c30b0b1398c0f8df768569babf6bcf02035fadda4006476",
+    ".rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v3-brief.md": "e4b0cf7447f361aea1235fede2d4bd877f5df54059d8c7ffa69264eb84ae1f9e",
+    ".rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v3.json": "f801c42c48ac48f6b45f39fab880e055cb1e66c4f2e67dfe22b38127a644a29e"
+  },
+  "inherited_bindings": [
+    {
+      "packet_path": ".rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v3.json",
+      "map": "bindings",
+      "exclude_original_path": ".rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+      "count": 4
+    },
+    {
+      "packet_path": ".rpiv/artifacts/evidence/2026-09-12_pc-s1-intent-v1.json",
+      "map": "bindings",
+      "exclude_original_path": ".rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+      "count": 19
+    }
+  ],
+  "identity_scheme": "Verify 3 direct plus 4 v3-inherited plus 19 v1-authority raw hashes (26 distinct paths). Effective complete intent = frozen v1, explicit v2 replacements, explicit v3 replacements, two v4 additive oracles. Old canonical paths resolve to the corresponding direct/inherited snapshot.",
+  "evidence_paths": [
+    ".rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v3-review.md",
+    ".rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v2-review.md",
+    ".rpiv/artifacts/evidence/2026-09-10_canonical-project-writer-s7.md"
+  ],
+  "review_instructions": "Read-only final v4 intent re-review. Two additions explicitly test already-approved exact repository trust binding and executable identity change during version dispatch. No other behavior/scope is changed. Confirm inherited completeness and absence of new contradictions; verify 26 raw hashes and source base before/after. Return explicit identity/status, v3 findings disposition and any remaining actionable findings. No edits, tests/builds, Git writes or other reviewers' current output. Trusted-local scope/ISOL-1 deferral remains approved; no implementation/platform certification. Parent persists results."
+}

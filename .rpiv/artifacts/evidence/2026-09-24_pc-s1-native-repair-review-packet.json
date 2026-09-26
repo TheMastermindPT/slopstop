@@ -1,0 +1,55 @@
+{
+  "mode": "candidate",
+  "workflow_path": "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/candidate-workflow.md",
+  "artifact_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+  "slice_id": "PC-S1",
+  "repository_path": "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1",
+  "base_commit": "97678d2a131daaf0791822ed3f5a7c3977ee7e7c",
+  "candidate_revision": {
+    "kind": "frozen-worktree-snapshot",
+    "manifest_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-24_pc-s1-native-repair-snapshot.json",
+    "manifest_sha256": "69e25b8e0fb354290c65382f21fb633082707fde440a96683732b7fcca0fa345",
+    "included_file_count": 39,
+    "source_capture_count": 36,
+    "description": "Immutable base plus complete binary-capable tracked patch, sorted content/mode/status manifest, retained exact non-Markdown contents including every untracked source, and explicit append-only-evidence exclusion. No staging or commit. All included files regular, mode metadata explicit."
+  },
+  "contract_identity": {
+    "packet_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v4.json",
+    "packet_sha256": "c3d1f79762fa6b75b044e8206661aee8a66830541f6d22dce76807c05bf4d0ef",
+    "content_hash": "62f60b4067a9f9fcb60e33192d37d3b9ec3ee5dec47505584dd3078cecd3217e",
+    "rule": "Resolve and verify its 26 direct/inherited bindings exactly, including frozen v1-v3 owner sections and shared workflow. Use the whole effective contract but scope current candidate findings to the repair below."
+  },
+  "evidence_paths": [
+    "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1/.rpiv/artifacts/evidence/2026-09-13_pc-s1-implementation.md",
+    "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-19_pc-s1-observer-continuation.md",
+    "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-13_pc-s1-build-authority.md",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-2ZRrT7",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-Rb3sy5",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-p6aidn",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-P6nMfT"
+  ],
+  "review_scope": {
+    "kind": "narrow-repair-within-unaccepted-PC-S1",
+    "compare_to": "The manifest's incoming VilEQT snapshot is an unaccepted WIP comparator, not a newly accepted predecessor; original base and integration target remain base_commit.",
+    "files": [
+      "apps/harness/src/project-registration-observer.ts",
+      "apps/harness/src/registration/observer-clock.ts",
+      "apps/harness/src/registration/version-observation-execution.ts",
+      "apps/harness/src/registration/windows-version-child.ts",
+      "apps/harness/tests/integration/project-registration.integration.test.ts",
+      "apps/harness/tests/integration/registration-native-clock-fixture.ts",
+      "apps/harness/tests/integration/registration-native-fault-fixture.ts",
+      "apps/harness/tests/integration/registration-version-fixture.ts"
+    ],
+    "behaviors": "Native actual-pipe stdout/stderr overflow -> typed limit result after confirmed cleanup; original limit/cancellation trigger retained through Job-query, native-wait and close faults; original cleanup budget and D2 exact 2000/4000/5000 boundary/EOF/late-call behavior; child-completion 1999 vs 2000. Scope includes effects through observer/journal and integrity of real-vs-fault-controlled tests and prospective Red/Green evidence.",
+    "not_completion": "Registration/list/select/reopen, canonical attachment, broader registry/owner-loss/PID-reuse/negative-capability matrices, app startup/protocol/UI/Linux product integration, whole packages and whole-candidate acceptance remain pending. Do not fail this narrow repair solely for explicitly outside-scope missing feature work, and never infer PC-S1 completion from a scoped pass. Inspect surrounding code where necessary to judge this repair's actual effect."
+  },
+  "observed_parent_checks": {
+    "snapshot": "39 included files, 36 source capture bytes/inventory and four identical source maps verified; all final captured commands exit0; exactly five existing source files changed plus three additions against VilEQT",
+    "codescene": "Parent safeguard passed; 30 checked/eligible, metadata issues-found with one improvement in unchanged-for-this-repair schema spec, no degradation. Installation 5/6: OAuth/CLI/API/runtime/Git pass; automated Agent Instructions recognizer failed although linked docs/agents/codescene.md was read. Do not report 6/6.",
+    "codescene_configuration_reference": "https://codescene.io/docs/integrations/mcp.html#configuration",
+    "sonar": "Not assessed; prior unavailable/auth-failure results preserved and setup/retries stopped by user. No clean claim.",
+    "tests": "Author captures types passed, unit20/20, registration integration71/71, Biome30 files passed. Parent verified bytes/maps/exits, not rerun tests. Evidence qualifies real pipes/native resources versus controlled clocks/faults and invalid earlier Red attempts."
+  },
+  "review_instructions": "Independent READ-ONLY candidate review of this exact narrow repair. Verify manifest/source/capture/contract identities before and after. Read actual source, incoming captured files and necessary dependencies; inspect chronological evidence for scoped claims. Do not edit, run tests/builds/native probes, mutate Git/GitHub or inspect another reviewer's current output. Return explicit mode, identities/counts, scope, inspection/gate outcome, severity-tagged findings with exact source/test/evidence references and clear scope limits. A scoped pass is not acceptance of the whole PC-S1 or new human authority. Report broken/incomplete identities separately; do not fabricate proof or require deferred hostile-config isolation. Parent persists all reports outside frozen source."
+}

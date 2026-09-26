@@ -1,0 +1,37 @@
+{
+  "mode": "intent",
+  "workflow_path": "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/candidate-workflow.md",
+  "artifact_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+  "slice_id": "PC-S1",
+  "repository_path": "C:/Users/pedro/Documents/GitHub/slopstop",
+  "base_commit": "97678d2a131daaf0791822ed3f5a7c3977ee7e7c",
+  "content_hash": "85e613dcb9850da6153ca90f2fb703db7e7a3bb7144a7a93895d4fc69ed34abf",
+  "identity_scheme": "Raw SHA-256 of entire brief and local authority files; code is unchanged from base_commit. Whole-document binding includes every normative section. This is intent inspection, not a source candidate snapshot.",
+  "evidence_paths": [
+    "docs/ragnarok-prototype-coordination.md",
+    ".rpiv/artifacts/evidence/2026-09-10_canonical-project-writer-s7.md"
+  ],
+  "bindings": {
+    ".rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md": "24d799c3d4d126f4ff7ecb60b16f6b72a862532ece8e568dbff6e33b65dd116f",
+    "AGENTS.md": "6b64e7b756753220a362992bb11e8e16bd970d259883219233da7e28d375f943",
+    "PRODUCT.md": "d6184abfa7679fd56243e4ca8e3d313a207fd51be759f20462277e73fb32267c",
+    "CONTEXT.md": "c7e57244535a9c39a7e6cf976a1e86b7c5122c087e792dbb13fd6e1c8999c72a",
+    "docs/ragnarok-prototype-coordination.md": "70c138fb5906ae3bd09c8fca5bb37b9384ac562d6779efc77b6eb00e131b8348",
+    ".rpiv/decisions/degrade-distinguishes-broken.md": "b6b54e460aa8c704a828865e53576591f4ea7f468f431277c1fda4a5b87fb2d2",
+    ".rpiv/decisions/shared-vocab-union.md": "452efad6ed17158e83b233f87be95fa47c2b557bfd35a4c3b6f4cfd61010d92f",
+    "docs/adr/0004-canonical-board-index.md": "c68622b34dae3e4ca3194717f7a634fe16d0ad0224b4d95725575d3818d54f64",
+    "docs/adr/0005-storage-lifecycle-and-recovery.md": "f6bd3cee0bc072153005850153ec9ee0402135e666cf99396f4947aa866e0d6a",
+    "docs/adr/0006-physical-persistence-layout.md": "788d537d8879d199179ae747a92b93f474a624d37d829b17dcc1438731cc2a3b",
+    "docs/adr/0008-run-workspace-mutation-lease-and-process-job-lifecycle.md": "bd86df7e6eef9ecde3e307ff66fe56c884578630ea461fe1de17a3bd573422fc",
+    "docs/adr/0013-effect-reconciliation-and-recovery-journal.md": "ad932dab2aa013ddd330c7caf0d90e6b6a79baf2f98b9180a667d7e3dc4d70fe",
+    "docs/adr/0015-parallel-worker-candidate-composition-and-exact-integration.md": "ef3de6bad0afde38ade476874b0b3eb2d12e054d5328c4434fe8f1c25ec1cbc7",
+    ".rpiv/artifacts/designs/2026-08-31_16-37-32_project-storage-opening.md": "b0c5b3a72afb987696e8e465138c2ac6edf7aaad8295795e05599095825f7302",
+    ".rpiv/artifacts/plans/2026-08-25_14-53-19_workspace-production-boundary-tracer-bullet.md": "600a0dde3f3b1d4b559a0a08cca86f740c44a183f9ad438c4bd848c62ad226f8",
+    ".rpiv/artifacts/validation/2026-08-25_23-26-11_workspace-supervision-prototype.md": "76640f00b8433f9a65e1b1810af03816ab32ed1b43791137601ac3d3fb3f9cf7",
+    ".rpiv/artifacts/evidence/2026-09-10_canonical-project-writer-s7.md": "384a95204eb86bb59a6a6cc9ab926e567a815643d1c0b5bf5ff10f6700a83520",
+    "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/candidate-workflow.md": "94c2867895111448511508ce4bf7068fdb3f63bc05af677318cec22c1ea63832",
+    "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/test-contract-authoring.md": "09181999a6770fc2894834d89c68a123bc55adf712f9f588684449112eaddaba",
+    "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/artifact-review-dispatch.md": "c5eaabb2289938f799e700747b7e786f90d5da8037a71bac70a8568aca571562"
+  },
+  "review_instructions": "Read-only independent intent review of PC-S1, not implementation certification. Verify bindings before and after and source against base_commit. Do not edit files, run tests/builds, mutate Git/GitHub, or access other reviewers' output. Read the workflow and actual integration seams. Evaluate whether the proposed registration behavior, observer admission, registry compatibility and public oracles are sufficient and consistent with approved constraints. Return mode, reviewed identity, inspection status and severity-tagged findings with exact plan/source references. Missing technical commitments are real intent gaps, not proof failures of unbuilt code. Report a failed gate if mandatory gaps remain; do not infer approval from in-review status. Parent persists the result."
+}

@@ -2,6 +2,12 @@
 
 <!-- impeccable:product-schema 1 -->
 
+## Product Identity
+
+Ragnarok is the official product name, replacing the provisional name SlopStop (decision: 2026-09-11). Existing SlopStop references describe the same product under its former name, not a separate application.
+
+The technical rename is deferred to separately scoped work. Repository and package names, application identifiers, storage paths and filenames such as `slopstop.db`, and existing runtime labels still use SlopStop where implemented. Historical artifacts retain their original names and provenance. New product and UI/UX design work uses Ragnarok; this naming decision alone does not authorize a technical migration.
+
 ## Platform
 
 web
@@ -122,7 +128,9 @@ SlopStop treats project intent, execution attempts, and model conversations as s
 
 ## Brand Commitments
 
-The product name is SlopStop. The final visual identity is deliberately open and will be selected through explicit variants. The foundation shell may use a provisional technical-cartography direction, but it must remain cheap to replace.
+The official product name is Ragnarok. The name is an input to future UI/UX and brand exploration, including visual language, imagery, tone, and interaction concepts. No particular mythology, palette, typography, iconography, or motion treatment is selected by the name alone. Variants require explicit review and must preserve clear domain meaning, accessibility, and operational readability.
+
+The final visual identity is deliberately open. Existing layouts and the foundation shell are provisional and may change substantially through use and review; they must remain cheap to replace.
 
 The current prototype direction is carbon and graphite, centered on a live graph, direct model conversation, explicit commands, contextual supervision, and full diagnostic state. Effects are reserved for focus, attention, active work, and transitions so code and operational reading remain stable. This direction remains a prototype until explicit review selects a Stable Product Identity.
 

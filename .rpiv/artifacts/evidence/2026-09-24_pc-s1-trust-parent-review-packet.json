@@ -1,0 +1,51 @@
+{
+  "mode": "candidate",
+  "workflow_path": "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/candidate-workflow.md",
+  "artifact_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+  "slice_id": "PC-S1",
+  "repository_path": "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1",
+  "base_commit": "97678d2a131daaf0791822ed3f5a7c3977ee7e7c",
+  "scope": "Bounded in-progress trust-admission implementation plus two parent fixture repairs; not whole-PC-S1 completion or an accepted predecessor",
+  "scope_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-24_pc-s1-trust-admission-continuation.md",
+  "candidate_revision": {
+    "kind": "frozen-snapshot-with-exact-file-replacements",
+    "manifest_path": "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-2026-09-24-snapshot.json",
+    "manifest_sha256": "efd5d2f52dee798bb4b1d8f3e4e39209ed769cd6818dfbb9ab3d59a0e34c188d",
+    "resolution": "Resolve the complete sorted 50-file manifest from manifest_path. Replace only the sha256 and retained-byte location of the two entries below. All original modes, statuses, names, symlink data, other file digests, base commit, 26 contract bindings and binary patch remain identical. The two replacements are already-untracked regular files, so the complete tracked binary patch is unchanged. No files are added or deleted relative to that manifest. This references retained bytes, not a mutable branch tip.",
+    "replacements": {
+      "apps/harness/tests/integration/project-storage-historical-fixture.ts": {
+        "sha256": "7680e7d7e5088e8cf829048e84abff1f12adda80ab8ee89d831b2519a3987a47",
+        "bytes_path": "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-test-B8bmk6/source/apps/harness/tests/integration/project-storage-historical-fixture.ts"
+      },
+      "apps/harness/tests/integration/registration-schema-fixture.ts": {
+        "sha256": "7811fd7002c7181c437bf4cb9420ca0b3b4bd9829b540a36f7f19b9376f6ca91",
+        "bytes_path": "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-test-B8bmk6/source/apps/harness/tests/integration/registration-schema-fixture.ts"
+      }
+    },
+    "final_source_capture": "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-test-B8bmk6/inputs.json",
+    "final_source_capture_sha256": "b00877fd28d5e9efb8573b9b6436cf285723df0b80ca2035a21692ed461f3f5a",
+    "evidence_path": "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1/.rpiv/artifacts/evidence/2026-09-13_pc-s1-implementation.md",
+    "evidence_sha256": "d2fc0f97b6dda2aa2938d563a21d4e33c3daeb22acce2aa57f2e7a56c84a14de",
+    "evidence_bytes": 134845,
+    "preserved_original_evidence_bytes": 128111
+  },
+  "contract_content_hash": "62f60b4067a9f9fcb60e33192d37d3b9ec3ee5dec47505584dd3078cecd3217e",
+  "contract_bindings": "The exact 26 bindings in the retained manifest; resolve and inspect relevant normative content, including inherited v1-v3 and current v4 sections.",
+  "evidence_paths": [
+    "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-13_pc-s1-build-authority.md",
+    "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1/.rpiv/artifacts/evidence/2026-09-13_pc-s1-implementation.md",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-test-rRKmFx",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-test-3ZEDrU",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-test-B8bmk6",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-test-ptkmwD",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-test-ITKXFw",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-test-XrJpZj"
+  ],
+  "qualifications": [
+    "Original Vitest worker exits in qRsIkh/TQYB8a remain unexplained. Later passing runs do not establish a crash fix. Review the evidence qualification explicitly.",
+    "Mutation proof is pending; no whole-slice fast/deep/package or Linux proof is asserted. Sonar remains not assessed under the recorded user direction.",
+    "Native lifecycle and owner-recovery reviews were scoped passes within this same unaccepted PC-S1; they are not accepted predecessor slices.",
+    "No six-query executor, registration/list/select/reopen, protocol/UI integration or completed PC-S1 claim. Review correctness and proof of the bounded authority group, preserving remaining obligations."
+  ],
+  "review_instructions": "Read-only independent review. Inspect actual retained/current bytes and evidence; do not write files, run tests, invoke Sonar, change configuration or contact implementation sessions. Return reviewed identity, mode, scope, outcome, diagnostics and severity-tagged findings under your registered role. Missing proof remains pending/broken rather than clean. Do not infer human acceptance."
+}

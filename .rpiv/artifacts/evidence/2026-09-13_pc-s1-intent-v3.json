@@ -1,0 +1,30 @@
+{
+  "mode": "intent",
+  "workflow_path": "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/candidate-workflow.md",
+  "artifact_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+  "slice_id": "PC-S1",
+  "repository_path": "C:/Users/pedro/Documents/GitHub/slopstop",
+  "base_commit": "97678d2a131daaf0791822ed3f5a7c3977ee7e7c",
+  "content_hash": "d4fe47ccce00a2cdf00fd9e93854fceb446d80239c8eaf8b1394a19b9527c66d",
+  "identity_scheme": "Effective intent = immutable v1 clauses, exact v2 replacements, then exact v3 replacements. Verify 5 direct and 19 inherited raw-byte bindings before/after. No source candidate exists and no previous approval transfers automatically.",
+  "bindings": {
+    ".rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md": "e4b0cf7447f361aea1235fede2d4bd877f5df54059d8c7ffa69264eb84ae1f9e",
+    ".rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v2-brief.md": "cfdfe1b215b102187135fc62c45b96895ef5a0647e9911989d2720b86511d069",
+    ".rpiv/artifacts/evidence/2026-09-12_pc-s1-intent-v1-brief.md": "24d799c3d4d126f4ff7ecb60b16f6b72a862532ece8e568dbff6e33b65dd116f",
+    ".rpiv/artifacts/evidence/2026-09-12_pc-s1-intent-v1.json": "34298109e9b7ce23c6afa02145a5f619ab634fce019e07d0d7ad7d1159569acb",
+    ".rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v2.json": "7ad0f78dfe779c9ba6794e2878d4101543bfe1035626aa17a2bd6399e5c16ee9"
+  },
+  "inherited_bindings": {
+    "packet_path": ".rpiv/artifacts/evidence/2026-09-12_pc-s1-intent-v1.json",
+    "map": "bindings",
+    "exclude_original_path": ".rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+    "rule": "Verify the other 19 original path/hash pairs unchanged. Both old canonical brief bindings resolve to their direct-bound snapshots above, not the current v3 path."
+  },
+  "evidence_paths": [
+    ".rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v2-review.md",
+    ".rpiv/artifacts/evidence/2026-09-12_pc-s1-intent-v1-review.md",
+    ".rpiv/artifacts/evidence/2026-09-10_canonical-project-writer-s7.md"
+  ],
+  "developer_decision": "Developer explicitly chose the coordinator recommendation of a trusted-local personal prototype: 'ok vamos com a tua recomendacao. o isolamento fica pra outra altura'. Strong hostile-config/OS-network isolation is deferred as ISOL-1. The disclosure and no application-issued Git network/helpers/mutations/privacy obligations remain. This is an approved scope change, not an unapproved waiver; exact v3 acceptance/build remains pending.",
+  "review_instructions": "Read-only independent v3 intent inspection of effective PC-S1; verify all direct/inherited hashes and source base before/after. Check v2 findings against v3 D6-D10 and revised B2/B5/B6/B9/B10. Do not require deferred hostile-config confinement as if still in scope, but verify honest disclosure and remaining controls; flag any actual unauthorized scope reduction or unresolved contract. Preserve role-specific format, explicit identity/status, prior-finding dispositions and grounded actionable rows. No edits, tests/builds, Git/GitHub mutation or other reviewers' current outputs. Future capability tests are not executed results. Parent persists report."
+}

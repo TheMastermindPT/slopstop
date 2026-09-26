@@ -1,0 +1,46 @@
+{
+  "mode": "candidate",
+  "workflow_path": "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/candidate-workflow.md",
+  "artifact_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+  "slice_id": "PC-S1",
+  "repository_path": "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1",
+  "base_commit": "97678d2a131daaf0791822ed3f5a7c3977ee7e7c",
+  "candidate_revision": {
+    "kind": "frozen-worktree-snapshot",
+    "manifest_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-24_pc-s1-native-repair-r2-snapshot.json",
+    "manifest_sha256": "7ba7de384bfbd2ca80d72de2fb70c02628730abbba274b06d4afce4179b1fe13",
+    "rule": "Resolve prior39-entry manifest plus exactly three hash replacements; modes/statuses and original binary patch unchanged. All36 current non-Markdown contents retained at the new capture source root; three Markdown edits reconstruct from immutable base plus patch. Separate evidence hash and exact preserved86858-byte earlier prefix are bound. No staging/commit/new source files."
+  },
+  "previous_review_packet": {
+    "path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-24_pc-s1-native-repair-review-packet.json",
+    "sha256": "bb2ba1ef82b9688ee0986a74f594eaf57a0552c61907cc3b332a0010686ef4e4",
+    "result": "failed; preserved historical, not an accepted predecessor"
+  },
+  "contract_identity": {
+    "packet_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v4.json",
+    "packet_sha256": "c3d1f79762fa6b75b044e8206661aee8a66830541f6d22dce76807c05bf4d0ef",
+    "content_hash": "62f60b4067a9f9fcb60e33192d37d3b9ec3ee5dec47505584dd3078cecd3217e",
+    "rule": "Verify all26 direct/inherited authority bindings. No normative contract change."
+  },
+  "review_scope": {
+    "kind": "re-review of the same narrow native repair inside incomplete PC-S1",
+    "description": "Review the entire previous repair's claimed behavior plus NR-1/NR-2 fixes and any effects on dependencies. Primary new delta is windows-version-child.ts, public project-registration.integration.test.ts and registration-native-clock-fixture.ts. No wider feature acceptance.",
+    "NR-1": "Persistent first cancellation timestamp throughout actual post-resume polling. Tests cover cancel1999/poll2000 -> cancellation force3999/end6999, cancel1000/poll1500 -> force3000/end6000, equal2000 and after-deadline -> limit priority.",
+    "NR-2": "Recheck original cleanup deadline after successful resource closure. Terminal proof4999 and close4999 succeeds; close5000/5001 remains unconfirmed with original trigger and durable closed admission.",
+    "pending_outside_scope": "Broader owner-loss/PID-reuse/negative-capability/full registry/lifecycle, startup/protocol/UI/registration/Linux integration and packages remain pending. Missing outside-scope behavior alone does not fail this bounded repair; regressions or unmet scoped requirements do."
+  },
+  "evidence_paths": [
+    "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1/.rpiv/artifacts/evidence/2026-09-13_pc-s1-implementation.md",
+    "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-24_pc-s1-native-repair-review.md",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-ubIqR4",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-g8UFeb",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-VM0Ptn",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-U3ZKHm",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-Ny0Gik",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-SBUr8i",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-4nbXil",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-tunAA1"
+  ],
+  "parent_verification": "Current39 included files and complete36-file non-Markdown inventory matched; new captured raw bytes and four identical maps/exit0 verified; exactly three changes, no additions, saved binary patch unchanged, no staged changes. Prior evidence is an exact prefix. Parent repeated CodeScene safeguard: passed30 checked, no degradations, one improvement in unchanged schema spec. Sonar remains not assessed; no new mutation/Jev pass claimed.",
+  "review_instructions": "Independent READ-ONLY candidate re-review. Verify current/inherited snapshot, capture and contract identities before/after. Read actual implementation, tests, incoming snapshots and scoped Red/Green evidence. Explicitly resolve NR-1/NR-2 and identify actionable regressions; distinguish fault-clock policy proofs from real scheduling. No tests/native execution/builds/edits/Git mutations/nested agents or another current reviewer's output. Return role-specific identity/count/scope/outcome plus severity-tagged exact references. A scoped pass is not whole-PC-S1 acceptance, human approval or integration authority. Parent persists reports outside frozen candidate."
+}

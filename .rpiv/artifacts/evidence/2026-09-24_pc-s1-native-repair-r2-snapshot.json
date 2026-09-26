@@ -1,0 +1,23 @@
+{
+  "snapshot_id": "pc-s1-native-repair-r2",
+  "repository_path": "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1",
+  "base_commit": "97678d2a131daaf0791822ed3f5a7c3977ee7e7c",
+  "inherited_manifest_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-24_pc-s1-native-repair-snapshot.json",
+  "inherited_manifest_sha256": "69e25b8e0fb354290c65382f21fb633082707fde440a96683732b7fcca0fa345",
+  "resolution_rule": "Retain the previous sorted39-path manifest with its exact modes/statuses/regular-file metadata and unchanged binary patch. Override only these three hashes. All36 current non-Markdown bytes, including all untracked source, are retained under the NEW captured_source_root/path; the three Markdown changes remain reconstructible from base plus the same binary-capable patch. Previous snapshot and unaccepted incoming comparator remain historical, not accepted predecessors.",
+  "file_hash_replacements": {
+    "apps/harness/src/registration/windows-version-child.ts": "1208febbbfebc12eb66106c5657a1df3b139f54008bb3623a3900e4989158cb0",
+    "apps/harness/tests/integration/project-registration.integration.test.ts": "18617ba50821a078e68498d5b5cdbf978607b8bd1d624b54f7e512e074bbbbd6",
+    "apps/harness/tests/integration/registration-native-clock-fixture.ts": "d7bd7012c7b76f2e966e4f173972a780a53a4f39999a01942499db798d145fb6"
+  },
+  "captured_source_root": "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-4nbXil/source",
+  "capture_input_path": "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-4nbXil/inputs.json",
+  "capture_input_sha256": "bb7cf26925ed81099a345b525c29f38593ed44ef9e986af801d688cebedaf77c",
+  "evidence_path": ".rpiv/artifacts/evidence/2026-09-13_pc-s1-implementation.md",
+  "evidence_sha256": "096dc609fa98d7abb914f2a26ec38a4c3213631f334c6022d5f7419bb012adc4",
+  "evidence_exclusion": "Still append-only evidence, excluded from source reconstruction and separately bound while frozen. The first86858 bytes exactly reproduce the previous evidence hash13d2b79885286efeaa87bdd6ab16a403f4274b4fea81dda168cb29cff6b847e4; previous failed review history was preserved.",
+  "included_file_count": 39,
+  "source_file_count": 36,
+  "new_or_deleted_files": [],
+  "final_capture_suffixes": ["Ny0Gik", "SBUr8i", "4nbXil", "tunAA1"]
+}

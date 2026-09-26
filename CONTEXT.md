@@ -1,9 +1,11 @@
-# SlopStop Domain Context
+# Ragnarok Domain Context
 
 Use these terms consistently in code, schemas, tests, and UI copy.
 
 | Term | Meaning |
 | --- | --- |
+| Ragnarok | The official name of the local-first desktop coding harness previously called SlopStop. Product identity and UI/UX direction are recorded in `PRODUCT.md`. |
+| SlopStop | The former provisional name of Ragnarok; references under this name denote the same product. |
 | Project | One saved Git repository and its local SlopStop state; visualized as a galaxy. |
 | Project lifecycle | The independent active or archived axis of one Project; archiving preserves identity and history and never means close, delete, ready, or healthy. |
 | Project backup | A sealed, checksum-verified snapshot of both quiescent Project databases and their identity/schema manifest; it contains no raw credentials. |

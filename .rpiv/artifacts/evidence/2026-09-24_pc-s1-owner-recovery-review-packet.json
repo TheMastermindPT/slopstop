@@ -1,0 +1,52 @@
+{
+  "mode": "candidate",
+  "workflow_path": "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/candidate-workflow.md",
+  "artifact_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+  "slice_id": "PC-S1",
+  "repository_path": "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1",
+  "base_commit": "97678d2a131daaf0791822ed3f5a7c3977ee7e7c",
+  "candidate_revision": {
+    "kind": "frozen-worktree-snapshot-delta",
+    "manifest_path": "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-owner-recovery-2026-09-24-snapshot.json",
+    "manifest_sha256": "eb9c86af7824418848743150397bc90d00b6301ef96d10f5184f8dd36d96ede9",
+    "rule": "Resolve its pinned R2->R1 manifest chain; replace exactly2 hashes and add6 files.45 included files/modes/statuses,42 retained source bytes, unchanged tracked binary patch. Evidence separate hash; old93778 bytes exactly preserved at offset287 after truthful metadata addition. No accepted predecessor or commit is created by this snapshot."
+  },
+  "contract_identity": {
+    "packet_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v4.json",
+    "packet_sha256": "c3d1f79762fa6b75b044e8206661aee8a66830541f6d22dce76807c05bf4d0ef",
+    "content_hash": "62f60b4067a9f9fcb60e33192d37d3b9ec3ee5dec47505584dd3078cecd3217e",
+    "rule": "Verify26 direct/inherited bindings; applicable D2/B12 and first-cause/reconciliation constraints are unchanged."
+  },
+  "review_scope": {
+    "kind": "bounded owner-recovery characterization and test refactor within incomplete PC-S1",
+    "files": [
+      "apps/harness/tests/integration/project-registration.integration.test.ts",
+      "apps/harness/tests/integration/registration-registry-peer.mjs",
+      "apps/harness/tests/integration/registration-absence-fixture.ts",
+      "apps/harness/tests/integration/registration-observer-peer.mjs",
+      "apps/harness/tests/integration/registration-owner-recovery-cases.ts",
+      "apps/harness/tests/integration/registration-owner-recovery-fixture.ts",
+      "apps/harness/tests/integration/registration-peer-loader.mjs",
+      "apps/harness/tests/integration/registration-recovery-scenarios.ts"
+    ],
+    "claimed_behavior": "Six actual owned Node observer-peer death windows (intent, before child identity, child-stored, before terminal, terminal-stored, outcome-stored); live exact identity and missing/wrong session; controlled historical creation mismatch at same live PID; active Job despite mismatch; injected access/snapshot/API failures; fresh-request admission after exact reconciliation and old-publisher fencing. All16 new tests initially passed existing production behavior. Production/migrations/dependencies/naming bytes are unchanged.",
+    "required_distinctions": "Characterization is not fabricated product Red/Green. Actual Node owner-peer death is not final Electron startup proof. Historical-PID fixture does not force OS PID reuse. Injected access/capability faults are controlled notifications, not claims the host lacked APIs. Verify the fixtures actually reach claimed windows and assert public/durable outcomes, preserve unknown rather than clean, affect only owned processes and cannot pass from setup failure or fake authority.",
+    "pending_outside_scope": "Full registration/list/select/reopen and canonical attachment, wider registry/old-data/concurrency controls, app startup/transport/UI, Linux production integration, actual packages/full validation/Deep Review and human acceptance remain pending. Do not certify them or fail this packet merely for their absence. Any discovered real safety/correctness defect reached by this characterization remains actionable even if production was not edited."
+  },
+  "evidence_paths": [
+    "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1/.rpiv/artifacts/evidence/2026-09-13_pc-s1-implementation.md",
+    "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-24_pc-s1-owner-recovery-continuation.md",
+    "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-24_pc-s1-native-repair-r2-review.md",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-J56dEl",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-mkEkii",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-r3zepJ",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-MI06oF",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-tPOu1r",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-ModlJT",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-gDT3Vs",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-IBQ3O6",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-tyNsXg"
+  ],
+  "parent_checks": "Verified final snapshot/raw retained bytes/modes/current inventory45/42, unchanged production and binary patch, all4 final input hashes/maps/exits,26 intent bindings, metadata body preservation and direct evidence validation/diff check. Parent CodeScene safeguard passed36 checked, no degradation, same preexisting schema-spec improvement. Sonar not assessed; no new mutation/Jev/package pass claimed.",
+  "review_instructions": "Independent READ-ONLY candidate review. Verify all snapshot/source/evidence/contract identities before/after; inspect actual code, necessary production dependencies and recorded executions. No tests/native probes/builds/edits/Git mutation/nested agents/other current reviewer output. Return explicit mode/identity/scope/inspection and scoped gate, severity-tagged actionable rows with exact refs. Inspect test quality and claim accuracy, including preserved78-case body and common loader extraction. A scoped pass is not PC-S1 acceptance, new human authority or integration permission. Parent persists reports outside frozen source."
+}

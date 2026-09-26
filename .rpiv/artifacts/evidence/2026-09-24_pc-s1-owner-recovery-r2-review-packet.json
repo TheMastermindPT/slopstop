@@ -1,0 +1,49 @@
+{
+  "mode": "candidate",
+  "workflow_path": "C:/Users/pedro/rpiv-claude/rpiv/skills/_shared/candidate-workflow.md",
+  "artifact_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/designs/2026-09-12_22-45-37_persistent-project-conversation.md",
+  "slice_id": "PC-S1",
+  "repository_path": "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1",
+  "base_commit": "97678d2a131daaf0791822ed3f5a7c3977ee7e7c",
+  "candidate_revision": {
+    "kind": "frozen-worktree-snapshot-delta",
+    "manifest_path": "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-owner-recovery-or1-or2-2026-09-24-snapshot.json",
+    "manifest_sha256": "ab5797cbfdca5f6f596c0e26c497fc64027ea95e6e67cb09751ef827aa13a5ad",
+    "rule": "Resolve pinned previous45-file snapshot and inherited native R2/R1 manifests; replace exactly2 test hashes, no additions/deletions or production changes. All42 current source bytes retained; tracked binary patch unchanged. Current evidence and exact old prefix/body offsets are separately bound."
+  },
+  "contract_identity": {
+    "packet_path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-13_pc-s1-intent-v4.json",
+    "packet_sha256": "c3d1f79762fa6b75b044e8206661aee8a66830541f6d22dce76807c05bf4d0ef",
+    "content_hash": "62f60b4067a9f9fcb60e33192d37d3b9ec3ee5dec47505584dd3078cecd3217e",
+    "rule": "Verify all26 direct/inherited bindings; no normative change."
+  },
+  "previous_review_packet": {
+    "path": "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-24_pc-s1-owner-recovery-review-packet.json",
+    "sha256": "1d8779752dead61790058c8264a8d93f0c15b3892b879ac9c392e503ad7eb522",
+    "outcome": "failed overall; not an accepted predecessor"
+  },
+  "review_scope": {
+    "kind": "re-review entire bounded owner-recovery characterization with OR-1/OR-2 oracle corrections",
+    "new_delta": [
+      "apps/harness/tests/integration/registration-owner-recovery-cases.ts",
+      "apps/harness/tests/integration/registration-recovery-scenarios.ts"
+    ],
+    "OR-1": "Exact interrupted outcome equality distinguishes before-terminal with exact-owner-absence from terminal-stored with no annotation/extra result fields.",
+    "OR-2": "Independent storage client captures complete result_json by exact observationId while peer is paused BEFORE kill. Post-recovery original, repeated original and separate persisted row must equal this pre-death full result, not a result derived from recovery output.",
+    "retained": "All94 cases, loader/peer behavior, six real owner-death windows, conservative native/session/PID-history controls, fresh-request admission and publisher fencing. Production/migrations/dependencies/naming unchanged. This remains already-correct characterization, no invented Red.",
+    "outside_scope": "Whole PC-S1 registration/UI/startup/Linux/package and remaining matrices are not complete or accepted. Do not certify them or demand their implementation as an unrelated prerequisite to this test-oracle correction."
+  },
+  "evidence_paths": [
+    "C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1/.rpiv/artifacts/evidence/2026-09-13_pc-s1-implementation.md",
+    "C:/Users/pedro/Documents/GitHub/slopstop/.rpiv/artifacts/evidence/2026-09-24_pc-s1-owner-recovery-review.md",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-QMOPe2",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-3qQCZy",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-lYctmU",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-zGuhDD",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-377R8P",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-148j8l",
+    "C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-test-y6N9kw"
+  ],
+  "parent_checks": "Verified45/42 current/retained sources and full inventory, exactly2 test changes, no staged/production changes, preserved binary patch/failed review, original107539-byte prefix and older93778-byte body at offset287. Four final source maps/input hashes/exits verified. Evidence validator/diff check passed. Parent CodeScene36 checked passed, no degradation, only preexisting schema-spec improvement. lYctmU selected zero tests and is explicitly NOT pass evidence. Sonar not assessed, no retries; no new mutation/Jev pass.",
+  "review_instructions": "Independent READ-ONLY candidate re-review. Verify exact manifest/retained sources/contract and evidence before/after. Inspect actual pre-kill capture ordering and exact equality assertions; explicitly resolve OR-1/OR-2 and check retained bounded proof for regressions. No tests/native probes/builds/edits/Git mutation/nested agents/other current reviewer output. Return mode/identity/scope/inspection/scoped gate, prior-finding disposition and actionable rows if any. A scoped pass is not whole-PC-S1 acceptance or integration permission."
+}
