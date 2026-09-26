@@ -21,6 +21,7 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 - `research/2026-08-30_23-53-59_convergence-proof-bundle-contract.md` traces the cross-owner proof inputs for ticket `#75` and defines the request-scoped identity, typed membership, ordering, boundedness, and direct-validity basis later accepted by ADR 0020.
 - `research/2026-08-31_16-13-56_project-storage-opening-health.md` defines the smallest durable Project Storage slice, independent canonical/runtime health, prior-state witness handling, and the harness-owned persistence boundary.
 - `research/2026-09-02_19-16-24_harness-capabilities-and-next-step.md` records the accepted recovery sequence for schema authority, shutdown, privacy, bounded logs, prospective TDD, tracker repair, and packaged Project Storage proof.
+- `research/2026-09-19_jev-typesafe-primary-sources.md` examines Jev's official capabilities, limitations, privacy and public demos, maps advisory uses to Ragnarok, and records future ideas JEV-F01 (Worker-team composition) and JEV-F02 (governed self-improvement, outside v1 and a possible v2 direction). It recommends evaluating Conversation correction detection first; it is research and deferred exploration, not integration approval or production evidence.
 
 ## Solutions
 
