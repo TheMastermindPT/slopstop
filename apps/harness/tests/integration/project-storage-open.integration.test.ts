@@ -18,6 +18,10 @@ import {
   sha256File,
 } from "./project-storage-create-fixture.js";
 import {
+  historicalMigrationPath,
+  seedGenerationOneCanonical,
+} from "./project-storage-historical-fixture.js";
+import {
   type ApplicationRootPath,
   brokenHealth,
   closeRequest,
@@ -88,70 +92,6 @@ async function expectBrokenOpenWithoutMutation(
   expect(await inspectDurableProjectStorageState(input.root)).toEqual(before);
 }
 
-const historicalMigrationPath = path.join(
-  checkedInMigrationRoot,
-  "canonical",
-  "0000_fat_doctor_octopus.sql",
-);
-const historicalMetadata = {
-  metadata_key: "canonical",
-  database_kind: "canonical",
-  format_version: 1,
-  schema_version: 1,
-  last_migration_id: "0000_fat_doctor_octopus",
-};
-
-async function seedGenerationOneCanonical(root: ApplicationRootPath): Promise<void> {
-  const paths = generationPaths(root);
-  const manifest = parseProjectStorageManifest(await readFile(paths.manifest, "utf8"));
-  const source = await readFile(historicalMigrationPath, "utf8");
-  expect(createHash("sha256").update(source).digest("hex")).toBe(
-    "e21883d8c39eb5012a6df799fb8d2f5182e9050bf3546e48bde57f90abf3942c",
-  );
-  await rm(paths.canonical);
-  const database = new DatabaseSync(paths.canonical);
-  try {
-    database.exec(source);
-    database
-      .prepare("INSERT INTO schema_metadata VALUES (?, ?, ?, ?, ?)")
-      .run("canonical", "canonical", 1, 1, "0000_fat_doctor_octopus");
-    database
-      .prepare("INSERT INTO storage_identity VALUES (?, ?, ?, ?, ?, ?)")
-      .run(
-        "storage",
-        openRequest.projectId,
-        fixedCreationIds.storageId,
-        fixedCreationIds.generationId,
-        fixedCreationIds.canonicalDatabaseLineageId,
-        manifest.createdAt,
-      );
-    expect(database.prepare("SELECT * FROM schema_metadata").all()).toEqual([historicalMetadata]);
-    expect(
-      database.prepare("SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name").all(),
-    ).toEqual([{ name: "schema_metadata" }, { name: "storage_identity" }]);
-  } finally {
-    database.close();
-  }
-  const bytes = await readFile(paths.canonical);
-  await writeFile(
-    paths.manifest,
-    serializeProjectStorageManifest({
-      ...manifest,
-      canonical: {
-        ...manifest.canonical,
-        formatVersion: 1,
-        schemaVersion: 1,
-        lastMigrationId: "0000_fat_doctor_octopus",
-        activationBaseline: {
-          algorithm: "sha256",
-          sizeBytes: bytes.byteLength,
-          sha256: createHash("sha256").update(bytes).digest("hex"),
-        },
-      },
-    }),
-  );
-}
-
 async function historicalOpeningHashes(root: ApplicationRootPath) {
   const paths = generationPaths(root);
   const database = new DatabaseSync(paths.canonical, { readOnly: true });
@@ -212,7 +152,7 @@ async function createMigrationRootWithApplicationSuccessor(): Promise<string> {
   const fixtureRoot = await createTemporaryApplicationRoot();
   const migrationRoot = path.join(fixtureRoot, "drizzle");
   await cp(checkedInMigrationRoot, migrationRoot, { recursive: true });
-  await writeFile(path.join(migrationRoot, "application", "0001_opening_probe.sql"), "SELECT 1;\n");
+  await writeFile(path.join(migrationRoot, "application", "0002_opening_probe.sql"), "SELECT 1;\n");
   await writeFile(
     path.join(migrationRoot, "application", "meta", "_journal.json"),
     `${JSON.stringify(
@@ -230,8 +170,15 @@ async function createMigrationRootWithApplicationSuccessor(): Promise<string> {
           {
             idx: 1,
             version: "6",
-            when: 1788404224483,
-            tag: "0001_opening_probe",
+            when: 1789278600414,
+            tag: "0001_project_registration",
+            breakpoints: true,
+          },
+          {
+            idx: 2,
+            version: "6",
+            when: 1789278600415,
+            tag: "0002_opening_probe",
             breakpoints: true,
           },
         ],
@@ -874,7 +821,7 @@ it(
     try {
       expect(
         migratedApplication.prepare("SELECT last_migration_id FROM schema_metadata").get(),
-      ).toEqual({ last_migration_id: "0001_opening_probe" });
+      ).toEqual({ last_migration_id: "0002_opening_probe" });
     } finally {
       migratedApplication.close();
     }

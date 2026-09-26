@@ -51,6 +51,7 @@ catalog:
   jscpd: 5.0.15
   jsdom: 30.0.1
   knip: 6.34.0
+  koffi: 3.2.1
   likec4: 1.59.2
   libsql: 0.5.29
   lint-staged: 17.3.0
@@ -66,3 +67,4 @@ catalog:
 allowBuilds:
   electron: true
   esbuild: true
+  koffi: true

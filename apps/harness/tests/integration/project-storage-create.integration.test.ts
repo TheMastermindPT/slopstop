@@ -45,6 +45,7 @@ import {
   seedCanonicalConstraintAuthority,
   sqliteExecutor,
 } from "./project-storage-schema-cases.js";
+import { applicationRegistrationTables } from "./registration-schema-fixture.js";
 
 type CreatedGenerationPaths = Readonly<{
   directory: string;
@@ -228,12 +229,7 @@ it(
       canonical.close();
     }
 
-    await expect(readTableNames(applicationPath)).resolves.toEqual([
-      "schema_metadata",
-      "storage_generations",
-      "storage_locations",
-      "storage_registrations",
-    ]);
+    await expect(readTableNames(applicationPath)).resolves.toEqual(applicationRegistrationTables);
     await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalGenerationTwoTables);
     await expect(readTableNames(runtimePath)).resolves.toEqual([
       "slopstop_runtime_schema_metadata",

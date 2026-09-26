@@ -1,8 +1,10 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnySQLiteColumn,
   check,
   foreignKey,
   index,
+  integer,
   primaryKey,
   sqliteTable,
   text,
@@ -10,6 +12,10 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { createSchemaMetadataColumns } from "./schema-metadata-columns.js";
 import { domainIdentityCheck } from "./storage-schema-constraints.js";
+
+function physicalNumberCheck(column: AnySQLiteColumn) {
+  return sql`substr(${column}, 1, 1) between '1' and '9' and ${column} not glob '*[^0-9]*'`;
+}
 
 export const applicationSchemaMetadata = sqliteTable(
   "schema_metadata",
@@ -154,6 +160,186 @@ export const storageRegistrations = sqliteTable(
           and ${table.activatedAt} is not null
         )
       `,
+    ),
+  ],
+);
+
+export const registrationExecutableSelections = sqliteTable(
+  "registration_executable_selections",
+  {
+    selectionId: text("selection_id").primaryKey().notNull(),
+    executablePath: text("executable_path").notNull(),
+    platform: text("platform").notNull(),
+    volumeIdentity: text("volume_identity").notNull(),
+    fileIdentity: text("file_identity").notNull(),
+    birthIdentity: text("birth_identity").notNull(),
+    sha256: text("sha256").notNull(),
+    capturedAt: text("captured_at").notNull(),
+  },
+  (table) => [
+    check("registration_executable_selection_uuid", domainIdentityCheck(table.selectionId)),
+    check("registration_executable_path_nonempty", sql`length(${table.executablePath}) > 0`),
+    check("registration_executable_platform", sql`${table.platform} in ('win32', 'linux')`),
+    check("registration_executable_volume_positive", physicalNumberCheck(table.volumeIdentity)),
+    check("registration_executable_file_positive", physicalNumberCheck(table.fileIdentity)),
+    check("registration_executable_birth_positive", physicalNumberCheck(table.birthIdentity)),
+    check(
+      "registration_executable_sha256",
+      sql`length(${table.sha256}) = 64 and ${table.sha256} = lower(${table.sha256}) and ${table.sha256} not glob '*[^0-9a-f]*'`,
+    ),
+  ],
+);
+
+export const registrationVersionConsents = sqliteTable(
+  "registration_version_consents",
+  {
+    consentId: text("consent_id").primaryKey().notNull(),
+    selectionId: text("selection_id").notNull(),
+    decision: text("decision").notNull(),
+    decidedAt: text("decided_at").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "registration_version_consent_selection_fk",
+      columns: [table.selectionId],
+      foreignColumns: [registrationExecutableSelections.selectionId],
+    }).onDelete("restrict"),
+    check("registration_version_consent_uuid", domainIdentityCheck(table.consentId)),
+    check(
+      "registration_version_consent_decision",
+      sql`${table.decision} in ('accepted', 'declined')`,
+    ),
+  ],
+);
+
+export const registrationObserverIntents = sqliteTable(
+  "registration_observer_intents",
+  {
+    observationId: text("observation_id").primaryKey().notNull(),
+    selectionId: text("selection_id").notNull(),
+    consentId: text("consent_id").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    check("registration_observer_observation_uuid", domainIdentityCheck(table.observationId)),
+    uniqueIndex("registration_observer_consent_uq").on(table.consentId),
+    foreignKey({
+      columns: [table.selectionId],
+      foreignColumns: [registrationExecutableSelections.selectionId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.consentId],
+      foreignColumns: [registrationVersionConsents.consentId],
+    }).onDelete("restrict"),
+  ],
+);
+
+export const registrationObserverChildren = sqliteTable(
+  "registration_observer_children",
+  {
+    observationId: text("observation_id").primaryKey().notNull(),
+    identityJson: text("identity_json").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.observationId],
+      foreignColumns: [registrationObserverIntents.observationId],
+    }).onDelete("restrict"),
+    check("registration_observer_child_json", sql`json_valid(${table.identityJson})`),
+  ],
+);
+
+export const registrationObserverTerminals = sqliteTable(
+  "registration_observer_terminals",
+  {
+    observationId: text("observation_id").primaryKey().notNull(),
+    exitCode: integer("exit_code").notNull(),
+    stdoutClosed: integer("stdout_closed").notNull(),
+    stderrClosed: integer("stderr_closed").notNull(),
+    treeEmpty: integer("tree_empty").notNull(),
+    observedAt: text("observed_at").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.observationId],
+      foreignColumns: [registrationObserverChildren.observationId],
+    }).onDelete("restrict"),
+    check("registration_observer_stdout_boolean", sql`${table.stdoutClosed} in (0, 1)`),
+    check("registration_observer_stderr_boolean", sql`${table.stderrClosed} in (0, 1)`),
+    check("registration_observer_tree_boolean", sql`${table.treeEmpty} in (0, 1)`),
+  ],
+);
+
+export const registrationObserverOutcomes = sqliteTable(
+  "registration_observer_outcomes",
+  {
+    observationId: text("observation_id").primaryKey().notNull(),
+    resultJson: text("result_json").notNull(),
+    settledAt: text("settled_at").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.observationId],
+      foreignColumns: [registrationObserverIntents.observationId],
+    }).onDelete("restrict"),
+    check("registration_observer_outcome_json", sql`json_valid(${table.resultJson})`),
+  ],
+);
+
+export const registrationIdentityConsents = sqliteTable(
+  "registration_identity_consents",
+  {
+    consentId: text("consent_id").primaryKey().notNull(),
+    selectionId: text("selection_id").notNull(),
+    observationId: text("observation_id").notNull(),
+    decision: text("decision").notNull(),
+    decidedAt: text("decided_at").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.selectionId],
+      foreignColumns: [registrationExecutableSelections.selectionId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.observationId],
+      foreignColumns: [registrationObserverOutcomes.observationId],
+    }).onDelete("restrict"),
+    check(
+      "registration_identity_consent_decision",
+      sql`${table.decision} in ('accepted', 'declined')`,
+    ),
+  ],
+);
+
+export const registrationRepositorySelections = sqliteTable(
+  "registration_repository_selections",
+  {
+    selectionId: text("selection_id").primaryKey().notNull(),
+    directoryPath: text("directory_path").notNull(),
+    identityJson: text("identity_json").notNull(),
+    capturedAt: text("captured_at").notNull(),
+  },
+  (table) => [
+    check("registration_repository_identity_json", sql`json_valid(${table.identityJson})`),
+  ],
+);
+
+export const registrationRepositoryTrust = sqliteTable(
+  "registration_repository_trust",
+  {
+    trustId: text("trust_id").primaryKey().notNull(),
+    selectionId: text("selection_id").notNull(),
+    decision: text("decision").notNull(),
+    decidedAt: text("decided_at").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.selectionId],
+      foreignColumns: [registrationRepositorySelections.selectionId],
+    }).onDelete("restrict"),
+    check(
+      "registration_repository_trust_decision",
+      sql`${table.decision} in ('accepted', 'declined')`,
     ),
   ],
 );

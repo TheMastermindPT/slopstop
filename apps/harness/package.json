@@ -21,6 +21,7 @@
     "@slopstop/protocol": "workspace:*",
     "drizzle-orm": "catalog:",
     "fs-native-extensions": "catalog:",
+    "koffi": "catalog:",
     "libsql": "catalog:",
     "pino": "catalog:",
     "zod": "catalog:"

@@ -8,6 +8,13 @@
       "when": 1788404224482,
       "tag": "0000_gray_eddie_brock",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789278600414,
+      "tag": "0001_project_registration",
+      "breakpoints": true
     }
   ]
 }

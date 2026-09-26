@@ -1,6 +1,8 @@
-# SlopStop
+# Ragnarok
 
-SlopStop is a private, local-first desktop coding harness for visible, non-linear multi-agent development.
+Ragnarok is a private, local-first desktop coding harness for visible, non-linear multi-agent development.
+
+Formerly called SlopStop, the product adopted Ragnarok as its official name on 2026-09-11. The repository, packages, application identifiers, and storage names still use SlopStop pending a separately scoped technical rename. Ragnarok will inform the evolving UI/UX; the current interface and visual identity remain provisional. See `PRODUCT.md` for the naming and design commitments.
 
 The repository is in its foundation stage. The first executable slice proves a strict Electron renderer boundary, a separate harness utility process, and a versioned typed protocol before product features are added.
 
