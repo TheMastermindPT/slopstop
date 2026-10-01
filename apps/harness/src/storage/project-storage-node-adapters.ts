@@ -145,6 +145,7 @@ type MutableOpeningClients = {
 const maximumRegistryGenerationsPerProject = 256;
 
 export type NodeProjectStorageOptions = Readonly<{
+  initialRepositoryBinding?: InitialRepositoryBinding;
   applicationStorageRoot: string;
   migrationResourcesRoot: string;
   applicationVersion: string;
@@ -490,6 +491,7 @@ async function buildDatabase(
   spec: typeof databaseSpecs.canonical | typeof databaseSpecs.runtime,
   creation: AllocatedCreation,
   loadMigrations: (spec: DatabaseSpec) => Promise<readonly GeneratedMigration[]>,
+  initialBinding?: InitialRepositoryBinding,
 ): Promise<ClosedDatabaseBuild> {
   try {
     await requirePlainDirectory(
@@ -511,6 +513,8 @@ async function buildDatabase(
         migrations,
       });
       if (spec.databaseKind === "canonical") await insertCanonicalProjectState(client, creation);
+      if (spec.databaseKind === "canonical" && initialBinding !== undefined)
+        await seedInitialRepositoryBinding(client, creation, initialBinding);
       await insertDatabaseIdentity(client, spec, creation);
       await requireDeclaredSchemaObjects(client, spec);
       const metadata = await requireCurrentMetadata(client, spec, migrations);
@@ -1487,17 +1491,41 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     ]);
     requireUniqueRegistryWitnessRows({ registrations, directLocations });
     const hasGenerationLinkedLocation = await hasGenerationLocationWitness(client, generations);
-    return registryWitnessKinds({
+    const kinds = registryWitnessKinds({
       registrations,
       directLocations,
       generations,
       hasGenerationLinkedLocation,
     });
+    const reservationTable = await client.execute(
+      "SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'registration_reservations'",
+    );
+    if (reservationTable.rows.length === 0) return kinds;
+    const reservations = await client.execute({
+      sql: "SELECT reservation_id, record_fingerprint FROM registration_reservations WHERE json_extract(record_json, '$.projectId') = ?",
+      args: [projectId],
+    });
+    if (reservations.rows.length === 0) return kinds;
+    const seed = options.initialRepositoryBinding;
+    if (
+      seed !== undefined &&
+      seed.projectId === projectId &&
+      JSON.stringify(reservations.rows) ===
+        JSON.stringify([[seed.reservationId, seed.reservationFingerprint]])
+    )
+      return kinds;
+    return [...kinds, "registration-record"];
   };
 
   const databases: ProjectStorageStoreDependencies["databases"] = {
     createCanonical: (databasePath, creation) =>
-      buildDatabase(databasePath, databaseSpecs.canonical, creation, loadMigrations),
+      buildDatabase(
+        databasePath,
+        databaseSpecs.canonical,
+        creation,
+        loadMigrations,
+        options.initialRepositoryBinding,
+      ),
     createRuntime: (databasePath, creation) =>
       buildDatabase(databasePath, databaseSpecs.runtime, creation, loadMigrations),
     verifySealed: (generationPaths, creation) =>
@@ -1670,3 +1698,6 @@ export function createNodeProjectStorageDependencies(
 }
 
 export { createOpeningRelease };
+
+import type { InitialRepositoryBinding } from "@slopstop/protocol";
+import { seedInitialRepositoryBinding } from "./initial-repository-binding.js";

@@ -152,7 +152,7 @@ async function createMigrationRootWithApplicationSuccessor(): Promise<string> {
   const fixtureRoot = await createTemporaryApplicationRoot();
   const migrationRoot = path.join(fixtureRoot, "drizzle");
   await cp(checkedInMigrationRoot, migrationRoot, { recursive: true });
-  await writeFile(path.join(migrationRoot, "application", "0002_opening_probe.sql"), "SELECT 1;\n");
+  await writeFile(path.join(migrationRoot, "application", "0006_opening_probe.sql"), "SELECT 1;\n");
   await writeFile(
     path.join(migrationRoot, "application", "meta", "_journal.json"),
     `${JSON.stringify(
@@ -177,8 +177,36 @@ async function createMigrationRootWithApplicationSuccessor(): Promise<string> {
           {
             idx: 2,
             version: "6",
-            when: 1789278600415,
-            tag: "0002_opening_probe",
+            when: 1790509264265,
+            tag: "0002_identity_query_attempts",
+            breakpoints: true,
+          },
+          {
+            idx: 3,
+            version: "6",
+            when: 1790875463248,
+            tag: "0003_registration_proposals",
+            breakpoints: true,
+          },
+          {
+            idx: 4,
+            version: "6",
+            when: 1790881158291,
+            tag: "0004_registration_reservations",
+            breakpoints: true,
+          },
+          {
+            idx: 5,
+            version: "6",
+            when: 1790887540132,
+            tag: "0005_registration_publications",
+            breakpoints: true,
+          },
+          {
+            idx: 6,
+            version: "6",
+            when: 1790887540133,
+            tag: "0006_opening_probe",
             breakpoints: true,
           },
         ],
@@ -821,7 +849,7 @@ it(
     try {
       expect(
         migratedApplication.prepare("SELECT last_migration_id FROM schema_metadata").get(),
-      ).toEqual({ last_migration_id: "0002_opening_probe" });
+      ).toEqual({ last_migration_id: "0006_opening_probe" });
     } finally {
       migratedApplication.close();
     }

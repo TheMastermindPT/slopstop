@@ -38,6 +38,52 @@ const terminalSchema = z.strictObject({
   stderrClosed: z.literal(true),
   treeEmpty: z.literal(true),
 });
+
+export { childSchema as ObserverChildIdentitySchema, terminalSchema as ObserverTerminalSchema };
+
+async function queryChildIsSettled(
+  record: { id: string; child: string | null; terminal: string | null },
+  absence?: ObserverAbsencePort,
+) {
+  if (record.child === null) return false;
+  const child = childSchema.parse(JSON.parse(record.child));
+  if (child.jobName !== `Local\\SlopStop.Registration.Observer.${record.id}`)
+    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+  if (record.terminal !== null) {
+    terminalSchema.parse(JSON.parse(record.terminal));
+    return true;
+  }
+  return (await absence?.inspect(child))?.status === "absent";
+}
+
+async function reconcileIdentityQueryAttempts(
+  transaction: LocalLibsqlTransaction,
+  absence?: ObserverAbsencePort,
+) {
+  const rows = await transaction.execute(
+    "SELECT observation_id AS id, child_json AS child, terminal_json AS terminal FROM registration_identity_query_attempts WHERE result_json IS NULL",
+  );
+  const records = z
+    .array(
+      z.strictObject({
+        id: z.uuid(),
+        child: z.string().nullable(),
+        terminal: z.string().nullable(),
+      }),
+    )
+    .parse(registryRows(rows));
+  for (const record of records) {
+    if (!(await queryChildIsSettled(record, absence))) continue;
+    await transaction.execute({
+      sql: "UPDATE registration_identity_query_attempts SET result_json = ?, settled_at = ? WHERE observation_id = ? AND result_json IS NULL",
+      args: [
+        JSON.stringify({ status: "broken", code: "INTERNAL_FAILURE" }),
+        new Date().toISOString(),
+        record.id,
+      ],
+    });
+  }
+}
 const resultRowSchema = z.strictObject({
   observationId: PreparedGitVersionSchema.shape.observationId,
   resultJson: z.string(),
@@ -49,7 +95,7 @@ function unsettled(): never {
 
 export async function hasUnsettled(transaction: LocalLibsqlTransaction): Promise<boolean> {
   const result = await transaction.execute(
-    "SELECT i.observation_id FROM registration_observer_intents i LEFT JOIN registration_observer_outcomes o ON o.observation_id = i.observation_id WHERE o.observation_id IS NULL LIMIT 1",
+    "SELECT i.observation_id FROM registration_observer_intents i LEFT JOIN registration_observer_outcomes o ON o.observation_id = i.observation_id WHERE o.observation_id IS NULL UNION ALL SELECT observation_id FROM registration_identity_query_attempts WHERE result_json IS NULL LIMIT 1",
   );
   return result.rows.length > 0;
 }
@@ -239,6 +285,7 @@ export function createRegistryObserverJournal(
   return {
     reconcileObservers: (absence) =>
       write(async (transaction) => {
+        await reconcileIdentityQueryAttempts(transaction, absence);
         const terminalResult = await reconcileStoredTerminals(transaction);
         if (absence === undefined) return terminalResult;
         return reconcileAbsentOwners(transaction, absence);

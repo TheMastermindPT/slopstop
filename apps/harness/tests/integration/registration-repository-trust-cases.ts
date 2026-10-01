@@ -83,6 +83,99 @@ async function beginUnsettledObserver(
 }
 
 export function defineRepositoryTrustCases(createRoot: (prefix: string) => Promise<string>) {
+  it("drains admitted identity execution on stop without admitting later work", async () => {
+    const scenario = await createRepositoryTrustScenario(
+      await createRoot("pc-s1-identity-execution-stop-"),
+    );
+    const entered = switchDeferred<void>();
+    const release = switchDeferred<void>();
+    let entries = 0;
+    const port = {
+      admit: async () => {
+        entries += 1;
+        entered.resolve();
+        await release.promise;
+      },
+    };
+    try {
+      expect(
+        await scenario.registry.decideRepositoryTrust({ ...scenario.trust, decision: "accepted" }),
+      ).toEqual(recorded);
+      const pending = scenario.registry.admitRepositoryIdentityQueries(scenario.admission, port);
+      try {
+        await entered.promise;
+        let stopped = false;
+        const stopping = scenario.registry.stop().then(() => {
+          stopped = true;
+        });
+        expect(
+          await scenario.registry.admitRepositoryIdentityQueries(scenario.admission, port),
+        ).toEqual({ status: "broken", code: "INTERNAL_FAILURE" });
+        expect(entries).toBe(1);
+        expect(stopped).toBe(false);
+        release.resolve();
+        expect(await pending).toEqual(admittedResult);
+        await stopping;
+        expect(stopped).toBe(true);
+      } finally {
+        release.resolve();
+        await pending;
+      }
+    } finally {
+      await scenario.observer.close();
+      await scenario.registry.stop();
+    }
+  });
+
+  it("maps unexpected admitted identity execution failure without reporting admission success", async () => {
+    const scenario = await createRepositoryTrustScenario(
+      await createRoot("pc-s1-identity-execution-error-"),
+    );
+    try {
+      expect(
+        await scenario.registry.decideRepositoryTrust({ ...scenario.trust, decision: "accepted" }),
+      ).toEqual(recorded);
+      expect(
+        await scenario.registry.admitRepositoryIdentityQueries(scenario.admission, {
+          admit: async () => {
+            throw new Error("controlled-execution-failure");
+          },
+        }),
+      ).toEqual({ status: "broken", code: "INTERNAL_FAILURE" });
+    } finally {
+      await scenario.observer.close();
+      await scenario.registry.stop();
+    }
+  });
+
+  it("lets admitted identity execution access the durable journal without a held write transaction", async () => {
+    const scenario = await createRepositoryTrustScenario(
+      await createRoot("pc-s1-identity-journal-admission-"),
+    );
+    const entries: boolean[] = [];
+    const port = {
+      admit: async () => {
+        entries.push(await scenario.registry.hasUnsettled());
+      },
+    };
+    try {
+      expect(
+        await scenario.registry.admitRepositoryIdentityQueries(scenario.admission, port),
+      ).toEqual(trustRequired);
+      expect(entries).toEqual([]);
+      expect(
+        await scenario.registry.decideRepositoryTrust({ ...scenario.trust, decision: "accepted" }),
+      ).toEqual(recorded);
+      expect(
+        await scenario.registry.admitRepositoryIdentityQueries(scenario.admission, port),
+      ).toEqual(admittedResult);
+      expect(entries).toEqual([false]);
+    } finally {
+      await scenario.observer.close();
+      await scenario.registry.stop();
+    }
+  });
+
   it("returns native cancellation while another owner holds the registry write transaction", async () => {
     const root = await createRoot("pc-s1-trust-cancel-busy-");
     const options = consentRegistryOptions(root);

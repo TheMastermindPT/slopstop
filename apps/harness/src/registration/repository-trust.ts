@@ -155,10 +155,9 @@ async function decideTrust(transaction: LocalLibsqlTransaction, request: TrustDe
   return { status: "recorded" as const };
 }
 
-async function admitQueries(
+export async function authorizeQueries(
   transaction: LocalLibsqlTransaction,
   request: AdmissionRequest,
-  port: IdentityQueryAdmissionPort,
 ) {
   if (await hasUnsettled(transaction)) {
     return { status: "pending-recovery" as const, code: "OBSERVER_CLEANUP_UNCONFIRMED" as const };
@@ -179,12 +178,12 @@ async function admitQueries(
   const observed = await observeRepositoryDirectory(selection.directory);
   if (observed.status !== "observed") return observed;
   if (!samePhysicalIdentity(observed.key, selection.identity)) return trustRequired;
-  await port.admit({
+  return {
+    status: "authorized" as const,
     repositoryDirectory: selection.directory,
     repositoryIdentity: selection.identity,
     executable,
-  });
-  return { status: "admitted" as const };
+  };
 }
 
 export function createRepositoryTrustOwner(
@@ -212,8 +211,17 @@ export function createRepositoryTrustOwner(
         decideTrust(transaction, RepositoryTrustDecisionSchema.parse(input)),
       ).catch(registryFailure),
     admitRepositoryIdentityQueries: (input, port) =>
-      write((transaction) =>
-        admitQueries(transaction, RepositoryIdentityAdmissionRequestSchema.parse(input), port),
-      ).catch(registryFailure),
+      run(async (client) => {
+        const authority = await withWriteTransaction(client, (transaction) =>
+          authorizeQueries(transaction, RepositoryIdentityAdmissionRequestSchema.parse(input)),
+        );
+        if (authority.status !== "authorized") return authority;
+        await port.admit({
+          repositoryDirectory: authority.repositoryDirectory,
+          repositoryIdentity: authority.repositoryIdentity,
+          executable: authority.executable,
+        });
+        return { status: "admitted" as const };
+      }).catch(registryFailure),
   };
 }

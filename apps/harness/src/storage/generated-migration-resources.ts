@@ -258,16 +258,25 @@ function requireCanonicalRebuild(input: {
   if (predecessor === undefined) invalid();
   if (original === undefined) invalid();
   if (successor === undefined) invalid();
+  const binding = input.migrations[2];
+  const generationThree =
+    input.spec.schemaVersion === 3 &&
+    input.migrations.length === 3 &&
+    input.sources.length === 3 &&
+    binding?.migrationId === "0002_initial_repository_binding" &&
+    createHash("sha256").update(JSON.stringify(binding.statements)).digest("hex") ===
+      "332ea4d600ae9c32789d760f86b215ac9bbd578f12f17a27061c03696779d134";
   const authorityAgrees = [
     input.spec.resourceKind === "canonical",
     input.spec.databaseKind === "canonical",
     input.spec.metadataKey === "canonical",
     input.spec.metadataTable === "schema_metadata",
     input.spec.formatVersion === 1,
-    input.spec.schemaVersion === 2,
+    (input.spec.schemaVersion === 2 &&
+      input.migrations.length === 2 &&
+      input.sources.length === 2) ||
+      generationThree,
     !input.spec.tables.includes("__new_storage_identity"),
-    input.migrations.length === 2,
-    input.sources.length === 2,
     original.migrationId === "0000_fat_doctor_octopus",
     successor.migrationId === "0001_canonical_project_writer",
   ].every(Boolean);
@@ -318,7 +327,10 @@ function requireAuthorizedSql(
       createdTables.add(object.name);
     }
   }
-  if (hasRebuildCandidate || (spec.resourceKind === "canonical" && spec.schemaVersion === 2)) {
+  if (
+    hasRebuildCandidate ||
+    (spec.resourceKind === "canonical" && [2, 3].includes(spec.schemaVersion))
+  ) {
     requireCanonicalRebuild({ sources, migrations, spec });
   }
   if (!equalStrings(sortedStrings(createdTables), sortedStrings(spec.tables))) {

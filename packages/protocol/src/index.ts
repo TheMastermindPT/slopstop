@@ -66,6 +66,14 @@ export {
   writerProofStaleProjectId,
 } from "./canonical-writer-smoke-protocol.js";
 export type {
+  InitialRepositoryBinding,
+  RegisteredProject,
+} from "./project-registration-protocol.js";
+export {
+  InitialRepositoryBindingSchema,
+  RegisteredProjectSchema,
+} from "./project-registration-protocol.js";
+export type {
   CanonicalDatabaseLineageId,
   OpenedStorageIdentity,
   PersistenceHealth,

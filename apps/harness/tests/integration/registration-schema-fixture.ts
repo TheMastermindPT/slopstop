@@ -113,7 +113,7 @@ export async function expectPreservedRegistryRows(root: string, initial: "fresh"
   const check = createWorkerLocalLibsqlClient(path.join(root, "application.db"), "application");
   try {
     expect((await check.execute("SELECT last_migration_id FROM schema_metadata")).rows).toEqual([
-      ["0001_project_registration"],
+      ["0005_registration_publications"],
     ]);
     expect(
       (
@@ -150,12 +150,17 @@ export const previousApplicationRegistryTables = [
 export const applicationRegistrationTables = [
   "registration_executable_selections",
   "registration_identity_consents",
+  "registration_identity_query_attempts",
   "registration_observer_children",
   "registration_observer_intents",
   "registration_observer_outcomes",
   "registration_observer_terminals",
+  "registration_proposals",
+  "registration_publications",
   "registration_repository_selections",
   "registration_repository_trust",
+  "registration_requests",
+  "registration_reservations",
   "registration_version_consents",
   ...previousApplicationRegistryTables,
 ];

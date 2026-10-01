@@ -14,6 +14,10 @@ import {
   type DatabaseSpec,
   databaseSpecs,
   previousApplicationDatabaseSpec,
+  previousIdentityQueryDatabaseSpec,
+  previousProposalDatabaseSpec,
+  previousRegistrationDatabaseSpec,
+  previousReservationDatabaseSpec,
 } from "../storage/project-storage-database-specs.js";
 import { ProjectStorageBrokenError } from "../storage/project-storage-errors.js";
 import {
@@ -53,7 +57,7 @@ export type PreparedRegistryRunner = <Prepared, Result>(
 ) => Promise<Result>;
 
 export const PREVIOUS_REGISTRY_HEAD = "0000_gray_eddie_brock";
-export const CURRENT_REGISTRY_HEAD = "0001_project_registration";
+export const CURRENT_REGISTRY_HEAD = "0005_registration_publications";
 
 const noMigrationFailures = { checkpoint: async (_point: string) => undefined };
 function migrationFailures(options: RegistrationDatabaseOptions) {
@@ -213,6 +217,22 @@ async function firstRequiredMigration(
   if (metadata.lastMigrationId === CURRENT_REGISTRY_HEAD) {
     await requireRegistrySchema(transaction, databaseSpecs.application);
     return null;
+  }
+  if (metadata.lastMigrationId === "0001_project_registration") {
+    await requireRegistrySchema(transaction, previousRegistrationDatabaseSpec);
+    return 2;
+  }
+  if (metadata.lastMigrationId === "0002_identity_query_attempts") {
+    await requireRegistrySchema(transaction, previousIdentityQueryDatabaseSpec);
+    return 3;
+  }
+  if (metadata.lastMigrationId === "0003_registration_proposals") {
+    await requireRegistrySchema(transaction, previousProposalDatabaseSpec);
+    return 4;
+  }
+  if (metadata.lastMigrationId === "0004_registration_reservations") {
+    await requireRegistrySchema(transaction, previousReservationDatabaseSpec);
+    return 5;
   }
   if (metadata.lastMigrationId !== PREVIOUS_REGISTRY_HEAD) {
     throw new RegistryFault({ status: "broken", code: "REGISTRY_SCHEMA_UNKNOWN" });

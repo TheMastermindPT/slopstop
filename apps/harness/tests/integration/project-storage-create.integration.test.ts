@@ -35,7 +35,7 @@ import {
 } from "./project-storage-create-fixture.js";
 import {
   canonicalConstraintCases,
-  canonicalGenerationTwoTables,
+  canonicalCurrentTables,
   canonicalTableCounts,
   expectCreatedCanonicalSchema,
   type SqlTransform,
@@ -198,7 +198,7 @@ async function readDatabaseCheck(databasePath: string) {
 }
 
 it(
-  "creates the exact canonical generation-2 schema",
+  "creates the exact canonical generation-3 schema",
   async () => {
     const root = await createTemporaryApplicationRoot();
     const runtime = await createStorageRuntimeForRoot(root, {
@@ -230,7 +230,7 @@ it(
     }
 
     await expect(readTableNames(applicationPath)).resolves.toEqual(applicationRegistrationTables);
-    await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalGenerationTwoTables);
+    await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalCurrentTables);
     await expect(readTableNames(runtimePath)).resolves.toEqual([
       "slopstop_runtime_schema_metadata",
       "slopstop_runtime_storage_identity",
@@ -251,7 +251,7 @@ it(
 );
 
 it(
-  "enforces canonical generation-2 trust-spine constraints",
+  "enforces canonical generation-3 trust-spine constraints",
   async () => {
     const root = await createTemporaryApplicationRoot();
     const runtime = await createStorageRuntimeForRoot(root);
@@ -263,13 +263,13 @@ it(
       await runtime.stop();
     }
     const canonicalPath = createdGenerationPaths({ root }).canonical;
-    await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalGenerationTwoTables);
+    await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalCurrentTables);
     const database = new DatabaseSync(canonicalPath);
     try {
       database.exec("PRAGMA foreign_keys = ON");
       seedCanonicalConstraintAuthority(database);
       const before = canonicalTableCounts(database);
-      expect(before).toEqual([1, 0, 3, 0, 1, 1, 1, 0, 3, 0, 0]);
+      expect(before).toEqual([1, 0, 3, 0, 1, 0, 0, 1, 1, 0, 3, 0, 0]);
       for (const scenario of canonicalConstraintCases) {
         database.exec("SAVEPOINT invalid_case");
         try {

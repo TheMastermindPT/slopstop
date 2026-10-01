@@ -1,6 +1,12 @@
 import path from "node:path";
 import * as koffi from "koffi";
 import type { ObserverFailureTrigger } from "../project-registration-observer.js";
+import {
+  type IdentityQueryChildPort,
+  type IdentityQueryChildRequest,
+  IdentityQueryKindSchema,
+  identityQueryArguments,
+} from "./identity-query-child.js";
 import { type ObserverClock, systemObserverClock } from "./observer-clock.js";
 import {
   REGISTRATION_CLEANUP_BUDGET_MS,
@@ -19,7 +25,7 @@ import {
   WindowsObserverResources,
 } from "./windows-observer-api.js";
 
-type VersionChildRequest = Parameters<GitVersionChildPort["run"]>[0];
+type VersionChildRequest = Parameters<GitVersionChildPort["run"]>[0] | IdentityQueryChildRequest;
 type Pipe = { reader: bigint; writer: bigint; bytes: Buffer[]; size: number; eof: boolean };
 
 class ObserverLimitError extends Error {
@@ -255,7 +261,8 @@ function createSuspendedChild(
   koffi.encode(startup, 88, "void *", pipes[0].writer);
   koffi.encode(startup, 96, "void *", pipes[1].writer);
   koffi.encode(startup, 104, "void *", list);
-  const command = Buffer.from(`"${request.executablePath}" --version\0`, "utf16le");
+  const suffix = "query" in request ? identityQueryArguments(request.query).join(" ") : "--version";
+  const command = Buffer.from(`"${request.executablePath}" ${suffix}\0`, "utf16le");
   const environment = cleanEnvironment(resources.api, directory, request.executablePath);
   requireWindowsSuccess(
     resources.api,
@@ -267,7 +274,7 @@ function createSuspendedChild(
       1,
       0x08080404,
       environment,
-      directory,
+      "query" in request ? request.repositoryDirectory : directory,
       startup,
       information,
     ),
@@ -480,7 +487,10 @@ function validateVersionAdmission(directory: string, request: VersionChildReques
   const accepted = [
     validExecutablePath(request.executablePath),
     validControlDirectory(directory),
-    versionOnlyArguments(request.argv),
+    "query" in request
+      ? IdentityQueryKindSchema.safeParse(request.query).success &&
+        validControlDirectory(request.repositoryDirectory)
+      : versionOnlyArguments(request.argv),
   ];
   if (!accepted.every(Boolean)) {
     throw new Error("Invalid Windows version inspection admission.");
@@ -595,6 +605,25 @@ export function createWindowsVersionChild(
 ): GitVersionChildPort {
   return {
     run: async (request, signal) => {
+      if ("query" in request)
+        throw new Error("Version inspection cannot dispatch identity queries.");
+      if (process.platform !== "win32" || process.arch !== "x64") {
+        return { status: "unavailable", code: "GIT_UNAVAILABLE" };
+      }
+      return runVersion(controlDirectory, request, signal, apiFactory, clock);
+    },
+  };
+}
+
+export function createWindowsIdentityQueryChild(
+  controlDirectory: string,
+  apiFactory = createWindowsObserverApi,
+  clock: ObserverClock = systemObserverClock,
+): IdentityQueryChildPort {
+  return {
+    run: async (request, signal) => {
+      if (!IdentityQueryKindSchema.safeParse(request.query).success)
+        throw new Error("Unknown identity query.");
       if (process.platform !== "win32" || process.arch !== "x64") {
         return { status: "unavailable", code: "GIT_UNAVAILABLE" };
       }

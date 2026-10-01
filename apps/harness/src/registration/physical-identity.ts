@@ -15,6 +15,16 @@ export const PhysicalDirectoryKeySchema = PhysicalIdentitySchema.extend({
 
 export type PhysicalIdentity = z.infer<typeof PhysicalIdentitySchema>;
 
+export const RepositoryPhysicalSnapshotSchema = z.strictObject({
+  physical: z.strictObject({
+    worktree: PhysicalDirectoryKeySchema,
+    gitDirectory: PhysicalDirectoryKeySchema,
+    commonDirectory: PhysicalDirectoryKeySchema,
+  }),
+  metadataFingerprint: z.string().regex(/^[0-9a-f]{64}$/),
+});
+export type RepositoryPhysicalSnapshot = z.infer<typeof RepositoryPhysicalSnapshotSchema>;
+
 export function samePhysicalIdentity(left: PhysicalIdentity, right: PhysicalIdentity): boolean {
   return (
     left.platform === right.platform &&

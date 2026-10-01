@@ -1025,3 +1025,819 @@ The final typecheck, Biome, integration and observer captures have the same comp
 All four remain added-untracked relative to the original base, so the complete tracked patch remains `c0473d9874c4815d705b7c2622ac65f48d40f020b4c8067f094a0b528491761c`. The original binary-capable patch plus the unchanged runtime-only delta still reconstruct the tracked portion exactly. The new full manifest will be `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-trust-runtime-2026-09-26-r2-snapshot.json`: same 53 sorted included paths, fresh retained source root `pc-s1-node2420-BdjTfg/source`, original unchanged naming-document byte root, all 26 original contract bindings and current separately bound evidence. Snapshot and final evidence hash/bytes are returned after append verification; old snapshot bytes remain immutable.
 
 **State:** both reported TR-2 regressions corrected with prospective Red/Green and final bounded validation passed. The prior independent review remains failed for its original identity. The new R2 identity awaits the parent's three-role independent re-review; no acceptance or whole-PC-S1 completion is claimed. TR-5 remains pending outside this request. Writes freeze at handback.
+
+## 2026-09-27 — Bounded six-query result decoding
+
+User steering: **“para de ser paranoico com as verificacoes, faz quando achares necessario.continua a implementacao”**. The parent authorized one small useful PC-S1 behavior in the same candidate, with focused Red/Green, changed-file CodeScene and parent review, rather than another broad validation investigation. Initial `git status --short` was empty and HEAD was exactly `c92171c2bbfcfbc206af1075850f70de0b596075`. This is the source base for this new chunk, not the old uncommitted snapshot base. No commit/integration/push was performed here.
+
+Read effective v4 plus inherited v1/v2/v3, especially v1 lines 134–142 (six closed suffixes, output grammar and ceilings), v2 D2/D3/D5 (durable process ownership, physical identity, failure precedence) and v3 D8/D9 (two consent stages and boolean/nonzero-exit classification). Current native version execution has durable ownership but its port is restricted to `--version`; repository trust only admits an execution port. Expanding that lifecycle safely is a larger follow-up. The user explicitly allowed a consumable typed decoder as this bounded subcomponent.
+
+### Delivered behavior and public subcomponent seam
+
+Added `apps/harness/src/registration/git-identity-query-results.ts` and its colocated tests. The exported decoder functions are the tested public subcomponent interface:
+
+- `decodeGitIdentityBooleans(outputs)` accepts exactly three settled-output envelopes, ordered `--is-inside-work-tree`, `--is-bare-repository`, `--is-inside-git-dir`. Valid true/false/false returns `working-tree`; bare=true returns `BARE_REPOSITORY` before other boolean semantics; otherwise outside a working tree or inside the Git directory returns `NOT_WORKING_TREE`. Other text is `OBSERVATION_INVALID`.
+- `decodeGitIdentityPaths(outputs, platform)` accepts exactly three settled outputs ordered `--path-format=absolute --show-toplevel`, `--absolute-git-dir`, `--path-format=absolute --git-common-dir`. It returns `decoded` with separate worktree, administrative and common paths. It preserves meaningful spaces and Unicode, accepts LF/CRLF, rejects incomplete/extra lines, NUL, invalid UTF-8, leading BOM/quoted/relative paths and ambiguous Windows root-relative/drive-relative paths. Windows/Linux path syntax is checked explicitly rather than using the host platform implicitly.
+- Both validate the exact output-envelope/tuple shape through Zod. Each stdout/stderr retains the existing 8192-byte ceiling. Overflow precedes nonzero exit; nonzero exit precedes stdout parsing and returns only `GIT_QUERY_FAILED` plus numeric exit metadata. Stderr content never enters results. Tests pin the exact byte ceiling with multibyte UTF-8, avoiding a character-count substitute.
+
+This module performs no process execution, filesystem access or persistence. It is **not wired into the registration observer or native executor yet**. A `decoded` path is not a prepared repository, physical identity, locality proof or trust grant. The execution owner must still enforce both persisted consents, fixed argv/environment, sequential dispatch, early failures/cancellation, 2000ms child and 10000ms phase deadlines, durable ownership/EOF/tree cleanup and physical association revalidation. These decoders consume complete settled triples; they do not classify incomplete lifecycle results or authorize path-query dispatch on their own. Windows UNC syntax acceptance is only parsing, never permission to access a network location. No completed repository identity was fabricated.
+
+### Prospective proof and separate refactor
+
+The boolean behavior first ran against a rejecting interface scaffold: five expected semantic failures (valid working tree, bare/non-working classification and nonzero-exit precedence), eight rejection cases already passed. After minimal implementation all 13 passed. Detailed CodeScene found a complex conditional (9.68); in the separate refactor, three decoded lines now pass through one fixed tuple schema instead of a compound undefined guard.
+
+The path behavior then ran against its rejecting scaffold: four expected failures for valid platform paths, the exact byte ceiling and nonzero-exit metadata. The existing 13 boolean tests remained green. Minimal path implementation brought all 28 tests green. Final CodeScene reviews returned 10.0/no findings for production and test files. Biome initially reported test formatting only; formatting was patched without changing assertions, then the focused test and two-file Biome checks passed. No full/deep/integration/mutation/package suites were run for this chunk.
+
+TypeScript/Vitest/TDD skills already loaded in this session were applied. A narrow current Context7 Zod lookup was used: library resolution succeeded, the first docs request returned HTTP 500, and the one retry returned current safeParse and tuple documentation. No dependency changes or installation occurred.
+
+### Exact captures
+
+All commands used Node **v24.20.0**, pnpm **11.5.1**, the existing `pc-s1-node2420-capture.mjs` and candidate cwd. Captures live at `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/`, with exact `inputs.json`, retained source, stdout/stderr and exit/signal. The recorder's 300000ms internal / 310000ms outer bounds were unchanged. All signals were null.
+
+**T** = `pnpm exec vitest run apps/harness/src/registration/git-identity-query-results.test.ts --project harness`.
+**B** = `pnpm exec biome check apps/harness/src/registration/git-identity-query-results.ts apps/harness/src/registration/git-identity-query-results.test.ts`.
+
+| Capture | Command | Exit | Result | inputs.json SHA-256 |
+| --- | --- | --- | --- | --- |
+| `im0FG0` | T | 1 | Boolean Red: 5 expected failures, 8 passed | `5986756cf086d192da95fef7de0c1f80d5f1ebacdf18357117ed1a983c388e41` |
+| `YBpTTx` | T | 0 | Boolean Green: 13/13 | `125c1b54617dcf259573c32b5477b1908ebe023d0455f851559d64a5fb0db0d9` |
+| `zUe3Mz` | T | 1 | Path Red: 4 expected failures, 24 passed | `3b16fb9e626b3dddab1dd1dd85bac4cc69f0ff2a415fbf7dd1bbb44b280ca1fe` |
+| `UBH7BV` | T | 0 | Path Green: 28/28 | `ad0a01d7eb3f0cab6d435ec0e11e89c0c535b75ea23f2f0bcb4302d37f042ac5` |
+| `d1NwsS` | `pnpm --filter @slopstop/harness typecheck` | 0 | Affected workspace typecheck; before test-only formatting | `47d3324d4a7f1242023a6f0d39223c7121efccb4f34d0338dfaaf71ee7e9cd5f` |
+| `tJ80XE` | B | 1 | Test formatting findings only | `21391d3a700a00a366ec925ecdae562690d1f224efc0e5db9dbc40eb6cd90ab1` |
+| `c0A98h` | T | 0 | Final focused 28/28 | `0bc8a991cee5f2e9a164069f08a8c740b433a5d643c2785940ee3cc232d66684` |
+| `8UbcW5` | B | 0 | Final 2 files passed, no fixes | `f6938cfd4cd88a1ce061e326b94e78a2a79f918e190262c032e0a6f8f7133392` |
+
+Final source hashes (complete bytes retained under `c0A98h/source/`):
+
+- `apps/harness/src/registration/git-identity-query-results.ts`: `6f9fde77a8201e08612dd39466ed74067f8a7c7f88ac2095ca922986f7f67ae8`.
+- `apps/harness/src/registration/git-identity-query-results.test.ts`: `de32ce531ba4683dcd305d088aa6c1b5c27908c6f529c4976c16deb3a0876f55`.
+
+The prior evidence prefix remains exactly 170819 bytes / `3cbc976e9c09ed44b12351f72a528910994deac590946633f447cc4c0ba89589`. No accepted contract or existing product source was changed. Broader deep/mutation problems remain pending; historical crashes retain their actual status and no cause/fix claim is made. Sonar stays stopped/not assessed. Parent independent review of this decoder-only target is pending. Stop here at the bounded checkpoint; writes freeze at handback, without whole-PC-S1 or real six-query execution claims.
+
+## 2026-09-27 — Decoder coverage-review additions
+
+The parent reported the bounded actual-code review passed with no bugs, but coverage review failed completeness on two requested additions: malformed output envelopes and a valid Windows UNC triple. That intermediate coverage outcome remains recorded; these ordinary test additions do not retroactively make the earlier review complete. The user authorized characterization tests only, production changes only if an actual failure emerged, one focused run, relevant Biome and changed-test CodeScene.
+
+Added five parameterized envelope cases to `apps/harness/src/registration/git-identity-query-results.test.ts`: non-exited status, fractional exit code, non-Uint8Array stdout, non-Uint8Array stderr and an extra envelope field. Each case calls both exported decoders with otherwise valid inputs and requires exact `rejected / OBSERVATION_INVALID`. Extended the existing parameterized absolute-path cases with three distinct UNC strings under `example.invalid`, including meaningful Unicode/spaces and LF/CRLF framing. Exact output remains only `decoded` plus private paths, without any trust/prepared/identity fields. These are strings passed directly to the pure decoder; no filesystem or network operation is requested.
+
+All additions characterized existing behavior and passed immediately. No Red was invented and production code remained byte-identical. No further feature, contract, dependency, permission or lifecycle change occurred.
+
+Both commands ran once from the candidate on Node v24.20.0 / pnpm 11.5.1 through the existing `pc-s1-node2420-capture.mjs`. Captures at `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/` retain exact inputs, both source files, stdout/stderr and results:
+
+| ID | Exact inner command | Result | inputs.json SHA-256 |
+| --- | --- | --- | --- |
+| `mlKqq7` | `pnpm exec vitest run apps/harness/src/registration/git-identity-query-results.test.ts --project harness` | exit 0, **34/34 passed**, signal null | `d1a4e060eca735c430c3544113974cf1ba50691a60b8eb055a3b839e7704c5ab` |
+| `MxUwns` | `pnpm exec biome check apps/harness/src/registration/git-identity-query-results.test.ts` | exit 0, 1 file passed, no fixes, signal null | `683f575b950ffdce73c49f1df64c27cccef3539f666016fbcc1792175d709b42` |
+
+Changed-test CodeScene detailed review returned **10.0/no findings**. No broad gate, repeated typecheck, mutation, package check or Sonar call was run.
+
+Final test SHA-256: `a562946ef4eefd45dc9e0467465c866d0211dc2ffd3908b889a844b468c46b8c`. Unchanged production SHA-256: `6f9fde77a8201e08612dd39466ed74067f8a7c7f88ac2095ca922986f7f67ae8`. Both captures bind these exact two files; retained bytes are under their `source/` directories. Base remains `c92171c2bbfcfbc206af1075850f70de0b596075`.
+
+The previous evidence prefix is preserved exactly: 178435 bytes / `735b3bd62bfcabc1ab2108bfa7e28025205f5dc70b8d8413caafc0b95ebdd0a2`. Hand back for the parent's coverage recheck and freeze writes. Actual executor integration, broad deep/mutation problems and whole-PC-S1 completion remain outside this small addition; no acceptance is claimed.
+
+## 2026-09-27 — Remove the live admission-to-journal write-lock obstruction
+
+The user authorized the next practical bounded step toward consent-gated fixed-query execution, with a roughly fifteen-minute checkpoint and no broad suites, mutation, dependencies, contract changes or Git integration. Initial inspection confirmed HEAD `c92171c2bbfcfbc206af1075850f70de0b596075`, the two retained decoder files and the existing append-only evidence. All prior code and evidence were preserved.
+
+### Actual frontier and limitation
+
+Inspected the current registry admission, identity-query consent, version executor, native Windows supervised child and durable observer journal against the previously read v1/v2/v3/v4 six-query/ownership contracts. Two concrete implementation constraints emerged:
+
+- `admitRepositoryIdentityQueries` invoked the execution port while still holding its authorization write transaction. A callback that accesses the actual registry journal starts another transaction and fails with `REGISTRY_BUSY`. This is a real obstruction to connecting durable execution, not a hypothetical concern.
+- The existing durable journal is version-specific: `registration_observer_intents.consent_id` references version consent and is unique; one intent has one child and terminal, and scope/result validation is for a version observation. It cannot represent three/six repository-scoped children by reusing a completed version attempt or by treating version consent as identity-query consent. A real query phase requires a bounded journal/schema extension carrying repository selection, stage-two consent, query/phase identity and child recovery state, together with native closed-query dispatch. That larger implementation is **not delivered in this checkpoint**. The contract itself is not missing; the production journal support is.
+
+Implemented the smaller live boundary correction rather than introducing another unused execution abstraction or launching without durable authority. Authorization remains inside one short write transaction, including unresolved-observer check, persisted executable consent/physical recheck, exact trust decision and repository physical revalidation. Only after the transaction finishes does the already tracked registry operation invoke `port.admit`. Refused authorization never invokes the callback. The existing `run` lifecycle still tracks the entire asynchronous callback for stop/drain, and unexpected callback failures still map through `registryFailure`.
+
+This changes the existing wired public owner, not a new interface. It supplies no durable identity-query attempt, no first native boolean query and no completed repository observation. The decoders remain unchanged and are not connected to a native sequence yet. Future execution must atomically record/check its own durable intent before spawning, revalidate executable/physical scope per child, honor closed argv/environment and deadlines, and retain cancellation/cleanup/recovery proof. In particular, the callback's admission result is not a reusable launch token or permission to skip the journal's admission check.
+
+### Prospective test and focused proof
+
+Added a public-owner integration test using the real registry/physical-consent fixtures. Before repository trust, admission returns `REPOSITORY_TRUST_REQUIRED` and the callback is not entered. After exact trust acceptance, the callback calls the real durable journal's `hasUnsettled()` operation. Red observed `REGISTRY_BUSY` instead of `admitted`. Minimal Green releases the authorization write transaction before callback entry, permitting that journal operation to return false and admission to complete. No native query launch is claimed by this test.
+
+In the separate review step, added characterization controls for the unchanged lifecycle/error obligations: stop waits for an admitted callback, later admission is rejected without another callback entry, and an unexpected callback exception returns `broken / INTERNAL_FAILURE`, never successful admission. All three focused integration cases passed. Both changed files received detailed CodeScene scores **10.0/no findings**; no additional refactor was needed.
+
+All commands ran from the candidate via `pnpm exec node C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-capture.mjs` on Node **v24.20.0**, pnpm **11.5.1**. Captures live at `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/`, with exact command/cwd/runtime, source bytes/hashes, stdout/stderr and result. Internal 300000ms and outer 310000ms bounds were unchanged; all signals null.
+
+**T** = `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts project-registration.integration.test.ts -t admitted.identity.execution`.
+
+| Capture | Exact command | Exit/result | inputs.json SHA-256 |
+| --- | --- | --- | --- |
+| `7st7A4` | T | 1; expected `REGISTRY_BUSY` Red | `785010cdba6d05120ca1a63d1a124fe239adf934e5f41e4e847497668289f5b8` |
+| `mceCj5` | T | 0; minimal Green 1/1 | `3070c28ad2afcdf5afd692b1104f69367266ac56d879b2077de55014812479d9` |
+| `OSz8Mb` | T | 0; final focused 3/3, 125 unrelated tests filtered out | `61a4ca49661e0a3b795fbe4aebd2b97b069680467e632ad586b61ab518b76fa1` |
+| `hTzbiR` | `pnpm --filter @slopstop/harness typecheck` | 0; passed | `342863dd4dc9f509a2790abb7d5aeeb207e08539160dee4aa7d2640ab898980c` |
+| `KfUejQ` | `pnpm exec biome check apps/harness/src/registration/repository-trust.ts apps/harness/tests/integration/registration-repository-trust-cases.ts` | 0; 2 files passed, no fixes | `eedd4e5164889c15d57f89d9916537b7166ebd43e7e686eec9317adae245ae88` |
+
+The three final captures retain the same complete dirty source scope, including the two pre-existing decoder files:
+
+| Path | SHA-256 |
+| --- | --- |
+| `apps/harness/src/registration/git-identity-query-results.test.ts` (preserved) | `a562946ef4eefd45dc9e0467465c866d0211dc2ffd3908b889a844b468c46b8c` |
+| `apps/harness/src/registration/git-identity-query-results.ts` (preserved) | `6f9fde77a8201e08612dd39466ed74067f8a7c7f88ac2095ca922986f7f67ae8` |
+| `apps/harness/src/registration/repository-trust.ts` | `d7bf7f339d20e4dd7204b291e1315c21137ce688a0cff790d997e010eca101fb` |
+| `apps/harness/tests/integration/registration-repository-trust-cases.ts` | `80b6875d6eba6e8be96dcbb84245ea38ae89969860d3818778f7ab373ec7c43e` |
+
+Previous evidence remains an exact prefix: **181574 bytes**, SHA-256 `b7963bbd9400a2c19413a302734236c4ddf9f8e202fa2a075de539f85236079f`. No schema, migration, process adapter, dependency or accepted contract was changed. No broad/full/deep/mutation/package run or Sonar call occurred. Their existing pending/broken qualifications remain intact. Parent review is pending; no candidate acceptance, actual fixed-query execution or whole-PC-S1 completion is claimed. Checkpoint here and freeze writes.
+
+## 2026-09-27 — First real repository identity query with durable ownership
+
+### Authority and delivered frontier
+
+The user explicitly directed continuing the same execution packet beyond the prerequisite unlock, authorizing necessary repository-scoped journal/schema work under the existing v4 six-query contract. Base remains `c92171c2bbfcfbc206af1075850f70de0b596075` in the candidate worktree. Previous dirty decoder/admission work and evidence were preserved. No dependency, contract, commit, staging, integration or external user-data change occurred.
+
+**Delivered:** `createRepositoryIdentityQueryOwner(...).inspectInsideWorkTree(request, signal?)` actually executes the FIRST fixed Git identity query through persisted consent/trust, an installation-durable attempt, the real Windows supervised process adapter and the decoder. The exact closed query is the approved common prefix followed by `--is-inside-work-tree`. The identity child port takes a literal query kind, not arbitrary argv or shell input. Version execution remains `--version` only; the version factory explicitly rejects an identity-query-shaped request.
+
+The owner factory is a callable harness-internal production composition, exercised with real Git and a disposable working tree. It is not wired into renderer/preload/registration transport, and its internal `query-observed / insideWorkTree` result is **not** a user-facing prepared repository, a complete boolean phase, canonical identity or registration. The other five queries, whole-phase physical administration/common-directory validation and registration-attempt two-phase accounting remain subsequent work. No fake path outputs or fabricated completed identity were supplied.
+
+### Durable state, native reuse and failure behavior
+
+- Added generated migration **`0002_identity_query_attempts`**, rather than rewriting committed migrations. The new attempt table binds repository selection and identity consent through foreign keys, fixes the query kind with a check constraint, and retains immutable scope/physical/executable snapshots, creation time, child identity, terminal proof, result and settlement time. Updates require the expected null predecessor and cannot overwrite settled outcomes.
+- `0000_gray_eddie_brock.sql`, `0001_project_registration.sql` and the committed `0001_snapshot.json` remain byte-identical to base. The first two migration journal entries also match exactly. The old registration schema is retained as `previousRegistrationDatabaseSpec`; registry migration now validates it before applying 0002. Existing old-0000 migration remains supported. Current-head test expectations and the private successor-probe fixture were advanced consistently without weakening schema checks.
+- The live owner's admitted callback revalidates authority in the journal's short transaction and stores intent **before** native dispatch. Executable identity/digest and selected directory identity are checked again before the child, and again before publishing a successful result. No child runs inside a registry write transaction.
+- Reused Windows creation-time Job ownership, suspended-child ownership publication before resume, closed stdin, bounded stdout/stderr, controlled environment, exact executable selection, process-tree/EOF proof and cleanup logic. Identity execution supplies the repository as cwd while profile/temp/config environment roots remain the application-controlled directory. No repository/model text chooses arguments.
+- The existing 2000ms child observation and 5000ms cleanup machinery remains. The new owner closes admission on `close`, aborts active work and drains with the cleanup ceiling. A 10000ms phase signal prevents late success; uncertainty outranks success. Cancellation/close after child ownership records terminal proof and a cancelled outcome. Unknown dispatch/transport loss leaves the attempt unsettled rather than pretending no launch occurred.
+- Global `hasUnsettled` includes both version and identity-query attempts. Recovery checks the new child's exact observation-bound Job name and stored terminal proof, or the existing native exact-owner absence port. Missing child identity remains unresolved. Proven recovery fences the former publisher with a broken outcome; it never reconstructs success from missing output.
+- The decoder's new `decodeInsideWorkTreeOutput` is consumed by this real owner. It shares the strict settled-output/boolean grammar, output limit and failure-code rules. It returns only one boolean observation, not the three-boolean classification.
+
+The test fixture uses controlled version-observation output to establish persisted version authority against the actual installed Git executable's physical identity; the identity query itself is genuinely executed by the native adapter. This does not replace the separate real-version integration proof. Git initialization writes only the owned disposable fixture.
+
+### Prospective Red/Green and focused checks
+
+The first scaffold failed missing-consent classification (`nzJCwd`). After wiring the existing admission boundary, `I1DBlg` exposed a test setup mistake: passing identity-consent fields into the strict repository-trust decision schema. That run is a setup failure, **not** dispatch Red. Correcting the fixture produced `ac5mVP`: both absent-consent cases passed with no dispatch and the admitted case still returned capability-unavailable instead of the actual query result. Minimal execution/journal/native implementation then passed `s0hu1L`.
+
+The integration proof was strengthened to independently read persisted attempt rows before invoking the real native port: exactly one intent exists, with no child/terminal/outcome yet. The native onOwned callback persists the child before resume. On completion, the independent database reader requires both child and terminal plus the exact boolean result. Launch count remains zero before each required persisted approval and one after both.
+
+Added recovery proof prospectively: after the actual child completes, a controlled lost-terminal wrapper throws before the owner receives the result. `6rUH4i` failed because native absence recovery did not yet settle the identity attempt; minimal recovery support fixed that case. Added close proof prospectively: `10AZS3` failed with a successful observation after close against a no-op close scaffold; actual cancellation/drain fixed it. These tests preserve the cancellation and no-late-success obligations rather than manufacturing a prepared repository.
+
+Final focused integration covers: real successful first query, AbortSignal cancellation, owner close/no subsequent dispatch, lost terminal/reopen/blocked admission/exact absence recovery, and migration from the exact committed 0001 schema while retaining pre-existing Storage rows. Existing fresh/previous version-consent restart tests also passed after the additive migration.
+
+Detailed CodeScene initially found complexity/excess arguments in the new owner and recovery helper, and a long schema-spec extension function. Separate refactoring split those responsibilities, retained the existing journal as recovery owner (avoiding a new runtime import cycle), and hoisted the column-name vocabulary. All 14 changed analyzable TypeScript files reviewed at the final logic returned **10.0/no findings**. `identity-query-child.ts` contains only declarations and a constant; CodeScene returned `score: null`, explicitly **not assessed**, with typecheck/Biome as compensating checks. Generated SQL/JSON is not counted as executable CodeScene coverage.
+
+Current Drizzle documentation was fetched through Context7 library resolution then the generate/sqlite schema documentation. Generated 0002 using the installed pinned command `pnpm --filter @slopstop/harness exec drizzle-kit generate --config drizzle.application.config.ts --name identity_query_attempts` from the candidate, after verifying its output parent directory. It reported one new table and generated the SQL/snapshot/journal; no handwritten integrity or old migration rewrite. No new packages were installed.
+
+### Source-bound captures
+
+All captures below use the existing `pc-s1-node2420-capture.mjs`, candidate cwd, Node **v24.20.0**, pnpm **11.5.1**, 300000ms internal and 310000ms outer bounds. Each `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/` retains exact command/runtime/source bytes and stdout/stderr/result. All signals were null.
+
+**T** = `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-identity-query.integration.test.ts`.
+**Y** = `pnpm --filter @slopstop/harness typecheck`.
+
+| ID | Command | Exit / result | inputs.json SHA-256 |
+| --- | --- | --- | --- |
+| `nzJCwd` | T | 1; consent-classification Red | `9f38880263a0bb823225003ad27451940d39428334c8e392d0c4c128fe9c2207` |
+| `I1DBlg` | T | 1; strict decision fixture setup failure, not dispatch Red | `56d423a6658028bbd28d1c3520be4ee10a2a54d191a6e2b20aecb62461420da7` |
+| `ac5mVP` | T | 1; admitted native-query expected Red | `79a9b1dd06541afe64883c2e5a1451acd7a7161647c7df200902dbe59adb4246` |
+| `s0hu1L` | T | 0; first actual native-query Green | `e3917f8c5e31c41c8f4d498398e9834eb6b4b626bcb536ffae89e8f851657d6e` |
+| `cmKuCz` | Y | 2; intermediate transaction-generic typing errors, subsequently fixed | `3efbcf4b7a26d27443ef8583abbbf171f5c1d7b72d0acaba09ac95bcf1167724` |
+| `6rUH4i` | T | 1; recovery Red, 2 other cases passed | `7d8608a8c9a83f67bab56727be2ee8d996114842f2881480c2a7fbcee862d9bf` |
+| `10AZS3` | T | 1; close Red, recovery and 2 other cases passed | `b6a0e71371b494bd3a8365d20815087a5266904a21be19febf17e52100b6ea03` |
+| `D71xaL` | T | 0; 4/4 native/lifecycle cases passed | `8b1e786f151d872521c62e44defc7bdcd6f422cec6e5d44db6c8428ccb175b6a` |
+| `ueXkhp` | Y | 0 | `3d7192316c15994714578c62bb136754ba26e9a82e04a021b8b7ddad520c4d4e` |
+| `ZiCG15` | T | 0; 5/5 including old-schema migration | `91e314135737812178a9a6910a8ddf57c1048530cadacdc95ba7e22670cc5b14` |
+| `D7wLdF` | Y | 0; before final column-name refactor | `ca92309c5f4e8a1ee2adc5f09a8086ed6ecafe179b249d826f0a06efc45632cf` |
+| `YCikh0` | Scoped Biome command retained verbatim in inputs | 1; 29 files checked, 3 formatting/export-spacing findings | `d6d6896434d59b7fe0cb7e0a10577f5b777b0df40eee8f776add2c5faaf43be0` |
+| `wQeprD` | T | 0; final post-refactor **5/5** | `059d4fcb83284b1c8966dcbd4fbe1a48dbfcdcd36b34c87e764323d01da14302` |
+| `Lpon2O` | `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts project-registration.integration.test.ts -t preserves.version.consent` | 0; focused existing-version **2/2**, remaining cases filtered | `053a9bbbdeb649dff946d46ec46c19f1bdf5288d5a397fb00af663ce379e4978` |
+| `lqMXGl` | `pnpm exec biome check apps/harness/src/registration/observer-journal.ts apps/harness/src/registration/repository-trust.ts apps/harness/src/registration/windows-version-child.ts apps/harness/src/storage/project-storage-database-specs.ts` | 0; corrected/refactored 4 files pass; other scoped files unchanged from prior check | `70c56f7b02b620590aa22a5ffe2187c97e51d6e3e8e3f335da2714955dc6feab` |
+| `a3knHY` | Y | 0; final exact source | `f345c30598ecd97bac99116a66239f5e2542826d52f15338c269bef1caa32657` |
+
+Formatting was derived read-only from installed Biome and applied through patches. One formatting-helper attempt failed due to command-shell syntax and one optional diff-package lookup was absent; neither changed source or supplies test evidence. No test crash occurred in this packet and no unexplained crash was retried. Historical crash qualifications remain unchanged.
+
+### Exact current dirty scope and checkpoint
+
+Final `wQeprD`, `Lpon2O`, `lqMXGl`, and `a3knHY` inputs share the complete **20-file** source/config map. SHA-256 of `JSON.stringify(inputs.hashes)` is `675e327a906595f636ebd2602c6b74acf7a8e74be6eb4b38410f52661f301691`. All current bytes matched that map. Complete retained material is `pc-s1-node2420-wQeprD/source/`; its pinned inputs file above lists every path/hash, including the earlier decoder tests and admission-unlock test delta. Reconstruct against exact base `c92171c2bbfcfbc206af1075850f70de0b596075`, not a moving branch.
+
+Main new production sources: `registration/identity-query-child.ts`, `registration/identity-query-journal.ts`, `registration/repository-identity-query-owner.ts`. The existing decoder, observer journal, native adapter, registry migration owner, trust authorization seam and application schema/spec were extended. Added `drizzle/application/0002_identity_query_attempts.sql` and `meta/0002_snapshot.json`; extended only `_journal.json`. Added `tests/integration/registration-identity-query.integration.test.ts` and updated the consent fixture plus current-head/successor fixture expectations. Generated 0002 snapshot and SQL hashes are retained in the complete map; both committed old migrations and 0001 snapshot were separately compared to Git base and remained exact.
+
+Previous evidence remains an exact **188408-byte** prefix, SHA-256 `e634db9c373ea3dc9f0284db5745dfaae61c3f059efe3bf21c31dea5bf8f2b24`. No whole/full/deep/mutation/package suites were run. Broader pending/broken gates remain pending/broken; Sonar stays stopped/not assessed. This packet exceeded the approximate twenty-minute target while completing native journal recovery and schema compatibility; work stops at the first-query checkpoint rather than expanding to the remaining five queries. Parent independent review remains required. Freeze source/evidence at handback; no whole-PC-S1 completion or acceptance is claimed.
+
+## 2026-09-27 — First-query review corrections and complete freeze
+
+The parent reported the preceding first-query review **failed** on five concrete lifecycle/compatibility findings. Existing implementation authority covers correcting these introduced defects; no contract, runtime, dependency or integration permission was changed. Base remains `c92171c2bbfcfbc206af1075850f70de0b596075`. All earlier source/evidence remains retained by its captures, with this prior evidence's exact 202001 bytes / `c6096f0f11aea2a006cbd0555395c9c4957ea9acfa334865bc3714182f42e400` preserved as a prefix.
+
+### Findings and corrections
+
+1. **Late settlement/publication:** prospective public-owner tests held final settlement, then closed the owner or crossed the phase deadline. Both Red cases returned `query-observed`. The journal now receives a decision callback rather than a stale success object. Its write transaction stages the chosen result, re-evaluates after each asynchronous update, and makes one synchronous last decision immediately before commit dispatch. A changed decision revises only that transaction's uncommitted staging value. The initial conditional write requires NULL; it cannot replace a committed outcome. Publication checks again after journal completion and at the public owner return boundary.
+   - The decision/commit-dispatch boundary and later reply are explicitly distinct. Cancellation/deadline before the final commit decision persists cancellation/limit, not success. If the success was already durably committed before cancellation, that immutable history stays intact, while its late public success is suppressed. No committed row is silently rolled back or rewritten to manufacture cancellation.
+   - Four additional real-database characterization tests hold either the final UPDATE acknowledgment (before commit) or the commit acknowledgment (after a successful real commit). Both close/deadline cases are checked. An independent SQLite reader proves committed-success ordering in the latter cases before cancellation is triggered.
+2. **Lost pending cleanup on close:** Red reproduced `closed` after an inspect result of `pending-recovery` had left the active map. Each journal instance now retains its own unsettled attempt IDs; successful settlement/no-dispatch removes them, and close checks durable state for the remaining owned attempts within the existing bounded drain. Failure to prove settlement remains pending. A later close can prove closure after exact recovery, without relabelling the earlier pending close result. New dispatch remains closed. The real lost-terminal test proves pending close before native exact-owner reconciliation and closed afterward.
+3. **First cancellation cause:** Red reproduced timeout replacing cancellation at 9000ms when controlled cleanup completed at 11000ms. `identity-query-control.ts` records the first abort instant. Cancellation strictly before the 10000ms deadline remains cancellation; equality/deadline-first remains timeout; cleanup-unconfirmed remains primary. Real persistence is tested with controlled completed-child facts and controlled monotonic time, distinct from the separate real-native tests.
+4. **Successor fixture expectation:** corrected only `0002_opening_probe` → `0003_opening_probe` in the known-older-application upgrade consumer. Its exact test passed. This is an expected-value correction, not invented product Red.
+5. **Exact table oracle:** added `registration_identity_query_attempts` in sorted position to `applicationRegistrationTables`. The old literal `previousApplicationRegistryTables` remains unchanged. The exact canonical-generation-2 creation/table test passed. No schema gate was weakened.
+
+### Intermediate problems retained
+
+`G9RexN` is a failed intermediate run: the new database wrapper fixture spread a class instance and lost its prototype execute/close methods. It could not reach the intended barrier, causing four test timeouts and EBUSY fixture cleanup errors. The wrapper was corrected to forward those methods explicitly. That capture also found contention between a normal completed close's extra journal check and the next registry operation. Settled owned IDs are now removed after acknowledged settlement, avoiding an unnecessary competing write transaction on the ordinary successful close path. No blanket retry or deadline increase was used. The original EBUSY cleanup diagnostics remain retained; no complete retrospective cleanup proof is claimed for that run's temporary roots.
+
+The corrected owner/lifecycle suite passed 14/14 in `uEJktx` and `sLT6V1`. Separate CodeScene refactoring extracted cancellation control and shared late-success suppression, and split native test setup/proof helpers while retaining assertions. All seven files changed in this review correction received final detailed **10.0/no-finding** reviews. Intermediate complexity/long-method findings are preserved as historical tool outcomes, not waived. Formatting/import-order diagnostics were fixed through patches.
+
+### Final verification blocker
+
+During `PS8yxN`, Vitest reported **Worker exited unexpectedly** / `[vitest-pool]: Worker forks emitted error`. It ended exit 1, signal null, with 10 tests reported passed out of 14 expected and one unhandled worker error. This is **broken validation**, not a clean pass or a demonstrated product assertion failure. No test run was retried after this crash. The remaining changes afterward were test-helper extraction/import formatting only; final typecheck and the affected Biome check passed. Consequently the final test-tree verification remains blocked/pending a diagnosed follow-up, even though all behavior tests passed at the preceding identities. Historical `51UIMw`, `qRsIkh`, and `TQYB8a` failures remain unexplained as well; no shared cause or crash fix is claimed.
+
+### Exact source-bound captures
+
+All commands ran from `C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1` via the unchanged `pc-s1-node2420-capture.mjs`, Node v24.20.0 / pnpm 11.5.1, 300000ms internal and 310000ms outer bounds. Capture root is `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/`; each retains exact command/cwd/runtime/source bytes and stdout/stderr/result. All signals null.
+
+**L** = `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-identity-query-lifecycle.integration.test.ts`.
+**N** = `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-identity-query.integration.test.ts`.
+**O** = `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-identity-query-lifecycle.integration.test.ts registration-identity-query.integration.test.ts`.
+**Y** = `pnpm --filter @slopstop/harness typecheck`.
+
+| Capture | Command | Exit / outcome | inputs.json SHA-256 |
+| --- | --- | --- | --- |
+| `8zfhth` | L | 1; 2 expected settlement Reds | `1a5af6d866396cf93ad3bf6ea63f78a901e45b5cf207eeed31de940e39966e4a` |
+| `swSfE6` | L | 0; 2 settlement Greens | `3c1a47e97f5c56473f5b3535ed5010861cbdc510bacf3ffd93df9f946a6ff902` |
+| `OVWHG9` | N `-t lost-terminal` | 1; pending-close expected Red | `d3ca2e9d2f2ccb04c2c8f2bd75f1cbe344e62da4e04432c8be1079a91157997d` |
+| `zXvCKp` | N `-t lost-terminal` | 0; pending/reconciled close Green | `1801abc7215d3648ef30f22df820cb6cabe39639f78336b4dd825ffbd60f8d4f` |
+| `XkvQL0` | L `-t cancellation.instant` | 1; cancellation-cause Red, 2 controls passed | `e558b3acbdbd394041728f1b9f98af2dfbc3fec039065e68f93e8b8481df59a6` |
+| `lDg9zA` | L `-t cancellation.instant` | 0; 3/3 cause/priority cases | `cad4b474f9354f0a9bee1f0b4856291b2cec0b154dd10edba35df6a37ae8a493` |
+| `G9RexN` | O | 1; intermediate fixture timeouts/cleanup and close contention described above | `3d89a54b20342645666bc7eb3a2e43c9a666c2930853c9490687dfa6f39d4919` |
+| `RqujIS` | `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts project-storage-open.integration.test.ts -t upgrades.known.older.application.authority.before.creating` | 0; exact successor consumer passed | `5e87baa1d5f31456be55322bb88756fc2503b92ebbec7d97bca4b5d821753124` |
+| `8JTQ3L` | `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts project-storage-create.integration.test.ts -t creates.the.exact.canonical.generation-2.schema` | 0; exact-table consumer passed | `2e3aa5a8c82211e4f3caf539d24b43973515fc3f9f65cdac9612ff6fd60d2f72` |
+| `WIquc0` | Y | 0 | `523357deda4546deaf2a274a470643f06786d7b48aebe435d35f2112f121ddbb` |
+| `uEJktx` | O | 0; 14/14 | `6c183135996c4132b01e1599051b9742452dd23b283467ac2eff840fe37a311f` |
+| `WGmGft` | Y | 0 | `cabe4ed53c1230662a4dc8205734019838199ac4b67eff4938d855ac6de75604` |
+| `1Bx12x` | Seven changed-file Biome paths, exact command in inputs | 1; 2 import-order findings | `75e687b596cbfe1e0ddf39949c62261cf4b9c8e4697b1402444ce5c0061a7bd3` |
+| `sLT6V1` | O | 0; 14/14 | `c378e3358830a347ad015d69ef5975477bcc822f9575d4f490c6da65362438bf` |
+| `AYxQpC` | Same seven changed-file Biome paths | 0; 7 files passed | `fd96ab82ef518ad2a3fc88a591c132e6206314a53cdf2868e694c86b73e51ca5` |
+| `PS8yxN` | O | 1; **broken worker crash**, no retry | `7aa15df080366b87a84f7ac5213d2c7f907dc2fadb53f1a6c675aab16b6ee9ec` |
+| `DuoEPs` | Y | 0 | `bd2c944949e3d89204c0b3930ce7d27be85693ab4286909ce70da9ea71b10643` |
+| `pu9TvO` | `pnpm exec biome check apps/harness/tests/integration/registration-identity-query.integration.test.ts` | 1; formatting only | `a77e397621cfdd388c90070aaf96fa41c9cf5bc27827228702114d4003b4d478` |
+| `SzWy5j` | Y | 0; final source | `46e8dfe0aaa4a428319ccc4e1d373bf29c1426c3e942ff7698902e1a255a1ede` |
+| `ANDM8S` | `pnpm exec biome check apps/harness/tests/integration/registration-identity-query.integration.test.ts` | 0; final test file, other six unchanged since passed Biome | `3ea3ca5142947d8aa808126618fbc108fbba952775e9eed6b7bd7c9d2ed83121` |
+
+### Complete freeze, authority and remaining limits
+
+Final typecheck/Biome captures retain the same full 22-file dirty source/config scope against base, including all prior decoder/native/migration work and both newly added control/lifecycle-test files. Source-map SHA-256 (`JSON.stringify(inputs.hashes)`) is `a7013a0537e32412e1152e6d6f00367adf2fd0a2dd77302e9b42324bcca11544`; complete bytes are retained at `pc-s1-node2420-SzWy5j/source/`. A complete Temp snapshot will additionally bind all changed paths, their modes/status/symlink data, this separately identified evidence, all 26 original contract references and the complete losslessly retained `git diff --binary` patch against c92171c. Compression/encoding, if used for the patch carrier, is explicit and its decoded-byte digest is verified; it is not a substitute for omitted patch data. No old snapshot is overwritten.
+
+Corrections are implemented; final owner test verification is **broken**, and parent independent re-review remains pending. Full/deep/mutation/package gates were not run. TR-5 and broader existing limitations stay pending; Sonar remains stopped/not assessed. Still only the first identity query is implemented. No acceptance or whole-PC-S1 completion is claimed. Freeze writes at handback, with final snapshot/evidence identities reported separately.
+
+## 2026-09-27 — Complete closed six-query execution phase
+
+The user authorized the remaining five fixed queries and composition through the existing owner, retaining Node 24.20.0 and base `c92171c2bbfcfbc206af1075850f70de0b596075`. Read the parent first-query review and the exact v1 argument/output/budget policy, v2 physical/lifecycle obligations, v3 boolean/nonzero precedence and v4 trust-binding additions. The incoming 23-path snapshot `68c5aaa50c56a6b6ab11067c503703c75e05254f4914e556230987eac8e2cbda` matched before writes. Its evidence, all older snapshots and the ten-run diagnostic records remain historical; this packet does not claim a crash cause or fix.
+
+### Actual wiring
+
+- Added `inspectIdentity` to the existing harness-internal owner. It executes the six approved query kinds sequentially through the same supervised Windows adapter; it does not call six separately timed owners. One control/deadline is created for the whole invocation and disposed only when that invocation ends. The public first-query test seam `inspectInsideWorkTree` retains its prior result shape and lifecycle.
+- One closed query-kind enum and prefix/suffix mapping own every actual argument vector. The native adapter validates the kind, selects only the fixed mapping and never accepts arbitrary argv or shell text. Version-only execution still rejects identity-query-shaped input. No weaker flags, retries, helpers or network commands were introduced.
+- Each child still revalidates persisted executable/repository authority and physical identity, commits its intent before native dispatch, stores exact child identity before resume, retains terminal/EOF/tree proof and settles an immutable outcome. Every row now records query kind, a shared phase UUID, non-negative ordinal, the exact fixed argument vector, the original request and its executable/repository scope. All per-child pre/post physical rechecks remain in the reused path.
+- Only the exact successful boolean triple admits the path stage. Bare=true takes precedence over the other boolean predicates; nonzero exit stops immediately with `GIT_QUERY_FAILED` and numeric exit metadata, without deriving a reason from stderr. Decoding is shared with the prior strict UTF-8/one-line/output-bound machinery.
+- The composed result is internal **`identity-observed`**, with validated booleans, phase ID and private worktree/administrative/common paths. These are real Git outputs, not fabricated mock paths. This is not `prepared`, a canonical Repository binding or Project registration. Full physical association/comparison of the three returned directories, registration-attempt preparation/confirmation accounting, UI/register/list/select/open wiring and any PreparedRepository claim remain subsequent work. The selected directory/executable are checked per child; the returned path triple is syntactically validated here, not presented as a completed canonical physical-identity proof.
+- A shared-phase deadline may abort a later native child before its own child deadline. A prospective test exposed the inherited child cancellation trigger being reported as CANCELLED when the phase timeout was the actual cause. The owner now preserves cleanup-unconfirmed as primary but retains `OBSERVATION_LIMIT_EXCEEDED` as that phase-timeout trigger; earlier external cancellation remains cancellation.
+
+### Schema and compatibility
+
+Per the user's explicit permission to evolve the uncommitted/unreleased 0002, widened only its `identity_query_kind` check from the first kind to the closed six-kind set. Kept Drizzle declaration, SQL, 0002 snapshot metadata and independent database specification synchronized. No new table or column was needed: phase/command provenance is part of each immutable scope payload, while query kind, observation identity and consent/selection foreign keys remain relational. This does not migrate real user databases or silently reinterpret historical narrower-0002 fixtures; earlier captured bytes remain intact. Committed 0000/0001 SQL and the committed 0001 snapshot were verified byte-identical to base.
+
+The actual Storage exact-table/schema creation consumer passed with the widened check, and the focused existing first-query integration suite includes the committed-0001 upgrade/preserved-row proof. No whole migration/package/deep gate is claimed. No dependency/runtime/config pin changed. Disposable linked-worktree setup creates an empty commit only inside its owned temporary Git fixture, with an empty hooks directory and signing disabled; no candidate/source-main commit or ref operation occurred.
+
+### Prospective proof, characterization and refactor
+
+- `llP5nZ`: both real normal/linked worktree cases failed against an unavailable scaffold instead of producing the composed observation. `GXudPm`: both passed after implementation, observing all six actual native Git calls and exact private paths.
+- Added characterization of inherited refusal behavior through the new owner: missing identity consent and missing repository trust both produce zero launches. Real non-Git failure stops after the first call. Controlled valid bare booleans stop after three calls before any path query. A controlled clock advancing 4000ms per child demonstrates a single shared 10000ms budget, stopping at the third child rather than resetting per query.
+- `NOy3yT`: the new phase-timeout/uncertain-cleanup test observed the wrong CANCELLED trigger. `PmItur`: the minimal mapping fix passed, retaining pending-recovery as primary. Controlled cases prove sequencing/time/error behavior; the positive normal/linked cases genuinely execute Git through the supervised adapter.
+- An independent SQLite reader compares all six persisted query kinds/ordinals, common phase identity, ownership/terminal/settlement presence, request association and each complete argument vector against literal contract expectations. Common and per-worktree administrative paths are distinct in the linked-worktree oracle.
+- Separate refactoring split sequential collection from stage classification after CodeScene reported nested logic/overall complexity. Final changed-source/test detailed reviews returned **10.0/no findings** for all eight authored TypeScript files. Formatting/import ordering was derived from stdin-only Biome output and applied as patches. No test oracle was weakened.
+
+Current Git documentation was resolved with Context7 `/git/htmldocs` and checked for rev-parse boolean/path semantics and linked-worktree administration. No installation or library change occurred.
+
+### Retained commands and results
+
+All captures ran from the candidate through the unchanged `pc-s1-node2420-capture.mjs`, Node v24.20.0 / pnpm 11.5.1, with the existing 300000ms recorder / 310000ms outer bounds. Capture root: `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/`. Inputs retain exact command, source hashes and complete dirty-source bytes; result/stdout/stderr remain alongside them. All signals null.
+
+**P** = `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-identity-phase.integration.test.ts`.
+
+| Capture | Command | Exit/result | inputs.json SHA-256 |
+| --- | --- | --- | --- |
+| `llP5nZ` | P | 1; two expected all-six Reds | `872434f78840c6dc0aec5a465ea3d183575c12a069f62f0b7e73f6900022d2ae` |
+| `GXudPm` | P | 0; two real all-six Greens | `d9fc9b34a3470d5f490ea20c02274d3a20acca2aade8cbc91b44fd0872898011` |
+| `HUpN5q` | `pnpm --filter @slopstop/harness typecheck` | 0 | `bcbfdcb2d2af359c129dcfd4f0592c93d7ddc03de6aeac6b6e8f2ffe1be8387d` |
+| `gG2eNf` | P | 0; five phase cases passed | `e988a533919b744b11a76f5d47f5f08b5a42fc8f7dee0e06bbd4435a971734ed` |
+| `Q8IHEJ` | `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts project-storage-create.integration.test.ts -t creates.the.exact.canonical.generation-2.schema` | 0; exact Storage consumer passed | `d8bd4d6747cb0f85ebc866beb492599480a1445ba7a4f5d300d753653271c131` |
+| `NOy3yT` | P `-t phase-unconfirmed` | 1; expected phase-cause Red | `7218efcd458c17f35feff1ba36619583219e02bcef94390219a32678e509f59f` |
+| `PmItur` | P `-t phase-unconfirmed` | 0; phase-cause Green | `619c6c14929a5ecf0bab66b1a01893773d0db0f7b99d6dbc5d7ec8b1c9039daa` |
+| `kplSME` | `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-identity-phase.integration.test.ts registration-identity-query.integration.test.ts registration-identity-query-lifecycle.integration.test.ts` | 0; final focused **20/20**, 3 files | `0485f9d946619467b93b982142265611fbf6fefc71b502ec3c45e12bb87027ec` |
+| `HLxFpG` | `pnpm --filter @slopstop/harness typecheck` | 0; final source | `f1cc24877a83690da7e4af272f1ae60c4d5d183d69fc9782f6365993107dc688` |
+| `p5n3d6` | Exact changed-path Biome command in inputs | 0; 8 TypeScript files, no fixes; generated snapshot not counted as Biome coverage | `abf81a49d02bcf2235b59b8abfde1eb11c820091de994dc15d54673932e82f1a` |
+| `sFgv5s` | `pnpm exec vitest run apps/harness/src/registration/git-identity-query-results.test.ts --project harness` | 0; decoder regression **34/34** | `08b12dc03e612e3517d2b4150f55065e714ea7d24c9dd5e9442fa9dee1d6929e` |
+
+Final integration/typecheck/Biome/unit captures have identical complete **23-source/config** maps. SHA-256 of `JSON.stringify(inputs.hashes)` is `42bab144a241726bb1773160bab4bd26c0e892f7903d8e13ea2d1d1346eb4816`. Retained current bytes are under `pc-s1-node2420-kplSME/source/`, including the new phase integration file and all preceding dirty work. The complete freeze will bind these plus this evidence, modes/statuses, the full binary-capable tracked patch against c92171c and all26 original contract references.
+
+Previous evidence is preserved as an exact **213200-byte** prefix, SHA-256 `2b5e09a7d801a63387fc4daf75b03d56afa36cad3a4676698eeba316739a6c39`. No crash occurred in these focused runs; historical failures remain unexplained and were not investigated/relabelled. No full/deep/mutation/package or Sonar run occurred. Parent independent review remains pending. Freeze at this coherent all-six/internal-composition checkpoint; no prepared repository, UI completion, acceptance or integration is claimed.
+
+## 2026-09-27 — Joint physical repository observation
+
+The user authorized the next bounded PC-S1 step: physically compose the worktree, administrative directory and common directory after the reviewed six-query implementation. Read the parent `2026-09-27_pc-s1-six-query-review.md`, inherited v1/v2/v3/v4 identity/relationship/lifecycle requirements and the existing strict native identity adapter. Verified all predecessor24 paths against snapshot `6b3569e15c57a9e7881942edd7657cbc2b9bb8c972b717214d5678e207abcc07` before editing. Base remains `c92171c2bbfcfbc206af1075850f70de0b596075`; no prior work was discarded.
+
+### Delivered behavior and authority limit
+
+Added the harness-internal `inspectPhysicalIdentity` mode while retaining both existing query APIs. It returns **`physically-observed`**, not `prepared`. Its keys are produced by the existing Windows native directory observer and validated with the existing `physical-directory/v1` schema: platform, volume/file/birth identities remain lossless canonical decimal strings. No lowercase path, remote, content hash, mtime or ctime becomes a directory identity key.
+
+The physical observer resolves only the standard `.git` directory/gitfile and `commondir` metadata links, following the documented relative-path bases. It captures all three actual native directory keys before query dispatch, checks the selected worktree against its persisted trust identity, and revalidates the physical graph before and after each native child. At composition, each of the three paths returned by actual Git is opened through the same physical adapter and compared against the captured graph; string equality does not establish association. A final graph recheck fences metadata/identity changes before the physical result is published. This adds no Git command beyond the six reviewed queries.
+
+Gitfile/commondir reads use bounded buffers capped by the existing8192-byte observation limit, strict UTF-8/single-path handling and before/after file-handle metadata consistency. A digest of pointer bytes plus lossless transient file metadata detects changes to those links. That digest is a **change fence only**, not a canonical identity or a hash-based Project match. No config/ref/source tree is enumerated. Metadata paths and snapshots stay inside the private harness/installation scope; raw pointer text is not emitted as an error or sent to UI/log/model/telemetry.
+
+The same phase control is reused: physical awaits race phase cancellation, control is checked between I/O steps, and any late success is suppressed by the existing final publication guard. An asynchronous read completing after cancellation closes its handle without authorizing another step. This does not add a stronger hostile-filesystem/syscall-preemption or network-confinement guarantee than the existing trusted-local scope. Unsupported/nonlocal capability is propagated rather than fabricated as local identity.
+
+Every physical-mode query's immutable scope includes the captured physical keys/change fence. No table/migration was added. The result is still not an immutable durable registration proposal or a canonical binding. The exact name `ProposedRegistrationObservation` was not found in the26 bound normative references; v1 describes the required future proposal/confirmation owner without fixing that schema. This implementation therefore uses the user-authorized honest internal physical result, preserving the phase ID, rather than inventing a prepared-registration grant. Durable proposal identity/fingerprint, confirmation/reservation and Project registration remain subsequent work.
+
+### Public behavior proof and refactoring
+
+`jBLFsZ` observed the expected Red at the public owner: the scaffold returned `identity-observed` instead of a physical result. `uk5oqS` then passed with real Git and filesystem identities for normal/linked worktrees, an independent local clone and a junction alias. The suite was subsequently split into bounded independent cases without widening test deadlines. It compares consumer-visible keys across separate observations: linked worktrees share common-directory identity but have distinct worktree/admin identities; a clone has another common key despite shared history; the junction alias has the same physical keys.
+
+Additional characterization exercised the implemented fences: replace administration after a real child, remove linked administration, inject a mismatched administrative path into otherwise real Git output, select a subdirectory rather than a root, refuse a controlled capability observation, and expire the shared phase while physical inspection is running. Replacement/mismatch return `REPOSITORY_IDENTITY_CHANGED`; disappearance returns `REPOSITORY_NOT_FOUND`; a non-root selection is `OBSERVATION_INVALID`; capability/time refusals launch zero queries. No actual remote filesystem or ACL mutation was used. `UDWEbL` passed all9 cases. These passing branch checks are recorded as characterization, not fabricated Red.
+
+Separate refactoring addressed CodeScene complexity in pointer handling/capture and the owner mode dispatch, and reduced primitive-string test fixture arguments. Final reviewed logic scored10.0/no findings across the five changed TypeScript files. Helpers separate bounded pointer reads, error classification, graph capture/comparison and authorized mode selection. Biome formatting was derived read-only and applied through patches.
+
+### Final check qualification
+
+The final four-file identity regression capture `1sLZQt` ended with **two `Worker exited unexpectedly` errors**, exit1/signal null, reporting17 passes out of29 expected and2 completed files out of4. This is broken verification, not a combined pass. No test retry, broad gate or crash investigation followed. Existing crash histories remain unchanged; no common cause or fix is claimed.
+
+That same checkpoint's typecheck `VaXxGC` caught a refactoring-only type defect: a generic spread intersected the old `identity-observed` discriminator with `physically-observed`, erasing the physical arm. The final signature now consumes the concrete inferred query-observation variant; runtime behavior was unchanged by that type fix. Final typecheck `9Pk20C` and affected-file Biome `dtsDLe` passed. The final test tree remains unverified after the worker failure, even though the physical suite passed9/9 at its preceding identity.
+
+### Exact retained captures
+
+All commands ran in the candidate with Node v24.20.0 / pnpm11.5.1 through the unchanged `pc-s1-node2420-capture.mjs`, using300000ms internal /310000ms outer bounds. Every capture at `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/` retains command/runtime/source bytes/hashes and stdout/stderr/result. Signals were null.
+
+**P** = `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-physical-identity.integration.test.ts`.
+**Y** = `pnpm --filter @slopstop/harness typecheck`.
+
+| Capture | Command | Exit/result | inputs.json SHA-256 |
+| --- | --- | --- | --- |
+| `jBLFsZ` | P | 1; physical-result expected Red | `603bff184377073022a297ed635589e7d0b53350294dafea545f26f3284a4dba` |
+| `uk5oqS` | P | 0; real physical-composition Green | `9fb321c61ef25b39491e862993acd5d7ccf4605091d8feb6fe89d258e9de6005` |
+| `xWEHV6` | Y | 0 | `f0e1dcbcbe4c0c5fc64178e8c1f1c6313f0694fb52e599273d4cc73335dfe735` |
+| `UDWEbL` | P | 0; all9 physical cases passed | `2d355960ffe35a35d897774f8bdb72a08f54702e67ff94818af2e45e8abd3dc2` |
+| `A79vsz` | Y | 0 | `0af92b35b94e7a8389e0835942db42022ea2a61724723c0a81ec9f114e4b112e` |
+| `1sLZQt` | `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-physical-identity.integration.test.ts registration-identity-phase.integration.test.ts registration-identity-query.integration.test.ts registration-identity-query-lifecycle.integration.test.ts` | 1; **broken**, two worker errors,17/29 reported passes | `fc3a6c32d0cfb5fd233c93bc3ff0e751a45986ec50b8af736c37f2ffc79348cd` |
+| `VaXxGC` | Y | 2; refactor discriminator typing error | `a44ba163cb526dc5a9cde4c427d01b7ca032cc1da15600c8b10ceea5aeb41712` |
+| `3zOcVe` | Changed5-file Biome command retained exactly in inputs | 0; five files passed | `39e517891d3cb6f1bdaad6ec00ed6705ed6dd864191261521bb15172f25f4eae` |
+| `9Pk20C` | Y | 0; final exact source | `797b9b28360f876f824347bd5d4beca3e235483d2a2c15ffaae0d72cd8ddcdce` |
+| `dtsDLe` | `pnpm exec biome check apps/harness/src/registration/repository-physical-observation.ts` | 0; final corrected file, other four unchanged from passing check | `f9ac3b188a06fa9a209ecd548d7639fe63c32adc4b64381d0f0033416217de5c` |
+
+Git metadata semantics were retrieved with current Context7 Git documentation for gitfile and commondir, without installing anything. Repository/product/context guidance and the existing TypeScript/Vitest/TDD discipline were retained. Git commits/clones/worktree creation in this suite are confined to disposable fixtures with hooks disabled; no candidate/source-main commit or merge occurred.
+
+### Frozen frontier
+
+Final typecheck/Biome inputs have the same complete26-source/config map, SHA-256 (`JSON.stringify(inputs.hashes)`) `571efa281870ae44477fc465eb1ebf799319cc99834c9a7e55cdcd090e868334`. Full dirty-source bytes are retained under `pc-s1-node2420-9Pk20C/source/`, including all prior work. New files are `registration/repository-physical-observation.ts` and `tests/integration/registration-physical-identity.integration.test.ts`; existing `physical-identity.ts`, `identity-query-child.ts` and `repository-identity-query-owner.ts` carry the schema, scope and mode wiring. No runtime, dependency, SQL schema or migration changed in this step.
+
+The previous evidence prefix is exactly223381 bytes / `070735aa3a72b69be04b6116630016bb81286acf0dd93e995fdc323716ec9ffa`. A complete new Temp freeze binds all changed paths against c92171c, modes/statuses, retained bytes, full binary-capable tracked patch, this evidence and all26 original contract references. Previous snapshots remain unchanged. Parent review is pending, final regression verification is broken, and no prepared registration, canonical association, full-PC-S1 acceptance, broad/deep/mutation/package pass or Sonar assessment is claimed. Stop here and freeze writes at handback.
+
+## 2026-09-27 — Physical observation review repairs
+
+The parent reported two introduced defects in the prior physical-observation identity: final verification followed Git's canonical reported worktree instead of the original selected alias; initial `.git` absence was incorrectly treated as `OBSERVATION_INVALID` before Git classification. This appendix preserves that failed review and its predecessor snapshot `36c32812b8bacb2a5023a283cf06495c6a1388b7737c8f2e12edba76f0153bb6`. The earlier isolated final9/9 result remains a historical scoped pass, not evidence that these later reviewer scenarios were covered. The user authorized repairing the same packet without changing the contract or permissions.
+
+### Original selected path retained through final composition
+
+The public-owner regression runs the six real queries against a junction alias, presents equivalent canonical paths for its still-intact original target, then redirects only the original alias to the independent clone at the final composition boundary. Red returned `physically-observed` for the old target. The phase now carries the exact admitted selected directory through composition. Final verification still checks all three reported path identities and additionally revalidates the original selected location/graph. Green returns `REPOSITORY_IDENTITY_CHANGED`, while the test proves the old target remains present. This is a concrete checkpoint fence, not an atomic-filesystem or hostile-race guarantee.
+
+### Boolean classification precedes conclusions from absent metadata
+
+Initial discovery distinguishes a proven missing root `.git` entry from an invalid/corrupt graph or I/O failure. It uses lstat, so an existing broken link is not silently treated as absent. Only actual ENOENT at that marker yields an internal unresolved discovery state; other faults remain explicit. The selected directory identity/capability and phase control remain checked, and each admitted Boolean query still passes the existing executable/selection checks and durable lifecycle.
+
+An unresolved discovery runs only the closed Boolean stage. A nonzero Git exit stops immediately with `GIT_QUERY_FAILED`; a complete successful bare triple yields `BARE_REPOSITORY`. A working-tree Boolean answer cannot grant path queries or physical success without a complete root graph. Thus a selected subdirectory now executes three Boolean queries and is rejected as `OBSERVATION_INVALID` before path queries, instead of guessing a non-Git/bare classification from missing `.git`. Existing complete graphs retain their stronger pre/post-child checks. Corrupt gitfile input, capability refusal and deadline refusal still stop with zero launches.
+
+**Bare policy qualification:** the first Green attempt exposed an overstrict test expectation for a conventional bare directory. With the unchanged required `safe.bareRepository=explicit` prefix, the installed Git exits128 on that layout before producing Boolean results. Current official Git configuration documentation confirms this protected policy. v3 D9 requires preserving that nonzero result, not overriding it from filesystem inference or weakening flags. The retained real tests therefore cover all three cases: non-Git directory → exit128/one query; conventional bare refused by the protected policy → exit128/one query; a real bare administrative directory named `.git`, accepted by this installed Git's closed invocation → three successful Boolean queries and `BARE_REPOSITORY`. No stderr parsing, extra Git command, `--git-dir`, GIT_DIR injection or weaker configuration was introduced.
+
+### Prospective proof and final focused checks
+
+`K5I6mV` is the expected alias-redirection Red; `t70AJL` is its Green. `iKYvcY` records both initial absent-marker classification Reds. `wumd2e` demonstrates non-Git Green plus the incorrect conventional-bare test expectation just explained, and remains a failed run. `NbPR74` passes all three real classification/count oracles. Added corruption characterization proves the unresolved state does not swallow malformed existing administration.
+
+Final physical execution was run once on the completed source, alone rather than combined with native suites: `bXdPKZ`, **14/14 passed**. The affected prior phase classification/deadline cases passed separately in `IKMUiV`, **3/3**. No crash occurred and no diagnostic loop, full suite, deep, mutation, package, Sonar, commit or integration was performed. Node remains24.20.0; no dependency or runtime change.
+
+CodeScene reviewed the three changed files. Owner and tests returned10.0/no findings. The physical observer retains a **Primitive Obsession advisory at9.68** (path-heavy helper arguments); the extraction also now checks phase activity around marker lstat. This advisory is not represented as a clean/no-finding result or an accepted waiver; it remains visible for parent triage. No further production refactor was made after the final test capture merely to improve a metric. Typecheck and Biome both passed on the exact final source.
+
+### Captures and source identity
+
+Capture root is `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/`. Each directory retains the exact command/cwd/runtime, full dirty-source bytes/hash map, stdout/stderr and exit/signal. Commands use the unchanged recorder, Node v24.20.0 / pnpm11.5.1 and300000ms internal/310000ms outer bounds; every signal was null.
+
+**P** = `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-physical-identity.integration.test.ts`.
+**B** = `pnpm exec biome check apps/harness/src/registration/repository-identity-query-owner.ts apps/harness/src/registration/repository-physical-observation.ts apps/harness/tests/integration/registration-physical-identity.integration.test.ts`.
+
+| Capture | Exact command | Exit/result | inputs.json SHA-256 |
+| --- | --- | --- | --- |
+| `K5I6mV` | P `-t alias.redirected` | 1; expected late-alias Red | `2e3981405e501fd0d32e6f083f3360afda666a64a23066854abcb8dd20ac3e7b` |
+| `t70AJL` | P `-t alias.redirected` | 0; alias Green | `ce500dc5a7000b992101386a7b089770d8d607afb02bd17db542bd89219b56f9` |
+| `iKYvcY` | P `-t classifies.a.trusted` | 1; two classification Reds | `51de5c08c7c4abdc5cf0c11f71dcb508de77606a68b8bd9e64e572ee77cb1b72` |
+| `wumd2e` | P `-t classifies.a.trusted` | 1; non-Git passed; bare expectation contradicted fixed Git policy | `7f86ce2e27e20ee503352060ef7db370a5104fa1d8a2144afdf40983820a83c9` |
+| `NbPR74` | P `-t classifies.a.trusted` | 0; three real classification/count cases | `a4d3b952c77e1ca3b68a7d4516f00cf397521ebbf15f5059725b9fbfb6bc59b2` |
+| `Yi76Tg` | `pnpm --filter @slopstop/harness typecheck` | 0 | `4919a3ecfb81945d47bb8441c149bb27e7df107016a380194043ba91cbdf07f5` |
+| `kSPoza` | B | 0 | `0441e0d71b727029164e7c2262bfcb25aabcc3120c3b259a3e952ae7c080a0ef` |
+| `bXdPKZ` | P | 0; final isolated14/14 | `4923266d4b7d0e727d81e314499c3ee050632ee453acce1579f614ea8f88bb82` |
+| `IKMUiV` | `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-identity-phase.integration.test.ts -t classifies` | 0;3/3 controlled phase regressions | `216514a7311c6be302bd9acc6d6ee57dc3911459a1f2835af1f9956c2ef25843` |
+| `w7FNHQ` | `pnpm --filter @slopstop/harness typecheck` | 0; final source | `ec8d2e9e17907be94e0bc4b3ee8ecc1565cfd8d1dea3ba52a734a940edeb16b4` |
+| `YzJE1l` | B | 0; final three files, no fixes | `d2e0e4f46dc819f40fd45df221101c90fa6dff49c113f23bdebb5cd7411c9d33` |
+
+All four final capture maps match. Complete26-source/config map SHA-256 (`JSON.stringify(inputs.hashes)`) is `d22f9ab49b2e4acd9abedf94e770b6c77317c7ad5aff5ef633e05afef0af7db9`; retained bytes are under `pc-s1-node2420-bXdPKZ/source/`. Only `repository-identity-query-owner.ts`, `repository-physical-observation.ts` and `registration-physical-identity.integration.test.ts` changed relative to the previous physical freeze, plus this append. Previous evidence is an exact233674-byte prefix / `7c763c27644cdb786cabe62bd42c7f547ce781c3adea2f9b56c1eab6c29252c1`.
+
+The new complete Temp snapshot/patch binds the same base c92171c, all current changed paths and original26 references. Parent independent re-review is pending. Historical worker failures remain broken/unexplained; current focused passes do not relabel them. The result remains internal `physically-observed`, with no durable proposal/prepared grant, canonical registration or whole-PC-S1 acceptance. Freeze at handback.
+
+## 2026-09-27 — R3 named-selection cleanup (no intended behavior change)
+
+The user authorized one small separate cleanup of the introduced CodeScene primitive-heavy warning, without new abstraction layers or disabled rules. Detailed inspection confirmed `repository-physical-observation.ts` at9.68 with the aggregate Primitive Obsession finding. Grouped two existing argument pairs into readonly named selection objects: directory plus admitted physical identity for discovery, and original directory plus expected physical snapshot for completion. Updated the two owner call sites. Field values, checks, operation order, result envelopes and control/deadline objects are unchanged. No tests, contracts, schema, runtime or dependencies were edited. This is a no-behavior refactor; no fake Red is claimed.
+
+Both changed files then received detailed CodeScene **10.0/no findings**. Exactly one isolated physical-suite run was attempted as requested: `cydUhX` exited1 with `Worker exited unexpectedly`, one test reported passed out of14 expected, and one unhandled worker error. No test retry, diagnostic investigation or broad gate followed. This run is **broken validation** and does not replace the prior R2 fourteen-test pass or establish a new crash cause. Typecheck and two-file Biome passed on exactly the same source map.
+
+All captures use the existing Node24.20.0 recorder from the candidate, preserving300000ms internal/310000ms outer bounds. Directory prefix: `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`.
+
+| Capture | Exact inner command | Result | inputs.json SHA-256 |
+| --- | --- | --- | --- |
+| `cydUhX` | `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-physical-identity.integration.test.ts` | exit1, signal null; broken worker exit,1/14 reported passes | `ecc9d543c3c85d28d6f14ceaacefeaf9c1cc1668e0389908c1647afbb793298d` |
+| `DGBIzL` | `pnpm --filter @slopstop/harness typecheck` | exit0, signal null | `edeb1974c9568cbc828f39e0256c9ded9cc31f9e7e720265ecbe6b405fe98d75` |
+| `iaYnOq` | `pnpm exec biome check apps/harness/src/registration/repository-identity-query-owner.ts apps/harness/src/registration/repository-physical-observation.ts` | exit0, signal null;2 files passed | `6aa8cec58f4a66a3f4a038d9870b39f97ff8179481bbdcb4d70f91cacf6d0fe5` |
+
+Final changed-source hashes:
+- `apps/harness/src/registration/repository-identity-query-owner.ts`: `52cd00201ca07ea409f761fc9338ee2c6351e13cadfab3259c42d7e34b1fb372`.
+- `apps/harness/src/registration/repository-physical-observation.ts`: `a6df24a14e10472c85772eefb3af33b54148b7dbaedc75c343e30a855dba9d58`.
+
+All26 dirty source/config bytes are retained under `pc-s1-node2420-DGBIzL/source/`; the matching map digest is `aa59c3642989aa82a0b3cd846459d9bf6a776383fa1f515ce9788ceea5b9e051`. The prior R2 snapshot `02182869c4d27bdedfa14c7078a2c3ab9661599a98177087d3156fbd590bd4ce` remains unchanged. Its evidence is preserved as an exact242126-byte prefix / `265ec94650705ce348549d37f90af25f6073301aa46c6a7eee70903a30a4d2fc`. R3 freezes the full same27-path delta against c92171c with retained bytes/modes/statuses, complete binary-capable tracked patch, current evidence and all26 original contract bindings. Final test verification remains broken; independent review is pending. No commit, staging, merge, new feature or Sonar assessment occurred. Freeze writes at handback.
+
+## 2026-09-27 — Authorized one-shot physical prerequisite and preparation-contract checkpoint
+
+The user authorized exactly one fresh isolated physical-file run on R3 before dependent durable proposal work, with a stop on worker failure. Command, from `C:/Users/pedro/Documents/GitHub/ragnarok-pc-s1`: `pnpm exec node C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-capture.mjs PC-PHYSICAL-R3-final-once "pnpm exec vitest run --config apps/harness/vitest.integration.config.ts registration-physical-identity.integration.test.ts"`. Capture `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-vswHl5`: exit0, signal null, **14/14 passed**, duration33.92s. inputs.json SHA-256: `a2deeaccccaea259540349236674ba8140a25f5c7e449b2e1cf3ceea2d5b85c4`. Its complete26-file source map equals R3 (`aa59c3642989aa82a0b3cd846459d9bf6a776383fa1f515ce9788ceea5b9e051`). All27 R3 files and all26 original contract references matched their hashes before this evidence append. The245516-byte evidence prefix remains unchanged, SHA-256 `50bee816abe53870e92492a04d0373e6dcf3668f046522d679a9a4a49ff215f8`.
+
+This is current passing physical evidence, not a diagnosis or fix of historical worker crashes. No additional native test run occurred. The user reports parent-owned three-role static review without new defects; this session does not substitute its own review or invent review artifact identities.
+
+Contract inspection before implementation found a specific unresolved distinction: v1 lines50-54/70 require immutable durable proposals and reserve confirmation authority separately; v2 D5 lists prepared among public outcomes; v3 D7 explicitly grants no-observation replay for a **confirmed durable registration result**, but does not specify whether an exact retry of preparation returns historical prepared after the selection/executable has changed or disappeared. v4 adds no preparation replay rule. Searches of the RPIV documents and protocol found no exact `PrepareProjectRegistration` request definition. ADR0006 keeps installation authority separate from canonical Project truth. These are not grounds to reuse stale observation for a new proposal or allocate Project/Storage IDs during preparation.
+
+Pending human decision: approve immutable preparation replay by exact prepare request identity/fingerprint, returning the original proposal before observation even if current location/executable changed, explicitly as historical data; every new preparation obtains fresh admitted physical observation and confirmation later revalidates. Alternatively require fresh observation on preparation retry and define the resulting changed/unavailable outcome. This affects observable behavior and its Expected-red oracle; no implementation/schema/test changes are made before that decision. Proposal persistence/read/replay is **not implemented**, and no prepared or registered claim is made. Existing R3 source remains frozen; only this append changes the complete candidate inventory. No commits, integration, broad tests, mutation or Sonar.
+
+## 2026-10-01 — Durable preparation R1 implementation checkpoint (not ready)
+
+The human approved historical preparation replay. The authoritative addendum is source-main `.rpiv/artifacts/evidence/2026-09-27_pc-s1-preparation-replay-decision.md`, raw SHA-256 `a0c418fd8925ce436494f929b2765ee1b9e05bd0b8f5d2ee756b312aa8abf6e9`. Original v4 content hash `62f60b4067a9f9fcb60e33192d37d3b9ec3ee5dec47505584dd3078cecd3217e` and all26 original bindings remain separate and unchanged. Build remains exclusive candidate `ragnarok-pc-s1`, base c92171c, Node24.20.0. Predecessor complete snapshot SHA `05aabb99ee11cf0a1471387dfa29d7b3c6ffee28b043fa98392bafb640bbe8b7`; its248564-byte evidence prefix / `17d7792a2f825d503306a2fbdcdfe6933ce7498f499b80fcfdde383a07470144` is preserved. The prior physical prerequisite vswHl5 was not repeated.
+
+### Implemented public application-owner seam
+
+`createProjectRegistrationPreparation(registry, options, controlDirectory, child?)` exposes `prepare(unknown)` and `close()`. The strict version1 request separates a branded preparation requestId from the generated proposalId and includes the existing admission IDs. The owner snapshots/parses input synchronously, computes schema-ordered fingerprints, checks durable replay before consent/target/observer admission, and uses the real six-query physical observer for unknown requests. Publication repeats request lookup in a write transaction after observation; no write transaction spans Git execution. Same-ID different material input is an idempotency conflict. There is no Project/Storage identity allocation.
+
+Additive generated `0003_registration_proposals` stores request/proposal identity, input/proposal digests and schema-validated immutable private JSON in application.db. It retains exact admission IDs, admitted executable physical identity/digest/version, native selected path/identity, observed phase/booleans/paths and physical common/admin/worktree identities for future confirmation. Path-free result fields are status=prepared, requestId, proposalId, inputFingerprint, proposalFingerprint, preparedAt and requiresFreshValidation=true. Reading revalidates the JSON shape, row bindings and both digests; corrupt records return REGISTRY_CORRUPT. This is historical preparation, not current-validity or registration authority. The factory is directly usable/tested at the approved owner seam; transport/UI and confirmation/Project bootstrap are not wired.
+
+Independent schema specifications retain the0002 predecessor while adding0003; older head validation precedes extension. Updated current table/head expectations and successor migration probe0004. The generated migration adds only the proposal table/index. Existing0000/0001/0002 artifacts are retained.
+
+### Prospective red-green evidence
+
+Test file: `apps/harness/tests/integration/registration-preparation.integration.test.ts`. Agreed public seam is the preparation owner with actual application.db restart and real installed Git child execution; the fixture's version inspection is explicitly controlled, while identity queries use the native child. No missing-import Red.
+
+All following captures use `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/`, the unchanged recorder, candidate cwd and310000ms outer limit. Inner integration prefix: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`.
+
+| Behavior / check | Capture / inputs.json SHA-256 | Observed result |
+| --- | --- | --- |
+| P1 persist/restart exact result; test `persists one prepared proposal and recovers its exact result after restart`; expected Red unavailable scaffold rather than prepared | vmGNhA / `1de9867ff3c3723c8534112a6237fd45392ca3834bb1231d0d7093de9be730e3` | exit1, exact behavioral assertion failure |
+| P1 first implementation | wYODwJ / `98e90ea9f4b54e941dbc49bfcf51f3d9d73593186b22371fdff7b3a443f369c4` | exit1; strict stored authority schema omitted physical-directory version; corrected to existing PhysicalDirectoryKeySchema |
+| P1 Green, whole then-one-test preparation file | 4XEPtc / `cd0222d1ef230858573462bcb87f722575b6443b70bada99c812390906d6a0be` | exit0,1/1; six actual queries, exact result after owner/registry restart, no extra Git or returned private path |
+| P2 conflicting admission IDs on same request; `-t rejects` | rYL378 / `7092a378bee47c395b5b08c29a10ed9467ea789f865cd1b6e442dfaf0c0408d2` | exit1; returned old prepared instead of exact conflict |
+| P2 Green, same filter | 9qLaN5 / `ee2e5431cfdfd8e3ea1d71c436ce1e87b55933fb369b29ac8c19a6f26c2aeb2e` | exit0,1 passed; conflict then exact original replay after restart and deleted target, still six queries |
+| P3 corrupt saved JSON/digest; `-t corrupt` | fyBHVT / `bda07f4b880c518d5a8db4eb4e63d35414c99e47014b0e07d7d0b68ce5be2c4b` | exit1,2 failures: INTERNAL_FAILURE instead of REGISTRY_CORRUPT; unchecked altered digest incorrectly returned prepared |
+| P3 Green, same filter | ohCfsU / `45bada2d8f77d7efcd8a7b1c86b7b81180809bba1d459ff70377f8f88ee7453f` | exit0,2 passed; no new observation or replacement proposal |
+| Expanded seven-test preparation file | BT9uKy / `d3f96be5133ebc7cedbf058c47db8143a98f0993c910c93175b99ad6360ade92` | exit1, Worker exited unexpectedly; zero test outcomes reported. Broken, not assertion Red or final Green. No blind retry |
+| Initial `pnpm --filter @slopstop/harness typecheck` | TOPJwv / `1afa8467c047400ef60ab88ce31774e2f73783fd9f1658253c8bc001ab32f9b7` | exit2; incorrect generic application to withWriteTransaction; fixed transaction callback type |
+| Final same typecheck | JEZEAQ / `e9dede089a6efcd4a861ceb916bdf973dd3b2dc4b6711f13b0d79dde562f79cd` | exit0 |
+| Migration-consumer filter with single-quoted alternation | 0ECJ3g / `c0a5d85f6d6e4a3eaa4e0473ee65ce698e876388fc2370c0cc10087449b55441` | exit255; recorder child command shell interpreted pipe; no test proof |
+| Corrected `project-registration.integration.test.ts -t migration` | HsQQwf / `fd2788cce175b4aefbfbfe3be70d9a4cdd158f70e3f74d32c4178587f8ee2e59` | exit0,3 passed/125 skipped |
+| `project-storage-open.integration.test.ts -t upgrades` | rddRGo / `dbcd0831cf23b3c90283968b79ae965cb3a334d2dadd75869edfd14aedfb03b7` | exit0,1 passed/43 skipped; successor probe0004 |
+| Changed nine-file `pnpm exec biome check` (exact list in capture inputs) | ef0rMb / `9a94561c82893003e4af5ef61fe058e75e549bf614476d0f35d755bfd2765614` | exit0,9 files, no fixes |
+
+Final31-file source/config map SHA-256: `f3c22dee1b960de6b8ed63cacae952f294603f720e369f1954c34135768dae6a`; complete retained files in `pc-s1-node2420-ef0rMb/source/`. Typecheck/migration/storage/Biome final captures bind that same final map. Earlier red-green source snapshots remain separate. Biome formatting/type-only correction occurred after the broken seven-test run; final behavior verification remains blocked.
+
+### Separate review checkpoint and remaining work
+
+CodeScene MCP tools are unavailable in this resumed session (no CodeScene tools exposed); no Code Health pass/score is claimed. Parent owns independent review. No nested agents, Sonar, mutation, broad gates, runtime/dependency changes, commits or integration occurred.
+
+Three added composed-behavior tests are still unverified because BT9uKy crashed: replay despite stale consent plus unrelated cleanup marker with unchanged journal rows; new request performs six fresh queries and later missing target creates no proposal/Storage; nonzero child result creates no proposal. No fabricated Red is claimed for these inherited observer paths. Concurrent exact-request settlement has a transactional repeat lookup but no concurrency proof yet. Final cancellation-at-publication/close behavior also needs dedicated proof: the new wrapper currently reports closed after awaiting work, and the insert-to-commit cancellation window is not yet exercised. Treat these as review/follow-up items, not satisfied lifecycle guarantees. Historical native crashes remain unexplained. The bounded checkpoint is functional source plus partial behavior evidence, **not ready/accepted**. Confirmation must freshly validate all saved dependencies before registration; that owner, bootstrap and UI remain next work.
+
+## 2026-10-01 — Preparation R2 lifecycle completion and final focused proof
+
+Continuation of the same approved preparation packet, not a new phase. R1 snapshot `7e5e4f2ea9d0e0a458f9f486a7ad2c6dd33cec79b5caeb2b0d4acb45be1fdf20` remains immutable. Its256736-byte evidence prefix / `bd3c50d4b58761e9452fa4680113bc88ee466c0ce98b0d01d8147b640be0924a` is preserved. All26 original contract references and approved replay addendum `a0c418fd8925ce436494f929b2765ee1b9e05bd0b8f5d2ee756b312aa8abf6e9` were reverified unchanged. Base/runtime/workspace authority remains unchanged.
+
+Only production change from R1: `project-registration-preparation.ts` now propagates observer-close refusal (including thrown cleanup failure), retains cleanup uncertainty after the attempt leaves the active set, bounds close by the existing5000ms REGISTRATION_CLEANUP_BUDGET_MS, shares one close promise without restarting its deadline, and fences prepared-result publication after the final await. Cancellation during an admitted settlement may leave an exactly committed proposal; no successful late response is returned and durable history is never erased. A fresh owner can recover that original proposal before any new observation. Deadline uncertainty stays pending on later close calls; late completion is not an absence proof or implicit recovery.
+
+New controlled public-owner integration file: `registration-preparation-lifecycle.integration.test.ts`. The physical observer port is controlled; the application registry, writes, commit, row persistence and replay are real. SQL-client wrappers only introduce deterministic insert/commit acknowledgement barriers. These tests do not claim native child execution or physical-adapter proof; the separate original preparation file uses actual native identity queries.
+
+All captures below use the unchanged recorder, Node24.20.0, candidate cwd and310000ms outer bound; directory prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`. Integration command prefix is `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| Cleanup-refusal Red: lifecycle file `-t preserves` | qPFLRp / `a4e7b12364bbffb99f5a2c6703e93b34d7bd2f25b41a0c03bbc414505c45ce7f` | exit1; prepared instead of OBSERVER_CLEANUP_UNCONFIRMED |
+| Cleanup-refusal Green | xenmp0 / `3d67ec538843f856991c815ecc84945a717d7b34383ebfc2cb1031a1b15e87b7` | exit0,1 passed; prepare and repeated close pending, no proposal |
+| Bounded-close Red: lifecycle file `-t bounds` | EKKBYS / `e3c338673be4d76865b0837c46b2d5934d48c8665d47c4539d5f247111eda081` | exit1; close still unsettled at5000ms |
+| Bounded-close Green | gk2Joc / `4a0b5c11ce6ac7fce791b7bc0431627818d962991f77722c037af1722895464a` | exit0,1 passed; unsettled at4999ms, pending at5000ms, repeated close stays pending, late work cancelled |
+| Publication test initial fixture | h9hmSe / `0e0149fa5e3a79ec71a60fc52755859195a654293b2c1edf3ebb8cf20cabbc09` | broken test timeout/EBUSY, not Red: object spread lost class client methods. Explicit method delegation fixed the fixture; capture and failed fixture retained |
+| Publication Red: lifecycle file `-t suppresses` | JiNudu / `e0de3f4e5581deb3b32399489549d32671fad9c1fd65eff32d2aa21aa9860a56` | exit1; prepared instead of cancelled after close during held commit acknowledgement |
+| Publication Green | B4Bubj / `0240856d1acf30add544db9caac29c7135a4569c88a198827fd5aeb6ea78b0c1` | exit0,1 passed; cancelled response, exact committed proposal recovered without another observer |
+| Original native file `-t historical`, one focused invocation | yWbUVl / `249f784570d40e256f8273b5baac7e0db19d25e54c96e7294397f98ae4038d97` | exit0,1 passed |
+| Original native file `-t freshly`, one focused invocation | ESKPN2 / `756fd2a7d3ae686ad468a4345c0dca420e267f607717690c27ae28ece0771292` | exit0,1 passed |
+| Original native file `-t nonzero`, one focused invocation | cXIK8W / `b93f7120ff7160ec1dfb3f07a36b4eb12726c13a0526ee4b2f231f9cc26dcd77` | exit0,1 passed |
+| Final lifecycle file, isolated from native file | EogUHW / `0cadcf085633bdd6850ff3c45a25f21f1961f40f2dba0c1638fc3e43401fe466` | exit0,5/5 passed |
+| One final original native preparation file on final formatted source | ZohbCW / `0a578ae823fe2b1987cd7045debad222af57ec0fe428431a3247ba264b745720` | exit0,7/7 passed |
+| `pnpm --filter @slopstop/harness typecheck` | xQPebu / `64ca54af8680de2ebe668b019bfb57937a6ce0d5f24720e1b82007b401799217` | exit0 |
+| `pnpm exec biome check apps/harness/src/registration/project-registration-preparation.ts apps/harness/tests/integration/registration-preparation-lifecycle.integration.test.ts` | jVzVzD / `51fd03373f29cda741b94ba74cadfe7da74d0426dfa9ac03c18c41cf97bde594` | exit0,2 files, no fixes |
+
+The final five controlled cases include both INSERT-completed/commit-not-yet-dispatched and durable-COMMIT/acknowledgement-held cancellation windows. They also hold the first observed request before persistence while a second identical request commits: the first then returns that exact original proposal and all stored rows remain unchanged. This proves the existing transactional repeat lookup for contenders that reach settlement, not that global observer admission must admit overlapping native phases. No fabricated new Red is assigned to this already-present R1 race check or to the added insert-window coverage.
+
+Final four checks bind the same32-file source/config map, SHA-256 `0c4a7ffeba5be0ac1d7dff446a2ea30adbf7ce12c821cf73d7b8bb74af7693c4`. Full retained bytes: `pc-s1-node2420-jVzVzD/source/`. Full snapshot includes33 paths with this evidence, complete tracked binary patch, modes/statuses and all original26 contract references plus approved decision. No R1 source besides the preparation owner changed. Original R1 migration/storage-consumer passes remain applicable to unchanged schema files.
+
+The three parent-identified lifecycle regressions and missing behavior proofs are closed by current evidence. Historical native worker crashes remain unexplained; these passes do not diagnose or fix them. CodeScene remains **UNAVAILABLE** in this session, without installation/auth fallback or invented score. Parent independent review and human acceptance remain pending; mandatory quality readiness is not self-approved. Confirmation must still freshly validate saved authority before registration; Project bootstrap/association/activation and UI remain outside this packet. No commits, merges, broad/full/deep/mutation/Sonar or nested agents. Freeze writes for handback.
+
+## 2026-10-01 — Preparation R3 focused review corrections F1/F2
+
+Same packet and exclusive candidate; no additional scope. R2 snapshot `9c9de5d0f5288abf3f3fb2645b45d376b04a52072d3885e64720891cf7d0a98f` remains unchanged. Evidence263314-byte prefix / `abb08b18e394228e471c3c98c954da9ff1600277d9aeab84c0348b93080d0c84` is preserved. All26 original bindings plus approved preparation-replay decision were reverified unchanged.
+
+F1: `observeProposal` returns the original OBSERVER_CLEANUP_UNCONFIRMED observation when it already carries that pending outcome, preserving its first trigger instead of replacing it with the less informative close result. For other observation outcomes, pending close remains primary without an invented trigger. The existing no-trigger test remains intact. Added three prospective public-owner cases for OBSERVATION_LIMIT_EXCEEDED, CANCELLED and INTERNAL_FAILURE; they also assert pending close and zero proposals.
+
+F2: changed only the expected current head in `extends the exact committed registration schema without replacing old rows` from0002 to0003. Its exact0001 fixture and old-row preservation assertions remain intact; no production schema/migration changes.
+
+Captures use unchanged Node24.20.0 recorder, candidate cwd and310000ms outer timeout. Directory prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; integration prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| F1 Red: lifecycle file `-t trigger` | KsPBv6 / `7a4e0ad5aa5929f292637ad2e0773f108bfa87d7ebcf3e432384fa9f22af1997` | exit1,3 assertion failures: each original trigger was lost |
+| F1 Green: same filter after minimal owner fix | 3CNy0E / `70481cc53b9e07a5f0934e6c5d26b9b1ddedb0c3b0e1e97897ff9854f52ea086` | exit0,3 passed/5 skipped |
+| F2 initial failure: identity-query file `-t extends` | B3Mr1W / `4358f1e0cef2c782a7abf900703ab4bdc96b28f179fad69e4df9fbf495dea2ca` | exit1, actual0003 versus stale expected0002 |
+| F2 corrected expectation, same filter | ySpMBP / `830d214ad9e91feeff24dcd43f49a9fcb2b3dc3c3b3f72c11843dd0034409b30` | exit0,1 passed/4 skipped; old rows preserved |
+| Final isolated lifecycle file, one run | apCRJ2 / `6ec462475944bea336eae391aa5aee8b44c49bbedf8030a1635750cac8da3040` | exit1, Worker exited unexpectedly after7 reported passes of8; broken verification, not clean suite or assertion failure |
+| Final isolated native preparation file, one run | 9gZ04H / `9ded28b0cad7180ce8f5465f6993180c985a7eb4f2cc54c150ab759ee460c2d7` | exit0,7/7 passed |
+| `pnpm --filter @slopstop/harness typecheck` | au29mD / `0fe1ab8f89711294fcc68de27bcbaca1102cd3a8c87868540b3d78c453ba488f` | exit0 |
+| `pnpm exec biome check` on owner, lifecycle test and identity-query test (full command in inputs) | lY3PGi / `0400f7192d354956a26e9c605ae3aaa82be7b45b2055262345e5e9f97c05d28d` | exit0,3 files, no fixes |
+
+F2 Green, both final suites, typecheck and Biome bind identical32-file source/config map `90219c52761e8ba28c7834c07a5576889f6796d8488b3cf0db2a96a08f2adf0a`; retained full source bytes in `pc-s1-node2420-lY3PGi/source/`. R3 complete33-path snapshot/patch retains the same original base, modes/statuses and27 contract references. Only the owner and two named tests changed since R2, plus this append. No crash retry or investigation loop. CodeScene **UNAVAILABLE**, no tools/auth fallback or Sonar attempted. Formal parent re-review and current full lifecycle proof remain pending; no readiness/acceptance claim. No commits, broad gates, nested agents or new phase. Historical failures remain unchanged and unexplained. Freeze writes.
+
+## 2026-10-01 — Preparation R4 missing-registry characterization and authorized final checks
+
+One approved coverage addition only; all production files and corruption tests are unchanged from R3. Added `refuses missing registry replay without observing or recreating installation storage` to the public preparation integration file. It successfully saves a proposal through native identity queries, restarts the owner, moves its disposable installation root, then retries the exact request. Oracle: pending-recovery / REGISTRY_MISSING_WITH_WITNESS; still exactly six Git queries; original root remains ENOENT; moved application.db bytes remain identical, including proposal and observation history. There is no replacement folder/database/proposal. The existing-only implementation already satisfies this contract, so this is characterization and no fabricated Red is claimed.
+
+R3 snapshot `26730922f3f5c09d39ae0a2b8c3eca6ecf90016e99067cf95a1c19b0ecb42489` and all historical captures remain immutable. Evidence266993-byte prefix / `d8cf9792b3f79c9ccf35949be8189481f9e5325c58af308db90648e1a135c4c5` is preserved. All26 original references plus the approved replay decision were reverified unchanged. Base c92171c, candidate ownership and Node24.20.0 remain unchanged.
+
+Each authorized test command ran once, using the existing recorder and310000ms outer bound. Capture prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; integration prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| Native preparation file `-t recreating` | LUyA1a / `98585fff37890b5199ffb676603f20cd17dc607ce5bd55745561764400b6dde0` | exit0,1 passed/7 skipped |
+| Final native preparation file | wAR5Cf / `a754b9b1f4efe28a4710c65e77693a4ff9d911d1af5c06154c848503eb4993b7` | exit0,8/8 passed |
+| Final lifecycle file `--reporter=verbose`, separately executed | wN1k8v / `2c83b4e365672b1e94c6375969867aab3a2507768f2fc0281684f92d9ad22554` | exit0,8/8 passed; all test names individually recorded |
+| `pnpm --filter @slopstop/harness typecheck` | sWLAXf / `6f2c60e4cc5766e5b9dc89b6fec626cf09b86016edf88ac031b2b224c9887510` | exit0 |
+| `pnpm exec biome check apps/harness/tests/integration/registration-preparation.integration.test.ts` | z2Fg1z / `d81c1b33d7ac04b88c7380333b58e85ac4a8c4d14fd26eb1a4f4d3e3236fd70e` | exit0,1 file, no fixes |
+
+All five captures bind the exact final32-file source/config map `664105ac1e67f34b62c3539a92459d62a43f0ed1e22aa4c9b7fba631d4bc2580`. Retained complete bytes: `pc-s1-node2420-z2Fg1z/source/`. The only changed source/test digest versus R3 is the preparation integration file: `3f88899055b0aeba75c4e649f3a9b8b68c3dac8c85f92801513294beaec35562`. R4 freezes all33 candidate paths, modes/statuses, complete binary patch, retained contents and27 contract references.
+
+These are current complete passing focused suites; apCRJ2 and all earlier worker failures remain historical broken executions with unknown cause. There was no diagnostic retry loop. CodeScene remains **UNAVAILABLE**, without tools/auth fallback. Parent independent review and human acceptance remain pending; confirmation/Project creation/UI are still outside this preparation packet. No production, runtime, dependency, commit, integration, full/deep/mutation/Sonar or nested-agent work. Freeze writes.
+
+## 2026-10-01 — Confirmation validation checkpoint (pre-reservation only)
+
+The user authorized the next confirmation/create increment, explicitly allowing a bounded internal confirmation-validation seam if actual creation is too large for this checkpoint. This checkpoint uses that fallback; it does **not** deliver confirmation settlement or Project registration. Reviewed preparation predecessor: snapshot `4193746581b29f4140c80917f626d5aaf2644ae36f29ff6981d3cb67d85f0058`; evidence270388-byte prefix / `3e651398a7289bc87bbeb3a0163a4b777256c5837d8c74cf421092f639833c10` is preserved. Parent review record was read at source-main `.rpiv/artifacts/evidence/2026-10-01_pc-s1-preparation-review.md`. All26 original references and the approved replay addendum remain unchanged.
+
+### Boundary inspection and retained next work
+
+Approved v1 lines52-70 require an atomic common-directory reservation with stable Project/binding/Workspace/Storage-create IDs, then canonical binding/Workspace initialization before generation sealing. v2 D5 governs incomplete creation, and v3 D7 puts completed durable registration replay ahead of current observation. ADR0005 forbids fresh initialization across unrelated witnesses. Existing `project-storage-store.ts:303-398` already allocates, stages, builds and seals both databases. `project-storage-node-adapters.ts:475-514` initializes project_state and storage identity, while its current bootstrap input lacks repository binding/Workspace data. Calling it now and publishing registered would violate the initial-binding requirement. No duplicate bootstrap, lateral post-seal canonical write or intentionally stranded reservation was introduced.
+
+Next real creation work must extend that existing pre-seal bootstrap with exact canonical initial binding/Workspace data, add durable registration request/common-directory reservation/publication authority, recognize only its exact owned creation predecessor without bypassing unrelated witnesses, and implement v2 D5 recovery plus v3 D7 completed replay. Existing-Project attachment still belongs to the active canonical writer. This checkpoint implements none of those durable outcomes and never returns registered.
+
+### Implemented application-owner API
+
+`createProjectRegistrationPreparation(...).validateConfirmation(input)` accepts strict version1 input with a distinct branded RegistrationRequestId, the original preparation request (opaque admission IDs), proposalId and proposalFingerprint. The supplied requestId is currently validation correlation only: no durable confirmation request row is written or consumed, and no completed-confirmation idempotency promise is made.
+
+The method uses existing-only registry access and the existing digest/row-integrity checked proposal reader before observation. Missing/mismatched proposal identity/digest is rejected with REGISTRATION_IDEMPOTENCY_CONFLICT, without starting a new observation. A matching historical proposal always triggers a fresh admitted six-query physical phase under existing executable/trust/cleanup policy. It compares fresh executable identity/digest and all three physical worktree/admin/common tuples against the saved proposal. A changed tuple yields REPOSITORY_IDENTITY_CHANGED; current admission failures retain existing codes. Successful output is the internal `confirmation-validated` plus requestId/proposalId/proposalFingerprint, with no paths. This is a transient pre-reservation check, **not** a reusable creation grant, registered result or transport protocol addition.
+
+Preparation and validation share the existing tracked owner lifecycle, pending-cleanup retention, bounded close and final publication cancellation fence. No new migration or schema change. Native selection and executable grants remain the persisted originals; validation does not mint replacement consent or overwrite preparation. No Project/Storage allocation occurs.
+
+### Prospective proof and final checks
+
+Native public-owner test `validates confirmation with six fresh queries against the saved proposal after restart`: unavailable scaffold Red, then Green proving six preparation queries plus six fresh confirmation queries, one unchanged proposal and zero storage_registrations. Test `refuses confirmation when fresh Git administration differs from the saved proposal`: replace disposable .git with a fresh valid repository after preparation; fresh observation initially incorrectly validated, then the tuple comparison produces the expected rejection after12 total queries and no Storage generation or proposal mutation.
+
+Additional current coverage checks proposal ID/digest mismatches before Git, missing target despite successful historical preparation replay, and cancellation while validation completion is held. These reinforce the newly implemented guards/shared lifecycle; no fabricated separate Red is claimed for already-present branches. Real Git identity queries and application.db underpin the native file; the lifecycle file uses its explicitly controlled physical observer with real registry persistence.
+
+Capture prefix: `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; unchanged recorder/Node24.20.0, candidate cwd,310000ms outer timeout. Integration prefix: `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| Native file `-t validates`, Red | IN04JS / `82b9440bec618acbb8baa1f02073aa8fe4558b79fd5547bffe07481e877478e1` | exit1, unavailable instead of confirmation-validated |
+| Same filter, Green | VYYKTH / `bbeae98acd17c26075c76f44fded827d0b352b420cfde2d9f5004c01ac0ae827` | exit0,1 passed |
+| Native file `-t differs`, Red | 1VDSy8 / `c270ce87bdd5f3e2c9cecfc7ec44bd092871cb6d75afd2fb46241397ee3afa6b` | exit1, validated changed Git administration instead of REPOSITORY_IDENTITY_CHANGED |
+| Same filter, Green | aDo63a / `1e2365a4568bb6d675be7c8f3792f70d67f50811fdd22b647fec8401421aa22d` | exit0,1 passed |
+| Final preparation/confirmation native file `--reporter=verbose` | q7nefG / `c9db96f282436270d7c4c5af0b559ffff4c69a37803224a0c448e31b23c14244` | exit0,13/13 passed |
+| Final lifecycle file `--reporter=verbose`, separate execution | R8Js1M / `60295a69512ad7ce9fcefc2da45a74f04a76e8b8d37230fc9e551b724306a198` | exit0,9/9 passed |
+| `pnpm --filter @slopstop/harness typecheck` | PQ7HqZ / `4e3b55b9b8a49ee1fb9b9440791f848413d2d02bb9ec4570224f718947526817` | exit0 |
+| Biome on owner and two affected integration files (full command in inputs) | 4CX1dT / `3ea7799aff5898137b235856d48b5220693c8a39936c1a9615990f0c9bc99d57` | exit0,3 files |
+
+Final checks bind identical32-file source/config map `6b08613d85a9a551dc98f9097e2dbf8c577322f7bf1871b8332088c16385d070`; retained full files in `pc-s1-node2420-4CX1dT/source/`. Three source/test paths changed versus preparation R4, plus this evidence append. Complete33-path freeze retains modes/statuses, full binary patch and27 original/addendum references. Separate parent review remains pending. CodeScene remains **UNAVAILABLE**; no auth/install fallback or Sonar. Historical worker failures remain unexplained; none was retried here. No dependencies/runtime/commits/merges/full/deep/mutation/nested agents. This is a bounded validation checkpoint, not completion of confirmation/create-new/whole PC-S1. Freeze writes.
+
+## 2026-10-01 — Durable confirmation request and atomic reservation checkpoint
+
+The user explicitly authorized atomic reservation plus an owned confirmation request as the bounded alternative to full canonical bootstrap integration. This delivers that persistent behavior. Actual Project creation still requires the existing bootstrap's initial binding/Workspace seed before sealing, canonical schema compatibility work, and registration publication/recovery. No duplicate bootstrap or post-seal insertion is introduced.
+
+Predecessor snapshot `ab2c185184ca9807518db02699c378c20361a151a28cda80cd85a7bbb68cb63b` remains unchanged. Its277739-byte evidence prefix / `8e8ef8da6ec6fae6cfdbe26690080be58f0c319ab21adfa267f4d1bd6256fb13` is preserved. Same exclusive candidate, c92171c base and Node24.20.0. All26 original references plus approved replay addendum remain unchanged.
+
+### Persistent behavior and limits
+
+The existing owner now exposes `confirm(input)` with the strict confirmation request. It checks registry authority and exact durable request before target/Git/consent work. Existing owned reservations return pending-recovery / REGISTRATION_INCOMPLETE with the original requestId, without implicitly resuming creation. Changed request fingerprint returns REGISTRATION_IDEMPOTENCY_CONFLICT. Malformed JSON/digests/row bindings or inconsistent saved proposal/common-directory linkage returns REGISTRY_CORRUPT.
+
+Unknown requests use the private fresh-inspection path, not the public validation result as a permit. After fresh executable/trust/six-query/physical comparison, one SQLite write transaction rechecks request identity, finds/inserts the common-directory reservation and records the immutable request link. No write transaction spans Git. A database unique index covers platform/volume/file/birth strings; it is not path/remote identity or an in-memory mutex. A request FK protects the reservation link. Same-common requests share one reservation and one set of future identities.
+
+Reservation JSON retains stable reservation/Project/Repository-binding/Workspace/original Storage-create request IDs, timestamp, exact saved proposal and fresh phase identity. ProjectId uses the existing exported protocol schema. These are installation-owned reserved identities, not created canonical rows. The store checks record schemas/digests, physical columns and saved proposal linkage on replay. No registered result exists: no generation is built, so the truthful result is REGISTRATION_INCOMPLETE. Completed registered replay under D7 and full creation-state reconciliation remain next work.
+
+Additive generated0004_registration_reservations adds registration_reservations and registration_requests;0000/0001/0002/0003 remain unchanged. Exact previous0003/current0004 specs, table/head oracles and successor probe0005 were updated. Compatibility proof covers exact0001 and0003 while preserving old Storage rows. No canonical schema or bootstrap code changed.
+
+### Tests and captures
+
+Native public-owner proof saves a real request/reservation after12 total Git calls, restarts/removes the repository, then returns the exact incomplete state with unchanged rows and zero Storage generations. A separate prospective test rejects changed request content before Git. Additional coverage checks corrupted reservation authority and stale administration with zero reservations. Controlled overlapping independent owners share one exact persistent reservation and two request records with four valid distinct reserved future UUIDs; this uses a controlled physical observer but real application.db/write transactions.
+
+Capture prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; unchanged recorder,310000ms outer bound. Integration prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| Reservation Red, native file `-t reserves` | MhNAVz / `66b04a3b8a1ea6621ad54d4fe023791da439f8e7745eae3029515bcfec21cf20` | exit1; unavailable rather than incomplete; substring also selected one passing old test |
+| First implementation attempt `-t incomplete` | MKJcbW / `b36e11449bad4cc0c29c8ccad086688711160e0d5d140783e9f45bf24c58500e` | exit1, worker exited unexpectedly before test completion; broken, not Green |
+| Intermediate typecheck | CzNAMa / `664c0bfe07a33d5a5edf005bebb43bb8a4a9e3c885ec5ad9118ec02c04d70d4b` | exit0 |
+| After migration-oracle updates/formatting, `-t incomplete --reporter=verbose` | YQoZYX / `132f135d6cf5919f65a7d70307794c5e9a1b929b3135ce2f701b396218034ff8` | exit0,1 passed; bounded follow-up, no crash-cause/fix claim |
+| Changed-request Red, `-t reuse` | vzXron / `727561dde45e564af87f1d12aa1f7629da4588f918baea6b372b6e828eeca787` | exit1, incomplete instead of idempotency conflict |
+| Same test Green | 2m3frV / `4185641f72e44391958ae0791b50be0afee898ec33ef918e469d48286065d9f8` | exit0,1 passed |
+| Final native file `--reporter=verbose` | t3kmkX / `35999a3bfcd8bea82759bb6410bfd8a9050194806316ddd519a530eee953e43a` | exit0,16/16 passed |
+| Final lifecycle file `--reporter=verbose` | MLBElc / `5f9ee8041d0b2d4867a0faf21a9d0028ff803a44ee8faebed036d89b9df024aa` | exit1, worker exit after3 reported passes/10; no whole-file retry |
+| New overlapping-owner case `-t overlapping --reporter=verbose` | cHT1Rn / `dac24257eed535fce91290c7e03e94fa913569fc52e468b9f001500ef57eab5a` | exit0,1 passed; remaining old cases not relabelled passed |
+| Identity-query file `-t extends` | QwomG2 / `6b40b16b8d1bc89283ddd7e863853b3bcc8d7f3b9f64114e12edd53959f13431` | exit0,2 passed/4 skipped |
+| Project-registration file `-t migration` | pzaElV / `53991ff7eba21872d94f7612919eddb4f34c7c2aba16fc4959f7537314866cd5` | exit0,3 passed/125 skipped |
+| Project-storage-open file `-t upgrades` | DJf8dJ / `2dd9543574a093c83baf848d0aafb1feab80a005450bb72f69e3fceb9708f631` | exit0,1 passed/43 skipped |
+| Final harness typecheck | uXk2WO / `0baefd8c755904598bb7f251a8013dab40b0b142245136ce1e48ed1f5f2d0b0c` | exit0 |
+| Final changed11-file Biome (exact command in inputs) | Xy3OKl / `032bc61564baa6e4e63eba17d299fac926d8f439a41732822beabb514b6109a3` | exit0,11 files, no fixes |
+
+The formatting invocation initially emitted useAwaitThenable at an async fixture close; no rule/assertion was disabled and final captured Biome passed. No diagnosis of the transient diagnostic is claimed. Separate review inspection added stored request/proposal/common-reservation linkage checks, covered by final replay/corruption tests. No fabricated separate Red for characterization of already implemented constraints.
+
+Final checks from uXk2WO/t3kmkX onward bind identical35-file source/config map `bcb0b109a6a0a607f52e9aa26cf52850bbc0dd43fc4c5e748d2dc5127bb77c91`. Full retained source: `pc-s1-node2420-Xy3OKl/source/`. Complete36-path freeze includes evidence, binary patch, modes/statuses and27 references. CodeScene remains UNAVAILABLE, without auth/install fallback or Sonar. Parent review and full current lifecycle proof remain pending; historical worker crashes remain unexplained.
+
+Actual Project creation, pre-seal canonical binding/Workspace seed, ready-location/registered publication, completed-confirmation replay and full creation recovery remain **not implemented**. Next work must consume the exact reservation, freshly revalidate at creation/publication, preserve unrelated witnesses and reuse the existing bootstrap. A pending receipt is not a creation permit. No UI, generic listing, activation, dependencies/runtime changes, commits/integration, broad/deep/mutation checks or nested agents. Freeze writes at this bounded persistent checkpoint.
+
+## 2026-10-01 — Reservation R2 coverage finding: persisted authority loss
+
+The parent reports no concrete production defects from focused code/slice review and one coverage gap: loss of applicable persisted authority between prepare and public confirm. Added exactly one characterization, `refuses confirmation after persisted executable consent loses its applicable selection`. No production/schema/migration changes and no fabricated Red.
+
+After successful native preparation, the disposable fixture inserts a second valid executable-selection row, then rebinds the exact stage-two consent to it. Foreign-key integrity remains valid. The original proposal/request inputs are unchanged. This is controlled fixture authority loss, not an official revocation API. Public confirm must return exactly unavailable / GIT_CONFIRMATION_REQUIRED, retain six total identity Git dispatches, leave all observation journal rows unchanged and create zero registration_reservations/registration_requests. The existing implementation satisfies this oracle.
+
+Predecessor snapshot `e770daddb4867e4abc52b9ded549f0e8cb5102895061fe528174854694b6724a` and its285410-byte evidence prefix / `106135d84c876860b57b27241b842ade423d8539997339de60499cd4dc98e534` are preserved. Same base/runtime/workspace and all27 contract references were reverified. The sole source/test change is registration-preparation.integration.test.ts, SHA-256 `2baff9a756d6723421ff93796b8d5185b6dcbf07fbe76dcea3ef30c367ac1015`.
+
+Each requested command ran once using the unchanged Node24.20.0 recorder and310000ms outer bound. Capture prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; integration prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| New native characterization `-t applicable` | eHM8ZV / `71a8a4243781f02effc358c308d772d8aeed3312e2886771355aab86b8e73083` | exit0,1 passed/16 skipped |
+| Final native file `--reporter=verbose` | ebnTKg / `b8379bf52c36f0642d2d37aaa3e2cdbbbb368727e7ebcc0e62dba1b81bdb3eaf` | exit0,17/17 passed |
+| Final lifecycle file `--reporter=verbose`, separate execution | uMLDe6 / `314190c5550102d6f86ed6c9952ea309595f91ba006a5cdb6bafc8ee68021c9a` | exit1, Worker exited unexpectedly after8 reported passes/10; broken, no retry |
+| Harness typecheck | t1arTD / `dbd79dd8f707c14a6a2ddfd706634a24697109a9ea445ae35e23f99f6342b098` | exit0 |
+| Biome changed integration file | t2z08A / `3287fb29122661636482c05c24963173e62c87e0981c2815e2b83922d80c9eed` | exit0,1 file, no fixes |
+
+All five captures bind identical35-file source/config map `17d40a2b35d5322ea274240a413dea0e4c909bd4b36fa9d3cc38bd500f8cfdbf`; full retained bytes in `pc-s1-node2420-t2z08A/source/`. New complete36-path freeze includes evidence, full binary patch, modes/statuses and27 references. Coverage finding is addressed, but full current lifecycle proof remains broken and parent final review/acceptance is pending. Prior worker failures remain historical/unexplained. CodeScene remains UNAVAILABLE; Sonar not assessed under the stop direction, no auth/tool fallback. Actual Project creation/publication remains outside this checkpoint. No nested agents, full/deep/mutation gates, commits, dependencies or runtime changes. Freeze writes.
+
+## 2026-10-01 — Actual Storage bootstrap and registered receipt checkpoint
+
+Predecessor reservation R2 snapshot `b11b1da4eb18b04769d55c08f575d92cbb1e7158a084759640b38ecbcb151c10` remains unchanged. Its288728-byte evidence prefix / `02ce28d841159af126f3b1c0000c485d7e0551b77d0c7d99c2b178f3b25c7406` is preserved. The parent reservation review was read. All26 original contract references plus preparation-replay decision remain unchanged. Same exclusive worktree/base c92171c and Node24.20.0; no dependency/runtime changes.
+
+### Actual composed owner and bootstrap
+
+`createProjectRegistrationOwner(registry, optionsWithApplicationVersion, controlDirectory, child?)` installs the real Storage bootstrap into the existing preparation/confirmation owner. The lower-level preparation factory remains usable without creation for the preceding reservation-only seam; this new composed owner is the functional creation entry point. No renderer/transport/UI route is added.
+
+Only the caller that receives a newly inserted reservation after acknowledged transaction commit can start initial creation. Other/previous requests remain incomplete or route to requires-project-selection for an already published Project. Reservation request identity/common-directory uniqueness remains SQLite-owned. Exact pre-existing incomplete requests never automatically restart creation; lost ownership is not inferred safe from time. The bootstrap uses the existing createNodeProjectStorageDependencies/createProjectStorageOwner, original reserved Project/create-request IDs, staged directories, both databases, manifests, checksums, verification and active-generation transaction. It does not duplicate that algorithm or mutate a sealed database.
+
+The Node adapter accepts a strict, path-free initial binding seed bound to Project/create-request/reservation IDs and reservation digest. It seeds repository_bindings and project_workspaces transactionally during canonical construction, before baseline hashing/manifest/sealing. Composite keys and Project/binding foreign keys protect ownership; initial binding revision is0. Protocol exports own the seed/registered-result schemas. Installation-private paths and physical common identity remain in the reservation/proposal, not in canonical binding/Workspace rows.
+
+The Storage witness scan now recognizes reservations as registration-record witnesses. Only the exact supplied Project/reservation/digest is exempted; existing unrelated witness kinds remain intact. The composed bootstrap rechecks repository consent and physical association before creation and before publication without extra Git identity queries. It verifies the created canonical binding again through a plain existing file before recording the registered result. No current executable consent or target access is required for replaying a completed durable receipt.
+
+Application migration0005_registration_publications adds the durable publication link/result/digest. Canonical migration0002_initial_repository_binding introduces the two domain tables; canonical schema version becomes3. Prior migrations are retained. The migration resource guard keeps both original rebuild pins and adds an exact version3/head/count/statement-digest allowance for the new additive migration (`332ea4d600ae9c32789d760f86b215ac9bbd578f12f17a27061c03696779d134`); no generic rebuild bypass. Exact schema/table/count/FK oracles and application successor probe0006 were updated, while the historical generation-two fixture stays available to its old guard tests.
+
+Registered output contains request/proposal/Project/binding/Workspace/Storage/generation IDs, no paths or activation/onboarding claim. Publication validates its digest, reservation binding and the matching activated Storage-generation row. Exact original request replay returns the stored receipt before Git/current target/current consent/unrelated observer checks. Other request IDs resolving a published common identity route to requires-project-selection; no second Project or direct later Workspace attachment is created. The canonical writer attachment flow remains later work.
+
+### Prospective proof and corrections
+
+The new public composed-owner integration initially returned pending-recovery instead of registered (observed Red). It uses installed native Git and the actual Storage databases/files, not a mocked creation result. Before first Green, its oracle was strengthened to read the bound canonical rows, verify manifest schema3 and compare the sealed canonical checksum. Exact replay after restart removes the Git repository, changes persisted consent to declined and adds an unrelated unsettled observer; the result stays identical, Git count stays12 and generation count stays1. Changed request fingerprint conflicts.
+
+The interruption variant uses the existing Storage failure port at after-generation-rename. It returns broken on the injected unexpected failure; restart returns REGISTRATION_INCOMPLETE with the original request, one staging generation, zero publications and no extra Git/creation. This is characterization of inherited conservative bootstrap recovery, not a fabricated new Red. Full interruption/publication-only reconciliation and creation-close/concurrency matrices are not claimed complete.
+
+Implementation corrections: unwrap the existing Storage owner's ready/result envelope; keep registry migration failure hooks separate from Storage failure hooks; extend the exact canonical resource guard for its new third migration; preserve the generation-two fixture export; give the asynchronous bootstrap result an explicit Promise type for Biome without removing its await/catch behavior. Temporary diagnostic output used only stable test error text and was removed. No rule was disabled or timeout increased.
+
+Capture prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; existing recorder/310000ms outer bound. Integration command prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| Bootstrap public-owner Red | 009h4t / `c24417799a6b017890be7a5e1a35ba602b65e2cfc78c90c38327abcd1ba51c35` | exit1; pending-recovery instead of registered |
+| First implementation | 6XwDg9 / `f4e960ad2250fec55d6c608a99ac1b9b825a84aa00adc4745a3df9b0e5df1574` | exit1; incorrect Storage outcome unwrap |
+| Intermediate types | XTeiQm / `798521fb2528a2e4d166747ee149f50bdcb26c044ae8455cffc745449209ba3b` | exit2; outcome envelope and incompatible hook options identified |
+| Corrected unwrap | IpwHws / `029dbc061bdcc1aeb6e88257f7cda7beca4d0e24053efdb52740226216c0c1aa` | exit1; resource guard refused the new canonical head |
+| Bounded diagnostic run | 5C1jx5 / `72dd5155c9359f99258b28191a59ffe72bd6ba757baabb37b416a593dd5390e3` | exit1; exact diagnostic: Generated canonical storage identity rebuild is invalid |
+| Actual registered/seed/checksum/replay Green | qtNjG3 / `d2571763abaf2155f0770da32918e11c3478971652edea75a95f1bcb76d0851d` | exit0,1 passed |
+| Complete plus interrupted real bootstrap | 4nt6JI / `39929e75818dee58bf9de92ef6071361e77c6f7e8848cb1d6dd656082de4353f` | exit0,2/2 passed |
+| Intermediate harness types | JeLVhZ / `a4dd127a9232c85f0543e76209c0ab280ebe2e146ab4618064c0f7bbb8dd13f2` | exit2; restored legacy fixture export afterwards |
+| Protocol types | zHQKnC / `1e7e94444f5a955d2ca594ec70ef4a6117679eef0bd287ce96a5d605244b20e6` | exit0; protocol files unchanged afterwards |
+| Storage-create file `-t generation-3 --reporter=verbose` | wCiUXM / `c371d24f71876ca4ea39334e618e286630a5ed61cbebbf500137ded8a53cf91f` | exit0,2 passed/59 skipped; exact schema and trust-spine constraints |
+| Harness types after fixture restoration | AOrmgm / `a756f4ad85b4067637eeb952a2acaa59df93e5a071205fdc41712631a9103156` | exit0 |
+| First final Biome | BQh8So / `8957e86d4ca49f0354b6d03b9b49109641aea5b11bb4402e6a3e60bef5c5c9df` | exit1; useAwaitThenable on typed async bootstrap call; explicit Promise intermediate retained await semantics |
+| Storage-open file `-t older` | jHiQRO / `e351c74000fa6a4272881caaf1f54886f42787b6a6e197c89655292cbadb5f18` | exit0,3 passed/41 skipped |
+| Last bootstrap file `--reporter=verbose` | mQYo4V / `697b699e16ad03586a8ee63cebfa40788edda234458a7326ef3d88cc75c61452` | exit1; both tests hit15000ms test timeout, EBUSY cleanup failures. Broken final verification; no retry/timeout increase |
+| Current20-file Biome (exact command in inputs) | 9kbfUH / `6ee5b1c80860b39613997d015b839b162a62352ec38c7f6122a3039f42d708e8` | exit0 |
+| Current harness types | igrpTh / `a822c61740d4d5e0fb34f2bb67079880de2b859e3fe45373c68235f8d0083092` | exit0 |
+
+The current51-file source/config map is `c409d5a608d1480419b33967059a751aa4459e329335f494d4537df53c7c1727`; full retained files in `pc-s1-node2420-igrpTh/source/`. jHiQRO/mQYo4V/9kbfUH/igrpTh bind that same map. Compared with the2/2 passing capture, only the legacy schema-fixture export restoration and explicit Promise intermediate in the preparation owner differ; they are non-behavior-intended changes, but the last full bootstrap verification is still recorded broken rather than relabelled passed. Initial formatter noImplicitAnyLet was corrected with an explicit outcome type.
+
+This checkpoint contains a real registered happy path and durable original-result replay, with one actual interrupted-creation proof. It is **not ready/accepted**: final bootstrap verification timed out, CodeScene remains UNAVAILABLE, parent independent review and broader lifecycle/witness/concurrency/creation-interruption coverage remain pending. The timeout/EBUSY cause is not diagnosed; earlier worker crashes remain unexplained. Incomplete creation/publication-only recovery stays explicit pending, not automatic reconstruction. No UI/list/activation/attachment completion, dependency/runtime changes, commits/integration, full/deep/mutation/Sonar or nested agents. Freeze complete52-path delta with modes/statuses, retained contents, full binary patch and27 bound references; preserve all prior failures and snapshots.
+
+## 2026-10-01 — Bootstrap R2 bounded diagnosis and publication-failure proof
+
+R1 snapshot `3a72abfb6208ab3403863382782bd78ed3a75b593272dead33b0046b9a95994f` is preserved. Its298807-byte evidence prefix / `b1fbd07a0dc813ef8ea5fb45873435497073cafeab9821cacf16d49887eafe86` remains exact. Production is unchanged from R1; only the bootstrap integration test changes. All27 contract references were reverified. Node24.20.0, original base and exclusive candidate remain unchanged.
+
+### Diagnosis: evidence, hypotheses and measured result
+
+Read diagnosing-bugs guidance. Compared exact retained4nt6JI passing source with mQYo4V failing source: only (1) direct return-await changed to an explicit Promise local plus the same await and (2) the legacy canonical-generation-two table export was restored, with a sorted current-table projection. No locking or resource-lifetime algorithm changed between those captures.
+
+Ranked hypotheses announced before the experiment: H1 CPU/I/O contention while Biome ran concurrently would produce slower but progressing stages and an isolated pass; H2 a blocked libSQL operation would remain visible as a pending execute/begin/commit/close at12s; H3 a lifetime deadlock would reach creation completion then stall in owner/observer/registry shutdown. A passing isolated run alone cannot establish H1 as the historical cause.
+
+Ran only the complete case once, with verbose output, tagged timing/pending-operation instrumentation and no parallel quality command. The real client methods were delegated with their correct receivers, and no paths, SQL contents, credentials or application data were logged. Diagnostic capture088DF7 passed in5521ms. Timeline from test start: consent817ms; selection955ms; prepare2609ms; before staging4481ms; canonical database4861ms; both databases closed4923ms; renamed5019ms; activation acknowledged5208ms; confirm returned5388ms. At confirm return, tracked clients=0 and pending operations=[]; owner.close/observer.close/registry.stop completed at5393–5394ms. Historical replay completed5466ms, final shutdown5515ms with clients=0/pending=[]. Cleanup succeeded. No await was blocked in this experiment. The12s probe did not fire because the test completed earlier.
+
+Therefore no product deadlock or leak was demonstrated and no speculative production fix was made. The old mQYo4V logs have no phase probes, so their exact blocked await cannot be recovered. H1 remains plausible, not proven; H2/H3 did not reproduce. Existing timeout and EBUSY results remain historical broken checks, not retroactively passed. No timeout increase, fixture-ID workaround, background killing, diagnostic repetition or unrelated cleanup occurred. All DEBUG-bootstrap-r2 instrumentation was removed from current source; its captured diagnostic source/logs remain preserved in Temp.
+
+### Additional real publication-failure case
+
+The requested bounded test injects one failure at the actual registration_publications INSERT through the database port, after real Storage creation/activation. Other SQL uses the actual database. The operation returns broken/INTERNAL_FAILURE, has one active generation and zero publications. After closing owners, removing the Git target and reopening, exact confirm returns REGISTRATION_INCOMPLETE, with identical generation rows, no extra Git dispatch and zero calls to repository-directory or executable observation. Creation is not repeated and no false registered receipt appears. The interrupted-after-rename variant additionally asserts identical generation rows and zero fresh observation on its replay. This is additional coverage of existing failure/replay behavior, not a fabricated Red or new production revocation/recovery API.
+
+### Captures and final state
+
+Capture prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; unchanged recorder and310000ms outer bound. Commands were run sequentially for final verification; test deadline remains15000ms per case.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| One instrumented complete case: bootstrap file `-t complete --reporter=verbose` | 088DF7 / `a82dbf7e424e0070bc7c66bcd4b66d9959cf48506c997fd4f8238297e19f9900` | exit0,1 passed/1 skipped;5521ms; no pending resource at shutdown |
+| Final bootstrap file `--reporter=verbose`, debug removed | LyvI1r / `de3527af05053a4de2f16b56d606b095a4197d610e594611a1a6a9be4ce4bb48` | exit0,3/3 passed; complete9830ms, interrupted7043ms, publication-failed7324ms |
+| Harness typecheck | Z0J3cy / `d4934a48709ce45802f049bb71dcb33b18e1db8bcb632095afc2322ed041a310` | exit0 |
+| Biome changed test file | pJZNvq / `7854221536cb5e67cbfd08af22ab1c423fa04e851f3cf33f0f971b3dd79d6f4a` | exit0,1 file, no fixes |
+
+Final three checks share51-file source/config map `58d751a7e1c3abd0bb53abd35a265f3986d5ed34bc0ac38d8902a30491026ed9`; retained full files in `pc-s1-node2420-pJZNvq/source/`. Changed test SHA-256 `4274be6449d1e6c6e9ea2025fdc201bfb29ec6572c97e784413af35b9dbd82a6`; every production file matches frozen R1. Complete52-path R2 retains full binary patch, bytes, modes/statuses and27 references.
+
+Current focused bootstrap verification is passing. Historical timeout cause remains unproven; this is not a claim that contention or prior native-worker crashes were fixed. CodeScene remains UNAVAILABLE and parent review/acceptance remains pending. Full creation-close/concurrency/witness matrices and explicit publication-only recovery remain pending, without broadening this diagnosis. No commits, integration, full/deep/mutation/Sonar, runtime/dependency changes or nested agents. Freeze writes.
+
+## 2026-10-01 — Bootstrap R3 review defects and essential guards
+
+The parent found concrete cancellation and post-activation classification defects plus missing composed-owner/witness coverage. R2 snapshot `907fcff289370fec0de90e7be03dfe428cfdaa8194b801f6d11c146c88c49890` remains immutable;304419-byte evidence prefix / `d1eff8fae6a337f1cc3b2f566f65df14d7c5ca9ebd871bb1a8f52f68fca89945` is preserved. Same candidate/base/runtime and27 contract references, no new UI/scope.
+
+### Corrections
+
+The owner AbortSignal now reaches bootstrap and physical revalidation. Cancellation is checked before/after admission, in physical control, before entering Storage creation and before publication. Creation already admitted is drained through the existing Storage owner/stop path; committed generations are not erased. Once creation is active, cancellation or a post-create revalidation refusal returns REGISTRATION_INCOMPLETE with original requestId, not a normal repository refusal or late registered success. No new public diagnostic field was invented: the incomplete envelope remains the existing contract shape.
+
+Publication also checks cancellation inside the write transaction before INSERT and after readback. A private typed cancellation exception rolls back only uncommitted publication and is mapped to incomplete. Already committed receipts are never erased. Owner close tracks outstanding bootstrap work, retains the existing5000ms bound, and returns REGISTRATION_INCOMPLETE at that deadline while creation is unresolved rather than misreporting observer cleanup or closed. The first unresolved close result remains retained. Unexpected broken bootstrap cleanup conservatively keeps close incomplete.
+
+### New public-seam proofs
+
+`registration-bootstrap-guards.integration.test.ts` uses actual composed registration/Storage owners, disposable Git and real SQLite. Barriers delegate the actual registry admission or existing Storage checkpoint port; they do not fake validation or creation.
+
+- Close during initial bootstrap revalidation: expected cancelled, zero generations/publications. Red actually created and activated a generation after close; Green creates none.
+- Close after activation, before publication: close is unsettled at4999ms and pending/incomplete at5000ms; after release, confirm remains incomplete with one active generation, canonical binding/Workspace intact and no publication. Replay preserves exact generation rows and performs no new Git.
+- Remove the disposable repository at before-created-result: Red returned REPOSITORY_NOT_FOUND despite an active generation; Green returns REGISTRATION_INCOMPLETE and preserves generation/binding/Workspace. No secondary public field added.
+- Two composed owners overlap while winner creation is held: loser is pending, winner alone publishes registered, one generation/seed/publication exists and winning rows are unchanged.
+- Public Storage creation accepts the exact reservation, rejects a mismatched digest and refuses an additional recognized foreign repository marker. Negative cases create no generation and preserve application.db bytes; the marker bytes remain intact. The initial arbitrary-file fixture was correctly treated as invalid layout/broken, so it was corrected to the recognized `.slopstop-repository` witness; production witness handling was not changed or weakened. The exact-authority positive control still creates real Storage.
+
+### Source-bound captures
+
+Prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; existing Node24.20.0 recorder/310000ms outer bound. Integration prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`; final native files were run sequentially, deadlines unchanged.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| New guards file `-t initial`, Red | iwvkFF / `8e6bf0c6d5990c87bcac8b45956996c6e8579038afae36ac13518296f5a2e999` | exit1; active generation existed after pre-create close |
+| Same test Green | xeDX0C / `21ae004a8ba2ee5c692cde199689d6ffcd2accebe4706805bd846977bea4ab73` | exit0,1 passed |
+| Guards `-t retains`, Red | rVv88C / `975c5d4a0aa8876a8fa7a8529ff9015d11fadb48fbd69f6c9b79b945687131bd` | exit1,2 failed: wrong close code and REPOSITORY_NOT_FOUND after activation |
+| Same two cases Green | hvzKRA / `7315c4d2d1c25e62c38de5963d454e306016e4a5854f14080ecce871ba05694d` | exit0,2 passed |
+| Expanded guards first run | RsM8V4 / `e75983e2065a482a2bebd18107605c261d189e364bebf2e68a754c4e2f1c25bf` | exit1,6 passed/1 failed; arbitrary unknown file was not the intended recognized witness |
+| Corrected witness only | mhi3UC / `911ba22fbd4653262991fedfb5f4582fc2bf6600e938326d7b68041a95a31e99` | exit0,1 passed |
+| Existing bootstrap suite before final type fixes | mL9HLe / `7ee9c41180b42868927459c14462d66913ab952b0256ab3afddfb5d557c7b764` | exit0,3/3 passed |
+| Initial typecheck | sqtpIG / `738ee3325708e36e5534d1ff316ae4b779581768c894b98c16d661ba7d621b79` | exit2; write callback union-Promise inference; async callback fixed inference without changing branch outcomes |
+| Corrected typecheck | A76EdS / `178ed5eaaf25963472925abd636bb3119164f2389edccc994ca437f5fa5d434d` | exit0 |
+| Initial final Biome | hu4aZX / `9fc25c7edb192bcaab81128f8a2834ad77f35c34402a7dc2a474bd9f4ebfdea0` | exit1; explicit Promise local needed for async bootstrap port plus fixture indentation |
+| Current typecheck | hkZhnp / `0a4ec90d82618e90d65433dbc467e498dae35695f47ebabc6ef1a3c7e2805a85` | exit0 |
+| Current four-file Biome | greHWB / `24232001bfd4547c13f2558a4f4556925ce1c73c58fa27af352fc85daca11a17` | exit0,4 files, no fixes |
+| Current guards file `--reporter=verbose` | jlmUOM / `92e96ed0ab8c1c9549c2c818a8ca9e10090b4612f25cca9c0d4955c4100eb7a8` | exit0,7/7 passed |
+| Current existing bootstrap file `--reporter=verbose` | rUKp3M / `dd8887050d0bfeef3ebb43e25c02710d6a6787ff885a4136f392baeaa62af03b` | exit0,3/3 passed |
+
+Final four checks bind identical52-file source/config map `aff7224a4a44a53f908f1b1e4b0ae87743770a73451bfb6843335db63927c448`; retained full source under `pc-s1-node2420-rUKp3M/source/`. Changes versus R2 are three registration implementation files and the new guard test, plus this append. Competition/witness tests characterize existing intended behavior; no fake Red assigned. No migrations/protocol/dependencies/runtime changes.
+
+Freeze complete53-path R3, preserving full binary patch, retained bytes, modes/statuses and27 references. Parent re-review and human acceptance remain pending; CodeScene UNAVAILABLE, no auth/Sonar fallback. Historical timeouts/crashes retain their prior outcomes, with no cause-fix claim. Explicit publication-only recovery and remaining full-PC-S1/UI/attachment work remain outside this packet. No full/deep/mutation gates, commits/merge or nested agents.
+
+## 2026-10-01 — Bootstrap R4 review corrections F1/F2
+
+Preserved R3 snapshot `31a1cc63fb83719edf802f88de1c77a400bd13d6355352a58cde3cf9ef8fea24` and its311227-byte evidence prefix / `7048352e935ebc6975935d9f0ca8c549031684ea37fdfe37a7ec92b91dc3a08a`. Same candidate/base/Node24.20.0 and all27 contract references unchanged.
+
+F1: post-activation revalidation previously converted every non-matched result into incomplete, including broken registry authority. A new public composed-owner test changes the real registry migration head at before-created-result, after activation. Red returned REGISTRATION_INCOMPLETE instead of exact broken / REGISTRY_SCHEMA_UNKNOWN. The minimal production correction returns an observed broken result before mapping expected refusal/cancellation to incomplete. The test proves one preserved active generation, zero publication, exact broken replay and no new Git/recreation. Existing repository-loss/incomplete cases remain passing. Only this one production conditional was added.
+
+F2: added a real transaction barrier after registration_publications INSERT has executed, before the execute call returns and before readback/commit. The fixture delegates actual database-client/transaction operations; no private publication helper or validation wrapper is mocked. Inside the writer transaction, publication count is1 and the active-generation snapshot is captured. The test calls close without awaiting it while the barrier is held, releases the barrier, then proves acknowledged rollback, no commit attempt, zero durable publication, unchanged active generation and intact binding/Workspace. Exact replay remains REGISTRATION_INCOMPLETE with no extra Git/creation and no second publication INSERT. The existing cancellation/readback guard already satisfies this case, so it is characterization with no fake Red or production change.
+
+An explicit Promise annotation was added to an existing test close promise after Biome reported useAwaitThenable during formatting. Its await and behavior remain unchanged; no rule was disabled.
+
+Captures use the unchanged recorder, candidate cwd and310000ms outer limit. Prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; integration prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`. Native files ran sequentially, per-test timeout unchanged.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| F1 guards file `-t broken`, Red | 5ohfo7 / `f096a10271f85a7fb131f3ae3843888d23d3e81c31fca8ec865ddc8a2d1bc8f6` | exit1; broken schema authority swallowed as incomplete |
+| F1 same filter, Green | M1FIAg / `227e08d65f6cf20faf3dc23c6cff48b5a9dc6809443c3b3432da4176c7fbf33c` | exit0,1 passed/7 skipped |
+| F2 guards file `-t INSERT --reporter=verbose` | zHH36W / `92abaaba5a6eae906eb31421588257cba6aeeb4d753f23b874dca5f9f0cc92f6` | exit0,1 passed/8 skipped |
+| Final guards file `--reporter=verbose` | LPx32b / `216380158f2538365c2fc33ebd58d3727b5d3638f07bfec765892fcb12bc069a` | exit0,9/9 passed |
+| Final existing bootstrap file `--reporter=verbose` | 9RkYBs / `754cf4d88547dac1dc913e922b98e5ce52081fe6fb99c14c5dd7bf698e2c4ce4` | exit0,3/3 passed |
+| Harness typecheck | 5u86er / `75121d8afac9f19a0df95686289ca45efd9465ce9714acd577f0a6d77565ec16` | exit0 |
+| Biome bootstrap implementation and guard test | ebGfOM / `35b90660df431d604d332e73ccd539d0488e0e08a4bb0ee286663461d439873e` | exit0,2 files, no fixes |
+
+F2 and final checks bind the same52-file source/config map `638eefc548ce31319b82f80409371852997a27ff1162b35bb539508eef71796e`; full retained files under `pc-s1-node2420-ebGfOM/source/`. Current production delta versus R3 is only registration-storage-bootstrap.ts (`b401599ed9509f7353ea22f2e47c917648a943f41e36718732aa865b0a41db1b`); the guard test is `a46ad6b5ade987b3581c13c44e558baea87bc514f9c425b90e38670dbc1113c2`. Complete53-path R4 freezes full binary patch, modes/statuses, retained bytes and27 references.
+
+Parent re-review and human acceptance remain pending; CodeScene UNAVAILABLE, no auth/Sonar fallback. Historical failures remain intact without a cause-fix claim. No new feature/UI, migrations, dependencies/runtime, commits/merge, broad/full/mutation gates or nested agents. Freeze writes.

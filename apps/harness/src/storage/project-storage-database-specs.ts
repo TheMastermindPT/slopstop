@@ -1136,7 +1136,7 @@ const registrationApplicationChecks: readonly NamedCheckSpec[] = [
   ),
 ];
 
-export const databaseSpecs = {
+const registrationSpecs = {
   application: {
     ...previousApplicationDatabaseSpec,
     tables: [
@@ -1249,19 +1249,288 @@ export const databaseSpecs = {
       },
     ],
   },
+} as const satisfies Record<"application", DatabaseSpec>;
+
+export const previousRegistrationDatabaseSpec = registrationSpecs.application;
+
+const identityQueryColumnNames = [
+  "observation_id",
+  "repository_selection_id",
+  "consent_id",
+  "query_kind",
+  "scope_json",
+  "child_json",
+  "terminal_json",
+  "result_json",
+  "created_at",
+  "settled_at",
+];
+
+function withIdentityQuerySpec(previous: DatabaseSpec): DatabaseSpec {
+  const table = "registration_identity_query_attempts";
+  return {
+    ...previous,
+    tables: [...previous.tables, table],
+    columns: [
+      ...previous.columns,
+      ...identityQueryColumnNames.map(
+        (name, cid): ColumnSpec => ({
+          table,
+          cid,
+          name,
+          type: "TEXT",
+          notNull: [5, 6, 7, 9].includes(cid) ? 0 : 1,
+          defaultValue: null,
+          primaryKey: cid === 0 ? 1 : 0,
+          hidden: 0,
+        }),
+      ),
+    ],
+    checks: [
+      ...previous.checks,
+      {
+        table,
+        name: "identity_query_kind",
+        expression: `"${table}"."query_kind" in ('inside-work-tree', 'bare-repository', 'inside-git-dir', 'show-toplevel', 'absolute-git-dir', 'git-common-dir')`,
+      },
+      {
+        table,
+        name: "identity_query_scope_json",
+        expression: `json_valid("${table}"."scope_json")`,
+      },
+      ...["child", "terminal", "result"].map((kind) => ({
+        table,
+        name: `identity_query_${kind}_json`,
+        expression: `"${table}"."${kind}_json" is null or json_valid("${table}"."${kind}_json")`,
+      })),
+    ],
+    foreignKeys: [
+      ...previous.foreignKeys,
+      {
+        table,
+        columns: ["repository_selection_id"],
+        referencedTable: "registration_repository_selections",
+        referencedColumns: ["selection_id"],
+        onUpdate: "NO ACTION",
+        onDelete: "RESTRICT",
+        match: "NONE",
+      },
+      {
+        table,
+        columns: ["consent_id"],
+        referencedTable: "registration_identity_consents",
+        referencedColumns: ["consent_id"],
+        onUpdate: "NO ACTION",
+        onDelete: "RESTRICT",
+        match: "NONE",
+      },
+    ],
+  };
+}
+
+export const previousIdentityQueryDatabaseSpec = withIdentityQuerySpec(
+  previousRegistrationDatabaseSpec,
+);
+
+function withProposalSpec(previous: DatabaseSpec): DatabaseSpec {
+  const table = "registration_proposals";
+  return {
+    ...previous,
+    tables: [...previous.tables, table],
+    columns: [
+      ...previous.columns,
+      ...[
+        "request_id",
+        "proposal_id",
+        "input_fingerprint",
+        "proposal_fingerprint",
+        "record_json",
+      ].map(
+        (name, cid): ColumnSpec => ({
+          table,
+          cid,
+          name,
+          type: "TEXT",
+          notNull: 1,
+          defaultValue: null,
+          primaryKey: cid === 0 ? 1 : 0,
+          hidden: 0,
+        }),
+      ),
+    ],
+    checks: [
+      ...previous.checks,
+      {
+        table,
+        name: "registration_proposal_json",
+        expression: `json_valid("${table}"."record_json")`,
+      },
+    ],
+    indexes: [
+      ...previous.indexes,
+      {
+        table,
+        name: "registration_proposal_id_uq",
+        unique: true,
+        partial: false,
+        columns: ["proposal_id"],
+        predicate: null,
+      },
+    ],
+  };
+}
+
+export const previousProposalDatabaseSpec = withProposalSpec(previousIdentityQueryDatabaseSpec);
+
+function withReservationSpec(previous: DatabaseSpec): DatabaseSpec {
+  const reservation = "registration_reservations";
+  const request = "registration_requests";
+  const columns = [
+    {
+      table: reservation,
+      names: [
+        "reservation_id",
+        "common_platform",
+        "common_volume_identity",
+        "common_file_identity",
+        "common_birth_identity",
+        "record_json",
+        "record_fingerprint",
+      ],
+    },
+    {
+      table: request,
+      names: ["request_id", "input_fingerprint", "request_json", "reservation_id"],
+    },
+  ].flatMap(({ table, names }) =>
+    names.map(
+      (name, cid): ColumnSpec => ({
+        table,
+        cid,
+        name,
+        type: "TEXT",
+        notNull: 1,
+        defaultValue: null,
+        primaryKey: cid === 0 ? 1 : 0,
+        hidden: 0,
+      }),
+    ),
+  );
+  return {
+    ...previous,
+    tables: [...previous.tables, reservation, request],
+    columns: [...previous.columns, ...columns],
+    checks: [
+      ...previous.checks,
+      {
+        table: reservation,
+        name: "registration_reservation_json",
+        expression: `json_valid("${reservation}"."record_json")`,
+      },
+      {
+        table: request,
+        name: "registration_request_json",
+        expression: `json_valid("${request}"."request_json")`,
+      },
+    ],
+    indexes: [
+      ...previous.indexes,
+      {
+        table: reservation,
+        name: "registration_common_identity_uq",
+        unique: true,
+        partial: false,
+        columns: [
+          "common_platform",
+          "common_volume_identity",
+          "common_file_identity",
+          "common_birth_identity",
+        ],
+        predicate: null,
+      },
+    ],
+    foreignKeys: [
+      ...previous.foreignKeys,
+      {
+        table: request,
+        columns: ["reservation_id"],
+        referencedTable: reservation,
+        referencedColumns: ["reservation_id"],
+        onUpdate: "NO ACTION",
+        onDelete: "RESTRICT",
+        match: "NONE",
+      },
+    ],
+  };
+}
+
+export const previousReservationDatabaseSpec = withReservationSpec(previousProposalDatabaseSpec);
+
+function withPublicationSpec(previous: DatabaseSpec): DatabaseSpec {
+  const table = "registration_publications";
+  return {
+    ...previous,
+    tables: [...previous.tables, table],
+    columns: [
+      ...previous.columns,
+      ...["reservation_id", "request_id", "result_json", "result_fingerprint"].map(
+        (name, cid): ColumnSpec => ({
+          table,
+          cid,
+          name,
+          type: "TEXT",
+          notNull: 1,
+          defaultValue: null,
+          primaryKey: cid === 0 ? 1 : 0,
+          hidden: 0,
+        }),
+      ),
+    ],
+    checks: [
+      ...previous.checks,
+      {
+        table,
+        name: "registration_publication_json",
+        expression: `json_valid("${table}"."result_json")`,
+      },
+    ],
+    foreignKeys: [
+      ...previous.foreignKeys,
+      ...[
+        { column: "reservation_id", parent: "registration_reservations" },
+        { column: "request_id", parent: "registration_requests" },
+      ].map(
+        ({ column, parent }): ForeignKeySpec => ({
+          table,
+          columns: [column],
+          referencedTable: parent,
+          referencedColumns: [column],
+          onUpdate: "NO ACTION",
+          onDelete: "RESTRICT",
+          match: "NONE",
+        }),
+      ),
+    ],
+  };
+}
+
+export const databaseSpecs = {
+  application: withPublicationSpec(previousReservationDatabaseSpec),
   canonical: {
     resourceKind: "canonical",
     databaseKind: "canonical",
     metadataTable: "schema_metadata",
     metadataKey: "canonical",
     formatVersion: 1,
-    schemaVersion: 2,
+    schemaVersion: 3,
     tables: [
       "canonical_events",
       "command_idempotency",
       "command_receipts",
       "command_rejections",
       "project_state",
+      "repository_bindings",
+      "project_workspaces",
       "schema_metadata",
       "storage_identity",
       "writer_fence",
@@ -1269,8 +1538,43 @@ export const databaseSpecs = {
       "writer_handoffs",
       "writer_recovery_records",
     ],
-    columns: canonicalColumns,
-    checks: canonicalChecks,
+    columns: [
+      ...canonicalColumns,
+      ...[
+        {
+          table: "repository_bindings",
+          names: ["project_id", "binding_id", "revision", "registration_request_id", "created_at"],
+        },
+        {
+          table: "project_workspaces",
+          names: ["project_id", "workspace_id", "binding_id", "created_at"],
+        },
+      ].flatMap(({ table, names }) =>
+        names.map(
+          (name, cid): ColumnSpec => ({
+            table,
+            cid,
+            name,
+            type: name === "revision" ? "INTEGER" : "TEXT",
+            notNull: 1,
+            defaultValue: null,
+            primaryKey: cid < 2 ? cid + 1 : 0,
+            hidden: 0,
+          }),
+        ),
+      ),
+    ],
+    checks: [
+      ...canonicalChecks,
+      {
+        table: "repository_bindings",
+        name: "repository_binding_revision",
+        expression: nonnegativeSafeIntegerExpression({
+          table: "repository_bindings",
+          name: "revision",
+        }),
+      },
+    ],
     indexes: [
       {
         table: "canonical_events",
@@ -1399,6 +1703,24 @@ export const databaseSpecs = {
         columns: ["project_id", "receipt_id", "receipt_outcome", "project_sequence"],
         referencedTable: "command_receipts",
         referencedColumns: ["project_id", "receipt_id", "outcome", "project_sequence"],
+        onUpdate: "NO ACTION",
+        onDelete: "RESTRICT",
+        match: "NONE",
+      },
+      {
+        table: "repository_bindings",
+        columns: ["project_id"],
+        referencedTable: "project_state",
+        referencedColumns: ["project_id"],
+        onUpdate: "NO ACTION",
+        onDelete: "RESTRICT",
+        match: "NONE",
+      },
+      {
+        table: "project_workspaces",
+        columns: ["project_id", "binding_id"],
+        referencedTable: "repository_bindings",
+        referencedColumns: ["project_id", "binding_id"],
         onUpdate: "NO ACTION",
         onDelete: "RESTRICT",
         match: "NONE",

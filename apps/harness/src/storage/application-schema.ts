@@ -343,3 +343,121 @@ export const registrationRepositoryTrust = sqliteTable(
     ),
   ],
 );
+
+export const registrationReservations = sqliteTable(
+  "registration_reservations",
+  {
+    reservationId: text("reservation_id").primaryKey().notNull(),
+    commonPlatform: text("common_platform").notNull(),
+    commonVolumeIdentity: text("common_volume_identity").notNull(),
+    commonFileIdentity: text("common_file_identity").notNull(),
+    commonBirthIdentity: text("common_birth_identity").notNull(),
+    recordJson: text("record_json").notNull(),
+    recordFingerprint: text("record_fingerprint").notNull(),
+  },
+  (table) => [
+    uniqueIndex("registration_common_identity_uq").on(
+      table.commonPlatform,
+      table.commonVolumeIdentity,
+      table.commonFileIdentity,
+      table.commonBirthIdentity,
+    ),
+    check("registration_reservation_json", sql`json_valid(${table.recordJson})`),
+  ],
+);
+
+export const registrationRequests = sqliteTable(
+  "registration_requests",
+  {
+    requestId: text("request_id").primaryKey().notNull(),
+    inputFingerprint: text("input_fingerprint").notNull(),
+    requestJson: text("request_json").notNull(),
+    reservationId: text("reservation_id").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.reservationId],
+      foreignColumns: [registrationReservations.reservationId],
+    }).onDelete("restrict"),
+    check("registration_request_json", sql`json_valid(${table.requestJson})`),
+  ],
+);
+
+export const registrationPublications = sqliteTable(
+  "registration_publications",
+  {
+    reservationId: text("reservation_id").primaryKey().notNull(),
+    requestId: text("request_id").notNull(),
+    resultJson: text("result_json").notNull(),
+    resultFingerprint: text("result_fingerprint").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.reservationId],
+      foreignColumns: [registrationReservations.reservationId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.requestId],
+      foreignColumns: [registrationRequests.requestId],
+    }).onDelete("restrict"),
+    check("registration_publication_json", sql`json_valid(${table.resultJson})`),
+  ],
+);
+
+export const registrationProposals = sqliteTable(
+  "registration_proposals",
+  {
+    requestId: text("request_id").primaryKey().notNull(),
+    proposalId: text("proposal_id").notNull(),
+    inputFingerprint: text("input_fingerprint").notNull(),
+    proposalFingerprint: text("proposal_fingerprint").notNull(),
+    recordJson: text("record_json").notNull(),
+  },
+  (table) => [
+    uniqueIndex("registration_proposal_id_uq").on(table.proposalId),
+    check("registration_proposal_json", sql`json_valid(${table.recordJson})`),
+  ],
+);
+
+export const registrationIdentityQueryAttempts = sqliteTable(
+  "registration_identity_query_attempts",
+  {
+    observationId: text("observation_id").primaryKey().notNull(),
+    repositorySelectionId: text("repository_selection_id").notNull(),
+    consentId: text("consent_id").notNull(),
+    queryKind: text("query_kind").notNull(),
+    scopeJson: text("scope_json").notNull(),
+    childJson: text("child_json"),
+    terminalJson: text("terminal_json"),
+    resultJson: text("result_json"),
+    createdAt: text("created_at").notNull(),
+    settledAt: text("settled_at"),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.repositorySelectionId],
+      foreignColumns: [registrationRepositorySelections.selectionId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.consentId],
+      foreignColumns: [registrationIdentityConsents.consentId],
+    }).onDelete("restrict"),
+    check(
+      "identity_query_kind",
+      sql`${table.queryKind} in ('inside-work-tree', 'bare-repository', 'inside-git-dir', 'show-toplevel', 'absolute-git-dir', 'git-common-dir')`,
+    ),
+    check("identity_query_scope_json", sql`json_valid(${table.scopeJson})`),
+    check(
+      "identity_query_child_json",
+      sql`${table.childJson} is null or json_valid(${table.childJson})`,
+    ),
+    check(
+      "identity_query_terminal_json",
+      sql`${table.terminalJson} is null or json_valid(${table.terminalJson})`,
+    ),
+    check(
+      "identity_query_result_json",
+      sql`${table.resultJson} is null or json_valid(${table.resultJson})`,
+    ),
+  ],
+);

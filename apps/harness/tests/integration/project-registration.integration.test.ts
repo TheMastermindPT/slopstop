@@ -672,7 +672,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         try {
           expect(
             (await check.execute("SELECT last_migration_id FROM schema_metadata")).rows,
-          ).toEqual([["0001_project_registration"]]);
+          ).toEqual([["0005_registration_publications"]]);
         } finally {
           await check.close();
         }

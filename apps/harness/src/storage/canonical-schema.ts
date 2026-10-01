@@ -75,6 +75,42 @@ export const canonicalProjectState = sqliteTable(
   ],
 );
 
+export const repositoryBindings = sqliteTable(
+  "repository_bindings",
+  {
+    projectId: text("project_id").notNull(),
+    bindingId: text("binding_id").notNull(),
+    revision: integer("revision").notNull(),
+    registrationRequestId: text("registration_request_id").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.projectId, table.bindingId] }),
+    foreignKey({
+      columns: [table.projectId],
+      foreignColumns: [canonicalProjectState.projectId],
+    }).onDelete("restrict"),
+    check("repository_binding_revision", nonnegativeSafeIntegerCheck(table.revision)),
+  ],
+);
+
+export const projectWorkspaces = sqliteTable(
+  "project_workspaces",
+  {
+    projectId: text("project_id").notNull(),
+    workspaceId: text("workspace_id").notNull(),
+    bindingId: text("binding_id").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.projectId, table.workspaceId] }),
+    foreignKey({
+      columns: [table.projectId, table.bindingId],
+      foreignColumns: [repositoryBindings.projectId, repositoryBindings.bindingId],
+    }).onDelete("restrict"),
+  ],
+);
+
 export const canonicalStorageIdentity = sqliteTable(
   "storage_identity",
   {

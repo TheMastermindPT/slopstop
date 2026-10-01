@@ -22,6 +22,12 @@ export const canonicalGenerationTwoTables = [
   "writer_recovery_records",
 ] as const;
 
+export const canonicalCurrentTables = [
+  ...canonicalGenerationTwoTables,
+  "project_workspaces",
+  "repository_bindings",
+].sort();
+
 const project = "00000000-0000-4000-8000-000000000010";
 const instant = "2026-09-04T12:00:00.000Z";
 const identity = (suffix: number) => `00000000-0000-4000-8000-${String(suffix).padStart(12, "0")}`;
@@ -65,7 +71,7 @@ export function seedCanonicalConstraintAuthority(database: DatabaseSync): void {
 }
 
 export function canonicalTableCounts(database: DatabaseSync): readonly number[] {
-  return canonicalGenerationTwoTables.map((table) =>
+  return canonicalCurrentTables.map((table) =>
     Number(database.prepare(`SELECT count(*) AS count FROM ${table}`).get()?.["count"]),
   );
 }
@@ -84,8 +90,8 @@ export async function expectCreatedCanonicalSchema(
       metadata_key: "canonical",
       database_kind: "canonical",
       format_version: 1,
-      schema_version: 2,
-      last_migration_id: "0001_canonical_project_writer",
+      schema_version: 3,
+      last_migration_id: "0002_initial_repository_binding",
     },
   ]);
   expect(canonical.prepare("SELECT * FROM project_state").all()).toEqual([
@@ -107,11 +113,11 @@ export async function expectCreatedCanonicalSchema(
       created_at: "2026-09-04T12:00:00.000Z",
     },
   ]);
-  expect(canonicalTableCounts(canonical)).toEqual([0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0]);
-  expect(databaseSpecs.canonical.columns).toHaveLength(81);
-  expect(databaseSpecs.canonical.checks).toHaveLength(62);
+  expect(canonicalTableCounts(canonical)).toEqual([0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0]);
+  expect(databaseSpecs.canonical.columns).toHaveLength(90);
+  expect(databaseSpecs.canonical.checks).toHaveLength(63);
   expect(databaseSpecs.canonical.indexes).toHaveLength(15);
-  expect(databaseSpecs.canonical.foreignKeys).toHaveLength(11);
+  expect(databaseSpecs.canonical.foreignKeys).toHaveLength(13);
   await expect(
     requireDeclaredSchemaObjects(sqliteExecutor(canonical), databaseSpecs.canonical),
   ).resolves.toBeUndefined();
