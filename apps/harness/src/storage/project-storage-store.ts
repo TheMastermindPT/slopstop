@@ -555,9 +555,10 @@ export function createProjectStorageOwner(
   const trackAdmittedOperation = <Value>(operation: () => Promise<Value>): Promise<Value> => {
     const admissionOrder = nextOperationAdmissionOrder;
     nextOperationAdmissionOrder += 1;
+    // Registered only once admitted: an operation that throws synchronously never started.
+    const pendingOperation = operation();
     const completion: AdmittedOperationCompletion = Deferred.makeUnsafe<void, unknown>();
     admittedOperations.set(admissionOrder, completion);
-    const pendingOperation = operation();
     const settle = (outcome: Effect.Effect<void, unknown>) => {
       Deferred.doneUnsafe(completion, outcome);
       admittedOperations.delete(admissionOrder);

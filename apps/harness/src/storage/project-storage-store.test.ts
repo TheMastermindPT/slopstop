@@ -705,6 +705,27 @@ it.each([1, 2])(
   },
 );
 
+it("does not wait at stop for an operation whose lock threw before admission", async () => {
+  const fixture = lifecycleDependencies();
+  const failure = new Error("lock refused synchronously");
+  const owner = createProjectStorageOwner({
+    ...fixture.dependencies,
+    locks: {
+      ...fixture.dependencies.locks,
+      forProject: () => {
+        throw failure;
+      },
+    },
+  });
+
+  await expect(owner.create(request)).rejects.toBe(failure);
+  const stopped = await Promise.race([
+    owner.stop().then(() => "stopped" as const),
+    new Promise<"pending">((resolve) => setTimeout(() => resolve("pending"), 1_000)),
+  ]);
+  expect(stopped).toBe("stopped");
+});
+
 it("retains delayed asynchronous registry failure in the shared stop promise", async () => {
   const fixture = lifecycleDependencies();
   const createLock = createPermitLock();
