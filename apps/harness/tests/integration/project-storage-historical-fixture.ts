@@ -17,7 +17,10 @@ import {
   generationPaths,
   openRequest,
 } from "./project-storage-open-fixture.js";
-import { previousApplicationRegistryTables } from "./registration-schema-fixture.js";
+import {
+  applicationRegistrationTables,
+  previousApplicationRegistryTables,
+} from "./registration-schema-fixture.js";
 
 export const historicalMigrationPath = path.join(
   checkedInMigrationRoot,
@@ -86,17 +89,11 @@ export async function seedGenerationOneCanonical(root: ApplicationRootPath): Pro
 export function restorePreviousRegistryFixture(root: ApplicationRootPath): void {
   const database = new DatabaseSync(generationPaths(root).application);
   try {
-    for (const table of [
-      "registration_repository_trust",
-      "registration_repository_selections",
-      "registration_identity_consents",
-      "registration_observer_outcomes",
-      "registration_observer_terminals",
-      "registration_observer_children",
-      "registration_observer_intents",
-      "registration_version_consents",
-      "registration_executable_selections",
-    ])
+    // Every table added after the previous registry, derived from the current registry set so
+    // later registration migrations are removed too.
+    const previous = new Set<string>(previousApplicationRegistryTables);
+    database.exec("PRAGMA foreign_keys = OFF");
+    for (const table of applicationRegistrationTables.filter((name) => !previous.has(name)))
       database.exec(`DROP TABLE ${table}`);
     database.exec("UPDATE schema_metadata SET last_migration_id = '0000_gray_eddie_brock'");
     expect(
