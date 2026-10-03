@@ -22,9 +22,12 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 - `research/2026-08-31_16-13-56_project-storage-opening-health.md` defines the smallest durable Project Storage slice, independent canonical/runtime health, prior-state witness handling, and the harness-owned persistence boundary.
 - `research/2026-09-02_19-16-24_harness-capabilities-and-next-step.md` records the accepted recovery sequence for schema authority, shutdown, privacy, bounded logs, prospective TDD, tracker repair, and packaged Project Storage proof.
 - `research/2026-09-19_jev-typesafe-primary-sources.md` examines Jev's official capabilities, limitations, privacy and public demos, maps advisory uses to Ragnarok, and records future ideas JEV-F01 (Worker-team composition) and JEV-F02 (governed self-improvement, outside v1 and a possible v2 direction). It recommends evaluating Conversation correction detection first; it is research and deferred exploration, not integration approval or production evidence.
+- `research/2026-10-03_jev-ragnarok-benefit-update.md` refreshes Jev's official capabilities, limits, confidence semantics and agent-evaluation evidence, ranks potential benefits for Conversation/context/Workers, and proposes a bounded evaluation without approving integration or sending private project data.
+- `research/2026-10-03_skill-procedures-synthesis.md` inventories skill sources and extracts reusable procedures from RPIV, shared skills and enabled Claude plugins. Records concrete complementary/conflicting policies and a proposed evaluation method; discussion with Claude and product adoption remain later human decisions.
 - `research/2026-10-03_effect-alchemy-bun-strategic-fit.md` compares current primary-source capabilities with Ragnarok's actual Electron, Node, native-process and persistence boundaries. Separates incremental Effect adoption, Alchemy infrastructure use and Bun tooling/runtime changes; records costs, uncertainties and discussion questions without approving any migration.
 - `research/2026-10-03_effect-migration-collaboration-brief.md` records the subsequent human choice of a full Effect migration and onboards the existing Claude Herdr session to the broader product, roadmap, current implementation, pending work and strategic questions. Agent proposals remain subject to human decisions.
 - `research/2026-10-03_effect-collaboration-proposal.md` records the actual OpenCode/Claude discussion, corrections and joint full-migration/workflow proposal, with four grouped human choices and a separate broader product-strategy agenda. No new architecture choice is approved by agent agreement alone.
+- `research/2026-10-03_effect-sql-windows-experiment.md` records the authorized disposable SQL experiment: basic transactions pass, but immediate post-close file release differs between the current worker and direct clients. It preserves uncertain-commit semantics and leaves the final client choice to the user.
 
 ## Solutions
 
@@ -40,6 +43,9 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 - `solutions/2026-08-31_20-24-41_self-evolving-harness-and-developer-leverage.md` records Option 4, Resumable Parallel Work Fabric, as the accepted strategic interpretation of the existing v1 portfolio while preserving GitHub roadmap order, current ADR authority, and explicitly deferred supervision and live-replacement mechanisms.
 
 ## Current Authority
+
+- Coordination handoff: `handoffs/2026-10-03_21-16-54_claude-project-coordinator.md` transfers coordination from OpenCode to the separate Herdr agent `coordenador-claude`, after a completed read-and-teach-back exchange. The existing `claude` session remains the implementation author; the handoff distinguishes current approvals, unfinished migration/feature work and deferred strategy.
+- `evidence/2026-10-03_pc-s1-guarantee-scope-decision.md` records three user decisions: reduced PC-S1 scope (additional worktree association and Linux deferred, recovery detect-only, reduced limit matrices; data/trust guarantees retained), application.db verify-before-commit with approved oracle changes, and checkpoint commits on the Effect branch without merge or push.
 
 - `plans/2026-08-25_14-53-19_workspace-production-boundary-tracer-bullet.md` is the implemented five-phase Workspace production-boundary plan.
 - `validation/2026-08-25_20-05-32_workspace-production-boundary-tracer-bullet.md` records its final runtime, mutation, and Code Health proof.
