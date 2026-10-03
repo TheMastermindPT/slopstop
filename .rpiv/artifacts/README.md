@@ -29,6 +29,7 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 - `research/2026-10-03_effect-collaboration-proposal.md` records the actual OpenCode/Claude discussion, corrections and joint full-migration/workflow proposal, with four grouped human choices and a separate broader product-strategy agenda. No new architecture choice is approved by agent agreement alone.
 - `research/2026-10-03_product-thesis.md` proposes the product thesis (trust and understanding, not code generation), using the 2026-10-03 manual multi-agent coordination protocol as product specification evidence, with three primary metrics and roadmap consequences pending user decision.
 - `research/2026-10-03_inspiration-projects-research.md` surveys Kiro, Spec Kit, Copilot Workspace, Conductor, Vibe Kanban, Aider, Hermes Agent and Prime Agent with sourced mechanisms and criticisms, and lists adoption candidates without approving any.
+- `research/2026-10-03_provider-subscription-terms.md` verifies Anthropic, OpenAI, Google and Copilot rules for subscriptions versus APIs from third-party apps: orchestrating unmodified official CLIs under the user's own login is lowest-risk, reusing subscription tokens is prohibited at Anthropic and Google, and the hybrid runtime remains a proposal.
 - `research/2026-10-03_effect-sql-windows-experiment.md` records the authorized disposable SQL experiment: basic transactions pass, but immediate post-close file release differs between the current worker and direct clients. It preserves uncertain-commit semantics and leaves the final client choice to the user.
 
 ## Solutions
@@ -47,6 +48,7 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 ## Current Authority
 
 - Coordination handoff: `handoffs/2026-10-03_21-16-54_claude-project-coordinator.md` transfers coordination from OpenCode to the separate Herdr agent `coordenador-claude`, after a completed read-and-teach-back exchange. The existing `claude` session remains the implementation author; the handoff distinguishes current approvals, unfinished migration/feature work and deferred strategy.
+- `evidence/2026-10-03_baseline-measurement-log.md` is the running five-line-per-task baseline log of work done before Ragnarok (first project: chess; MaxReps is the gymapp comparison candidate).
 - `evidence/2026-10-03_pc-s1-guarantee-scope-decision.md` records three user decisions: reduced PC-S1 scope (additional worktree association and Linux deferred, recovery detect-only, reduced limit matrices; data/trust guarantees retained), application.db verify-before-commit with approved oracle changes, and checkpoint commits on the Effect branch without merge or push.
 
 - `plans/2026-08-25_14-53-19_workspace-production-boundary-tracer-bullet.md` is the implemented five-phase Workspace production-boundary plan.
