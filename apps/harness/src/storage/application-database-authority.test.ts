@@ -171,6 +171,52 @@ it("drains an accepted initialization waiting before BEGIN before stop completes
   });
 });
 
+it("lets a second initializer proceed while the first is still creating a fresh database", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-application-authority-fresh-"));
+  let release: () => void = () => undefined;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let reachOpen: () => void = () => undefined;
+  const firstOpen = new Promise<void>((resolve) => {
+    reachOpen = resolve;
+  });
+  let opens = 0;
+  // The first client the authority opens is created only after the gate opens, holding the
+  // first initializer between its missing-file policy and the file's creation.
+  const authority = createApplicationDatabaseAuthority({
+    applicationStorageRoot: root,
+    migrationResourcesRoot,
+    openClient: (databasePath) => {
+      opens += 1;
+      if (opens !== 1) return createWorkerLocalLibsqlClient(databasePath, "application");
+      reachOpen();
+      const real = gate.then(() => createWorkerLocalLibsqlClient(databasePath, "application"));
+      return {
+        execute: async (statement, args) => (await real).execute(statement, args),
+        transaction: async (mode) => (await real).transaction(mode),
+        close: async () => (await real).close(),
+      };
+    },
+  });
+  try {
+    const registry = authority.openCurrent({ createIfMissing: true });
+    await firstOpen;
+    const storage = authority.ensureCurrent({ createIfMissing: true });
+    release();
+    const [opened, ensured] = await Promise.allSettled([registry, storage]);
+    if (opened.status === "fulfilled") await opened.value?.close();
+    expect({
+      registry: opened.status,
+      storage: ensured.status === "fulfilled" ? ensured.value : ensured.reason,
+    }).toEqual({ registry: "fulfilled", storage: "current" });
+  } finally {
+    release();
+    await authority.stop();
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+  }
+});
+
 it("refuses to recreate an application database it already observed", async () => {
   await withAuthority(async (authority) => {
     await authority.ensureCurrent({ createIfMissing: true });

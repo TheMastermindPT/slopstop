@@ -83,6 +83,8 @@ export function createApplicationDatabaseAuthority(
     applicationStorageRoot: string;
     migrationResourcesRoot: string;
     failures?: ApplicationDatabaseMigrationFailures | undefined;
+    // Opens a raw client for the authority's own initialization; defaults to the worker.
+    openClient?: ((databasePath: string) => LocalLibsqlClient) | undefined;
   }>,
 ): ApplicationDatabaseAuthority {
   const applicationStorageRoot = path.resolve(input.applicationStorageRoot);
@@ -158,8 +160,10 @@ export function createApplicationDatabaseAuthority(
     };
   };
 
-  const openClient = () =>
-    admitClient(createWorkerLocalLibsqlClient(applicationDatabasePath, "application"));
+  const openRawClient =
+    input.openClient ??
+    ((databasePath: string) => createWorkerLocalLibsqlClient(databasePath, "application"));
+  const openClient = () => admitClient(openRawClient(applicationDatabasePath));
 
   const requireExistingFile = async (): Promise<void> => {
     if ((await lstatIfPresent({ targetPath: applicationDatabasePath })) === undefined) {
@@ -204,6 +208,7 @@ export function createApplicationDatabaseAuthority(
         });
       }
       createdEmpty = false;
+      observed = true;
       return client;
     } catch (error) {
       await client?.close();
@@ -224,7 +229,10 @@ export function createApplicationDatabaseAuthority(
       }
       if (!createIfMissing) return "absent";
       await mkdir(applicationStorageRoot, { recursive: true });
+      // Its client creates the file lazily: a fresh database still being created by this
+      // authority is not yet observed, so concurrent initializers must not see a witness.
       createdEmpty = true;
+      return "present";
     }
     observed = true;
     return "present";
