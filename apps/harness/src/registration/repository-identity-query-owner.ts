@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { decodeStrict } from "@slopstop/protocol";
 import {
   observeRepositoryDirectory,
   observeSelectedExecutable,
@@ -299,7 +300,7 @@ async function inspectQuery(
   const { registry, journal, child } = dependencies;
   let result: Awaited<ReturnType<typeof inspectAdmitted>> | undefined;
   try {
-    const request = RepositoryIdentityAdmissionRequestSchema.parse(input);
+    const request = decodeStrict(RepositoryIdentityAdmissionRequestSchema, input);
     const admission = await registry.admitRepositoryIdentityQueries(request, {
       admit: async (authority) => {
         result = await inspectAdmitted({ journal, child }, { request, authority, mode }, control);

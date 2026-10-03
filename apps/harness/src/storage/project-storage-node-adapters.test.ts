@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:f
 import os from "node:os";
 import path from "node:path";
 import type { InStatement } from "@libsql/client";
-import { ProjectStorageCreateRequestSchema } from "@slopstop/protocol";
+import { decodeStrict, ProjectStorageCreateRequestSchema } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
 import { canonicalGenerationTwoTables } from "../../tests/integration/project-storage-schema-cases.js";
 import type { ProjectStorageOwnerPort } from "../project-storage-application.js";
@@ -841,7 +841,7 @@ it("wraps unexpected schema authority failures without losing the internal cause
 
 type RollbackFailurePoint = "operation" | "commit";
 const rollbackFailurePoints: readonly RollbackFailurePoint[] = ["operation", "commit"];
-const createRequest = ProjectStorageCreateRequestSchema.parse({
+const createRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000010",
   createRequestId: "00000000-0000-4000-8000-000000000011",
 });

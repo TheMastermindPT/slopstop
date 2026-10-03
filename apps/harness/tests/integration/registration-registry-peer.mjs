@@ -6,6 +6,7 @@ const { createRegistrationRegistry } = await import(
 const { GitVersionInspectionRequestSchema } = await import(
   "../../src/project-registration-observer.ts"
 );
+const { decodeStrict } = await import("@slopstop/protocol");
 const [root, migrations, hold] = process.argv.slice(2);
 let release;
 const barrier = new Promise((resolve) => {
@@ -42,7 +43,7 @@ process.on("message", (message) => {
     process.exitCode = 2;
     return;
   }
-  const request = GitVersionInspectionRequestSchema.parse({
+  const request = decodeStrict(GitVersionInspectionRequestSchema, {
     selectionId: message.selectionId,
     consentId: null,
   });

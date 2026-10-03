@@ -2,7 +2,8 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { z } from "zod";
+import { decodeStrict, decodeStrictResult, UuidTextSchema } from "@slopstop/protocol";
+import { Result, Schema } from "effect";
 import {
   createProjectRegistrationObserver,
   type GitVersionInspectionRequest,
@@ -24,19 +25,19 @@ export const ownerCheckpoints = [
   "terminal-stored",
   "outcome-stored",
 ] as const;
-const checkpointSchema = z.strictObject({
-  kind: z.literal("checkpoint"),
-  point: z.enum(ownerCheckpoints),
-  observationId: z.uuid(),
-  identity: z
-    .strictObject({
-      platform: z.literal("win32"),
-      processId: z.number().int().positive(),
-      creationTime100ns: z.string(),
-      jobName: z.string(),
-      sessionId: z.number().int().nonnegative(),
-    })
-    .optional(),
+const checkpointSchema = Schema.Struct({
+  kind: Schema.Literal("checkpoint"),
+  point: Schema.Literals(ownerCheckpoints),
+  observationId: UuidTextSchema,
+  identity: Schema.optional(
+    Schema.Struct({
+      platform: Schema.Literal("win32"),
+      processId: Schema.Number.check(Schema.isInt(), Schema.isGreaterThan(0)),
+      creationTime100ns: Schema.String,
+      jobName: Schema.String,
+      sessionId: Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
+    }),
+  ),
 });
 
 export async function startObserverOwner(
@@ -69,7 +70,7 @@ export async function startObserverOwner(
     await exited;
   };
   try {
-    const reached = await new Promise<z.infer<typeof checkpointSchema>>((resolve, reject) => {
+    const reached = await new Promise<typeof checkpointSchema.Type>((resolve, reject) => {
       const timer = setTimeout(
         () => reject(new Error(`Owner checkpoint timed out: ${diagnostic}`)),
         10000,
@@ -84,8 +85,8 @@ export async function startObserverOwner(
       });
       child.once("message", (message) => {
         clearTimeout(timer);
-        const parsed = checkpointSchema.safeParse(message);
-        if (parsed.success) resolve(parsed.data);
+        const parsed = decodeStrictResult(checkpointSchema, message);
+        if (Result.isSuccess(parsed)) resolve(parsed.success);
         else reject(new Error(`Unexpected owner message: ${JSON.stringify(message)}`));
       });
     });
@@ -119,7 +120,7 @@ export function recoveringObserver(root: string, registry: RegistrationRegistry)
 }
 
 export async function newVersionRequest(registry: RegistrationRegistry) {
-  const request = GitVersionInspectionRequestSchema.parse({
+  const request = decodeStrict(GitVersionInspectionRequestSchema, {
     selectionId: randomUUID(),
     consentId: randomUUID(),
   });

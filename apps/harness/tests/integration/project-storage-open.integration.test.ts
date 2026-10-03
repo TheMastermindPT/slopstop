@@ -2,7 +2,11 @@ import { createHash } from "node:crypto";
 import { cp, mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { type ProjectDatabaseHealth, ProjectStorageCreateRequestSchema } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  type ProjectDatabaseHealth,
+  ProjectStorageCreateRequestSchema,
+} from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
 import {
   type ProjectStorageManifestV1,
@@ -51,7 +55,7 @@ import {
 } from "./project-storage-open-fixture.js";
 
 const manifestReadFailure = vi.hoisted(() => ({ filePath: undefined as string | undefined }));
-const applicationUpgradeCreateRequest = ProjectStorageCreateRequestSchema.parse({
+const applicationUpgradeCreateRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: openRequest.projectId,
   createRequestId: "00000000-0000-4000-8000-000000000019",
 });

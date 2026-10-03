@@ -4,6 +4,7 @@ import {
   createProjectCloseCommand,
   createProjectCreateCommand,
   createProjectOpenCommand,
+  decodeStrict,
   type ProjectId,
   type ProjectStorageCreateRequest,
   ProjectStorageOpenRequestSchema,
@@ -38,19 +39,21 @@ import {
   transportFor,
 } from "./project-storage-create-fixture.js";
 
-const projectA = ProjectStorageOpenRequestSchema.parse({
+const projectA = decodeStrict(ProjectStorageOpenRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000071",
 }).projectId;
-const projectB = ProjectStorageOpenRequestSchema.parse({
+const projectB = decodeStrict(ProjectStorageOpenRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000072",
 }).projectId;
 const identity = {
-  storageId: StorageIdSchema.parse("00000000-0000-4000-8000-000000000073"),
-  generationId: StorageGenerationIdSchema.parse("00000000-0000-4000-8000-000000000074"),
-  canonicalDatabaseLineageId: CanonicalDatabaseLineageIdSchema.parse(
+  storageId: decodeStrict(StorageIdSchema, "00000000-0000-4000-8000-000000000073"),
+  generationId: decodeStrict(StorageGenerationIdSchema, "00000000-0000-4000-8000-000000000074"),
+  canonicalDatabaseLineageId: decodeStrict(
+    CanonicalDatabaseLineageIdSchema,
     "00000000-0000-4000-8000-000000000075",
   ),
-  runtimeDatabaseLineageId: RuntimeDatabaseLineageIdSchema.parse(
+  runtimeDatabaseLineageId: decodeStrict(
+    RuntimeDatabaseLineageIdSchema,
     "00000000-0000-4000-8000-000000000076",
   ),
 };

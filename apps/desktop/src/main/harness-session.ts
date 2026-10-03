@@ -1,5 +1,6 @@
 import type { HarnessMessage } from "@slopstop/protocol";
-import { DesktopMessageSchema, parseHarnessMessage } from "@slopstop/protocol";
+import { DesktopMessageSchema, decodeStrictResult, parseHarnessMessage } from "@slopstop/protocol";
+import { Result } from "effect";
 
 export interface HarnessMessagePort {
   close(): void;
@@ -63,8 +64,8 @@ export class HarnessSession implements HarnessSessionClient {
   }
 
   send(message: unknown): HarnessSessionSendResult {
-    const parsed = DesktopMessageSchema.safeParse(message);
-    if (!parsed.success) {
+    const parsed = decodeStrictResult(DesktopMessageSchema, message);
+    if (Result.isFailure(parsed)) {
       return {
         ok: false,
         error: { code: "HARNESS_SESSION_MESSAGE_INVALID" },
@@ -77,7 +78,7 @@ export class HarnessSession implements HarnessSessionClient {
       };
     }
     try {
-      this.#port.postMessage(parsed.data);
+      this.#port.postMessage(parsed.success);
       return { ok: true };
     } catch {
       return {

@@ -2,6 +2,7 @@ import {
   type CanonicalProjectActivationRequest,
   type CanonicalProjectActivationResult,
   CanonicalProjectActivationResultSchema,
+  decodeStrict,
 } from "@slopstop/protocol";
 import type { ProjectStorageActivationSession } from "../project-storage-application.js";
 import { createWorkerLocalLibsqlClient } from "../storage/local-libsql-worker-client.js";
@@ -19,7 +20,7 @@ function refused(
   failure: { status: string; code: string },
 ): CanonicalProjectActivationResult {
   const status = failure.status === "pending-recovery" ? "unavailable" : failure.status;
-  return CanonicalProjectActivationResultSchema.parse({
+  return decodeStrict(CanonicalProjectActivationResultSchema, {
     status,
     request,
     diagnostic: {

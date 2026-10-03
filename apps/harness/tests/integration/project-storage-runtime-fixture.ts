@@ -9,6 +9,7 @@ import {
   createProjectCloseCommand,
   createProjectCreateCommand,
   createProjectOpenCommand,
+  decodeStrict,
   type ProjectStorageCloseRequest,
   type ProjectStorageCreateRequest,
   ProjectStorageCreateRequestSchema,
@@ -37,18 +38,20 @@ import {
 export const checkedInMigrationRoot = path.resolve(import.meta.dirname, "../../drizzle");
 export const projectStorageIntegrationTimeout = 15_000;
 const temporaryRoots: string[] = [];
-export const createRequest = ProjectStorageCreateRequestSchema.parse({
+export const createRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000010",
   createRequestId: "00000000-0000-4000-8000-000000000011",
 });
 export const fixedCreationIds = {
-  storageId: StorageIdSchema.parse("00000000-0000-4000-8000-000000000012"),
+  storageId: decodeStrict(StorageIdSchema, "00000000-0000-4000-8000-000000000012"),
   locationId: "00000000-0000-4000-8000-000000000013",
-  generationId: StorageGenerationIdSchema.parse("00000000-0000-4000-8000-000000000014"),
-  canonicalDatabaseLineageId: CanonicalDatabaseLineageIdSchema.parse(
+  generationId: decodeStrict(StorageGenerationIdSchema, "00000000-0000-4000-8000-000000000014"),
+  canonicalDatabaseLineageId: decodeStrict(
+    CanonicalDatabaseLineageIdSchema,
     "00000000-0000-4000-8000-000000000015",
   ),
-  runtimeDatabaseLineageId: RuntimeDatabaseLineageIdSchema.parse(
+  runtimeDatabaseLineageId: decodeStrict(
+    RuntimeDatabaseLineageIdSchema,
     "00000000-0000-4000-8000-000000000016",
   ),
 } as const;

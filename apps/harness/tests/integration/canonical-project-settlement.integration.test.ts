@@ -1,4 +1,9 @@
-import { CommandIdSchema, createProjectOpenCommand, ProjectIdSchema } from "@slopstop/protocol";
+import {
+  CommandIdSchema,
+  createProjectOpenCommand,
+  decodeStrict,
+  ProjectIdSchema,
+} from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import {
   appliedReceipt,
@@ -103,6 +108,7 @@ it("round-trips durable settlement and replay over real MessagePorts", async () 
     expect(await f.switchProject()).toEqual(
       settlementEvent(3, 3, "project.switch.result", {
         status: "target-result",
+        sourceReleased: true,
         request: settlementSwitch,
         target: settlementActivation(true),
       }),
@@ -187,7 +193,7 @@ it("joins exact simultaneous commands and rejects distinct work as busy", async 
       ...settlementRequest,
       command: {
         ...settlementRequest.command,
-        commandId: CommandIdSchema.parse("44444444-4444-4444-8444-444444444502"),
+        commandId: decodeStrict(CommandIdSchema, "44444444-4444-4444-8444-444444444502"),
       },
     };
     expect(await f.execute(8, next)).toEqual(
@@ -279,6 +285,7 @@ it("switches only after the admitted settlement and joins complete", async () =>
     expect(await join).toEqual(settledCommand(settlementRequest, appliedReceipt));
     expect(await switching).toEqual({
       status: "target-result",
+      sourceReleased: true,
       request: settlementSwitch,
       target: settlementActivation(true),
     });
@@ -335,7 +342,10 @@ it("S5 G15 freezes submission meaning before asynchronous repository work: same-
     const pending = f.application.execute(submitted);
     submitted.command.payload.value = 8;
     submitted.command.payload.meta.a = 99;
-    submitted.command.commandId = CommandIdSchema.parse("44444444-4444-4444-8444-444444444502");
+    submitted.command.commandId = decodeStrict(
+      CommandIdSchema,
+      "44444444-4444-4444-8444-444444444502",
+    );
     submitted.command.type = "conformance.counter.other";
     submitted.command.version = 2;
     await pendingWork.ready;
@@ -408,7 +418,7 @@ async function expectComposedBodyFailure(
     ...settlementRequest,
     command: {
       ...settlementRequest.command,
-      commandId: CommandIdSchema.parse("44444444-4444-4444-8444-444444444502"),
+      commandId: decodeStrict(CommandIdSchema, "44444444-4444-4444-8444-444444444502"),
     },
   };
   expect(await f.execute(6, distinct)).toEqual(
@@ -528,7 +538,9 @@ it.each(["failure", "joined", "invalid-result"] as const)(
     if (kind === "invalid-result") corruptCompositionResult(f);
     else configureCompositionFault(f, "handler");
     try {
-      const request = { projectId: ProjectIdSchema.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2") };
+      const request = {
+        projectId: decodeStrict(ProjectIdSchema, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2"),
+      };
       const opening = f.send(5, createProjectOpenCommand(f.metadata(5), request));
       await f.delivered(5);
       const first = f.execute();
@@ -596,6 +608,7 @@ it("S5 G15 revokes handler capabilities and observes swallowed or unawaited SQL 
     );
     expect(await switching).toEqual({
       status: "target-result",
+      sourceReleased: true,
       request: settlementSwitch,
       target: settlementActivation(true),
     });
@@ -639,6 +652,7 @@ it.each(["before", "after", "lost", "close"] as const)(
       expect(f.calls).toEqual(calls);
       expect(await f.application.switchProject(settlementSwitch)).toEqual({
         status: "target-result",
+        sourceReleased: true,
         request: settlementSwitch,
         target: settlementActivation(true),
       });
@@ -672,6 +686,7 @@ it.each(["held", "rejected", "false-success"] as const)(
       retained.release();
       expect(await switching).toEqual({
         status: "target-result",
+        sourceReleased: true,
         request: settlementSwitch,
         target: settlementActivation(true),
       });

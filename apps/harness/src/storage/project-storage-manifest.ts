@@ -1,71 +1,77 @@
 import {
   CanonicalDatabaseLineageIdSchema,
+  dateTimeTextSchema,
+  decodeStrict,
   ProjectIdSchema,
   ProjectStorageCreateRequestIdSchema,
   RuntimeDatabaseLineageIdSchema,
   StorageGenerationIdSchema,
   StorageIdSchema,
+  TrimmedNonEmptyTextSchema,
 } from "@slopstop/protocol";
-import { z } from "zod";
+import { Schema } from "effect";
 
 export const projectStorageManifestFilename = "manifest.json";
 export const canonicalDatabaseFilename = "slopstop.db";
 export const runtimeDatabaseFilename = "mastra.db";
 export const canonicalWriterLeaseFilename = ".slopstop-writer.lock";
 
-const safeNonnegativeIntegerSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
-const utcInstantSchema = z.iso
-  .datetime({ offset: true })
-  .refine((value) => value.endsWith("Z"), "UTC instant must end in Z.");
-const activationBaselineSchema = z.strictObject({
-  algorithm: z.literal("sha256"),
+const safeNonnegativeIntegerSchema = Schema.Number.check(
+  Schema.isInt(),
+  Schema.isGreaterThanOrEqualTo(0),
+);
+const utcInstantSchema = dateTimeTextSchema({ offset: true }).check(
+  Schema.makeFilter((value: string) => value.endsWith("Z") || "UTC instant must end in Z."),
+);
+const activationBaselineSchema = Schema.Struct({
+  algorithm: Schema.Literal("sha256"),
   sizeBytes: safeNonnegativeIntegerSchema,
-  sha256: z.string().regex(/^[0-9a-f]{64}$/u),
+  sha256: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u)),
 });
 
-const ProjectStorageManifestV1Schema = z.strictObject({
-  manifestVersion: z.literal(1),
+const ProjectStorageManifestV1Schema = Schema.Struct({
+  manifestVersion: Schema.Literal(1),
   projectId: ProjectIdSchema,
   storageId: StorageIdSchema,
   generationId: StorageGenerationIdSchema,
-  provenance: z.strictObject({
-    kind: z.literal("initial-create"),
+  provenance: Schema.Struct({
+    kind: Schema.Literal("initial-create"),
     createRequestId: ProjectStorageCreateRequestIdSchema,
-    sourceGenerationId: z.null(),
-    storageOperationId: z.null(),
+    sourceGenerationId: Schema.Null,
+    storageOperationId: Schema.Null,
   }),
-  canonical: z.strictObject({
-    kind: z.literal("canonical"),
+  canonical: Schema.Struct({
+    kind: Schema.Literal("canonical"),
     databaseLineageId: CanonicalDatabaseLineageIdSchema,
-    filename: z.literal(canonicalDatabaseFilename),
+    filename: Schema.Literal(canonicalDatabaseFilename),
     formatVersion: safeNonnegativeIntegerSchema,
     schemaVersion: safeNonnegativeIntegerSchema,
-    lastMigrationId: z.string().trim().min(1),
+    lastMigrationId: TrimmedNonEmptyTextSchema,
     activationBaseline: activationBaselineSchema,
   }),
-  runtime: z.strictObject({
-    kind: z.literal("runtime"),
+  runtime: Schema.Struct({
+    kind: Schema.Literal("runtime"),
     databaseLineageId: RuntimeDatabaseLineageIdSchema,
-    filename: z.literal(runtimeDatabaseFilename),
+    filename: Schema.Literal(runtimeDatabaseFilename),
     adapterFormatVersion: safeNonnegativeIntegerSchema,
     adapterSchemaVersion: safeNonnegativeIntegerSchema,
-    adapterLastMigrationId: z.string().trim().min(1),
-    mastraMigrationHead: z.null(),
+    adapterLastMigrationId: TrimmedNonEmptyTextSchema,
+    mastraMigrationHead: Schema.Null,
     activationBaseline: activationBaselineSchema,
   }),
-  projectSequence: z.literal(0),
-  runtimeWaterline: z.literal(0),
-  producingApplicationVersion: z.string().trim().min(1),
+  projectSequence: Schema.Literal(0),
+  runtimeWaterline: Schema.Literal(0),
+  producingApplicationVersion: TrimmedNonEmptyTextSchema,
   createdAt: utcInstantSchema,
 });
-export type ProjectStorageManifestV1 = z.infer<typeof ProjectStorageManifestV1Schema>;
+export type ProjectStorageManifestV1 = typeof ProjectStorageManifestV1Schema.Type;
 
 export function parseProjectStorageManifest(source: string): ProjectStorageManifestV1 {
   const json: unknown = JSON.parse(source);
-  return ProjectStorageManifestV1Schema.parse(json);
+  return decodeStrict(ProjectStorageManifestV1Schema, json);
 }
 
 export function serializeProjectStorageManifest(input: unknown): string {
-  const manifest = ProjectStorageManifestV1Schema.parse(input);
+  const manifest = decodeStrict(ProjectStorageManifestV1Schema, input);
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }

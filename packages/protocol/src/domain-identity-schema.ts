@@ -1,19 +1,16 @@
-import type { DomainIdentity, ProjectId as KernelProjectId } from "@slopstop/kernel";
-import { isDomainIdentity } from "@slopstop/kernel";
-import { z } from "zod";
+import { DomainIdentityTextSchema } from "@slopstop/kernel";
+import { Schema } from "effect";
 
-export function domainIdentitySchema<T extends DomainIdentity<string>>() {
-  return z.custom<T>((value) => isDomainIdentity(value));
+function lowercaseIdentity(message: string) {
+  return DomainIdentityTextSchema.check(
+    Schema.makeFilter((value: string) => value === value.toLowerCase(), { message }),
+  );
 }
 
-export function lowercaseDomainIdentitySchema<T extends DomainIdentity<string>>(
-  schema: z.ZodType<T>,
-  message = "Identity must use lowercase UUID text.",
-) {
-  return schema.refine((value) => value === value.toLowerCase(), { message });
-}
-
-export const ProjectIdSchema = lowercaseDomainIdentitySchema(
-  domainIdentitySchema<KernelProjectId>(),
-  "Project identity must use lowercase UUID text.",
+export const LowercaseDomainIdentityTextSchema = lowercaseIdentity(
+  "Identity must use lowercase UUID text.",
 );
+
+export const ProjectIdSchema = lowercaseIdentity(
+  "Project identity must use lowercase UUID text.",
+).pipe(Schema.brand("ProjectId"));

@@ -1,34 +1,27 @@
-import { RegisteredProjectSelectionCodeSchema } from "@slopstop/protocol";
-import { z } from "zod";
+import { Schema } from "effect";
+import { ApplicationDatabaseFault } from "../storage/application-database-migration.js";
 import { storageErrorCode } from "../storage/project-storage-node-errors.js";
 
-export const RegistryFailureSchema = z.union([
-  z.strictObject({
-    status: z.literal("broken"),
-    code: RegisteredProjectSelectionCodeSchema.extract([
-      "REGISTRY_SCHEMA_UNKNOWN",
-      "REGISTRY_SCHEMA_NEWER",
-      "REGISTRY_CORRUPT",
-    ]),
+export const RegistryFailureSchema = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("broken"),
+    code: Schema.Literals(["REGISTRY_SCHEMA_UNKNOWN", "REGISTRY_SCHEMA_NEWER", "REGISTRY_CORRUPT"]),
   }),
-  z.strictObject({
-    status: z.literal("unavailable"),
-    code: RegisteredProjectSelectionCodeSchema.extract(["REGISTRY_BUSY"]),
+  Schema.Struct({
+    status: Schema.Literal("unavailable"),
+    code: Schema.Literal("REGISTRY_BUSY"),
   }),
-  z.strictObject({
-    status: z.literal("pending-recovery"),
-    code: RegisteredProjectSelectionCodeSchema.extract([
-      "REGISTRY_MISSING_WITH_WITNESS",
-      "OBSERVER_CLEANUP_UNCONFIRMED",
-    ]),
+  Schema.Struct({
+    status: Schema.Literal("pending-recovery"),
+    code: Schema.Literals(["REGISTRY_MISSING_WITH_WITNESS", "OBSERVER_CLEANUP_UNCONFIRMED"]),
   }),
-  z.strictObject({
-    status: z.literal("rejected"),
-    code: RegisteredProjectSelectionCodeSchema.extract(["REGISTRATION_IDEMPOTENCY_CONFLICT"]),
+  Schema.Struct({
+    status: Schema.Literal("rejected"),
+    code: Schema.Literal("REGISTRATION_IDEMPOTENCY_CONFLICT"),
   }),
 ]);
 
-export type RegistryFailure = z.infer<typeof RegistryFailureSchema>;
+export type RegistryFailure = typeof RegistryFailureSchema.Type;
 
 export class RegistryFault extends Error {
   constructor(readonly failure: RegistryFailure) {
@@ -41,6 +34,7 @@ export function registryFailure(
   error: unknown,
 ): RegistryFailure | { status: "broken"; code: "INTERNAL_FAILURE" } {
   if (error instanceof RegistryFault) return error.failure;
+  if (error instanceof ApplicationDatabaseFault) return error.failure;
   const code = storageErrorCode({ error });
   if (code === "SQLITE_BUSY" || code === "SQLITE_LOCKED") {
     return { status: "unavailable", code: "REGISTRY_BUSY" };

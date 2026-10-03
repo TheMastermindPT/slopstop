@@ -154,6 +154,14 @@ async function assertPackagedNativeBindings(resources) {
       throw new Error("Packaged SlopStop is missing the target libSQL native binding.");
     }
   }
+  const koffiPrefix = `.vite/build/node_modules/@koromix/koffi-${process.platform}-${process.arch}/`;
+  const koffiFound = bindings.some((binding) => {
+    const packagedPath = path.relative(nativeRoot, binding).split(path.sep).join("/");
+    return packagedPath.startsWith(koffiPrefix) && packagedPath.endsWith("/koffi.node");
+  });
+  if (!koffiFound) {
+    throw new Error("Packaged SlopStop is missing the target Koffi native binding.");
+  }
 }
 
 async function assertPackagedStorageResources() {

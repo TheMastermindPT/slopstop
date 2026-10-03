@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { decodeStrict } from "@slopstop/protocol";
 import { afterEach, expect, it, vi } from "vitest";
 import type { IdentityQueryChildPort } from "../../src/registration/identity-query-child.js";
 import { createRepositoryIdentityQueryOwner } from "../../src/registration/repository-identity-query-owner.js";
@@ -99,7 +100,7 @@ async function createPhaseFixture(linked: boolean) {
   );
   const selected = await scenario.registry.selectRepository();
   if (selected.status !== "prepared") throw new Error("Selection unavailable");
-  const request = RepositoryIdentityAdmissionRequestSchema.parse({
+  const request = decodeStrict(RepositoryIdentityAdmissionRequestSchema, {
     ...scenario.request,
     repositorySelectionId: selected.repositorySelectionId,
     trustId: "248271ec-1ed7-4fca-8664-05a64bdc4101",
@@ -151,7 +152,7 @@ async function authorizeWithRefusals(
 
 function expectPhaseJournal(
   root: string,
-  request: ReturnType<typeof RepositoryIdentityAdmissionRequestSchema.parse>,
+  request: typeof RepositoryIdentityAdmissionRequestSchema.Type,
   phaseId: unknown,
 ) {
   const database = new DatabaseSync(path.join(root, "installation/application.db"), {

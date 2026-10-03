@@ -13,6 +13,7 @@ import {
   createWorkspaceProjectionInvalidatedEvent,
   createWorkspaceQueryResultEvent,
   type DesktopMessage,
+  decodeStrict,
   type HarnessFailureCode,
   type MessageId,
   type ProjectListResult,
@@ -56,6 +57,17 @@ function runtimeShutdownFailure(failures: readonly unknown[]): unknown {
   return failures.length === 1
     ? failures[0]
     : new AggregateError(failures, "Harness runtime shutdown failed.");
+}
+
+function attemptStop(stop: () => Promise<void> | undefined): Promise<unknown[]> {
+  try {
+    return Promise.resolve(stop()).then(
+      () => [],
+      (error: unknown) => [error],
+    );
+  } catch (error) {
+    return Promise.resolve([error]);
+  }
 }
 
 type CanonicalProjectMessage = Extract<
@@ -199,7 +211,7 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
   });
   const stopNotifications = options.workspaceApplication.subscribe((notification) => {
     try {
-      const validated = WorkspaceNotificationSchema.parse(notification);
+      const validated = decodeStrict(WorkspaceNotificationSchema, notification);
       options.transport.send(
         createWorkspaceProjectionInvalidatedEvent(nextMetadata(null), validated),
       );
@@ -213,46 +225,35 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     if (stopPromise !== undefined) {
       return stopPromise;
     }
-    const failures: unknown[] = [];
-    const settlement = {
-      resolve: (): void => undefined,
-      reject: (_reason: unknown): void => undefined,
-    };
-    stopPromise = new Promise<void>((resolve, reject) => {
-      settlement.resolve = resolve;
-      settlement.reject = reject;
+    // Publish the shared promise before any cleanup callback can re-enter stop.
+    let settle: (completion: Promise<void>) => void = () => undefined;
+    stopPromise = new Promise<void>((resolve) => {
+      settle = resolve;
     });
+    const intakeFailures: unknown[] = [];
     try {
       stopMessages();
     } catch (error) {
-      failures.push(error);
+      intakeFailures.push(error);
     }
     try {
       stopNotifications();
     } catch (error) {
-      failures.push(error);
+      intakeFailures.push(error);
     }
-    void (async () => {
-      try {
-        await options.projectListing?.stop();
-      } catch (error) {
-        failures.push(error);
-      }
-      try {
-        await options.canonicalProjectApplication.stop();
-      } catch (error) {
-        failures.push(error);
-        settlement.reject(runtimeShutdownFailure(failures));
-        return;
-      }
-      try {
-        await options.projectStorageApplication.stop();
-      } catch (error) {
-        failures.push(error);
-      }
-      if (failures.length === 0) settlement.resolve();
-      else settlement.reject(runtimeShutdownFailure(failures));
-    })();
+    const canonical = attemptStop(() => options.canonicalProjectApplication.stop());
+    // Project listing owns a private Storage owner, so it drains independently of canonical.
+    const listing = attemptStop(() => options.projectListing?.stop());
+    // A failed canonical release may still hold the shared Storage owner: withhold its stop.
+    const storage = canonical.then((failures) =>
+      failures.length > 0 ? failures : attemptStop(() => options.projectStorageApplication.stop()),
+    );
+    settle(
+      Promise.all([storage, listing]).then(([storageFailures, listingFailures]) => {
+        const failures = [...intakeFailures, ...storageFailures, ...listingFailures];
+        if (failures.length > 0) throw runtimeShutdownFailure(failures);
+      }),
+    );
     return stopPromise;
   };
 }

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import {
   type CanonicalCommandReceipt,
   CommandIdSchema,
+  decodeStrict,
   ProjectActivationIdSchema,
 } from "@slopstop/protocol";
 import { expect, vi } from "vitest";
@@ -523,7 +524,7 @@ export async function expectCorruptedConflict(
 }
 
 export const unchangedText = snapshotCanonicalCommand(settlementRequest.projectId, {
-  commandId: CommandIdSchema.parse("44444444-4444-4444-8444-444444444502"),
+  commandId: decodeStrict(CommandIdSchema, "44444444-4444-4444-8444-444444444502"),
   type: "conformance.counter.set",
   version: 1,
   payload: { value: 7 },
@@ -539,7 +540,7 @@ export const unchangedReceipt = {
 } as const;
 
 const rejectedText = snapshotCanonicalCommand(settlementRequest.projectId, {
-  commandId: CommandIdSchema.parse("44444444-4444-4444-8444-444444444503"),
+  commandId: decodeStrict(CommandIdSchema, "44444444-4444-4444-8444-444444444503"),
   type: "conformance.counter.set",
   version: 1,
   payload: { value: 9 },
@@ -898,7 +899,7 @@ export async function createSettlementFixture(handoffId = "88888888-8888-4888-88
     canonicalDatabasePath: file,
     projectId: settlementRequest.projectId,
     activationId: settlementRequest.activationId,
-    writerToken: WriterCapabilityTokenSchema.parse("1".repeat(64)),
+    writerToken: decodeStrict(WriterCapabilityTokenSchema, "1".repeat(64)),
     activatedAt: settlementT0,
   });
   if (activated.status !== "activated") {
@@ -1031,12 +1032,13 @@ export async function activateReplayRepository(
   const activated = await factory.activate({
     canonicalDatabasePath: f.file,
     projectId,
-    activationId: ProjectActivationIdSchema.parse(
+    activationId: decodeStrict(
+      ProjectActivationIdSchema,
       projectId === settlementRequest.projectId
         ? "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2"
         : "ebbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2",
     ),
-    writerToken: WriterCapabilityTokenSchema.parse("2".repeat(64)),
+    writerToken: decodeStrict(WriterCapabilityTokenSchema, "2".repeat(64)),
     activatedAt: "2026-09-05T12:00:05.000Z",
   });
   if (activated.status !== "activated") throw activated.error;

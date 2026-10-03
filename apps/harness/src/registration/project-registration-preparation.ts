@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { decodeStrict } from "@slopstop/protocol";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { sameExecutableIdentity } from "./executable-identity.js";
@@ -68,7 +69,7 @@ async function observeProposal(
   const inspect = async () => {
     const observation = await observer.inspectPhysicalIdentity(request.admission, signal);
     if (observation.status !== "physically-observed") return observation;
-    const record = RegistrationProposalRecordSchema.parse({
+    const record = decodeStrict(RegistrationProposalRecordSchema, {
       request,
       authority,
       observation,
@@ -87,7 +88,7 @@ async function observeProposal(
 
 async function prepare(dependencies: Dependencies, input: unknown, signal: AbortSignal) {
   try {
-    const request = PrepareProjectRegistrationSchema.parse(input);
+    const request = decodeStrict(PrepareProjectRegistrationSchema, input);
     const write = <T>(operation: (transaction: LocalLibsqlTransaction) => Promise<T>) =>
       withRegistrationDatabase(
         dependencies.options,
@@ -118,7 +119,7 @@ async function inspectConfirmation(
   signal: AbortSignal,
 ) {
   try {
-    const request = ConfirmationValidationRequestSchema.parse(input);
+    const request = decodeStrict(ConfirmationValidationRequestSchema, input);
     const saved = await withRegistrationDatabase(
       dependencies.options,
       (client) =>
@@ -182,7 +183,7 @@ async function validateConfirmation(
 
 async function confirm(dependencies: Dependencies, input: unknown, signal: AbortSignal) {
   try {
-    const request = ConfirmationValidationRequestSchema.parse(input);
+    const request = decodeStrict(ConfirmationValidationRequestSchema, input);
     const write = <T>(operation: (transaction: LocalLibsqlTransaction) => Promise<T>) =>
       withRegistrationDatabase(
         dependencies.options,

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { decodeStrict } from "@slopstop/protocol";
 import { afterEach, expect, it, vi } from "vitest";
 import type {
   IdentityQueryChildPort,
@@ -78,7 +79,7 @@ async function observePhysical(
   try {
     const selected = await scenario.registry.selectRepository();
     if (selected.status !== "prepared") throw new Error("Missing selected directory");
-    const request = RepositoryIdentityAdmissionRequestSchema.parse({
+    const request = decodeStrict(RepositoryIdentityAdmissionRequestSchema, {
       ...scenario.request,
       repositorySelectionId: selected.repositorySelectionId,
       trustId: "d41c9b7a-d7c6-4f28-9677-6389413440a9",

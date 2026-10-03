@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import {
   CanonicalProjectActivationRequestSchema,
   CanonicalProjectSwitchRequestSchema,
+  decodeStrict,
   type HarnessStatus,
   HarnessStatusSchema,
   ProjectListRequestSchema,
@@ -201,7 +202,7 @@ function reportPackageSmokeFailure(results: readonly PromiseSettledResult<unknow
 }
 
 function broadcastHarnessStatus(status: HarnessStatus): void {
-  const validated = HarnessStatusSchema.parse(status);
+  const validated = decodeStrict(HarnessStatusSchema, status);
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) {
       window.webContents.send(desktopIpcChannels.harnessStatusChanged, validated);
@@ -212,12 +213,12 @@ function broadcastHarnessStatus(status: HarnessStatus): void {
 function registerHarnessIpc(harnessSupervisor: HarnessSupervisor): void {
   ipcMain.handle(desktopIpcChannels.getHarnessStatus, () => harnessSupervisor.getStatus());
   ipcMain.handle(desktopIpcChannels.retryHarness, () => {
-    return RetryHarnessResultSchema.parse(harnessSupervisor.retry());
+    return decodeStrict(RetryHarnessResultSchema, harnessSupervisor.retry());
   });
 }
 
 export function broadcastWorkspaceNotification(notification: WorkspaceNotification): void {
-  const validated = WorkspaceNotificationSchema.parse(notification);
+  const validated = decodeStrict(WorkspaceNotificationSchema, notification);
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) {
       window.webContents.send(desktopIpcChannels.workspaceNotification, validated);
@@ -227,10 +228,10 @@ export function broadcastWorkspaceNotification(notification: WorkspaceNotificati
 
 export function registerWorkspaceIpc(bridge: WorkspaceBridgeClient): void {
   ipcMain.handle(desktopIpcChannels.queryWorkspace, (_event, value: unknown) => {
-    return bridge.query(WorkspaceQuerySchema.parse(value) satisfies WorkspaceQuery);
+    return bridge.query(decodeStrict(WorkspaceQuerySchema, value) satisfies WorkspaceQuery);
   });
   ipcMain.handle(desktopIpcChannels.submitWorkspaceIntent, (_event, value: unknown) => {
-    return bridge.submit(WorkspaceIntentSchema.parse(value) satisfies WorkspaceIntent);
+    return bridge.submit(decodeStrict(WorkspaceIntentSchema, value) satisfies WorkspaceIntent);
   });
 }
 
@@ -345,14 +346,14 @@ async function bootstrap(): Promise<void> {
     });
     const projects = projectEntryBridge;
     ipcMain.handle(desktopIpcChannels.listProjects, (_event, value: unknown) => {
-      ProjectListRequestSchema.parse(value);
+      decodeStrict(ProjectListRequestSchema, value);
       return projects.list();
     });
     ipcMain.handle(desktopIpcChannels.activateProject, (_event, value: unknown) =>
-      projects.activate(CanonicalProjectActivationRequestSchema.parse(value)),
+      projects.activate(decodeStrict(CanonicalProjectActivationRequestSchema, value)),
     );
     ipcMain.handle(desktopIpcChannels.switchProject, (_event, value: unknown) =>
-      projects.switchProject(CanonicalProjectSwitchRequestSchema.parse(value)),
+      projects.switchProject(decodeStrict(CanonicalProjectSwitchRequestSchema, value)),
     );
     projectStorageBridge = createProjectStorageBridge({
       session: harnessSession,

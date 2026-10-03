@@ -1,4 +1,5 @@
-import { z } from "zod";
+import { decodeStrict, decodeStrictResult, UuidTextSchema } from "@slopstop/protocol";
+import { Result, Schema } from "effect";
 import {
   GitVersionInspectionResultSchema,
   PreparedGitVersionSchema,
@@ -15,15 +16,23 @@ import {
 import { type RegistryRunner, registryRows } from "./registry-database.js";
 import { RegistryFault, registryFailure } from "./registry-failure.js";
 
-export const IdentityQueryConsentRequestSchema = PreparedGitVersionSchema.pick({
-  selectionId: true,
-  observationId: true,
-}).extend({ consentId: z.uuid().brand<"IdentityQueryConsentId">() });
-export const IdentityQueryDecisionSchema = IdentityQueryConsentRequestSchema.extend({
-  decision: z.enum(["accepted", "declined"]),
+export const IdentityQueryConsentRequestSchema = Schema.Struct({
+  selectionId: PreparedGitVersionSchema.fields.selectionId,
+  observationId: PreparedGitVersionSchema.fields.observationId,
+  consentId: UuidTextSchema.pipe(Schema.brand("IdentityQueryConsentId")),
 });
-export type IdentityQueryConsentRequest = z.infer<typeof IdentityQueryConsentRequestSchema>;
-type IdentityQueryDecision = z.infer<typeof IdentityQueryDecisionSchema>;
+const ConsentDecisionSchema = Schema.Literals(["accepted", "declined"]);
+export const IdentityQueryDecisionSchema = Schema.Struct({
+  ...IdentityQueryConsentRequestSchema.fields,
+  decision: ConsentDecisionSchema,
+});
+export type IdentityQueryConsentRequest = typeof IdentityQueryConsentRequestSchema.Type;
+type IdentityQueryDecision = typeof IdentityQueryDecisionSchema.Type;
+const versionRowsSchema = Schema.Array(Schema.Struct({ resultJson: Schema.String })).check(
+  Schema.isMaxLength(1),
+);
+const decisionRowsSchema = Schema.Array(IdentityQueryDecisionSchema).check(Schema.isMaxLength(1));
+const decisionCellSchema = Schema.Tuple([Schema.Tuple([ConsentDecisionSchema])]);
 type ConsentFailure =
   | ReturnType<typeof registryFailure>
   | Exclude<ExecutableIdentityObservation, { status: "observed" }>
@@ -55,22 +64,21 @@ async function readValidatedVersion(
     sql: "SELECT o.result_json AS resultJson FROM registration_observer_intents i JOIN registration_observer_outcomes o ON o.observation_id = i.observation_id WHERE i.observation_id = ? AND i.selection_id = ?",
     args: [request.observationId, request.selectionId],
   });
-  const row = z
-    .strictObject({ resultJson: z.string() })
-    .array()
-    .max(1)
-    .parse(registryRows(result))[0];
+  const row = decodeStrict(versionRowsSchema, registryRows(result))[0];
   if (row === undefined) return undefined;
-  const parsed = GitVersionInspectionResultSchema.safeParse(JSON.parse(row.resultJson));
-  if (!parsed.success) throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-  if (parsed.data.status !== "prepared") return undefined;
+  const parsed = decodeStrictResult(GitVersionInspectionResultSchema, JSON.parse(row.resultJson));
+  if (Result.isFailure(parsed)) {
+    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+  }
+  const version = parsed.success;
+  if (version.status !== "prepared") return undefined;
   if (
-    parsed.data.observationId !== request.observationId ||
-    parsed.data.selectionId !== request.selectionId
+    version.observationId !== request.observationId ||
+    version.selectionId !== request.selectionId
   ) {
     throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
   }
-  return parsed.data;
+  return version;
 }
 
 async function recordDecision(transaction: LocalLibsqlTransaction, request: IdentityQueryDecision) {
@@ -78,7 +86,7 @@ async function recordDecision(transaction: LocalLibsqlTransaction, request: Iden
     sql: "SELECT consent_id AS consentId, selection_id AS selectionId, observation_id AS observationId, decision FROM registration_identity_consents WHERE consent_id = ?",
     args: [request.consentId],
   });
-  const existing = IdentityQueryDecisionSchema.array().max(1).parse(registryRows(rows))[0];
+  const existing = decodeStrict(decisionRowsSchema, registryRows(rows))[0];
   if (existing !== undefined) {
     if (!sameDecision(existing, request)) {
       throw new RegistryFault({ status: "rejected", code: "REGISTRATION_IDEMPOTENCY_CONFLICT" });
@@ -116,9 +124,7 @@ export async function resolveIdentityQueryConsent(
     args: [request.consentId, request.selectionId, request.observationId],
   });
   if (rows.rows.length === 0) return unconfirmed;
-  const decision = z
-    .tuple([z.tuple([IdentityQueryDecisionSchema.shape.decision])])
-    .parse(rows.rows)[0][0];
+  const decision = decodeStrict(decisionCellSchema, rows.rows)[0][0];
   if (decision === "declined") return { status: "cancelled" as const };
   const version = await readValidatedVersion(transaction, request);
   const selection = await readSelection(transaction, request.selectionId);
@@ -142,11 +148,14 @@ export function createIdentityQueryConsentAuthority(
   return {
     decideIdentityQueries: (input) =>
       write((transaction) =>
-        recordDecision(transaction, IdentityQueryDecisionSchema.parse(input)),
+        recordDecision(transaction, decodeStrict(IdentityQueryDecisionSchema, input)),
       ).catch(registryFailure),
     resolveIdentityQueries: (input) =>
       write((transaction) =>
-        resolveIdentityQueryConsent(transaction, IdentityQueryConsentRequestSchema.parse(input)),
+        resolveIdentityQueryConsent(
+          transaction,
+          decodeStrict(IdentityQueryConsentRequestSchema, input),
+        ),
       ).catch(registryFailure),
   };
 }

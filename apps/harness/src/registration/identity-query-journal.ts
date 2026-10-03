@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { decodeStrict } from "@slopstop/protocol";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { type IdentityQueryDispatch, identityQueryArguments } from "./identity-query-child.js";
@@ -94,7 +95,7 @@ export function createIdentityQueryJournal(options: RegistrationDatabaseOptions)
       });
     },
     recordChild: (id: string, child: WindowsObserverChildIdentity) => {
-      const parsed = ObserverChildIdentitySchema.parse(child);
+      const parsed = decodeStrict(ObserverChildIdentitySchema, child);
       if (parsed.jobName !== `Local\\SlopStop.Registration.Observer.${id}`)
         throw new Error("Query child scope mismatch");
       return update(
@@ -105,7 +106,7 @@ export function createIdentityQueryJournal(options: RegistrationDatabaseOptions)
     recordTerminal: (id: string, terminal: ObserverTerminalProof) =>
       update(
         "UPDATE registration_identity_query_attempts SET terminal_json = ? WHERE observation_id = ? AND child_json IS NOT NULL AND terminal_json IS NULL AND result_json IS NULL",
-        [JSON.stringify(ObserverTerminalSchema.parse(terminal)), id],
+        [JSON.stringify(decodeStrict(ObserverTerminalSchema, terminal)), id],
       ),
     settle: <Result extends Readonly<{ status: string }>>(id: string, decide: () => Result) =>
       withRegistrationDatabase(

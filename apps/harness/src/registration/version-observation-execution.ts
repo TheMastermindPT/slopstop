@@ -1,3 +1,4 @@
+import { decodeStrict } from "@slopstop/protocol";
 import {
   type GitVersionInspectionResult,
   type ObserverFailureTrigger,
@@ -144,7 +145,7 @@ async function publishVersion(
     await dependencies.journal.invalidate(observationId, "OBSERVATION_INVALID");
     return { status: "rejected", code: "OBSERVATION_INVALID" };
   }
-  const result = PreparedGitVersionSchema.parse({
+  const result = decodeStrict(PreparedGitVersionSchema, {
     status: "prepared",
     selectionId: request.selectionId,
     observationId,

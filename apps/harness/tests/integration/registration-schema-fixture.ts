@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { decodeStrict } from "@slopstop/protocol";
 import { expect } from "vitest";
 import { GitVersionInspectionRequestSchema } from "../../src/project-registration-observer.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
@@ -38,7 +39,7 @@ export async function inspectRegistryAfterStatements(root: string, statements: r
     migrationResourcesRoot,
   });
   try {
-    const request = GitVersionInspectionRequestSchema.parse({
+    const request = decodeStrict(GitVersionInspectionRequestSchema, {
       selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
       consentId: null,
     });

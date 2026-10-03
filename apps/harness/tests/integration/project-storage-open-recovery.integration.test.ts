@@ -1,7 +1,7 @@
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { type OpenedStorageIdentity, StorageIdSchema } from "@slopstop/protocol";
+import { decodeStrict, type OpenedStorageIdentity, StorageIdSchema } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import {
   createRequest,
@@ -149,7 +149,7 @@ it(
   async () => {
     const root = await createTemporaryApplicationRoot();
     await initializeApplicationAuthority(root);
-    const storageId = StorageIdSchema.parse("00000000-0000-4000-8000-000000000071");
+    const storageId = decodeStrict(StorageIdSchema, "00000000-0000-4000-8000-000000000071");
     const database = new DatabaseSync(path.join(root, "application.db"));
     try {
       database

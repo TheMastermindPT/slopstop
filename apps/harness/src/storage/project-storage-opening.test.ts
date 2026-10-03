@@ -1,5 +1,6 @@
 import {
   CanonicalDatabaseLineageIdSchema,
+  decodeStrict,
   ProjectStorageOpenRequestSchema,
   RuntimeDatabaseLineageIdSchema,
   StorageGenerationIdSchema,
@@ -148,17 +149,19 @@ describe("Project database probe classification", () => {
 });
 
 it("retains the exact release handle for a selected blocked manifest", () => {
-  const request = ProjectStorageOpenRequestSchema.parse({
+  const request = decodeStrict(ProjectStorageOpenRequestSchema, {
     projectId: "00000000-0000-4000-8000-000000000010",
   });
   const release = vi.fn(async () => {});
   const identity = {
-    storageId: StorageIdSchema.parse("00000000-0000-4000-8000-000000000012"),
-    generationId: StorageGenerationIdSchema.parse("00000000-0000-4000-8000-000000000014"),
-    canonicalDatabaseLineageId: CanonicalDatabaseLineageIdSchema.parse(
+    storageId: decodeStrict(StorageIdSchema, "00000000-0000-4000-8000-000000000012"),
+    generationId: decodeStrict(StorageGenerationIdSchema, "00000000-0000-4000-8000-000000000014"),
+    canonicalDatabaseLineageId: decodeStrict(
+      CanonicalDatabaseLineageIdSchema,
       "00000000-0000-4000-8000-000000000015",
     ),
-    runtimeDatabaseLineageId: RuntimeDatabaseLineageIdSchema.parse(
+    runtimeDatabaseLineageId: decodeStrict(
+      RuntimeDatabaseLineageIdSchema,
       "00000000-0000-4000-8000-000000000016",
     ),
   };

@@ -1,4 +1,5 @@
 import {
+  decodeStrict,
   ProjectStorageCloseRequestSchema,
   ProjectStorageCreateRequestSchema,
   ProjectStorageOpenRequestSchema,
@@ -14,9 +15,12 @@ const projectId = "00000000-0000-4000-8000-000000000010";
 const anotherProjectId = "00000000-0000-4000-8000-000000000020";
 const createRequestId = "00000000-0000-4000-8000-000000000011";
 const anotherCreateRequestId = "00000000-0000-4000-8000-000000000021";
-const openRequest = ProjectStorageOpenRequestSchema.parse({ projectId });
-const createRequest = ProjectStorageCreateRequestSchema.parse({ projectId, createRequestId });
-const closeRequest = ProjectStorageCloseRequestSchema.parse({ projectId });
+const openRequest = decodeStrict(ProjectStorageOpenRequestSchema, { projectId });
+const createRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
+  projectId,
+  createRequestId,
+});
+const closeRequest = decodeStrict(ProjectStorageCloseRequestSchema, { projectId });
 const unavailableDiagnostic = {
   code: "PROJECT_STORAGE_UNAVAILABLE",
   message: "Project Storage owner is unavailable.",

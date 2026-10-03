@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { z } from "zod";
+import { Result, Schema } from "effect";
 import { lstatIfPresent } from "./project-storage-filesystem-authority.js";
 import {
   type ProjectStorageManifestV1,
@@ -28,9 +28,10 @@ type ManifestSourceInspection =
   | Extract<OpeningManifestInspection, { status: "blocked" }>
   | Readonly<{ status: "read"; source: string }>;
 
-const manifestVersionSchema = z
-  .object({ manifestVersion: z.number().int().nonnegative() })
-  .passthrough();
+// Reads only the version; the full manifest schema decides every other member.
+const manifestVersionSchema = Schema.Struct({
+  manifestVersion: Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
+});
 
 const blocked = (manifestStatus: ManifestBlockingStatus) => ({
   status: "blocked" as const,
@@ -79,10 +80,10 @@ function parseOpeningManifest(source: string): OpeningManifestInspection {
   } catch {
     return blocked("corrupt");
   }
-  const version = manifestVersionSchema.safeParse(json);
-  if (!version.success) return blocked("corrupt");
-  if (version.data.manifestVersion > 1) return blocked("unsupported-newer");
-  if (version.data.manifestVersion !== 1) return blocked("corrupt");
+  const version = Schema.decodeUnknownResult(manifestVersionSchema)(json);
+  if (Result.isFailure(version)) return blocked("corrupt");
+  if (version.success.manifestVersion > 1) return blocked("unsupported-newer");
+  if (version.success.manifestVersion !== 1) return blocked("corrupt");
   try {
     return { status: "current", manifest: parseProjectStorageManifest(source) };
   } catch {

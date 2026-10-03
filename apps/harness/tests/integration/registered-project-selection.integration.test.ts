@@ -13,11 +13,12 @@ import {
   createProjectActivateCommand,
   createProjectCommand,
   createProjectSwitchCommand,
+  decodeStrict,
   type ProjectId,
   RegisteredProjectSchema,
 } from "@slopstop/protocol";
+import { Schema } from "effect";
 import { afterEach, expect, it } from "vitest";
-import { z } from "zod";
 import { startHarnessProcessRuntime } from "../../src/process-bootstrap.js";
 import { createProjectRegistrationOwner } from "../../src/registration/project-registration-owner.js";
 import { RepositoryTrustDecisionSchema } from "../../src/registration/repository-trust.js";
@@ -70,12 +71,12 @@ async function activate(host: ReturnType<typeof runtime>, projectId: ProjectId) 
       { projectId },
     ),
   );
-  return z
-    .object({
-      event: z.literal("project.activate.result"),
+  return Schema.decodeUnknownSync(
+    Schema.Struct({
+      event: Schema.Literal("project.activate.result"),
       payload: CanonicalProjectActivationResultSchema,
-    })
-    .parse(response).payload;
+    }),
+  )(response).payload;
 }
 
 function rows(f: Awaited<ReturnType<typeof registeredFixture>>, sql: string) {
@@ -108,7 +109,7 @@ async function registeredFixture(existingRoot?: string) {
     if (selected.status !== "prepared") throw new Error("Selection missing");
     const trust = { repositorySelectionId: selected.repositorySelectionId, trustId: randomUUID() };
     await scenario.registry.decideRepositoryTrust(
-      RepositoryTrustDecisionSchema.parse({ ...trust, decision: "accepted" }),
+      decodeStrict(RepositoryTrustDecisionSchema, { ...trust, decision: "accepted" }),
     );
     await scenario.registry.decideIdentityQueries({ ...scenario.request, decision: "accepted" });
     const preparation = {
@@ -118,7 +119,8 @@ async function registeredFixture(existingRoot?: string) {
     };
     const proposal = await owner.prepare(preparation);
     if (proposal.status !== "prepared") throw new Error("Preparation missing");
-    const registered = RegisteredProjectSchema.parse(
+    const registered = decodeStrict(
+      RegisteredProjectSchema,
       await owner.confirm({
         version: 1,
         requestId: randomUUID(),
@@ -158,12 +160,12 @@ it.runIf(process.platform === "win32")(
           },
         ),
       );
-      const switched = z
-        .object({
-          event: z.literal("project.switch.result"),
+      const switched = Schema.decodeUnknownSync(
+        Schema.Struct({
+          event: Schema.Literal("project.switch.result"),
           payload: CanonicalProjectSwitchResultSchema,
-        })
-        .parse(response).payload;
+        }),
+      )(response).payload;
       if (switched.status !== "target-result" || switched.target.status !== "active")
         throw new Error("Activation B missing");
       expect(switched.target).toMatchObject({
@@ -171,7 +173,7 @@ it.runIf(process.platform === "win32")(
         request: { projectId: b.registered.projectId },
       });
       expect(switched.target.activationId).not.toBe(activeA.activationId);
-      const oldCommand = CanonicalProjectCommandRequestSchema.parse({
+      const oldCommand = decodeStrict(CanonicalProjectCommandRequestSchema, {
         projectId: a.registered.projectId,
         activationId: activeA.activationId,
         command: {
@@ -499,7 +501,7 @@ it.runIf(process.platform === "win32")(
         diagnostic: { code: "WRITER_UNAVAILABLE" },
       });
       if (selected.status !== "active") throw new Error("Activation missing");
-      const command = CanonicalProjectCommandRequestSchema.parse({
+      const command = decodeStrict(CanonicalProjectCommandRequestSchema, {
         projectId: f.registered.projectId,
         activationId: selected.activationId,
         command: {

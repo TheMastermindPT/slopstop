@@ -1,15 +1,16 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { z } from "zod";
+import { decodeStrict } from "@slopstop/protocol";
+import { Schema } from "effect";
 
-const peerMessageSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("ready") }),
-  z.strictObject({ kind: z.literal("migration") }),
-  z.strictObject({ kind: z.literal("locked") }),
-  z.strictObject({ kind: z.literal("result"), outcome: z.unknown() }),
-  z.strictObject({ kind: z.literal("failed"), message: z.string() }),
+const peerMessageSchema = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("ready") }),
+  Schema.Struct({ kind: Schema.Literal("migration") }),
+  Schema.Struct({ kind: Schema.Literal("locked") }),
+  Schema.Struct({ kind: Schema.Literal("result"), outcome: Schema.Unknown }),
+  Schema.Struct({ kind: Schema.Literal("failed"), message: Schema.String }),
 ]);
-type PeerMessage = z.infer<typeof peerMessageSchema>;
+type PeerMessage = typeof peerMessageSchema.Type;
 type PeerRequest =
   | { kind: "prepare"; selectionId: string; executablePath: string }
   | { kind: "release" | "stop" };
@@ -35,7 +36,7 @@ export async function startRegistryPeer(root: string, migrations: string, hold =
     stderr += data.toString();
   });
   child.on("message", (message) => {
-    messages.push(peerMessageSchema.parse(message));
+    messages.push(decodeStrict(peerMessageSchema, message));
     for (const notify of waiting) notify();
   });
   const exit = new Promise<void>((resolve, reject) => {

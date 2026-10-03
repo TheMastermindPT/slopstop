@@ -12,6 +12,7 @@ import {
   CanonicalProjectActivationResultSchema,
   CanonicalProjectCommandResultSchema,
   CanonicalProjectSwitchResultSchema,
+  decodeStrict,
   type ProjectId,
 } from "@slopstop/protocol";
 import {
@@ -105,7 +106,7 @@ function activationFailure(
   message: string,
   retryable = false,
 ): CanonicalProjectActivationResult {
-  return CanonicalProjectActivationResultSchema.parse({
+  return decodeStrict(CanonicalProjectActivationResultSchema, {
     status,
     request,
     diagnostic: { code, message, retryable },
@@ -197,7 +198,7 @@ function commandFailure(
   request: CanonicalProjectCommandRequest,
   status: keyof typeof commandDiagnostics,
 ): CanonicalProjectCommandResult {
-  return CanonicalProjectCommandResultSchema.parse({
+  return decodeStrict(CanonicalProjectCommandResultSchema, {
     status,
     projectId: request.projectId,
     activationId: request.activationId,
@@ -572,7 +573,7 @@ export function createActiveProjectCoordinator(
       enqueue(async () => {
         const rejected = rejectSwitchSource(state, request);
         if (rejected !== undefined)
-          return CanonicalProjectSwitchResultSchema.parse({
+          return decodeStrict(CanonicalProjectSwitchResultSchema, {
             status: rejected,
             request,
             diagnostic: switchDiagnostics[rejected],
@@ -582,7 +583,7 @@ export function createActiveProjectCoordinator(
           return { status: "target-result", sourceReleased: false, request, target: refused };
         const released = await release(ownedActivation(state));
         if (released.status === "failed")
-          return CanonicalProjectSwitchResultSchema.parse({
+          return decodeStrict(CanonicalProjectSwitchResultSchema, {
             status: "release-failed",
             request,
             diagnostic: {

@@ -8,13 +8,14 @@ import {
   createProjectActivateCommand,
   createProjectCommand,
   createProjectSwitchCommand,
+  decodeStrict,
   ProjectActivationIdSchema,
   type ProjectId,
   ProjectIdSchema,
   parseHarnessMessage,
 } from "@slopstop/protocol";
+import { Schema, SchemaTransformation } from "effect";
 import { expect, vi } from "vitest";
-import { z } from "zod";
 import { createActiveProjectCoordinator } from "../../src/active-project-coordinator.js";
 import {
   type CanonicalCommandDecision,
@@ -52,7 +53,8 @@ import {
   transportFor,
 } from "./project-storage-runtime-fixture.js";
 
-export const settlementNewEpoch = ProjectActivationIdSchema.parse(
+export const settlementNewEpoch = decodeStrict(
+  ProjectActivationIdSchema,
   "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
 );
 export function settledCommand(request: CanonicalProjectCommandRequest, receipt: unknown) {
@@ -80,10 +82,10 @@ export function busyCommand(request: CanonicalProjectCommandRequest) {
 }
 export const settlementSwitch = {
   from: {
-    projectId: ProjectIdSchema.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"),
-    activationId: ProjectActivationIdSchema.parse("eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"),
+    projectId: decodeStrict(ProjectIdSchema, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"),
+    activationId: decodeStrict(ProjectActivationIdSchema, "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"),
   },
-  to: { projectId: ProjectIdSchema.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1") },
+  to: { projectId: decodeStrict(ProjectIdSchema, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1") },
 };
 export function settlementEvent(
   sequence: number,
@@ -328,7 +330,7 @@ export function compositionMutation(f: CompositionFixture) {
   let parsedValue = 0;
   f.handler.mockImplementation(async (context) => {
     output = await applyCounter(context);
-    context.payload.value = 9;
+    Reflect.set(context.payload, "value", 9);
     parsedValue = context.payload.value;
     return output;
   });
@@ -627,7 +629,8 @@ export async function createSettlementComposition(extended = true) {
     },
     createActivationId: () =>
       ++activation === 1 ? settlementRequest.activationId : settlementNewEpoch,
-    createWriterToken: () => WriterCapabilityTokenSchema.parse(String(activation).repeat(64)),
+    createWriterToken: () =>
+      decodeStrict(WriterCapabilityTokenSchema, String(activation).repeat(64)),
     now: clock,
   });
   const controls: CompositionControls = {};
@@ -748,11 +751,35 @@ function settlementChannel(
   };
 }
 
-const counterPayloadSchema = z.strictObject({
-  value: z.number().int().min(0).max(10),
-  meta: z.strictObject({ a: z.number(), b: z.number() }).optional(),
-  tags: z.array(z.string()).optional(),
+const counterPayloadSchema = Schema.Struct({
+  value: Schema.Number.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0),
+    Schema.isLessThanOrEqualTo(10),
+  ),
+  meta: Schema.optional(Schema.Struct({ a: Schema.Number, b: Schema.Number })),
+  tags: Schema.optional(Schema.Array(Schema.String)),
 });
+type CounterPayload = typeof counterPayloadSchema.Type;
+const counterCellSchema = Schema.Tuple([
+  Schema.Tuple([
+    Schema.Number.check(Schema.isInt()),
+    Schema.Number.check(Schema.isInt(), Schema.isGreaterThan(0)),
+  ]),
+]);
+
+// Like a Zod transform, the transformed payload is delivered without revalidation.
+function transformedCounterPayload(transform: (payload: CounterPayload) => CounterPayload) {
+  return counterPayloadSchema.pipe(
+    Schema.decodeTo(
+      Schema.declare((value: unknown): value is CounterPayload => typeof value === "object"),
+      SchemaTransformation.transform<CounterPayload, CounterPayload>({
+        decode: transform,
+        encode: (payload) => payload,
+      }),
+    ),
+  );
+}
 
 export const conflictCases = [
   {
@@ -812,7 +839,7 @@ export const admissionCases = [
 ] as const;
 export type CounterContext = Readonly<{
   projectId: ProjectId;
-  payload: z.infer<typeof counterPayloadSchema>;
+  payload: CounterPayload;
   transaction: CanonicalCommandTransaction;
 }>;
 
@@ -900,9 +927,7 @@ export async function applyCounter(context: CounterContext): Promise<CanonicalCo
     sql: "SELECT value,entity_version FROM conformance_counter WHERE project_id=? AND counter_id=?",
     args: [projectId, "55555555-5555-4555-8555-555555555501"],
   });
-  const [previous, version] = z
-    .tuple([z.tuple([z.number().int(), z.number().int().positive()])])
-    .parse(result.rows)[0];
+  const [previous, version] = decodeStrict(counterCellSchema, result.rows)[0];
   if (previous === payload.value) return { outcome: "unchanged" };
   const updated = await transaction.execute({
     sql: "UPDATE conformance_counter SET value=?, entity_version=? WHERE project_id=? AND counter_id=? AND entity_version=?",
@@ -911,7 +936,8 @@ export async function applyCounter(context: CounterContext): Promise<CanonicalCo
   if (updated.rowsAffected !== 1) throw new Error("Conformance counter update was not singular.");
   const source = {
     aggregateType: "conformance.counter",
-    aggregateId: CanonicalEventInputSchema.shape.aggregateId.parse(
+    aggregateId: decodeStrict(
+      CanonicalEventInputSchema.fields.aggregateId,
       "55555555-5555-4555-8555-555555555501",
     ),
     aggregateVersion: version + 1,
@@ -937,7 +963,7 @@ export function createConformanceCounterCommand(
   transform?: (payload: CounterContext["payload"]) => CounterContext["payload"],
 ) {
   const payloadSchema =
-    transform === undefined ? counterPayloadSchema : counterPayloadSchema.transform(transform);
+    transform === undefined ? counterPayloadSchema : transformedCounterPayload(transform);
   return defineCanonicalCommand({
     type: "conformance.counter.set",
     version: 1,

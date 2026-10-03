@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import {
   createHandshakeCommand,
+  decodeStrict,
   type HarnessBootstrap,
   HarnessBootstrapSchema,
   type HarnessMessage,
@@ -55,7 +56,7 @@ export class HarnessSupervisor {
   constructor(entryPath: string, logger: Logger, bootstrap: HarnessBootstrap) {
     this.#entryPath = entryPath;
     this.#logger = logger;
-    this.#bootstrap = HarnessBootstrapSchema.parse(bootstrap);
+    this.#bootstrap = decodeStrict(HarnessBootstrapSchema, bootstrap);
     this.#session.subscribe((event) => {
       this.#handleSessionEvent(event);
     });
@@ -284,7 +285,7 @@ export class HarnessSupervisor {
   }
 
   #setStatus(status: HarnessStatus): void {
-    this.#status = HarnessStatusSchema.parse(status);
+    this.#status = decodeStrict(HarnessStatusSchema, status);
     for (const listener of this.#listeners) {
       listener(this.#status);
     }

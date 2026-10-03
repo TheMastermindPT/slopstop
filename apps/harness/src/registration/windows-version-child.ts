@@ -1,4 +1,5 @@
 import path from "node:path";
+import { acceptsStrict } from "@slopstop/protocol";
 import * as koffi from "koffi";
 import type { ObserverFailureTrigger } from "../project-registration-observer.js";
 import {
@@ -488,7 +489,7 @@ function validateVersionAdmission(directory: string, request: VersionChildReques
     validExecutablePath(request.executablePath),
     validControlDirectory(directory),
     "query" in request
-      ? IdentityQueryKindSchema.safeParse(request.query).success &&
+      ? acceptsStrict(IdentityQueryKindSchema, request.query) &&
         validControlDirectory(request.repositoryDirectory)
       : versionOnlyArguments(request.argv),
   ];
@@ -622,7 +623,7 @@ export function createWindowsIdentityQueryChild(
 ): IdentityQueryChildPort {
   return {
     run: async (request, signal) => {
-      if (!IdentityQueryKindSchema.safeParse(request.query).success)
+      if (!acceptsStrict(IdentityQueryKindSchema, request.query))
         throw new Error("Unknown identity query.");
       if (process.platform !== "win32" || process.arch !== "x64") {
         return { status: "unavailable", code: "GIT_UNAVAILABLE" };

@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { RegisteredProjectSchema } from "@slopstop/protocol";
+import { decodeStrict, RegisteredProjectSchema } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { createProjectRegistrationOwner } from "../../src/registration/project-registration-owner.js";
 import { RepositoryTrustDecisionSchema } from "../../src/registration/repository-trust.js";
@@ -41,7 +41,7 @@ it.runIf(process.env["PC_UI_USER_DATA"] !== undefined)(
         };
         expect(
           await scenario.registry.decideRepositoryTrust(
-            RepositoryTrustDecisionSchema.parse({ ...trust, decision: "accepted" }),
+            decodeStrict(RepositoryTrustDecisionSchema, { ...trust, decision: "accepted" }),
           ),
         ).toEqual({ status: "recorded" });
         expect(
@@ -58,7 +58,8 @@ it.runIf(process.env["PC_UI_USER_DATA"] !== undefined)(
         const proposal = await owner.prepare(preparation);
         if (proposal.status !== "prepared") throw new Error("No proposal");
         projects.push(
-          RegisteredProjectSchema.parse(
+          decodeStrict(
+            RegisteredProjectSchema,
             await owner.confirm({
               version: 1,
               requestId: randomUUID(),

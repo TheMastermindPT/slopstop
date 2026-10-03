@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { ProjectActivationIdSchema } from "@slopstop/protocol";
+import { decodeStrict, ProjectActivationIdSchema } from "@slopstop/protocol";
 import { expect, vi } from "vitest";
 import { createActiveProjectCoordinator } from "../../src/active-project-coordinator.js";
 import { createCanonicalCommandRegistry } from "../../src/canonical-command-registry.js";
@@ -73,10 +73,11 @@ export async function activateRecovery(
   return factory.activate({
     canonicalDatabasePath: f.file,
     projectId: settlementRequest.projectId,
-    activationId: ProjectActivationIdSchema.parse(
+    activationId: decodeStrict(
+      ProjectActivationIdSchema,
       `eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa${generation}`,
     ),
-    writerToken: WriterCapabilityTokenSchema.parse(String(generation).repeat(64)),
+    writerToken: decodeStrict(WriterCapabilityTokenSchema, String(generation).repeat(64)),
     activatedAt: generation === 2 ? recoveryActivationTime : "2026-09-05T12:00:07.000Z",
   });
 }
@@ -341,8 +342,8 @@ export async function advanceRecoveryFixture(f: Awaited<ReturnType<typeof create
   const activated = await factory.activate({
     canonicalDatabasePath: f.file,
     projectId: settlementRequest.projectId,
-    activationId: ProjectActivationIdSchema.parse("eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2"),
-    writerToken: WriterCapabilityTokenSchema.parse("2".repeat(64)),
+    activationId: decodeStrict(ProjectActivationIdSchema, "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2"),
+    writerToken: decodeStrict(WriterCapabilityTokenSchema, "2".repeat(64)),
     activatedAt: "2026-09-05T12:00:05.000Z",
   });
   if (activated.status !== "activated") throw activated.error;
@@ -440,7 +441,7 @@ export async function createRecoveryComposition() {
       },
     },
     createActivationId: () => settlementRequest.activationId,
-    createWriterToken: () => WriterCapabilityTokenSchema.parse("1".repeat(64)),
+    createWriterToken: () => decodeStrict(WriterCapabilityTokenSchema, "1".repeat(64)),
     now: vi.fn(() => recoveryReleaseTime).mockReturnValueOnce(settlementT0),
   });
   expect(await coordinator.activate({ projectId: settlementRequest.projectId })).toEqual({

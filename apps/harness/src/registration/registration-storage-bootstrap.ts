@@ -1,5 +1,6 @@
 import path from "node:path";
 import {
+  decodeStrict,
   InitialRepositoryBindingSchema,
   ProjectStorageCreateRequestSchema,
   ProjectStorageCreateResultSchema,
@@ -22,7 +23,11 @@ import {
   type Reservation,
   reservationFingerprint,
 } from "./registration-confirmation-store.js";
-import { type RegistrationDatabaseOptions, withRegistrationDatabase } from "./registry-database.js";
+import {
+  applicationDatabaseFor,
+  type RegistrationDatabaseOptions,
+  withRegistrationDatabase,
+} from "./registry-database.js";
 import { registryFailure } from "./registry-failure.js";
 import { discoverSelectedPhysical } from "./repository-physical-observation.js";
 import type { RepositoryTrustOwner } from "./repository-trust.js";
@@ -76,7 +81,7 @@ export function createRegistrationStorageBootstrap(
       const before = await revalidate(registry, reservation, signal);
       if (before.status !== "matched") return before;
       if (signal.aborted) return { status: "cancelled" } as const;
-      const seed = InitialRepositoryBindingSchema.parse({
+      const seed = decodeStrict(InitialRepositoryBindingSchema, {
         projectId: reservation.projectId,
         createRequestId: reservation.createRequestId,
         repositoryBindingId: reservation.repositoryBindingId,
@@ -89,6 +94,7 @@ export function createRegistrationStorageBootstrap(
         applicationStorageRoot: options.applicationStorageRoot,
         migrationResourcesRoot: options.migrationResourcesRoot,
         applicationVersion: options.applicationVersion,
+        applicationDatabase: applicationDatabaseFor(options),
         initialRepositoryBinding: seed,
         ...(options.storageFailures === undefined ? {} : { failures: options.storageFailures }),
       });
@@ -97,7 +103,7 @@ export function createRegistrationStorageBootstrap(
       try {
         if (signal.aborted) return { status: "cancelled" } as const;
         creation = await owner.create(
-          ProjectStorageCreateRequestSchema.parse({
+          decodeStrict(ProjectStorageCreateRequestSchema, {
             projectId: seed.projectId,
             createRequestId: seed.createRequestId,
           }),
@@ -113,7 +119,7 @@ export function createRegistrationStorageBootstrap(
           code: "REGISTRATION_INCOMPLETE",
           requestId: request.requestId,
         } as const;
-      const created = ProjectStorageCreateResultSchema.parse(creation.result);
+      const created = decodeStrict(ProjectStorageCreateResultSchema, creation.result);
       if (created.status === "broken")
         return { status: "broken", code: "INTERNAL_FAILURE" } as const;
       if (created.status !== "created")
@@ -147,7 +153,7 @@ export function createRegistrationStorageBootstrap(
       const after = await revalidate(registry, reservation, signal);
       if (after.status === "broken") return after;
       if (after.status !== "matched" || signal.aborted) return incomplete(request);
-      const result = RegisteredProjectSchema.parse({
+      const result = decodeStrict(RegisteredProjectSchema, {
         status: "registered",
         requestId: request.requestId,
         proposalId: request.proposalId,

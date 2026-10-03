@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
+  decodeStrict,
   ProjectStorageCreateRequestSchema,
   ProjectStorageCreateResultSchema,
   RegisteredProjectSchema,
@@ -78,7 +79,7 @@ it.runIf(process.platform === "win32").each([
       trustId: randomUUID(),
     };
     await registry.decideRepositoryTrust(
-      RepositoryTrustDecisionSchema.parse({ ...trust, decision: "accepted" }),
+      decodeStrict(RepositoryTrustDecisionSchema, { ...trust, decision: "accepted" }),
     );
     await registry.decideIdentityQueries({ ...scenario.request, decision: "accepted" });
     const preparation = {
@@ -95,7 +96,7 @@ it.runIf(process.platform === "win32").each([
       proposalId: proposal.proposalId,
       proposalFingerprint: proposal.proposalFingerprint,
     };
-    const registered = RegisteredProjectSchema.parse(await owner.confirm(confirmation));
+    const registered = decodeStrict(RegisteredProjectSchema, await owner.confirm(confirmation));
     const otherRequestId = randomUUID();
     if (registration !== "incomplete")
       expect(await owner.confirm({ ...confirmation, requestId: otherRequestId })).toMatchObject({
@@ -255,7 +256,7 @@ it("lists an empty new installation but never replaces witnessed or malformed re
 it("lists older unbound Storage in migration-required safe mode without rewriting it", async () => {
   const root = await newRoot();
   const options = { ...consentRegistryOptions(root), applicationVersion: "0.0.0" };
-  const request = ProjectStorageCreateRequestSchema.parse({
+  const request = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId: randomUUID(),
     createRequestId: randomUUID(),
   });
@@ -263,7 +264,7 @@ it("lists older unbound Storage in migration-required safe mode without rewritin
   const creation = await storage.create(request);
   await storage.stop();
   if (creation.status !== "ready") throw new Error("Storage fixture unavailable");
-  const created = ProjectStorageCreateResultSchema.parse(creation.result);
+  const created = decodeStrict(ProjectStorageCreateResultSchema, creation.result);
   if (created.status !== "created") throw new Error("Storage fixture unavailable");
   const generation = path.join(
     options.applicationStorageRoot,

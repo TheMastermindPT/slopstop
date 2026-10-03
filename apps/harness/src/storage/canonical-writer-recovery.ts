@@ -2,13 +2,14 @@ import { isDomainIdentity } from "@slopstop/kernel";
 import {
   type CommandId,
   CommandIdSchema,
+  decodeStrict,
   ProjectActivationIdSchema,
   type ProjectId,
   ProjectIdSchema,
   type WriterGeneration,
   WriterGenerationSchema,
 } from "@slopstop/protocol";
-import { z } from "zod";
+import { Schema } from "effect";
 import {
   CanonicalSha256Schema,
   canonicalChangedOnce,
@@ -30,11 +31,11 @@ export type CanonicalUncertaintyDescriptor = Readonly<{
   commandId: CommandId;
   fingerprint: string;
 }>;
-const recoveryIdentitySchema = z
-  .string()
-  .refine(isDomainIdentity)
-  .refine((value) => value === value.toLowerCase());
-const preparedRecoverySchema = z.strictObject({
+const recoveryIdentitySchema = Schema.String.check(
+  Schema.makeFilter(isDomainIdentity),
+  Schema.makeFilter((value: string) => value === value.toLowerCase()),
+);
+const preparedRecoverySchema = Schema.Struct({
   projectId: ProjectIdSchema,
   writerGeneration: WriterGenerationSchema,
   commandId: CommandIdSchema,
@@ -42,18 +43,19 @@ const preparedRecoverySchema = z.strictObject({
   recoveryRecordId: recoveryIdentitySchema,
   observedAt: canonicalWriterUtcInstantSchema,
 });
-export type PreparedCanonicalUncertainty = Readonly<z.infer<typeof preparedRecoverySchema>>;
-const recordingRowSchema = preparedRecoverySchema.extend({
-  reason: z.literal("commit-uncertain"),
-  resolution: z.null(),
-  resolvedByWriterGeneration: z.null(),
-  resolvedAt: z.null(),
+export type PreparedCanonicalUncertainty = Readonly<typeof preparedRecoverySchema.Type>;
+const recordingRowSchema = Schema.Struct({
+  ...preparedRecoverySchema.fields,
+  reason: Schema.Literal("commit-uncertain"),
+  resolution: Schema.Null,
+  resolvedByWriterGeneration: Schema.Null,
+  resolvedAt: Schema.Null,
   sourceProjectId: ProjectIdSchema,
   sourceGeneration: WriterGenerationSchema,
   sourceActivationId: ProjectActivationIdSchema,
   sourceDigest: CanonicalSha256Schema,
   sourceAcquiredAt: canonicalWriterUtcInstantSchema,
-  sourceReleasedAt: canonicalWriterUtcInstantSchema.nullable(),
+  sourceReleasedAt: Schema.NullOr(canonicalWriterUtcInstantSchema),
 });
 
 export async function inspectCanonicalRecovery(
@@ -64,7 +66,7 @@ export async function inspectCanonicalRecovery(
   const rows = await readRecoveryRows(tx, projectId, previous?.generation ?? 0);
   if (rows.length === 0) return undefined;
   if (previous === undefined) throw new Error("Initial Writer has recovery records.");
-  const row = recordingRowSchema.parse(canonicalExactlyOne(rows));
+  const row = decodeStrict(recordingRowSchema, canonicalExactlyOne(rows));
   const coherent = [
     row.projectId === projectId,
     row.writerGeneration === previous.generation,
@@ -140,9 +142,16 @@ export function prepareCanonicalUncertainty(
     Readonly<{ projectId: ProjectId; writerGeneration: WriterGeneration }>,
   dependencies: Readonly<{ createRecoveryRecordId(): string; now(): string }>,
 ): PreparedCanonicalUncertainty {
-  const recoveryRecordId = recoveryIdentitySchema.parse(dependencies.createRecoveryRecordId());
+  const recoveryRecordId = decodeStrict(
+    recoveryIdentitySchema,
+    dependencies.createRecoveryRecordId(),
+  );
   return Object.freeze(
-    preparedRecoverySchema.parse({ ...source, recoveryRecordId, observedAt: dependencies.now() }),
+    decodeStrict(preparedRecoverySchema, {
+      ...source,
+      recoveryRecordId,
+      observedAt: dependencies.now(),
+    }),
   );
 }
 
@@ -190,7 +199,7 @@ function checkRecordedUncertainty(
     sourceAcquiredAt: _acquired,
     sourceReleasedAt,
     ...row
-  } = recordingRowSchema.parse(value);
+  } = decodeStrict(recordingRowSchema, value);
   const expected = {
     ...record,
     reason: "commit-uncertain",

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { decodeWithIssues } from "./decode-with-issues.test-support.js";
 import {
+  acceptsStrict,
   CanonicalDatabaseLineageIdSchema,
   ProjectDatabaseHealthSchema,
   ProjectIdSchema,
@@ -93,18 +95,16 @@ describe("Project Storage protocol", () => {
         reason,
         diagnostic: { code, message: reason },
       } as const;
-      expect(ProjectStorageCreateResultSchema.safeParse(blocked).success).toBe(true);
-      expect(ProjectStorageCreateResultSchema.safeParse({ ...blocked, identity }).success).toBe(
-        false,
-      );
+      expect(acceptsStrict(ProjectStorageCreateResultSchema, blocked)).toBe(true);
+      expect(acceptsStrict(ProjectStorageCreateResultSchema, { ...blocked, identity })).toBe(false);
 
       for (const [, contradictoryCode] of blockedCases) {
         if (contradictoryCode !== code) {
           expect(
-            ProjectStorageCreateResultSchema.safeParse({
+            acceptsStrict(ProjectStorageCreateResultSchema, {
               ...blocked,
               diagnostic: { code: contradictoryCode, message: reason },
-            }).success,
+            }),
           ).toBe(false);
         }
       }
@@ -123,48 +123,48 @@ describe("Project Storage protocol", () => {
     const validProjectId = "018f47a3-4e3d-4d2b-9c41-7df4605c0a11";
 
     for (const schema of storageIdentitySchemas) {
-      expect(schema.safeParse(validStorageId).success).toBe(true);
-      expect(schema.safeParse(validStorageId.toUpperCase()).success).toBe(false);
-      expect(schema.safeParse(validStorageId.toUpperCase()).error?.issues).toEqual([
+      expect(decodeWithIssues(schema, validStorageId).success).toBe(true);
+      expect(decodeWithIssues(schema, validStorageId.toUpperCase()).success).toBe(false);
+      expect(decodeWithIssues(schema, validStorageId.toUpperCase()).error?.issues).toEqual([
         { code: "custom", path: [], message: "Identity must use lowercase UUID text." },
       ]);
-      expect(schema.safeParse("00000000-0000-0000-0000-000000000000").success).toBe(false);
-      expect(schema.safeParse("not-a-uuid").success).toBe(false);
+      expect(decodeWithIssues(schema, "00000000-0000-0000-0000-000000000000").success).toBe(false);
+      expect(decodeWithIssues(schema, "not-a-uuid").success).toBe(false);
     }
-    expect(ProjectIdSchema.safeParse(validProjectId).success).toBe(true);
-    expect(ProjectIdSchema.safeParse(validProjectId.toUpperCase()).success).toBe(false);
-    expect(ProjectIdSchema.safeParse(validProjectId.toUpperCase()).error?.issues).toEqual([
+    expect(acceptsStrict(ProjectIdSchema, validProjectId)).toBe(true);
+    expect(acceptsStrict(ProjectIdSchema, validProjectId.toUpperCase())).toBe(false);
+    expect(decodeWithIssues(ProjectIdSchema, validProjectId.toUpperCase()).error?.issues).toEqual([
       { code: "custom", path: [], message: "Project identity must use lowercase UUID text." },
     ]);
-    expect(ProjectIdSchema.safeParse("00000000-0000-0000-0000-000000000000").success).toBe(false);
-    expect(ProjectIdSchema.safeParse("not-a-uuid").success).toBe(false);
+    expect(acceptsStrict(ProjectIdSchema, "00000000-0000-0000-0000-000000000000")).toBe(false);
+    expect(acceptsStrict(ProjectIdSchema, "not-a-uuid")).toBe(false);
   });
 
   it("rejects contradictory Project Storage open results", () => {
     for (const result of validOpenResults) {
-      expect(ProjectStorageOpenResultSchema.safeParse(result).success).toBe(true);
+      expect(acceptsStrict(ProjectStorageOpenResultSchema, result)).toBe(true);
       expect(
-        ProjectStorageOpenResultSchema.safeParse({ ...result, storagePath: "private" }).success,
+        acceptsStrict(ProjectStorageOpenResultSchema, { ...result, storagePath: "private" }),
       ).toBe(false);
     }
     expect(
-      ProjectStorageOpenResultSchema.safeParse({
+      acceptsStrict(ProjectStorageOpenResultSchema, {
         ...opened,
         runtimeHealth: {
           status: "corrupt",
           diagnostic: { code: "DATABASE_CORRUPT", message: "corrupt" },
         },
-      }).success,
+      }),
     ).toBe(false);
-    expect(ProjectStorageOpenResultSchema.safeParse(safeMode).success).toBe(true);
+    expect(acceptsStrict(ProjectStorageOpenResultSchema, safeMode)).toBe(true);
     expect(
-      ProjectStorageOpenResultSchema.safeParse({
+      acceptsStrict(ProjectStorageOpenResultSchema, {
         ...opened,
         status: "safe-mode",
         mode: "safe-mode",
-      }).success,
+      }),
     ).toBe(false);
-    const contradictorySafeMode = ProjectStorageOpenResultSchema.safeParse({
+    const contradictorySafeMode = decodeWithIssues(ProjectStorageOpenResultSchema, {
       ...opened,
       status: "safe-mode",
       mode: "safe-mode",
@@ -177,18 +177,18 @@ describe("Project Storage protocol", () => {
       },
     ]);
     expect(
-      ProjectStorageOpenResultSchema.safeParse({
+      acceptsStrict(ProjectStorageOpenResultSchema, {
         ...safeMode,
         canonicalHealth: safeMode.runtimeHealth,
         runtimeHealth: { status: "healthy" },
-      }).success,
+      }),
     ).toBe(true);
     expect(
-      ProjectStorageOpenResultSchema.safeParse({
+      acceptsStrict(ProjectStorageOpenResultSchema, {
         status: "not-registered",
         request: { projectId },
         identity,
-      }).success,
+      }),
     ).toBe(false);
   });
 
@@ -197,77 +197,79 @@ describe("Project Storage protocol", () => {
       const health = { status, diagnostic: { code, message: status } };
       const contradictoryCode =
         code === "DATABASE_CORRUPT" ? "DATABASE_MISSING" : "DATABASE_CORRUPT";
-      expect(ProjectDatabaseHealthSchema.safeParse(health).success).toBe(true);
+      expect(acceptsStrict(ProjectDatabaseHealthSchema, health)).toBe(true);
       expect(
-        ProjectDatabaseHealthSchema.safeParse({
+        acceptsStrict(ProjectDatabaseHealthSchema, {
           ...health,
           diagnostic: { code: contradictoryCode, message: status },
-        }).success,
+        }),
       ).toBe(false);
     }
   });
 
   it("validates create and close result branches", () => {
     expect(
-      ProjectStorageCreateResultSchema.safeParse({
+      acceptsStrict(ProjectStorageCreateResultSchema, {
         status: "created",
         request: createRequest,
         mode: "read-write",
         identity,
-      }).success,
+      }),
     ).toBe(true);
-    expect(ProjectStorageCreateResultSchema.safeParse(priorStateBlocked).success).toBe(true);
+    expect(acceptsStrict(ProjectStorageCreateResultSchema, priorStateBlocked)).toBe(true);
     expect(
-      ProjectStorageCreateResultSchema.safeParse({
+      acceptsStrict(ProjectStorageCreateResultSchema, {
         ...priorStateBlocked,
         diagnostic: { code: "PROJECT_STORAGE_ALREADY_REGISTERED", message: "witnessed" },
-      }).success,
+      }),
     ).toBe(false);
     expect(
-      ProjectStorageCreateResultSchema.safeParse({ ...priorStateBlocked, identity }).success,
+      acceptsStrict(ProjectStorageCreateResultSchema, { ...priorStateBlocked, identity }),
     ).toBe(false);
     expect(
-      ProjectStorageCreateResultSchema.safeParse({
+      acceptsStrict(ProjectStorageCreateResultSchema, {
         status: "unavailable",
         request: createRequest,
         diagnostic: unavailableDiagnostic,
-      }).success,
+      }),
     ).toBe(true);
 
     expect(
-      ProjectStorageCloseResultSchema.safeParse({ status: "closed", request: { projectId } })
-        .success,
+      decodeWithIssues(ProjectStorageCloseResultSchema, {
+        status: "closed",
+        request: { projectId },
+      }).success,
     ).toBe(true);
     expect(
-      ProjectStorageCloseResultSchema.safeParse({
+      acceptsStrict(ProjectStorageCloseResultSchema, {
         status: "closed",
         request: { projectId },
         wasOpen: false,
-      }).success,
+      }),
     ).toBe(false);
     expect(
-      ProjectStorageCloseResultSchema.safeParse({
+      acceptsStrict(ProjectStorageCloseResultSchema, {
         status: "unavailable",
         request: { projectId },
         diagnostic: unavailableDiagnostic,
-      }).success,
+      }),
     ).toBe(true);
 
     for (const code of brokenDiagnosticCodes) {
       const diagnostic = { code, message: "Project Storage failed." };
       expect(
-        ProjectStorageCreateResultSchema.safeParse({
+        acceptsStrict(ProjectStorageCreateResultSchema, {
           status: "broken",
           request: createRequest,
           diagnostic,
-        }).success,
+        }),
       ).toBe(true);
       expect(
-        ProjectStorageCloseResultSchema.safeParse({
+        acceptsStrict(ProjectStorageCloseResultSchema, {
           status: "broken",
           request: { projectId },
           diagnostic,
-        }).success,
+        }),
       ).toBe(true);
     }
   });

@@ -1,4 +1,5 @@
 import {
+  decodeStrict,
   type ProjectStorageCloseRequest,
   ProjectStorageCloseResultSchema,
   type ProjectStorageCreateRequest,
@@ -57,10 +58,10 @@ it("preserves the original Project101 bootstrap create and open identity", async
   const open = vi
     .fn<(request: ProjectStorageOpenRequest) => Promise<ProjectStorageOpenResult>>()
     .mockImplementationOnce(async (request) =>
-      ProjectStorageOpenResultSchema.parse({ status: "not-registered", request }),
+      decodeStrict(ProjectStorageOpenResultSchema, { status: "not-registered", request }),
     )
     .mockImplementationOnce(async (request) =>
-      ProjectStorageOpenResultSchema.parse({
+      decodeStrict(ProjectStorageOpenResultSchema, {
         status: "opened",
         request,
         mode: "read-write",
@@ -72,7 +73,7 @@ it("preserves the original Project101 bootstrap create and open identity", async
   const bridge: ProjectStorageBridgeClient = {
     open,
     create: vi.fn(async (request: ProjectStorageCreateRequest) =>
-      ProjectStorageCreateResultSchema.parse({
+      decodeStrict(ProjectStorageCreateResultSchema, {
         status: "created",
         request,
         mode: "read-write",
@@ -80,7 +81,7 @@ it("preserves the original Project101 bootstrap create and open identity", async
       }),
     ),
     close: vi.fn(async (request: ProjectStorageCloseRequest) =>
-      ProjectStorageCloseResultSchema.parse({ status: "closed", request }),
+      decodeStrict(ProjectStorageCloseResultSchema, { status: "closed", request }),
     ),
     stop: vi.fn(),
   };
@@ -122,7 +123,7 @@ it("refuses writer proof through ordinary Storage dispatch", async () => {
 it("classifies an unexpected absent-Project result before later bootstrap steps", async () => {
   const bridge: ProjectStorageBridgeClient = {
     open: vi.fn(async (request: ProjectStorageOpenRequest) =>
-      ProjectStorageOpenResultSchema.parse({
+      decodeStrict(ProjectStorageOpenResultSchema, {
         status: "broken",
         request,
         diagnostic: {

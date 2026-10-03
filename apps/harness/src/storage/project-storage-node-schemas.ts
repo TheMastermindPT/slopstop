@@ -1,36 +1,41 @@
 import {
   CanonicalDatabaseLineageIdSchema,
+  dateTimeTextSchema,
+  decodeStrictResult,
+  NonEmptyTextSchema,
   ProjectIdSchema,
   ProjectStorageCreateRequestIdSchema,
   RuntimeDatabaseLineageIdSchema,
   StorageGenerationIdSchema,
   StorageIdSchema,
+  TrimmedNonEmptyTextSchema,
+  UuidTextSchema,
 } from "@slopstop/protocol";
-import { z } from "zod";
+import { Result, Schema } from "effect";
 import type { LocalLibsqlResultSet } from "./local-libsql-worker-client.js";
+import { SqlIntegerSchema } from "./sql-integer-schema.js";
 
-const sqlIntegerSchema = z
-  .union([z.number().int(), z.bigint()])
-  .transform((value) => Number(value))
-  .pipe(z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER));
+const sqlIntegerSchema = SqlIntegerSchema.check(Schema.isGreaterThanOrEqualTo(0));
 
 export function integerScalar(result: LocalLibsqlResultSet): number | undefined {
   const row = result.rows[0];
   if (row === undefined) return undefined;
   const validShape = [result.rows.length === 1, row.length === 1].every(Boolean);
   if (!validShape) return undefined;
-  const parsed = sqlIntegerSchema.safeParse(row[0]);
-  return parsed.success ? parsed.data : undefined;
+  const parsed = decodeStrictResult(sqlIntegerSchema, row[0]);
+  return Result.isSuccess(parsed) ? parsed.success : undefined;
 }
-export const utcInstantSchema = z.iso
-  .datetime({ offset: true })
-  .refine((value) => value.endsWith("Z"), "UTC instant must end in Z.");
-export const privateLocationIdSchema = z
-  .uuid()
-  .refine((value) => value === value.toLowerCase(), "Identity must use lowercase UUID text.");
-const sha256Schema = z.string().regex(/^[0-9a-f]{64}$/u);
+export const utcInstantSchema = dateTimeTextSchema({ offset: true }).check(
+  Schema.makeFilter((value: string) => value.endsWith("Z") || "UTC instant must end in Z."),
+);
+export const privateLocationIdSchema = UuidTextSchema.check(
+  Schema.makeFilter(
+    (value: string) => value === value.toLowerCase() || "Identity must use lowercase UUID text.",
+  ),
+);
+const sha256Schema = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u));
 
-export const stagingDeclarationSchema = z.strictObject({
+export const stagingDeclarationSchema = Schema.Struct({
   projectId: ProjectIdSchema,
   storageId: StorageIdSchema,
   locationId: privateLocationIdSchema,
@@ -41,32 +46,32 @@ export const stagingDeclarationSchema = z.strictObject({
   createRequestFingerprint: sha256Schema,
   createdAt: utcInstantSchema,
   observedAt: utcInstantSchema,
-  normalizedPath: z.string().min(1),
+  normalizedPath: NonEmptyTextSchema,
   generationDirectoryName: StorageGenerationIdSchema,
-  locationState: z.literal("staging"),
-  creationState: z.literal("staging"),
+  locationState: Schema.Literal("staging"),
+  creationState: Schema.Literal("staging"),
 });
-export type StagingDeclaration = z.infer<typeof stagingDeclarationSchema>;
+export type StagingDeclaration = typeof stagingDeclarationSchema.Type;
 
-export const activationSchema = z.strictObject({
+export const activationSchema = Schema.Struct({
   projectId: ProjectIdSchema,
   storageId: StorageIdSchema,
   locationId: privateLocationIdSchema,
   generationId: StorageGenerationIdSchema,
   activatedAt: utcInstantSchema,
 });
-export type Activation = z.infer<typeof activationSchema>;
+export type Activation = typeof activationSchema.Type;
 
-export const metadataRowSchema = z.strictObject({
-  metadataKey: z.string().trim().min(1),
-  databaseKind: z.enum(["application", "canonical", "runtime-adapter"]),
+export const metadataRowSchema = Schema.Struct({
+  metadataKey: TrimmedNonEmptyTextSchema,
+  databaseKind: Schema.Literals(["application", "canonical", "runtime-adapter"]),
   formatVersion: sqlIntegerSchema,
   schemaVersion: sqlIntegerSchema,
-  lastMigrationId: z.string().trim().min(1),
+  lastMigrationId: TrimmedNonEmptyTextSchema,
 });
-export type MetadataRow = z.infer<typeof metadataRowSchema>;
+export type MetadataRow = typeof metadataRowSchema.Type;
 
-export const generationRowSchema = z.strictObject({
+export const generationRowSchema = Schema.Struct({
   storageId: StorageIdSchema,
   generationId: StorageGenerationIdSchema,
   projectId: ProjectIdSchema,
@@ -76,33 +81,33 @@ export const generationRowSchema = z.strictObject({
   createRequestId: ProjectStorageCreateRequestIdSchema,
   createRequestFingerprint: sha256Schema,
   generationDirectoryName: StorageGenerationIdSchema,
-  creationState: z.enum(["staging", "active"]),
+  creationState: Schema.Literals(["staging", "active"]),
   createdAt: utcInstantSchema,
-  activatedAt: utcInstantSchema.nullable(),
+  activatedAt: Schema.NullOr(utcInstantSchema),
 });
-export type GenerationRow = z.infer<typeof generationRowSchema>;
+export type GenerationRow = typeof generationRowSchema.Type;
 
-export const registrationRowSchema = z.strictObject({
+export const registrationRowSchema = Schema.Struct({
   storageId: StorageIdSchema,
   projectId: ProjectIdSchema,
-  activeGenerationId: StorageGenerationIdSchema.nullable(),
-  activeLocationId: privateLocationIdSchema.nullable(),
+  activeGenerationId: Schema.NullOr(StorageGenerationIdSchema),
+  activeLocationId: Schema.NullOr(privateLocationIdSchema),
   createdAt: utcInstantSchema,
-  activatedAt: utcInstantSchema.nullable(),
+  activatedAt: Schema.NullOr(utcInstantSchema),
 });
-export type RegistrationRow = z.infer<typeof registrationRowSchema>;
+export type RegistrationRow = typeof registrationRowSchema.Type;
 
-export const locationRowSchema = z.strictObject({
+export const locationRowSchema = Schema.Struct({
   storageId: StorageIdSchema,
   locationId: privateLocationIdSchema,
-  normalizedPath: z.string().min(1),
-  locationState: z.enum(["staging", "committed"]),
+  normalizedPath: NonEmptyTextSchema,
+  locationState: Schema.Literals(["staging", "committed"]),
   observedAt: utcInstantSchema,
 });
-export type LocationRow = z.infer<typeof locationRowSchema>;
+export type LocationRow = typeof locationRowSchema.Type;
 
-export const canonicalIdentityRowSchema = z.strictObject({
-  identityKey: z.literal("storage"),
+export const canonicalIdentityRowSchema = Schema.Struct({
+  identityKey: Schema.Literal("storage"),
   projectId: ProjectIdSchema,
   storageId: StorageIdSchema,
   generationId: StorageGenerationIdSchema,
@@ -110,8 +115,8 @@ export const canonicalIdentityRowSchema = z.strictObject({
   createdAt: utcInstantSchema,
 });
 
-export const runtimeIdentityRowSchema = z.strictObject({
-  identityKey: z.literal("storage"),
+export const runtimeIdentityRowSchema = Schema.Struct({
+  identityKey: Schema.Literal("storage"),
   projectId: ProjectIdSchema,
   storageId: StorageIdSchema,
   generationId: StorageGenerationIdSchema,

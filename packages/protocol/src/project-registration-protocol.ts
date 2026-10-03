@@ -1,32 +1,39 @@
-import { z } from "zod";
+import { Schema } from "effect";
 import { ProjectIdSchema } from "./domain-identity-schema.js";
 import {
   ProjectStorageCreateRequestSchema,
   StorageGenerationIdSchema,
   StorageIdSchema,
 } from "./project-storage-protocol.js";
+import { UuidTextSchema } from "./schema-codec.js";
 
-export const InitialRepositoryBindingSchema = ProjectStorageCreateRequestSchema.extend({
-  reservationId: z.uuid(),
-  reservationFingerprint: z.string().regex(/^[0-9a-f]{64}$/),
-  repositoryBindingId: z.uuid().brand<"RepositoryBindingId">(),
-  workspaceId: z.uuid().brand<"WorkspaceId">(),
-  registrationRequestId: z.uuid().brand<"RegistrationRequestId">(),
+const RepositoryBindingIdSchema = UuidTextSchema.pipe(Schema.brand("RepositoryBindingId"));
+const WorkspaceIdSchema = UuidTextSchema.pipe(Schema.brand("WorkspaceId"));
+const RegistrationRequestIdSchema = UuidTextSchema.pipe(Schema.brand("RegistrationRequestId"));
+
+export const InitialRepositoryBindingSchema = Schema.Struct({
+  ...ProjectStorageCreateRequestSchema.fields,
+  reservationId: UuidTextSchema,
+  reservationFingerprint: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/)),
+  repositoryBindingId: RepositoryBindingIdSchema,
+  workspaceId: WorkspaceIdSchema,
+  registrationRequestId: RegistrationRequestIdSchema,
 });
-export type InitialRepositoryBinding = z.infer<typeof InitialRepositoryBindingSchema>;
+export type InitialRepositoryBinding = typeof InitialRepositoryBindingSchema.Type;
 
-export const RegisteredProjectSchema = z.strictObject({
-  status: z.literal("registered"),
-  requestId: InitialRepositoryBindingSchema.shape.registrationRequestId,
-  proposalId: z.uuid().brand<"RegistrationProposalId">(),
+export const RegisteredProjectSchema = Schema.Struct({
+  status: Schema.Literal("registered"),
+  requestId: RegistrationRequestIdSchema,
+  proposalId: UuidTextSchema.pipe(Schema.brand("RegistrationProposalId")),
   projectId: ProjectIdSchema,
-  repositoryBindingId: InitialRepositoryBindingSchema.shape.repositoryBindingId,
-  workspaceId: InitialRepositoryBindingSchema.shape.workspaceId,
+  repositoryBindingId: RepositoryBindingIdSchema,
+  workspaceId: WorkspaceIdSchema,
   storageId: StorageIdSchema,
   generationId: StorageGenerationIdSchema,
 });
-export type RegisteredProject = z.infer<typeof RegisteredProjectSchema>;
-export const RegisteredProjectSelectionCodeSchema = z.enum([
+export type RegisteredProject = typeof RegisteredProjectSchema.Type;
+
+export const registeredProjectSelectionCodes = [
   "REGISTRY_SCHEMA_UNKNOWN",
   "REGISTRY_SCHEMA_NEWER",
   "REGISTRY_CORRUPT",
@@ -44,4 +51,8 @@ export const RegisteredProjectSelectionCodeSchema = z.enum([
   "OBSERVATION_INVALID",
   "OBSERVATION_LIMIT_EXCEEDED",
   "INTERNAL_FAILURE",
-]);
+] as const;
+export const RegisteredProjectSelectionCodeSchema = Schema.Literals(
+  registeredProjectSelectionCodes,
+);
+export type RegisteredProjectSelectionCode = typeof RegisteredProjectSelectionCodeSchema.Type;

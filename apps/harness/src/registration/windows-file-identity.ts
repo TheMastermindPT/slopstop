@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { acceptsStrict, decodeStrict, decodeStrictResult } from "@slopstop/protocol";
+import { Result, Schema } from "effect";
 import * as koffi from "koffi";
-import { z } from "zod";
 import {
   type ExecutableIdentityObservation,
   ExecutableIdentitySchema,
@@ -19,10 +20,10 @@ import {
   WindowsObserverResources,
 } from "./windows-observer-api.js";
 
-const LocalNtfsSchema = z.strictObject({
-  filesystem: z.literal("NTFS"),
-  deviceType: z.literal(7),
-  remote: z.literal(false),
+const LocalNtfsSchema = Schema.Struct({
+  filesystem: Schema.Literal("NTFS"),
+  deviceType: Schema.Literal(7),
+  remote: Schema.Literal(false),
 });
 
 function createFileApi() {
@@ -50,11 +51,11 @@ function localNtfs(api: ReturnType<typeof createFileApi>, handle: bigint): boole
   const device = Buffer.alloc(8);
   const status = nativeInteger(api.device(handle, io, device, 8, 4));
   if (status < 0) throw new Error("Windows volume device observation failed.");
-  return LocalNtfsSchema.safeParse({
+  return acceptsStrict(LocalNtfsSchema, {
     filesystem: name.toString("utf16le").split("\0")[0],
     deviceType: device.readUInt32LE(0),
     remote: (device.readUInt32LE(4) & 0x10) !== 0,
-  }).success;
+  });
 }
 
 function identityMetadata(
@@ -72,7 +73,7 @@ function identityMetadata(
 function nativeIdentity(identity: Buffer, basic: Buffer) {
   const fileIdentity = identity.readBigUInt64LE(8) | (identity.readBigUInt64LE(16) << 64n);
   const birthIdentity = (basic.readBigInt64LE(0) - 116444736000000000n) * 100n;
-  return PhysicalIdentitySchema.safeParse({
+  return decodeStrictResult(PhysicalIdentitySchema, {
     platform: "win32",
     volumeIdentity: String(identity.readBigUInt64LE(0)),
     fileIdentity: String(fileIdentity),
@@ -106,10 +107,15 @@ export async function observeWindowsDirectory(
       return { status: "rejected", code: "OBSERVATION_INVALID" };
     }
     const parsed = nativeIdentity(identity, basic);
-    if (!parsed.success) return { status: "unavailable", code: "IDENTITY_CAPABILITY_UNAVAILABLE" };
+    if (Result.isFailure(parsed)) {
+      return { status: "unavailable", code: "IDENTITY_CAPABILITY_UNAVAILABLE" };
+    }
     return {
       status: "observed",
-      key: PhysicalDirectoryKeySchema.parse({ ...parsed.data, version: "physical-directory/v1" }),
+      key: decodeStrict(PhysicalDirectoryKeySchema, {
+        ...parsed.success,
+        version: "physical-directory/v1",
+      }),
     };
   } catch (error) {
     return directoryObservationFailure(error);
@@ -166,7 +172,9 @@ export async function observeWindowsExecutable(
     const standard = Buffer.alloc(24);
     requireWindowsSuccess(kernel, api.information(handle, 1, standard, standard.length));
     const parsed = nativeIdentity(identity, basic);
-    if (!parsed.success) return { status: "unavailable", code: "IDENTITY_CAPABILITY_UNAVAILABLE" };
+    if (Result.isFailure(parsed)) {
+      return { status: "unavailable", code: "IDENTITY_CAPABILITY_UNAVAILABLE" };
+    }
     const sha256 = executableDigest(resources, handle, standard.readBigInt64LE(8));
     const afterBasic = Buffer.alloc(40);
     const afterStandard = Buffer.alloc(24);
@@ -177,7 +185,7 @@ export async function observeWindowsExecutable(
     }
     return {
       status: "observed",
-      identity: ExecutableIdentitySchema.parse({ ...parsed.data, sha256 }),
+      identity: decodeStrict(ExecutableIdentitySchema, { ...parsed.success, sha256 }),
     };
   } catch {
     return { status: "broken", code: "INTERNAL_FAILURE" };

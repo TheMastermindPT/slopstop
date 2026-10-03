@@ -7,14 +7,14 @@ import {
   type Page,
   test,
 } from "@playwright/test";
-import { WorkspaceIntentSchema, WorkspaceQuerySchema } from "@slopstop/protocol";
+import { decodeStrict, WorkspaceIntentSchema, WorkspaceQuerySchema } from "@slopstop/protocol";
 
-const query = WorkspaceQuerySchema.parse({
+const query = decodeStrict(WorkspaceQuerySchema, {
   query: "memory-library.read",
   projectId: "11111111-1111-4111-8111-111111111111",
   cursor: null,
 });
-const intent = WorkspaceIntentSchema.parse({
+const intent = decodeStrict(WorkspaceIntentSchema, {
   intent: "memory.proposal.review",
   projectId: "11111111-1111-4111-8111-111111111111",
   proposalId: "22222222-2222-4222-8222-222222222222",

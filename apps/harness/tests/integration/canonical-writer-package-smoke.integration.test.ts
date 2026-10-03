@@ -6,6 +6,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MessageChannel } from "node:worker_threads";
 import {
+  decodeStrict,
   ProjectActivationIdSchema,
   ProjectStorageCreateRequestSchema,
   ProjectStorageCreateResultSchema,
@@ -39,7 +40,7 @@ import { observeFixturePort, portAdapter } from "./canonical-writer-smoke-test-t
 
 const project = "00000000-0000-4000-8000-000000000101";
 const proofId = "00000000-0000-4000-8000-000000000162";
-const epochs = [141, 142].map((n) => ProjectActivationIdSchema.parse(id(n)));
+const epochs = [141, 142].map((n) => decodeStrict(ProjectActivationIdSchema, id(n)));
 const migrations = path.resolve("apps/harness/drizzle");
 const cleanup: (() => Promise<void>)[] = [];
 const native = {
@@ -101,7 +102,10 @@ it("characterizes real Storage Q creation after a closed independent P owner", a
   cleanup.push(() => owner.stop());
   expect(
     await owner.create(
-      ProjectStorageCreateRequestSchema.parse({ projectId: id(104), createRequestId: id(114) }),
+      decodeStrict(ProjectStorageCreateRequestSchema, {
+        projectId: id(104),
+        createRequestId: id(114),
+      }),
     ),
   ).toMatchObject({ status: "ready", result: { status: "created" } });
 });
@@ -123,7 +127,10 @@ async function seed() {
   const owner = createProjectStorageOwner(dependencies);
   cleanup.push(() => owner.stop());
   const created = await owner.create(
-    ProjectStorageCreateRequestSchema.parse({ projectId: project, createRequestId: id(111) }),
+    decodeStrict(ProjectStorageCreateRequestSchema, {
+      projectId: project,
+      createRequestId: id(111),
+    }),
   );
   expect(created.status).toBe("ready");
   const opened = await owner.acquireActivation({ projectId: writerProofProjectId });
@@ -157,7 +164,7 @@ async function seedGenerations(database: string) {
       canonicalDatabasePath: database,
       projectId: writerProofProjectId,
       activationId,
-      writerToken: WriterCapabilityTokenSchema.parse(String(n).repeat(64)),
+      writerToken: decodeStrict(WriterCapabilityTokenSchema, String(n).repeat(64)),
       activatedAt: time(n - 1),
     });
     if (result.status !== "activated") throw new Error("Seed activation failed");
@@ -290,7 +297,7 @@ it("audits exact seeded receipts and abandoned recovery through real Node ports 
   const run = await launch(f.root);
   await run.transport.send(control());
   expect(run.results).toHaveLength(1);
-  const result = WriterProofEventSchema.parse(run.results[0]);
+  const result = decodeStrict(WriterProofEventSchema, run.results[0]);
   expect(result.step).toBe("audit.initialize");
   expect(run.exits).toEqual([]);
   run.port.close();
@@ -300,7 +307,7 @@ it("audits exact seeded receipts and abandoned recovery through real Node ports 
 });
 
 async function replacement(root: string) {
-  const projectId = ProjectStorageCreateRequestSchema.shape.projectId.parse(id(104));
+  const projectId = decodeStrict(ProjectStorageCreateRequestSchema.fields.projectId, id(104));
   const owner = createProjectStorageOwner(
     createNodeProjectStorageDependencies({
       applicationStorageRoot: root,
@@ -318,7 +325,7 @@ async function replacement(root: string) {
   );
   if (lease.status !== "acquired") throw new Error("Replacement lease failed");
   cleanup.push(() => lease.lease.release());
-  const activationId = ProjectActivationIdSchema.parse(randomUUID());
+  const activationId = decodeStrict(ProjectActivationIdSchema, randomUUID());
   const factory = createCanonicalCommandRepositoryFactory({
     registry: createCanonicalCommandRegistry([]),
     createReceiptId: randomUUID,
@@ -333,7 +340,7 @@ async function replacement(root: string) {
     projectId,
     activationId,
     canonicalDatabasePath: opened.session.canonicalDatabasePath,
-    writerToken: WriterCapabilityTokenSchema.parse("9".repeat(64)),
+    writerToken: decodeStrict(WriterCapabilityTokenSchema, "9".repeat(64)),
     activatedAt: new Date().toISOString(),
   });
   if (activated.status !== "activated") throw new Error("Replacement activation failed");
@@ -359,7 +366,7 @@ async function step(run: Awaited<ReturnType<typeof launch>>, message: unknown, c
   if (run.setupFailures.length) throw run.setupFailures[0];
   expect(run.results).toHaveLength(count);
   expect(run.exits).toEqual([]);
-  return WriterProofEventSchema.parse(run.results[count - 1]);
+  return decodeStrict(WriterProofEventSchema, run.results[count - 1]);
 }
 
 async function initializeAndRelease(root: string, decorators: WriterProofResourceDecorators = {}) {
@@ -704,7 +711,9 @@ it("rejects pipelined controls while an owned SQL read is held", async () => {
   }));
   run.port.postMessage(control());
   await vi.waitFor(() => expect(reached).toHaveBeenCalled());
-  run.port.postMessage(WriterProofControlSchema.parse({ ...control(), requestId: id(176) }));
+  run.port.postMessage(
+    decodeStrict(WriterProofControlSchema, { ...control(), requestId: id(176) }),
+  );
   release();
   await run.transport.terminated;
   expect(run.exits).toEqual([1]);
@@ -939,7 +948,7 @@ it("rejects a valid but misbound public Storage creation result before initializ
         return {
           status: "ready",
           result: {
-            ...ProjectStorageCreateResultSchema.parse(result.result),
+            ...decodeStrict(ProjectStorageCreateResultSchema, result.result),
             request: { projectId: id(101), createRequestId: id(111) },
           },
         };

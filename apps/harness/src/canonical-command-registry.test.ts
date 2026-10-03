@@ -1,6 +1,11 @@
-import { ProjectIdSchema, TypedCommandSchema } from "@slopstop/protocol";
+import {
+  acceptsStrict,
+  decodeStrict,
+  ProjectIdSchema,
+  TypedCommandSchema,
+} from "@slopstop/protocol";
+import { Schema, SchemaTransformation } from "effect";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
-import { z } from "zod";
 import * as registryApi from "./canonical-command-registry.js";
 import {
   type CanonicalCommandTransaction,
@@ -8,19 +13,36 @@ import {
   defineCanonicalCommand,
 } from "./canonical-command-registry.js";
 
-const projectId = ProjectIdSchema.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1");
-const command = TypedCommandSchema.parse({
+const projectId = decodeStrict(ProjectIdSchema, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1");
+const command = decodeStrict(TypedCommandSchema, {
   commandId: "44444444-4444-4444-8444-444444444501",
   type: "conformance.counter.set",
   version: 1,
   payload: { value: 7, meta: { b: 2, a: 1 }, tags: ["x", "y"] },
 });
 
-function publicSchema(name: string): z.ZodType {
+function isDecoder(value: unknown): value is Schema.Decoder<unknown> {
+  return Schema.isSchema(value);
+}
+
+function publicSchema(name: string): Schema.Decoder<unknown> {
   const schema: unknown = Reflect.get(registryApi, name);
-  expect(schema, `Missing public schema: ${name}`).toBeInstanceOf(z.ZodType);
-  if (!(schema instanceof z.ZodType)) throw new Error(`Missing public schema: ${name}`);
+  expect(Schema.isSchema(schema), `Missing public schema: ${name}`).toBe(true);
+  if (!isDecoder(schema)) throw new Error(`Missing public schema: ${name}`);
   return schema;
+}
+
+// Runs before payload decoding, like a Zod preprocess step.
+function preprocessed<S extends Schema.Top>(preprocess: (value: unknown) => unknown, schema: S) {
+  return Schema.Unknown.pipe(
+    Schema.decodeTo(
+      schema,
+      SchemaTransformation.transform<S["Encoded"], unknown>({
+        decode: (value) => preprocess(value) as S["Encoded"],
+        encode: (value) => value,
+      }),
+    ),
+  );
 }
 
 const event = {
@@ -37,7 +59,7 @@ describe("rejects nil and max aggregate identities in handler events and replay 
     "accepts valid G3 event aggregate %s unchanged",
     (aggregateId) => {
       const input = { ...event, aggregateId };
-      expect(publicSchema("CanonicalEventInputSchema").parse(input)).toEqual(input);
+      expect(decodeStrict(publicSchema("CanonicalEventInputSchema"), input)).toEqual(input);
     },
   );
 
@@ -50,7 +72,7 @@ describe("rejects nil and max aggregate identities in handler events and replay 
     "not-a-uuid",
   ])("rejects G3 event aggregate %s at the public schema", (aggregateId) => {
     expect(
-      publicSchema("CanonicalEventInputSchema").safeParse({ ...event, aggregateId }).success,
+      acceptsStrict(publicSchema("CanonicalEventInputSchema"), { ...event, aggregateId }),
     ).toBe(false);
   });
 
@@ -71,7 +93,7 @@ describe("rejects nil and max aggregate identities in handler events and replay 
   ])("rejects malformed G3 event field %s = %s", (field, value) => {
     const input = { ...event };
     Reflect.set(input, field, value);
-    expect(publicSchema("CanonicalEventInputSchema").safeParse(input).success).toBe(false);
+    expect(acceptsStrict(publicSchema("CanonicalEventInputSchema"), input)).toBe(false);
   });
 
   it("accepts safe-bound versions and preserves nonblank type whitespace", () => {
@@ -82,7 +104,7 @@ describe("rejects nil and max aggregate identities in handler events and replay 
       aggregateType: " conformance.counter ",
       eventType: " conformance.counter.changed ",
     };
-    expect(publicSchema("CanonicalEventInputSchema").parse(input)).toEqual(input);
+    expect(decodeStrict(publicSchema("CanonicalEventInputSchema"), input)).toEqual(input);
   });
 });
 
@@ -100,7 +122,7 @@ describe("G3 public command decision schema", () => {
     { outcome: "rejected", rejection: { code: "TEST_COUNTER_REJECTED", retryable: false } },
     { outcome: "rejected", rejection: { code: "TEST_COUNTER_REJECTED", retryable: true } },
   ])("accepts the exact decision %j", (input) => {
-    expect(publicSchema("CanonicalCommandDecisionSchema").parse(input)).toEqual(input);
+    expect(decodeStrict(publicSchema("CanonicalCommandDecisionSchema"), input)).toEqual(input);
   });
 
   it.each([
@@ -128,7 +150,7 @@ describe("G3 public command decision schema", () => {
     { outcome: "applied", events: [{ ...event, payload: { value: Infinity } }] },
     { outcome: "unchanged", message: "private" },
   ])("rejects malformed or mixed decision %j", (input) => {
-    expect(publicSchema("CanonicalCommandDecisionSchema").safeParse(input).success).toBe(false);
+    expect(acceptsStrict(publicSchema("CanonicalCommandDecisionSchema"), input)).toBe(false);
   });
 
   it.each([
@@ -140,8 +162,10 @@ describe("G3 public command decision schema", () => {
     { code: "TEST_COUNTER_REJECTED", retryable: false, details: { version: 1 } },
   ])("rejects unsafe rejection metadata %j", (rejection) => {
     expect(
-      publicSchema("CanonicalCommandDecisionSchema").safeParse({ outcome: "rejected", rejection })
-        .success,
+      acceptsStrict(publicSchema("CanonicalCommandDecisionSchema"), {
+        outcome: "rejected",
+        rejection,
+      }),
     ).toBe(false);
   });
 
@@ -150,17 +174,19 @@ describe("G3 public command decision schema", () => {
     (code) => {
       const input = { outcome: "rejected", rejection: { code, retryable: false } };
       const schema = publicSchema("CanonicalCommandDecisionSchema");
-      expect(schema.parse(input)).toEqual(input);
-      expect(schema.safeParse({ ...input, rejection: { code, retryable: true } }).success).toBe(
-        false,
-      );
+      expect(decodeStrict(schema, input)).toEqual(input);
+      expect(acceptsStrict(schema, { ...input, rejection: { code, retryable: true } })).toBe(false);
     },
   );
 });
-const payloadSchema = z.strictObject({
-  value: z.number().int().min(0).max(10),
-  meta: z.strictObject({ a: z.number(), b: z.number() }).optional(),
-  tags: z.array(z.string()).optional(),
+const payloadSchema = Schema.Struct({
+  value: Schema.Number.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0),
+    Schema.isLessThanOrEqualTo(10),
+  ),
+  meta: Schema.optional(Schema.Struct({ a: Schema.Number, b: Schema.Number })),
+  tags: Schema.optional(Schema.Array(Schema.String)),
 });
 // This unused SQL port permits registry execution, not the G5 real-facade proof.
 const transaction: CanonicalCommandTransaction = {
@@ -194,7 +220,12 @@ describe("binds typed payload definitions and rejects duplicate registrations", 
     const definition = defineCanonicalCommand({
       type: command.type,
       version: 1,
-      payloadSchema: z.string().transform(Number),
+      payloadSchema: Schema.String.pipe(
+        Schema.decodeTo(
+          Schema.Number,
+          SchemaTransformation.transform({ decode: Number, encode: String }),
+        ),
+      ),
       handle: ({ payload }) => {
         expectTypeOf(payload).toEqualTypeOf<number>();
         expect(payload).toBe(7);
@@ -217,7 +248,7 @@ describe("binds typed payload definitions and rejects duplicate registrations", 
       defineCanonicalCommand({
         type: command.type,
         version: 1,
-        payloadSchema: z.preprocess(parse, payloadSchema),
+        payloadSchema: preprocessed(parse, payloadSchema),
         handle,
       }),
     ]);
@@ -257,9 +288,11 @@ describe("binds typed payload definitions and rejects duplicate registrations", 
       defineCanonicalCommand({
         type: command.type,
         version: 1,
-        payloadSchema: payloadSchema.refine(() => {
-          throw error;
-        }),
+        payloadSchema: payloadSchema.check(
+          Schema.makeFilter(() => {
+            throw error;
+          }),
+        ),
         handle,
       }),
     ]);
@@ -277,7 +310,7 @@ describe("binds typed payload definitions and rejects duplicate registrations", 
     defineCanonicalCommand({
       type: command.type,
       version: 1,
-      payloadSchema: z.number(),
+      payloadSchema: Schema.Number,
       handle: ({ payload, transaction: capability }) => {
         expectTypeOf(payload).toEqualTypeOf<number>();
         expectTypeOf(capability.execute).toEqualTypeOf<CanonicalCommandTransaction["execute"]>();
@@ -299,7 +332,7 @@ describe("binds typed payload definitions and rejects duplicate registrations", 
     defineCanonicalCommand({
       type: command.type,
       version: 2,
-      payloadSchema: z.number(),
+      payloadSchema: Schema.Number,
       // @ts-expect-error A callback cannot widen numeric schema inference to a string union.
       handle: ({ payload }: { payload: string }) => {
         payload.toUpperCase();
@@ -388,7 +421,7 @@ describe("binds typed payload definitions and rejects duplicate registrations", 
       Reflect.set(
         input,
         field,
-        field === "payloadSchema" ? z.never() : () => ({ outcome: "applied", events: [] }),
+        field === "payloadSchema" ? Schema.Never : () => ({ outcome: "applied", events: [] }),
       );
       const prepared = definition.prepare(command.payload);
       expect(prepared.status).toBe("ready");
@@ -418,7 +451,7 @@ describe("binds typed payload definitions and rejects duplicate registrations", 
       defineCanonicalCommand({
         type: command.type,
         version: 1,
-        payloadSchema: z.preprocess((value) => {
+        payloadSchema: preprocessed((value) => {
           if (value !== null && typeof value === "object") Reflect.set(value, "value", 9);
           return value;
         }, payloadSchema),

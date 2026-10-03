@@ -1,11 +1,14 @@
+import type { Brand } from "effect";
+import { Schema } from "effect";
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
-declare const domainIdentityBrand: unique symbol;
-declare const projectionRevisionBrand: unique symbol;
+export type DomainIdentity<Name extends string> = string & Brand.Brand<Name>;
 
-export type DomainIdentity<Name extends string> = string & {
-  readonly [domainIdentityBrand]: Name;
-};
+// Brand each identity at its owner, for example `.pipe(Schema.brand("ProjectId"))`.
+export const DomainIdentityTextSchema = Schema.String.check(
+  Schema.isPattern(UUID_PATTERN, { expected: "UUID text" }),
+);
 
 export type ProjectId = DomainIdentity<"ProjectId">;
 export type WaypointId = DomainIdentity<"WaypointId">;
@@ -22,16 +25,16 @@ export type MemoryTopicId = DomainIdentity<"MemoryTopicId">;
 export type MemoryRevisionId = DomainIdentity<"MemoryRevisionId">;
 export type MemoryProposalId = DomainIdentity<"MemoryProposalId">;
 
-export type WorkspaceProjectionRevision = number & {
-  readonly [projectionRevisionBrand]: "WorkspaceProjectionRevision";
-};
+export const WorkspaceProjectionRevisionSchema = Schema.Number.check(
+  Schema.isInt(),
+  Schema.isGreaterThanOrEqualTo(0),
+).pipe(Schema.brand("WorkspaceProjectionRevision"));
+export type WorkspaceProjectionRevision = typeof WorkspaceProjectionRevisionSchema.Type;
+
+const isDomainIdentityText = Schema.is(DomainIdentityTextSchema);
 
 export function isDomainIdentity(value: unknown): value is DomainIdentity<string> {
-  return typeof value === "string" && UUID_PATTERN.test(value);
+  return isDomainIdentityText(value);
 }
 
-export function isWorkspaceProjectionRevision(
-  value: unknown,
-): value is WorkspaceProjectionRevision {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-}
+export const isWorkspaceProjectionRevision = Schema.is(WorkspaceProjectionRevisionSchema);

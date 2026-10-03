@@ -1,5 +1,6 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { decodeStrict } from "@slopstop/protocol";
 import { expect } from "vitest";
 import {
   createProjectRegistrationObserver,
@@ -54,7 +55,7 @@ async function consentToVersion(
   registry: ReturnType<typeof createRegistrationRegistry>,
   executablePath: string,
 ) {
-  const stageOne = GitVersionInspectionRequestSchema.parse({
+  const stageOne = decodeStrict(GitVersionInspectionRequestSchema, {
     selectionId: "5f3920cf-4591-4f48-b0e8-4989a67e01f9",
     consentId: "390b0210-44f9-4c09-8a9b-765bb58d27c6",
   });
@@ -95,8 +96,11 @@ export async function createControlledIdentityConsent(
   );
   try {
     const stageOne = await consentToVersion(registry, executablePath);
-    const version = PreparedGitVersionSchema.parse(await observer.inspectGitVersion(stageOne));
-    const request = IdentityQueryConsentRequestSchema.parse({
+    const version = decodeStrict(
+      PreparedGitVersionSchema,
+      await observer.inspectGitVersion(stageOne),
+    );
+    const request = decodeStrict(IdentityQueryConsentRequestSchema, {
       selectionId: version.selectionId,
       observationId: version.observationId,
       consentId: "27959be2-c4a4-4d80-aec3-84bc7ab22eca",
@@ -121,7 +125,7 @@ export async function createRepositoryTrustScenario(root: string) {
     ).toEqual({ status: "recorded" });
     const selected = await scenario.registry.selectRepository();
     if (selected.status !== "prepared") throw new Error("Native test selection unavailable");
-    const trust = RepositoryTrustRequestSchema.parse({
+    const trust = decodeStrict(RepositoryTrustRequestSchema, {
       repositorySelectionId: selected.repositorySelectionId,
       trustId: "8f9f3180-fac6-40b7-999b-099cd6b96055",
     });

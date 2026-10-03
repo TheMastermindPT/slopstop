@@ -19,6 +19,7 @@
     "@phosphor-icons/react": "catalog:",
     "@sentry/electron": "catalog:",
     "@slopstop/protocol": "workspace:*",
+    "effect": "catalog:",
     "pino": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"

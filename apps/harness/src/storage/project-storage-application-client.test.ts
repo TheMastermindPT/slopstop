@@ -49,6 +49,8 @@ it("waits for pending initialization before stopping its retained client", async
   const manager = createApplicationClientManager({
     applicationDatabasePath: databasePath,
     applicationStorageRoot: root,
+    // Schema authority is outside these client-lifecycle cases.
+    ensureInitialized: async () => "present",
     createClient: () => client,
     initialize: async () => {
       markInitializationStarted?.();
@@ -86,6 +88,8 @@ it("preserves typed unavailability from application initialization", async () =>
   const manager = createApplicationClientManager({
     applicationDatabasePath: databasePath,
     applicationStorageRoot: root,
+    // Schema authority is outside these client-lifecycle cases.
+    ensureInitialized: async () => "present",
     createClient: () => createClient(async () => undefined),
     initialize: async () => {
       throw failure;
@@ -111,6 +115,8 @@ it("keeps failed new-authority cleanup with the initialization failure", async (
   const manager = createApplicationClientManager({
     applicationDatabasePath: databasePath,
     applicationStorageRoot: root,
+    // Schema authority is outside these client-lifecycle cases.
+    ensureInitialized: async () => "present",
     createClient: () => {
       writeFileSync(databasePath, "");
       return createClient(async () => undefined);

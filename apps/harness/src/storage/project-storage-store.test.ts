@@ -1,5 +1,6 @@
 import {
   CanonicalDatabaseLineageIdSchema,
+  decodeStrict,
   type ProjectId,
   type ProjectStorageCreateRequest,
   ProjectStorageCreateRequestSchema,
@@ -21,18 +22,21 @@ import {
 } from "./project-storage-store.js";
 import { SerialLock } from "./serial-lock.js";
 
-const request = ProjectStorageCreateRequestSchema.parse({
+const request = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000010",
   createRequestId: "00000000-0000-4000-8000-000000000011",
 });
-const expectedStorageId = StorageIdSchema.parse("00000000-0000-4000-8000-000000000012");
-const expectedGenerationId = StorageGenerationIdSchema.parse(
+const expectedStorageId = decodeStrict(StorageIdSchema, "00000000-0000-4000-8000-000000000012");
+const expectedGenerationId = decodeStrict(
+  StorageGenerationIdSchema,
   "00000000-0000-4000-8000-000000000014",
 );
-const expectedCanonicalLineageId = CanonicalDatabaseLineageIdSchema.parse(
+const expectedCanonicalLineageId = decodeStrict(
+  CanonicalDatabaseLineageIdSchema,
   "00000000-0000-4000-8000-000000000015",
 );
-const expectedRuntimeLineageId = RuntimeDatabaseLineageIdSchema.parse(
+const expectedRuntimeLineageId = decodeStrict(
+  RuntimeDatabaseLineageIdSchema,
   "00000000-0000-4000-8000-000000000016",
 );
 const expectedCreateRequestFingerprint = "a".repeat(64);
@@ -397,11 +401,11 @@ function installFingerprintMap(
 
 it("creates once, replays exactly, and rejects conflicting reuse without mutation", async () => {
   const fixture = lifecycleDependencies();
-  const conflictRequest = ProjectStorageCreateRequestSchema.parse({
+  const conflictRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId: "00000000-0000-4000-8000-000000000020",
     createRequestId: request.createRequestId,
   });
-  const registeredRequest = ProjectStorageCreateRequestSchema.parse({
+  const registeredRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId: request.projectId,
     createRequestId: "00000000-0000-4000-8000-000000000021",
   });
@@ -494,7 +498,7 @@ it("serializes installation-wide create decisions before allocation", async () =
     winningProjectId = creation.projectId;
     return { status: "fresh" };
   });
-  const competingRequest = ProjectStorageCreateRequestSchema.parse({
+  const competingRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId: "00000000-0000-4000-8000-000000000020",
     createRequestId: request.createRequestId,
   });

@@ -2,7 +2,11 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { lstatSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { HarnessBootstrapSchema, ProjectActivationIdSchema } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  HarnessBootstrapSchema,
+  ProjectActivationIdSchema,
+} from "@slopstop/protocol";
 import { createActiveProjectCoordinator } from "./active-project-coordinator.js";
 import { createCanonicalCommandRegistry } from "./canonical-command-registry.js";
 import { createCanonicalProjectApplication } from "./canonical-project-application.js";
@@ -12,6 +16,7 @@ import {
   startHarnessRuntime,
 } from "./harness-runtime.js";
 import { createProjectStorageApplication } from "./project-storage-application.js";
+import { createApplicationDatabaseAuthority } from "./storage/application-database-authority.js";
 import {
   createCanonicalCommandRepositoryFactory,
   WriterCapabilityTokenSchema,
@@ -72,7 +77,7 @@ export function startHarnessProcessRuntime(
     transport: HarnessTransport;
   }>,
 ): StopHarnessRuntime {
-  const bootstrap = HarnessBootstrapSchema.parse(input.bootstrap);
+  const bootstrap = decodeStrict(HarnessBootstrapSchema, input.bootstrap);
   const applicationStorageRoot = trustedRoot(bootstrap.applicationStorageRootUrl);
   const migrationResourcesRoot = trustedRoot(bootstrap.migrationResourcesRootUrl);
   if (
@@ -81,23 +86,39 @@ export function startHarnessProcessRuntime(
   ) {
     throw new Error("Harness bootstrap roots must not overlap.");
   }
+  // One application database authority for every owner this harness composes.
+  const applicationDatabase = createApplicationDatabaseAuthority({
+    applicationStorageRoot,
+    migrationResourcesRoot,
+  });
+  // It stops only after both consumers that can still admit work have stopped; a withheld
+  // Storage stop keeps it alive with any uncertain transaction.
+  let activeApplicationDatabaseConsumers = 2;
+  const releaseApplicationDatabaseConsumer = async (): Promise<void> => {
+    activeApplicationDatabaseConsumers -= 1;
+    if (activeApplicationDatabaseConsumers === 0) await applicationDatabase.stop();
+  };
   const projectStorageOwner = createProjectStorageOwner(
     createNodeProjectStorageDependencies({
       applicationStorageRoot,
       migrationResourcesRoot,
       applicationVersion: "0.0.0",
+      applicationDatabase,
     }),
   );
+  const projectStorageApplication = createProjectStorageApplication(projectStorageOwner);
 
   const now = () => new Date().toISOString();
   const coordinator = createActiveProjectCoordinator({
     validateTarget: createRegisteredProjectTargetValidation({
       applicationStorageRoot,
       migrationResourcesRoot,
+      applicationDatabase,
     }),
     validateSession: createRegisteredProjectSessionValidation({
       applicationStorageRoot,
       migrationResourcesRoot,
+      applicationDatabase,
     }),
     storage: projectStorageOwner,
     leases: createNodeCanonicalWriterLeaseFactory(),
@@ -111,14 +132,16 @@ export function startHarnessProcessRuntime(
       createHandoffId: randomUUID,
       createRecoveryRecordId: randomUUID,
     }),
-    createActivationId: () => ProjectActivationIdSchema.parse(randomUUID()),
-    createWriterToken: () => WriterCapabilityTokenSchema.parse(randomBytes(32).toString("hex")),
+    createActivationId: () => decodeStrict(ProjectActivationIdSchema, randomUUID()),
+    createWriterToken: () =>
+      decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
     now,
   });
   const registrationOptions = {
     applicationStorageRoot,
     migrationResourcesRoot,
     applicationVersion: "0.0.0",
+    applicationDatabase,
   };
   const registrationRegistry = createRegistrationRegistry(registrationOptions);
   const registration = createProjectRegistrationOwner(
@@ -128,17 +151,28 @@ export function startHarnessProcessRuntime(
   );
   return startHarnessRuntime({
     projectListing: {
-      list: async () => ProjectListResultSchema.parse(await registration.listProjects()),
+      list: async () => decodeStrict(ProjectListResultSchema, await registration.listProjects()),
       stop: async () => {
-        const result = await registration.close();
-        await registrationRegistry.stop();
-        if (result.status !== "closed") throw new Error("Project listing cleanup is unconfirmed.");
+        try {
+          const result = await registration.close();
+          await registrationRegistry.stop();
+          if (result.status !== "closed")
+            throw new Error("Project listing cleanup is unconfirmed.");
+        } finally {
+          await releaseApplicationDatabaseConsumer();
+        }
       },
     },
     transport: input.transport,
     canonicalProjectApplication: createCanonicalProjectApplication(coordinator),
     workspaceApplication: createUnavailableWorkspaceApplication(),
-    projectStorageApplication: createProjectStorageApplication(projectStorageOwner),
+    projectStorageApplication: {
+      ...projectStorageApplication,
+      stop: async () => {
+        await projectStorageApplication.stop();
+        await releaseApplicationDatabaseConsumer();
+      },
+    },
     harnessVersion: "0.0.0",
     createId: randomUUID,
     now,

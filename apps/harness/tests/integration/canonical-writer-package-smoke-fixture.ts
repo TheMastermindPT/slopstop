@@ -1,16 +1,20 @@
 import { deepStrictEqual } from "node:assert/strict";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
+  dateTimeTextSchema,
+  decodeStrict,
+  EmptyObjectSchema,
   ProjectActivationIdSchema,
   ProjectStorageCreateResultSchema,
   ProjectStorageOpenResultSchema,
+  UuidTextSchema,
   type WriterProofControl,
   writerProofProjectId,
   writerProofStaleCommand,
   writerProofStaleCreateRequestId,
   writerProofStaleProjectId,
 } from "@slopstop/protocol";
-import { z } from "zod";
+import { Schema } from "effect";
 import {
   createCanonicalCommandRegistry,
   defineCanonicalCommand,
@@ -67,16 +71,16 @@ const tables = [
   "writer_handoffs",
   "writer_recovery_records",
 ] as const;
-const uuid = z
-  .uuid()
-  .refine(
-    (s) =>
+const uuid = UuidTextSchema.check(
+  Schema.makeFilter(
+    (s: string) =>
       s === s.toLowerCase() &&
       s !== "00000000-0000-0000-0000-000000000000" &&
       s !== "ffffffff-ffff-ffff-ffff-ffffffffffff",
-  );
-const utc = z.iso.datetime({ precision: 3 });
-const digest = z.string().regex(/^[a-f0-9]{64}$/);
+  ),
+);
+const utc = dateTimeTextSchema({ precision: 3 });
+const digest = Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/));
 const safeFailure = "Writer proof fixture failed.";
 
 function requireProof(value: unknown): asserts value {
@@ -138,11 +142,11 @@ async function snapshot(client: LocalLibsqlClient): Promise<Snapshot> {
 
 function verifyStorage(
   value: Snapshot,
-  opened: Extract<ReturnType<typeof ProjectStorageOpenResultSchema.parse>, { status: "opened" }>,
+  opened: Extract<typeof ProjectStorageOpenResultSchema.Type, { status: "opened" }>,
   sequence: number,
 ) {
   const identity = only(value, "storage_identity");
-  const created = utc.parse(identity["created_at"]);
+  const created = decodeStrict(utc, identity["created_at"]);
   exact(identity, {
     identity_key: "storage",
     project_id: opened.request.projectId,
@@ -159,7 +163,7 @@ function verifyStorage(
     last_migration_id: "0001_canonical_project_writer",
   });
   const state = only(value, "project_state");
-  const updated = utc.parse(state["updated_at"]);
+  const updated = decodeStrict(utc, state["updated_at"]);
   requireProof(created <= updated);
   exact(state, {
     project_id: opened.request.projectId,
@@ -182,10 +186,10 @@ function verifyAuthority(
   const first = generations[0];
   const second = generations[1];
   requireProof(first && second);
-  const acquired = generations.map((row) => utc.parse(row["acquired_at"]));
-  const tokens = generations.map((row) => digest.parse(row["token_digest"]));
+  const acquired = generations.map((row) => decodeStrict(utc, row["acquired_at"]));
+  const tokens = generations.map((row) => decodeStrict(digest, row["token_digest"]));
   requireProof(tokens[0] !== tokens[1]);
-  const terminal = released ? utc.parse(second["released_at"]) : null;
+  const terminal = released ? decodeStrict(utc, second["released_at"]) : null;
   const firstTime = acquired[0];
   const secondTime = acquired[1];
   requireProof(firstTime && secondTime && firstTime <= secondTime);
@@ -214,7 +218,7 @@ function verifyAuthority(
   handoffs.forEach((row, i) => {
     exact(row, {
       project_id: projectId,
-      handoff_id: uuid.parse(row["handoff_id"]),
+      handoff_id: decodeStrict(uuid, row["handoff_id"]),
       from_writer_generation: i === 0 ? null : 1,
       to_writer_generation: i + 1,
       kind: i === 0 ? "initial" : "recovery",
@@ -225,7 +229,7 @@ function verifyAuthority(
   const recovery = only(value, "writer_recovery_records");
   exact(recovery, {
     project_id: projectId,
-    recovery_record_id: uuid.parse(recovery["recovery_record_id"]),
+    recovery_record_id: decodeStrict(uuid, recovery["recovery_record_id"]),
     writer_generation: 1,
     reason: "abandoned-active-fence",
     command_id: null,
@@ -329,7 +333,7 @@ export function createWriterProofFixture(
   const audit = async (control: Extract<WriterProofControl, { step: "audit.initialize" }>) => {
     const result = await owner.open({ projectId: writerProofProjectId });
     requireProof(result.status === "ready");
-    const opened = ProjectStorageOpenResultSchema.parse(result.result);
+    const opened = decodeStrict(ProjectStorageOpenResultSchema, result.result);
     requireProof(opened.status === "opened");
     const file = dependencies.paths.forCreation(writerProofProjectId, opened.identity.generationId)
       .active.canonicalDatabase;
@@ -367,7 +371,7 @@ export function createWriterProofFixture(
       createRequestId: writerProofStaleCreateRequestId,
     });
     requireProof(created.status === "ready");
-    const validated = ProjectStorageCreateResultSchema.parse(created.result);
+    const validated = decodeStrict(ProjectStorageCreateResultSchema, created.result);
     requireProof(validated.status === "created");
     exact(validated.request, {
       projectId: writerProofStaleProjectId,
@@ -388,7 +392,7 @@ export function createWriterProofFixture(
       defineCanonicalCommand({
         type: "conformance.writer.noop",
         version: 1,
-        payloadSchema: z.strictObject({}),
+        payloadSchema: EmptyObjectSchema,
         handle: () => {
           counts.handlerCalls++;
           return { outcome: "unchanged" };
@@ -417,12 +421,12 @@ export function createWriterProofFixture(
       createRecoveryRecordId: randomUUID,
       sha256Text: async (text) => createHash("sha256").update(text).digest("hex"),
     });
-    const activationId = ProjectActivationIdSchema.parse(randomUUID());
+    const activationId = decodeStrict(ProjectActivationIdSchema, randomUUID());
     const activated = await factory.activate({
       canonicalDatabasePath: session.canonicalDatabasePath,
       projectId: writerProofStaleProjectId,
       activationId,
-      writerToken: WriterCapabilityTokenSchema.parse(randomBytes(32).toString("hex")),
+      writerToken: decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
       activatedAt: new Date().toISOString(),
     });
     if (activated.status === "broken") {

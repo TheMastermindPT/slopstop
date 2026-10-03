@@ -9,6 +9,7 @@ import {
   createWorkspaceIntentResultEvent,
   createWorkspaceProjectionInvalidatedEvent,
   createWorkspaceQueryResultEvent,
+  decodeStrict,
   HarnessBootstrapSchema,
   type HarnessStatus,
   MessageIdSchema,
@@ -76,25 +77,25 @@ const logger = {
 } as unknown as Logger;
 
 const eventMetadata = {
-  messageId: MessageIdSchema.parse("00000000-0000-4000-8000-000000000002"),
+  messageId: decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000002"),
   sentAt: "2026-08-14T12:00:01.000Z",
   sequence: 1,
-  causationId: MessageIdSchema.parse("00000000-0000-4000-8000-000000000001"),
+  causationId: decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000001"),
 };
-const bootstrap = HarnessBootstrapSchema.parse({
+const bootstrap = decodeStrict(HarnessBootstrapSchema, {
   kind: "harness.connect",
   applicationStorageRootUrl: "file:///C:/Users/example/AppData/SlopStop/storage",
   migrationResourcesRootUrl: "file:///C:/app/harness-migrations",
 });
 const projectStorageProjectId = "00000000-0000-4000-8000-000000000101";
-const projectStorageOpenRequest = ProjectStorageOpenRequestSchema.parse({
+const projectStorageOpenRequest = decodeStrict(ProjectStorageOpenRequestSchema, {
   projectId: projectStorageProjectId,
 });
-const projectStorageCreateRequest = ProjectStorageCreateRequestSchema.parse({
+const projectStorageCreateRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: projectStorageProjectId,
   createRequestId: "00000000-0000-4000-8000-000000000102",
 });
-const projectStorageCloseRequest = ProjectStorageCloseRequestSchema.parse({
+const projectStorageCloseRequest = decodeStrict(ProjectStorageCloseRequestSchema, {
   projectId: projectStorageProjectId,
 });
 const projectStorageUnavailable = {
@@ -390,12 +391,12 @@ describe("HarnessSupervisor", () => {
     supervisor.getSession().subscribe((event) => sessionEvents.push(event));
     supervisor.start();
     child.emit("spawn");
-    const query = WorkspaceQuerySchema.parse({
+    const query = decodeStrict(WorkspaceQuerySchema, {
       query: "memory-library.read",
       projectId: "00000000-0000-4000-8000-000000000010",
       cursor: null,
     });
-    const result = WorkspaceQueryResultSchema.parse({
+    const result = decodeStrict(WorkspaceQueryResultSchema, {
       status: "unavailable",
       query,
       diagnostic: {
@@ -408,16 +409,16 @@ describe("HarnessSupervisor", () => {
     const intentEvent = createWorkspaceIntentResultEvent(
       {
         ...eventMetadata,
-        messageId: MessageIdSchema.parse("00000000-0000-4000-8000-000000000003"),
+        messageId: decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000003"),
       },
-      WorkspaceIntentResultSchema.parse({ status: "forwarded", capability: "memory" }),
+      decodeStrict(WorkspaceIntentResultSchema, { status: "forwarded", capability: "memory" }),
     );
     const invalidationEvent = createWorkspaceProjectionInvalidatedEvent(
       {
         ...eventMetadata,
-        messageId: MessageIdSchema.parse("00000000-0000-4000-8000-000000000004"),
+        messageId: decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000004"),
       },
-      WorkspaceNotificationSchema.parse({
+      decodeStrict(WorkspaceNotificationSchema, {
         capability: "memory",
         scope: {
           kind: "project",

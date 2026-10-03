@@ -1,3 +1,4 @@
+import { decodeStrict } from "@slopstop/protocol";
 import { describe, expect, it, vi } from "vitest";
 import {
   createProjectRegistrationObserver,
@@ -20,7 +21,7 @@ import {
 
 const openAdmission: ObserverAdmissionPort = { hasUnsettled: async () => false };
 
-const executableIdentity = ExecutableIdentitySchema.parse({
+const executableIdentity = decodeStrict(ExecutableIdentitySchema, {
   platform: "win32",
   volumeIdentity: "3240924279274158738",
   fileIdentity: "51509920738823581",
@@ -42,11 +43,11 @@ function createVersionScenario(
   },
   admission: ObserverAdmissionPort = openAdmission,
 ) {
-  const request = GitVersionInspectionRequestSchema.parse({
+  const request = decodeStrict(GitVersionInspectionRequestSchema, {
     selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
     consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
   });
-  const prepared = GitVersionInspectionResultSchema.parse({
+  const prepared = decodeStrict(GitVersionInspectionResultSchema, {
     status: "prepared",
     selectionId: request.selectionId,
     observationId: "c42caec7-06c4-49bd-9a34-e5b034ab2477",
@@ -136,7 +137,7 @@ describe("Project registration observer executable admission", () => {
           },
         },
       );
-      const request = GitVersionInspectionRequestSchema.parse({
+      const request = decodeStrict(GitVersionInspectionRequestSchema, {
         selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
         consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
       });
@@ -160,11 +161,11 @@ describe("Project registration observer executable admission", () => {
       { inspect: async () => held },
       openAdmission,
     );
-    const request = GitVersionInspectionRequestSchema.parse({
+    const request = decodeStrict(GitVersionInspectionRequestSchema, {
       selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
       consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
     });
-    const prepared = GitVersionInspectionResultSchema.parse({
+    const prepared = decodeStrict(GitVersionInspectionResultSchema, {
       status: "prepared",
       selectionId: request.selectionId,
       observationId: "c42caec7-06c4-49bd-9a34-e5b034ab2477",
@@ -208,7 +209,7 @@ describe("Project registration observer executable admission", () => {
     );
 
     const result = await observer.inspectGitVersion(
-      GitVersionInspectionRequestSchema.parse({
+      decodeStrict(GitVersionInspectionRequestSchema, {
         selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
         consentId: null,
       }),
@@ -234,7 +235,7 @@ describe("Project registration observer executable admission", () => {
     );
 
     const result = await observer.inspectGitVersion(
-      GitVersionInspectionRequestSchema.parse({
+      decodeStrict(GitVersionInspectionRequestSchema, {
         selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
         consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
       }),
@@ -245,11 +246,11 @@ describe("Project registration observer executable admission", () => {
   });
 
   it("returns the version observation admitted by the stored stage-one decision", async () => {
-    const request = GitVersionInspectionRequestSchema.parse({
+    const request = decodeStrict(GitVersionInspectionRequestSchema, {
       selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
       consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
     });
-    const observation = GitVersionInspectionResultSchema.parse({
+    const observation = decodeStrict(GitVersionInspectionResultSchema, {
       status: "prepared",
       selectionId: request.selectionId,
       observationId: "c42caec7-06c4-49bd-9a34-e5b034ab2477",

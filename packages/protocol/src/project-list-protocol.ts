@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { Schema } from "effect";
 import { ProjectIdSchema } from "./domain-identity-schema.js";
 import { InitialRepositoryBindingSchema } from "./project-registration-protocol.js";
 import {
@@ -7,69 +7,79 @@ import {
   StorageGenerationIdSchema,
   StorageIdSchema,
 } from "./project-storage-protocol.js";
+import { EmptyObjectSchema, wholeUnion } from "./schema-codec.js";
 
-export const ProjectListStorageSchema = z.discriminatedUnion("status", [
-  z.strictObject({
-    status: z.literal("healthy"),
+export const ProjectListStorageSchema = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("healthy"),
     storageId: StorageIdSchema,
     generationId: StorageGenerationIdSchema,
   }),
-  z.strictObject({
-    status: z.literal("safe-mode"),
-    storageId: StorageIdSchema.nullable(),
-    generationId: StorageGenerationIdSchema.nullable(),
+  Schema.Struct({
+    status: Schema.Literal("safe-mode"),
+    storageId: Schema.NullOr(StorageIdSchema),
+    generationId: Schema.NullOr(StorageGenerationIdSchema),
     canonical: PersistenceHealthSchema,
     runtime: PersistenceHealthSchema,
   }),
-  z.strictObject({ status: z.literal("not-registered") }),
-  z.strictObject({ status: z.literal("unavailable"), code: ProjectStorageDiagnosticCodeSchema }),
-  z.strictObject({ status: z.literal("broken"), code: ProjectStorageDiagnosticCodeSchema }),
-]);
-export const ProjectListLocationSchema = z.discriminatedUnion("status", [
-  z.strictObject({ status: z.literal("present") }),
-  z.strictObject({ status: z.literal("not-bound") }),
-  z.strictObject({ status: z.literal("missing"), code: z.literal("REPOSITORY_NOT_FOUND") }),
-  z.strictObject({ status: z.literal("changed"), code: z.literal("REPOSITORY_IDENTITY_CHANGED") }),
-  z.strictObject({
-    status: z.literal("unavailable"),
-    code: z.enum(["REPOSITORY_INACCESSIBLE", "IDENTITY_CAPABILITY_UNAVAILABLE"]),
+  Schema.Struct({ status: Schema.Literal("not-registered") }),
+  Schema.Struct({
+    status: Schema.Literal("unavailable"),
+    code: ProjectStorageDiagnosticCodeSchema,
   }),
-  z.strictObject({ status: z.literal("invalid"), code: z.literal("OBSERVATION_INVALID") }),
-  z.strictObject({ status: z.literal("broken"), code: z.literal("INTERNAL_FAILURE") }),
+  Schema.Struct({ status: Schema.Literal("broken"), code: ProjectStorageDiagnosticCodeSchema }),
+]);
+export const ProjectListLocationSchema = Schema.Union([
+  Schema.Struct({ status: Schema.Literal("present") }),
+  Schema.Struct({ status: Schema.Literal("not-bound") }),
+  Schema.Struct({
+    status: Schema.Literal("missing"),
+    code: Schema.Literal("REPOSITORY_NOT_FOUND"),
+  }),
+  Schema.Struct({
+    status: Schema.Literal("changed"),
+    code: Schema.Literal("REPOSITORY_IDENTITY_CHANGED"),
+  }),
+  Schema.Struct({
+    status: Schema.Literal("unavailable"),
+    code: Schema.Literals(["REPOSITORY_INACCESSIBLE", "IDENTITY_CAPABILITY_UNAVAILABLE"]),
+  }),
+  Schema.Struct({ status: Schema.Literal("invalid"), code: Schema.Literal("OBSERVATION_INVALID") }),
+  Schema.Struct({ status: Schema.Literal("broken"), code: Schema.Literal("INTERNAL_FAILURE") }),
 ]);
 const common = {
   projectId: ProjectIdSchema,
   storage: ProjectListStorageSchema,
   repositoryLocation: ProjectListLocationSchema,
-  access: z.literal("not-assessed"),
+  access: Schema.Literal("not-assessed"),
 };
 const binding = {
-  repositoryBindingId: InitialRepositoryBindingSchema.shape.repositoryBindingId,
-  workspaceId: InitialRepositoryBindingSchema.shape.workspaceId,
+  repositoryBindingId: InitialRepositoryBindingSchema.fields.repositoryBindingId,
+  workspaceId: InitialRepositoryBindingSchema.fields.workspaceId,
 };
-export const ProjectListEntrySchema = z.discriminatedUnion("registration", [
-  z.strictObject({ registration: z.literal("registered"), ...common, ...binding }),
-  z.strictObject({
-    registration: z.literal("incomplete"),
-    code: z.literal("REGISTRATION_INCOMPLETE"),
+export const ProjectListEntrySchema = Schema.Union([
+  Schema.Struct({ registration: Schema.Literal("registered"), ...common, ...binding }),
+  Schema.Struct({
+    registration: Schema.Literal("incomplete"),
+    code: Schema.Literal("REGISTRATION_INCOMPLETE"),
     ...common,
     ...binding,
   }),
-  z.strictObject({ registration: z.literal("unbound"), ...common }),
+  Schema.Struct({ registration: Schema.Literal("unbound"), ...common }),
 ]);
-export const ProjectListSchema = z.strictObject({
-  status: z.literal("listed"),
-  projects: z.array(ProjectListEntrySchema),
+export const ProjectListSchema = Schema.Struct({
+  status: Schema.Literal("listed"),
+  projects: Schema.Array(ProjectListEntrySchema),
 });
-export type ProjectList = z.infer<typeof ProjectListSchema>;
+export type ProjectList = typeof ProjectListSchema.Type;
 
-export const ProjectListRequestSchema = z.strictObject({});
-export const ProjectListResultSchema = z.union([
+export const ProjectListRequestSchema = EmptyObjectSchema;
+export const ProjectListResultSchema = wholeUnion([
   ProjectListSchema,
-  z.strictObject({ status: z.literal("cancelled") }),
-  z.strictObject({
-    status: z.literal("broken"),
-    code: z.enum([
+  Schema.Struct({ status: Schema.Literal("cancelled") }),
+  Schema.Struct({
+    status: Schema.Literal("broken"),
+    code: Schema.Literals([
       "REGISTRY_SCHEMA_UNKNOWN",
       "REGISTRY_SCHEMA_NEWER",
       "REGISTRY_CORRUPT",
@@ -77,17 +87,17 @@ export const ProjectListResultSchema = z.union([
       "PROJECT_LIST_TRANSPORT_FAILED",
     ]),
   }),
-  z.strictObject({
-    status: z.literal("unavailable"),
-    code: z.enum(["REGISTRY_BUSY", "PROJECT_LIST_UNAVAILABLE"]),
+  Schema.Struct({
+    status: Schema.Literal("unavailable"),
+    code: Schema.Literals(["REGISTRY_BUSY", "PROJECT_LIST_UNAVAILABLE"]),
   }),
-  z.strictObject({
-    status: z.literal("pending-recovery"),
-    code: z.enum(["REGISTRY_MISSING_WITH_WITNESS", "OBSERVER_CLEANUP_UNCONFIRMED"]),
+  Schema.Struct({
+    status: Schema.Literal("pending-recovery"),
+    code: Schema.Literals(["REGISTRY_MISSING_WITH_WITNESS", "OBSERVER_CLEANUP_UNCONFIRMED"]),
   }),
-  z.strictObject({
-    status: z.literal("rejected"),
-    code: z.literal("REGISTRATION_IDEMPOTENCY_CONFLICT"),
+  Schema.Struct({
+    status: Schema.Literal("rejected"),
+    code: Schema.Literal("REGISTRATION_IDEMPOTENCY_CONFLICT"),
   }),
 ]);
-export type ProjectListResult = z.infer<typeof ProjectListResultSchema>;
+export type ProjectListResult = typeof ProjectListResultSchema.Type;

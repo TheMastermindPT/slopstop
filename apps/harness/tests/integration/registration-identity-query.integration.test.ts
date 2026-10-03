@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { decodeStrict } from "@slopstop/protocol";
 import { afterEach, expect, it } from "vitest";
 import type { IdentityQueryChildPort } from "../../src/registration/identity-query-child.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
@@ -178,7 +179,7 @@ async function selectQueryRequest(
 ) {
   const selected = await scenario.registry.selectRepository();
   if (selected.status !== "prepared") throw new Error("Selection unavailable");
-  return RepositoryIdentityAdmissionRequestSchema.parse({
+  return decodeStrict(RepositoryIdentityAdmissionRequestSchema, {
     ...scenario.request,
     repositorySelectionId: selected.repositorySelectionId,
     trustId: "f6e2f3db-834e-418e-b747-391ccdb4f455",

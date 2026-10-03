@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { z } from "zod";
+import { decodeStrict, TrimmedNonEmptyTextSchema } from "@slopstop/protocol";
+import { Schema } from "effect";
 import type { GeneratedMigration } from "./generated-migrations.js";
 import type { DatabaseSpec } from "./project-storage-database-specs.js";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
@@ -11,21 +12,25 @@ import {
   scanSqliteSchemaTokens,
 } from "./sqlite-schema-scanner.js";
 
-const drizzleJournalSchema = z.strictObject({
-  version: z.string().trim().min(1),
-  dialect: z.literal("sqlite"),
-  entries: z.array(
-    z.strictObject({
-      idx: z.number().int().nonnegative(),
-      version: z.string().trim().min(1),
-      when: z.number().int().nonnegative(),
-      tag: z.string().regex(/^[0-9]{4}_[a-z0-9_]+$/u),
-      breakpoints: z.boolean(),
+const NonnegativeIntegerSchema = Schema.Number.check(
+  Schema.isInt(),
+  Schema.isGreaterThanOrEqualTo(0),
+);
+const drizzleJournalSchema = Schema.Struct({
+  version: TrimmedNonEmptyTextSchema,
+  dialect: Schema.Literal("sqlite"),
+  entries: Schema.Array(
+    Schema.Struct({
+      idx: NonnegativeIntegerSchema,
+      version: TrimmedNonEmptyTextSchema,
+      when: NonnegativeIntegerSchema,
+      tag: Schema.String.check(Schema.isPattern(/^[0-9]{4}_[a-z0-9_]+$/u)),
+      breakpoints: Schema.Boolean,
     }),
   ),
 });
 
-type DrizzleJournal = z.infer<typeof drizzleJournalSchema>;
+type DrizzleJournal = typeof drizzleJournalSchema.Type;
 
 function equalStrings(first: readonly string[], second: readonly string[]): boolean {
   return first.length === second.length && first.every((value, index) => value === second[index]);
@@ -96,7 +101,7 @@ async function readJournal(input: { journalPath: string }): Promise<DrizzleJourn
     message: "Generated migration journal is unavailable.",
   });
   try {
-    return drizzleJournalSchema.parse(JSON.parse(source));
+    return decodeStrict(drizzleJournalSchema, JSON.parse(source));
   } catch {
     throw new ProjectStorageBrokenError("Generated migration journal is invalid.");
   }

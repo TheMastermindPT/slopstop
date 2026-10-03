@@ -11,6 +11,7 @@ import {
   createProjectCommand,
   createProjectSwitchCommand,
   type DesktopMessage,
+  decodeStrict,
   type HarnessBootstrap,
   HarnessBootstrapSchema,
   type HarnessMessage,
@@ -435,9 +436,10 @@ async function spawn(
     proof.assert(options.deadline, "spawn");
     if (!fixture) {
       requireWriterProof(owner.transferred !== undefined, "transport");
-      const sent: unknown = child.postMessage(HarnessBootstrapSchema.parse(proof.input.bootstrap), [
-        owner.transferred,
-      ]);
+      const sent: unknown = child.postMessage(
+        decodeStrict(HarnessBootstrapSchema, proof.input.bootstrap),
+        [owner.transferred],
+      );
       requireWriterProof(sent !== false, "transport");
     }
   } catch {
@@ -466,7 +468,7 @@ async function call(
       return owner.local.postMessage(command);
     },
     (raw) => {
-      const result = HarnessMessageSchema.parse(raw);
+      const result = decodeStrict(HarnessMessageSchema, raw);
       requireWriterProof(
         result.event === event &&
           result.causationId === command.messageId &&
@@ -722,7 +724,7 @@ async function connectFixture(proof: Proof): Promise<Fixture> {
   proof.assert();
   const proofId = randomUUID();
   requireWriterProof(owner.transferred !== undefined, "transport");
-  const start = WriterProofStartSchema.parse({
+  const start = decodeStrict(WriterProofStartSchema, {
     version: 1,
     kind: "writer-proof.connect",
     proofId,
@@ -737,7 +739,7 @@ async function control(
   value: Record<string, unknown>,
   stage: WriterProofStage,
 ): Promise<WriterProofEvent> {
-  const request = WriterProofControlSchema.parse({
+  const request = decodeStrict(WriterProofControlSchema, {
     version: 1,
     kind: "writer-proof.control",
     proofId: fixture.proofId,
@@ -750,7 +752,7 @@ async function control(
       return fixture.owner.local.postMessage(request);
     },
     (raw) => {
-      const event = WriterProofEventSchema.parse(raw);
+      const event = decodeStrict(WriterProofEventSchema, raw);
       requireWriterProof(
         event.proofId === request.proofId &&
           event.requestId === request.requestId &&

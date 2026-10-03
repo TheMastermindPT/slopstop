@@ -8,6 +8,7 @@ import {
   CanonicalProjectCommandResultSchema,
   CanonicalProjectSwitchRequestSchema,
   CanonicalProjectSwitchResultSchema,
+  decodeStrict,
 } from "@slopstop/protocol";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -19,7 +20,7 @@ import {
 import type { ActiveProjectCoordinator } from "./active-project-coordinator.js";
 import * as applications from "./canonical-project-application.js";
 
-const request = CanonicalProjectCommandRequestSchema.parse({
+const request = decodeStrict(CanonicalProjectCommandRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000010",
   activationId: "00000000-0000-4000-8000-000000000011",
   command: {
@@ -29,14 +30,14 @@ const request = CanonicalProjectCommandRequestSchema.parse({
     payload: {},
   },
 });
-const activation = CanonicalProjectActivationResultSchema.parse({
+const activation = decodeStrict(CanonicalProjectActivationResultSchema, {
   status: "active",
   request: { projectId: request.projectId },
   access: "read-write",
   activationId: request.activationId,
   writerGeneration: 1,
 });
-const result = CanonicalProjectCommandResultSchema.parse({
+const result = decodeStrict(CanonicalProjectCommandResultSchema, {
   status: "inactive",
   projectId: request.projectId,
   activationId: request.activationId,
@@ -50,7 +51,7 @@ const result = CanonicalProjectCommandResultSchema.parse({
 const otherId = "00000000-0000-4000-8000-000000000021";
 
 function settledResult(outcome: "applied" | "unchanged" | "rejected" = "applied") {
-  const parsed = CanonicalProjectCommandResultSchema.parse({
+  const parsed = decodeStrict(CanonicalProjectCommandResultSchema, {
     status: "settled",
     projectId: request.projectId,
     activationId: request.activationId,
@@ -105,7 +106,7 @@ it.each(["commandType", "commandVersion"] as const)(
   async (key) => {
     const value = settledResult();
     Reflect.set(value.receipt, key, key === "commandType" ? "fixture.other" : 2);
-    expect(CanonicalProjectCommandResultSchema.parse(value)).toEqual(value);
+    expect(decodeStrict(CanonicalProjectCommandResultSchema, value)).toEqual(value);
     const { app } = commandApplication(value);
     await invalidResult(() => app.execute(request));
   },
@@ -117,7 +118,7 @@ it.each(["projectId", "commandId", "activationId"] as const)(
     const value = settledResult();
     Reflect.set(value, key, otherId);
     if (key !== "activationId") Reflect.set(value.receipt, key, otherId);
-    expect(CanonicalProjectCommandResultSchema.parse(value)).toEqual(value);
+    expect(decodeStrict(CanonicalProjectCommandResultSchema, value)).toEqual(value);
     const { app } = commandApplication(value);
     await invalidResult(() => app.execute(request));
   },
@@ -327,7 +328,7 @@ it.each([
 ] as const)(
   "G13 non-durable %s validates exact diagnostic without a receipt (regression)",
   async (status, code, message, retryable) => {
-    const value = CanonicalProjectCommandResultSchema.parse({
+    const value = decodeStrict(CanonicalProjectCommandResultSchema, {
       status,
       projectId: request.projectId,
       activationId: request.activationId,
@@ -410,7 +411,7 @@ it("validates canonical owner results without swallowing owner failures", async 
   expect(owner.stop).toHaveBeenCalledOnce();
 });
 
-const switchRequest = CanonicalProjectSwitchRequestSchema.parse({
+const switchRequest = decodeStrict(CanonicalProjectSwitchRequestSchema, {
   from: {
     projectId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
     activationId: "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
@@ -436,13 +437,15 @@ function switchApplication(value: CanonicalProjectSwitchResult) {
 
 describe.each(switchResults)("switch application $name", ({ value }) => {
   it("validates complete switch correlation and preserves owner exceptions", async () => {
-    const { app, owner } = switchApplication(CanonicalProjectSwitchResultSchema.parse(value));
+    const { app, owner } = switchApplication(
+      decodeStrict(CanonicalProjectSwitchResultSchema, value),
+    );
     expect(await app.switchProject(switchRequest)).toEqual(value);
     expect(owner.switchProject).toHaveBeenCalledExactlyOnceWith(switchRequest);
   });
 
   it("rejects every original switch request identity mismatch", async () => {
-    const changed = CanonicalProjectSwitchResultSchema.parse(value);
+    const changed = decodeStrict(CanonicalProjectSwitchResultSchema, value);
     const { app } = switchApplication(changed);
     for (const [parent, key, replacement] of [
       [changed.request.from, "projectId", projectC],
@@ -457,7 +460,7 @@ describe.each(switchResults)("switch application $name", ({ value }) => {
   });
 
   it("rejects private fields instead of stripping them from switch results", async () => {
-    const changed = CanonicalProjectSwitchResultSchema.parse(value);
+    const changed = decodeStrict(CanonicalProjectSwitchResultSchema, value);
     const { app } = switchApplication(changed);
     for (const boundary of switchResultBoundaries(changed)) {
       for (const key of [
@@ -479,7 +482,7 @@ describe.each(switchResults)("switch application $name", ({ value }) => {
 
 describe.each(switchTargets)("switch application target $name", ({ target }) => {
   it("rejects nested target mismatch and schema-valid joint destination mismatch", async () => {
-    const changed = CanonicalProjectSwitchResultSchema.parse({
+    const changed = decodeStrict(CanonicalProjectSwitchResultSchema, {
       status: "target-result",
       request: switchRequest,
       target,
@@ -490,14 +493,14 @@ describe.each(switchTargets)("switch application target $name", ({ target }) => 
     await invalidResult(() => app.switchProject(switchRequest));
     Reflect.set(changed.request.to, "projectId", projectC);
     Reflect.set(changed.target.request, "projectId", projectC);
-    expect(CanonicalProjectSwitchResultSchema.parse(changed)).toEqual(changed);
+    expect(decodeStrict(CanonicalProjectSwitchResultSchema, changed)).toEqual(changed);
     await invalidResult(() => app.switchProject(switchRequest));
   });
 });
 
 describe.each(switchFailures)("switch application retryability $name", ({ value }) => {
   it("rejects flipped switch-owned diagnostic retryability", async () => {
-    const changed = CanonicalProjectSwitchResultSchema.parse(value);
+    const changed = decodeStrict(CanonicalProjectSwitchResultSchema, value);
     if (changed.status === "target-result") throw new Error("Expected a switch failure fixture.");
     const { app } = switchApplication(changed);
     Reflect.set(changed.diagnostic, "retryable", !changed.diagnostic.retryable);
@@ -509,7 +512,7 @@ describe.each(switchTargets.filter(({ target }) => "diagnostic" in target))(
   "switch application nested retryability $name",
   ({ name, target }) => {
     it("preserves legacy nested failure booleans and the fixed read-only literal", async () => {
-      const changed = CanonicalProjectSwitchResultSchema.parse({
+      const changed = decodeStrict(CanonicalProjectSwitchResultSchema, {
         status: "target-result",
         request: switchRequest,
         target,
@@ -526,7 +529,7 @@ describe.each(switchTargets.filter(({ target }) => "diagnostic" in target))(
 
 it("preserves the identical unexpected switch owner exception", async () => {
   const { app, owner } = switchApplication(
-    CanonicalProjectSwitchResultSchema.parse({
+    decodeStrict(CanonicalProjectSwitchResultSchema, {
       status: "target-result",
       request: switchRequest,
       target: { status: "not-registered", request: switchRequest.to },

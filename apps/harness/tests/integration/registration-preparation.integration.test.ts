@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { lstat, mkdtemp, readFile, rename, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { decodeStrict } from "@slopstop/protocol";
 import { afterEach, expect, it } from "vitest";
 import { createProjectRegistrationPreparation } from "../../src/registration/project-registration-preparation.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
@@ -68,7 +69,7 @@ async function fixture() {
   );
   expect(
     await registry.decideRepositoryTrust(
-      RepositoryTrustDecisionSchema.parse({ ...trust, decision: "accepted" }),
+      decodeStrict(RepositoryTrustDecisionSchema, { ...trust, decision: "accepted" }),
     ),
   ).toEqual({ status: "recorded" });
   const request = {

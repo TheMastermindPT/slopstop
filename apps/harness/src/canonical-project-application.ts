@@ -10,8 +10,9 @@ import {
   CanonicalProjectActivationResultSchema,
   CanonicalProjectCommandResultSchema,
   CanonicalProjectSwitchResultSchema,
+  decodeStrictResult,
 } from "@slopstop/protocol";
-import type { z } from "zod";
+import { Result, type Schema } from "effect";
 import type { ActiveProjectCoordinator } from "./active-project-coordinator.js";
 export interface CanonicalProjectApplication {
   activate(request: CanonicalProjectActivationRequest): Promise<CanonicalProjectActivationResult>;
@@ -89,13 +90,13 @@ export function createCanonicalProjectApplication(
   };
 }
 
-function validatedResult<Result>(
-  schema: z.ZodType<Result>,
+function validatedResult<S extends Schema.ConstraintDecoder<unknown>>(
+  schema: S,
   value: unknown,
-  matches: (result: Result) => boolean,
-): Result {
-  const parsed = schema.safeParse(value);
-  if (!parsed.success) throw new CanonicalProjectApplicationError();
-  if (!matches(parsed.data)) throw new CanonicalProjectApplicationError();
-  return parsed.data;
+  matches: (result: S["Type"]) => boolean,
+): S["Type"] {
+  const parsed = decodeStrictResult(schema, value);
+  if (Result.isFailure(parsed)) throw new CanonicalProjectApplicationError();
+  if (!matches(parsed.success)) throw new CanonicalProjectApplicationError();
+  return parsed.success;
 }

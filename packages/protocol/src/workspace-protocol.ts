@@ -1,256 +1,258 @@
-import type {
-  AcceptedRevisionId as KernelAcceptedRevisionId,
-  ContextProposalId as KernelContextProposalId,
-  ContextRecordId as KernelContextRecordId,
-  ConversationBranchId as KernelConversationBranchId,
-  ConversationId as KernelConversationId,
-  ConversationMessageId as KernelConversationMessageId,
-  FrameDraftId as KernelFrameDraftId,
-  FrameSectionId as KernelFrameSectionId,
-  MemoryProposalId as KernelMemoryProposalId,
-  MemoryRevisionId as KernelMemoryRevisionId,
-  MemoryTopicId as KernelMemoryTopicId,
-  ReviewAnnotationId as KernelReviewAnnotationId,
-  WaypointId as KernelWaypointId,
-  WorkspaceProjectionRevision as KernelWorkspaceProjectionRevision,
+import {
+  DomainIdentityTextSchema,
+  WorkspaceProjectionRevisionSchema as KernelWorkspaceProjectionRevisionSchema,
 } from "@slopstop/kernel";
-import { isWorkspaceProjectionRevision } from "@slopstop/kernel";
-import { z } from "zod";
-import { domainIdentitySchema, ProjectIdSchema } from "./domain-identity-schema.js";
+import { Schema } from "effect";
+import { ProjectIdSchema } from "./domain-identity-schema.js";
+import { NonEmptyTextSchema, wholeUnion } from "./schema-codec.js";
 
 export { ProjectIdSchema };
-export type ProjectId = z.infer<typeof ProjectIdSchema>;
-export const WaypointIdSchema = domainIdentitySchema<KernelWaypointId>();
-export type WaypointId = z.infer<typeof WaypointIdSchema>;
-export const ConversationIdSchema = domainIdentitySchema<KernelConversationId>();
-export type ConversationId = z.infer<typeof ConversationIdSchema>;
-export const ConversationBranchIdSchema = domainIdentitySchema<KernelConversationBranchId>();
-export type ConversationBranchId = z.infer<typeof ConversationBranchIdSchema>;
-export const ConversationMessageIdSchema = domainIdentitySchema<KernelConversationMessageId>();
-export type ConversationMessageId = z.infer<typeof ConversationMessageIdSchema>;
-export const ContextProposalIdSchema = domainIdentitySchema<KernelContextProposalId>();
-export type ContextProposalId = z.infer<typeof ContextProposalIdSchema>;
-export const ContextRecordIdSchema = domainIdentitySchema<KernelContextRecordId>();
-export type ContextRecordId = z.infer<typeof ContextRecordIdSchema>;
-export const FrameDraftIdSchema = domainIdentitySchema<KernelFrameDraftId>();
-export type FrameDraftId = z.infer<typeof FrameDraftIdSchema>;
-export const FrameSectionIdSchema = domainIdentitySchema<KernelFrameSectionId>();
-export type FrameSectionId = z.infer<typeof FrameSectionIdSchema>;
-export const ReviewAnnotationIdSchema = domainIdentitySchema<KernelReviewAnnotationId>();
-export type ReviewAnnotationId = z.infer<typeof ReviewAnnotationIdSchema>;
-export const AcceptedRevisionIdSchema = domainIdentitySchema<KernelAcceptedRevisionId>();
-export type AcceptedRevisionId = z.infer<typeof AcceptedRevisionIdSchema>;
-export const MemoryTopicIdSchema = domainIdentitySchema<KernelMemoryTopicId>();
-export type MemoryTopicId = z.infer<typeof MemoryTopicIdSchema>;
-export const MemoryRevisionIdSchema = domainIdentitySchema<KernelMemoryRevisionId>();
-export type MemoryRevisionId = z.infer<typeof MemoryRevisionIdSchema>;
-export const MemoryProposalIdSchema = domainIdentitySchema<KernelMemoryProposalId>();
-export type MemoryProposalId = z.infer<typeof MemoryProposalIdSchema>;
-
-export const WorkspaceProjectionRevisionSchema = z.custom<KernelWorkspaceProjectionRevision>(
-  (value) => isWorkspaceProjectionRevision(value),
+export type ProjectId = typeof ProjectIdSchema.Type;
+export const WaypointIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("WaypointId"));
+export type WaypointId = typeof WaypointIdSchema.Type;
+export const ConversationIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("ConversationId"));
+export type ConversationId = typeof ConversationIdSchema.Type;
+export const ConversationBranchIdSchema = DomainIdentityTextSchema.pipe(
+  Schema.brand("ConversationBranchId"),
 );
-export type WorkspaceProjectionRevision = z.infer<typeof WorkspaceProjectionRevisionSchema>;
+export type ConversationBranchId = typeof ConversationBranchIdSchema.Type;
+export const ConversationMessageIdSchema = DomainIdentityTextSchema.pipe(
+  Schema.brand("ConversationMessageId"),
+);
+export type ConversationMessageId = typeof ConversationMessageIdSchema.Type;
+export const ContextProposalIdSchema = DomainIdentityTextSchema.pipe(
+  Schema.brand("ContextProposalId"),
+);
+export type ContextProposalId = typeof ContextProposalIdSchema.Type;
+export const ContextRecordIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("ContextRecordId"));
+export type ContextRecordId = typeof ContextRecordIdSchema.Type;
+export const FrameDraftIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("FrameDraftId"));
+export type FrameDraftId = typeof FrameDraftIdSchema.Type;
+export const FrameSectionIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("FrameSectionId"));
+export type FrameSectionId = typeof FrameSectionIdSchema.Type;
+export const ReviewAnnotationIdSchema = DomainIdentityTextSchema.pipe(
+  Schema.brand("ReviewAnnotationId"),
+);
+export type ReviewAnnotationId = typeof ReviewAnnotationIdSchema.Type;
+export const AcceptedRevisionIdSchema = DomainIdentityTextSchema.pipe(
+  Schema.brand("AcceptedRevisionId"),
+);
+export type AcceptedRevisionId = typeof AcceptedRevisionIdSchema.Type;
+export const MemoryTopicIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("MemoryTopicId"));
+export type MemoryTopicId = typeof MemoryTopicIdSchema.Type;
+export const MemoryRevisionIdSchema = DomainIdentityTextSchema.pipe(
+  Schema.brand("MemoryRevisionId"),
+);
+export type MemoryRevisionId = typeof MemoryRevisionIdSchema.Type;
+export const MemoryProposalIdSchema = DomainIdentityTextSchema.pipe(
+  Schema.brand("MemoryProposalId"),
+);
+export type MemoryProposalId = typeof MemoryProposalIdSchema.Type;
 
-export const WorkspaceCapabilitySchema = z.enum(["conversation", "frame", "memory"]);
-export type WorkspaceCapability = z.infer<typeof WorkspaceCapabilitySchema>;
+export const WorkspaceProjectionRevisionSchema = KernelWorkspaceProjectionRevisionSchema;
+export type WorkspaceProjectionRevision = typeof WorkspaceProjectionRevisionSchema.Type;
 
-export const WorkspaceScopeSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("project"), projectId: ProjectIdSchema }),
-  z.strictObject({
-    kind: z.literal("waypoint"),
+export const WorkspaceCapabilitySchema = Schema.Literals(["conversation", "frame", "memory"]);
+export type WorkspaceCapability = typeof WorkspaceCapabilitySchema.Type;
+
+export const WorkspaceScopeSchema = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("project"), projectId: ProjectIdSchema }),
+  Schema.Struct({
+    kind: Schema.Literal("waypoint"),
     projectId: ProjectIdSchema,
     waypointId: WaypointIdSchema,
   }),
 ]);
-export type WorkspaceScope = z.infer<typeof WorkspaceScopeSchema>;
+export type WorkspaceScope = typeof WorkspaceScopeSchema.Type;
 
-const OpaqueCursorSchema = z.string().min(1);
+const OpaqueCursorSchema = NonEmptyTextSchema;
 
-const ConversationReadQuerySchema = z.strictObject({
-  query: z.literal("conversation.read"),
+type Issue = Readonly<{ path: readonly PropertyKey[]; message: string }>;
+
+// Reports every violated cross-member rule at its own path.
+function invariants<T>(collect: (value: T) => readonly (Issue | false)[]) {
+  return Schema.makeFilter((value: T) =>
+    collect(value)
+      .filter((issue): issue is Issue => issue !== false)
+      .map((issue) => ({ path: issue.path, issue: issue.message })),
+  );
+}
+
+const unique = (values: readonly unknown[]) => new Set(values).size === values.length;
+
+const ConversationReadQuerySchema = Schema.Struct({
+  query: Schema.Literal("conversation.read"),
   scope: WorkspaceScopeSchema,
-  cursor: OpaqueCursorSchema.nullable(),
+  cursor: Schema.NullOr(OpaqueCursorSchema),
 });
-const ContextRecordReadQuerySchema = z.strictObject({
-  query: z.literal("context-record.read"),
+const ContextRecordReadQuerySchema = Schema.Struct({
+  query: Schema.Literal("context-record.read"),
   projectId: ProjectIdSchema,
   contextRecordId: ContextRecordIdSchema,
 });
-const FrameReviewReadQuerySchema = z.strictObject({
-  query: z.literal("frame-review.read"),
+const FrameReviewReadQuerySchema = Schema.Struct({
+  query: Schema.Literal("frame-review.read"),
   projectId: ProjectIdSchema,
 });
-const MemoryLibraryReadQuerySchema = z.strictObject({
-  query: z.literal("memory-library.read"),
+const MemoryLibraryReadQuerySchema = Schema.Struct({
+  query: Schema.Literal("memory-library.read"),
   projectId: ProjectIdSchema,
-  cursor: OpaqueCursorSchema.nullable(),
+  cursor: Schema.NullOr(OpaqueCursorSchema),
 });
 
-export const WorkspaceQuerySchema = z.discriminatedUnion("query", [
+export const WorkspaceQuerySchema = Schema.Union([
   ConversationReadQuerySchema,
   ContextRecordReadQuerySchema,
   FrameReviewReadQuerySchema,
   MemoryLibraryReadQuerySchema,
 ]);
-export type WorkspaceQuery = z.infer<typeof WorkspaceQuerySchema>;
+export type WorkspaceQuery = typeof WorkspaceQuerySchema.Type;
 
-const ContextSourceSchema = z.enum([
+const ContextSourceSchema = Schema.Literals([
   "scope",
   "conversation",
   "accepted-revision",
   "verified-memory",
   "attachment",
 ]);
-const ContextTrustSchema = z.enum(["trusted", "untrusted", "mixed"]);
-const ContextProposalItemSchema = z.strictObject({
-  itemId: z.string().min(1),
+const ContextTrustSchema = Schema.Literals(["trusted", "untrusted", "mixed"]);
+const contextItemFields = {
+  itemId: NonEmptyTextSchema,
   source: ContextSourceSchema,
-  label: z.string().min(1),
-  included: z.boolean(),
+  label: NonEmptyTextSchema,
   trust: ContextTrustSchema,
-  confirmation: z.enum(["not-required", "required", "confirmed"]),
+};
+const ContextProposalItemSchema = Schema.Struct({
+  ...contextItemFields,
+  included: Schema.Boolean,
+  confirmation: Schema.Literals(["not-required", "required", "confirmed"]),
 });
-const ContextProposalSchema = z
-  .strictObject({
-    id: ContextProposalIdSchema,
-    items: z.array(ContextProposalItemSchema),
-  })
-  .superRefine((proposal, context) => {
-    const itemIds = new Set(proposal.items.map((item) => item.itemId));
-    if (itemIds.size !== proposal.items.length) {
-      context.addIssue({
-        code: "custom",
-        path: ["items"],
-        message: "Context proposal item identities must be unique.",
-      });
-    }
-  });
+const ContextProposalSchema = Schema.Struct({
+  id: ContextProposalIdSchema,
+  items: Schema.Array(ContextProposalItemSchema),
+}).check(
+  invariants((proposal) => [
+    !unique(proposal.items.map((item) => item.itemId)) && {
+      path: ["items"],
+      message: "Context proposal item identities must be unique.",
+    },
+  ]),
+);
 
-const ConversationBranchSchema = z.strictObject({
+const ConversationBranchSchema = Schema.Struct({
   id: ConversationBranchIdSchema,
-  parentBranchId: ConversationBranchIdSchema.nullable(),
-  sourceMessageId: ConversationMessageIdSchema.nullable(),
+  parentBranchId: Schema.NullOr(ConversationBranchIdSchema),
+  sourceMessageId: Schema.NullOr(ConversationMessageIdSchema),
 });
-const ConversationMessageSchema = z.strictObject({
+const ConversationMessageSchema = Schema.Struct({
   id: ConversationMessageIdSchema,
   branchId: ConversationBranchIdSchema,
-  author: z.enum(["user", "model"]),
-  body: z.string().min(1),
-  contextRecordId: ContextRecordIdSchema.nullable(),
+  author: Schema.Literals(["user", "model"]),
+  body: NonEmptyTextSchema,
+  contextRecordId: Schema.NullOr(ContextRecordIdSchema),
 });
-export const ConversationProjectionSchema = z
-  .strictObject({
-    projection: z.literal("conversation"),
-    revision: WorkspaceProjectionRevisionSchema,
-    scope: WorkspaceScopeSchema,
-    conversationId: ConversationIdSchema,
-    branches: z.array(ConversationBranchSchema),
-    messages: z.strictObject({
-      items: z.array(ConversationMessageSchema),
-      nextCursor: OpaqueCursorSchema.nullable(),
-    }),
-    contextProposal: ContextProposalSchema.nullable(),
-  })
-  .superRefine((projection, context) => {
+
+type ProjectedBranch = typeof ConversationBranchSchema.Type;
+
+function branchIssues(branches: readonly ProjectedBranch[]): Issue[] {
+  const branchIds = new Set(branches.map((branch) => branch.id));
+  const byId = new Map(branches.map((branch) => [branch.id, branch]));
+  const issues: Issue[] = [];
+  for (const branch of branches) {
+    if (branch.parentBranchId !== null && !branchIds.has(branch.parentBranchId)) {
+      issues.push({
+        path: ["branches"],
+        message: "Conversation branch parents must exist in the projection.",
+      });
+    }
+    const visited = new Set<ConversationBranchId>();
+    let current: ConversationBranchId | null = branch.id;
+    while (current !== null) {
+      if (visited.has(current)) {
+        issues.push({
+          path: ["branches"],
+          message: "Conversation branch parents must be acyclic.",
+        });
+        break;
+      }
+      visited.add(current);
+      current = byId.get(current)?.parentBranchId ?? null;
+    }
+  }
+  return issues;
+}
+
+export const ConversationProjectionSchema = Schema.Struct({
+  projection: Schema.Literal("conversation"),
+  revision: WorkspaceProjectionRevisionSchema,
+  scope: WorkspaceScopeSchema,
+  conversationId: ConversationIdSchema,
+  branches: Schema.Array(ConversationBranchSchema),
+  messages: Schema.Struct({
+    items: Schema.Array(ConversationMessageSchema),
+    nextCursor: Schema.NullOr(OpaqueCursorSchema),
+  }),
+  contextProposal: Schema.NullOr(ContextProposalSchema),
+}).check(
+  invariants((projection) => {
     const branchIds = new Set(projection.branches.map((branch) => branch.id));
-    const messageIds = new Set(projection.messages.items.map((message) => message.id));
-    if (branchIds.size !== projection.branches.length) {
-      context.addIssue({
-        code: "custom",
+    return [
+      !unique(projection.branches.map((branch) => branch.id)) && {
         path: ["branches"],
         message: "Conversation branch identities must be unique.",
-      });
-    }
-    if (messageIds.size !== projection.messages.items.length) {
-      context.addIssue({
-        code: "custom",
+      },
+      !unique(projection.messages.items.map((message) => message.id)) && {
         path: ["messages", "items"],
         message: "Conversation message identities must be unique.",
-      });
-    }
-    const branches = new Map(projection.branches.map((branch) => [branch.id, branch]));
-    for (const branch of projection.branches) {
-      if (branch.parentBranchId !== null && !branchIds.has(branch.parentBranchId)) {
-        context.addIssue({
-          code: "custom",
-          path: ["branches"],
-          message: "Conversation branch parents must exist in the projection.",
-        });
-      }
-      const visited = new Set<ConversationBranchId>();
-      let current: ConversationBranchId | null = branch.id;
-      while (current !== null) {
-        if (visited.has(current)) {
-          context.addIssue({
-            code: "custom",
-            path: ["branches"],
-            message: "Conversation branch parents must be acyclic.",
-          });
-          break;
-        }
-        visited.add(current);
-        current = branches.get(current)?.parentBranchId ?? null;
-      }
-    }
-    for (const message of projection.messages.items) {
-      if (!branchIds.has(message.branchId)) {
-        context.addIssue({
-          code: "custom",
+      },
+      ...branchIssues(projection.branches),
+      ...projection.messages.items
+        .filter((message) => !branchIds.has(message.branchId))
+        .map(() => ({
           path: ["messages", "items"],
           message: "Conversation messages must reference a projected branch.",
-        });
-      }
-    }
-  });
-export type ConversationProjection = z.infer<typeof ConversationProjectionSchema>;
+        })),
+    ];
+  }),
+);
+export type ConversationProjection = typeof ConversationProjectionSchema.Type;
 
-const ContextRecordItemSchema = ContextProposalItemSchema.omit({
-  included: true,
-  confirmation: true,
-});
-export const ContextRecordProjectionSchema = z
-  .strictObject({
-    projection: z.literal("context-record"),
-    revision: WorkspaceProjectionRevisionSchema,
-    projectId: ProjectIdSchema,
-    id: ContextRecordIdSchema,
-    responseMessageId: ConversationMessageIdSchema,
-    included: z.array(ContextRecordItemSchema),
-    excluded: z.array(ContextRecordItemSchema),
-    completeness: z.enum(["complete", "truncated"]),
-    technicalDetails: z.string().min(1).nullable(),
-  })
-  .superRefine((projection, context) => {
-    const included = new Set(projection.included.map((item) => item.itemId));
+const ContextRecordItemSchema = Schema.Struct(contextItemFields);
+export const ContextRecordProjectionSchema = Schema.Struct({
+  projection: Schema.Literal("context-record"),
+  revision: WorkspaceProjectionRevisionSchema,
+  projectId: ProjectIdSchema,
+  id: ContextRecordIdSchema,
+  responseMessageId: ConversationMessageIdSchema,
+  included: Schema.Array(ContextRecordItemSchema),
+  excluded: Schema.Array(ContextRecordItemSchema),
+  completeness: Schema.Literals(["complete", "truncated"]),
+  technicalDetails: Schema.NullOr(NonEmptyTextSchema),
+}).check(
+  invariants((projection) => {
+    const included = projection.included.map((item) => item.itemId);
     const excluded = new Set(projection.excluded.map((item) => item.itemId));
-    if (included.size !== projection.included.length) {
-      context.addIssue({
-        code: "custom",
+    return [
+      !unique(included) && {
         path: ["included"],
         message: "Included Context item identities must be unique.",
-      });
-    }
-    if (excluded.size !== projection.excluded.length) {
-      context.addIssue({
-        code: "custom",
+      },
+      excluded.size !== projection.excluded.length && {
         path: ["excluded"],
         message: "Excluded Context item identities must be unique.",
-      });
-    }
-    if ([...included].some((itemId) => excluded.has(itemId))) {
-      context.addIssue({
-        code: "custom",
+      },
+      included.some((itemId) => excluded.has(itemId)) && {
         path: ["excluded"],
         message: "Included and excluded Context item identities must be disjoint.",
-      });
-    }
-  });
-export type ContextRecordProjection = z.infer<typeof ContextRecordProjectionSchema>;
+      },
+    ];
+  }),
+);
+export type ContextRecordProjection = typeof ContextRecordProjectionSchema.Type;
 
-const FrameSectionSchema = z.strictObject({
+const FrameSectionSchema = Schema.Struct({
   id: FrameSectionIdSchema,
-  kind: z.enum([
+  kind: Schema.Literals([
     "summary",
     "user-story",
     "prediction",
@@ -259,269 +261,229 @@ const FrameSectionSchema = z.strictObject({
     "proposed-diff",
     "traceable-mirror",
   ]),
-  title: z.string().min(1),
-  body: z.string().min(1),
+  title: NonEmptyTextSchema,
+  body: NonEmptyTextSchema,
 });
-const ReviewAnnotationSchema = z.strictObject({
+const ReviewAnnotationSchema = Schema.Struct({
   id: ReviewAnnotationIdSchema,
   sectionId: FrameSectionIdSchema,
-  selectedText: z.string().min(1),
-  comment: z.string().min(1),
-  state: z.enum(["open", "resolved"]),
+  selectedText: NonEmptyTextSchema,
+  comment: NonEmptyTextSchema,
+  state: Schema.Literals(["open", "resolved"]),
 });
-const FrameDecisionSchema = z.discriminatedUnion("state", [
-  z.strictObject({
+const FrameDecisionSchema = Schema.Union([
+  Schema.Struct({
     sectionId: FrameSectionIdSchema,
-    state: z.literal("draft"),
+    state: Schema.Literal("draft"),
   }),
-  z.strictObject({
+  Schema.Struct({
     sectionId: FrameSectionIdSchema,
-    state: z.literal("accepted"),
+    state: Schema.Literal("accepted"),
     acceptedRevisionId: AcceptedRevisionIdSchema,
   }),
 ]);
-export const FrameReviewProjectionSchema = z
-  .strictObject({
-    projection: z.literal("frame-review"),
-    revision: WorkspaceProjectionRevisionSchema,
-    projectId: ProjectIdSchema,
-    draftId: FrameDraftIdSchema,
-    sections: z.array(FrameSectionSchema),
-    annotations: z.array(ReviewAnnotationSchema),
-    decisions: z.array(FrameDecisionSchema),
-  })
-  .superRefine((projection, context) => {
+export const FrameReviewProjectionSchema = Schema.Struct({
+  projection: Schema.Literal("frame-review"),
+  revision: WorkspaceProjectionRevisionSchema,
+  projectId: ProjectIdSchema,
+  draftId: FrameDraftIdSchema,
+  sections: Schema.Array(FrameSectionSchema),
+  annotations: Schema.Array(ReviewAnnotationSchema),
+  decisions: Schema.Array(FrameDecisionSchema),
+}).check(
+  invariants((projection) => {
     const sectionIds = new Set(projection.sections.map((section) => section.id));
-    const annotationIds = new Set(projection.annotations.map((annotation) => annotation.id));
-    const decisionSections = new Set(projection.decisions.map((decision) => decision.sectionId));
-    if (sectionIds.size !== projection.sections.length) {
-      context.addIssue({
-        code: "custom",
+    return [
+      sectionIds.size !== projection.sections.length && {
         path: ["sections"],
         message: "Frame section identities must be unique.",
-      });
-    }
-    if (annotationIds.size !== projection.annotations.length) {
-      context.addIssue({
-        code: "custom",
+      },
+      !unique(projection.annotations.map((annotation) => annotation.id)) && {
         path: ["annotations"],
         message: "Review annotation identities must be unique.",
-      });
-    }
-    if (decisionSections.size !== projection.decisions.length) {
-      context.addIssue({
-        code: "custom",
+      },
+      !unique(projection.decisions.map((decision) => decision.sectionId)) && {
         path: ["decisions"],
         message: "Frame sections may have only one decision state.",
-      });
-    }
-    if (projection.annotations.some((annotation) => !sectionIds.has(annotation.sectionId))) {
-      context.addIssue({
-        code: "custom",
+      },
+      projection.annotations.some((annotation) => !sectionIds.has(annotation.sectionId)) && {
         path: ["annotations"],
         message: "Review annotations must reference a projected Frame section.",
-      });
-    }
-    if (projection.decisions.some((decision) => !sectionIds.has(decision.sectionId))) {
-      context.addIssue({
-        code: "custom",
+      },
+      projection.decisions.some((decision) => !sectionIds.has(decision.sectionId)) && {
         path: ["decisions"],
         message: "Frame decisions must reference a projected Frame section.",
-      });
-    }
-  });
-export type FrameReviewProjection = z.infer<typeof FrameReviewProjectionSchema>;
-
-const MemoryProjectionItemSchema = z.discriminatedUnion("kind", [
-  z.strictObject({
-    kind: z.literal("proposal"),
-    id: MemoryProposalIdSchema,
-    title: z.string().min(1),
-    summary: z.string().min(1),
-    provenance: z.string().min(1),
+      },
+    ];
   }),
-  z.strictObject({
-    kind: z.literal("verified"),
+);
+export type FrameReviewProjection = typeof FrameReviewProjectionSchema.Type;
+
+const MemoryProjectionItemSchema = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("proposal"),
+    id: MemoryProposalIdSchema,
+    title: NonEmptyTextSchema,
+    summary: NonEmptyTextSchema,
+    provenance: NonEmptyTextSchema,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("verified"),
     topicId: MemoryTopicIdSchema,
     revisionId: MemoryRevisionIdSchema,
-    state: z.enum(["accepted", "stale", "broken"]),
-    title: z.string().min(1),
-    summary: z.string().min(1),
-    provenance: z.string().min(1),
+    state: Schema.Literals(["accepted", "stale", "broken"]),
+    title: NonEmptyTextSchema,
+    summary: NonEmptyTextSchema,
+    provenance: NonEmptyTextSchema,
   }),
 ]);
-export const MemoryLibraryProjectionSchema = z
-  .strictObject({
-    projection: z.literal("memory-library"),
-    revision: WorkspaceProjectionRevisionSchema,
-    projectId: ProjectIdSchema,
-    items: z.array(MemoryProjectionItemSchema),
-    nextCursor: OpaqueCursorSchema.nullable(),
-  })
-  .superRefine((projection, context) => {
-    const proposalIds = projection.items
-      .filter((item) => item.kind === "proposal")
-      .map((item) => item.id);
-    const verifiedRevisions = projection.items
-      .filter((item) => item.kind === "verified")
-      .map((item) => `${item.topicId}:${item.revisionId}`);
-    if (new Set(proposalIds).size !== proposalIds.length) {
-      context.addIssue({
-        code: "custom",
-        path: ["items"],
-        message: "Memory proposal identities must be unique within a page.",
-      });
-    }
-    if (new Set(verifiedRevisions).size !== verifiedRevisions.length) {
-      context.addIssue({
-        code: "custom",
-        path: ["items"],
-        message: "Verified Memory revisions must be unique within a page.",
-      });
-    }
-  });
-export type MemoryLibraryProjection = z.infer<typeof MemoryLibraryProjectionSchema>;
+export const MemoryLibraryProjectionSchema = Schema.Struct({
+  projection: Schema.Literal("memory-library"),
+  revision: WorkspaceProjectionRevisionSchema,
+  projectId: ProjectIdSchema,
+  items: Schema.Array(MemoryProjectionItemSchema),
+  nextCursor: Schema.NullOr(OpaqueCursorSchema),
+}).check(
+  invariants((projection) => [
+    !unique(projection.items.flatMap((item) => (item.kind === "proposal" ? [item.id] : []))) && {
+      path: ["items"],
+      message: "Memory proposal identities must be unique within a page.",
+    },
+    !unique(
+      projection.items.flatMap((item) =>
+        item.kind === "verified" ? [`${item.topicId}:${item.revisionId}`] : [],
+      ),
+    ) && {
+      path: ["items"],
+      message: "Verified Memory revisions must be unique within a page.",
+    },
+  ]),
+);
+export type MemoryLibraryProjection = typeof MemoryLibraryProjectionSchema.Type;
 
-export const WorkspaceProjectionSchema = z.discriminatedUnion("projection", [
+export const WorkspaceProjectionSchema = Schema.Union([
   ConversationProjectionSchema,
   ContextRecordProjectionSchema,
   FrameReviewProjectionSchema,
   MemoryLibraryProjectionSchema,
 ]);
-export type WorkspaceProjection = z.infer<typeof WorkspaceProjectionSchema>;
+export type WorkspaceProjection = typeof WorkspaceProjectionSchema.Type;
 
-const ConversationMessageSubmitIntentSchema = z.strictObject({
-  intent: z.literal("conversation.message.submit"),
+const ConversationMessageSubmitIntentSchema = Schema.Struct({
+  intent: Schema.Literal("conversation.message.submit"),
   scope: WorkspaceScopeSchema,
   branchId: ConversationBranchIdSchema,
-  text: z.string().min(1),
+  text: NonEmptyTextSchema,
   contextProposalId: ContextProposalIdSchema,
   expectedProjectionRevision: WorkspaceProjectionRevisionSchema,
 });
-const ConversationInfluenceSelectIntentSchema = z.strictObject({
-  intent: z.literal("conversation.influence.select"),
+const ConversationInfluenceSelectIntentSchema = Schema.Struct({
+  intent: Schema.Literal("conversation.influence.select"),
   projectId: ProjectIdSchema,
   frameDraftId: FrameDraftIdSchema,
-  includedMessageIds: z.array(ConversationMessageIdSchema),
-  excludedMessageIds: z.array(ConversationMessageIdSchema),
+  includedMessageIds: Schema.Array(ConversationMessageIdSchema),
+  excludedMessageIds: Schema.Array(ConversationMessageIdSchema),
   expectedProjectionRevision: WorkspaceProjectionRevisionSchema,
 });
-const FrameReviewAnnotateIntentSchema = z.strictObject({
-  intent: z.literal("frame-review.annotate"),
-  projectId: ProjectIdSchema,
-  frameDraftId: FrameDraftIdSchema,
-  sectionId: FrameSectionIdSchema,
-  selectedText: z.string().min(1),
-  comment: z.string().min(1),
-  expectedProjectionRevision: WorkspaceProjectionRevisionSchema,
-});
-const FrameDecisionAcceptIntentSchema = z.strictObject({
-  intent: z.literal("frame.decision.accept"),
+const FrameReviewAnnotateIntentSchema = Schema.Struct({
+  intent: Schema.Literal("frame-review.annotate"),
   projectId: ProjectIdSchema,
   frameDraftId: FrameDraftIdSchema,
   sectionId: FrameSectionIdSchema,
+  selectedText: NonEmptyTextSchema,
+  comment: NonEmptyTextSchema,
   expectedProjectionRevision: WorkspaceProjectionRevisionSchema,
 });
-const FrameAcceptIntentSchema = z.strictObject({
-  intent: z.literal("frame.accept"),
+const FrameDecisionAcceptIntentSchema = Schema.Struct({
+  intent: Schema.Literal("frame.decision.accept"),
+  projectId: ProjectIdSchema,
+  frameDraftId: FrameDraftIdSchema,
+  sectionId: FrameSectionIdSchema,
+  expectedProjectionRevision: WorkspaceProjectionRevisionSchema,
+});
+const FrameAcceptIntentSchema = Schema.Struct({
+  intent: Schema.Literal("frame.accept"),
   projectId: ProjectIdSchema,
   frameDraftId: FrameDraftIdSchema,
   expectedProjectionRevision: WorkspaceProjectionRevisionSchema,
 });
-const MemoryProposalReviewIntentSchema = z.strictObject({
-  intent: z.literal("memory.proposal.review"),
+const MemoryProposalReviewIntentSchema = Schema.Struct({
+  intent: Schema.Literal("memory.proposal.review"),
   projectId: ProjectIdSchema,
   proposalId: MemoryProposalIdSchema,
-  decision: z.enum(["accept", "reject"]),
+  decision: Schema.Literals(["accept", "reject"]),
   expectedProjectionRevision: WorkspaceProjectionRevisionSchema,
 });
 
-const WorkspaceIntentVariantsSchema = z.discriminatedUnion("intent", [
+export const WorkspaceIntentSchema = Schema.Union([
   ConversationMessageSubmitIntentSchema,
   ConversationInfluenceSelectIntentSchema,
   FrameReviewAnnotateIntentSchema,
   FrameDecisionAcceptIntentSchema,
   FrameAcceptIntentSchema,
   MemoryProposalReviewIntentSchema,
-]);
-export const WorkspaceIntentSchema = WorkspaceIntentVariantsSchema.superRefine(
-  (intent, context) => {
-    if (intent.intent !== "conversation.influence.select") {
-      return;
-    }
-    const included = new Set(intent.includedMessageIds);
+]).check(
+  invariants((intent) => {
+    if (intent.intent !== "conversation.influence.select") return [];
     const excluded = new Set(intent.excludedMessageIds);
-    if (included.size !== intent.includedMessageIds.length) {
-      context.addIssue({
-        code: "custom",
+    return [
+      !unique(intent.includedMessageIds) && {
         path: ["includedMessageIds"],
         message: "Included message identities must be unique.",
-      });
-    }
-    if (excluded.size !== intent.excludedMessageIds.length) {
-      context.addIssue({
-        code: "custom",
+      },
+      excluded.size !== intent.excludedMessageIds.length && {
         path: ["excludedMessageIds"],
         message: "Excluded message identities must be unique.",
-      });
-    }
-    if ([...included].some((messageId) => excluded.has(messageId))) {
-      context.addIssue({
-        code: "custom",
+      },
+      intent.includedMessageIds.some((messageId) => excluded.has(messageId)) && {
         path: ["excludedMessageIds"],
         message: "Included and excluded message identities must be disjoint.",
-      });
-    }
-  },
+      },
+    ];
+  }),
 );
-export type WorkspaceIntent = z.infer<typeof WorkspaceIntentSchema>;
+export type WorkspaceIntent = typeof WorkspaceIntentSchema.Type;
 
-export const WorkspaceDiagnosticSchema = z.strictObject({
-  code: z.enum([
-    "WORKSPACE_CAPABILITY_UNAVAILABLE",
-    "WORKSPACE_PRODUCER_FAILED",
-    "WORKSPACE_PROJECTION_INVALID",
-    "WORKSPACE_TRANSPORT_FAILED",
-  ]),
-  message: z.string().min(1),
-});
-export type WorkspaceDiagnostic = z.infer<typeof WorkspaceDiagnosticSchema>;
+const workspaceFailureCodes = [
+  "WORKSPACE_PRODUCER_FAILED",
+  "WORKSPACE_PROJECTION_INVALID",
+  "WORKSPACE_TRANSPORT_FAILED",
+] as const;
 
-const WorkspaceQueryUnavailableResultSchema = z.strictObject({
-  status: z.literal("unavailable"),
+export const WorkspaceDiagnosticSchema = Schema.Struct({
+  code: Schema.Literals(["WORKSPACE_CAPABILITY_UNAVAILABLE", ...workspaceFailureCodes]),
+  message: NonEmptyTextSchema,
+});
+export type WorkspaceDiagnostic = typeof WorkspaceDiagnosticSchema.Type;
+
+const UnavailableDiagnosticSchema = Schema.Struct({
+  code: Schema.Literal("WORKSPACE_CAPABILITY_UNAVAILABLE"),
+  message: NonEmptyTextSchema,
+});
+const BrokenDiagnosticSchema = Schema.Struct({
+  code: Schema.Literals(workspaceFailureCodes),
+  message: NonEmptyTextSchema,
+});
+
+const WorkspaceQueryUnavailableResultSchema = Schema.Struct({
+  status: Schema.Literal("unavailable"),
   query: WorkspaceQuerySchema,
-  diagnostic: WorkspaceDiagnosticSchema.extend({
-    code: z.literal("WORKSPACE_CAPABILITY_UNAVAILABLE"),
-  }),
+  diagnostic: UnavailableDiagnosticSchema,
 });
-const WorkspaceQueryBrokenResultSchema = z.strictObject({
-  status: z.literal("broken"),
+const WorkspaceQueryBrokenResultSchema = Schema.Struct({
+  status: Schema.Literal("broken"),
   query: WorkspaceQuerySchema,
-  diagnostic: WorkspaceDiagnosticSchema.extend({
-    code: z.enum([
-      "WORKSPACE_PRODUCER_FAILED",
-      "WORKSPACE_PROJECTION_INVALID",
-      "WORKSPACE_TRANSPORT_FAILED",
-    ]),
-  }),
+  diagnostic: BrokenDiagnosticSchema,
 });
-const WorkspaceIntentUnavailableResultSchema = z.strictObject({
-  status: z.literal("unavailable"),
+const WorkspaceIntentUnavailableResultSchema = Schema.Struct({
+  status: Schema.Literal("unavailable"),
   capability: WorkspaceCapabilitySchema,
-  diagnostic: WorkspaceDiagnosticSchema.extend({
-    code: z.literal("WORKSPACE_CAPABILITY_UNAVAILABLE"),
-  }),
+  diagnostic: UnavailableDiagnosticSchema,
 });
-const WorkspaceIntentBrokenResultSchema = z.strictObject({
-  status: z.literal("broken"),
+const WorkspaceIntentBrokenResultSchema = Schema.Struct({
+  status: Schema.Literal("broken"),
   capability: WorkspaceCapabilitySchema,
-  diagnostic: WorkspaceDiagnosticSchema.extend({
-    code: z.enum([
-      "WORKSPACE_PRODUCER_FAILED",
-      "WORKSPACE_PROJECTION_INVALID",
-      "WORKSPACE_TRANSPORT_FAILED",
-    ]),
-  }),
+  diagnostic: BrokenDiagnosticSchema,
 });
 
 function sameWorkspaceScope(left: WorkspaceScope, right: WorkspaceScope): boolean {
@@ -535,61 +497,46 @@ function sameWorkspaceScope(left: WorkspaceScope, right: WorkspaceScope): boolea
   );
 }
 
-const projectionIdentityIssue = {
-  code: "custom" as const,
-  path: ["projection"],
-  message: "Projection identity must match its query.",
-};
+function projectionIdentity<T>(matches: (result: T) => boolean) {
+  return Schema.makeFilter(
+    (result: T) =>
+      matches(result) || {
+        path: ["projection"],
+        issue: "Projection identity must match its query.",
+      },
+  );
+}
 
-const ConversationReadyQueryResultSchema = z
-  .strictObject({
-    status: z.literal("ready"),
-    query: ConversationReadQuerySchema,
-    projection: ConversationProjectionSchema,
-  })
-  .superRefine((result, context) => {
-    if (!sameWorkspaceScope(result.query.scope, result.projection.scope)) {
-      context.addIssue(projectionIdentityIssue);
-    }
-  });
-const ContextRecordReadyQueryResultSchema = z
-  .strictObject({
-    status: z.literal("ready"),
-    query: ContextRecordReadQuerySchema,
-    projection: ContextRecordProjectionSchema,
-  })
-  .superRefine((result, context) => {
-    if (
-      result.query.projectId !== result.projection.projectId ||
-      result.query.contextRecordId !== result.projection.id
-    ) {
-      context.addIssue(projectionIdentityIssue);
-    }
-  });
-const FrameReviewReadyQueryResultSchema = z
-  .strictObject({
-    status: z.literal("ready"),
-    query: FrameReviewReadQuerySchema,
-    projection: FrameReviewProjectionSchema,
-  })
-  .superRefine((result, context) => {
-    if (result.query.projectId !== result.projection.projectId) {
-      context.addIssue(projectionIdentityIssue);
-    }
-  });
-const MemoryLibraryReadyQueryResultSchema = z
-  .strictObject({
-    status: z.literal("ready"),
-    query: MemoryLibraryReadQuerySchema,
-    projection: MemoryLibraryProjectionSchema,
-  })
-  .superRefine((result, context) => {
-    if (result.query.projectId !== result.projection.projectId) {
-      context.addIssue(projectionIdentityIssue);
-    }
-  });
+const ConversationReadyQueryResultSchema = Schema.Struct({
+  status: Schema.Literal("ready"),
+  query: ConversationReadQuerySchema,
+  projection: ConversationProjectionSchema,
+}).check(
+  projectionIdentity((result) => sameWorkspaceScope(result.query.scope, result.projection.scope)),
+);
+const ContextRecordReadyQueryResultSchema = Schema.Struct({
+  status: Schema.Literal("ready"),
+  query: ContextRecordReadQuerySchema,
+  projection: ContextRecordProjectionSchema,
+}).check(
+  projectionIdentity(
+    (result) =>
+      result.query.projectId === result.projection.projectId &&
+      result.query.contextRecordId === result.projection.id,
+  ),
+);
+const FrameReviewReadyQueryResultSchema = Schema.Struct({
+  status: Schema.Literal("ready"),
+  query: FrameReviewReadQuerySchema,
+  projection: FrameReviewProjectionSchema,
+}).check(projectionIdentity((result) => result.query.projectId === result.projection.projectId));
+const MemoryLibraryReadyQueryResultSchema = Schema.Struct({
+  status: Schema.Literal("ready"),
+  query: MemoryLibraryReadQuerySchema,
+  projection: MemoryLibraryProjectionSchema,
+}).check(projectionIdentity((result) => result.query.projectId === result.projection.projectId));
 
-export const WorkspaceQueryResultSchema = z.union([
+export const WorkspaceQueryResultSchema = wholeUnion([
   ConversationReadyQueryResultSchema,
   ContextRecordReadyQueryResultSchema,
   FrameReviewReadyQueryResultSchema,
@@ -597,31 +544,30 @@ export const WorkspaceQueryResultSchema = z.union([
   WorkspaceQueryUnavailableResultSchema,
   WorkspaceQueryBrokenResultSchema,
 ]);
-export type WorkspaceQueryResult = z.infer<typeof WorkspaceQueryResultSchema>;
+export type WorkspaceQueryResult = typeof WorkspaceQueryResultSchema.Type;
 
-export const WorkspaceIntentResultSchema = z.union([
-  z.strictObject({
-    status: z.literal("forwarded"),
+export const WorkspaceIntentResultSchema = wholeUnion([
+  Schema.Struct({
+    status: Schema.Literal("forwarded"),
     capability: WorkspaceCapabilitySchema,
   }),
   WorkspaceIntentUnavailableResultSchema,
   WorkspaceIntentBrokenResultSchema,
 ]);
-export type WorkspaceIntentResult = z.infer<typeof WorkspaceIntentResultSchema>;
+export type WorkspaceIntentResult = typeof WorkspaceIntentResultSchema.Type;
 
-export const WorkspaceNotificationSchema = z
-  .strictObject({
-    capability: WorkspaceCapabilitySchema,
-    scope: WorkspaceScopeSchema,
-    revision: WorkspaceProjectionRevisionSchema,
-  })
-  .superRefine((notification, context) => {
-    if (notification.scope.kind === "waypoint" && notification.capability !== "conversation") {
-      context.addIssue({
-        code: "custom",
+export const WorkspaceNotificationSchema = Schema.Struct({
+  capability: WorkspaceCapabilitySchema,
+  scope: WorkspaceScopeSchema,
+  revision: WorkspaceProjectionRevisionSchema,
+}).check(
+  Schema.makeFilter(
+    (notification) =>
+      notification.scope.kind !== "waypoint" ||
+      notification.capability === "conversation" || {
         path: ["scope"],
-        message: "Only Conversation supports Waypoint-scoped invalidation.",
-      });
-    }
-  });
-export type WorkspaceNotification = z.infer<typeof WorkspaceNotificationSchema>;
+        issue: "Only Conversation supports Waypoint-scoped invalidation.",
+      },
+  ),
+);
+export type WorkspaceNotification = typeof WorkspaceNotificationSchema.Type;

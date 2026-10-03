@@ -6,6 +6,7 @@ import {
   createProjectOpenCommand,
   createWorkspaceIntentCommand,
   createWorkspaceQueryCommand,
+  decodeStrict,
   ProjectStorageCloseRequestSchema,
   ProjectStorageCreateRequestSchema,
   ProjectStorageOpenRequestSchema,
@@ -45,7 +46,7 @@ const handshake = {
 } as const;
 
 function memoryQuery(projectId: string) {
-  return WorkspaceQuerySchema.parse({
+  return decodeStrict(WorkspaceQuerySchema, {
     query: "memory-library.read",
     projectId,
     cursor: null,
@@ -53,7 +54,7 @@ function memoryQuery(projectId: string) {
 }
 
 function unavailableMemoryResult(query: ReturnType<typeof memoryQuery>): WorkspaceQueryResult {
-  return WorkspaceQueryResultSchema.parse({
+  return decodeStrict(WorkspaceQueryResultSchema, {
     status: "unavailable",
     query,
     diagnostic: {
@@ -63,7 +64,7 @@ function unavailableMemoryResult(query: ReturnType<typeof memoryQuery>): Workspa
   });
 }
 
-const memoryIntent = WorkspaceIntentSchema.parse({
+const memoryIntent = decodeStrict(WorkspaceIntentSchema, {
   intent: "memory.proposal.review",
   projectId: "00000000-0000-4000-8000-000000000010",
   proposalId: "00000000-0000-4000-8000-000000000011",
@@ -71,7 +72,7 @@ const memoryIntent = WorkspaceIntentSchema.parse({
   expectedProjectionRevision: 0,
 });
 
-const unavailableMemoryIntentResult = WorkspaceIntentResultSchema.parse({
+const unavailableMemoryIntentResult = decodeStrict(WorkspaceIntentResultSchema, {
   status: "unavailable",
   capability: "memory",
   diagnostic: {
@@ -80,7 +81,7 @@ const unavailableMemoryIntentResult = WorkspaceIntentResultSchema.parse({
   },
 });
 
-const memoryNotification = WorkspaceNotificationSchema.parse({
+const memoryNotification = decodeStrict(WorkspaceNotificationSchema, {
   capability: "memory",
   scope: {
     kind: "project",
@@ -269,12 +270,12 @@ function startRuntime(transport: TestTransport): StopHarnessRuntime {
 
 function projectStorageCommands() {
   const projectId = "00000000-0000-4000-8000-000000000010";
-  const openRequest = ProjectStorageOpenRequestSchema.parse({ projectId });
-  const createRequest = ProjectStorageCreateRequestSchema.parse({
+  const openRequest = decodeStrict(ProjectStorageOpenRequestSchema, { projectId });
+  const createRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId,
     createRequestId: "00000000-0000-4000-8000-000000000011",
   });
-  const closeRequest = ProjectStorageCloseRequestSchema.parse({ projectId });
+  const closeRequest = decodeStrict(ProjectStorageCloseRequestSchema, { projectId });
   const open = createProjectOpenCommand(
     {
       messageId: "00000000-0000-4000-8000-000000000100",
@@ -391,7 +392,7 @@ describe("harness runtime transport", () => {
   it("dispatches workspace queries without false system ready", async () => {
     const transport = new TestTransport();
     const stop = startRuntime(transport);
-    const query = WorkspaceQuerySchema.parse({
+    const query = decodeStrict(WorkspaceQuerySchema, {
       query: "memory-library.read",
       projectId: "00000000-0000-4000-8000-000000000010",
       cursor: null,
@@ -581,7 +582,7 @@ describe("harness runtime transport", () => {
       createId: () => "00000000-0000-4000-8000-000000000002",
       now: () => "2026-08-14T12:00:01.000Z",
     });
-    const query = WorkspaceQuerySchema.parse({
+    const query = decodeStrict(WorkspaceQuerySchema, {
       query: "memory-library.read",
       projectId: "00000000-0000-4000-8000-000000000010",
       cursor: null,
@@ -777,6 +778,50 @@ describe("harness runtime transport", () => {
       "canonicalProjectApplication.stop",
       "projectStorageApplication.stop",
     ]);
+    expect(stopProjectStorage).toHaveBeenCalledOnce();
+  });
+
+  it("shares one stop promise when a cleanup callback re-enters stop", async () => {
+    const calls: string[] = [];
+    let reentered: Promise<void> | undefined;
+    let stop: StopHarnessRuntime | undefined;
+    const stopMessages = vi.fn(() => calls.push("stopMessages"));
+    const stopNotifications = vi.fn(() => calls.push("stopNotifications"));
+    const stopCanonical = vi.fn(async () => {
+      calls.push("canonicalProjectApplication.stop");
+      reentered = stop?.();
+    });
+    const stopProjectStorage = vi.fn(async () => {
+      calls.push("projectStorageApplication.stop");
+    });
+    stop = startHarnessRuntime({
+      transport: { send: () => undefined, subscribe: () => stopMessages },
+      canonicalProjectApplication: { ...unusedCanonicalApplication(), stop: stopCanonical },
+      workspaceApplication: {
+        ...createUnavailableWorkspaceApplication(),
+        subscribe: () => stopNotifications,
+      },
+      projectStorageApplication: {
+        ...createUnavailableProjectStorageApplication(),
+        stop: stopProjectStorage,
+      },
+      harnessVersion: "0.0.0",
+      createId: () => "00000000-0000-4000-8000-000000000002",
+      now: () => "2026-08-14T12:00:01.000Z",
+    });
+
+    const firstStop = stop();
+
+    expect(reentered).toBe(firstStop);
+    expect(calls).toEqual([
+      "stopMessages",
+      "stopNotifications",
+      "canonicalProjectApplication.stop",
+    ]);
+    await expect(firstStop).resolves.toBeUndefined();
+    expect(stopMessages).toHaveBeenCalledOnce();
+    expect(stopNotifications).toHaveBeenCalledOnce();
+    expect(stopCanonical).toHaveBeenCalledOnce();
     expect(stopProjectStorage).toHaveBeenCalledOnce();
   });
 
@@ -1102,7 +1147,7 @@ it.each(["A.fence", "B.storage.acquire"])(
 it.each(switchApplicationResults)(
   "validates complete switch correlation and preserves owner exceptions: runtime original identities $name",
   async ({ value }) => {
-    const changed = CanonicalProjectSwitchResultSchema.parse(value);
+    const changed = decodeStrict(CanonicalProjectSwitchResultSchema, value);
     for (const [boundary, key, replacement] of [
       [changed.request.from, "projectId", switchProjects.C.projectId],
       [changed.request.from, "activationId", newAEpoch],
@@ -1118,7 +1163,7 @@ it.each(switchApplicationResults)(
 it.each(switchApplicationResults)(
   "validates complete switch correlation and preserves owner exceptions: runtime private fields $name",
   async ({ value }) => {
-    const changed = CanonicalProjectSwitchResultSchema.parse(value);
+    const changed = decodeStrict(CanonicalProjectSwitchResultSchema, value);
     for (const boundary of switchResultBoundaries(changed)) {
       for (const key of [
         "extra",
@@ -1139,27 +1184,28 @@ it.each(switchApplicationResults)(
 it.each(switchApplicationTargets)(
   "validates complete switch correlation and preserves owner exceptions: runtime nested identities $name",
   async ({ target }) => {
-    const changed = CanonicalProjectSwitchResultSchema.parse(switchTarget(target));
+    const changed = decodeStrict(CanonicalProjectSwitchResultSchema, switchTarget(target));
     if (changed.status !== "target-result") throw new Error("Expected a target fixture.");
     Reflect.set(changed.target.request, "projectId", switchProjects.A.projectId);
     await expectInvalidSwitchRuntime(changed, new TestTransport());
     Reflect.set(changed.request.to, "projectId", switchProjects.C.projectId);
     Reflect.set(changed.target.request, "projectId", switchProjects.C.projectId);
-    expect(CanonicalProjectSwitchResultSchema.parse(changed)).toEqual(changed);
+    expect(decodeStrict(CanonicalProjectSwitchResultSchema, changed)).toEqual(changed);
     await expectInvalidSwitchRuntime(changed, new TestTransport());
   },
 );
 it.each(switchApplicationFailures)(
   "validates complete switch correlation and preserves owner exceptions: runtime retryability $name",
   async ({ value }) => {
-    const changed = CanonicalProjectSwitchResultSchema.parse(value);
+    const changed = decodeStrict(CanonicalProjectSwitchResultSchema, value);
     if (changed.status === "target-result") throw new Error("Expected a failure fixture.");
     Reflect.set(changed.diagnostic, "retryable", !changed.diagnostic.retryable);
     await expectInvalidSwitchRuntime(changed, new TestTransport());
   },
 );
 it("validates complete switch correlation and preserves owner exceptions: runtime read-only retryability", async () => {
-  const changed = CanonicalProjectSwitchResultSchema.parse(
+  const changed = decodeStrict(
+    CanonicalProjectSwitchResultSchema,
     switchTarget(switchActive("B", 1, "read-only")),
   );
   if (changed.status !== "target-result" || !("diagnostic" in changed.target))

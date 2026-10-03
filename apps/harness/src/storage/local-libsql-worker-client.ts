@@ -3,49 +3,60 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import type { InArgs, InStatement } from "@libsql/client";
-import { z } from "zod";
+import { Result, Schema } from "effect";
 
-const sqlValueSchema = z.union([
-  z.null(),
-  z.string(),
-  z.number().finite(),
-  z.bigint(),
-  z.instanceof(ArrayBuffer),
+// Self-contained like the worker it hosts: child-process tests load this module directly.
+const strictParseOptions = { errors: "all", onExcessProperty: "error" } as const;
+const NonEmptyTextSchema = Schema.String.check(Schema.isMinLength(1));
+
+const ArrayBufferSchema = Schema.declare(
+  (value: unknown): value is ArrayBuffer => value instanceof ArrayBuffer,
+);
+const sqlValueSchema = Schema.Union([
+  Schema.Null,
+  Schema.String,
+  Schema.Finite,
+  Schema.BigInt,
+  ArrayBufferSchema,
 ]);
 
-const resultSetSchema = z.strictObject({
-  columns: z.array(z.string()),
-  rows: z.array(z.array(sqlValueSchema)),
-  rowsAffected: z.number().int().nonnegative(),
-  lastInsertRowid: z.bigint().nullable(),
+const resultSetSchema = Schema.Struct({
+  columns: Schema.Array(Schema.String),
+  rows: Schema.Array(Schema.Array(sqlValueSchema)),
+  rowsAffected: Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
+  lastInsertRowid: Schema.NullOr(Schema.BigInt),
 });
 
-const workerErrorSchema = z.strictObject({
-  name: z.string().min(1),
-  message: z.string(),
-  code: z.string().optional(),
+const workerErrorSchema = Schema.Struct({
+  name: NonEmptyTextSchema,
+  message: Schema.String,
+  code: Schema.optional(Schema.String),
 });
 
-const workerResponseSchema = z.discriminatedUnion("type", [
-  z.strictObject({ type: z.literal("ready") }),
-  z.strictObject({
-    type: z.literal("success"),
-    requestId: z.number().int().nonnegative(),
-    result: z.unknown(),
+const RequestIdSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0));
+const workerResponseSchema = Schema.Union([
+  Schema.Struct({ type: Schema.Literal("ready") }),
+  Schema.Struct({
+    type: Schema.Literal("success"),
+    requestId: RequestIdSchema,
+    result: Schema.Unknown,
   }),
-  z.strictObject({
-    type: z.literal("failure"),
-    requestId: z.number().int().nonnegative(),
+  Schema.Struct({
+    type: Schema.Literal("failure"),
+    requestId: RequestIdSchema,
     error: workerErrorSchema,
   }),
-  z.strictObject({ type: z.literal("fatal"), error: workerErrorSchema }),
+  Schema.Struct({ type: Schema.Literal("fatal"), error: workerErrorSchema }),
 ]);
 
-const transactionIdSchema = z.number().int().positive();
-const clientIdSchema = z.number().int().positive();
-const nullResultSchema = z.null();
+const PositiveIntegerSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThan(0));
+const transactionIdSchema = PositiveIntegerSchema;
+const clientIdSchema = PositiveIntegerSchema;
+const nullResultSchema = Schema.Null;
 
-export type LocalLibsqlResultSet = z.infer<typeof resultSetSchema>;
+type WorkerResultSchema = Schema.ConstraintDecoder<unknown>;
+
+export type LocalLibsqlResultSet = typeof resultSetSchema.Type;
 
 export interface LocalLibsqlTransaction {
   readonly closed: boolean;
@@ -85,7 +96,7 @@ type WorkerRequest =
 
 type WorkerModuleUrls = Readonly<{
   libsqlClient: string;
-  zod: string;
+  effect: string;
 }>;
 
 function resolveWorkerModuleUrl(packageName: string, entryPath: string): string {
@@ -105,7 +116,7 @@ function resolveWorkerModuleUrl(packageName: string, entryPath: string): string 
 
 const workerModuleUrls: WorkerModuleUrls = {
   libsqlClient: resolveWorkerModuleUrl("@libsql/client", "lib-esm/node.js"),
-  zod: resolveWorkerModuleUrl("zod", "index.js"),
+  effect: resolveWorkerModuleUrl("effect", "dist/index.js"),
 };
 
 const workerSource = `
@@ -128,65 +139,71 @@ const serializeError = (error, fallbackMessage = "Local libSQL operation failed.
 void (async () => {
   setFlagsFromString("--expose_gc");
   const collectGarbage = runInNewContext("gc");
-  const [{ createClient }, { z }] = await Promise.all([
+  const [{ createClient }, { Schema }] = await Promise.all([
     import(workerData.libsqlClient),
-    import(workerData.zod),
+    import(workerData.effect),
   ]);
   const port = parentPort;
   if (port === null) throw new Error("Local libSQL worker has no parent port.");
 
-  const inputValueSchema = z.union([
-    z.null(),
-    z.string(),
-    z.number().finite(),
-    z.bigint(),
-    z.instanceof(ArrayBuffer),
-    z.boolean(),
-    z.instanceof(Uint8Array),
-    z.instanceof(Date),
+  const strict = { errors: "all", onExcessProperty: "error" };
+  const instanceOf = (type) => Schema.declare((value) => value instanceof type);
+  const inputValueSchema = Schema.Union([
+    Schema.Null,
+    Schema.String,
+    Schema.Finite,
+    Schema.BigInt,
+    instanceOf(ArrayBuffer),
+    Schema.Boolean,
+    instanceOf(Uint8Array),
+    instanceOf(Date),
   ]);
-  const argsSchema = z.union([
-    z.array(inputValueSchema),
-    z.record(z.string(), inputValueSchema),
+  const argsSchema = Schema.Union([
+    Schema.Array(inputValueSchema),
+    Schema.Record(Schema.String, inputValueSchema),
   ]);
-  const statementSchema = z.union([
-    z.string().min(1),
-    z.strictObject({ sql: z.string().min(1), args: argsSchema.optional() }),
+  const nonEmptyText = Schema.String.check(Schema.isMinLength(1));
+  const statementSchema = Schema.Union([
+    nonEmptyText,
+    Schema.Struct({ sql: nonEmptyText, args: Schema.optional(argsSchema) }),
   ]);
-  const requestIdSchema = z.number().int().nonnegative();
-  const clientIdSchema = z.number().int().positive();
-  const transactionIdSchema = z.number().int().positive();
-  const requestSchema = z.discriminatedUnion("operation", [
-    z.strictObject({
-      operation: z.literal("open-client"),
+  const integer = Schema.Number.check(Schema.isInt());
+  const requestIdSchema = integer.check(Schema.isGreaterThanOrEqualTo(0));
+  const clientIdSchema = integer.check(Schema.isGreaterThan(0));
+  const transactionIdSchema = integer.check(Schema.isGreaterThan(0));
+  const urlSchema = Schema.String.check(Schema.makeFilter((value) => URL.canParse(value)));
+  const requestSchema = Schema.Union([
+    Schema.Struct({
+      operation: Schema.Literal("open-client"),
       requestId: requestIdSchema,
-      url: z.string().url(),
+      url: urlSchema,
     }),
-    z.strictObject({
-      operation: z.literal("execute"),
+    Schema.Struct({
+      operation: Schema.Literal("execute"),
       requestId: requestIdSchema,
       clientId: clientIdSchema,
-      transactionId: transactionIdSchema.nullable(),
+      transactionId: Schema.NullOr(transactionIdSchema),
       statement: statementSchema,
     }),
-    z.strictObject({
-      operation: z.literal("begin"),
+    Schema.Struct({
+      operation: Schema.Literal("begin"),
       requestId: requestIdSchema,
       clientId: clientIdSchema,
-      mode: z.literal("write"),
+      mode: Schema.Literal("write"),
     }),
-    z.strictObject({
-      operation: z.enum(["commit", "rollback", "close-transaction"]),
+    Schema.Struct({
+      operation: Schema.Literals(["commit", "rollback", "close-transaction"]),
       requestId: requestIdSchema,
       clientId: clientIdSchema,
       transactionId: transactionIdSchema,
     }),
-    z.strictObject({
-      operation: z.literal("close-client"),
+    Schema.Struct({
+      operation: Schema.Literal("close-client"),
       requestId: requestIdSchema,
       clientId: clientIdSchema,
     }),
   ]);
+  const decodeRequest = Schema.decodeUnknownSync(requestSchema, strict);
   const clients = new Map();
   const transactions = new Map();
   let nextClientId = 1;
@@ -235,11 +252,10 @@ void (async () => {
     }
     client.close();
     clients.delete(clientId);
-    if (clients.size === 0) {
-      // libsql releases Windows file handles from native finalizers, not close().
-      collectGarbage();
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
+    // libsql releases Windows file handles from native finalizers, not close(). Collect on
+    // every close: other clients staying open must not keep this client's files locked.
+    collectGarbage();
+    await new Promise((resolve) => setTimeout(resolve, 10));
     return null;
   };
   const handleClientRequest = async (request) => {
@@ -279,7 +295,7 @@ void (async () => {
     queue = queue.then(async () => {
       let requestId;
       try {
-        const request = requestSchema.parse(value);
+        const request = decodeRequest(value);
         requestId = request.requestId;
         const result = await handle(request);
         port.postMessage({ type: "success", requestId, result });
@@ -307,7 +323,7 @@ function normalizeStatement(statement: InStatement, args: InArgs | undefined): I
   return args === undefined ? statement : { sql: statement, args };
 }
 
-function deserializeWorkerError(input: z.infer<typeof workerErrorSchema>): Error {
+function deserializeWorkerError(input: typeof workerErrorSchema.Type): Error {
   const error = new Error(input.message);
   error.name = input.name;
   if (input.code !== undefined) Reflect.set(error, "code", input.code);
@@ -378,7 +394,10 @@ class LocalLibsqlWorkerBroker {
     });
   }
 
-  async request<Result>(request: WorkerRequest, schema: z.ZodType<Result>): Promise<Result> {
+  async request<S extends WorkerResultSchema>(
+    request: WorkerRequest,
+    schema: S,
+  ): Promise<S["Type"]> {
     await this.#ready;
     if (this.#failure !== undefined) throw this.#failure;
     const requestId = this.#nextRequestId++;
@@ -393,16 +412,16 @@ class LocalLibsqlWorkerBroker {
       this.releaseWhenIdle();
       throw error;
     }
-    return schema.parse(await response);
+    return Schema.decodeUnknownSync(schema, strictParseOptions)(await response);
   }
 
   private receive(value: unknown): void {
-    const parsed = workerResponseSchema.safeParse(value);
-    if (!parsed.success) {
+    const parsed = Schema.decodeUnknownResult(workerResponseSchema, strictParseOptions)(value);
+    if (Result.isFailure(parsed)) {
       this.fail(new Error("Local libSQL worker returned an invalid response."));
       return;
     }
-    const response = parsed.data;
+    const response = parsed.success;
     if (response.type === "ready") {
       if (this.#readySettled) {
         this.fail(new Error("Local libSQL worker initialized more than once."));
@@ -501,7 +520,10 @@ class WorkerLocalLibsqlClient implements LocalLibsqlClient {
     return this.request({ operation: "execute", transactionId, statement }, resultSetSchema);
   }
 
-  async request<Result>(request: ClientWorkerRequest, schema: z.ZodType<Result>): Promise<Result> {
+  async request<S extends WorkerResultSchema>(
+    request: ClientWorkerRequest,
+    schema: S,
+  ): Promise<S["Type"]> {
     if (this.#closing) throw new Error("Local libSQL client is closed.");
     const clientId = await this.#clientId;
     return this.#broker.request({ ...request, clientId }, schema);

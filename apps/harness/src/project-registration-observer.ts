@@ -1,56 +1,57 @@
-import { z } from "zod";
+import { NonEmptyTextSchema, UuidTextSchema } from "@slopstop/protocol";
+import { Schema } from "effect";
 import { REGISTRATION_CLEANUP_BUDGET_MS } from "./registration/observer-limits.js";
 import { RegistryFailureSchema, registryFailure } from "./registration/registry-failure.js";
 
-const ExecutableSelectionIdSchema = z.uuid().brand<"ExecutableSelectionId">();
-const ExecutableConsentIdSchema = z.uuid().brand<"ExecutableConsentId">();
-const VersionObservationIdSchema = z.uuid().brand<"VersionObservationId">();
+const ExecutableSelectionIdSchema = UuidTextSchema.pipe(Schema.brand("ExecutableSelectionId"));
+const ExecutableConsentIdSchema = UuidTextSchema.pipe(Schema.brand("ExecutableConsentId"));
+const VersionObservationIdSchema = UuidTextSchema.pipe(Schema.brand("VersionObservationId"));
 
-export const GitVersionInspectionRequestSchema = z.strictObject({
+export const GitVersionInspectionRequestSchema = Schema.Struct({
   selectionId: ExecutableSelectionIdSchema,
-  consentId: ExecutableConsentIdSchema.nullable(),
+  consentId: Schema.NullOr(ExecutableConsentIdSchema),
 });
 
-export type GitVersionInspectionRequest = z.infer<typeof GitVersionInspectionRequestSchema>;
-export const PreparedGitVersionSchema = z.strictObject({
-  status: z.literal("prepared"),
+export type GitVersionInspectionRequest = typeof GitVersionInspectionRequestSchema.Type;
+export const PreparedGitVersionSchema = Schema.Struct({
+  status: Schema.Literal("prepared"),
   selectionId: ExecutableSelectionIdSchema,
   observationId: VersionObservationIdSchema,
-  version: z.string().min(1),
+  version: NonEmptyTextSchema,
 });
 
-export const ObserverFailureTriggerSchema = z.enum([
+export const ObserverFailureTriggerSchema = Schema.Literals([
   "INTERNAL_FAILURE",
   "OBSERVATION_LIMIT_EXCEEDED",
   "CANCELLED",
 ]);
-export type ObserverFailureTrigger = z.infer<typeof ObserverFailureTriggerSchema>;
+export type ObserverFailureTrigger = typeof ObserverFailureTriggerSchema.Type;
 
-export const GitVersionInspectionResultSchema = z.union([
-  z.strictObject({ status: z.literal("cancelled") }),
-  z.strictObject({
-    status: z.literal("pending-recovery"),
-    code: z.literal("OBSERVER_CLEANUP_UNCONFIRMED"),
-    trigger: ObserverFailureTriggerSchema.optional(),
+export const GitVersionInspectionResultSchema = Schema.Union([
+  Schema.Struct({ status: Schema.Literal("cancelled") }),
+  Schema.Struct({
+    status: Schema.Literal("pending-recovery"),
+    code: Schema.Literal("OBSERVER_CLEANUP_UNCONFIRMED"),
+    trigger: Schema.optional(ObserverFailureTriggerSchema),
   }),
   RegistryFailureSchema,
-  z.strictObject({
-    status: z.literal("broken"),
-    code: z.literal("INTERNAL_FAILURE"),
-    reconciliation: z.literal("exact-owner-absence").optional(),
+  Schema.Struct({
+    status: Schema.Literal("broken"),
+    code: Schema.Literal("INTERNAL_FAILURE"),
+    reconciliation: Schema.optional(Schema.Literal("exact-owner-absence")),
   }),
-  z.strictObject({
-    status: z.literal("rejected"),
-    code: z.literal("OBSERVATION_INVALID"),
+  Schema.Struct({
+    status: Schema.Literal("rejected"),
+    code: Schema.Literal("OBSERVATION_INVALID"),
   }),
-  z.strictObject({
-    status: z.literal("unavailable"),
-    code: z.literal("GIT_QUERY_FAILED"),
-    exitCode: z.int(),
+  Schema.Struct({
+    status: Schema.Literal("unavailable"),
+    code: Schema.Literal("GIT_QUERY_FAILED"),
+    exitCode: Schema.Number.check(Schema.isInt()),
   }),
-  z.strictObject({
-    status: z.literal("unavailable"),
-    code: z.enum([
+  Schema.Struct({
+    status: Schema.Literal("unavailable"),
+    code: Schema.Literals([
       "GIT_UNAVAILABLE",
       "GIT_CONFIRMATION_REQUIRED",
       "OBSERVATION_LIMIT_EXCEEDED",
@@ -60,7 +61,7 @@ export const GitVersionInspectionResultSchema = z.union([
   PreparedGitVersionSchema,
 ]);
 
-export type GitVersionInspectionResult = z.infer<typeof GitVersionInspectionResultSchema>;
+export type GitVersionInspectionResult = typeof GitVersionInspectionResultSchema.Type;
 
 export interface GitVersionInspectionPort {
   inspect(

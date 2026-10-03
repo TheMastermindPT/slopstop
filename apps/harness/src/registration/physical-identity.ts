@@ -1,29 +1,32 @@
-import { z } from "zod";
+import { Schema } from "effect";
 
-const PhysicalNumberSchema = z.string().regex(/^[1-9][0-9]*$/);
+const PhysicalNumberSchema = Schema.String.check(Schema.isPattern(/^[1-9][0-9]*$/));
 
-export const PhysicalIdentitySchema = z.strictObject({
-  platform: z.enum(["win32", "linux"]),
+const physicalIdentityFields = {
+  platform: Schema.Literals(["win32", "linux"]),
   volumeIdentity: PhysicalNumberSchema,
   fileIdentity: PhysicalNumberSchema,
   birthIdentity: PhysicalNumberSchema,
+};
+
+export const PhysicalIdentitySchema = Schema.Struct(physicalIdentityFields);
+
+export const PhysicalDirectoryKeySchema = Schema.Struct({
+  ...physicalIdentityFields,
+  version: Schema.Literal("physical-directory/v1"),
 });
 
-export const PhysicalDirectoryKeySchema = PhysicalIdentitySchema.extend({
-  version: z.literal("physical-directory/v1"),
-});
+export type PhysicalIdentity = typeof PhysicalIdentitySchema.Type;
 
-export type PhysicalIdentity = z.infer<typeof PhysicalIdentitySchema>;
-
-export const RepositoryPhysicalSnapshotSchema = z.strictObject({
-  physical: z.strictObject({
+export const RepositoryPhysicalSnapshotSchema = Schema.Struct({
+  physical: Schema.Struct({
     worktree: PhysicalDirectoryKeySchema,
     gitDirectory: PhysicalDirectoryKeySchema,
     commonDirectory: PhysicalDirectoryKeySchema,
   }),
-  metadataFingerprint: z.string().regex(/^[0-9a-f]{64}$/),
+  metadataFingerprint: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/)),
 });
-export type RepositoryPhysicalSnapshot = z.infer<typeof RepositoryPhysicalSnapshotSchema>;
+export type RepositoryPhysicalSnapshot = typeof RepositoryPhysicalSnapshotSchema.Type;
 
 export function samePhysicalIdentity(left: PhysicalIdentity, right: PhysicalIdentity): boolean {
   return (
@@ -34,17 +37,17 @@ export function samePhysicalIdentity(left: PhysicalIdentity, right: PhysicalIden
   );
 }
 
-export const RepositoryDirectoryObservationSchema = z.union([
-  z.strictObject({ status: z.literal("observed"), key: PhysicalDirectoryKeySchema }),
-  z.strictObject({
-    status: z.literal("unavailable"),
-    code: z.enum(["IDENTITY_CAPABILITY_UNAVAILABLE", "REPOSITORY_INACCESSIBLE"]),
+export const RepositoryDirectoryObservationSchema = Schema.Union([
+  Schema.Struct({ status: Schema.Literal("observed"), key: PhysicalDirectoryKeySchema }),
+  Schema.Struct({
+    status: Schema.Literal("unavailable"),
+    code: Schema.Literals(["IDENTITY_CAPABILITY_UNAVAILABLE", "REPOSITORY_INACCESSIBLE"]),
   }),
-  z.strictObject({
-    status: z.literal("rejected"),
-    code: z.enum(["REPOSITORY_NOT_FOUND", "OBSERVATION_INVALID"]),
+  Schema.Struct({
+    status: Schema.Literal("rejected"),
+    code: Schema.Literals(["REPOSITORY_NOT_FOUND", "OBSERVATION_INVALID"]),
   }),
-  z.strictObject({ status: z.literal("broken"), code: z.literal("INTERNAL_FAILURE") }),
+  Schema.Struct({ status: Schema.Literal("broken"), code: Schema.Literal("INTERNAL_FAILURE") }),
 ]);
 
-export type RepositoryDirectoryObservation = z.infer<typeof RepositoryDirectoryObservationSchema>;
+export type RepositoryDirectoryObservation = typeof RepositoryDirectoryObservationSchema.Type;

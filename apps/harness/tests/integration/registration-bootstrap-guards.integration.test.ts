@@ -5,12 +5,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
+  decodeStrict,
   InitialRepositoryBindingSchema,
   ProjectStorageCreateRequestSchema,
   RegisteredProjectSchema,
 } from "@slopstop/protocol";
+import { Schema } from "effect";
 import { afterEach, expect, it, vi } from "vitest";
-import { z } from "zod";
 import { createProjectRegistrationOwner } from "../../src/registration/project-registration-owner.js";
 import { createProjectRegistrationPreparation } from "../../src/registration/project-registration-preparation.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
@@ -71,7 +72,7 @@ async function fixture(
   const trust = { repositorySelectionId: selection.repositorySelectionId, trustId: randomUUID() };
   expect(
     await scenario.registry.decideRepositoryTrust(
-      RepositoryTrustDecisionSchema.parse({ ...trust, decision: "accepted" }),
+      decodeStrict(RepositoryTrustDecisionSchema, { ...trust, decision: "accepted" }),
     ),
   ).toEqual({ status: "recorded" });
   expect(
@@ -426,7 +427,7 @@ it.runIf(process.platform === "win32")(
       expect(f.rows("SELECT * FROM storage_generations")).toEqual(before);
       expect(f.rows("SELECT * FROM registration_publications")).toEqual([]);
       release.release();
-      const registered = RegisteredProjectSchema.parse(await winner);
+      const registered = decodeStrict(RegisteredProjectSchema, await winner);
       expect(creations).toBe(1);
       expect(f.rows("SELECT * FROM storage_generations")).toEqual(before);
       expect(f.rows("SELECT * FROM registration_publications")).toHaveLength(1);
@@ -480,15 +481,15 @@ it
       )[0];
       if (typeof row?.["record_json"] !== "string" || typeof row["record_fingerprint"] !== "string")
         throw new Error("Reservation missing");
-      const identity = z
-        .object(
-          InitialRepositoryBindingSchema.omit({
-            reservationFingerprint: true,
-            registrationRequestId: true,
-          }).shape,
-        )
-        .parse(JSON.parse(row["record_json"]));
-      const seed = InitialRepositoryBindingSchema.parse({
+      const {
+        reservationFingerprint: _fingerprint,
+        registrationRequestId: _request,
+        ...identityFields
+      } = InitialRepositoryBindingSchema.fields;
+      const identity = Schema.decodeUnknownSync(Schema.Struct(identityFields))(
+        JSON.parse(row["record_json"]),
+      );
+      const seed = decodeStrict(InitialRepositoryBindingSchema, {
         ...identity,
         registrationRequestId: f.request.requestId,
         reservationFingerprint:
@@ -511,7 +512,7 @@ it
       );
       try {
         const result = await owner.create(
-          ProjectStorageCreateRequestSchema.parse({
+          decodeStrict(ProjectStorageCreateRequestSchema, {
             projectId: seed.projectId,
             createRequestId: seed.createRequestId,
           }),

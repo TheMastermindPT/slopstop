@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, stat } from "node:fs/promises";
 import path from "node:path";
+import { decodeStrict } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
 import { GitVersionInspectionRequestSchema } from "../../src/project-registration-observer.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
@@ -58,7 +59,7 @@ function captureAdmissions() {
 async function beginUnsettledObserver(
   scenario: Awaited<ReturnType<typeof createRepositoryTrustScenario>>,
 ) {
-  const next = GitVersionInspectionRequestSchema.parse({
+  const next = decodeStrict(GitVersionInspectionRequestSchema, {
     ...scenario.stageOne,
     consentId: "707c9723-44df-4a96-9e6e-ce7afce6ae68",
   });
@@ -493,7 +494,7 @@ export function defineRepositoryTrustCases(createRoot: (prefix: string) => Promi
     try {
       const decision = { ...scenario.trust, decision: "accepted" as const };
       expect(await scenario.registry.decideRepositoryTrust(decision)).toEqual(recorded);
-      const request = RepositoryIdentityAdmissionRequestSchema.parse({
+      const request = decodeStrict(RepositoryIdentityAdmissionRequestSchema, {
         ...scenario.admission,
         [field]: "d448cb38-1f78-44ab-b2a3-01cbecb4bc70",
       });
@@ -626,7 +627,7 @@ export function defineRepositoryTrustCases(createRoot: (prefix: string) => Promi
       expect(await registry.decideIdentityQueries(decision)).toEqual(recorded);
       const selectedA = await registry.selectRepository();
       if (selectedA.status !== "prepared") throw new Error("Selection A unavailable");
-      const trustA = RepositoryTrustRequestSchema.parse({
+      const trustA = decodeStrict(RepositoryTrustRequestSchema, {
         repositorySelectionId: selectedA.repositorySelectionId,
         trustId: "5b4ba3c7-10e5-41cb-b25d-07a8970901c8",
       });
@@ -681,7 +682,7 @@ export function defineRepositoryTrustCases(createRoot: (prefix: string) => Promi
     }
     expect(selection.status).toBe("prepared");
     if (selection.status !== "prepared") throw new Error("Native selection unavailable");
-    const trust = RepositoryTrustRequestSchema.parse({
+    const trust = decodeStrict(RepositoryTrustRequestSchema, {
       repositorySelectionId: selection.repositorySelectionId,
       trustId: "7a337006-00cd-4dd1-a202-b5d913ea6d14",
     });

@@ -1,16 +1,19 @@
 import {
+  decodeStrict,
   writerProofProjectId as healthyProjectId,
   ProjectIdSchema,
   ProjectStorageCreateRequestIdSchema,
 } from "@slopstop/protocol";
 import type { ProjectStorageBridgeClient } from "./project-storage-bridge.js";
 
-const absentProjectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000102");
-const witnessProjectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000103");
-const healthyCreateRequestId = ProjectStorageCreateRequestIdSchema.parse(
+const absentProjectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000102");
+const witnessProjectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000103");
+const healthyCreateRequestId = decodeStrict(
+  ProjectStorageCreateRequestIdSchema,
   "00000000-0000-4000-8000-000000000111",
 );
-const witnessCreateRequestId = ProjectStorageCreateRequestIdSchema.parse(
+const witnessCreateRequestId = decodeStrict(
+  ProjectStorageCreateRequestIdSchema,
   "00000000-0000-4000-8000-000000000112",
 );
 

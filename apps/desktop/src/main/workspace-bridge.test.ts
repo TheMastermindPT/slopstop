@@ -7,6 +7,7 @@ import {
   createWorkspaceQueryResultEvent,
   type DesktopMessage,
   DesktopMessageSchema,
+  decodeStrict,
   MessageIdSchema,
   type WorkspaceIntent,
   type WorkspaceIntentResult,
@@ -72,7 +73,7 @@ class FakeSession implements HarnessSessionClient {
 
   send(message: unknown): HarnessSessionSendResult {
     if (this.sendResult.ok) {
-      this.sent.push(DesktopMessageSchema.parse(message));
+      this.sent.push(decodeStrict(DesktopMessageSchema, message));
     }
     return this.sendResult;
   }
@@ -87,11 +88,14 @@ class FakeSession implements HarnessSessionClient {
 }
 
 function id(value: number): string {
-  return MessageIdSchema.parse(`00000000-0000-4000-8000-${String(value).padStart(12, "0")}`);
+  return decodeStrict(
+    MessageIdSchema,
+    `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`,
+  );
 }
 
 function memoryQuery(project = 10): WorkspaceQuery {
-  return WorkspaceQuerySchema.parse({
+  return decodeStrict(WorkspaceQuerySchema, {
     query: "memory-library.read",
     projectId: id(project),
     cursor: null,
@@ -99,7 +103,7 @@ function memoryQuery(project = 10): WorkspaceQuery {
 }
 
 function conversationWaypointQuery(): WorkspaceQuery {
-  return WorkspaceQuerySchema.parse({
+  return decodeStrict(WorkspaceQuerySchema, {
     query: "conversation.read",
     scope: { kind: "waypoint", projectId: id(10), waypointId: id(40) },
     cursor: null,
@@ -107,7 +111,7 @@ function conversationWaypointQuery(): WorkspaceQuery {
 }
 
 function conversationProjectQuery(project = 10): WorkspaceQuery {
-  return WorkspaceQuerySchema.parse({
+  return decodeStrict(WorkspaceQuerySchema, {
     query: "conversation.read",
     scope: { kind: "project", projectId: id(project) },
     cursor: null,
@@ -115,7 +119,7 @@ function conversationProjectQuery(project = 10): WorkspaceQuery {
 }
 
 function contextRecordQuery(project = 10): WorkspaceQuery {
-  return WorkspaceQuerySchema.parse({
+  return decodeStrict(WorkspaceQuerySchema, {
     query: "context-record.read",
     projectId: id(project),
     contextRecordId: id(60),
@@ -123,14 +127,14 @@ function contextRecordQuery(project = 10): WorkspaceQuery {
 }
 
 function frameQuery(project = 10): WorkspaceQuery {
-  return WorkspaceQuerySchema.parse({
+  return decodeStrict(WorkspaceQuerySchema, {
     query: "frame-review.read",
     projectId: id(project),
   });
 }
 
 function conversationIntent(): WorkspaceIntent {
-  return WorkspaceIntentSchema.parse({
+  return decodeStrict(WorkspaceIntentSchema, {
     intent: "conversation.message.submit",
     scope: { kind: "project", projectId: id(10) },
     branchId: id(20),
@@ -141,7 +145,7 @@ function conversationIntent(): WorkspaceIntent {
 }
 
 function memoryIntent(): WorkspaceIntent {
-  return WorkspaceIntentSchema.parse({
+  return decodeStrict(WorkspaceIntentSchema, {
     intent: "memory.proposal.review",
     projectId: id(10),
     proposalId: id(30),
@@ -153,7 +157,7 @@ function memoryIntent(): WorkspaceIntent {
 function workspaceIntents(): readonly WorkspaceIntent[] {
   return [
     conversationIntent(),
-    WorkspaceIntentSchema.parse({
+    decodeStrict(WorkspaceIntentSchema, {
       intent: "conversation.influence.select",
       projectId: id(10),
       frameDraftId: id(22),
@@ -161,7 +165,7 @@ function workspaceIntents(): readonly WorkspaceIntent[] {
       excludedMessageIds: [id(24)],
       expectedProjectionRevision: 0,
     }),
-    WorkspaceIntentSchema.parse({
+    decodeStrict(WorkspaceIntentSchema, {
       intent: "frame-review.annotate",
       projectId: id(10),
       frameDraftId: id(22),
@@ -170,14 +174,14 @@ function workspaceIntents(): readonly WorkspaceIntent[] {
       comment: "Clarify this.",
       expectedProjectionRevision: 0,
     }),
-    WorkspaceIntentSchema.parse({
+    decodeStrict(WorkspaceIntentSchema, {
       intent: "frame.decision.accept",
       projectId: id(10),
       frameDraftId: id(22),
       sectionId: id(25),
       expectedProjectionRevision: 0,
     }),
-    WorkspaceIntentSchema.parse({
+    decodeStrict(WorkspaceIntentSchema, {
       intent: "frame.accept",
       projectId: id(10),
       frameDraftId: id(22),
@@ -188,7 +192,7 @@ function workspaceIntents(): readonly WorkspaceIntent[] {
 }
 
 function unavailableQueryResult(query: WorkspaceQuery) {
-  return WorkspaceQueryResultSchema.parse({
+  return decodeStrict(WorkspaceQueryResultSchema, {
     status: "unavailable",
     query,
     diagnostic: {
@@ -201,7 +205,7 @@ function unavailableQueryResult(query: WorkspaceQuery) {
 function readyResult(query: WorkspaceQuery, revision: number): WorkspaceQueryResult {
   switch (query.query) {
     case "memory-library.read":
-      return WorkspaceQueryResultSchema.parse({
+      return decodeStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query,
         projection: {
@@ -213,7 +217,7 @@ function readyResult(query: WorkspaceQuery, revision: number): WorkspaceQueryRes
         },
       });
     case "conversation.read":
-      return WorkspaceQueryResultSchema.parse({
+      return decodeStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query,
         projection: {
@@ -227,7 +231,7 @@ function readyResult(query: WorkspaceQuery, revision: number): WorkspaceQueryRes
         },
       });
     case "context-record.read":
-      return WorkspaceQueryResultSchema.parse({
+      return decodeStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query,
         projection: {
@@ -243,7 +247,7 @@ function readyResult(query: WorkspaceQuery, revision: number): WorkspaceQueryRes
         },
       });
     case "frame-review.read":
-      return WorkspaceQueryResultSchema.parse({
+      return decodeStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query,
         projection: {
@@ -332,7 +336,7 @@ describe("WorkspaceBridge", () => {
             messageId: id(901),
             sentAt: "2026-08-14T12:00:01.000Z",
             sequence: 1,
-            causationId: MessageIdSchema.parse("00000000-0000-4000-8000-000000000401"),
+            causationId: decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000401"),
           },
           {
             code: "HARNESS_INTERNAL_FAILURE",
@@ -358,7 +362,7 @@ describe("WorkspaceBridge", () => {
       emitIntentResult(
         session,
         "00000000-0000-4000-8000-000000000402",
-        WorkspaceIntentResultSchema.parse({ status: "forwarded", capability: "memory" }),
+        decodeStrict(WorkspaceIntentResultSchema, { status: "forwarded", capability: "memory" }),
       );
       await expect(intent).resolves.toEqual({ status: "forwarded", capability: "memory" });
     } finally {
@@ -398,7 +402,7 @@ describe("WorkspaceBridge", () => {
       const session = new FakeSession();
       const bridge = bridgeWith(session, [id(1)]);
       const pending = bridge.submit(intent);
-      const result = WorkspaceIntentResultSchema.parse({ status: "forwarded", capability });
+      const result = decodeStrict(WorkspaceIntentResultSchema, { status: "forwarded", capability });
 
       emitIntentResult(session, id(1), result);
 
@@ -444,7 +448,7 @@ describe("WorkspaceBridge", () => {
     failedIntentSession.sendResult = { ok: true };
     const intentRetry = failedIntentBridge.submit(memoryIntent());
     expect(failedIntentSession.sent).toHaveLength(1);
-    const forwarded = WorkspaceIntentResultSchema.parse({
+    const forwarded = decodeStrict(WorkspaceIntentResultSchema, {
       status: "forwarded",
       capability: "memory",
     });
@@ -463,7 +467,7 @@ describe("WorkspaceBridge", () => {
       diagnostic: { message: "Harness request identity collided." },
     });
     expect(session.sent).toHaveLength(1);
-    const forwarded = WorkspaceIntentResultSchema.parse({
+    const forwarded = decodeStrict(WorkspaceIntentResultSchema, {
       status: "forwarded",
       capability: "memory",
     });
@@ -652,7 +656,7 @@ describe("WorkspaceBridge", () => {
     emitIntentResult(
       kindSession,
       id(1),
-      WorkspaceIntentResultSchema.parse({ status: "forwarded", capability: "memory" }),
+      decodeStrict(WorkspaceIntentResultSchema, { status: "forwarded", capability: "memory" }),
     );
     await expect(kindPending).resolves.toMatchObject({
       status: "broken",
@@ -684,7 +688,7 @@ describe("WorkspaceBridge", () => {
     emitIntentResult(
       capabilitySession,
       id(1),
-      WorkspaceIntentResultSchema.parse({ status: "forwarded", capability: "memory" }),
+      decodeStrict(WorkspaceIntentResultSchema, { status: "forwarded", capability: "memory" }),
     );
     await expect(capabilityPending).resolves.toMatchObject({
       status: "broken",
@@ -756,7 +760,7 @@ describe("WorkspaceBridge", () => {
     };
     for (const revision of [4, 3, 4, 5]) {
       publish(
-        WorkspaceNotificationSchema.parse({
+        decodeStrict(WorkspaceNotificationSchema, {
           capability: "conversation",
           scope: projectScope,
           revision,
@@ -764,21 +768,25 @@ describe("WorkspaceBridge", () => {
       );
     }
     publish(
-      WorkspaceNotificationSchema.parse({
+      decodeStrict(WorkspaceNotificationSchema, {
         capability: "conversation",
         scope: waypointScope,
         revision: 1,
       }),
     );
     publish(
-      WorkspaceNotificationSchema.parse({
+      decodeStrict(WorkspaceNotificationSchema, {
         capability: "conversation",
         scope: otherWaypointScope,
         revision: 1,
       }),
     );
     publish(
-      WorkspaceNotificationSchema.parse({ capability: "memory", scope: projectScope, revision: 1 }),
+      decodeStrict(WorkspaceNotificationSchema, {
+        capability: "memory",
+        scope: projectScope,
+        revision: 1,
+      }),
     );
 
     expect(
@@ -792,7 +800,11 @@ describe("WorkspaceBridge", () => {
     ]);
     unsubscribe();
     publish(
-      WorkspaceNotificationSchema.parse({ capability: "memory", scope: projectScope, revision: 2 }),
+      decodeStrict(WorkspaceNotificationSchema, {
+        capability: "memory",
+        scope: projectScope,
+        revision: 2,
+      }),
     );
     expect(received).toHaveLength(5);
   });
@@ -810,7 +822,7 @@ describe("WorkspaceBridge", () => {
           sequence: 1,
           causationId: null,
         },
-        WorkspaceNotificationSchema.parse({
+        decodeStrict(WorkspaceNotificationSchema, {
           capability: "memory",
           scope: { kind: "project", projectId: id(10) },
           revision: 5,
@@ -860,7 +872,7 @@ describe("WorkspaceBridge", () => {
           sequence: 1,
           causationId: null,
         },
-        WorkspaceNotificationSchema.parse({
+        decodeStrict(WorkspaceNotificationSchema, {
           capability: "conversation",
           scope: { kind: "project", projectId: id(10) },
           revision: 5,
@@ -891,7 +903,7 @@ describe("WorkspaceBridge", () => {
           sequence: 2,
           causationId: null,
         },
-        WorkspaceNotificationSchema.parse({
+        decodeStrict(WorkspaceNotificationSchema, {
           capability: "frame",
           scope: { kind: "project", projectId: id(10) },
           revision: 5,
@@ -968,7 +980,7 @@ describe("WorkspaceBridge", () => {
       { isDestroyed: () => false, webContents: { send: liveSend } },
       { isDestroyed: () => true, webContents: { send: destroyedSend } },
     ]);
-    const notification = WorkspaceNotificationSchema.parse({
+    const notification = decodeStrict(WorkspaceNotificationSchema, {
       capability: "memory",
       scope: { kind: "project", projectId: id(10) },
       revision: 1,

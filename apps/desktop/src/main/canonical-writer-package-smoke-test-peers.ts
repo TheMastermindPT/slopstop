@@ -1,10 +1,10 @@
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
-import { HarnessBootstrapSchema } from "@slopstop/protocol";
+import { decodeStrict, HarnessBootstrapSchema } from "@slopstop/protocol";
 import { type Mock, vi } from "vitest";
 
 export const id = (number: number) => `00000000-0000-4000-8000-${String(number).padStart(12, "0")}`;
-export const bootstrap = HarnessBootstrapSchema.parse({
+export const bootstrap = decodeStrict(HarnessBootstrapSchema, {
   kind: "harness.connect",
   applicationStorageRootUrl: "file:///C:/proof/user/storage",
   migrationResourcesRootUrl: "file:///C:/proof/migrations",

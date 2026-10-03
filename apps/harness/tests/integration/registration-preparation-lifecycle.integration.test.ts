@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { decodeStrict, UuidTextSchema } from "@slopstop/protocol";
+import { Schema } from "effect";
 import { afterEach, expect, it, vi } from "vitest";
-import { z } from "zod";
 import { REGISTRATION_CLEANUP_BUDGET_MS } from "../../src/registration/observer-limits.js";
 import { createProjectRegistrationPreparation } from "../../src/registration/project-registration-preparation.js";
 import * as identity from "../../src/registration/repository-identity-query-owner.js";
@@ -40,7 +41,7 @@ async function fixture(
   await mkdir(path.join(scenario.directory, ".git"));
   expect(
     await scenario.registry.decideRepositoryTrust(
-      RepositoryTrustDecisionSchema.parse({ ...scenario.trust, decision: "accepted" }),
+      decodeStrict(RepositoryTrustDecisionSchema, { ...scenario.trust, decision: "accepted" }),
     ),
   ).toEqual({ status: "recorded" });
   const key = {
@@ -168,14 +169,14 @@ it.runIf(process.platform === "win32")(
       expect(await f.rows("registration_requests")).toHaveLength(2);
       const json = reserved[0]?.[5];
       if (typeof json !== "string") throw new Error("Missing reservation record");
-      const record = z
-        .object({
-          projectId: z.uuid(),
-          repositoryBindingId: z.uuid(),
-          workspaceId: z.uuid(),
-          createRequestId: z.uuid(),
-        })
-        .parse(JSON.parse(json));
+      const record = Schema.decodeUnknownSync(
+        Schema.Struct({
+          projectId: UuidTextSchema,
+          repositoryBindingId: UuidTextSchema,
+          workspaceId: UuidTextSchema,
+          createRequestId: UuidTextSchema,
+        }),
+      )(JSON.parse(json));
       expect(new Set(Object.values(record)).size).toBe(4);
     } finally {
       release.release();

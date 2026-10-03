@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { z } from "zod";
+import { decodeStrict, NonEmptyTextSchema, UuidTextSchema } from "@slopstop/protocol";
+import { Schema } from "effect";
 import {
   type GitVersionInspectionResult,
   GitVersionInspectionResultSchema,
@@ -8,6 +9,7 @@ import {
 } from "../project-registration-observer.js";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
+import { SqlIntegerSchema } from "../storage/sql-integer-schema.js";
 import { readConsent, readSelection } from "./executable-consent-store.js";
 import { sameExecutableIdentity } from "./executable-identity.js";
 import { type RegistryRunner, registryRows } from "./registry-database.js";
@@ -18,26 +20,47 @@ import type {
   VersionObserverJournal,
 } from "./version-observation-execution.js";
 
-type ObservationId = z.infer<typeof PreparedGitVersionSchema.shape.observationId>;
+const ObservationIdSchema = PreparedGitVersionSchema.fields.observationId;
+type ObservationId = typeof ObservationIdSchema.Type;
 export interface ObserverRecoveryPort {
   reconcileObservers(
     absence?: ObserverAbsencePort,
   ): Promise<Readonly<{ status: "settled" }> | ReturnType<typeof registryFailure>>;
 }
-const sqlInteger = z.union([z.number().int(), z.bigint()]).transform(Number).pipe(z.number().int());
-const childSchema = z.strictObject({
-  platform: z.literal("win32"),
-  processId: z.number().int().positive().max(4294967295),
-  creationTime100ns: z.string().regex(/^[1-9][0-9]*$/),
-  jobName: z.string().min(1),
-  sessionId: z.number().int().nonnegative().max(4294967295).optional(),
+const childSchema = Schema.Struct({
+  platform: Schema.Literal("win32"),
+  processId: Schema.Number.check(
+    Schema.isInt(),
+    Schema.isGreaterThan(0),
+    Schema.isLessThanOrEqualTo(4294967295),
+  ),
+  creationTime100ns: Schema.String.check(Schema.isPattern(/^[1-9][0-9]*$/)),
+  jobName: NonEmptyTextSchema,
+  sessionId: Schema.optional(
+    Schema.Number.check(
+      Schema.isInt(),
+      Schema.isGreaterThanOrEqualTo(0),
+      Schema.isLessThanOrEqualTo(4294967295),
+    ),
+  ),
 });
-const terminalSchema = z.strictObject({
-  exitCode: z.number().int(),
-  stdoutClosed: z.literal(true),
-  stderrClosed: z.literal(true),
-  treeEmpty: z.literal(true),
+const terminalSchema = Schema.Struct({
+  exitCode: Schema.Number.check(Schema.isInt()),
+  stdoutClosed: Schema.Literal(true),
+  stderrClosed: Schema.Literal(true),
+  treeEmpty: Schema.Literal(true),
 });
+const attemptRowsSchema = Schema.Array(
+  Schema.Struct({
+    id: UuidTextSchema,
+    child: Schema.NullOr(Schema.String),
+    terminal: Schema.NullOr(Schema.String),
+  }),
+);
+const pendingChildRowsSchema = Schema.Array(
+  Schema.Struct({ observationId: ObservationIdSchema, identityJson: Schema.String }),
+);
+const exitCodeCellSchema = Schema.Tuple([Schema.Tuple([SqlIntegerSchema])]);
 
 export { childSchema as ObserverChildIdentitySchema, terminalSchema as ObserverTerminalSchema };
 
@@ -46,11 +69,11 @@ async function queryChildIsSettled(
   absence?: ObserverAbsencePort,
 ) {
   if (record.child === null) return false;
-  const child = childSchema.parse(JSON.parse(record.child));
+  const child = decodeStrict(childSchema, JSON.parse(record.child));
   if (child.jobName !== `Local\\SlopStop.Registration.Observer.${record.id}`)
     throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
   if (record.terminal !== null) {
-    terminalSchema.parse(JSON.parse(record.terminal));
+    decodeStrict(terminalSchema, JSON.parse(record.terminal));
     return true;
   }
   return (await absence?.inspect(child))?.status === "absent";
@@ -63,15 +86,7 @@ async function reconcileIdentityQueryAttempts(
   const rows = await transaction.execute(
     "SELECT observation_id AS id, child_json AS child, terminal_json AS terminal FROM registration_identity_query_attempts WHERE result_json IS NULL",
   );
-  const records = z
-    .array(
-      z.strictObject({
-        id: z.uuid(),
-        child: z.string().nullable(),
-        terminal: z.string().nullable(),
-      }),
-    )
-    .parse(registryRows(rows));
+  const records = decodeStrict(attemptRowsSchema, registryRows(rows));
   for (const record of records) {
     if (!(await queryChildIsSettled(record, absence))) continue;
     await transaction.execute({
@@ -84,10 +99,9 @@ async function reconcileIdentityQueryAttempts(
     });
   }
 }
-const resultRowSchema = z.strictObject({
-  observationId: PreparedGitVersionSchema.shape.observationId,
-  resultJson: z.string(),
-});
+const resultRowsSchema = Schema.Array(
+  Schema.Struct({ observationId: ObservationIdSchema, resultJson: Schema.String }),
+).check(Schema.isMaxLength(1));
 
 function unsettled(): never {
   throw new RegistryFault({ status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" });
@@ -133,9 +147,9 @@ async function readResult(
     sql: "SELECT i.observation_id AS observationId, o.result_json AS resultJson FROM registration_observer_intents i JOIN registration_observer_outcomes o ON o.observation_id = i.observation_id WHERE i.consent_id = ? AND i.selection_id = ?",
     args: [request.consentId, request.selectionId],
   });
-  const row = resultRowSchema.array().max(1).parse(registryRows(result))[0];
+  const row = decodeStrict(resultRowsSchema, registryRows(result))[0];
   if (row === undefined) return undefined;
-  const decoded = GitVersionInspectionResultSchema.parse(JSON.parse(row.resultJson));
+  const decoded = decodeStrict(GitVersionInspectionResultSchema, JSON.parse(row.resultJson));
   if (decoded.status === "prepared") {
     if (
       decoded.observationId !== row.observationId ||
@@ -156,7 +170,7 @@ async function confirmedExit(
     args: [observationId],
   });
   if (result.rows.length === 0) return unsettled();
-  return z.tuple([z.tuple([sqlInteger])]).parse(result.rows)[0][0];
+  return decodeStrict(exitCodeCellSchema, result.rows)[0][0];
 }
 
 async function writeOutcome(
@@ -177,14 +191,14 @@ function invalidatedResult(
   if (code === "GIT_QUERY_FAILED") return { status: "unavailable", code, exitCode };
   if (code === "OBSERVATION_INVALID") return { status: "rejected", code };
   if (code === "INTERNAL_FAILURE") return { status: "broken", code };
-  return GitVersionInspectionResultSchema.parse({ status: "unavailable", code });
+  return decodeStrict(GitVersionInspectionResultSchema, { status: "unavailable", code });
 }
 
 async function beginObservation(transaction: LocalLibsqlTransaction, request: VersionDispatch) {
   const previous = await readResult(transaction, request);
   if (previous !== undefined) return { status: "settled" as const, result: previous };
   if (await hasUnsettled(transaction)) return unsettled();
-  const observationId = PreparedGitVersionSchema.shape.observationId.parse(randomUUID());
+  const observationId = decodeStrict(ObservationIdSchema, randomUUID());
   await transaction.execute({
     sql: "INSERT INTO registration_observer_intents (observation_id, selection_id, consent_id, created_at) VALUES (?, ?, ?, ?)",
     args: [observationId, request.selectionId, request.consentId, new Date().toISOString()],
@@ -194,9 +208,9 @@ async function beginObservation(transaction: LocalLibsqlTransaction, request: Ve
 
 async function completeObservation(
   transaction: LocalLibsqlTransaction,
-  result: z.infer<typeof PreparedGitVersionSchema>,
+  result: typeof PreparedGitVersionSchema.Type,
 ) {
-  const prepared = PreparedGitVersionSchema.parse(result);
+  const prepared = decodeStrict(PreparedGitVersionSchema, result);
   if ((await confirmedExit(transaction, prepared.observationId)) !== 0) {
     throw new Error("A failed child cannot validate an executable version.");
   }
@@ -217,16 +231,9 @@ async function reconcileStoredTerminals(transaction: LocalLibsqlTransaction) {
     JOIN registration_observer_terminals t ON t.observation_id = i.observation_id
     LEFT JOIN registration_observer_outcomes o ON o.observation_id = i.observation_id
     WHERE o.observation_id IS NULL AND t.stdout_closed = 1 AND t.stderr_closed = 1 AND t.tree_empty = 1`);
-  const rows = z
-    .array(
-      z.strictObject({
-        observationId: PreparedGitVersionSchema.shape.observationId,
-        identityJson: z.string(),
-      }),
-    )
-    .parse(registryRows(pending));
+  const rows = decodeStrict(pendingChildRowsSchema, registryRows(pending));
   for (const row of rows) {
-    const child = childSchema.parse(JSON.parse(row.identityJson));
+    const child = decodeStrict(childSchema, JSON.parse(row.identityJson));
     if (child.jobName !== `Local\\SlopStop.Registration.Observer.${row.observationId}`) {
       throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
     }
@@ -253,16 +260,9 @@ async function reconcileAbsentOwners(
     JOIN registration_observer_children c ON c.observation_id = i.observation_id
     LEFT JOIN registration_observer_outcomes o ON o.observation_id = i.observation_id
     WHERE o.observation_id IS NULL`);
-  const rows = z
-    .array(
-      z.strictObject({
-        observationId: PreparedGitVersionSchema.shape.observationId,
-        identityJson: z.string(),
-      }),
-    )
-    .parse(registryRows(pending));
+  const rows = decodeStrict(pendingChildRowsSchema, registryRows(pending));
   for (const row of rows) {
-    const child = childSchema.parse(JSON.parse(row.identityJson));
+    const child = decodeStrict(childSchema, JSON.parse(row.identityJson));
     if (child.jobName !== `Local\\SlopStop.Registration.Observer.${row.observationId}`) {
       throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
     }
@@ -310,7 +310,7 @@ export function createRegistryObserverJournal(
       }),
     recordChild: (observationId, input) =>
       write(async (transaction) => {
-        const child = childSchema.parse(input);
+        const child = decodeStrict(childSchema, input);
         if (child.jobName !== `Local\\SlopStop.Registration.Observer.${observationId}`) {
           throw new Error("Observer child has a different owner.");
         }
@@ -321,7 +321,7 @@ export function createRegistryObserverJournal(
       }),
     recordTerminal: (observationId, input) =>
       write(async (transaction) => {
-        const terminal = terminalSchema.parse(input);
+        const terminal = decodeStrict(terminalSchema, input);
         await transaction.execute({
           sql: "INSERT INTO registration_observer_terminals (observation_id, exit_code, stdout_closed, stderr_closed, tree_empty, observed_at) VALUES (?, ?, 1, 1, 1, ?)",
           args: [observationId, terminal.exitCode, new Date().toISOString()],

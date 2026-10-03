@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { decodeStrict } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { createCanonicalCommandRegistry } from "../../src/canonical-command-registry.js";
 import {
@@ -256,7 +257,7 @@ it("configures every canonical write connection and retains unfinished ownership
       canonicalDatabasePath: file,
       projectId: settlementRequest.projectId,
       activationId: settlementRequest.activationId,
-      writerToken: WriterCapabilityTokenSchema.parse("1".repeat(64)),
+      writerToken: decodeStrict(WriterCapabilityTokenSchema, "1".repeat(64)),
       activatedAt: settlementT0,
     });
     expect(activated.status).toBe("activated");

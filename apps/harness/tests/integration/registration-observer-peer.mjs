@@ -3,6 +3,7 @@ import "./registration-peer-loader.mjs";
 const { createProjectRegistrationObserver, GitVersionInspectionRequestSchema } = await import(
   "../../src/project-registration-observer.ts"
 );
+const { decodeStrict } = await import("@slopstop/protocol");
 const { createRegistrationRegistry } = await import(
   "../../src/registration/registration-registry.ts"
 );
@@ -19,7 +20,7 @@ const { observeSelectedExecutable } = await import(
   "../../src/storage/repository-identity-observer.ts"
 );
 const [root, migrations, checkpoint, requestJson] = process.argv.slice(2);
-const request = GitVersionInspectionRequestSchema.parse(JSON.parse(requestJson));
+const request = decodeStrict(GitVersionInspectionRequestSchema, JSON.parse(requestJson));
 const registry = createRegistrationRegistry({
   applicationStorageRoot: root,
   migrationResourcesRoot: migrations,

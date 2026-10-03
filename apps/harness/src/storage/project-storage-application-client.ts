@@ -85,6 +85,8 @@ async function rejectInitialization(input: {
 export function createApplicationClientManager(input: {
   applicationDatabasePath: string;
   applicationStorageRoot: string;
+  // Initializes application.db through its shared authority before a client is retained.
+  ensureInitialized(createIfMissing: boolean): Promise<"absent" | "present">;
   createClient(): LocalLibsqlClient;
   initialize(client: LocalLibsqlClient): Promise<void>;
 }): ApplicationClientManager {
@@ -103,6 +105,7 @@ export function createApplicationClientManager(input: {
       createIfMissing,
     });
     if (!available) return undefined;
+    if ((await input.ensureInitialized(createIfMissing)) === "absent") return undefined;
     try {
       return await initializeRetainedApplicationClient(
         input.createClient(),

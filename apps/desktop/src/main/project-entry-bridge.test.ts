@@ -6,6 +6,7 @@ import {
   createProjectActivateResultEvent,
   createProjectListResultEvent,
   type DesktopMessage,
+  decodeStrict,
 } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { HarnessSession } from "./harness-session.js";
@@ -50,12 +51,14 @@ it("returns a real list response and does not confuse disconnect with an empty i
 
 it("rejects activation replies for a different Project even with a matching message correlation", async () => {
   const { port, bridge } = setup();
-  const request = CanonicalProjectActivationRequestSchema.parse({ projectId: randomUUID() });
+  const request = decodeStrict(CanonicalProjectActivationRequestSchema, {
+    projectId: randomUUID(),
+  });
   const result = bridge.activate(request);
   port.emit("message", {
     data: createProjectActivateResultEvent(
       port.metadata(),
-      CanonicalProjectActivationResultSchema.parse({
+      decodeStrict(CanonicalProjectActivationResultSchema, {
         status: "not-registered",
         request: { projectId: randomUUID() },
       }),

@@ -4,7 +4,8 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
-import { RegisteredProjectSchema } from "@slopstop/protocol";
+import { decodeStrict, RegisteredProjectSchema } from "@slopstop/protocol";
+import { Schema } from "effect";
 
 test("lists and switches real saved Projects through the sandboxed Electron preload", async () => {
   test.setTimeout(150_000);
@@ -29,7 +30,8 @@ test("lists and switches real saved Projects through the sandboxed Electron prel
       stdio: "pipe",
     },
   );
-  const projects = RegisteredProjectSchema.array().parse(
+  const projects = decodeStrict(
+    Schema.Array(RegisteredProjectSchema),
     JSON.parse(await readFile(path.join(userData, "fixture-projects.json"), "utf8")),
   );
   const first = projects[0];

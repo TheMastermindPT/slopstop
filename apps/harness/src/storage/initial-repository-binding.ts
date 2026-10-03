@@ -1,4 +1,8 @@
-import { type InitialRepositoryBinding, InitialRepositoryBindingSchema } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  type InitialRepositoryBinding,
+  InitialRepositoryBindingSchema,
+} from "@slopstop/protocol";
 import type { LocalLibsqlClient, LocalLibsqlTransaction } from "./local-libsql-worker-client.js";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
 import { withWriteTransaction } from "./project-storage-transaction.js";
@@ -8,7 +12,7 @@ export async function seedInitialRepositoryBinding(
   creation: { projectId: string; createRequestId: string; createdAt: string },
   input: InitialRepositoryBinding,
 ) {
-  const seed = InitialRepositoryBindingSchema.parse(input);
+  const seed = decodeStrict(InitialRepositoryBindingSchema, input);
   if (seed.projectId !== creation.projectId || seed.createRequestId !== creation.createRequestId)
     throw new ProjectStorageBrokenError("Initial repository binding scope does not agree.");
   await withWriteTransaction(client, async (transaction) => {

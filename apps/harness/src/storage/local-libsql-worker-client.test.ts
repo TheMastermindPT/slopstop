@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -80,6 +80,28 @@ it("keeps a failed real commit open for rollback", async () => {
     expect(transaction.closed).toBe(true);
   } finally {
     await client.close();
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+  }
+});
+
+it("releases a closed client's files while another worker client stays open", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-libsql-release-"));
+  const active = createWorkerLocalLibsqlClient(path.join(root, "active.db"), "generation");
+  const staging = path.join(root, ".staging-next");
+  try {
+    await active.execute("CREATE TABLE marker (id TEXT PRIMARY KEY)");
+    await active.execute({ sql: "INSERT INTO marker (id) VALUES (?)", args: ["kept"] });
+    await mkdir(staging);
+    const next = createWorkerLocalLibsqlClient(path.join(staging, "next.db"), "generation");
+    await next.execute("CREATE TABLE generation (id TEXT PRIMARY KEY)");
+    await next.close();
+
+    await expect(rename(staging, path.join(root, "next"))).resolves.toBeUndefined();
+    await expect(active.execute("SELECT id FROM marker")).resolves.toMatchObject({
+      rows: [["kept"]],
+    });
+  } finally {
+    await active.close();
     await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
 });

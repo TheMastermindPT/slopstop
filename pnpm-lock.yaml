@@ -84,6 +84,9 @@ catalogs:
     drizzle-orm:
       specifier: 0.45.2
       version: 0.45.2
+    effect:
+      specifier: 4.0.0
+      version: 4.0.0
     electron:
       specifier: 43.4.0
       version: 43.4.0
@@ -135,9 +138,6 @@ catalogs:
     vitest:
       specifier: 4.1.10
       version: 4.1.10
-    zod:
-      specifier: 4.4.3
-      version: 4.4.3
 
 overrides:
   '@electron/node-gyp': 10.2.0-electron.1
@@ -213,6 +213,9 @@ importers:
       '@slopstop/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0
       pino:
         specifier: 'catalog:'
         version: 10.3.1
@@ -283,6 +286,9 @@ importers:
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@libsql/client@0.17.4)(@opentelemetry/api@1.9.1)
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0
       fs-native-extensions:
         specifier: 'catalog:'
         version: 1.5.1
@@ -295,24 +301,25 @@ importers:
       pino:
         specifier: 'catalog:'
         version: 10.3.1
-      zod:
-        specifier: 'catalog:'
-        version: 4.4.3
     devDependencies:
       drizzle-kit:
         specifier: 'catalog:'
         version: 0.31.10
 
-  packages/kernel: {}
+  packages/kernel:
+    dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0
 
   packages/protocol:
     dependencies:
       '@slopstop/kernel':
         specifier: workspace:*
         version: link:../kernel
-      zod:
+      effect:
         specifier: 'catalog:'
-        version: 4.4.3
+        version: 4.0.0
 
 packages:
 
@@ -3008,6 +3015,9 @@ packages:
 
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
+
+  effect@4.0.0:
+    resolution: {integrity: sha512-ooc1TG5t+FfzgYnFz2ff6BBKyZ7EwBRVXC7c4RhQUAD6/TZ2gTXXMeb4WX7a19ozQo4J73/QW+S00YAIresoMQ==}
 
   electron-to-chromium@1.5.405:
     resolution: {integrity: sha512-bNglH7lPH5l+yHOes7Zr4VqxhOy4BQ9ZBUX4VdoFgxMpzJk7W1ZoO3Vgd9Pxa9PyjQ76sfm2aKH/nzEcCNRlew==}
@@ -7957,6 +7967,8 @@ snapshots:
       gopd: 1.2.0
 
   eastasianwidth@0.2.0: {}
+
+  effect@4.0.0: {}
 
   electron-to-chromium@1.5.405: {}
 

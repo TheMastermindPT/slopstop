@@ -2,6 +2,7 @@ import { lstat, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
+  decodeStrict,
   type OpenedStorageIdentity,
   type ProjectDatabaseHealth,
   ProjectStorageCloseRequestSchema,
@@ -22,10 +23,10 @@ import {
   sha256File,
 } from "./project-storage-create-fixture.js";
 
-export const openRequest = ProjectStorageOpenRequestSchema.parse({
+export const openRequest = decodeStrict(ProjectStorageOpenRequestSchema, {
   projectId: createRequest.projectId,
 });
-export const closeRequest = ProjectStorageCloseRequestSchema.parse({
+export const closeRequest = decodeStrict(ProjectStorageCloseRequestSchema, {
   projectId: createRequest.projectId,
 });
 export const recoveryRequiredHealth = {
@@ -173,7 +174,7 @@ export async function createHealthyProjectStorageFixture(): Promise<ApplicationR
 
 export async function initializeApplicationAuthority(root: ApplicationRootPath): Promise<void> {
   const initializer = await createStorageRuntimeForRoot(root);
-  const request = ProjectStorageCreateRequestSchema.parse({
+  const request = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId: "00000000-0000-4000-8000-000000000050",
     createRequestId: "00000000-0000-4000-8000-000000000051",
   });

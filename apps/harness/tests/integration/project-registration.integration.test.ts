@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/p
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { decodeStrict } from "@slopstop/protocol";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   createProjectRegistrationObserver,
@@ -173,7 +174,9 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
       async (example) => {
         const root = await createRoot("pc-s1-native-trigger-");
         const observed = await observeNativeTrigger(root, example.trigger, example.fault);
-        expect(GitVersionInspectionResultSchema.parse(observed.result)).toEqual(observed.result);
+        expect(decodeStrict(GitVersionInspectionResultSchema, observed.result)).toEqual(
+          observed.result,
+        );
         if (example.trigger === "stdout" || example.trigger === "stderr")
           expect(observed.injectedBytes).toBe(8193);
         if (example.fault !== "none") expect(observed.failures).toBeGreaterThan(0);
@@ -277,11 +280,11 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
 
     it("inspects the admitted installed Git version through the owned native child", async () => {
       const root = await createRoot("pc-s1-version-");
-      const request = GitVersionInspectionRequestSchema.parse({
+      const request = decodeStrict(GitVersionInspectionRequestSchema, {
         selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
         consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
       });
-      const expected = GitVersionInspectionResultSchema.parse({
+      const expected = decodeStrict(GitVersionInspectionResultSchema, {
         status: "prepared",
         selectionId: request.selectionId,
         observationId: "c42caec7-06c4-49bd-9a34-e5b034ab2477",
@@ -366,7 +369,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         migrationResourcesRoot,
       });
       try {
-        const request = GitVersionInspectionRequestSchema.parse({
+        const request = decodeStrict(GitVersionInspectionRequestSchema, {
           selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
           consentId: null,
         });
@@ -408,7 +411,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         migrationResourcesRoot,
       });
       try {
-        const request = GitVersionInspectionRequestSchema.parse({
+        const request = decodeStrict(GitVersionInspectionRequestSchema, {
           selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
           consentId: null,
         });
@@ -454,7 +457,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         migrationResourcesRoot,
       });
       try {
-        const request = GitVersionInspectionRequestSchema.parse({
+        const request = decodeStrict(GitVersionInspectionRequestSchema, {
           selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
           consentId: null,
         });
@@ -490,7 +493,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         applicationStorageRoot: root,
         migrationResourcesRoot,
       });
-      const request = GitVersionInspectionRequestSchema.parse({
+      const request = decodeStrict(GitVersionInspectionRequestSchema, {
         selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
         consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
       });
@@ -535,7 +538,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         applicationStorageRoot: root,
         migrationResourcesRoot,
       });
-      const request = GitVersionInspectionRequestSchema.parse({
+      const request = decodeStrict(GitVersionInspectionRequestSchema, {
         selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
         consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
       });
@@ -557,7 +560,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
             decision: "accepted",
           }),
         ).toEqual({ status: "recorded" });
-        const other = GitVersionInspectionRequestSchema.parse({
+        const other = decodeStrict(GitVersionInspectionRequestSchema, {
           ...request,
           selectionId: "6396df9a-6d5c-44c3-b77c-8f20f9a63626",
         });
@@ -598,7 +601,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
           },
         });
         try {
-          const request = GitVersionInspectionRequestSchema.parse({
+          const request = decodeStrict(GitVersionInspectionRequestSchema, {
             selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
             consentId: null,
           });
@@ -654,7 +657,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         },
       });
       try {
-        const request = GitVersionInspectionRequestSchema.parse({
+        const request = decodeStrict(GitVersionInspectionRequestSchema, {
           selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
           consentId: null,
         });
@@ -697,7 +700,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
           migrationResourcesRoot,
         });
         try {
-          const request = GitVersionInspectionRequestSchema.parse({
+          const request = decodeStrict(GitVersionInspectionRequestSchema, {
             selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
             consentId: null,
           });
@@ -736,7 +739,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
           migrationResourcesRoot,
         });
         try {
-          const request = GitVersionInspectionRequestSchema.parse({
+          const request = decodeStrict(GitVersionInspectionRequestSchema, {
             selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
             consentId: null,
           });
@@ -769,7 +772,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         },
       });
       try {
-        const request = GitVersionInspectionRequestSchema.parse({
+        const request = decodeStrict(GitVersionInspectionRequestSchema, {
           selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
           consentId: null,
         });

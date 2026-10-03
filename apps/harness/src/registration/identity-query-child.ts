@@ -1,4 +1,5 @@
-import { z } from "zod";
+import { decodeStrict } from "@slopstop/protocol";
+import { Schema } from "effect";
 import type { RepositoryPhysicalSnapshot } from "./physical-identity.js";
 import type {
   GitVersionChildPort,
@@ -27,8 +28,8 @@ export const identityQueryKinds = [
   "absolute-git-dir",
   "git-common-dir",
 ] as const;
-export const IdentityQueryKindSchema = z.enum(identityQueryKinds);
-export type IdentityQueryKind = z.infer<typeof IdentityQueryKindSchema>;
+export const IdentityQueryKindSchema = Schema.Literals(identityQueryKinds);
+export type IdentityQueryKind = typeof IdentityQueryKindSchema.Type;
 
 const prefix = [
   "--no-pager",
@@ -57,7 +58,7 @@ const suffixes = {
 } as const;
 
 export function identityQueryArguments(query: IdentityQueryKind): readonly string[] {
-  return [...prefix, ...suffixes[IdentityQueryKindSchema.parse(query)]];
+  return [...prefix, ...suffixes[decodeStrict(IdentityQueryKindSchema, query)]];
 }
 
 export type IdentityQueryDispatch = Readonly<{

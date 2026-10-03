@@ -3,6 +3,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
   CanonicalDatabaseLineageIdSchema,
+  decodeStrict,
   type ProjectStorageCreateRequest,
   ProjectStorageCreateRequestSchema,
   RuntimeDatabaseLineageIdSchema,
@@ -692,11 +693,11 @@ it.each(["canonical_lineage_id", "runtime_lineage_id"] as const)(
   projectStorageIntegrationTimeout,
 );
 
-const foreignConflictRequest = ProjectStorageCreateRequestSchema.parse({
+const foreignConflictRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000020",
   createRequestId: createRequest.createRequestId,
 });
-const differentCreateRequest = ProjectStorageCreateRequestSchema.parse({
+const differentCreateRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: createRequest.projectId,
   createRequestId: "00000000-0000-4000-8000-000000000099",
 });
@@ -989,7 +990,7 @@ it.each(["format_version", "schema_version"] as const)(
 
 async function seedOrphanLocation(input: { root: string }): Promise<string> {
   const initializer = await createStorageRuntimeForRoot(input.root);
-  const initializerRequest = ProjectStorageCreateRequestSchema.parse({
+  const initializerRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId: "00000000-0000-4000-8000-000000000050",
     createRequestId: "00000000-0000-4000-8000-000000000051",
   });
@@ -1030,14 +1031,19 @@ function createCountingStorageOwner(input: { root: string }) {
       migrationResourcesRoot: checkedInMigrationRoot,
       applicationVersion: "0.0.0",
       ids: {
-        storageId: () => allocate(StorageIdSchema.parse("00000000-0000-4000-8000-000000000071")),
+        storageId: () =>
+          allocate(decodeStrict(StorageIdSchema, "00000000-0000-4000-8000-000000000071")),
         locationId: () => allocate("00000000-0000-4000-8000-000000000072"),
         generationId: () =>
-          allocate(StorageGenerationIdSchema.parse("00000000-0000-4000-8000-000000000073")),
+          allocate(decodeStrict(StorageGenerationIdSchema, "00000000-0000-4000-8000-000000000073")),
         canonicalLineageId: () =>
-          allocate(CanonicalDatabaseLineageIdSchema.parse("00000000-0000-4000-8000-000000000074")),
+          allocate(
+            decodeStrict(CanonicalDatabaseLineageIdSchema, "00000000-0000-4000-8000-000000000074"),
+          ),
         runtimeLineageId: () =>
-          allocate(RuntimeDatabaseLineageIdSchema.parse("00000000-0000-4000-8000-000000000075")),
+          allocate(
+            decodeStrict(RuntimeDatabaseLineageIdSchema, "00000000-0000-4000-8000-000000000075"),
+          ),
       },
     }),
   );

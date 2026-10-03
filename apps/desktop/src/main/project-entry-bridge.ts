@@ -10,6 +10,7 @@ import {
   createProjectListCommand,
   createProjectSwitchCommand,
   type DesktopMessage,
+  decodeStrict,
   type HarnessMessage,
   ProjectListResultSchema,
 } from "@slopstop/protocol";
@@ -79,13 +80,13 @@ export function createProjectEntryBridge(options: {
       request(
         () => createProjectListCommand(metadata()),
         "project.list.result",
-        (value) => ProjectListResultSchema.parse(value),
+        (value) => decodeStrict(ProjectListResultSchema, value),
         () => ({ status: "broken" as const, code: "PROJECT_LIST_TRANSPORT_FAILED" as const }),
       ),
     activate: (input: CanonicalProjectActivationRequest) => {
-      const inputRequest = CanonicalProjectActivationRequestSchema.parse(input);
+      const inputRequest = decodeStrict(CanonicalProjectActivationRequestSchema, input);
       const broken = () =>
-        CanonicalProjectActivationResultSchema.parse({
+        decodeStrict(CanonicalProjectActivationResultSchema, {
           status: "unavailable",
           request: inputRequest,
           diagnostic: {
@@ -98,7 +99,7 @@ export function createProjectEntryBridge(options: {
         () => createProjectActivateCommand(metadata(), inputRequest),
         "project.activate.result",
         (value) => {
-          const result = CanonicalProjectActivationResultSchema.parse(value);
+          const result = decodeStrict(CanonicalProjectActivationResultSchema, value);
           if (!isDeepStrictEqual(result.request, inputRequest))
             throw new Error("Mismatched activation");
           return result;
@@ -107,9 +108,9 @@ export function createProjectEntryBridge(options: {
       );
     },
     switchProject: (input: CanonicalProjectSwitchRequest) => {
-      const inputRequest = CanonicalProjectSwitchRequestSchema.parse(input);
+      const inputRequest = decodeStrict(CanonicalProjectSwitchRequestSchema, input);
       const broken = () =>
-        CanonicalProjectSwitchResultSchema.parse({
+        decodeStrict(CanonicalProjectSwitchResultSchema, {
           status: "coordinator-unavailable",
           request: inputRequest,
           diagnostic: {
@@ -122,7 +123,7 @@ export function createProjectEntryBridge(options: {
         () => createProjectSwitchCommand(metadata(), inputRequest),
         "project.switch.result",
         (value) => {
-          const result = CanonicalProjectSwitchResultSchema.parse(value);
+          const result = decodeStrict(CanonicalProjectSwitchResultSchema, value);
           if (!isDeepStrictEqual(result.request, inputRequest))
             throw new Error("Mismatched switch");
           return result;

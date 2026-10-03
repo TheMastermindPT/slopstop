@@ -1,5 +1,6 @@
 import { copyFile, rename } from "node:fs/promises";
 import path from "node:path";
+import { decodeStrict } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { PreparedGitVersionSchema } from "../../src/project-registration-observer.js";
 import { IdentityQueryConsentRequestSchema } from "../../src/registration/identity-query-consent.js";
@@ -89,10 +90,11 @@ export function defineIdentityConsentCases(createRoot: (prefix: string) => Promi
   it("retains an explicit identity-query refusal as cancellation after restart", async () => {
     const root = await createRoot("pc-s1-stage2-decline-");
     const scenario = await createRegistryVersionScenario(root, createWindowsVersionChild(root));
-    const version = PreparedGitVersionSchema.parse(
+    const version = decodeStrict(
+      PreparedGitVersionSchema,
       await scenario.observer.inspectGitVersion(scenario.request),
     );
-    const request = IdentityQueryConsentRequestSchema.parse({
+    const request = decodeStrict(IdentityQueryConsentRequestSchema, {
       selectionId: version.selectionId,
       observationId: version.observationId,
       consentId: "6ec89261-8044-4fe9-a60d-6d0c82a6a723",
@@ -122,12 +124,13 @@ export function defineIdentityConsentCases(createRoot: (prefix: string) => Promi
     const scenario = await createRegistryVersionScenario(root, createWindowsVersionChild(root));
     const table = "registration_identity_consents";
     let before: ReturnType<typeof readDecisionRows>;
-    let request: ReturnType<typeof IdentityQueryConsentRequestSchema.parse>;
+    let request: typeof IdentityQueryConsentRequestSchema.Type;
     try {
-      const version = PreparedGitVersionSchema.parse(
+      const version = decodeStrict(
+        PreparedGitVersionSchema,
         await scenario.observer.inspectGitVersion(scenario.request),
       );
-      request = IdentityQueryConsentRequestSchema.parse({
+      request = decodeStrict(IdentityQueryConsentRequestSchema, {
         selectionId: version.selectionId,
         observationId: version.observationId,
         consentId: "232c0a25-7f9a-41e1-8fce-a22c02effa45",
@@ -177,10 +180,11 @@ export function defineIdentityConsentCases(createRoot: (prefix: string) => Promi
   it("persists separate identity-query consent after real version observation and restart", async () => {
     const root = await createRoot("pc-s1-stage2-");
     const scenario = await createRegistryVersionScenario(root, createWindowsVersionChild(root));
-    const version = PreparedGitVersionSchema.parse(
+    const version = decodeStrict(
+      PreparedGitVersionSchema,
       await scenario.observer.inspectGitVersion(scenario.request),
     );
-    const request = IdentityQueryConsentRequestSchema.parse({
+    const request = decodeStrict(IdentityQueryConsentRequestSchema, {
       selectionId: version.selectionId,
       observationId: version.observationId,
       consentId: "2ecbf5a1-ac3e-478e-b7f7-3e9b15924ae3",

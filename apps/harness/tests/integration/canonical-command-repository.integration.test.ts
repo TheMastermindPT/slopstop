@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { ProjectIdSchema } from "@slopstop/protocol";
+import { decodeStrict, ProjectIdSchema } from "@slopstop/protocol";
 import { assert, expect, it } from "vitest";
 import {
   type CanonicalCommandDecision,
@@ -630,7 +630,7 @@ it("fails closed on broken original idempotency authority: G6 stored type preced
 
 it("canonicalizes submitted command content without changing its meaning: G6 other Project cannot alias original", async () => {
   const f = await createSettlementFixture();
-  const other = ProjectIdSchema.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
+  const other = decodeStrict(ProjectIdSchema, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
   const aggregate = "55555555-5555-4555-8555-555555555501";
   const t0 = "2026-09-05T12:00:00.000Z";
   try {
@@ -1409,7 +1409,7 @@ it.each([2, 0])(
       const registry = createCanonicalCommandRegistry([
         createConformanceCounterCommand(async (context) => {
           const decision = await applyCounter(context);
-          if (decision.outcome === "applied") decision.events.length = eventCount;
+          if (decision.outcome === "applied") Reflect.set(decision.events, "length", eventCount);
           return decision;
         }),
       ]);
@@ -1479,7 +1479,7 @@ it("freezes submission meaning before asynchronous repository work: handler payl
   const f = await createSettlementFixture();
   try {
     registerCounter(f, (context) => {
-      context.payload.value = 9;
+      Reflect.set(context.payload, "value", 9);
       return applyCounter(context);
     });
     await expect(f.repository.settle(settlementText)).resolves.toEqual({

@@ -1,6 +1,8 @@
+import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
+import { decodeWithIssues, type IssueDetail } from "./decode-with-issues.test-support.js";
 import * as protocol from "./index.js";
+import { decodeStrict } from "./schema-codec.js";
 
 const projectId = "00000000-0000-4000-8000-000000000010";
 const activationId = "00000000-0000-4000-8000-000000000011";
@@ -31,33 +33,31 @@ const commandRequest = {
   command: { commandId, type: "fixture.noop", version: 1, payload: {} },
 };
 
-function schema(name: string): z.ZodType {
+type PublicSchema = Schema.Decoder<unknown>;
+
+function isPublicSchema(value: unknown): value is PublicSchema {
+  return Schema.isSchema(value);
+}
+
+function schema(name: string): PublicSchema {
   const value: unknown = Reflect.get(protocol, name);
-  expect(value, name).toBeInstanceOf(z.ZodType);
-  if (!(value instanceof z.ZodType)) throw new Error("Expected a public canonical schema.");
+  expect(Schema.isSchema(value), name).toBe(true);
+  if (!isPublicSchema(value)) throw new Error("Expected a public canonical schema.");
   return value;
 }
 
-function leafIssues(
-  issues: readonly z.core.$ZodIssue[],
-  prefix: PropertyKey[] = [],
-): { path: PropertyKey[]; code: string; keys?: string[] }[] {
-  return issues.flatMap((issue) => {
-    const path = [...prefix, ...issue.path];
-    if (issue.code === "invalid_union")
-      return issue.errors.flatMap((branch) => leafIssues(branch, path));
-    return [
-      {
-        path,
-        code: issue.code,
-        ...(issue.code === "unrecognized_keys" ? { keys: issue.keys } : {}),
-      },
-    ];
-  });
+// Test support already expands union failures into their member leaf issues.
+function leafIssues(issues: readonly IssueDetail[]): readonly IssueDetail[] {
+  return issues;
 }
 
-function rejectsField(target: z.ZodType, value: unknown, path: PropertyKey[], code?: string): void {
-  const parsed = target.safeParse(value);
+function rejectsField(
+  target: PublicSchema,
+  value: unknown,
+  path: PropertyKey[],
+  code?: string,
+): void {
+  const parsed = decodeWithIssues(target, value);
   expect(parsed.success).toBe(false);
   if (parsed.success) throw new Error("Expected invalid canonical input.");
   expect(leafIssues(parsed.error.issues)).toContainEqual(
@@ -65,7 +65,7 @@ function rejectsField(target: z.ZodType, value: unknown, path: PropertyKey[], co
   );
 }
 
-function commandInvalidCases(target: z.ZodType): void {
+function commandInvalidCases(target: PublicSchema): void {
   for (const version of [0, 0.5, 9007199254740992])
     rejectsField(target, { ...commandRequest, command: { ...commandRequest.command, version } }, [
       "command",
@@ -107,11 +107,11 @@ const outcomes = [
   ["coordinator-unavailable", "PROJECT_COORDINATOR_UNAVAILABLE", false],
 ] as const;
 
-function assertPrivateKeysRejected(target: z.ZodType, values: readonly object[]): void {
+function assertPrivateKeysRejected(target: PublicSchema, values: readonly object[]): void {
   for (const value of values) {
-    expect(target.parse(value)).toEqual(value);
+    expect(decodeStrict(target, value)).toEqual(value);
     for (const key of ["writerToken", "tokenDigest", "canonicalDatabasePath", "writerLeasePath"]) {
-      const parsed = target.safeParse({ ...value, [key]: "private" });
+      const parsed = decodeWithIssues(target, { ...value, [key]: "private" });
       expect(parsed.success).toBe(false);
       if (parsed.success) throw new Error("Private field was accepted.");
       expect(leafIssues(parsed.error.issues)).toContainEqual({
@@ -180,8 +180,8 @@ function activationOutcomes(): object[] {
 it("parses canonical Project activation and command protocol branches", () => {
   const activation = schema("CanonicalProjectActivationResultSchema");
   const command = schema("CanonicalProjectCommandRequestSchema");
-  expect(schema("CanonicalProjectActivationRequestSchema").parse(request)).toEqual(request);
-  expect(command.parse(commandRequest)).toEqual(commandRequest);
+  expect(decodeStrict(schema("CanonicalProjectActivationRequestSchema"), request)).toEqual(request);
+  expect(decodeStrict(command, commandRequest)).toEqual(commandRequest);
   assertPrivateKeysRejected(activation, activationOutcomes());
   for (const writerGeneration of [0, 0.5, 9007199254740992])
     rejectsField(activation, { ...writable, writerGeneration }, ["writerGeneration"]);
@@ -247,7 +247,7 @@ describe.each([
   { name: "A to A", value: { ...switchRequest, to: { projectId: sourceProjectId } } },
 ])("$name", ({ value }) => {
   it("parses only strict source-qualified switch requests", () => {
-    expect(schema("CanonicalProjectSwitchRequestSchema").parse(value)).toEqual(value);
+    expect(decodeStrict(schema("CanonicalProjectSwitchRequestSchema"), value)).toEqual(value);
   });
 });
 
@@ -265,7 +265,8 @@ describe.each([
   ),
 ])("invalid switch request $path / $key = $value", ({ path, key, value }) => {
   it("parses only strict source-qualified switch requests", () => {
-    const parsed = schema("CanonicalProjectSwitchRequestSchema").safeParse(
+    const parsed = decodeWithIssues(
+      schema("CanonicalProjectSwitchRequestSchema"),
       changedField(switchRequest, path, key, value),
     );
     expect(parsed.success).toBe(false);
@@ -404,7 +405,11 @@ const switchFailures = [
   diagnostic: { code, message, retryable },
 }));
 
-function rejectsSwitchExtras(target: z.ZodType, value: object, paths: readonly string[][]): void {
+function rejectsSwitchExtras(
+  target: PublicSchema,
+  value: object,
+  paths: readonly string[][],
+): void {
   for (const path of paths) {
     for (const key of [
       "extra",
@@ -418,17 +423,22 @@ function rejectsSwitchExtras(target: z.ZodType, value: object, paths: readonly s
       rejectsField(target, changedField(value, path, key, true), path, "unrecognized_keys");
     }
   }
-  expect(target.safeParse(changedField(value, [], "request", undefined)).success).toBe(false);
-  expect(target.safeParse(changedField(value, [], "status", "switched")).success).toBe(false);
+  expect(decodeWithIssues(target, changedField(value, [], "request", undefined)).success).toBe(
+    false,
+  );
+  expect(decodeWithIssues(target, changedField(value, [], "status", "switched")).success).toBe(
+    false,
+  );
 }
 
 describe.each(switchTargets)("switch target $name", ({ value }) => {
   it("validates switch result branches and destination correlation", () => {
     const target = schema("CanonicalProjectSwitchResultSchema");
     const result = { status: "target-result", request: switchRequest, target: value };
-    expect(target.parse(result)).toEqual(result);
+    expect(decodeStrict(target, result)).toEqual(result);
     for (const projectId of [sourceProjectId, otherProjectId]) {
-      const parsed = target.safeParse(
+      const parsed = decodeWithIssues(
+        target,
         changedField(result, ["target", "request"], "projectId", projectId),
       );
       expect(parsed.success).toBe(false);
@@ -479,17 +489,18 @@ describe.each(
       "retryable",
       !diagnostic.retryable,
     );
-    if (name === "B_RO") expect(target.safeParse(flipped).success).toBe(false);
-    else expect(target.parse(flipped)).toEqual(flipped);
+    if (name === "B_RO") expect(decodeWithIssues(target, flipped).success).toBe(false);
+    else expect(decodeStrict(target, flipped)).toEqual(flipped);
   });
 });
 
 describe.each(switchFailures)("switch failure $status/$diagnostic.code", (result) => {
   it("validates switch result branches and destination correlation", () => {
     const target = schema("CanonicalProjectSwitchResultSchema");
-    expect(target.parse(result)).toEqual(result);
+    expect(decodeStrict(target, result)).toEqual(result);
     expect(
-      target.safeParse(
+      decodeWithIssues(
+        target,
         changedField(result, ["diagnostic"], "retryable", !result.diagnostic.retryable),
       ).success,
     ).toBe(false);
@@ -497,11 +508,13 @@ describe.each(switchFailures)("switch failure $status/$diagnostic.code", (result
       .filter(({ status }) => status !== result.status)
       .map(({ diagnostic }) => diagnostic.code);
     for (const code of [...wrongCodes, "WRITER_UNKNOWN"]) {
-      expect(target.safeParse(changedField(result, ["diagnostic"], "code", code)).success).toBe(
-        false,
-      );
+      expect(
+        decodeWithIssues(target, changedField(result, ["diagnostic"], "code", code)).success,
+      ).toBe(false);
     }
-    expect(target.safeParse({ ...result, target: writableSwitchTarget }).success).toBe(false);
+    expect(decodeWithIssues(target, { ...result, target: writableSwitchTarget }).success).toBe(
+      false,
+    );
     rejectsSwitchExtras(target, result, [
       [],
       ["request"],
@@ -517,7 +530,10 @@ describe("S5 finite JSON payloads", () => {
     const payload: unknown = JSON.parse(
       '{"__proto__":{"x":1},"10":10,"2":2,"text":"  e\\u0301  ","n":-0}',
     );
-    const parsed = protocol.TypedCommandSchema.parse({ ...commandRequest.command, payload });
+    const parsed = decodeStrict(protocol.TypedCommandSchema, {
+      ...commandRequest.command,
+      payload,
+    });
     expect(parsed.payload).toEqual(payload);
     if (parsed.payload === null || typeof parsed.payload !== "object") {
       throw new Error("Expected an object payload.");
@@ -531,7 +547,7 @@ describe("S5 finite JSON payloads", () => {
     "preserves finite JSON edge values without prototype assignment: valid %j",
     (payload) => {
       expect(
-        protocol.TypedCommandSchema.parse({ ...commandRequest.command, payload }).payload,
+        decodeStrict(protocol.TypedCommandSchema, { ...commandRequest.command, payload }).payload,
       ).toEqual(payload);
     },
   );
@@ -540,7 +556,7 @@ describe("S5 finite JSON payloads", () => {
     const shared = { n: 1 };
     const payload = { left: shared, right: shared };
     expect(
-      protocol.TypedCommandSchema.parse({ ...commandRequest.command, payload }).payload,
+      decodeStrict(protocol.TypedCommandSchema, { ...commandRequest.command, payload }).payload,
     ).toEqual({ left: { n: 1 }, right: { n: 1 } });
   });
 
@@ -550,7 +566,8 @@ describe("S5 finite JSON payloads", () => {
       const payload: object = JSON.parse('{"__proto__":null}');
       Reflect.set(payload, "__proto__", value);
       expect(
-        protocol.TypedCommandSchema.safeParse({ ...commandRequest.command, payload }).success,
+        decodeWithIssues(protocol.TypedCommandSchema, { ...commandRequest.command, payload })
+          .success,
       ).toBe(false);
     },
   );
@@ -584,7 +601,7 @@ describe("S5 finite JSON payloads", () => {
     "preserves finite JSON edge values without prototype assignment: rejects $name",
     ({ make }) => {
       expect(
-        protocol.TypedCommandSchema.safeParse({
+        decodeWithIssues(protocol.TypedCommandSchema, {
           ...commandRequest.command,
           payload: make(),
         }).success,
@@ -662,22 +679,24 @@ describe("S5 G2 receipt protocol", () => {
   it.each([appliedReceipt, unchangedReceipt, rejectedReceipt])(
     "validates settled receipts and new non-durable result branches: exact $outcome",
     (receipt) => {
-      expect(schema("CanonicalCommandReceiptSchema").parse(receipt)).toEqual(receipt);
+      expect(decodeStrict(schema("CanonicalCommandReceiptSchema"), receipt)).toEqual(receipt);
       const result = { ...settledResult, commandId: receipt.commandId, receipt };
-      expect(protocol.CanonicalProjectCommandResultSchema.parse(result)).toEqual(result);
+      expect(decodeStrict(protocol.CanonicalProjectCommandResultSchema, result)).toEqual(result);
     },
   );
 
   it("validates settled receipts and new non-durable result branches: old receipt under new epoch", () => {
     const result = { ...settledResult, activationId: "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2" };
-    expect(protocol.CanonicalProjectCommandResultSchema.parse(result)).toEqual(result);
+    expect(decodeStrict(protocol.CanonicalProjectCommandResultSchema, result)).toEqual(result);
   });
 
   it.each(["projectId", "commandId"])(
     "validates settled receipts and new non-durable result branches: correlation %s",
     (key) => {
       const result = changedField(settledResult, ["receipt"], key, otherProjectId);
-      expect(protocol.CanonicalProjectCommandResultSchema.safeParse(result).success).toBe(false);
+      expect(decodeWithIssues(protocol.CanonicalProjectCommandResultSchema, result).success).toBe(
+        false,
+      );
     },
   );
 
@@ -691,7 +710,7 @@ describe("S5 G2 receipt protocol", () => {
         commandId: appliedReceipt.commandId,
         diagnostic: { code, message, retryable },
       };
-      expect(protocol.CanonicalProjectCommandResultSchema.parse(result)).toEqual(result);
+      expect(decodeStrict(protocol.CanonicalProjectCommandResultSchema, result)).toEqual(result);
     },
   );
 
@@ -718,7 +737,9 @@ describe("S5 G2 receipt protocol", () => {
         { ...result, diagnostic: { ...result.diagnostic, [key]: "private" } },
       ]),
     ])("rejects invalid non-durable variant %#", (invalid) => {
-      expect(protocol.CanonicalProjectCommandResultSchema.safeParse(invalid).success).toBe(false);
+      expect(decodeWithIssues(protocol.CanonicalProjectCommandResultSchema, invalid).success).toBe(
+        false,
+      );
     });
   });
 
@@ -740,7 +761,7 @@ describe("S5 G2 receipt protocol", () => {
       });
       it("preserves the maximum safe integer", () => {
         const value = { ...appliedReceipt, [key]: Number.MAX_SAFE_INTEGER };
-        expect(schema("CanonicalCommandReceiptSchema").parse(value)).toEqual(value);
+        expect(decodeStrict(schema("CanonicalCommandReceiptSchema"), value)).toEqual(value);
       });
     },
   );
@@ -775,7 +796,8 @@ describe("S5 G2 receipt protocol", () => {
     })),
   ])("rejects event references: $name", ({ events }) => {
     expect(
-      schema("CanonicalCommandReceiptSchema").safeParse({ ...appliedReceipt, events }).success,
+      decodeWithIssues(schema("CanonicalCommandReceiptSchema"), { ...appliedReceipt, events })
+        .success,
     ).toBe(false);
   });
 
@@ -788,7 +810,7 @@ describe("S5 G2 receipt protocol", () => {
     { ...rejectedReceipt, rejection: { code: "A", retryable: false } },
     { ...rejectedReceipt, rejection: { code: `A${"_".repeat(63)}`, retryable: false } },
   ])("preserves valid receipt variant %#", (receipt) => {
-    expect(schema("CanonicalCommandReceiptSchema").parse(receipt)).toEqual(receipt);
+    expect(decodeStrict(schema("CanonicalCommandReceiptSchema"), receipt)).toEqual(receipt);
   });
 
   it.each([
@@ -808,7 +830,7 @@ describe("S5 G2 receipt protocol", () => {
     { ...rejectedReceipt, rejection: { code: "COUNTER_POLICY_REJECTED" } },
     { ...rejectedReceipt, rejection: { code: "COUNTER_POLICY_REJECTED", retryable: "false" } },
   ])("rejects mutually exclusive receipt/rejection variant %#", (receipt) => {
-    expect(schema("CanonicalCommandReceiptSchema").safeParse(receipt).success).toBe(false);
+    expect(decodeWithIssues(schema("CanonicalCommandReceiptSchema"), receipt).success).toBe(false);
   });
 
   describe.each(privateReceiptKeys)("private field %s", (key) => {
@@ -840,11 +862,13 @@ describe("S5 G2 receipt protocol", () => {
         },
       },
     ])("rejects $name without stripping", ({ value }) => {
-      expect(protocol.CanonicalProjectCommandResultSchema.safeParse(value).success).toBe(false);
+      expect(decodeWithIssues(protocol.CanonicalProjectCommandResultSchema, value).success).toBe(
+        false,
+      );
       if (value.receipt !== appliedReceipt) {
-        expect(schema("CanonicalCommandReceiptSchema").safeParse(value.receipt).success).toBe(
-          false,
-        );
+        expect(
+          decodeWithIssues(schema("CanonicalCommandReceiptSchema"), value.receipt).success,
+        ).toBe(false);
       }
     });
   });
@@ -852,7 +876,7 @@ describe("S5 G2 receipt protocol", () => {
   it.each([appliedReceipt, unchangedReceipt, rejectedReceipt])(
     "freezes $outcome receipt and every nested property",
     (receipt) => {
-      const parsed: unknown = schema("CanonicalCommandReceiptSchema").parse(receipt);
+      const parsed: unknown = decodeStrict(schema("CanonicalCommandReceiptSchema"), receipt);
       if (typeof parsed !== "object" || parsed === null)
         throw new Error("Expected receipt object.");
       expect(Object.isFrozen(parsed)).toBe(true);
@@ -879,9 +903,9 @@ describe("S5 G2 receipt protocol", () => {
   it.each(["2026-09-05T12:00:00Z", "2026-09-05T12:00:00.123Z", "2026-09-05T12:00:00.123456Z"])(
     "requires seconds in settlement clocks and persisted receipt instants: preserves %s",
     (settledAt) => {
-      expect(schema("CanonicalSettlementTimeSchema").parse(settledAt)).toBe(settledAt);
+      expect(decodeStrict(schema("CanonicalSettlementTimeSchema"), settledAt)).toBe(settledAt);
       const receipt = { ...appliedReceipt, settledAt };
-      expect(schema("CanonicalCommandReceiptSchema").parse(receipt)).toEqual(receipt);
+      expect(decodeStrict(schema("CanonicalCommandReceiptSchema"), receipt)).toEqual(receipt);
     },
   );
   it.each([
@@ -893,7 +917,9 @@ describe("S5 G2 receipt protocol", () => {
   ])(
     "requires seconds in settlement clocks and persisted receipt instants: rejects %s",
     (settledAt) => {
-      expect(schema("CanonicalSettlementTimeSchema").safeParse(settledAt).success).toBe(false);
+      expect(decodeWithIssues(schema("CanonicalSettlementTimeSchema"), settledAt).success).toBe(
+        false,
+      );
       rejectsField(schema("CanonicalCommandReceiptSchema"), { ...appliedReceipt, settledAt }, [
         "settledAt",
       ]);

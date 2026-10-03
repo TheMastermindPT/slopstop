@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstat, mkdir, readFile as readNodeFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { StorageGenerationIdSchema } from "@slopstop/protocol";
+import { decodeStrict, StorageGenerationIdSchema } from "@slopstop/protocol";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
 import {
   assertStagingPath,
@@ -139,7 +139,7 @@ function requireAtomicRenameShape(input: { source: string; destination: string }
   if (!renameAgrees) {
     throw new ProjectStorageBrokenError("Project Storage rename must stay on one filesystem.");
   }
-  StorageGenerationIdSchema.parse(path.basename(input.destination));
+  decodeStrict(StorageGenerationIdSchema, path.basename(input.destination));
 }
 
 async function renameAtomic(input: { source: string; destination: string }): Promise<void> {

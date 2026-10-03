@@ -1,6 +1,7 @@
 import {
   CanonicalProjectActivationResultSchema,
   CanonicalProjectSwitchResultSchema,
+  decodeStrict,
   type HarnessStatus,
   ProjectListResultSchema,
 } from "@slopstop/protocol";
@@ -78,7 +79,7 @@ describe("desktop shell", () => {
         retryHarness: async () => ({ ok: true }),
         subscribeHarnessStatus: () => () => {},
         listProjects: async () =>
-          ProjectListResultSchema.parse({
+          decodeStrict(ProjectListResultSchema, {
             status: "listed",
             projects: [
               {
@@ -99,7 +100,7 @@ describe("desktop shell", () => {
             ],
           }),
         activateProject: async (request) =>
-          CanonicalProjectActivationResultSchema.parse({
+          decodeStrict(CanonicalProjectActivationResultSchema, {
             status: "safe-mode",
             request,
             identity: {
@@ -150,7 +151,7 @@ describe("desktop shell", () => {
         listProjects: async () => {
           const projectId = ++listing === 1 ? oldId : newId;
           if (projectId === oldId && deferred === "list") await gate;
-          return ProjectListResultSchema.parse({
+          return decodeStrict(ProjectListResultSchema, {
             status: "listed",
             projects: [
               {
@@ -167,7 +168,7 @@ describe("desktop shell", () => {
         },
         activateProject: async (request) => {
           if (request.projectId === oldId) await gate;
-          return CanonicalProjectActivationResultSchema.parse({
+          return decodeStrict(CanonicalProjectActivationResultSchema, {
             status: "active",
             request,
             access: "read-write",
@@ -216,7 +217,7 @@ describe("desktop shell", () => {
       retryHarness: async () => ({ ok: true }),
       subscribeHarnessStatus: () => () => {},
       listProjects: async () =>
-        ProjectListResultSchema.parse({
+        decodeStrict(ProjectListResultSchema, {
           status: "listed",
           projects: [first, second].map((projectId) => ({
             registration: "registered",
@@ -229,7 +230,7 @@ describe("desktop shell", () => {
           })),
         }),
       activateProject: async (request) =>
-        CanonicalProjectActivationResultSchema.parse({
+        decodeStrict(CanonicalProjectActivationResultSchema, {
           status: "active",
           request,
           access: "read-write",
@@ -237,7 +238,7 @@ describe("desktop shell", () => {
           writerGeneration: 1,
         }),
       switchProject: async (request) =>
-        CanonicalProjectSwitchResultSchema.parse({
+        decodeStrict(CanonicalProjectSwitchResultSchema, {
           status: "target-result",
           sourceReleased: false,
           request,
@@ -272,7 +273,7 @@ describe("desktop shell", () => {
       retryHarness: async () => ({ ok: true }),
       subscribeHarnessStatus: () => () => {},
       listProjects: async () =>
-        ProjectListResultSchema.parse({
+        decodeStrict(ProjectListResultSchema, {
           status: "listed",
           projects: [
             {
@@ -288,7 +289,7 @@ describe("desktop shell", () => {
         }),
       activateProject: async (request) => {
         await gate;
-        return CanonicalProjectActivationResultSchema.parse({
+        return decodeStrict(CanonicalProjectActivationResultSchema, {
           status: "active",
           request,
           access: "read-only",

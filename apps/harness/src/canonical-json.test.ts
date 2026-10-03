@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
 import {
   CanonicalProjectCommandRequestSchema,
+  decodeStrict,
   ProjectIdSchema,
   TypedCommandSchema,
 } from "@slopstop/protocol";
+import { Schema } from "effect";
 import { expect, it } from "vitest";
-import { z } from "zod";
 import {
   canonicalJsonText,
   hashCanonicalJson,
@@ -57,8 +58,8 @@ it("canonicalizes submitted command content without changing its meaning: recurs
 it.each([NaN, Infinity, -Infinity, undefined, 1n, Symbol("invalid"), () => 1, new Date()])(
   "preserves finite JSON edge values without prototype assignment: invalid direct value %s",
   (value) => {
-    expect(() => canonicalJsonText(value)).toThrow(z.ZodError);
-    expect(() => canonicalJsonText({ nested: value })).toThrow(z.ZodError);
+    expect(() => canonicalJsonText(value)).toThrow(Schema.SchemaError);
+    expect(() => canonicalJsonText({ nested: value })).toThrow(Schema.SchemaError);
   },
 );
 
@@ -76,7 +77,7 @@ const fingerprintText =
   '{"commandId":"44444444-4444-4444-8444-444444444501","fingerprintVersion":1,"payload":{"meta":{"a":1,"b":2},"tags":["x","y"],"value":7},"projectId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1","type":"conformance.counter.set","version":1}';
 
 it("freezes submission meaning before asynchronous repository work: synchronous snapshot", () => {
-  const input = CanonicalProjectCommandRequestSchema.parse(structuredClone(submitted));
+  const input = decodeStrict(CanonicalProjectCommandRequestSchema, structuredClone(submitted));
   const text = snapshotCanonicalCommand(input.projectId, input.command);
   Reflect.set(input.command, "commandId", "44444444-4444-4444-8444-444444444502");
   Reflect.set(input.command, "type", "conformance.counter.other");
@@ -124,8 +125,8 @@ it.each([
   "canonicalizes submitted command content without changing its meaning: fingerprint $field",
   ({ command, text }) => {
     const actual = snapshotCanonicalCommand(
-      ProjectIdSchema.parse(submitted.projectId),
-      TypedCommandSchema.parse(command),
+      decodeStrict(ProjectIdSchema, submitted.projectId),
+      decodeStrict(TypedCommandSchema, command),
     );
     expect(actual).toBe(text);
     expect(hashCanonicalJson(readCanonicalCommandSnapshot(actual))).toBe(
@@ -136,23 +137,23 @@ it.each([
 );
 
 it("canonicalizes submitted command content without changing its meaning: Project versus epoch", () => {
-  const first = CanonicalProjectCommandRequestSchema.parse(submitted);
-  const second = CanonicalProjectCommandRequestSchema.parse({
+  const first = decodeStrict(CanonicalProjectCommandRequestSchema, submitted);
+  const second = decodeStrict(CanonicalProjectCommandRequestSchema, {
     ...submitted,
     activationId: "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
   });
   expect(snapshotCanonicalCommand(first.projectId, first.command)).toBe(fingerprintText);
   expect(snapshotCanonicalCommand(second.projectId, second.command)).toBe(fingerprintText);
-  const otherProject = ProjectIdSchema.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
+  const otherProject = decodeStrict(ProjectIdSchema, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
   expect(snapshotCanonicalCommand(otherProject, first.command)).toBe(
     fingerprintText.replace(submitted.projectId, otherProject),
   );
 });
 
 it("canonicalizes submitted command content without changing its meaning: raw omitted tags", () => {
-  const project = ProjectIdSchema.parse(submitted.projectId);
-  const base = TypedCommandSchema.parse({ ...submitted.command, payload: { value: 7 } });
-  const explicit = TypedCommandSchema.parse({
+  const project = decodeStrict(ProjectIdSchema, submitted.projectId);
+  const base = decodeStrict(TypedCommandSchema, { ...submitted.command, payload: { value: 7 } });
+  const explicit = decodeStrict(TypedCommandSchema, {
     ...submitted.command,
     payload: { value: 7, tags: [] },
   });

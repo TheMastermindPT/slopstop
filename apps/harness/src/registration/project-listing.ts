@@ -1,11 +1,13 @@
 import {
+  decodeStrict,
+  decodeStrictResult,
   ProjectIdSchema,
   ProjectListEntrySchema,
   ProjectListSchema,
   ProjectStorageCloseResultSchema,
   ProjectStorageOpenResultSchema,
 } from "@slopstop/protocol";
-import { z } from "zod";
+import { Result, Schema } from "effect";
 import { createNodeProjectStorageDependencies } from "../storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../storage/project-storage-store.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
@@ -16,11 +18,14 @@ import {
   readProjectRegistrationRecords,
 } from "./registration-confirmation-store.js";
 import {
+  applicationDatabaseFor,
   type RegistrationDatabaseOptions,
   registryRows,
   withRegistrationDatabase,
 } from "./registry-database.js";
 import { RegistryFault, registryFailure } from "./registry-failure.js";
+
+const storedProjectRowsSchema = Schema.Array(Schema.Struct({ projectId: ProjectIdSchema }));
 
 async function location(reservation: Reservation) {
   const result = await observeRepositoryDirectory(
@@ -45,7 +50,7 @@ async function inspectStorageHealth(
     return { status: "broken" as const, code: "PROJECT_STORAGE_OWNER_FAILED" as const };
   if (opened.status === "unavailable")
     return { status: "unavailable" as const, code: "PROJECT_STORAGE_UNAVAILABLE" as const };
-  const result = ProjectStorageOpenResultSchema.parse(opened.result);
+  const result = decodeStrict(ProjectStorageOpenResultSchema, opened.result);
   if (result.status === "opened")
     return {
       status: "healthy" as const,
@@ -74,7 +79,7 @@ async function storageHealth(
   const closed = await owner.close({ projectId });
   if (
     closed.status !== "ready" ||
-    ProjectStorageCloseResultSchema.parse(closed.result).status !== "closed"
+    decodeStrict(ProjectStorageCloseResultSchema, closed.result).status !== "closed"
   )
     throw new Error("Project listing storage release failed.");
   if (inspected.kind === "failed") throw inspected.error;
@@ -89,19 +94,17 @@ export async function listRegisteredProjects(
     const { records, storedProjects } = await withRegistrationDatabase(options, (client) =>
       withWriteTransaction(client, async (transaction) => {
         const records = await readProjectRegistrationRecords(transaction);
-        const stored = z
-          .strictObject({ projectId: ProjectIdSchema })
-          .array()
-          .safeParse(
-            registryRows(
-              await transaction.execute(
-                "SELECT project_id AS projectId FROM storage_registrations ORDER BY project_id",
-              ),
+        const stored = decodeStrictResult(
+          storedProjectRowsSchema,
+          registryRows(
+            await transaction.execute(
+              "SELECT project_id AS projectId FROM storage_registrations ORDER BY project_id",
             ),
-          );
-        if (!stored.success)
+          ),
+        );
+        if (Result.isFailure(stored))
           throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-        return { records, storedProjects: stored.data };
+        return { records, storedProjects: stored.success };
       }),
     );
     const owner = createProjectStorageOwner(
@@ -109,6 +112,7 @@ export async function listRegisteredProjects(
         applicationStorageRoot: options.applicationStorageRoot,
         migrationResourcesRoot: options.migrationResourcesRoot,
         applicationVersion: options.applicationVersion,
+        applicationDatabase: applicationDatabaseFor(options),
       }),
     );
     const projects = [];
@@ -116,7 +120,7 @@ export async function listRegisteredProjects(
       for (const { reservation, publication } of records) {
         if (signal.aborted) return { status: "cancelled" } as const;
         projects.push(
-          ProjectListEntrySchema.parse({
+          decodeStrict(ProjectListEntrySchema, {
             registration: publication === undefined ? "incomplete" : "registered",
             ...(publication === undefined ? { code: "REGISTRATION_INCOMPLETE" } : {}),
             projectId: reservation.projectId,
@@ -133,7 +137,7 @@ export async function listRegisteredProjects(
         if (bound.has(projectId)) continue;
         if (signal.aborted) return { status: "cancelled" } as const;
         projects.push(
-          ProjectListEntrySchema.parse({
+          decodeStrict(ProjectListEntrySchema, {
             registration: "unbound",
             projectId,
             repositoryLocation: { status: "not-bound" },
@@ -147,7 +151,7 @@ export async function listRegisteredProjects(
     }
     if (signal.aborted) return { status: "cancelled" } as const;
     projects.sort((a, b) => (a.projectId < b.projectId ? -1 : a.projectId > b.projectId ? 1 : 0));
-    return ProjectListSchema.parse({ status: "listed", projects });
+    return decodeStrict(ProjectListSchema, { status: "listed", projects });
   } catch (error) {
     return registryFailure(error);
   }

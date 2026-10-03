@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { z } from "zod";
+import { decodeStrict, decodeStrictResult, UuidTextSchema } from "@slopstop/protocol";
+import { Result, Schema } from "effect";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { observeRepositoryDirectory } from "../storage/repository-identity-observer.js";
@@ -22,19 +23,26 @@ import {
 } from "./registry-database.js";
 import { RegistryFault, registryFailure } from "./registry-failure.js";
 
-const RepositorySelectionIdSchema = z.uuid().brand<"RepositorySelectionId">();
-export const RepositoryTrustRequestSchema = z.strictObject({
+const RepositorySelectionIdSchema = UuidTextSchema.pipe(Schema.brand("RepositorySelectionId"));
+export const RepositoryTrustRequestSchema = Schema.Struct({
   repositorySelectionId: RepositorySelectionIdSchema,
-  trustId: z.uuid().brand<"RepositoryTrustId">(),
+  trustId: UuidTextSchema.pipe(Schema.brand("RepositoryTrustId")),
 });
-export const RepositoryTrustDecisionSchema = RepositoryTrustRequestSchema.extend({
-  decision: z.enum(["accepted", "declined"]),
+const TrustDecisionValueSchema = Schema.Literals(["accepted", "declined"]);
+export const RepositoryTrustDecisionSchema = Schema.Struct({
+  ...RepositoryTrustRequestSchema.fields,
+  decision: TrustDecisionValueSchema,
 });
-export const RepositoryIdentityAdmissionRequestSchema = IdentityQueryConsentRequestSchema.extend(
-  RepositoryTrustRequestSchema.shape,
+export const RepositoryIdentityAdmissionRequestSchema = Schema.Struct({
+  ...IdentityQueryConsentRequestSchema.fields,
+  ...RepositoryTrustRequestSchema.fields,
+});
+type TrustDecision = typeof RepositoryTrustDecisionSchema.Type;
+type AdmissionRequest = typeof RepositoryIdentityAdmissionRequestSchema.Type;
+const trustDecisionRowsSchema = Schema.Array(RepositoryTrustDecisionSchema).check(
+  Schema.isMaxLength(1),
 );
-type TrustDecision = z.infer<typeof RepositoryTrustDecisionSchema>;
-type AdmissionRequest = z.infer<typeof RepositoryIdentityAdmissionRequestSchema>;
+const trustDecisionCellSchema = Schema.Tuple([Schema.Tuple([TrustDecisionValueSchema])]);
 type ExecutableAuthority = Awaited<
   ReturnType<IdentityQueryConsentAuthority["resolveIdentityQueries"]>
 >;
@@ -54,7 +62,7 @@ export interface RepositoryTrustOwner {
   selectRepository(): Promise<
     | Readonly<{
         status: "prepared";
-        repositorySelectionId: z.infer<typeof RepositorySelectionIdSchema>;
+        repositorySelectionId: typeof RepositorySelectionIdSchema.Type;
       }>
     | Readonly<{ status: "cancelled" }>
     | Failure
@@ -85,20 +93,24 @@ export interface IdentityQueryAdmissionPort {
 }
 
 const trustRequired = { status: "unavailable", code: "REPOSITORY_TRUST_REQUIRED" } as const;
-const selectionSchema = z.strictObject({ directory: z.string(), identityJson: z.string() });
+const selectionRowsSchema = Schema.Array(
+  Schema.Struct({ directory: Schema.String, identityJson: Schema.String }),
+).check(Schema.isMaxLength(1));
 
 async function readRepositorySelection(transaction: LocalLibsqlTransaction, selectionId: string) {
   const rows = await transaction.execute({
     sql: "SELECT directory_path AS directory, identity_json AS identityJson FROM registration_repository_selections WHERE selection_id = ?",
     args: [selectionId],
   });
-  const row = selectionSchema.array().max(1).parse(registryRows(rows))[0];
+  const row = decodeStrict(selectionRowsSchema, registryRows(rows))[0];
   if (row === undefined) return undefined;
-  const identity = PhysicalDirectoryKeySchema.safeParse(JSON.parse(row.identityJson));
-  if (!identity.success) throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+  const identity = decodeStrictResult(PhysicalDirectoryKeySchema, JSON.parse(row.identityJson));
+  if (Result.isFailure(identity)) {
+    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+  }
   return {
     directory: row.directory,
-    identity: identity.data,
+    identity: identity.success,
   };
 }
 
@@ -112,7 +124,7 @@ async function chooseRepository(selection: NativeRepositorySelectionPort | undef
 async function persistRepositorySelection(transaction: LocalLibsqlTransaction, directory: string) {
   const observed = await observeRepositoryDirectory(directory);
   if (observed.status !== "observed") return observed;
-  const repositorySelectionId = RepositorySelectionIdSchema.parse(randomUUID());
+  const repositorySelectionId = decodeStrict(RepositorySelectionIdSchema, randomUUID());
   await transaction.execute({
     sql: "INSERT INTO registration_repository_selections (selection_id, directory_path, identity_json, captured_at) VALUES (?, ?, ?, ?)",
     args: [
@@ -130,7 +142,7 @@ async function decideTrust(transaction: LocalLibsqlTransaction, request: TrustDe
     sql: "SELECT trust_id AS trustId, selection_id AS repositorySelectionId, decision FROM registration_repository_trust WHERE trust_id = ?",
     args: [request.trustId],
   });
-  const previous = RepositoryTrustDecisionSchema.array().max(1).parse(registryRows(rows))[0];
+  const previous = decodeStrict(trustDecisionRowsSchema, registryRows(rows))[0];
   if (previous !== undefined) {
     if (
       previous.repositorySelectionId !== request.repositorySelectionId ||
@@ -169,9 +181,7 @@ export async function authorizeQueries(
     args: [request.trustId, request.repositorySelectionId],
   });
   if (rows.rows.length === 0) return trustRequired;
-  const decision = z
-    .tuple([z.tuple([RepositoryTrustDecisionSchema.shape.decision])])
-    .parse(rows.rows)[0][0];
+  const decision = decodeStrict(trustDecisionCellSchema, rows.rows)[0][0];
   if (decision === "declined") return { status: "cancelled" as const };
   const selection = await readRepositorySelection(transaction, request.repositorySelectionId);
   if (selection === undefined) return trustRequired;
@@ -208,12 +218,15 @@ export function createRepositoryTrustOwner(
       ).catch(registryFailure),
     decideRepositoryTrust: (input) =>
       write((transaction) =>
-        decideTrust(transaction, RepositoryTrustDecisionSchema.parse(input)),
+        decideTrust(transaction, decodeStrict(RepositoryTrustDecisionSchema, input)),
       ).catch(registryFailure),
     admitRepositoryIdentityQueries: (input, port) =>
       run(async (client) => {
         const authority = await withWriteTransaction(client, (transaction) =>
-          authorizeQueries(transaction, RepositoryIdentityAdmissionRequestSchema.parse(input)),
+          authorizeQueries(
+            transaction,
+            decodeStrict(RepositoryIdentityAdmissionRequestSchema, input),
+          ),
         );
         if (authority.status !== "authorized") return authority;
         await port.admit({

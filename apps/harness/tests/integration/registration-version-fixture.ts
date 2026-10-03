@@ -1,4 +1,5 @@
 import path from "node:path";
+import { decodeStrict } from "@slopstop/protocol";
 import { expect } from "vitest";
 import {
   createProjectRegistrationObserver,
@@ -31,7 +32,7 @@ export async function inspectStoredConsent(root: string, request: GitVersionInsp
     const observer = createProjectRegistrationObserver(
       createGitVersionInspection(reopened, {
         inspect: async () =>
-          GitVersionInspectionResultSchema.parse({
+          decodeStrict(GitVersionInspectionResultSchema, {
             status: "prepared",
             selectionId: request.selectionId,
             observationId: "c42caec7-06c4-49bd-9a34-e5b034ab2477",
@@ -88,7 +89,7 @@ export async function createStoredVersionConsent(root: string) {
     applicationStorageRoot: root,
     migrationResourcesRoot: path.resolve(import.meta.dirname, "../../drizzle"),
   });
-  const request = GitVersionInspectionRequestSchema.parse({
+  const request = decodeStrict(GitVersionInspectionRequestSchema, {
     selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
     consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
   });

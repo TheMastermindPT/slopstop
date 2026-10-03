@@ -1,10 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
+  dateTimeTextSchema,
+  decodeStrict,
+  decodeStrictResult,
   ProjectIdSchema,
   type RegisteredProject,
   RegisteredProjectSchema,
+  UuidTextSchema,
 } from "@slopstop/protocol";
-import { z } from "zod";
+import { Result, Schema } from "effect";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { PhysicalDirectoryKeySchema, samePhysicalIdentity } from "./physical-identity.js";
 import {
@@ -19,27 +23,53 @@ import { RegistryFault } from "./registry-failure.js";
 import type { discoverSelectedPhysical } from "./repository-physical-observation.js";
 import type { RepositoryTrustOwner } from "./repository-trust.js";
 
-export const ConfirmationValidationRequestSchema = z.strictObject({
-  version: z.literal(1),
-  requestId: z.uuid().brand<"RegistrationRequestId">(),
+export const ConfirmationValidationRequestSchema = Schema.Struct({
+  version: Schema.Literal(1),
+  requestId: UuidTextSchema.pipe(Schema.brand("RegistrationRequestId")),
   preparation: PrepareProjectRegistrationSchema,
-  proposalId: RegistrationProposalRecordSchema.shape.proposalId,
-  proposalFingerprint: z.string().regex(/^[0-9a-f]{64}$/),
+  proposalId: RegistrationProposalRecordSchema.fields.proposalId,
+  proposalFingerprint: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/)),
 });
-export type ConfirmationRequest = z.infer<typeof ConfirmationValidationRequestSchema>;
+export type ConfirmationRequest = typeof ConfirmationValidationRequestSchema.Type;
 
-const reservationSchema = z.strictObject({
-  version: z.literal(1),
-  reservationId: z.uuid().brand<"RegistrationReservationId">(),
+const reservationSchema = Schema.Struct({
+  version: Schema.Literal(1),
+  reservationId: UuidTextSchema.pipe(Schema.brand("RegistrationReservationId")),
   projectId: ProjectIdSchema,
-  repositoryBindingId: z.uuid().brand<"RepositoryBindingId">(),
-  workspaceId: z.uuid().brand<"WorkspaceId">(),
-  createRequestId: z.uuid().brand<"ProjectStorageCreateRequestId">(),
-  createdAt: z.iso.datetime(),
+  repositoryBindingId: UuidTextSchema.pipe(Schema.brand("RepositoryBindingId")),
+  workspaceId: UuidTextSchema.pipe(Schema.brand("WorkspaceId")),
+  createRequestId: UuidTextSchema.pipe(Schema.brand("ProjectStorageCreateRequestId")),
+  createdAt: dateTimeTextSchema(),
   proposal: RegistrationProposalRecordSchema,
-  confirmationPhaseId: z.uuid(),
+  confirmationPhaseId: UuidTextSchema,
 });
-export type Reservation = z.infer<typeof reservationSchema>;
+export type Reservation = typeof reservationSchema.Type;
+const { version: _keyVersion, ...commonKeyFields } = PhysicalDirectoryKeySchema.fields;
+const reservationKeyRowsSchema = Schema.Tuple([
+  Schema.Struct({ ...commonKeyFields, recordJson: Schema.String, fingerprint: Schema.String }),
+]);
+const requestRowsSchema = Schema.Array(
+  Schema.Struct({
+    fingerprint: Schema.String,
+    requestJson: Schema.String,
+    reservationId: UuidTextSchema,
+  }),
+).check(Schema.isMaxLength(1));
+const reservationIdRowsSchema = Schema.Array(Schema.Struct({ reservationId: UuidTextSchema }));
+const publicationRowsSchema = Schema.Array(
+  Schema.Struct({
+    requestId: UuidTextSchema,
+    resultJson: Schema.String,
+    fingerprint: Schema.String,
+  }),
+).check(Schema.isMaxLength(1));
+const reservationRequestRowsSchema = Schema.Array(
+  Schema.Struct({
+    requestId: ConfirmationValidationRequestSchema.fields.requestId,
+    reservationId: reservationSchema.fields.reservationId,
+    requestJson: Schema.String,
+  }),
+).check(Schema.isMinLength(1));
 export type RegistrationBootstrap = (
   reservation: Reservation,
   request: ConfirmationRequest,
@@ -79,15 +109,8 @@ async function readReservation(transaction: LocalLibsqlTransaction, id: string) 
     args: [id],
   });
   try {
-    const row = z
-      .tuple([
-        PhysicalDirectoryKeySchema.omit({ version: true }).extend({
-          recordJson: z.string(),
-          fingerprint: z.string(),
-        }),
-      ])
-      .parse(registryRows(result))[0];
-    const record = reservationSchema.parse(JSON.parse(row.recordJson));
+    const row = decodeStrict(reservationKeyRowsSchema, registryRows(result))[0];
+    const record = decodeStrict(reservationSchema, JSON.parse(row.recordJson));
     const common = record.proposal.observation.physical.commonDirectory;
     if (
       record.reservationId !== id ||
@@ -112,17 +135,13 @@ export async function readConfirmation(
     sql: "SELECT input_fingerprint AS fingerprint, request_json AS requestJson, reservation_id AS reservationId FROM registration_requests WHERE request_id = ?",
     args: [request.requestId],
   });
-  const parsed = z
-    .strictObject({ fingerprint: z.string(), requestJson: z.string(), reservationId: z.uuid() })
-    .array()
-    .max(1)
-    .safeParse(registryRows(result));
-  if (!parsed.success) throw corrupt();
-  const row = parsed.data[0];
+  const parsed = decodeStrictResult(requestRowsSchema, registryRows(result));
+  if (Result.isFailure(parsed)) throw corrupt();
+  const row = parsed.success[0];
   if (row === undefined) return undefined;
   let saved: ConfirmationRequest;
   try {
-    saved = ConfirmationValidationRequestSchema.parse(JSON.parse(row.requestJson));
+    saved = decodeStrict(ConfirmationValidationRequestSchema, JSON.parse(row.requestJson));
   } catch {
     throw corrupt();
   }
@@ -161,15 +180,13 @@ async function findCommonReservation(
     sql: "SELECT reservation_id AS reservationId FROM registration_reservations WHERE common_platform = ? AND common_volume_identity = ? AND common_file_identity = ? AND common_birth_identity = ?",
     args: [key.platform, key.volumeIdentity, key.fileIdentity, key.birthIdentity],
   });
-  const rows = z
-    .strictObject({ reservationId: z.uuid() })
-    .array()
-    .max(1)
-    .safeParse(registryRows(result));
-  if (!rows.success) throw corrupt();
-  return rows.data[0] === undefined
-    ? undefined
-    : readReservation(transaction, rows.data[0].reservationId);
+  const rows = decodeStrictResult(
+    reservationIdRowsSchema.check(Schema.isMaxLength(1)),
+    registryRows(result),
+  );
+  if (Result.isFailure(rows)) throw corrupt();
+  const found = rows.success[0];
+  return found === undefined ? undefined : readReservation(transaction, found.reservationId);
 }
 
 async function insertReservation(transaction: LocalLibsqlTransaction, record: Reservation) {
@@ -199,7 +216,7 @@ export async function reserveConfirmation(
   let reservation = await findCommonReservation(transaction, input.saved);
   const created = reservation === undefined;
   if (reservation === undefined) {
-    reservation = reservationSchema.parse({
+    reservation = decodeStrict(reservationSchema, {
       version: 1,
       reservationId: randomUUID(),
       projectId: randomUUID(),
@@ -230,13 +247,9 @@ async function readPublication(transaction: LocalLibsqlTransaction, reservation:
     args: [reservation.reservationId],
   });
   try {
-    const row = z
-      .strictObject({ requestId: z.uuid(), resultJson: z.string(), fingerprint: z.string() })
-      .array()
-      .max(1)
-      .parse(registryRows(result))[0];
+    const row = decodeStrict(publicationRowsSchema, registryRows(result))[0];
     if (row === undefined) return undefined;
-    const receipt = RegisteredProjectSchema.parse(JSON.parse(row.resultJson));
+    const receipt = decodeStrict(RegisteredProjectSchema, JSON.parse(row.resultJson));
     if (
       digest(receipt) !== row.fingerprint ||
       receipt.requestId !== row.requestId ||
@@ -269,7 +282,7 @@ export async function publishRegistration(
   input: RegisteredProject,
   signal: AbortSignal,
 ) {
-  const result = RegisteredProjectSchema.parse(input);
+  const result = decodeStrict(RegisteredProjectSchema, input);
   const previous = await readPublication(transaction, reservation);
   if (previous !== undefined) return previous;
   if (signal.aborted) throw new RegistrationPublicationCancelled();
@@ -294,20 +307,18 @@ export function reservationFingerprint(reservation: Reservation) {
 }
 
 export async function readProjectRegistrationRecords(transaction: LocalLibsqlTransaction) {
-  const ids = z
-    .strictObject({ reservationId: z.uuid() })
-    .array()
-    .safeParse(
-      registryRows(
-        await transaction.execute(
-          "SELECT reservation_id AS reservationId FROM registration_reservations ORDER BY reservation_id",
-        ),
+  const ids = decodeStrictResult(
+    reservationIdRowsSchema,
+    registryRows(
+      await transaction.execute(
+        "SELECT reservation_id AS reservationId FROM registration_reservations ORDER BY reservation_id",
       ),
-    );
-  if (!ids.success) throw corrupt();
+    ),
+  );
+  if (Result.isFailure(ids)) throw corrupt();
   const records = [];
   const projects = new Set<string>();
-  for (const { reservationId } of ids.data) {
+  for (const { reservationId } of ids.success) {
     const reservation = await readReservation(transaction, reservationId);
     if (projects.has(reservation.projectId)) throw corrupt();
     projects.add(reservation.projectId);
@@ -315,20 +326,12 @@ export async function readProjectRegistrationRecords(transaction: LocalLibsqlTra
       sql: "SELECT request_id AS requestId, reservation_id AS reservationId, request_json AS requestJson FROM registration_requests WHERE reservation_id = ?",
       args: [reservationId],
     });
-    const rows = z
-      .strictObject({
-        requestId: ConfirmationValidationRequestSchema.shape.requestId,
-        reservationId: reservationSchema.shape.reservationId,
-        requestJson: z.string(),
-      })
-      .array()
-      .min(1)
-      .safeParse(registryRows(requests));
-    if (!rows.success) throw corrupt();
-    for (const row of rows.data) {
+    const rows = decodeStrictResult(reservationRequestRowsSchema, registryRows(requests));
+    if (Result.isFailure(rows)) throw corrupt();
+    for (const row of rows.success) {
       let request: ConfirmationRequest;
       try {
-        request = ConfirmationValidationRequestSchema.parse(JSON.parse(row.requestJson));
+        request = decodeStrict(ConfirmationValidationRequestSchema, JSON.parse(row.requestJson));
       } catch {
         throw corrupt();
       }

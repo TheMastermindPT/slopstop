@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { RegisteredProjectSchema } from "@slopstop/protocol";
+import { decodeStrict, RegisteredProjectSchema } from "@slopstop/protocol";
 import { afterEach, expect, it, vi } from "vitest";
 import { createProjectRegistrationOwner } from "../../src/registration/project-registration-owner.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
@@ -95,7 +95,7 @@ it
         decision: "accepted",
       };
       expect(
-        await registry.decideRepositoryTrust(RepositoryTrustDecisionSchema.parse(trust)),
+        await registry.decideRepositoryTrust(decodeStrict(RepositoryTrustDecisionSchema, trust)),
       ).toEqual({ status: "recorded" });
       expect(
         await registry.decideIdentityQueries({ ...scenario.request, decision: "accepted" }),
@@ -168,7 +168,7 @@ it
       }
       expect(result).toMatchObject({ status: "registered", requestId: request.requestId });
       expect(dispatches).toBe(12);
-      const registered = RegisteredProjectSchema.parse(result);
+      const registered = decodeStrict(RegisteredProjectSchema, result);
       const generation = path.join(
         options.applicationStorageRoot,
         "projects",

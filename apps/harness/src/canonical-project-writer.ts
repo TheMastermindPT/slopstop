@@ -5,7 +5,7 @@ import type {
   TypedCommand,
   WriterGeneration,
 } from "@slopstop/protocol";
-import { CanonicalProjectCommandResultSchema } from "@slopstop/protocol";
+import { CanonicalProjectCommandResultSchema, decodeStrict } from "@slopstop/protocol";
 import { snapshotCanonicalCommand } from "./canonical-json.js";
 import type { CanonicalCommandRepository } from "./storage/canonical-command-repository.js";
 import type {
@@ -75,7 +75,7 @@ function writerFailure(
       retryable: false,
     },
   } as const;
-  return CanonicalProjectCommandResultSchema.parse({
+  return decodeStrict(CanonicalProjectCommandResultSchema, {
     status,
     projectId: input.projectId,
     activationId: input.activationId,
@@ -170,7 +170,7 @@ async function settleWriterCommand(
 ): Promise<CanonicalProjectCommandResult> {
   const outcome = await input.repository.settle(key);
   if (outcome.status !== "settled") return writerFailure(input, commandId, outcome.status);
-  return CanonicalProjectCommandResultSchema.parse({
+  return decodeStrict(CanonicalProjectCommandResultSchema, {
     status: "settled",
     projectId: input.projectId,
     activationId: input.activationId,

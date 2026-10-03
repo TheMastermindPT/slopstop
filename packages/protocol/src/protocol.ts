@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { Result, Schema } from "effect";
 import {
   type CanonicalProjectActivationRequest,
   CanonicalProjectActivationRequestSchema,
@@ -13,6 +13,11 @@ import {
   type CanonicalProjectSwitchResult,
   CanonicalProjectSwitchResultSchema,
 } from "./canonical-project-protocol.js";
+import {
+  ProjectListRequestSchema,
+  type ProjectListResult,
+  ProjectListResultSchema,
+} from "./project-list-protocol.js";
 import type {
   ProjectStorageCloseRequest,
   ProjectStorageCloseResult,
@@ -29,6 +34,14 @@ import {
   ProjectStorageOpenRequestSchema,
   ProjectStorageOpenResultSchema,
 } from "./project-storage-protocol.js";
+import {
+  dateTimeTextSchema,
+  decodeStrict,
+  decodeStrictResult,
+  NonEmptyTextSchema,
+  summarizeSchemaError,
+  UuidTextSchema,
+} from "./schema-codec.js";
 import type {
   WorkspaceIntent,
   WorkspaceIntentResult,
@@ -46,183 +59,183 @@ import {
 
 export const protocolVersion = 4 as const;
 
-export const MessageIdSchema = z.uuid().brand<"MessageId">();
-export type MessageId = z.infer<typeof MessageIdSchema>;
+export const MessageIdSchema = UuidTextSchema.pipe(Schema.brand("MessageId"));
+export type MessageId = typeof MessageIdSchema.Type;
 
-const TimestampSchema = z.iso.datetime({ offset: true });
-const SequenceSchema = z.number().int().nonnegative();
+const TimestampSchema = dateTimeTextSchema({ offset: true });
+const SequenceSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0));
 
-const EnvelopeProbeSchema = z
-  .object({
-    protocolVersion: z.number().int(),
-  })
-  .passthrough();
+// Reads only the version; every other key is intentionally ignored by this probe.
+const EnvelopeProbeSchema = Schema.Struct({ protocolVersion: Schema.Number.check(Schema.isInt()) });
 
 const DesktopCommandMetadataSchema = {
-  protocolVersion: z.literal(protocolVersion),
-  messageType: z.literal("command"),
+  protocolVersion: Schema.Literal(protocolVersion),
+  messageType: Schema.Literal("command"),
   messageId: MessageIdSchema,
   sentAt: TimestampSchema,
 } as const;
 
-const HandshakeCommandSchema = z.strictObject({
+const HandshakeCommandSchema = Schema.Struct({
   ...DesktopCommandMetadataSchema,
-  command: z.literal("system.handshake"),
-  payload: z.strictObject({
-    desktopVersion: z.string().min(1),
-  }),
+  command: Schema.Literal("system.handshake"),
+  payload: Schema.Struct({ desktopVersion: NonEmptyTextSchema }),
 });
-const ProjectOpenCommandSchema = z.strictObject({
+const ProjectOpenCommandSchema = Schema.Struct({
   ...DesktopCommandMetadataSchema,
-  command: z.literal("project.open"),
+  command: Schema.Literal("project.open"),
   payload: ProjectStorageOpenRequestSchema,
 });
-const ProjectCreateCommandSchema = z.strictObject({
+const ProjectCreateCommandSchema = Schema.Struct({
   ...DesktopCommandMetadataSchema,
-  command: z.literal("project.create"),
+  command: Schema.Literal("project.create"),
   payload: ProjectStorageCreateRequestSchema,
 });
-const ProjectCloseCommandSchema = z.strictObject({
+const ProjectCloseCommandSchema = Schema.Struct({
   ...DesktopCommandMetadataSchema,
-  command: z.literal("project.close"),
+  command: Schema.Literal("project.close"),
   payload: ProjectStorageCloseRequestSchema,
 });
-const WorkspaceQueryCommandSchema = z.strictObject({
+const WorkspaceQueryCommandSchema = Schema.Struct({
   ...DesktopCommandMetadataSchema,
-  command: z.literal("workspace.query"),
+  command: Schema.Literal("workspace.query"),
   payload: WorkspaceQuerySchema,
 });
-const WorkspaceIntentCommandSchema = z.strictObject({
+const WorkspaceIntentCommandSchema = Schema.Struct({
   ...DesktopCommandMetadataSchema,
-  command: z.literal("workspace.intent"),
+  command: Schema.Literal("workspace.intent"),
   payload: WorkspaceIntentSchema,
 });
 
 const plainLocalFileUrlPattern = /^file:\/\/\/(?![\\/])(?:(?!%2f|%5c)[^?#\\])*$/i;
 const invalidPercentEscapePattern = /%(?![\da-f]{2})/i;
-const LocalFileUrlSchema = z
-  .string()
-  .superRefine((value, context) => {
-    const hasUnsafeCharacter = [...value].some((character) => {
-      const codePoint = character.codePointAt(0) ?? 0;
-      return codePoint <= 0x20 || codePoint === 0x7f;
-    });
-    if (
-      !plainLocalFileUrlPattern.test(value) ||
-      invalidPercentEscapePattern.test(value) ||
-      hasUnsafeCharacter
-    ) {
-      context.addIssue({
-        code: "custom",
-        message: "Harness bootstrap roots must be plain local file URLs.",
-      });
-    }
-  })
-  .pipe(z.url());
+// Protocol code runs in Node and the renderer; both provide WHATWG URL, but this package
+// targets plain ES2022, so the global is read defensively and fails closed.
+const whatwgUrl: unknown = Reflect.get(globalThis, "URL");
+function canParseUrl(value: string): boolean {
+  if (typeof whatwgUrl !== "function" || !("canParse" in whatwgUrl)) return false;
+  const canParse: unknown = whatwgUrl.canParse;
+  return typeof canParse === "function" && Reflect.apply(canParse, whatwgUrl, [value]) === true;
+}
+function isPlainLocalFileUrl(value: string): boolean {
+  const hasUnsafeCharacter = [...value].some((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint <= 0x20 || codePoint === 0x7f;
+  });
+  return (
+    plainLocalFileUrlPattern.test(value) &&
+    !invalidPercentEscapePattern.test(value) &&
+    !hasUnsafeCharacter &&
+    canParseUrl(value)
+  );
+}
+const LocalFileUrlSchema = Schema.String.check(
+  Schema.makeFilter(
+    (value: string) =>
+      isPlainLocalFileUrl(value) || "Harness bootstrap roots must be plain local file URLs.",
+  ),
+);
 
-export const HarnessBootstrapSchema = z.strictObject({
-  kind: z.literal("harness.connect"),
+export const HarnessBootstrapSchema = Schema.Struct({
+  kind: Schema.Literal("harness.connect"),
   applicationStorageRootUrl: LocalFileUrlSchema,
   migrationResourcesRootUrl: LocalFileUrlSchema,
 });
-export type HarnessBootstrap = z.infer<typeof HarnessBootstrapSchema>;
+export type HarnessBootstrap = typeof HarnessBootstrapSchema.Type;
 
 const HarnessEventMetadataSchema = {
-  protocolVersion: z.literal(protocolVersion),
-  messageType: z.literal("event"),
+  protocolVersion: Schema.Literal(protocolVersion),
+  messageType: Schema.Literal("event"),
   messageId: MessageIdSchema,
   sentAt: TimestampSchema,
   sequence: SequenceSchema,
-  causationId: MessageIdSchema.nullable(),
+  causationId: Schema.NullOr(MessageIdSchema),
 } as const;
 
-const ReadyEventSchema = z.strictObject({
+const ReadyEventSchema = Schema.Struct({
   ...HarnessEventMetadataSchema,
-  event: z.literal("system.ready"),
-  payload: z.strictObject({
-    harnessVersion: z.string().min(1),
-  }),
+  event: Schema.Literal("system.ready"),
+  payload: Schema.Struct({ harnessVersion: NonEmptyTextSchema }),
 });
 
-export const HarnessFailureCodeSchema = z.enum([
+export const HarnessFailureCodeSchema = Schema.Literals([
   "PROTOCOL_MESSAGE_INVALID",
   "PROTOCOL_VERSION_UNSUPPORTED",
   "HARNESS_INTERNAL_FAILURE",
 ]);
-export type HarnessFailureCode = z.infer<typeof HarnessFailureCodeSchema>;
+export type HarnessFailureCode = typeof HarnessFailureCodeSchema.Type;
 
-const HarnessFailurePayloadSchema = z.strictObject({
+const HarnessFailurePayloadSchema = Schema.Struct({
   code: HarnessFailureCodeSchema,
-  message: z.string().min(1),
-  retryable: z.boolean(),
+  message: NonEmptyTextSchema,
+  retryable: Schema.Boolean,
 });
-type HarnessFailure = Readonly<z.infer<typeof HarnessFailurePayloadSchema>>;
+type HarnessFailure = typeof HarnessFailurePayloadSchema.Type;
 
-const RequestFailureEventSchema = z.strictObject({
+const RequestFailureEventSchema = Schema.Struct({
   ...HarnessEventMetadataSchema,
   causationId: MessageIdSchema,
-  event: z.literal("request.failure"),
+  event: Schema.Literal("request.failure"),
   payload: HarnessFailurePayloadSchema,
 });
 
-const SystemFailureEventSchema = z.strictObject({
+const SystemFailureEventSchema = Schema.Struct({
   ...HarnessEventMetadataSchema,
-  causationId: z.null(),
-  event: z.literal("system.failure"),
+  causationId: Schema.Null,
+  event: Schema.Literal("system.failure"),
   payload: HarnessFailurePayloadSchema,
 });
 
-const ProjectOpenResultEventSchema = z.strictObject({
+const ProjectOpenResultEventSchema = Schema.Struct({
   ...HarnessEventMetadataSchema,
-  event: z.literal("project.open.result"),
+  event: Schema.Literal("project.open.result"),
   payload: ProjectStorageOpenResultSchema,
 });
-const ProjectCreateResultEventSchema = z.strictObject({
+const ProjectCreateResultEventSchema = Schema.Struct({
   ...HarnessEventMetadataSchema,
-  event: z.literal("project.create.result"),
+  event: Schema.Literal("project.create.result"),
   payload: ProjectStorageCreateResultSchema,
 });
-const ProjectCloseResultEventSchema = z.strictObject({
+const ProjectCloseResultEventSchema = Schema.Struct({
   ...HarnessEventMetadataSchema,
-  event: z.literal("project.close.result"),
+  event: Schema.Literal("project.close.result"),
   payload: ProjectStorageCloseResultSchema,
 });
 
-const WorkspaceQueryResultEventSchema = z.strictObject({
+const WorkspaceQueryResultEventSchema = Schema.Struct({
   ...HarnessEventMetadataSchema,
-  event: z.literal("workspace.query.result"),
+  event: Schema.Literal("workspace.query.result"),
   payload: WorkspaceQueryResultSchema,
 });
-const WorkspaceIntentResultEventSchema = z.strictObject({
+const WorkspaceIntentResultEventSchema = Schema.Struct({
   ...HarnessEventMetadataSchema,
-  event: z.literal("workspace.intent.result"),
+  event: Schema.Literal("workspace.intent.result"),
   payload: WorkspaceIntentResultSchema,
 });
-const WorkspaceProjectionInvalidatedEventSchema = z.strictObject({
+const WorkspaceProjectionInvalidatedEventSchema = Schema.Struct({
   ...HarnessEventMetadataSchema,
-  event: z.literal("workspace.projection.invalidated"),
+  event: Schema.Literal("workspace.projection.invalidated"),
   payload: WorkspaceNotificationSchema,
 });
 
-export const DesktopMessageSchema = z.discriminatedUnion("command", [
-  z.strictObject({
+export const DesktopMessageSchema = Schema.Union([
+  Schema.Struct({
     ...DesktopCommandMetadataSchema,
-    command: z.literal("project.list"),
+    command: Schema.Literal("project.list"),
     payload: ProjectListRequestSchema,
   }),
-  z.strictObject({
+  Schema.Struct({
     ...DesktopCommandMetadataSchema,
-    command: z.literal("project.switch"),
+    command: Schema.Literal("project.switch"),
     payload: CanonicalProjectSwitchRequestSchema,
   }),
-  z.strictObject({
+  Schema.Struct({
     ...DesktopCommandMetadataSchema,
-    command: z.literal("project.activate"),
+    command: Schema.Literal("project.activate"),
     payload: CanonicalProjectActivationRequestSchema,
   }),
-  z.strictObject({
+  Schema.Struct({
     ...DesktopCommandMetadataSchema,
-    command: z.literal("project.command"),
+    command: Schema.Literal("project.command"),
     payload: CanonicalProjectCommandRequestSchema,
   }),
   HandshakeCommandSchema,
@@ -232,27 +245,27 @@ export const DesktopMessageSchema = z.discriminatedUnion("command", [
   WorkspaceQueryCommandSchema,
   WorkspaceIntentCommandSchema,
 ]);
-export type DesktopMessage = z.infer<typeof DesktopMessageSchema>;
+export type DesktopMessage = typeof DesktopMessageSchema.Type;
 
-export const HarnessMessageSchema = z.discriminatedUnion("event", [
-  z.strictObject({
+export const HarnessMessageSchema = Schema.Union([
+  Schema.Struct({
     ...HarnessEventMetadataSchema,
-    event: z.literal("project.list.result"),
+    event: Schema.Literal("project.list.result"),
     payload: ProjectListResultSchema,
   }),
-  z.strictObject({
+  Schema.Struct({
     ...HarnessEventMetadataSchema,
-    event: z.literal("project.switch.result"),
+    event: Schema.Literal("project.switch.result"),
     payload: CanonicalProjectSwitchResultSchema,
   }),
-  z.strictObject({
+  Schema.Struct({
     ...HarnessEventMetadataSchema,
-    event: z.literal("project.activate.result"),
+    event: Schema.Literal("project.activate.result"),
     payload: CanonicalProjectActivationResultSchema,
   }),
-  z.strictObject({
+  Schema.Struct({
     ...HarnessEventMetadataSchema,
-    event: z.literal("project.command.result"),
+    event: Schema.Literal("project.command.result"),
     payload: CanonicalProjectCommandResultSchema,
   }),
   ReadyEventSchema,
@@ -265,9 +278,9 @@ export const HarnessMessageSchema = z.discriminatedUnion("event", [
   WorkspaceIntentResultEventSchema,
   WorkspaceProjectionInvalidatedEventSchema,
 ]);
-export type HarnessMessage = z.infer<typeof HarnessMessageSchema>;
+export type HarnessMessage = typeof HarnessMessageSchema.Type;
 
-export const HarnessDiagnosticCodeSchema = z.enum([
+export const HarnessDiagnosticCodeSchema = Schema.Literals([
   "HARNESS_HANDSHAKE_TIMEOUT",
   "HARNESS_SHUTDOWN_TIMEOUT",
   "HARNESS_PROCESS_EXITED",
@@ -276,49 +289,49 @@ export const HarnessDiagnosticCodeSchema = z.enum([
   "DESKTOP_BRIDGE_FAILED",
 ]);
 
-const HarnessDiagnosticSchema = z.strictObject({
+const HarnessDiagnosticSchema = Schema.Struct({
   code: HarnessDiagnosticCodeSchema,
-  message: z.string().min(1),
+  message: NonEmptyTextSchema,
 });
 
-export const HarnessStatusSchema = z.discriminatedUnion("state", [
-  z.strictObject({
-    state: z.literal("starting"),
+export const HarnessStatusSchema = Schema.Union([
+  Schema.Struct({
+    state: Schema.Literal("starting"),
     attempt: SequenceSchema,
   }),
-  z.strictObject({
-    state: z.literal("ready"),
+  Schema.Struct({
+    state: Schema.Literal("ready"),
     attempt: SequenceSchema,
-    harnessVersion: z.string().min(1),
+    harnessVersion: NonEmptyTextSchema,
   }),
-  z.strictObject({
-    state: z.literal("degraded"),
+  Schema.Struct({
+    state: Schema.Literal("degraded"),
     attempt: SequenceSchema,
     diagnostic: HarnessDiagnosticSchema,
   }),
-  z.strictObject({
-    state: z.literal("crashed"),
+  Schema.Struct({
+    state: Schema.Literal("crashed"),
     attempt: SequenceSchema,
-    canRetry: z.literal(true),
+    canRetry: Schema.Literal(true),
     diagnostic: HarnessDiagnosticSchema,
   }),
-  z.strictObject({
-    state: z.literal("stopped"),
+  Schema.Struct({
+    state: Schema.Literal("stopped"),
   }),
 ]);
-export type HarnessStatus = z.infer<typeof HarnessStatusSchema>;
+export type HarnessStatus = typeof HarnessStatusSchema.Type;
 
-export const RetryHarnessResultSchema = z.discriminatedUnion("ok", [
-  z.strictObject({ ok: z.literal(true) }),
-  z.strictObject({
-    ok: z.literal(false),
-    error: z.strictObject({
-      code: z.literal("HARNESS_RETRY_UNAVAILABLE"),
-      message: z.string().min(1),
+export const RetryHarnessResultSchema = Schema.Union([
+  Schema.Struct({ ok: Schema.Literal(true) }),
+  Schema.Struct({
+    ok: Schema.Literal(false),
+    error: Schema.Struct({
+      code: Schema.Literal("HARNESS_RETRY_UNAVAILABLE"),
+      message: NonEmptyTextSchema,
     }),
   }),
 ]);
-export type RetryHarnessResult = z.infer<typeof RetryHarnessResultSchema>;
+export type RetryHarnessResult = typeof RetryHarnessResultSchema.Type;
 
 type ProtocolParseIssue = Readonly<{
   code: string;
@@ -346,25 +359,37 @@ type CommandMetadata = Readonly<{
   sentAt: string;
 }>;
 
-function normalizeIssues(error: z.ZodError): ProtocolParseIssue[] {
-  return error.issues.map((issue) => {
-    const path = issue.path.map(String).join(".") || "$";
-    return {
-      code:
-        issue.code === "invalid_union" && (path === "command" || path === "event")
-          ? "invalid_value"
-          : issue.code,
-      path,
-    };
+type Discriminator = "command" | "event";
+
+function normalizeIssues(
+  error: Schema.SchemaError,
+  discriminator: Discriminator,
+  value: unknown,
+): ProtocolParseIssue[] {
+  return summarizeSchemaError(error).map((issue) => {
+    if (issue.code === "invalid_union" && issue.path.length === 0) {
+      // A non-object envelope is a type failure; an unmatched one names no known message.
+      if (!isObjectRecord(value)) return { code: "invalid_type", path: "$" };
+      if (discriminator in value) return { code: "invalid_value", path: discriminator };
+    }
+    return { code: issue.code, path: issue.path.map(String).join(".") || "$" };
   });
 }
 
-function hasUnsupportedVersion(value: unknown): boolean {
-  const probe = EnvelopeProbeSchema.safeParse(value);
-  return probe.success && probe.data.protocolVersion !== protocolVersion;
+function isObjectRecord(value: unknown): value is object {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function parseMessage<T>(schema: z.ZodType<T>, value: unknown): ProtocolParseResult<T> {
+function hasUnsupportedVersion(value: unknown): boolean {
+  const probe = Schema.decodeUnknownResult(EnvelopeProbeSchema)(value);
+  return Result.isSuccess(probe) && probe.success.protocolVersion !== protocolVersion;
+}
+
+function parseMessage<S extends Schema.ConstraintDecoder<unknown>>(
+  schema: S,
+  discriminator: Discriminator,
+  value: unknown,
+): ProtocolParseResult<S["Type"]> {
   if (hasUnsupportedVersion(value)) {
     return {
       ok: false,
@@ -375,26 +400,26 @@ function parseMessage<T>(schema: z.ZodType<T>, value: unknown): ProtocolParseRes
     };
   }
 
-  const parsed = schema.safeParse(value);
-  if (parsed.success) {
-    return { ok: true, value: parsed.data };
+  const parsed = decodeStrictResult(schema, value);
+  if (Result.isSuccess(parsed)) {
+    return { ok: true, value: parsed.success };
   }
 
   return {
     ok: false,
     error: {
       code: "PROTOCOL_MESSAGE_INVALID",
-      issues: normalizeIssues(parsed.error),
+      issues: normalizeIssues(parsed.failure, discriminator, value),
     },
   };
 }
 
 export function parseDesktopMessage(value: unknown): ProtocolParseResult<DesktopMessage> {
-  return parseMessage(DesktopMessageSchema, value);
+  return parseMessage(DesktopMessageSchema, "command", value);
 }
 
 export function parseHarnessMessage(value: unknown): ProtocolParseResult<HarnessMessage> {
-  return parseMessage(HarnessMessageSchema, value);
+  return parseMessage(HarnessMessageSchema, "event", value);
 }
 
 function createCommand(
@@ -402,7 +427,7 @@ function createCommand(
   command: DesktopMessage["command"],
   payload: unknown,
 ): DesktopMessage {
-  return DesktopMessageSchema.parse({
+  return decodeStrict(DesktopMessageSchema, {
     protocolVersion,
     messageType: "command",
     ...metadata,
@@ -416,7 +441,7 @@ function createEvent(
   event: HarnessMessage["event"],
   payload: unknown,
 ): HarnessMessage {
-  return HarnessMessageSchema.parse({
+  return decodeStrict(HarnessMessageSchema, {
     protocolVersion,
     messageType: "event",
     ...metadata,
@@ -517,8 +542,8 @@ export function readMessageId(value: unknown): MessageId | null {
     return null;
   }
 
-  const parsed = MessageIdSchema.safeParse(value.messageId);
-  return parsed.success ? parsed.data : null;
+  const parsed = decodeStrictResult(MessageIdSchema, value.messageId);
+  return Result.isSuccess(parsed) ? parsed.success : null;
 }
 
 export function createReadyEvent(metadata: EventMetadata, harnessVersion: string): HarnessMessage {
@@ -581,11 +606,6 @@ export function createWorkspaceProjectionInvalidatedEvent(
   return createEvent(metadata, "workspace.projection.invalidated", notification);
 }
 
-import {
-  ProjectListRequestSchema,
-  type ProjectListResult,
-  ProjectListResultSchema,
-} from "./project-list-protocol.js";
 export function createProjectListCommand(metadata: CommandMetadata): DesktopMessage {
   return createCommand(metadata, "project.list", {});
 }
