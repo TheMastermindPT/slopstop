@@ -79,6 +79,14 @@ vi.mock("./harness-supervisor.js", () => ({
 vi.mock("./project-storage-bridge.js", () => ({
   createProjectStorageBridge: () => ({ stop: ports.storageStop }),
 }));
+vi.mock("./project-entry-bridge.js", () => ({
+  createProjectEntryBridge: () => ({
+    list: vi.fn(),
+    activate: vi.fn(),
+    switchProject: vi.fn(),
+    stop: vi.fn(),
+  }),
+}));
 vi.mock("./workspace-bridge.js", () => ({
   createWorkspaceBridge: () => ({ stop: ports.workspaceStop, subscribe: vi.fn() }),
 }));
