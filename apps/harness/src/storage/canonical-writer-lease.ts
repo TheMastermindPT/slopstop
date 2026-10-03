@@ -1,3 +1,5 @@
+import { retryableAttempt } from "./retryable-attempt.js";
+
 export type CanonicalWriterLeaseFailureCode =
   | "WRITER_LEASE_OPEN_FAILED"
   | "WRITER_LEASE_LOCK_FAILED"
@@ -44,16 +46,8 @@ export class CanonicalWriterLeaseError extends Error {
 }
 
 function sharedRetry(operation: () => Promise<void>): () => Promise<void> {
-  let pending: Promise<void> | undefined;
-  return () => {
-    if (pending !== undefined) return pending;
-    const attempt = Promise.resolve().then(operation);
-    pending = attempt;
-    void attempt.catch(() => {
-      if (pending === attempt) pending = undefined;
-    });
-    return attempt;
-  };
+  // Starts asynchronously, as before, even for a synchronously throwing operation.
+  return retryableAttempt(() => Promise.resolve().then(operation));
 }
 
 type LeaseFile = Awaited<ReturnType<CanonicalWriterLeaseDependencies["openLeaseFile"]>>;

@@ -15,6 +15,7 @@ import {
   decodeStrict,
   type ProjectId,
 } from "@slopstop/protocol";
+import { Deferred, Effect } from "effect";
 import {
   type CanonicalProjectWriter,
   CanonicalProjectWriterReleaseError,
@@ -38,6 +39,7 @@ import {
   type CanonicalWriterLeaseFactory,
 } from "./storage/canonical-writer-lease.js";
 import { createPermitLock, withPermit } from "./storage/permit-lock.js";
+import { retryableAttempt } from "./storage/retryable-attempt.js";
 export interface ActiveProjectCoordinator {
   activate(request: CanonicalProjectActivationRequest): Promise<CanonicalProjectActivationResult>;
   switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
@@ -446,9 +448,9 @@ export function createActiveProjectCoordinator(
   dependencies: ActiveProjectCoordinatorDependencies,
 ): ActiveProjectCoordinator {
   const lifecycle = createPermitLock();
-  const admitted = new Set<Promise<void>>();
+  // Completion of each admitted command; release drains them before giving up ownership.
+  const admitted = new Set<Deferred.Deferred<void>>();
   let state: State = { status: "inactive" };
-  let stopAttempt: Promise<void> | undefined;
   let pendingLifecycle = 0;
 
   const enqueue = <Result>(operation: () => Promise<Result>): Promise<Result> => {
@@ -469,7 +471,12 @@ export function createActiveProjectCoordinator(
       ownership: Ownership;
     }>,
   ): Promise<ReleaseResult> => {
-    await Promise.all([...admitted]);
+    await Effect.runPromise(
+      Effect.forEach([...admitted], (completion) => Deferred.await(completion), {
+        concurrency: "unbounded",
+        discard: true,
+      }),
+    );
     // Clock failure must leave the original active or retained state intact.
     const time = dependencies.now();
     state = { ...owned, status: "releasing" };
@@ -566,6 +573,8 @@ export function createActiveProjectCoordinator(
     if (result.status === "failed") throw new Error("Canonical Project activation release failed.");
     state = { status: "stopped" };
   };
+  // A failed release leaves stop retryable; a successful stop stays the shared answer.
+  const stopOnce = retryableAttempt(() => enqueue(stop));
 
   return {
     activate: (request) => enqueue(() => activateWithinLifecycle(request)),
@@ -612,26 +621,15 @@ export function createActiveProjectCoordinator(
       const submission = active.writer.settle(request.command);
       if (submission.status === "completed") return submission.result;
       const operation = submission.result;
-      const completion = operation.then(
-        () => undefined,
-        () => undefined,
-      );
+      const completion = Deferred.makeUnsafe<void>();
       admitted.add(completion);
       try {
         return await operation;
       } finally {
-        await completion;
+        Deferred.doneUnsafe(completion, Effect.void);
         admitted.delete(completion);
       }
     },
-    stop: () => {
-      if (stopAttempt !== undefined) return stopAttempt;
-      const attempt = enqueue(stop);
-      stopAttempt = attempt;
-      void attempt.catch(() => {
-        if (stopAttempt === attempt) stopAttempt = undefined;
-      });
-      return attempt;
-    },
+    stop: stopOnce,
   };
 }
