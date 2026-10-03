@@ -10,6 +10,7 @@ import {
   StorageIdSchema,
 } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
+import { createPermitLock, withPermit } from "./permit-lock.js";
 import {
   ProjectStorageBrokenError,
   ProjectStorageUnavailableError,
@@ -20,7 +21,6 @@ import {
   type PriorStateWitnessKind,
   type ProjectStorageStoreDependencies,
 } from "./project-storage-store.js";
-import { SerialLock } from "./serial-lock.js";
 
 const request = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000010",
@@ -707,12 +707,12 @@ it.each([1, 2])(
 
 it("retains delayed asynchronous registry failure in the shared stop promise", async () => {
   const fixture = lifecycleDependencies();
-  const createLock = new SerialLock();
+  const createLock = createPermitLock();
   const registryStopEntered = deferred();
   const registryStopRelease = deferred();
   const registryFailure = new Error("registry close failed");
   fixture.dependencies.locks.afterCreateDrain.mockImplementation((operation) =>
-    createLock.runAfterPending(operation),
+    withPermit(createLock, operation),
   );
   fixture.registryStop.mockImplementation(async () => {
     registryStopEntered.resolve();

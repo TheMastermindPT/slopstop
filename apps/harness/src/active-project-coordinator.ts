@@ -37,7 +37,7 @@ import {
   CanonicalWriterLeaseError,
   type CanonicalWriterLeaseFactory,
 } from "./storage/canonical-writer-lease.js";
-import { SerialLock } from "./storage/serial-lock.js";
+import { createPermitLock, withPermit } from "./storage/permit-lock.js";
 export interface ActiveProjectCoordinator {
   activate(request: CanonicalProjectActivationRequest): Promise<CanonicalProjectActivationResult>;
   switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
@@ -445,7 +445,7 @@ async function acquireProject(
 export function createActiveProjectCoordinator(
   dependencies: ActiveProjectCoordinatorDependencies,
 ): ActiveProjectCoordinator {
-  const lifecycle = new SerialLock();
+  const lifecycle = createPermitLock();
   const admitted = new Set<Promise<void>>();
   let state: State = { status: "inactive" };
   let stopAttempt: Promise<void> | undefined;
@@ -453,7 +453,7 @@ export function createActiveProjectCoordinator(
 
   const enqueue = <Result>(operation: () => Promise<Result>): Promise<Result> => {
     pendingLifecycle++;
-    return lifecycle.run(async () => {
+    return withPermit(lifecycle, async () => {
       try {
         return await operation();
       } finally {

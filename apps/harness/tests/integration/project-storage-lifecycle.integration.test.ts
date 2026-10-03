@@ -882,6 +882,30 @@ it("aggregates a real unavailable failure from an opening pending at stop", asyn
   expect(fixture.registryStop).toHaveBeenCalledOnce();
 });
 
+it("settles operations admitted before Storage stop once the held create drains", async () => {
+  const root = await createTemporaryApplicationRoot();
+  const fixture = createCreateBoundaryTransportFixture(root, "createCanonical");
+  const created = fixture.application.create(createRequest);
+  await fixture.started;
+  const queued = [
+    fixture.application.open({ projectId: createRequest.projectId }),
+    fixture.application.close({ projectId: createRequest.projectId }),
+  ];
+  const stopping = fixture.stop();
+  await fixture.storageStopRequested;
+  fixture.release();
+
+  const outcomes = await Promise.all([created, ...queued]);
+  expect(outcomes.map(({ status }) => status)).toEqual([
+    "unavailable",
+    "unavailable",
+    "unavailable",
+  ]);
+  await expect(stopping).resolves.toBeUndefined();
+  expect(fixture.registryStop).toHaveBeenCalledOnce();
+  expect(fixture.projectLockCount()).toBe(3);
+});
+
 it.each(createBoundaries)(
   "stops create after $boundary without crossing the next durable boundary",
   async (boundary) => {

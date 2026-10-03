@@ -108,7 +108,6 @@ import type {
   ProjectStorageStoreDependencies,
 } from "./project-storage-store.js";
 import { withWriteTransaction } from "./project-storage-transaction.js";
-import { SerialLock } from "./serial-lock.js";
 
 export { requireDeclaredSchemaObjects } from "./database-schema-verifier.js";
 export { loadGeneratedMigrations } from "./generated-migration-resources.js";
@@ -130,7 +129,7 @@ type ClosedDatabaseBuild = Awaited<
 type CreateInspection = Awaited<
   ReturnType<ProjectStorageStoreDependencies["registry"]["inspectCreate"]>
 >;
-type ProjectLockEntry = { lock: SerialLock; users: number };
+type ProjectLockEntry = { lock: PermitLock; users: number };
 type OpeningSelection = Readonly<{
   identity: Extract<ProjectStorageOpenEvidence, { status: "selected-current" }>["identity"];
   generation: GenerationRow;
@@ -1336,7 +1335,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     ({
       now: () => decodeStrict(utcInstantSchema, new Date().toISOString()),
     } satisfies ProjectStorageStoreDependencies["clock"]);
-  const createLock = new SerialLock();
+  const createLock = createPermitLock();
   const projectLocks = new Map<ProjectId, ProjectLockEntry>();
   const paths: ProjectStorageStoreDependencies["paths"] = {
     forCreation: (projectId, generationId) => {
@@ -1700,17 +1699,18 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     databases,
     failures,
     locks: {
-      forCreate: (operation) => createLock.run(operation),
-      afterCreateDrain: (operation) => createLock.runAfterPending(operation),
+      forCreate: (operation) => withPermit(createLock, operation),
+      // Queues behind every create already waiting for or holding the create permit.
+      afterCreateDrain: (operation) => withPermit(createLock, operation),
       forProject: (projectId, operation) => {
         let entry = projectLocks.get(projectId);
         if (entry === undefined) {
-          entry = { lock: new SerialLock(), users: 0 };
+          entry = { lock: createPermitLock(), users: 0 };
           projectLocks.set(projectId, entry);
         }
         const retainedEntry = entry;
         retainedEntry.users += 1;
-        return retainedEntry.lock.run(operation).finally(() => {
+        return withPermit(retainedEntry.lock, operation).finally(() => {
           retainedEntry.users -= 1;
           if (retainedEntry.users === 0 && projectLocks.get(projectId) === retainedEntry) {
             projectLocks.delete(projectId);
@@ -1732,3 +1732,4 @@ export { createOpeningRelease };
 import type { InitialRepositoryBinding } from "@slopstop/protocol";
 import { Schema } from "effect";
 import { seedInitialRepositoryBinding } from "./initial-repository-binding.js";
+import { createPermitLock, type PermitLock, withPermit } from "./permit-lock.js";
