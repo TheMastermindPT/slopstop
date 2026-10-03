@@ -17,6 +17,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   createProjectStorageApplication,
   createUnavailableWorkspaceApplication,
+  type ProjectStorageApplication,
   startHarnessRuntime,
 } from "../../src/index.js";
 import { ProjectStorageUnavailableError } from "../../src/storage/project-storage-errors.js";
@@ -376,7 +377,22 @@ function createCreateBoundaryTransportFixture(
       },
     },
   } satisfies ProjectStorageStoreDependencies;
-  const application = createProjectStorageApplication(createProjectStorageOwner(dependencies));
+  const storageApplication = createProjectStorageApplication(
+    createProjectStorageOwner(dependencies),
+  );
+  // The runtime stops Storage only after canonical release (2a shutdown contract), so
+  // direct post-stop calls wait for that request instead of assuming the same turn.
+  let markStorageStopRequested: () => void = () => undefined;
+  const storageStopRequested = new Promise<void>((resolve) => {
+    markStorageStopRequested = resolve;
+  });
+  const application: ProjectStorageApplication = {
+    ...storageApplication,
+    stop: () => {
+      markStorageStopRequested();
+      return storageApplication.stop();
+    },
+  };
   const { port1, port2 } = new MessageChannel();
   let generatedId = 600;
   let commandId = 700;
@@ -405,6 +421,7 @@ function createCreateBoundaryTransportFixture(
     registryStop,
     shutdownEvents,
     started: gate.started,
+    storageStopRequested,
     release: gate.release,
     create(request: ProjectStorageCreateRequest): Promise<unknown> {
       const metadata = {
@@ -880,6 +897,8 @@ it.each(createBoundaries)(
       expect(stop.repeatedStop).toBe(stop.stopPromise);
       expect(stop.isSettled()).toBe(false);
       expect(fixture.registryStop).not.toHaveBeenCalled();
+      await fixture.storageStopRequested;
+      expect(stop.isSettled()).toBe(false);
       await expectPostStopOperationsUnavailable(fixture);
     } finally {
       fixture.release();
