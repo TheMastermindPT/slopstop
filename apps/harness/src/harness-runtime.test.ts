@@ -231,6 +231,62 @@ it("awaits canonical release and withholds Storage shutdown after rejection", as
   expect(f.storage.stop).not.toHaveBeenCalled();
 });
 
+function applicationDatabaseShutdownFixture(canonicalStop: () => Promise<void>) {
+  const calls: string[] = [];
+  const listingRelease = deferred<void>();
+  const stop = startHarnessRuntime({
+    transport: new TestTransport(),
+    canonicalProjectApplication: { ...unusedCanonicalApplication(), stop: canonicalStop },
+    projectStorageApplication: {
+      ...createUnavailableProjectStorageApplication(),
+      stop: async () => {
+        calls.push("storage");
+      },
+    },
+    projectListing: {
+      list: async () => {
+        throw new Error("Listing is not used by this test.");
+      },
+      stop: async () => {
+        calls.push("listing-started");
+        await listingRelease.promise;
+        calls.push("listing");
+      },
+    },
+    applicationDatabase: {
+      stop: async () => {
+        calls.push("application-database");
+      },
+    },
+    workspaceApplication: createUnavailableWorkspaceApplication(),
+    harnessVersion: "0.0.0",
+    createId: () => "00000000-0000-4000-8000-000000000002",
+    now: () => "2026-08-14T12:00:01.000Z",
+  });
+  return { calls, stop, releaseListing: () => listingRelease.resolve() };
+}
+
+it("stops the shared application database only after Storage and listing have stopped", async () => {
+  const f = applicationDatabaseShutdownFixture(async () => undefined);
+  const stopping = f.stop();
+  await nextTurn();
+  expect(f.calls).toEqual(["listing-started", "storage"]);
+  f.releaseListing();
+  await stopping;
+  expect(f.calls).toEqual(["listing-started", "storage", "listing", "application-database"]);
+});
+
+it("keeps the shared application database when canonical release withholds Storage", async () => {
+  const failure = new Error("canonical release failed");
+  const f = applicationDatabaseShutdownFixture(async () => {
+    throw failure;
+  });
+  const stopping = f.stop();
+  f.releaseListing();
+  await expect(stopping).rejects.toBe(failure);
+  expect(f.calls).toEqual(["listing-started", "listing"]);
+});
+
 function deferred<T>() {
   let settle: ((value: T) => void) | undefined;
   const promise = new Promise<T>((resolve) => {

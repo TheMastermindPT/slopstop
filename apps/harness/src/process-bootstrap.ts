@@ -7,16 +7,27 @@ import {
   HarnessBootstrapSchema,
   ProjectActivationIdSchema,
 } from "@slopstop/protocol";
+import { Context, Effect, Layer, ManagedRuntime } from "effect";
 import { createActiveProjectCoordinator } from "./active-project-coordinator.js";
 import { createCanonicalCommandRegistry } from "./canonical-command-registry.js";
-import { createCanonicalProjectApplication } from "./canonical-project-application.js";
+import {
+  type CanonicalProjectApplication,
+  createCanonicalProjectApplication,
+} from "./canonical-project-application.js";
 import {
   type HarnessTransport,
   type StopHarnessRuntime,
   startHarnessRuntime,
 } from "./harness-runtime.js";
-import { createProjectStorageApplication } from "./project-storage-application.js";
-import { createApplicationDatabaseAuthority } from "./storage/application-database-authority.js";
+import {
+  createProjectStorageApplication,
+  type ProjectStorageOwner,
+} from "./project-storage-application.js";
+import type { RegistrationRegistry } from "./registration/registration-registry.js";
+import {
+  type ApplicationDatabaseAuthority,
+  createApplicationDatabaseAuthority,
+} from "./storage/application-database-authority.js";
 import {
   createCanonicalCommandRepositoryFactory,
   WriterCapabilityTokenSchema,
@@ -86,97 +97,157 @@ export function startHarnessProcessRuntime(
   ) {
     throw new Error("Harness bootstrap roots must not overlap.");
   }
-  // One application database authority for every owner this harness composes.
-  const applicationDatabase = createApplicationDatabaseAuthority({
-    applicationStorageRoot,
-    migrationResourcesRoot,
-  });
-  // It stops only after both consumers that can still admit work have stopped; a withheld
-  // Storage stop keeps it alive with any uncertain transaction.
-  let activeApplicationDatabaseConsumers = 2;
-  const releaseApplicationDatabaseConsumer = async (): Promise<void> => {
-    activeApplicationDatabaseConsumers -= 1;
-    if (activeApplicationDatabaseConsumers === 0) await applicationDatabase.stop();
-  };
-  const projectStorageOwner = createProjectStorageOwner(
-    createNodeProjectStorageDependencies({
-      applicationStorageRoot,
-      migrationResourcesRoot,
-      applicationVersion: "0.0.0",
-      applicationDatabase,
-    }),
+  // One runtime per harness process builds the owners once, sharing one application
+  // database authority. Their shutdown order stays explicit in the harness runtime.
+  const runtime = ManagedRuntime.make(
+    harnessServicesLayer({ applicationStorageRoot, migrationResourcesRoot }),
   );
-  const projectStorageApplication = createProjectStorageApplication(projectStorageOwner);
-
-  const now = () => new Date().toISOString();
-  const coordinator = createActiveProjectCoordinator({
-    validateTarget: createRegisteredProjectTargetValidation({
-      applicationStorageRoot,
-      migrationResourcesRoot,
-      applicationDatabase,
-    }),
-    validateSession: createRegisteredProjectSessionValidation({
-      applicationStorageRoot,
-      migrationResourcesRoot,
-      applicationDatabase,
-    }),
-    storage: projectStorageOwner,
-    leases: createNodeCanonicalWriterLeaseFactory(),
-    repositories: createCanonicalCommandRepositoryFactory({
-      registry: createCanonicalCommandRegistry([]),
-      createReceiptId: randomUUID,
-      createEventId: randomUUID,
-      now,
-      openClient: (databasePath) => createWorkerLocalLibsqlClient(databasePath, "generation"),
-      sha256Text: async (text) => createHash("sha256").update(text).digest("hex"),
-      createHandoffId: randomUUID,
-      createRecoveryRecordId: randomUUID,
-    }),
-    createActivationId: () => decodeStrict(ProjectActivationIdSchema, randomUUID()),
-    createWriterToken: () =>
-      decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
-    now,
-  });
-  const registrationOptions = {
-    applicationStorageRoot,
-    migrationResourcesRoot,
-    applicationVersion: "0.0.0",
-    applicationDatabase,
-  };
-  const registrationRegistry = createRegistrationRegistry(registrationOptions);
-  const registration = createProjectRegistrationOwner(
-    registrationRegistry,
-    registrationOptions,
-    applicationStorageRoot,
-  );
-  return startHarnessRuntime({
-    projectListing: {
-      list: async () => decodeStrict(ProjectListResultSchema, await registration.listProjects()),
-      stop: async () => {
-        try {
-          const result = await registration.close();
-          await registrationRegistry.stop();
+  try {
+    const services = runtime.runSync(
+      Effect.gen(function* () {
+        return {
+          applicationDatabase: yield* ApplicationDatabase,
+          projectStorage: yield* ProjectStorage,
+          registration: yield* ProjectRegistration,
+          canonicalProjects: yield* CanonicalProjects,
+        };
+      }),
+    );
+    const { registration } = services;
+    const stopHarness = startHarnessRuntime({
+      projectListing: {
+        list: async () =>
+          decodeStrict(ProjectListResultSchema, await registration.owner.listProjects()),
+        stop: async () => {
+          const result = await registration.owner.close();
+          await registration.registry.stop();
           if (result.status !== "closed")
             throw new Error("Project listing cleanup is unconfirmed.");
-        } finally {
-          await releaseApplicationDatabaseConsumer();
-        }
+        },
       },
-    },
-    transport: input.transport,
-    canonicalProjectApplication: createCanonicalProjectApplication(coordinator),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
-    projectStorageApplication: {
-      ...projectStorageApplication,
-      stop: async () => {
-        await projectStorageApplication.stop();
-        await releaseApplicationDatabaseConsumer();
-      },
-    },
-    harnessVersion: "0.0.0",
-    createId: randomUUID,
-    now,
-  });
+      applicationDatabase: services.applicationDatabase,
+      transport: input.transport,
+      canonicalProjectApplication: services.canonicalProjects,
+      workspaceApplication: createUnavailableWorkspaceApplication(),
+      projectStorageApplication: createProjectStorageApplication(services.projectStorage),
+      harnessVersion: "0.0.0",
+      createId: randomUUID,
+      now: currentTime,
+    });
+    let disposal: Promise<void> | undefined;
+    return () => {
+      const stopped = stopHarness();
+      disposal ??= stopped.finally(() => runtime.dispose());
+      return disposal;
+    };
+  } catch (error) {
+    void runtime.dispose();
+    throw error;
+  }
+}
+
+const currentTime = () => new Date().toISOString();
+
+type HarnessRootPaths = Readonly<{
+  applicationStorageRoot: string;
+  migrationResourcesRoot: string;
+}>;
+
+class HarnessRoots extends Context.Service<HarnessRoots, HarnessRootPaths>()(
+  "slopstop/harness/HarnessRoots",
+) {}
+class ApplicationDatabase extends Context.Service<
+  ApplicationDatabase,
+  ApplicationDatabaseAuthority
+>()("slopstop/harness/ApplicationDatabase") {}
+class ProjectStorage extends Context.Service<ProjectStorage, ProjectStorageOwner>()(
+  "slopstop/harness/ProjectStorage",
+) {}
+class ProjectRegistration extends Context.Service<
+  ProjectRegistration,
+  Readonly<{
+    registry: RegistrationRegistry;
+    owner: ReturnType<typeof createProjectRegistrationOwner>;
+  }>
+>()("slopstop/harness/ProjectRegistration") {}
+class CanonicalProjects extends Context.Service<CanonicalProjects, CanonicalProjectApplication>()(
+  "slopstop/harness/CanonicalProjects",
+) {}
+
+const applicationDatabaseLayer = Layer.effect(
+  ApplicationDatabase,
+  Effect.gen(function* () {
+    return createApplicationDatabaseAuthority(yield* HarnessRoots);
+  }),
+);
+
+const projectStorageLayer = Layer.effect(
+  ProjectStorage,
+  Effect.gen(function* () {
+    const roots = yield* HarnessRoots;
+    return createProjectStorageOwner(
+      createNodeProjectStorageDependencies({
+        ...roots,
+        applicationVersion: "0.0.0",
+        applicationDatabase: yield* ApplicationDatabase,
+      }),
+    );
+  }),
+);
+
+const projectRegistrationLayer = Layer.effect(
+  ProjectRegistration,
+  Effect.gen(function* () {
+    const roots = yield* HarnessRoots;
+    const options = {
+      ...roots,
+      applicationVersion: "0.0.0",
+      applicationDatabase: yield* ApplicationDatabase,
+    };
+    const registry = createRegistrationRegistry(options);
+    return {
+      registry,
+      owner: createProjectRegistrationOwner(registry, options, roots.applicationStorageRoot),
+    };
+  }),
+);
+
+const canonicalProjectsLayer = Layer.effect(
+  CanonicalProjects,
+  Effect.gen(function* () {
+    const roots = yield* HarnessRoots;
+    const applicationDatabase = yield* ApplicationDatabase;
+    const registryOptions = { ...roots, applicationDatabase };
+    const coordinator = createActiveProjectCoordinator({
+      validateTarget: createRegisteredProjectTargetValidation(registryOptions),
+      validateSession: createRegisteredProjectSessionValidation(registryOptions),
+      storage: yield* ProjectStorage,
+      leases: createNodeCanonicalWriterLeaseFactory(),
+      repositories: createCanonicalCommandRepositoryFactory({
+        registry: createCanonicalCommandRegistry([]),
+        createReceiptId: randomUUID,
+        createEventId: randomUUID,
+        now: currentTime,
+        openClient: (databasePath) => createWorkerLocalLibsqlClient(databasePath, "generation"),
+        sha256Text: async (text) => createHash("sha256").update(text).digest("hex"),
+        createHandoffId: randomUUID,
+        createRecoveryRecordId: randomUUID,
+      }),
+      createActivationId: () => decodeStrict(ProjectActivationIdSchema, randomUUID()),
+      createWriterToken: () =>
+        decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
+      now: currentTime,
+    });
+    return createCanonicalProjectApplication(coordinator);
+  }),
+);
+
+function harnessServicesLayer(roots: HarnessRootPaths) {
+  return canonicalProjectsLayer.pipe(
+    Layer.provideMerge(Layer.mergeAll(projectStorageLayer, projectRegistrationLayer)),
+    Layer.provideMerge(applicationDatabaseLayer),
+    Layer.provideMerge(Layer.succeed(HarnessRoots, roots)),
+  );
 }
 
 import { ProjectListResultSchema } from "@slopstop/protocol";
