@@ -8,6 +8,35 @@
 - Durable requirements and research are indexed in `.rpiv/artifacts/README.md`.
 - Before CodeScene authentication, API/project lookups, or Code Health gates, read `docs/agents/codescene.md`.
 
+## Interacting with the user
+
+- Don't just agree with the user. Explain where their idea is correct, where it is incomplete, and where it could fail.
+
+### How to communicate (plain Portuguese (Portugal))
+
+Explanations and status updates must be in plain Portuguese (Portugal). The user sometimes can't follow dense, jargon-heavy writing, so make it easy to read:
+
+- Use simple, everyday words and short sentences. Avoid jargon. When a technical term is unavoidable, explain it in a few plain words the first time you use it.
+- Lead with the bottom line: what happened, what it means, and what (if anything) you need from the user. Then add supporting detail below it.
+- Use a short analogy or a concrete example when it makes the point click faster than an abstract description.
+- Keep it concise. Don't bury the point under exhaustive detail; give the short version and offer to go deeper if the user wants it.
+- Still be direct about problems: say plainly where something is wrong, incomplete, or risky. Plain Portuguese means clear, not vague or softened.
+- This governs explanations, summaries, and status updates, not artifacts. Code, file paths, commit messages, test names, and command output stay exact and technical.
+- Use Portuguese only when speaking with the user or writing artifacts that require it. Write everything else in English.
+
+## Environment
+
+- Windows 11 development with Docker available.
+- Stack tooling: pnpm, Biome, Vitest + StrykerJS, Knip, dependency-cruiser, likeC4 (likec4 CLI is global).
+- Work on feature branches. The user may push with GitHub Desktop or the CLI.
+- Product is in active development, not hosted or in production.
+- Lazy-load current documentation through Context7 when touching a library; use Exa search for the web.
+- Playwright is available for browser verification.
+- After each implementation packet or phase, use the CodeScene MCP tools to analyze issues. Resolve issues immediately and refactor until CodeScene reports a score of 10. SonarQube is not used (user decision).
+- Load relevant best-practice skills before drafting designs or blueprints, writing code, or performing reviews. For example, load `typescript-best-practices` for TypeScript work, use the Astro docs MCP server for Astro, and load the relevant Cloudflare, Stripe, or Vitest skills.
+- Prefer `rg` over `grep` in the shell.
+- Write TypeScript comments as TSDoc, and add comments only when they improve understanding.
+
 ## Architecture
 
 - `packages/kernel` owns framework-independent domain behavior and depends on no workspace package.
