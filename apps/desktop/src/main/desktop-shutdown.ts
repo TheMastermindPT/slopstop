@@ -1,3 +1,5 @@
+import { Effect, Result } from "effect";
+
 type DesktopBeforeQuitEvent = Readonly<{ preventDefault(): void }>;
 
 export type DesktopShutdownController = Readonly<{
@@ -21,29 +23,33 @@ export function createDesktopShutdown(
   let requestedExitCode: number | undefined;
   let allowQuit = false;
 
-  const stop = (): Promise<void> => {
-    stopPromise ??= Promise.resolve().then(async () => {
-      const failures: unknown[] = [];
-      const attempt = (operation: () => void): void => {
-        try {
-          operation();
-        } catch (error) {
-          failures.push(error);
-        }
-      };
+  // Runs once: bridges stop first, then the harness; every failure is kept and the
+  // program itself never fails.
+  const shutdown = Effect.gen(function* () {
+    const failures: unknown[] = [];
+    for (const stopBridge of [options.stopProjectStorageBridge, options.stopWorkspaceBridge]) {
+      const stopped = yield* Effect.result(
+        Effect.try({ try: stopBridge, catch: (error) => error }),
+      );
+      if (Result.isFailure(stopped)) failures.push(stopped.failure);
+    }
+    const harness = yield* Effect.result(
+      Effect.tryPromise({ try: () => options.stopHarness(), catch: (error) => error }),
+    );
+    if (Result.isFailure(harness)) failures.push(harness.failure);
+    return failures;
+  });
 
-      attempt(options.stopProjectStorageBridge);
-      attempt(options.stopWorkspaceBridge);
-      try {
-        await options.stopHarness();
-      } catch (error) {
-        failures.push(error);
-      }
-      if (failures.length === 1) throw failures[0];
-      if (failures.length > 1) {
-        throw new AggregateError(failures, "Desktop shutdown failed.");
-      }
-    });
+  const stop = (): Promise<void> => {
+    // Starts one microtask after the caller's turn, as the desktop shutdown contract expects.
+    stopPromise ??= Promise.resolve()
+      .then(() => Effect.runPromise(shutdown))
+      .then((failures) => {
+        if (failures.length === 1) throw failures[0];
+        if (failures.length > 1) {
+          throw new AggregateError(failures, "Desktop shutdown failed.");
+        }
+      });
     return stopPromise;
   };
 
