@@ -26,12 +26,15 @@ const smokeIntent = WorkspaceIntentSchema.parse({
   expectedProjectionRevision: 0,
 });
 const expectedMethods = [
+  "activateProject",
   "getHarnessStatus",
+  "listProjects",
   "queryWorkspace",
   "retryHarness",
   "submitWorkspaceIntent",
   "subscribeHarnessStatus",
   "subscribeWorkspaceNotifications",
+  "switchProject",
 ] as const;
 const expectedResultKeys = [
   "intentResult",

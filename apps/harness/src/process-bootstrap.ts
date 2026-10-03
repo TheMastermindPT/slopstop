@@ -91,6 +91,14 @@ export function startHarnessProcessRuntime(
 
   const now = () => new Date().toISOString();
   const coordinator = createActiveProjectCoordinator({
+    validateTarget: createRegisteredProjectTargetValidation({
+      applicationStorageRoot,
+      migrationResourcesRoot,
+    }),
+    validateSession: createRegisteredProjectSessionValidation({
+      applicationStorageRoot,
+      migrationResourcesRoot,
+    }),
     storage: projectStorageOwner,
     leases: createNodeCanonicalWriterLeaseFactory(),
     repositories: createCanonicalCommandRepositoryFactory({
@@ -107,7 +115,26 @@ export function startHarnessProcessRuntime(
     createWriterToken: () => WriterCapabilityTokenSchema.parse(randomBytes(32).toString("hex")),
     now,
   });
+  const registrationOptions = {
+    applicationStorageRoot,
+    migrationResourcesRoot,
+    applicationVersion: "0.0.0",
+  };
+  const registrationRegistry = createRegistrationRegistry(registrationOptions);
+  const registration = createProjectRegistrationOwner(
+    registrationRegistry,
+    registrationOptions,
+    applicationStorageRoot,
+  );
   return startHarnessRuntime({
+    projectListing: {
+      list: async () => ProjectListResultSchema.parse(await registration.listProjects()),
+      stop: async () => {
+        const result = await registration.close();
+        await registrationRegistry.stop();
+        if (result.status !== "closed") throw new Error("Project listing cleanup is unconfirmed.");
+      },
+    },
     transport: input.transport,
     canonicalProjectApplication: createCanonicalProjectApplication(coordinator),
     workspaceApplication: createUnavailableWorkspaceApplication(),
@@ -117,3 +144,11 @@ export function startHarnessProcessRuntime(
     now,
   });
 }
+
+import { ProjectListResultSchema } from "@slopstop/protocol";
+import { createProjectRegistrationOwner } from "./registration/project-registration-owner.js";
+import {
+  createRegisteredProjectSessionValidation,
+  createRegisteredProjectTargetValidation,
+} from "./registration/registered-project-selection.js";
+import { createRegistrationRegistry } from "./registration/registration-registry.js";

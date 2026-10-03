@@ -105,7 +105,7 @@ async function collectRuntimePackages(): Promise<ReadonlyMap<string, string>> {
   };
 
   await Promise.all(
-    ["@libsql/client", "fs-native-extensions", "libsql", "zod"].map((packageName) =>
+    ["@libsql/client", "fs-native-extensions", "libsql", "koffi", "zod"].map((packageName) =>
       collect(packageName, harnessRoot),
     ),
   );
@@ -151,7 +151,7 @@ export default defineConfig({
       formats: ["cjs"],
     },
     rollupOptions: {
-      external: [...nodeBuiltins, "fs-native-extensions", "libsql"],
+      external: [...nodeBuiltins, "fs-native-extensions", "libsql", "koffi"],
     },
   },
 });

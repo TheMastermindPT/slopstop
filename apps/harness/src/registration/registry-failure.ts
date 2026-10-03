@@ -1,19 +1,30 @@
+import { RegisteredProjectSelectionCodeSchema } from "@slopstop/protocol";
 import { z } from "zod";
 import { storageErrorCode } from "../storage/project-storage-node-errors.js";
 
 export const RegistryFailureSchema = z.union([
   z.strictObject({
     status: z.literal("broken"),
-    code: z.enum(["REGISTRY_SCHEMA_UNKNOWN", "REGISTRY_SCHEMA_NEWER", "REGISTRY_CORRUPT"]),
+    code: RegisteredProjectSelectionCodeSchema.extract([
+      "REGISTRY_SCHEMA_UNKNOWN",
+      "REGISTRY_SCHEMA_NEWER",
+      "REGISTRY_CORRUPT",
+    ]),
   }),
-  z.strictObject({ status: z.literal("unavailable"), code: z.literal("REGISTRY_BUSY") }),
+  z.strictObject({
+    status: z.literal("unavailable"),
+    code: RegisteredProjectSelectionCodeSchema.extract(["REGISTRY_BUSY"]),
+  }),
   z.strictObject({
     status: z.literal("pending-recovery"),
-    code: z.enum(["REGISTRY_MISSING_WITH_WITNESS", "OBSERVER_CLEANUP_UNCONFIRMED"]),
+    code: RegisteredProjectSelectionCodeSchema.extract([
+      "REGISTRY_MISSING_WITH_WITNESS",
+      "OBSERVER_CLEANUP_UNCONFIRMED",
+    ]),
   }),
   z.strictObject({
     status: z.literal("rejected"),
-    code: z.literal("REGISTRATION_IDEMPOTENCY_CONFLICT"),
+    code: RegisteredProjectSelectionCodeSchema.extract(["REGISTRATION_IDEMPOTENCY_CONFLICT"]),
   }),
 ]);
 

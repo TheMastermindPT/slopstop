@@ -65,6 +65,15 @@ export {
   writerProofStaleCreateRequestId,
   writerProofStaleProjectId,
 } from "./canonical-writer-smoke-protocol.js";
+export type { ProjectList, ProjectListResult } from "./project-list-protocol.js";
+export {
+  ProjectListEntrySchema,
+  ProjectListLocationSchema,
+  ProjectListRequestSchema,
+  ProjectListResultSchema,
+  ProjectListSchema,
+  ProjectListStorageSchema,
+} from "./project-list-protocol.js";
 export type {
   InitialRepositoryBinding,
   RegisteredProject,
@@ -72,6 +81,7 @@ export type {
 export {
   InitialRepositoryBindingSchema,
   RegisteredProjectSchema,
+  RegisteredProjectSelectionCodeSchema,
 } from "./project-registration-protocol.js";
 export type {
   CanonicalDatabaseLineageId,
@@ -128,6 +138,8 @@ export {
   createProjectCommandResultEvent,
   createProjectCreateCommand,
   createProjectCreateResultEvent,
+  createProjectListCommand,
+  createProjectListResultEvent,
   createProjectOpenCommand,
   createProjectOpenResultEvent,
   createProjectSwitchCommand,

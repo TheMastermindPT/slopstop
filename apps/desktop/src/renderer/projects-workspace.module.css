@@ -1,0 +1,163 @@
+.shell {
+  display: grid;
+  grid-template-columns: 3.5rem 19rem minmax(0, 1fr);
+  grid-template-rows: 3.5rem minmax(0, 1fr);
+  width: 100vw;
+  height: 100vh;
+  color: var(--prototype-ink);
+  background: var(--prototype-night);
+  font-size: 0.875rem;
+}
+.shell button {
+  font: inherit;
+  color: inherit;
+  background: var(--prototype-raised);
+  border: 1px solid var(--prototype-line-strong);
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.7rem;
+}
+.shell button:hover:not(:disabled) {
+  background: var(--prototype-panel);
+}
+.shell button:disabled {
+  cursor: not-allowed;
+  color: var(--prototype-muted);
+}
+.rail {
+  grid-row: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 1.4rem;
+  padding-top: 0.8rem;
+  border-right: 1px solid var(--prototype-line);
+  background: var(--prototype-deep);
+}
+.rail button {
+  padding: 0.45rem;
+}
+.mark {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.header {
+  grid-column: 2 / -1;
+  display: flex;
+  gap: 1.5rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1.2rem;
+  border-bottom: 1px solid var(--prototype-line);
+  background: var(--prototype-deep);
+}
+.header h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+.header :global([role="status"]) {
+  display: flex;
+  gap: 0.8rem;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--prototype-muted);
+}
+.header :global([role="status"]) strong {
+  color: var(--prototype-ink);
+}
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+  padding: 1rem;
+  overflow-y: auto;
+  border-right: 1px solid var(--prototype-line);
+  background: var(--prototype-deep);
+}
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.listHeader h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.sidebar p {
+  color: var(--prototype-muted);
+  line-height: 1.6;
+}
+.projectList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.projectList li {
+  border-bottom: 1px solid var(--prototype-line);
+}
+.projectList button {
+  display: grid;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 0;
+  padding: 1rem 0.6rem;
+  background: transparent;
+}
+.projectList button[aria-current="true"] {
+  border-color: var(--prototype-line-strong);
+  background: var(--prototype-raised);
+  color: var(--prototype-ink);
+}
+.projectList code,
+.workspace code {
+  font-family: var(--prototype-font-code);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+  color: var(--prototype-muted);
+}
+.projectList span {
+  font-size: 0.78rem;
+  color: var(--prototype-muted);
+}
+.asideNote {
+  margin-top: auto;
+  font-size: 0.75rem;
+}
+.workspace {
+  min-width: 0;
+  padding: 2rem;
+  overflow-y: auto;
+}
+.workspace h2 {
+  font-size: 1.4rem;
+  margin: 0 0 1rem;
+  font-weight: 600;
+}
+.workspace p {
+  line-height: 1.6;
+  max-width: 65ch;
+  color: var(--prototype-muted);
+}
+.workspace .access {
+  color: var(--prototype-ink);
+  margin-top: 2rem;
+}
+.workspace .error {
+  color: var(--prototype-danger);
+  border: 1px solid var(--prototype-line-strong);
+  padding: 0.8rem;
+}
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: 3rem 16rem minmax(0, 1fr);
+  }
+  .workspace {
+    padding: 1rem;
+  }
+  .header :global([role="status"]) span {
+    display: none;
+  }
+}

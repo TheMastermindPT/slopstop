@@ -207,6 +207,11 @@ const WorkspaceProjectionInvalidatedEventSchema = z.strictObject({
 export const DesktopMessageSchema = z.discriminatedUnion("command", [
   z.strictObject({
     ...DesktopCommandMetadataSchema,
+    command: z.literal("project.list"),
+    payload: ProjectListRequestSchema,
+  }),
+  z.strictObject({
+    ...DesktopCommandMetadataSchema,
     command: z.literal("project.switch"),
     payload: CanonicalProjectSwitchRequestSchema,
   }),
@@ -230,6 +235,11 @@ export const DesktopMessageSchema = z.discriminatedUnion("command", [
 export type DesktopMessage = z.infer<typeof DesktopMessageSchema>;
 
 export const HarnessMessageSchema = z.discriminatedUnion("event", [
+  z.strictObject({
+    ...HarnessEventMetadataSchema,
+    event: z.literal("project.list.result"),
+    payload: ProjectListResultSchema,
+  }),
   z.strictObject({
     ...HarnessEventMetadataSchema,
     event: z.literal("project.switch.result"),
@@ -569,4 +579,19 @@ export function createWorkspaceProjectionInvalidatedEvent(
   notification: WorkspaceNotification,
 ): HarnessMessage {
   return createEvent(metadata, "workspace.projection.invalidated", notification);
+}
+
+import {
+  ProjectListRequestSchema,
+  type ProjectListResult,
+  ProjectListResultSchema,
+} from "./project-list-protocol.js";
+export function createProjectListCommand(metadata: CommandMetadata): DesktopMessage {
+  return createCommand(metadata, "project.list", {});
+}
+export function createProjectListResultEvent(
+  metadata: EventMetadata,
+  result: ProjectListResult,
+): HarnessMessage {
+  return createEvent(metadata, "project.list.result", result);
 }

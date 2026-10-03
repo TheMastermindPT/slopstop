@@ -5,6 +5,7 @@ import { sameExecutableIdentity } from "./executable-identity.js";
 import type { IdentityQueryChildPort } from "./identity-query-child.js";
 import { REGISTRATION_CLEANUP_BUDGET_MS } from "./observer-limits.js";
 import { samePhysicalIdentity } from "./physical-identity.js";
+import type { listRegisteredProjects } from "./project-listing.js";
 import {
   ConfirmationValidationRequestSchema,
   incomplete,
@@ -26,12 +27,15 @@ import { registryFailure } from "./registry-failure.js";
 import { createRepositoryIdentityQueryOwner } from "./repository-identity-query-owner.js";
 import type { IdentityQueryAdmissionPort, RepositoryTrustOwner } from "./repository-trust.js";
 
+type Listing = (signal: AbortSignal) => ReturnType<typeof listRegisteredProjects>;
+
 type Dependencies = Readonly<{
   registry: RepositoryTrustOwner;
   options: RegistrationDatabaseOptions;
   controlDirectory: string;
   child: IdentityQueryChildPort | undefined;
   bootstrap?: RegistrationBootstrap;
+  listing?: Listing;
 }>;
 
 const pendingCleanup = {
@@ -211,12 +215,19 @@ async function confirm(dependencies: Dependencies, input: unknown, signal: Abort
 }
 
 type OperationResult =
+  | Awaited<ReturnType<typeof listProjects>>
   | Awaited<ReturnType<typeof prepare>>
   | Awaited<ReturnType<typeof confirm>>
   | Awaited<ReturnType<typeof validateConfirmation>>;
 
 const pendingCreation = { status: "pending-recovery", code: "REGISTRATION_INCOMPLETE" } as const;
-type PendingClose = typeof pendingCleanup | typeof pendingCreation;
+const pendingListing = { status: "broken", code: "INTERNAL_FAILURE" } as const;
+type PendingClose = typeof pendingCleanup | typeof pendingCreation | typeof pendingListing;
+
+async function listProjects(dependencies: Dependencies, _input: unknown, signal: AbortSignal) {
+  if (dependencies.listing === undefined) return pendingListing;
+  return dependencies.listing(signal);
+}
 
 async function drainPreparations(
   work: Iterable<Promise<OperationResult>>,
@@ -253,10 +264,26 @@ export function createProjectRegistrationPreparation(
   controlDirectory: string,
   child?: IdentityQueryChildPort,
   bootstrap?: RegistrationBootstrap,
+  listing?: Listing,
 ) {
   let closed = false;
   let unconfirmed: PendingClose | undefined;
   let activeBootstraps = 0;
+  let activeListings = 0;
+  const trackedListing: Listing | undefined =
+    listing === undefined
+      ? undefined
+      : async (signal) => {
+          activeListings += 1;
+          try {
+            const work: Promise<Awaited<ReturnType<Listing>>> = listing(signal);
+            const result = await work;
+            if (result.status === "broken") unconfirmed ??= pendingListing;
+            return result;
+          } finally {
+            activeListings -= 1;
+          }
+        };
   const trackedBootstrap: RegistrationBootstrap | undefined =
     bootstrap === undefined
       ? undefined
@@ -274,7 +301,7 @@ export function createProjectRegistrationPreparation(
   let closing: ReturnType<typeof drainPreparations> | undefined;
   const active = new Map<AbortController, Promise<OperationResult>>();
   const run = async (
-    operation: typeof prepare | typeof validateConfirmation | typeof confirm,
+    operation: typeof prepare | typeof validateConfirmation | typeof confirm | typeof listProjects,
     request: unknown,
   ) => {
     if (closed) return { status: "cancelled" } as const;
@@ -286,6 +313,7 @@ export function createProjectRegistrationPreparation(
         controlDirectory,
         child,
         ...(trackedBootstrap === undefined ? {} : { bootstrap: trackedBootstrap }),
+        ...(trackedListing === undefined ? {} : { listing: trackedListing }),
       },
       request,
       controller.signal,
@@ -300,7 +328,8 @@ export function createProjectRegistrationPreparation(
       if (
         (result.status === "prepared" ||
           result.status === "confirmation-validated" ||
-          result.status === "registered") &&
+          result.status === "registered" ||
+          result.status === "listed") &&
         controller.signal.aborted
       )
         return { status: "cancelled" } as const;
@@ -310,6 +339,7 @@ export function createProjectRegistrationPreparation(
     }
   };
   return {
+    listProjects: () => run(listProjects, undefined),
     confirm: (request: unknown) => run(confirm, request),
     prepare: (request: unknown) => run(prepare, request),
     validateConfirmation: (request: unknown) => run(validateConfirmation, request),
@@ -318,7 +348,11 @@ export function createProjectRegistrationPreparation(
       closed = true;
       for (const controller of active.keys()) controller.abort();
       closing = drainPreparations(active.values(), () =>
-        activeBootstraps > 0 ? pendingCreation : pendingCleanup,
+        activeBootstraps > 0
+          ? pendingCreation
+          : activeListings > 0
+            ? pendingListing
+            : pendingCleanup,
       ).then((result) => {
         if (result.status === "pending-recovery") unconfirmed ??= result;
         return unconfirmed ?? result;

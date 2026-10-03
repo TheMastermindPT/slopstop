@@ -97,12 +97,15 @@ test.describe("built desktop shell", () => {
       processType: "undefined",
       requireType: "undefined",
       exposedApi: [
+        "activateProject",
         "getHarnessStatus",
+        "listProjects",
         "queryWorkspace",
         "retryHarness",
         "submitWorkspaceIntent",
         "subscribeHarnessStatus",
         "subscribeWorkspaceNotifications",
+        "switchProject",
       ],
     });
   });

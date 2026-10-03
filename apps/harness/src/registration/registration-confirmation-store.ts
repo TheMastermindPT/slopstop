@@ -292,3 +292,52 @@ export async function publishRegistration(
 export function reservationFingerprint(reservation: Reservation) {
   return digest(reservation);
 }
+
+export async function readProjectRegistrationRecords(transaction: LocalLibsqlTransaction) {
+  const ids = z
+    .strictObject({ reservationId: z.uuid() })
+    .array()
+    .safeParse(
+      registryRows(
+        await transaction.execute(
+          "SELECT reservation_id AS reservationId FROM registration_reservations ORDER BY reservation_id",
+        ),
+      ),
+    );
+  if (!ids.success) throw corrupt();
+  const records = [];
+  const projects = new Set<string>();
+  for (const { reservationId } of ids.data) {
+    const reservation = await readReservation(transaction, reservationId);
+    if (projects.has(reservation.projectId)) throw corrupt();
+    projects.add(reservation.projectId);
+    const requests = await transaction.execute({
+      sql: "SELECT request_id AS requestId, reservation_id AS reservationId, request_json AS requestJson FROM registration_requests WHERE reservation_id = ?",
+      args: [reservationId],
+    });
+    const rows = z
+      .strictObject({
+        requestId: ConfirmationValidationRequestSchema.shape.requestId,
+        reservationId: reservationSchema.shape.reservationId,
+        requestJson: z.string(),
+      })
+      .array()
+      .min(1)
+      .safeParse(registryRows(requests));
+    if (!rows.success) throw corrupt();
+    for (const row of rows.data) {
+      let request: ConfirmationRequest;
+      try {
+        request = ConfirmationValidationRequestSchema.parse(JSON.parse(row.requestJson));
+      } catch {
+        throw corrupt();
+      }
+      if (request.requestId !== row.requestId || row.reservationId !== reservationId)
+        throw corrupt();
+      if ((await readConfirmation(transaction, request)) === undefined) throw corrupt();
+    }
+    const publication = await readPublication(transaction, reservation);
+    records.push({ reservation, publication });
+  }
+  return records;
+}

@@ -3,6 +3,7 @@ import {
   createProjectCloseResultEvent,
   createProjectCommandResultEvent,
   createProjectCreateResultEvent,
+  createProjectListResultEvent,
   createProjectOpenResultEvent,
   createProjectSwitchResultEvent,
   createReadyEvent,
@@ -14,6 +15,7 @@ import {
   type DesktopMessage,
   type HarnessFailureCode,
   type MessageId,
+  type ProjectListResult,
   parseDesktopMessage,
   readMessageId,
   WorkspaceNotificationSchema,
@@ -30,6 +32,7 @@ export interface HarnessTransport {
 export type StopHarnessRuntime = () => Promise<void>;
 
 type HarnessRuntimeOptions = Readonly<{
+  projectListing?: Readonly<{ list(): Promise<ProjectListResult>; stop(): Promise<void> }>;
   transport: HarnessTransport;
   canonicalProjectApplication: CanonicalProjectApplication;
   projectStorageApplication: ProjectStorageApplication;
@@ -166,6 +169,13 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     if (isCanonicalProjectMessage(parsed.value)) return handleCanonicalProjectMessage(parsed.value);
     if (isProjectStorageMessage(parsed.value)) return handleProjectStorageMessage(parsed.value);
     switch (parsed.value.command) {
+      case "project.list": {
+        const result =
+          (await options.projectListing?.list()) ??
+          ({ status: "unavailable", code: "PROJECT_LIST_UNAVAILABLE" } as const);
+        options.transport.send(createProjectListResultEvent(nextMetadata(causationId), result));
+        return;
+      }
       case "system.handshake":
         options.transport.send(createReadyEvent(nextMetadata(causationId), options.harnessVersion));
         return;
@@ -223,6 +233,11 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
       failures.push(error);
     }
     void (async () => {
+      try {
+        await options.projectListing?.stop();
+      } catch (error) {
+        failures.push(error);
+      }
       try {
         await options.canonicalProjectApplication.stop();
       } catch (error) {

@@ -1841,3 +1841,240 @@ Captures use the unchanged recorder, candidate cwd and310000ms outer limit. Pref
 F2 and final checks bind the same52-file source/config map `638eefc548ce31319b82f80409371852997a27ff1162b35bb539508eef71796e`; full retained files under `pc-s1-node2420-ebGfOM/source/`. Current production delta versus R3 is only registration-storage-bootstrap.ts (`b401599ed9509f7353ea22f2e47c917648a943f41e36718732aa865b0a41db1b`); the guard test is `a46ad6b5ade987b3581c13c44e558baea87bc514f9c425b90e38670dbc1113c2`. Complete53-path R4 freezes full binary patch, modes/statuses, retained bytes and27 references.
 
 Parent re-review and human acceptance remain pending; CodeScene UNAVAILABLE, no auth/Sonar fallback. Historical failures remain intact without a cause-fix claim. No new feature/UI, migrations, dependencies/runtime, commits/merge, broad/full/mutation gates or nested agents. Freeze writes.
+
+## 2026-10-02 — Saved Project listing checkpoint
+
+The user reported the reviewed bootstrap committed separately and authorized listing next. Verified a clean candidate at new accepted predecessor `0994f078258d7a697e3165a9157f566e86806ee6` before editing. This is the new delta base, not a claim of whole-PC-S1 completion. No commit/merge/push was performed here. The315476-byte committed evidence prefix / `7f2afc01447aa9bb093211888dff46f08ecde4b1671ca70ed5761fdda2b30c39` is preserved, and all26 original contract references plus approved replay decision were reverified.
+
+### Actual listing interface
+
+The existing composed `createProjectRegistrationOwner` now wires `listProjects()` to a real installation read owner. Protocol Zod schemas define the path-free listed DTO. It reports stable Project/binding/Workspace IDs where owned, current Storage identity/health, repository-location state and `access: not-assessed`. No display name or creation-time ordering was invented; Project IDs use deterministic lexical order, with no chronological meaning. Writer access is not asserted from Storage health. Selection, activation, reopening admission and renderer/transport wiring remain next work.
+
+Registry compatibility/integrity validation uses the existing owner. A short transaction validates durable reservations, their requests/proposals and publications; duplicate/conflicting Project authority fails broken rather than choosing a record. Multiple confirmation requests for one common identity yield one Project entry. The registry transaction/client are released before probing Project Storage, avoiding a nested registry write lock. The existing Storage owner performs open/health classification, and each Project session is explicitly closed before the next; the Storage owner is stopped afterwards. No Git executor, creation path, canonical writer or active-Project coordinator is invoked by listing.
+
+Published records are tagged registered; reservations without publication remain visible as incomplete/REGISTRATION_INCOMPLETE, even when their Storage is active. Existing Storage registrations without repository registration remain visible as unbound rather than being hidden or given invented bindings. Legacy canonical schema2 is shown in migration-required safe mode with its original IDs/bytes. Missing repository directories retain their entry with REPOSITORY_NOT_FOUND. Location present means the saved selected directory's physical identity is present, not a new Git topology/config inspection or write grant; full association revalidation remains reopening work. No private paths, raw diagnostics or config content enter the list.
+
+An empty unwitnessed installation may initialize only application.db through the already-approved compatibility path; it returns an empty list and creates no Project directory. Unknown/corrupt registry authority fails explicitly, never as an empty list. A witnessed missing registry is REGISTRY_MISSING_WITH_WITNESS with no recreated database. Listing shares owner admission/cancellation/drain tracking and suppresses a late listed response after close. Unsettled list cleanup is a broken internal failure rather than a false closed result. No schema/migration/dependency/runtime changes.
+
+### Prospective proof
+
+The public owner initially returned unavailable instead of the real published list (Red), then listed the same registered IDs after actual Git/Storage creation and restart (Green). A second Red proved unpublished active Storage was being hidden as an empty list; Green exposes it explicitly as incomplete. A third Red proved older unbound Storage was hidden; Green includes its migration-required health. The older-data fixture uses real Storage, then removes the new canonical tables and sets a consistent schema2 head/manifest/checksum before listing; both canonical bytes and manifest remain unchanged afterwards.
+
+Final coverage also exercises two confirmation requests for one published Project (one entry), repeated listing without extra Git, target disappearance, empty new installation, invalid registry head with byte preservation, and witnessed missing registry without initialization. These are read/health characterizations alongside the three observed red-green behaviors; no fabricated historical Red for inherited compatibility behavior.
+
+Capture prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; unchanged Node24.20.0 recorder/310000ms outer limit. Integration command prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`, file registration-list.integration.test.ts.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| Published list Red | 4R26nG / `2f66e9f3c4b7d7ad467fb75d6c9b67173014a645fa45b5098ead4a2df1e06c50` | exit1, unavailable instead of listed |
+| Published list Green | EboAgS / `bda5158843ea280308ee7a6ffe695c1ba53baa71a72c1ff394e2ec791a1ac1c6` | exit0,1 passed |
+| Incomplete entry Red, `-t incomplete` | F4NdWZ / `4164997fa323a9e855760cb70a0a4e0b71b89d8344594038db25302d780e3507` | exit1, hidden entry |
+| Incomplete Green | OnbYJV / `82edae671aaba6870afea0ff0e10f76d66cce76589941f7c6a1a385c961dead6` | exit0,1 passed |
+| Older Storage Red, `-t older` | BySs70 / `649d6210f7fb9cf9cc6d1e0f566ba0948bd20b902a32933be8bdd81041425f2d` | exit1, hidden legacy Project |
+| Older Storage Green | 6RROSn / `58f040eb0a48f2107d51e681329ff26146f5b20ee570bcb40a2a82106c21a60a` | exit0,1 passed |
+| Expanded file | Mg9mbw / `4280582f378c72cb0a44e08ccd41c82824f8ca758d682ea9d778ecafb6ecfe2e` | exit0,4/4 passed |
+| Initial harness types | xfD0im / `75b71606bebc8690eff41a1574157da3a962cb71a542eaa76e11f3bd8a46fda7` | exit2; unknown Storage result envelopes corrected using existing public Zod result schemas |
+| Protocol types | zRBF5p / `03a8a46baf1d846ee805b5b6656795af2013810ef606d967a3adddeb5ad4d3f6` | exit0; later protocol edits only organize imports |
+| Final harness types | lpFa95 / `dc661f79cdf60be717a8c34f49855c660cc8b250e69a806b212d24d2aea9a4d8` | exit0 |
+| Final seven-file Biome | EZsBAY / `d1ed48c2a79a4bac724c024c6fdcf7c001766c1cec34464dd00770fceda8766b` | exit0,7 files, no fixes |
+| Final listing file `--reporter=verbose` | QPadkh / `0ab5908363135994eb879fd6cb08ebfc73d324749283454adc3b8f6dacbfa694` | exit0,4/4 passed |
+
+Separate review/refactor corrected explicit throw-in-finally cleanup handling by settling the read, closing the session, validating close, then returning/rethrowing. No lint rule or behavioral assertion weakened. Final three checks share the seven-file delta source map `3ce9c37a23d8eda588d2f9ca1958e5f08b7a989f6d1793dec836caa4d46bd185` relative to0994f078; full changed bytes retained in `pc-s1-node2420-QPadkh/source/`. New complete eight-path snapshot binds only the actual delta against that committed base, plus27 contract references. Prior commits/snapshots supply historical implementation identity.
+
+Current listing tests/types/lint pass; CodeScene remains UNAVAILABLE, no auth/install/Sonar fallback. Parent independent review/acceptance is pending. Selection/reopen/activation and UI remain unimplemented in this packet; no claim of current writer access or whole-feature completion. Listing cancellation/cleanup fault injection and wider health matrices are not claimed exhaustively covered. No new commits, merge, full/deep/mutation gates, dependencies/runtime changes or nested agents. Freeze writes.
+
+## 2026-10-02 — Listing R2 enumerated-row identity correction
+
+Parent code/slice review identified one concrete integrity defect: enumeration selected only request_json, then validated whichever request ID that JSON named. Copying valid request B's JSON into row A could therefore validate B twice and bypass A's mismatched digest. R1 snapshot `ef96fee67feb323310603e12e471387e820bd7d8bd9f42394a8f72aadc2ab3da` and its322886-byte evidence prefix / `96706ee87a29f0ef122c09c7dbe3689ef6b5136af3adb2b3f41e48409f8bec3f` are preserved. Base remains0994f078258d7a697e3165a9157f566e86806ee6, with27 unchanged contract references.
+
+Minimal production correction: enumerate actual request_id and reservation_id with request_json, validate their existing branded schemas, require parsed requestId to match that actual row key and the row's reservation to match the enumerated reservation **before** readConfirmation. Existing schema/digest checks remain strict and unchanged.
+
+The new public list test creates two valid confirmation requests for the same real reservation, keeps A's row key/digest/reservation unchanged, and copies only B's JSON into A. Red returned a healthy listed Project. Green returns exactly broken/REGISTRY_CORRUPT, with no further Git and byte-identical damaged application.db afterwards: no repair, overwrite or mutation. Existing published/incomplete/legacy/missing-state cases remain in the same five-case file; fixture setup is reused via a named test variant.
+
+Source-bound captures use the unchanged Node24.20.0 recorder, candidate cwd and310000ms outer bound. Prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; integration prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| Listing file `-t copied --reporter=verbose`, Red | bYsmXw / `1bdd3f1f7043fe05e047de5c69469b48ef317bf973ee06f19c04c5ed136f4c71` | exit1; corrupted A was accepted by validating B |
+| Same case `-t copied`, Green | 6v2lh8 / `aa16c62cdc517ef9db6efa91b1279956d063f10e4acf0caeea0762bc6dba2d48` | exit0,1 passed/4 skipped |
+| Final listing file `--reporter=verbose` | kAYXsQ / `3a4cfa88dc59c406fd1676da9a258e181cc5622d8de80f4864a70637168f6c34` | exit0,5/5 passed |
+| Final harness typecheck | XzDChX / `50d3bb48a92c97013738224eb960289768267b1a71766835283b068e6b151bc7` | exit0 |
+| Final protocol typecheck | U9n5nF / `c8a5e567306803b93b84272b0a14f1b9418d5ce9e0b75769dbb09a71e79b9d70` | exit0 |
+| Biome changed store and listing test | yyNBRV / `7337de480908a162147294943dc95d6f46dc630ea6f61dfc86cee79cd3150e92` | exit0,2 files, no fixes |
+
+All final checks bind identical seven-file delta source map `78b905c43180fe4dfd9a5a355e0dbb31174b4eeca9f67df23afbe9ddd308d0ef`; complete changed bytes retained under `pc-s1-node2420-kAYXsQ/source/`. New R2 freezes the full eight-path delta against0994f078, with evidence, binary patch, retained contents, modes/statuses and27 references. Compared with R1 only the confirmation-store enumerator, listing test and this append changed. CodeScene remains UNAVAILABLE; no auth/Sonar fallback, other refactor, commits/merge, nested agents or broad gates. Parent re-review/acceptance and the previously recorded selection/UI/health-matrix limits remain pending. Freeze writes.
+
+## 2026-10-02 — Registered Project selection/reopening through the existing runtime
+
+Continued from listing R2 snapshot `debde3da253b83010233a16e6248d4903fc59f78f94e80d8a2c6cf48c8b62e11`, retaining its uncommitted listing changes. The326210-byte evidence prefix / `1957a4929912529e39fb8591df48f073c398c9caa22bd445f4daa8a5da657cb3` is preserved. Base remains0994f078258d7a697e3165a9157f566e86806ee6;27 original/addendum references verified unchanged. No commit or merge.
+
+### Actual host wiring
+
+Existing public runtime commands `project.activate` and `project.switch` now validate registered targets in the production `startHarnessProcessRuntime` composition. There is no second active-Project state or synthetic activation result. The same ActiveProjectCoordinator still owns lifecycle serialization, activation IDs, old-command drain, Storage sessions, native writer leases, writer fences, read-only fallback and command rejection.
+
+Two optional coordinator admission ports carry the registration checks. Target validation runs after the existing activation/source-token checks and before changing/releasing the previous state. During switching it is repeated after the old activation is drained/released, immediately before target acquisition; this is not a reusable validation permit. A known missing/changed target before release preserves the old activation. Failures discovered only after release retain the coordinator's existing target-failure semantics.
+
+Target validation reads the existing-only registry through its compatibility/integrity owner, resolves checked reservation/publication authority, and performs bounded filesystem-only worktree/admin/common identity comparison. It performs no Git/version process or credential operation. An incomplete registration is unavailable with REGISTRATION_INCOMPLETE; missing, changed, inaccessible, unsupported or broken authority retain distinct typed codes. Missing registry bytes never initialize replacement data. Existing Storage-only Projects without a repository registration retain the legacy coordinator opening contract; no repository association is fabricated for them.
+
+After Storage yields a healthy read/write-capable session but before writer acquisition, session validation checks current Storage identity and the canonical binding/Workspace/initial registration request against the persisted registration. It opens only the Storage-owned canonical path after a plain-file check and releases that read client. The coordinator already holds the Storage session, so refusals use its existing cleanup/retained-release-failure path. Safe-mode sessions retain the existing coordinator classification/cleanup and are not forced through absent newer binding tables.
+
+Protocol activation diagnostics were extended with a shared registered-selection code vocabulary. The existing registry failure schema derives its unchanged accepted subsets from that owner instead of copying another vocabulary. Canonical activation failures retain their existing rejected/unavailable/broken shapes; registration pending-recovery conditions are conveyed as activation unavailable with the original specific code. No paths, SQL handles or writer tokens enter responses. Listing's access-not-assessed contract is unchanged; activation now reports the actual coordinator access.
+
+### Public runtime tests
+
+The new integration file uses production process bootstrap over a MessageChannel, actual registered Git repositories, real Project databases and native writer leases. Runtime sessions are separate instances within the test process, not a claim of separate OS-process execution.
+
+Prospective Red: removing a registered repository still produced active/read-write before this work. Green refuses REPOSITORY_NOT_FOUND before any writer generation. A second prospective Red showed altered canonical binding provenance still activated; Green returns PROJECT_STORAGE_BROKEN with coordinator-owned session cleanup. Further tests prove changed Git administration refusal without changed Storage rows; schema2 migration-required safe mode with unchanged canonical/manifest bytes; reopening in a new runtime session with fresh activation ID but identical Storage generation and observer journal; preservation of the old activation when a switch target disappears; and real competing-session read-only activation with command rejection WRITER_UNAVAILABLE. Existing coordinator behavior is reused, not given fabricated new Red evidence.
+
+### Captures
+
+Prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; existing Node24.20.0 recorder and310000ms outer bound. Native integration prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`, file registered-project-selection.integration.test.ts. Native files ran singly.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| Missing target Red | KN99pi / `bfc759934595e0f14f58040e1123d46bf8f1d3b6c3e87fc2756a1ca4e7175321` | exit1, active instead of repository-not-found refusal |
+| First Green attempt | Fpav0W / `f6dca97da4216eabce27351ff74f25a016efc105fdf6ced0022115a5134d8ea1` | exit1, Worker exited unexpectedly; broken, not assertion Green |
+| Intermediate types | dNUFL7 / `5666d947b96ede1ce2592ebc3a83098e0a13ff5575fa3b5a279d331b0bca844a` | exit2; non-empty enum tuple spread positioning corrected |
+| Current missing-target check | USNEJM / `566ca7a0f35d50782592bfb8550119e7a38f82303ecb0fb57d56400ea3b06db4` | exit0,1 passed; no crash-cause/fix claim |
+| Canonical binding Red, `-t disagrees` | Jta6D0 / `13275709366a181004e80ff8b0e1c4412279f41612eb3a0aad13057e8aad37aa` | exit1, active instead of broken Storage association |
+| Same case Green | lGLQlJ / `e5266afb2f3909f2f2ebafc68f6a5565fd4ee82bc64ae18c82d54bb6f99438ce` | exit0,1 passed |
+| Final runtime integration `--reporter=verbose` | 1b6J9o / `0e722b53d8c74e8099cc073237d8d5e684e3e441013ea7799d02efcc43d585be` | exit0,7/7 passed |
+| Harness typecheck | e9m4KW / `e0b76ce66cd125e0dca0d2619b72e67bdd26e8c00bc8629306053b04f83755ff` | exit0 |
+| Protocol typecheck | 4I21Eg / `372485249dc6debf6c50a3f00038deb3d527d5aa250bde1113b7a50980e64441` | exit0 |
+| Eight changed-file Biome | QM57C3 / `e0dce115a85e006a24d6e615273b3189a8a897d07de460816188024e56faa5bb` | exit0 |
+| Initial coordinator unit command from wrong config cwd | ataHFc / `8cac471bf410dc2ddda2e3844c0b1dc82260b6af262262215b904b470a4b314e` | exit1, no tests found; invocation error, not behavior evidence |
+| `pnpm --dir apps/harness exec vitest run --config vitest.config.ts active-project-coordinator.test.ts` | A094cc / `69eaa5e335798cf27c018a67a454c8f9cf863a7afd67d74c670fee499c94cbd5` | exit0,29/29 existing coordinator tests passed |
+
+All final checks bind identical14-file delta source map `e668575fd60d908ba042bef522de70526d95fcf10da62ddab51b4b855479cdbf`. Full retained changed files are under `pc-s1-node2420-A094cc/source/`; new complete15-path freeze includes the earlier uncommitted listing delta, evidence, full binary patch, modes/statuses and27 references against0994f078.
+
+Current host selection/reopening behavior is callable and tested. UI/preload entry controls, list transport routing, successful switch between two distinct registered Projects, further access-denial/cleanup fault matrices and whole-PC-S1 validation are not claimed complete. CodeScene remains UNAVAILABLE; no auth/install/Sonar fallback, dependency/runtime/migration changes, full/deep/mutation gates, commits/merge or nested agents. Historical worker failures remain unexplained. Parent independent review/acceptance pending; freeze writes.
+
+## 2026-10-03 — Selection R2 two-Project switch characterization and resumed closeout
+
+Completed administrative closeout after the usage-limit interruption. R1 snapshot `839fd7b696482982a3796f533742318e7a30d428fe059189b1b42b93554fa923` and its333816-byte evidence prefix / `3ae2fb49bc586d1a2a8848a0f68c780f9453c9d5c2ae9c422315a962d5184a78` are preserved. Base remains0994f078258d7a697e3165a9157f566e86806ee6. Current production/protocol files match R1; the sole source/test change is registered-project-selection.integration.test.ts (`61a9c820da9438d36112507a01aff202092eb4d6687bd1d8b02f026935f16d6a`). All27 references were reverified unchanged.
+
+The existing fixture now optionally reuses one installation while creating a second distinct disposable repository/registered Project. The new public production-runtime case activates A, switches to B and asserts B's Project/activation identity and read-write access. A command carrying A's former identity is rejected by the original runtime with PROJECT_NOT_ACTIVE. While that runtime still owns B, another runtime session acquires A read-write, proving release of A's native writer lease; A's former activation token is rejected there with PROJECT_ACTIVATION_STALE. Both Storage-generation rows remain exactly unchanged. No private coordinator calls are asserted and no Storage is created by switching/reopening. This is characterization of existing production behavior, with no fake Red or production change.
+
+The interrupted attempt had already completed focused/final tests, typecheck and Biome. The parent independently ran the full current selection file again after resumption. Compared all capture input maps with current files: they are identical, so no tests, coordinator regression suite or quality checks were repeated during this administrative closeout.
+
+Capture prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; existing recorder and Node24.20.0. Native command prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`, file registered-project-selection.integration.test.ts.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| New A-to-B case `-t between --reporter=verbose` | g8MRcC / `dc246af53e2f5cd6a23af940daac9c96d86d9c827cd6f8b88484834856177c5b` | exit0,1 passed/7 skipped |
+| Full selection file `--reporter=verbose` | pKWrGC / `e46bfa85ae7029f1790b669553206b91a70c513e1d126d74902918116cf7f331` | exit0,8/8 passed,44.73s |
+| Harness typecheck | bT1xWW / `a0d500639743e94b62a06105fef5f2f8570afcd98733b2a39ab88af3969ea4c6` | exit0 |
+| Biome changed integration test | HDY3Od / `a78e0a4f2dca7bee4a6549474f2ead501b7ff28238a89a52c22a5fd4e8497286` | exit0,1 file, no fixes |
+| Parent resumed full selection file `--reporter=verbose` | z9CRvg / `6be3642f16c4408406ecc732a08d88259fdf96f0f0bca9e660a756e9a0ddeca1` | exit0,8/8 passed,47.44s; captured2026-10-03T12:17:49.783Z |
+
+All five captures bind the current14-file delta source map `3b5733c474c1b4e3bc7e765a7b350f7a8c668930165cd494eb42ba17de64f563`. Full retained source is available in `pc-s1-node2420-z9CRvg/source/`. R2 freezes the complete15-path dirty delta against0994f078, including prior uncommitted listing, this append, modes/statuses, complete binary patch and27 references. The earlier29/29 coordinator proof remains historical on unchanged production; protocol bytes also remain unchanged from their passing R1 check.
+
+The distinct-two-Project switch coverage gap is closed. Parent independent review/acceptance, UI/preload/list transport and wider failure/full-feature validation remain pending. Previously recorded CodeScene unavailability remains not assessed in this administrative closeout; no tool/auth/install fallback or Sonar. No implementation beyond the existing test change, no new commands executing tests, no commits/merge/push, broad gates or nested agents. Freeze writes.
+
+## 2026-10-03 — Selection R3 root-replacement mapping and generation finding triage
+
+Preserved R2 snapshot `0ba0d2eace13636593c7db933d815240a1fc21df31cd4915c6db41f5b5d5c586` and337703-byte evidence prefix / `a99d5ea0048b0d49e75d65eb0de74a508f301dad7f048850647ce988b34a9749`. Same0994f078 base, Node24.20.0, prior listing work and27 contract references.
+
+### F1 — verified defect, fixed at selection boundary
+
+Public runtime test moves the entire registered root aside and initializes a different valid Git repository at the original path. Red returned broken/INTERNAL_FAILURE because discoverSelectedPhysical's unavailable/REPOSITORY_TRUST_REQUIRED result is not an activation DTO. Added only the selection-boundary mapping to rejected/REPOSITORY_IDENTITY_CHANGED. Preparation/physical-observer trust semantics remain unchanged. Green proves the exact refusal, zero writer_generations and unchanged storage_generations. No automatic reassociation or new trust grant is introduced.
+
+### F2 — recommendation is overreach, not a verified missing selection invariant
+
+Do **not** compare the selected session's generationId with the original registration receipt's generationId. The latter is historical, not the current active-generation authority:
+
+- `docs/adr/0005-storage-lifecycle-and-recovery.md:20-22` explicitly permits staged migration/restore to activate a newly identified complete generation under the same Project, through the authoritative active-generation change; lines23-25 preserve safe-mode/recovery and prohibit blind initialization.
+- `docs/adr/0006-physical-persistence-layout.md:18,111,119-124` assigns selection to the registry's active-generation pointer and requires agreement with manifest and database identities. It does not assign that role to the initial registration receipt.
+- Frozen v1 brief `2026-09-12_pc-s1-intent-v1-brief.md:110-112` requires resolving the existing association and revalidating association/Storage before activation. Effective v3 D7 `2026-09-13_pc-s1-intent-v3-brief.md:50-54` requires exact immutable replay of the original registered IDs/outcome and separates that history from current location/access health.
+
+The existing Storage owner already checks the required **current** authority:
+
+- `apps/harness/src/storage/project-storage-node-adapters.ts:982-998` checks active-generation/location pointers against the active generation row.
+- `:1000-1069` selects/reconfirms current registry/filesystem agreement, constructs session identity from that selected row and chooses the generation path from its generationId.
+- `:1397-1452` passes that selected generation to manifest inspection and database probes, then returns the selected-current identity.
+- `apps/harness/src/storage/project-storage-opening-manifest.ts:40-52` compares manifest Project/Storage/generation/lineage identities against that current authority.
+- `project-storage-node-adapters.ts:433-473,1072-1113` compares both database generation/lineage identities to the selected generation and validates current opening metadata/health before normal access.
+- `apps/harness/src/registration/registered-project-selection.ts:33-64` adds stable registration Storage/binding/Workspace agreement to that owned session; it intentionally does not substitute the historical receipt's generation for current Storage authority.
+
+An inconsistent pointer/manifest/database state does not qualify as a healthy selected session under this owner. Conversely, a valid future lifecycle transition must not be rejected solely because its new generation differs from the initial receipt. The current initial-create-oriented opening implementation conservatively expects one ordinary generation (`project-storage-node-adapters.ts:1028-1033`); this is **not** proof that full migration/restore lifecycle support is complete. Such future support needs proper lifecycle-owner tests, not a fabricated multi-generation fixture or a permanent historical-generation pin in selection.
+
+Verdict for parent triage: the proposed original-receipt equality check is a false-positive remedy/contract overreach. No generation-related production change or synthetic migration test was made. Current-generation integrity remains with its existing owner. This is a source/contract analysis, not a new execution claim for migration/restore.
+
+### Source-bound verification
+
+Prefix `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-`; unchanged recorder/310000ms outer bound. Integration prefix `pnpm exec vitest run --config apps/harness/vitest.integration.config.ts`, selection integration file.
+
+| Check | Capture / inputs.json SHA-256 | Result |
+| --- | --- | --- |
+| Root replacement `-t replacement --reporter=verbose`, Red | iQFJvy / `45c482d62184e9cf4447777d8ecd7d9751fb72422b0fa6c043d6f54eed72b114` | exit1; INTERNAL_FAILURE instead of REPOSITORY_IDENTITY_CHANGED |
+| Same case Green | EPXbo6 / `4b8b7926ce19bcb7042e95d83c324b3d96c362fe7532ef989165d9c883881755` | exit0,1 passed/8 skipped |
+| Final selection file `--reporter=verbose` | oeiGSh / `f0de3098e156699cc4caaa837b52b4612545f6a28687de9323dbb0ef9beb3ba0` | exit0,9/9 passed |
+| Harness typecheck | drmlrE / `a9cf641f4692ea2b56f44c7a175e637a9fb9b97761b82a8e12df7c7239f7558d` | exit0 |
+| Protocol typecheck | CmqKNy / `13a958990f651a8caaa0e138d0b095129be004d19dff33e892e653db7b5f3493` | exit0 |
+| Changed-file Biome | D9UPh7 / `c0d3e178b204d0fa03b40e1eb6ad128bed5846ce956596278209c9a33fb360df` | exit0,2 files, no fixes |
+
+Final four checks bind the same14-file delta source map `1ed6f1284ed5f731a090ee81b3c20bc33e8d0ee3b6f5ce780c5bd46084acd529`; retained full bytes under `pc-s1-node2420-D9UPh7/source/`. R3 freezes all15 dirty paths against0994f078 with full binary patch, modes/statuses, retained contents and27 references. Only selection mapping/test and this append changed from R2. No contract, migration, runtime/dependency, commit/merge, full/deep/mutation/Sonar or nested-agent work. CodeScene remains unavailable/not assessed without auth fallback. Parent finding triage/re-review and acceptance pending; prior scope limitations/history retained. Freeze writes.
+
+## 2026-10-03 — Existing Projects UI, real Electron proof and final cleanup
+
+Scope: list/open/switch existing Projects through the real protocol/runtime, Electron main bridge, narrow validated preload and renderer. New repository registration controls remain deferred. Candidate `ragnarok-pc-s1`, base `0994f078258d7a697e3165a9157f566e86806ee6`, branch `feat/project-registration`; no staging, commit, merge or nested agents. Preserve the preceding 343831 evidence bytes, SHA-256 `1cce3f2c4b75b58096d64f77a505a5d02024cc6553d79411b1fac51b4119586e`, and all preceding listing/selection changes and immutable snapshots. Node v24.20.0 / pnpm11.5.1 unchanged.
+
+### Behavior and original Red–Green evidence
+
+- Added strict `project.list` / `project.list.result` envelopes and composed-owner dispatch; no renderer filesystem/Node access. Bridge correlates replies, checks requested Project identity, and settles disconnected/malformed transport as explicit failure rather than an empty installation.
+- Existing coordinator remains authoritative. UI waits for activation, distinguishes read-only/read-write/safe mode, disables unavailable/incomplete selections, and ignores stale asynchronous replies after lifecycle changes. `sourceReleased: false` preserves the active Project when the switch target is refused before release; release failure is visible and never presented as writable. There is no optimistic active-Project replacement.
+- Runtime list Red `Vc66aJ` rejected the new command as PROTOCOL_MESSAGE_INVALID; Green `xg1HDI` passed 1/1. Source-release signal Red `dHnOE0`, Green `seqgA0` passed the focused switch test. Initial renderer activation Red `tuI89g` lacked the Open Project control; Green `fWiT2O` passed 3/3, including deferred read-only activation. These are original implementation proofs, not claimed against the later refactor bytes.
+- Packaged preload surface expectation was extended for the three new narrow methods, retaining exact-key validation. Red `0dguOH` failed the old boundary expectation; the corrected verifier is covered by the 72-test checkpoint below.
+
+All capture IDs in this section resolve to `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/`, containing exact `inputs.json`, source bytes, stdout/stderr and result.json. The pinned recorder command is `pnpm exec node C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-capture.mjs <label> "<command>"`, run from the candidate root.
+
+### Integration and visual evidence before final refactor
+
+- `ioeAzM`, `PC-UI-focused-tests`: `pnpm exec vitest run apps/desktop/src/main/project-entry-bridge.test.ts apps/desktop/src/main/package-smoke-verifier.test.ts apps/desktop/src/preload/preload.test.ts apps/desktop/src/renderer/app.test.tsx` — **72/72 passed**, four files. Includes broken-list versus empty distinction, mismatched activation correlation, malformed/disconnected transport, and refused-switch preservation of the active Project.
+- Desktop types `2W58gw` and harness types `cDKKVO` passed. Biome checked23 UI-related files and formatted18 without reported remaining issues. Impeccable manual detector `dSOCHf` returned `[]`; no further polish/detector loop.
+- Initial Electron `BvFPNR` failed before window creation. Private diagnostic shim identified `pino.multistream is not a function`: the standalone E2E build omitted Forge's Node resolve conditions/mainFields and selected the browser package. Fixed only the test build script to match Forge. `SVrHJ7` is the earlier build; `abzQqn` is the corrected build. These failures remain recorded.
+- `LnUk2T`, `PC-UI-electron-node`: `pnpm --dir apps/desktop exec playwright test tests/e2e/projects.test.ts` — **1/1 passed**. Launch uses real Electron with isolated disposable userData; the fixture registers two Projects through existing registry/registration/Storage owners. Version-consent observation is controlled test setup; native repository identity/registration, saved databases and UI transport are real. No fake renderer dataset and no registration-form claim.
+- Real UI journey: list → activate first Project (Read-write) → switch to second Project. Checks userData isolation, absent renderer `process`/`require`, zero page errors, and no document horizontal overflow at minimum640x480. Wide/minimum screenshots and accessibility capture retained under `C:/Users/pedro/AppData/Local/Temp/opencode/pc-ui-proof-muyl7q/` (`projects-wide.png`, `projects-narrow.png`, `projects-accessibility.txt`). Both screenshots were visually inspected in one batch. No additional visual changes were made.
+- Invalid narrow test command `ZIWpag` used the renderer-only config for main/preload tests and found no tests. `WEDdD7` then used desktop cwd; native verifier fixtures failed60 cases because their root-relative native file was absent at that cwd. The correctly rooted `ioeAzM` run passed those cases. These were invocation faults, not native code fixes; no prior historical native crash is reclassified.
+
+### Final behavior-preserving cleanup and current-source proof
+
+CodeScene became available and reported9.53/10 for `projects-workspace.tsx`, with nested conditional complexity in `open`. Extracted only existing switch handling into local `switchTo`, passing the captured activation and generation explicitly. Kept guards, lifecycle epoch checks, source-release semantics, catch/finally and UI output unchanged. Subsequent CodeScene review: **10.0/10, empty findings**. This is file-level analysis, not a whole-branch quality gate. Optional guidance setup was declined/out of scope; no AGENTS/rule/config/auth changes.
+
+- `F0rpyP`, `PC-UI-final-renderer`: `pnpm --dir apps/desktop exec vitest run --config vitest.config.ts src/renderer/app.test.tsx` — **5/5 passed** on final source. The preceding72-test result remains explicitly pre-refactor; it was not rerun blindly.
+- `Ovknmo`, `PC-UI-final-types`: `pnpm --dir apps/desktop typecheck` — passed on final source.
+- `s1gHhr`, `PC-UI-final-build`: `pnpm --dir apps/desktop exec node scripts/build-project-entry-e2e.mjs` — passed. Existing CJS import.meta warnings in Sentry and local-libsql-worker-client remain visible; no warning-suppression/config change.
+- `j9RQFF`, `PC-UI-final-electron`: `pnpm --dir apps/desktop exec playwright test tests/e2e/projects.test.ts` — **1/1 passed**,18.9s total, the single permitted post-refactor Electron confirmation. New screenshots/accessibility retained under `C:/Users/pedro/AppData/Local/Temp/opencode/pc-ui-proof-n3iT2T/`. No further visual inspection/polish cycle.
+- One earlier SonarQube snippet attempt returned **Not authorized**. **NOT ASSESSED**; no finding/pass claim, retries or authentication/configuration changes. User instruction to stop Sonar is retained.
+
+### Handback and freeze
+
+Freeze the entire current dirty delta, including earlier listing/selection, against0994f078 as `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-project-ui-2026-10-03-snapshot.json`. It retains every dirty file, statuses/modes/symlink metadata, full binary tracked patch, evidence prefix, commands/capture digests, screenshots, and the unchanged original26 bindings plus approved replay addendum. Source identities for all final commands are retained, not retrospectively stamped onto earlier72-test/Electron proofs. This completes implementation/proof of the existing-Project UI packet for parent review, not full PC-S1 acceptance. New registration UI, publication-only recovery, full feature validation and parent/human acceptance remain deferred. No guidance edits, full/deep/mutation gate, commit or integration.
+
+## 2026-10-03 — UI R2: review F1 truthful safe-mode health and stale replies
+
+Review finding F1 accepted: list and opened-view labels read only canonical health. Healthy canonical Storage with missing/corrupt runtime therefore incorrectly displayed `Safe mode · healthy`; the opened view also claimed Storage was connected. R1 is preserved as historical implementation/proof, not retroactively described as covering this gap. Preserve its complete snapshot SHA-256 `a7b65e24da74a7aa67c9db52df6ccfee91b0b0c44831496a568818be8b9097ba` and351432-byte evidence prefix SHA-256 `2b963f3f22b7d59bb5a8ab2c56bc34b08d18cfd45a5969a9a13d415c192acf39`.
+
+Minimal production fix in `projects-workspace.tsx`: one shared safe-mode label includes each nonhealthy Canonical and Runtime condition; healthy components are omitted rather than hiding the failure. The opened view explicitly carries active/safe-mode/release-failed presentation mode. Only active views claim connection; nonactive views state `Writes unavailable. Storage needs attention before this Project can be used.` No coordinator, persistence, transport or architecture changes.
+
+### Red, characterization and Green
+
+All IDs below refer to `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-node2420-<ID>/`, with retained input/source hashes, stdout/stderr and result.json. Same Node24.20.0 pinned recorder, cwd candidate, base0994f078.
+
+- **Red `Z5Jkw4`**, `PC-UI-R2-red`, `pnpm --dir apps/desktop exec vitest run --config vitest.config.ts src/renderer/app.test.tsx`:3 failed /7 passed. Three real renderer-through-preload cases expected Runtime corrupt/missing but received canonical-only labels: healthy/corrupt, healthy/missing, corrupt/missing. Assertions cover both list and opened view, absence of Read-write/connected claims, and explicit unavailable writes.
+- The two controlled stale-reply cases **already passed in Red**: defer an old list response or old activation response, publish a new ready harness epoch, load/select the new Project, then resolve the old response. Neither old list nor old activation replaces the new list/active view. These are characterization of existing guards, with no fabricated failing test or guard change.
+- **Green `10rn3a`**, `PC-UI-R2-green`, same renderer command: **10/10 passed**. Types `IbMTuS`, `pnpm --dir apps/desktop typecheck`: passed. CodeScene on final `projects-workspace.tsx`: **10.0/10, no findings**; no configuration/guidance change. Sonar remains NOT ASSESSED, no new call.
+
+### Real missing-runtime Electron proof
+
+Extended the existing disposable real Electron journey, not a mock health projection. After successful A activation and A→B switch releases A, move A's actual `mastra.db` out of its generation directory, Refresh the real listing, then open A. Assert `Runtime missing` in the list and `Safe mode · Runtime missing` in the workspace, `Writes unavailable`, no Read-write/connected claim, and absent renderer process/require. Existing two-Project registration fixture and real storage owners are unchanged.
+
+- Build `qwtwcI`, `pnpm --dir apps/desktop exec node scripts/build-project-entry-e2e.mjs`: passed; existing import.meta warnings retained.
+- First extended Electron run **`BFj6Q8` failed**: the test moved the runtime file to a backup name inside the generation directory, so the filesystem authority correctly reported `Storage broken` for an unknown witness. Confirmed against `project-storage-filesystem-authority.ts` generationFileWitnessKind, lines120–135. This was not evidence of missing-runtime safe mode and is not erased/reclassified as a pass.
+- Corrected only that fixture destination to the outer proof folder (`held-runtime.db`). **`I7zGiX`**, `PC-UI-R2-electron-final`, `pnpm --dir apps/desktop exec playwright test tests/e2e/projects.test.ts`: **1/1 passed**,18.4s total. This single corrective rerun proves actual missing-runtime behavior plus the existing list/open/switch and isolation journey. No further repeat/polish loop.
+- Generated screenshots/accessibility are retained under `C:/Users/pedro/AppData/Local/Temp/opencode/pc-ui-proof-tw0NxU/` (`projects-wide.png`, `projects-narrow.png`, `projects-accessibility.txt`). No additional visual-polish/inspection loop or detector run.
+- Final Biome **`paVvn3`**, `pnpm exec biome check apps/desktop/src/renderer/projects-workspace.tsx apps/desktop/src/renderer/app.test.tsx apps/desktop/tests/e2e/projects.test.ts`:3 files passed, no fixes.
+
+Renderer Green/types/build precede the one-line E2E backup-destination correction; their exact source maps remain distinct and retained. The renderer production/test bytes are identical to final proof. Final Electron and Biome bind the final entire source delta. Prior72 tests and R1 proofs remain bound to their historical sources, not restamped or blindly rerun.
+
+R2 freeze: `C:/Users/pedro/AppData/Local/Temp/opencode/pc-s1-project-ui-r2-2026-10-03-snapshot.json`, complete35-path delta against0994f078, all sources retained with modes/statuses, full binary tracked patch, preserved evidence prefix and all27 unchanged bindings. Relative to R1 only the renderer, renderer test, existing Electron test and this evidence append changed. No new registration form, guidance/auth/config changes, nested agents, commits/merge or feature expansion. F1 implemented and focused proof complete; parent re-review/human acceptance and overall feature completion remain pending.

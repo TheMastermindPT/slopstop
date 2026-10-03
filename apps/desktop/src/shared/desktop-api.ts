@@ -1,5 +1,10 @@
 import type {
+  CanonicalProjectActivationRequest,
+  CanonicalProjectActivationResult,
+  CanonicalProjectSwitchRequest,
+  CanonicalProjectSwitchResult,
   HarnessStatus,
+  ProjectListResult,
   RetryHarnessResult,
   WorkspaceIntent,
   WorkspaceIntentResult,
@@ -9,6 +14,9 @@ import type {
 } from "@slopstop/protocol";
 
 export const desktopIpcChannels = {
+  listProjects: "projects:list",
+  activateProject: "projects:activate",
+  switchProject: "projects:switch",
   getHarnessStatus: "harness:get-status",
   harnessStatusChanged: "harness:status-changed",
   retryHarness: "harness:retry",
@@ -18,6 +26,11 @@ export const desktopIpcChannels = {
 } as const;
 
 export interface SlopStopApi {
+  listProjects(): Promise<ProjectListResult>;
+  activateProject(
+    request: CanonicalProjectActivationRequest,
+  ): Promise<CanonicalProjectActivationResult>;
+  switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
   getHarnessStatus(): Promise<HarnessStatus>;
   retryHarness(): Promise<RetryHarnessResult>;
   subscribeHarnessStatus(listener: (status: HarnessStatus) => void): () => void;

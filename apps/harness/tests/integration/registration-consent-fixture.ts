@@ -76,10 +76,11 @@ export async function createControlledIdentityConsent(
   root: string,
   selection?: NativeRepositorySelectionPort,
   selectedExecutable?: string,
+  databaseOptions = consentRegistryOptions(root),
 ) {
   const executablePath = selectedExecutable ?? path.join(root, "selected.exe");
   if (selectedExecutable === undefined) await copyFile(process.execPath, executablePath);
-  const registry = createRegistrationRegistry(consentRegistryOptions(root), selection);
+  const registry = createRegistrationRegistry(databaseOptions, selection);
   const controlled = controlledVersionChild();
   const observer = createProjectRegistrationObserver(
     createGitVersionInspection(

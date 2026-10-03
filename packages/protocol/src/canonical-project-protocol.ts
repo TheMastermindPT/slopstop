@@ -129,6 +129,7 @@ const diagnosticSchema = z.strictObject({
   retryable: z.boolean(),
 });
 export const CanonicalProjectActivationDiagnosticCodeSchema = z.enum([
+  ...RegisteredProjectSelectionCodeSchema.options,
   "PROJECT_ALREADY_ACTIVE",
   "PROJECT_COORDINATOR_UNAVAILABLE",
   "PROJECT_STORAGE_UNAVAILABLE",
@@ -202,13 +203,38 @@ export const CanonicalProjectActivationResultSchema = z.union([
     runtimeHealth: ProjectDatabaseHealthSchema,
   }),
   z.strictObject({ status: z.literal("not-registered"), ...activationBase }),
-  activationFailureSchema("rejected", ["PROJECT_ALREADY_ACTIVE"]),
+  activationFailureSchema("rejected", [
+    "PROJECT_ALREADY_ACTIVE",
+    ...RegisteredProjectSelectionCodeSchema.extract([
+      "REPOSITORY_NOT_FOUND",
+      "REPOSITORY_IDENTITY_CHANGED",
+      "REPOSITORY_INVALID",
+      "OBSERVATION_INVALID",
+      "REGISTRATION_IDEMPOTENCY_CONFLICT",
+    ]).options,
+  ]),
   activationFailureSchema("unavailable", [
     "PROJECT_COORDINATOR_UNAVAILABLE",
     "PROJECT_STORAGE_UNAVAILABLE",
+    ...RegisteredProjectSelectionCodeSchema.extract([
+      "REGISTRY_BUSY",
+      "REGISTRY_MISSING_WITH_WITNESS",
+      "OBSERVER_CLEANUP_UNCONFIRMED",
+      "REGISTRATION_INCOMPLETE",
+      "REPOSITORY_INACCESSIBLE",
+      "IDENTITY_CAPABILITY_UNAVAILABLE",
+      "REPOSITORY_UNSUPPORTED",
+      "OBSERVATION_LIMIT_EXCEEDED",
+    ]).options,
   ]),
   activationFailureSchema("broken", [
     "PROJECT_STORAGE_BROKEN",
+    ...RegisteredProjectSelectionCodeSchema.extract([
+      "REGISTRY_SCHEMA_UNKNOWN",
+      "REGISTRY_SCHEMA_NEWER",
+      "REGISTRY_CORRUPT",
+      "INTERNAL_FAILURE",
+    ]).options,
     "PROJECT_STORAGE_RELEASE_FAILED",
     "WRITER_LEASE_OPEN_FAILED",
     "WRITER_LEASE_LOCK_FAILED",
@@ -397,6 +423,7 @@ export const CanonicalProjectSwitchResultSchema = z
   .discriminatedUnion("status", [
     z.strictObject({
       status: z.literal("target-result"),
+      sourceReleased: z.boolean().optional(),
       request: CanonicalProjectSwitchRequestSchema,
       target: CanonicalProjectActivationResultSchema,
     }),
@@ -420,3 +447,5 @@ export const CanonicalProjectSwitchResultSchema = z
     },
   );
 export type CanonicalProjectSwitchResult = z.infer<typeof CanonicalProjectSwitchResultSchema>;
+
+import { RegisteredProjectSelectionCodeSchema } from "./project-registration-protocol.js";

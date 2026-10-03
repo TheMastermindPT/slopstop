@@ -1,5 +1,10 @@
 import {
+  CanonicalProjectActivationRequestSchema,
+  CanonicalProjectActivationResultSchema,
+  CanonicalProjectSwitchRequestSchema,
+  CanonicalProjectSwitchResultSchema,
   HarnessStatusSchema,
+  ProjectListResultSchema,
   RetryHarnessResultSchema,
   WorkspaceIntentResultSchema,
   WorkspaceIntentSchema,
@@ -11,6 +16,22 @@ import { contextBridge, type IpcRendererEvent, ipcRenderer } from "electron";
 import { desktopIpcChannels, type SlopStopApi } from "../shared/desktop-api.js";
 
 const api: SlopStopApi = {
+  listProjects: async () =>
+    ProjectListResultSchema.parse(await ipcRenderer.invoke(desktopIpcChannels.listProjects, {})),
+  activateProject: async (request) =>
+    CanonicalProjectActivationResultSchema.parse(
+      await ipcRenderer.invoke(
+        desktopIpcChannels.activateProject,
+        CanonicalProjectActivationRequestSchema.parse(request),
+      ),
+    ),
+  switchProject: async (request) =>
+    CanonicalProjectSwitchResultSchema.parse(
+      await ipcRenderer.invoke(
+        desktopIpcChannels.switchProject,
+        CanonicalProjectSwitchRequestSchema.parse(request),
+      ),
+    ),
   getHarnessStatus: async () => {
     return HarnessStatusSchema.parse(await ipcRenderer.invoke(desktopIpcChannels.getHarnessStatus));
   },

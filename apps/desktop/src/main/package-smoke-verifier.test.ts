@@ -379,12 +379,15 @@ const exactResult = {
   processType: "undefined",
   requireType: "undefined",
   methods: [
+    "activateProject",
     "getHarnessStatus",
+    "listProjects",
     "queryWorkspace",
     "retryHarness",
     "submitWorkspaceIntent",
     "subscribeHarnessStatus",
     "subscribeWorkspaceNotifications",
+    "switchProject",
   ],
   queryResult: {
     status: "unavailable",

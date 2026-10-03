@@ -44,6 +44,13 @@ export interface ActiveProjectCoordinator {
   stop(): Promise<void>;
 }
 export type ActiveProjectCoordinatorDependencies = Readonly<{
+  validateTarget?(
+    request: CanonicalProjectActivationRequest,
+  ): Promise<CanonicalProjectActivationResult | undefined>;
+  validateSession?(
+    request: CanonicalProjectActivationRequest,
+    session: Extract<ProjectStorageActivationSession, { mode: "read-write" }>,
+  ): Promise<CanonicalProjectActivationResult | undefined>;
   storage: ProjectStorageActivationPort;
   leases: CanonicalWriterLeaseFactory;
   repositories: CanonicalCommandRepositoryFactory;
@@ -425,6 +432,12 @@ async function acquireProject(
       runtimeHealth: session.result.runtimeHealth,
     };
   }
+  const refused = await dependencies.validateSession?.(request, session);
+  if (refused !== undefined) {
+    const closed = await context.cleanup();
+    if (closed.status === "failed") return context.retain(closed.ownership, closed.code);
+    return refused;
+  }
   return acquireWritable(context, session);
 }
 
@@ -491,6 +504,8 @@ export function createActiveProjectCoordinator(
   ): Promise<CanonicalProjectActivationResult> => {
     const rejected = activationRejection(state, request);
     if (rejected !== undefined) return rejected;
+    const refused = await dependencies.validateTarget?.(request);
+    if (refused !== undefined) return refused;
     state = { status: "activating" };
     let ownership: Ownership | undefined;
     let cleanupAttempt: Promise<ReleaseResult> | undefined;
@@ -562,6 +577,9 @@ export function createActiveProjectCoordinator(
             request,
             diagnostic: switchDiagnostics[rejected],
           });
+        const refused = await dependencies.validateTarget?.(request.to);
+        if (refused !== undefined)
+          return { status: "target-result", sourceReleased: false, request, target: refused };
         const released = await release(ownedActivation(state));
         if (released.status === "failed")
           return CanonicalProjectSwitchResultSchema.parse({
@@ -575,6 +593,7 @@ export function createActiveProjectCoordinator(
           });
         return {
           status: "target-result",
+          sourceReleased: true,
           request,
           target: await activateWithinLifecycle(request.to),
         };
