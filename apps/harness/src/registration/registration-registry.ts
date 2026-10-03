@@ -1,3 +1,4 @@
+import { Deferred, Effect, Result } from "effect";
 import type {
   GitVersionInspectionRequest,
   GitVersionInspectionResult,
@@ -61,16 +62,24 @@ export function createRegistrationRegistry(
   repositorySelection?: NativeRepositorySelectionPort,
 ): RegistrationRegistry {
   let stopped = false;
-  const pending = new Set<Promise<unknown>>();
-  const track = async <Result>(operation: () => Promise<Result>): Promise<Result> => {
+  let nextAdmission = 0;
+  // Completion of each admitted operation, failing with its rejection for the stop report.
+  const pending = new Map<number, Deferred.Deferred<void, unknown>>();
+  const track = async <Value>(operation: () => Promise<Value>): Promise<Value> => {
     if (stopped) throw new Error("Registration registry is stopped.");
     const work = operation();
-    pending.add(work);
-    try {
-      return await work;
-    } finally {
-      pending.delete(work);
-    }
+    const admission = nextAdmission++;
+    const completion = Deferred.makeUnsafe<void, unknown>();
+    pending.set(admission, completion);
+    const settle = (outcome: Effect.Effect<void, unknown>) => {
+      Deferred.doneUnsafe(completion, outcome);
+      pending.delete(admission);
+    };
+    void work.then(
+      () => settle(Effect.void),
+      (error: unknown) => settle(Effect.fail(error)),
+    );
+    return work;
   };
   const run: RegistryRunner = (operation) =>
     track(() => withRegistrationDatabase(options, operation));
@@ -170,13 +179,18 @@ export function createRegistrationRegistry(
       ),
     stop: async () => {
       stopped = true;
-      const results = await Promise.allSettled([...pending]);
-      const failed = results.filter((result) => result.status === "rejected");
+      const results = await Effect.runPromise(
+        Effect.forEach(
+          [...pending.values()],
+          (completion) => Effect.result(Deferred.await(completion)),
+          {
+            concurrency: "unbounded",
+          },
+        ),
+      );
+      const failed = results.filter(Result.isFailure).map((result) => result.failure);
       if (failed.length > 0)
-        throw new AggregateError(
-          failed.map((result) => result.reason),
-          "Registration registry did not stop cleanly.",
-        );
+        throw new AggregateError(failed, "Registration registry did not stop cleanly.");
     },
   };
 }

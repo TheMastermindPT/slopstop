@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { decodeStrict } from "@slopstop/protocol";
+import { Duration, Effect, Result } from "effect";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { sameExecutableIdentity } from "./executable-identity.js";
@@ -230,32 +231,36 @@ async function listProjects(dependencies: Dependencies, _input: unknown, signal:
   return dependencies.listing(signal);
 }
 
-async function drainPreparations(
+function cleanupUnconfirmed(result: Result.Result<OperationResult, unknown>): boolean {
+  if (Result.isFailure(result)) return true;
+  return (
+    result.success.status === "pending-recovery" &&
+    result.success.code === "OBSERVER_CLEANUP_UNCONFIRMED"
+  );
+}
+
+// Waits for aborted work within the cleanup budget; work still running at the budget is
+// reported through timeoutResult, never as closed.
+function drainPreparations(
   work: Iterable<Promise<OperationResult>>,
   timeoutResult: () => PendingClose,
-) {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      Promise.allSettled(work).then((results) => {
-        if (
-          results.some(
-            (result) =>
-              result.status === "rejected" ||
-              (result.value.status === "pending-recovery" &&
-                result.value.code === "OBSERVER_CLEANUP_UNCONFIRMED"),
-          )
-        )
-          return pendingCleanup;
-        return { status: "closed" } as const;
-      }),
-      new Promise<PendingClose>((resolve) => {
-        timer = setTimeout(() => resolve(timeoutResult()), REGISTRATION_CLEANUP_BUDGET_MS);
-      }),
-    ]);
-  } finally {
-    clearTimeout(timer);
-  }
+): Promise<PendingClose | Readonly<{ status: "closed" }>> {
+  const settled = Effect.map(
+    Effect.forEach(
+      [...work],
+      (pending) =>
+        Effect.result(Effect.tryPromise({ try: () => pending, catch: (error) => error })),
+      { concurrency: "unbounded" },
+    ),
+    (results): PendingClose | Readonly<{ status: "closed" }> =>
+      results.some(cleanupUnconfirmed) ? pendingCleanup : { status: "closed" },
+  );
+  return Effect.runPromise(
+    Effect.timeoutOrElse(settled, {
+      duration: Duration.millis(REGISTRATION_CLEANUP_BUDGET_MS),
+      orElse: () => Effect.sync(timeoutResult),
+    }),
+  );
 }
 
 // Optional creation stays owned until its work and resource cleanup settle.
