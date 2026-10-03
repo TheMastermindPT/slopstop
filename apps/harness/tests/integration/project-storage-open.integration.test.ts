@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { cp, mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
   decodeStrict,
   type ProjectDatabaseHealth,
   ProjectStorageCreateRequestSchema,
+  ProjectStorageOpenRequestSchema,
 } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
 import {
@@ -14,7 +15,6 @@ import {
   serializeProjectStorageManifest,
 } from "../../src/storage/project-storage-manifest.js";
 import {
-  checkedInMigrationRoot,
   createStorageRuntimeForRoot,
   createTemporaryApplicationRoot,
   fixedCreationIds,
@@ -53,8 +53,31 @@ import {
   unavailableHealth,
   unsupportedNewerHealth,
 } from "./project-storage-open-fixture.js";
+import { createPreviousRegistry } from "./registration-schema-fixture.js";
 
 const manifestReadFailure = vi.hoisted(() => ({ filePath: undefined as string | undefined }));
+const previousRegistryProjectId = "71938cf7-9874-4dd8-8f10-7507a8ef9a82";
+
+function readApplicationHead(root: ApplicationRootPath | string) {
+  const database = new DatabaseSync(path.join(root, "application.db"), { readOnly: true });
+  try {
+    return database.prepare("SELECT last_migration_id FROM schema_metadata").get();
+  } finally {
+    database.close();
+  }
+}
+
+function readPreviousRegistrations(root: ApplicationRootPath | string) {
+  const database = new DatabaseSync(path.join(root, "application.db"), { readOnly: true });
+  try {
+    return database
+      .prepare("SELECT storage_id, project_id, created_at FROM storage_registrations")
+      .all();
+  } finally {
+    database.close();
+  }
+}
+
 const applicationUpgradeCreateRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: openRequest.projectId,
   createRequestId: "00000000-0000-4000-8000-000000000019",
@@ -151,76 +174,6 @@ it(
   },
   projectStorageIntegrationTimeout,
 );
-
-async function createMigrationRootWithApplicationSuccessor(): Promise<string> {
-  const fixtureRoot = await createTemporaryApplicationRoot();
-  const migrationRoot = path.join(fixtureRoot, "drizzle");
-  await cp(checkedInMigrationRoot, migrationRoot, { recursive: true });
-  await writeFile(path.join(migrationRoot, "application", "0006_opening_probe.sql"), "SELECT 1;\n");
-  await writeFile(
-    path.join(migrationRoot, "application", "meta", "_journal.json"),
-    `${JSON.stringify(
-      {
-        version: "7",
-        dialect: "sqlite",
-        entries: [
-          {
-            idx: 0,
-            version: "6",
-            when: 1788404224482,
-            tag: "0000_gray_eddie_brock",
-            breakpoints: true,
-          },
-          {
-            idx: 1,
-            version: "6",
-            when: 1789278600414,
-            tag: "0001_project_registration",
-            breakpoints: true,
-          },
-          {
-            idx: 2,
-            version: "6",
-            when: 1790509264265,
-            tag: "0002_identity_query_attempts",
-            breakpoints: true,
-          },
-          {
-            idx: 3,
-            version: "6",
-            when: 1790875463248,
-            tag: "0003_registration_proposals",
-            breakpoints: true,
-          },
-          {
-            idx: 4,
-            version: "6",
-            when: 1790881158291,
-            tag: "0004_registration_reservations",
-            breakpoints: true,
-          },
-          {
-            idx: 5,
-            version: "6",
-            when: 1790887540132,
-            tag: "0005_registration_publications",
-            breakpoints: true,
-          },
-          {
-            idx: 6,
-            version: "6",
-            when: 1790887540133,
-            tag: "0006_opening_probe",
-            breakpoints: true,
-          },
-        ],
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  return migrationRoot;
-}
 
 async function seedIncompleteGeneration(root: ApplicationRootPath): Promise<void> {
   const database = new DatabaseSync(generationPaths(root).application);
@@ -626,11 +579,20 @@ const applicationOpeningFailureCases = [
     expectedCode: "PROJECT_STORAGE_OWNER_FAILED",
     expectedMessage: "Database migration authority is incompatible.",
   },
+  // A known older head left this no-mutation table (user-approved option (ii), 2026-10-03):
+  // the shared application database authority upgrades it before Storage opens, as the
+  // registry already does. Unknown and newer heads stay here: broken, never mutated.
   {
-    name: "has known but non-current migration",
-    seed: async (): Promise<StorageRuntimeOptions> => ({
-      migrationResourcesRoot: await createMigrationRootWithApplicationSuccessor(),
-    }),
+    name: "has a newer application head",
+    seed: async (root: ApplicationRootPath): Promise<undefined> => {
+      const database = new DatabaseSync(generationPaths(root).application);
+      try {
+        database.exec("UPDATE schema_metadata SET schema_version = 2");
+      } finally {
+        database.close();
+      }
+      return undefined;
+    },
     expectedStatus: "broken",
     expectedCode: "PROJECT_STORAGE_OWNER_FAILED",
     expectedMessage: "Database migration authority is incompatible.",
@@ -826,20 +788,11 @@ it.each(applicationOpeningFailureCases)(
 it(
   "upgrades known older application authority before creating",
   async () => {
-    const root = await createHealthyProjectStorageFixture();
-    const application = new DatabaseSync(generationPaths(root).application);
-    try {
-      application.exec(`
-        DELETE FROM storage_registrations;
-        DELETE FROM storage_generations;
-        DELETE FROM storage_locations;
-      `);
-    } finally {
-      application.close();
-    }
-    await rm(generationPaths(root).project, { recursive: true, force: true });
-    const migrationResourcesRoot = await createMigrationRootWithApplicationSuccessor();
-    const runtime = await createStorageRuntimeForRoot(root, { migrationResourcesRoot });
+    // Real historical head instead of a synthetic successor (user-approved option (ii)).
+    const root = await createTemporaryApplicationRoot();
+    await createPreviousRegistry(root);
+    const before = readPreviousRegistrations(root);
+    const runtime = await createStorageRuntimeForRoot(root);
     try {
       await expect(runtime.create(applicationUpgradeCreateRequest)).resolves.toMatchObject({
         event: "project.create.result",
@@ -849,14 +802,65 @@ it(
       await runtime.stop();
     }
 
-    const migratedApplication = new DatabaseSync(generationPaths(root).application);
+    expect(readApplicationHead(root)).toEqual({
+      last_migration_id: "0005_registration_publications",
+    });
+    expect(readPreviousRegistrations(root)).toEqual(
+      expect.arrayContaining(before.map((row) => expect.objectContaining(row))),
+    );
+  },
+  projectStorageIntegrationTimeout,
+);
+
+// Storage open upgrades a known older application head through the shared authority
+// (user-approved option (ii) with PC-B8). A failed upgrade before commit leaving the old
+// schema exact is covered by project-registration.integration.test.ts checkpoint cases.
+it(
+  "upgrades a known older application authority on open instead of treating it as absent",
+  async () => {
+    const root = await createTemporaryApplicationRoot();
+    await createPreviousRegistry(root);
+    const before = readPreviousRegistrations(root);
+    // Another Project's files: the upgrade and the opening must leave them byte-identical.
+    const projectFile = path.join(
+      root,
+      "projects",
+      "5b0d2e64-8a39-4f5e-9d1c-2f3a4b5c6d7e",
+      "untouched.bin",
+    );
+    await mkdir(path.dirname(projectFile), { recursive: true });
+    await writeFile(projectFile, Buffer.from("project bytes the opening must not touch"));
+    const projectBytes = await readFile(projectFile);
+    const request = decodeStrict(ProjectStorageOpenRequestSchema, {
+      projectId: previousRegistryProjectId,
+    });
+    const runtime = await createStorageRuntimeForRoot(root);
+    let result: unknown;
     try {
-      expect(
-        migratedApplication.prepare("SELECT last_migration_id FROM schema_metadata").get(),
-      ).toEqual({ last_migration_id: "0006_opening_probe" });
+      result = await runtime.open(request);
     } finally {
-      migratedApplication.close();
+      await runtime.stop();
     }
+
+    // The migrated registration (no generation yet) needs recovery: never absent.
+    expect(payloadOf(result)).toEqual({
+      status: "safe-mode",
+      request,
+      mode: "safe-mode",
+      identity: {
+        storageId: before[0]?.["storage_id"],
+        generationId: null,
+        canonicalDatabaseLineageId: null,
+        runtimeDatabaseLineageId: null,
+      },
+      canonicalHealth: recoveryRequiredHealth,
+      runtimeHealth: recoveryRequiredHealth,
+    });
+    expect(readApplicationHead(root)).toEqual({
+      last_migration_id: "0005_registration_publications",
+    });
+    expect(readPreviousRegistrations(root)).toEqual(before);
+    expect(await readFile(projectFile)).toEqual(projectBytes);
   },
   projectStorageIntegrationTimeout,
 );

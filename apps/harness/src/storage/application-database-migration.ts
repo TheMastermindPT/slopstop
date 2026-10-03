@@ -168,7 +168,9 @@ export async function firstRequiredApplicationMigration(
 ): Promise<number | null> {
   const names = await tableNames(transaction);
   if (names.length === 0) {
-    if (!fresh) throw new Error("Existing registration registry has no schema.");
+    // A schema-less file this authority did not just create (e.g. left by a crash) is
+    // refused explicitly, never initialized as if fresh.
+    if (!fresh) throw corrupt();
     return 0;
   }
   await requireIntegrity(transaction);

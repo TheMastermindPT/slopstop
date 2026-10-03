@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { Deferred, Effect, Semaphore } from "effect";
 import {
@@ -96,6 +96,7 @@ export function createApplicationDatabaseAuthority(
   let accepted = 0;
   let createdEmpty = false;
   let observed = false;
+  let initializing = 0;
   let initialization: Promise<"absent" | "current"> | undefined;
 
   // Accepted work: queued or held admissions and initializations. Each ends exactly once.
@@ -238,9 +239,39 @@ export function createApplicationDatabaseAuthority(
     return "present";
   };
 
+  // A fresh initialization that fails rolls back, leaving the empty file its client created.
+  // The sole initializer removes that file (never one with content) so the next start
+  // initializes again; a failed removal is reported as its own failure.
+  const discardFailedCreation = async (error: unknown): Promise<unknown> => {
+    if (!createdEmpty || initializing !== 1) return error;
+    try {
+      const entry = await lstatIfPresent({ targetPath: applicationDatabasePath });
+      if (entry?.isFile() === true && !entry.isSymbolicLink() && entry.size === 0) {
+        await unlink(applicationDatabasePath);
+      }
+      return error;
+    } catch (cleanup) {
+      return new AggregateError(
+        [error, cleanup],
+        "Application database initialization cleanup failed.",
+      );
+    }
+  };
+
+  const initializeOnNewClient = async (): Promise<LocalLibsqlClient> => {
+    initializing += 1;
+    try {
+      return await migrateOn(openClient());
+    } catch (error) {
+      throw await discardFailedCreation(error);
+    } finally {
+      initializing -= 1;
+    }
+  };
+
   const initialize = async (createIfMissing: boolean): Promise<"absent" | "current"> => {
     if ((await prepare(createIfMissing)) === "absent") return "absent";
-    const client = await migrateOn(openClient());
+    const client = await initializeOnNewClient();
     await client.close();
     return "current";
   };
@@ -271,7 +302,7 @@ export function createApplicationDatabaseAuthority(
       const end = accept();
       try {
         if ((await prepare(createIfMissing)) === "absent") return undefined;
-        return await migrateOn(openClient());
+        return await initializeOnNewClient();
       } finally {
         end();
       }

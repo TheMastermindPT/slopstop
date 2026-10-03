@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -152,4 +152,40 @@ it("admits a fresh Project create behind the registry's initial migration on one
     await reopenedDatabase.stop();
     await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   }
+});
+
+it("refuses a schema-less application database left by an interrupted start without touching it", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "slopstop-application-authority-empty-"));
+  const base = consentRegistryOptions(root);
+  const databasePath = path.join(base.applicationStorageRoot, "application.db");
+  await mkdir(base.applicationStorageRoot, { recursive: true });
+  await writeFile(databasePath, "");
+  const applicationDatabase = createApplicationDatabaseAuthority(base);
+  const options = { ...base, applicationVersion: "0.0.0", applicationDatabase };
+  const registry = createRegistrationRegistry(options);
+  const registration = createProjectRegistrationOwner(registry, options, root);
+  const storage = createProjectStorageOwner(createNodeProjectStorageDependencies(options));
+  try {
+    const created = await storage.create(
+      decodeStrict(ProjectStorageCreateRequestSchema, {
+        projectId: randomUUID(),
+        createRequestId: randomUUID(),
+      }),
+    );
+    expect(created).toEqual({
+      status: "broken",
+      message: "Existing database has no migration authority.",
+    });
+    expect(await registration.listProjects()).toEqual({
+      status: "broken",
+      code: "REGISTRY_CORRUPT",
+    });
+  } finally {
+    await storage.stop();
+    await registration.close();
+    await registry.stop();
+    await applicationDatabase.stop();
+  }
+  expect((await readFile(databasePath)).byteLength).toBe(0);
+  await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
 });

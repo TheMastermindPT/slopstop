@@ -606,18 +606,14 @@ async function createWithTransformedMigrations(root: string, transform: SqlTrans
   }
 }
 
-async function expectNoProjectAllocation(root: string): Promise<void> {
+// The application schema is verified before its initialization commits (user-approved
+// contract, 2026-10-03): a rejected fresh schema rolls back and leaves no application
+// database, so the next start initializes again instead of failing internally.
+async function expectRolledBackFreshInitialization(root: string): Promise<void> {
   await expect(pathExists(path.join(root, "projects", createRequest.projectId))).resolves.toBe(
     false,
   );
-  const applicationPath = path.join(root, "application.db");
-  await expect(
-    Promise.all([
-      readRows(applicationPath, "SELECT * FROM storage_generations"),
-      readRows(applicationPath, "SELECT * FROM storage_locations"),
-      readRows(applicationPath, "SELECT * FROM storage_registrations"),
-    ]),
-  ).resolves.toEqual([[], [], []]);
+  await expect(pathExists(path.join(root, "application.db"))).resolves.toBe(false);
 }
 
 it.each(sameNameSchemaMutationCases)(
@@ -634,8 +630,7 @@ it.each(sameNameSchemaMutationCases)(
 
     const root = await createTemporaryApplicationRoot();
     const rejected = await createWithTransformedMigrations(root, mutate);
-
-    expect(rejected.result).toMatchObject({
+    const rejectedPayload = {
       event: "project.create.result",
       payload: {
         status: "broken",
@@ -644,11 +639,20 @@ it.each(sameNameSchemaMutationCases)(
           message: expectedMessage,
         },
       },
-    });
+    };
+
+    expect(rejected.result).toMatchObject(rejectedPayload);
     expect(rejected.allocationCount()).toBe(0);
-    await expectNoProjectAllocation(root);
+    await expectRolledBackFreshInitialization(root);
     expect(JSON.stringify(rejected.result)).not.toContain(root);
     expect(JSON.stringify(rejected.result)).not.toContain(rejected.migrationResourcesRoot);
+
+    // A restart with the same resources reports the same precise refusal, never an
+    // internal failure from a schema-less database left behind.
+    const restarted = await createWithTransformedMigrations(root, mutate);
+    expect(restarted.result).toMatchObject(rejectedPayload);
+    expect(restarted.allocationCount()).toBe(0);
+    await expectRolledBackFreshInitialization(root);
   },
   30_000,
 );
