@@ -135,7 +135,7 @@ function deniedCommand(
     diagnostic: { code, message, retryable: status === "read-only" },
   };
 }
-function commandResult(index: number, count: number, request: Record<string, unknown>) {
+function commandDenial(index: number, count: number, request: Record<string, unknown>) {
   if (count === 0 && index !== 1)
     return deniedCommand(request, {
       status: "inactive",
@@ -154,6 +154,11 @@ function commandResult(index: number, count: number, request: Record<string, unk
       code: "PROJECT_ACTIVATION_STALE",
       message: "The command activation is stale.",
     });
+  return undefined;
+}
+function commandResult(index: number, count: number, request: Record<string, unknown>) {
+  const denial = commandDenial(index, count, request);
+  if (denial !== undefined) return denial;
   return {
     status: "settled",
     projectId: id(101),
@@ -234,25 +239,30 @@ export function productionResponse(
   const kind = request["command"];
   const sequence = (sequences.get(index) ?? 0) + 1;
   sequences.set(index, sequence);
-  let payload: unknown = { harnessVersion: "0.0.0" };
-  if (kind === "project.activate") payload = activation(index, request["payload"]);
+  return {
+    ...ready(request),
+    sequence,
+    payload: productionPayload(index, request, commands),
+    event: kind === "system.handshake" ? "system.ready" : `${kind}.result`,
+  };
+}
+function productionPayload(
+  index: number,
+  request: Record<string, unknown>,
+  commands: Map<number, number>,
+): unknown {
+  const kind = request["command"];
+  if (kind === "project.activate") return activation(index, request["payload"]);
   if (kind === "project.switch")
-    payload = {
+    return {
       status: "target-result",
       request: request["payload"],
       target: activation(index, record(request["payload"])["to"]),
     };
-  if (kind === "project.command") {
-    const count = commands.get(index) ?? 0;
-    commands.set(index, count + 1);
-    payload = commandResult(index, count, record(request["payload"]));
-  }
-  return {
-    ...ready(request),
-    sequence,
-    payload,
-    event: kind === "system.handshake" ? "system.ready" : `${kind}.result`,
-  };
+  if (kind !== "project.command") return { harnessVersion: "0.0.0" };
+  const count = commands.get(index) ?? 0;
+  commands.set(index, count + 1);
+  return commandResult(index, count, record(request["payload"]));
 }
 export function fixtureContradiction(
   variant: string,

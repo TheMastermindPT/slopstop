@@ -83,6 +83,14 @@ async function rejectInitialization(input: {
   throw applicationClientInitializationFailure(cause);
 }
 
+// Initialization failures keep their cause under the caller's message; others normalize.
+function translateAcquisitionFailure(error: unknown, message: string): never {
+  if (error instanceof ApplicationClientInitializationFailure) {
+    throw new ProjectStorageApplicationClientInitializationError(message, { cause: error.cause });
+  }
+  normalizeStorageError({ error, message });
+}
+
 export function createApplicationClientManager(input: {
   applicationDatabasePath: string;
   applicationStorageRoot: string;
@@ -96,18 +104,23 @@ export function createApplicationClientManager(input: {
   let initialization: Deferred.Deferred<LocalLibsqlClient | undefined, unknown> | undefined;
   let stopped = false;
 
-  const initializeCandidate = async (
-    createIfMissing: boolean,
-  ): Promise<LocalLibsqlClient | undefined> => {
-    const existed =
-      (await lstatIfPresent({ targetPath: input.applicationDatabasePath })) !== undefined;
+  // The plain-file policy, then the shared authority's initialization.
+  const prepareCandidate = async (createIfMissing: boolean): Promise<boolean> => {
     const available = await prepareApplicationDatabase({
       applicationDatabasePath: input.applicationDatabasePath,
       applicationStorageRoot: input.applicationStorageRoot,
       createIfMissing,
     });
-    if (!available) return undefined;
-    if ((await input.ensureInitialized(createIfMissing)) === "absent") return undefined;
+    if (!available) return false;
+    return (await input.ensureInitialized(createIfMissing)) === "present";
+  };
+
+  const initializeCandidate = async (
+    createIfMissing: boolean,
+  ): Promise<LocalLibsqlClient | undefined> => {
+    const existed =
+      (await lstatIfPresent({ targetPath: input.applicationDatabasePath })) !== undefined;
+    if (!(await prepareCandidate(createIfMissing))) return undefined;
     try {
       return await initializeRetainedApplicationClient(
         input.createClient(),
@@ -126,10 +139,10 @@ export function createApplicationClientManager(input: {
     }
   };
 
-  const acquire = async (createIfMissing: boolean): Promise<LocalLibsqlClient | undefined> => {
-    if (stopped) throw new ProjectStorageUnavailableError("Project Storage registry is stopped.");
-    if (initialization !== undefined) return Effect.runPromise(Deferred.await(initialization));
-    if (applicationClient !== undefined) return applicationClient;
+  // Runs one initialization and publishes its exact outcome to every concurrent caller.
+  const initializeShared = async (
+    createIfMissing: boolean,
+  ): Promise<LocalLibsqlClient | undefined> => {
     const candidate = Deferred.makeUnsafe<LocalLibsqlClient | undefined, unknown>();
     initialization = candidate;
     try {
@@ -144,20 +157,17 @@ export function createApplicationClientManager(input: {
     }
   };
 
+  const acquire = async (createIfMissing: boolean): Promise<LocalLibsqlClient | undefined> => {
+    if (stopped) throw new ProjectStorageUnavailableError("Project Storage registry is stopped.");
+    if (initialization !== undefined) return Effect.runPromise(Deferred.await(initialization));
+    return applicationClient ?? initializeShared(createIfMissing);
+  };
+
   const existing = async (): Promise<LocalLibsqlClient | undefined> => {
     try {
       return await acquire(false);
     } catch (error) {
-      if (error instanceof ApplicationClientInitializationFailure) {
-        throw new ProjectStorageApplicationClientInitializationError(
-          "Project Storage application authority is invalid.",
-          { cause: error.cause },
-        );
-      }
-      normalizeStorageError({
-        error,
-        message: "Project Storage application authority is invalid.",
-      });
+      translateAcquisitionFailure(error, "Project Storage application authority is invalid.");
     }
   };
 
@@ -175,16 +185,10 @@ export function createApplicationClientManager(input: {
         }
         return created;
       } catch (error) {
-        if (error instanceof ApplicationClientInitializationFailure) {
-          throw new ProjectStorageApplicationClientInitializationError(
-            "Project Storage application authority cannot be created.",
-            { cause: error.cause },
-          );
-        }
-        normalizeStorageError({
+        translateAcquisitionFailure(
           error,
-          message: "Project Storage application authority cannot be created.",
-        });
+          "Project Storage application authority cannot be created.",
+        );
       }
     },
     stop: async () => {

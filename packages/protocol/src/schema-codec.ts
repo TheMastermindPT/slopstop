@@ -122,61 +122,82 @@ function filterCode(filter: SchemaAST.Filter<unknown>): string {
   return filterCodes.find(([prefix]) => id.startsWith(prefix))?.[1] ?? "custom";
 }
 
+type FixedLeafTag = Exclude<SchemaIssue.Leaf["_tag"], "InvalidValue" | "InvalidType">;
+
+const fixedLeafCodes: Readonly<Record<FixedLeafTag, string>> = {
+  MissingKey: "invalid_type",
+  UnexpectedKey: "unrecognized_keys",
+  OneOf: "invalid_union",
+  Forbidden: "custom",
+};
+
+function invalidTypeCode(issue: Extract<SchemaIssue.Leaf, { _tag: "InvalidType" }>): string {
+  if (issue.ast._tag === "Literal") return "invalid_value";
+  return issue.ast._tag === "Declaration" ? "custom" : "invalid_type";
+}
+
 function leafCode(issue: SchemaIssue.Leaf, filter: SchemaAST.Filter<unknown> | undefined): string {
-  switch (issue._tag) {
-    case "InvalidValue":
-      return filter === undefined ? "invalid_value" : filterCode(filter);
-    case "InvalidType":
-      if (issue.ast._tag === "Literal") return "invalid_value";
-      return issue.ast._tag === "Declaration" ? "custom" : "invalid_type";
-    case "MissingKey":
-      return "invalid_type";
-    case "UnexpectedKey":
-      return "unrecognized_keys";
-    case "OneOf":
-      return "invalid_union";
-    case "Forbidden":
-      return "custom";
+  if (issue._tag === "InvalidValue") {
+    return filter === undefined ? "invalid_value" : filterCode(filter);
   }
+  if (issue._tag === "InvalidType") return invalidTypeCode(issue);
+  return fixedLeafCodes[issue._tag];
 }
 
 type WalkOptions = Readonly<{ expandWholeUnions: boolean }>;
+type WalkPosition = Readonly<{
+  path: readonly PropertyKey[];
+  filter: SchemaAST.Filter<unknown> | undefined;
+}>;
+type WalkContext = Readonly<{ options: WalkOptions; leaves: SchemaIssueLeaf[] }>;
+type AnyOfIssue = Extract<SchemaIssue.Issue, { _tag: "AnyOf" }>;
 
-function walk(
-  issue: SchemaIssue.Issue,
-  path: readonly PropertyKey[],
-  filter: SchemaAST.Filter<unknown> | undefined,
-  options: WalkOptions,
-  leaves: SchemaIssueLeaf[],
-): void {
+function report(code: string, issue: SchemaIssue.Issue, at: WalkPosition, context: WalkContext) {
+  context.leaves.push({ code, path: at.path, issue, filter: at.filter });
+}
+
+// A whole union stays one issue unless expansion is requested and it has members.
+function reportsWholeUnion(issue: AnyOfIssue, options: WalkOptions): boolean {
+  if (!wholeUnionReports.has(issue.ast)) return false;
+  return !options.expandWholeUnions || issue.issues.length === 0;
+}
+
+function expandsUnionMembers(issue: AnyOfIssue): boolean {
+  return wholeUnionReports.has(issue.ast) || issue.issues.length === 1;
+}
+
+function walkAnyOf(issue: AnyOfIssue, at: WalkPosition, context: WalkContext): void {
+  if (reportsWholeUnion(issue, context.options)) {
+    report("invalid_union", issue, at, context);
+    return;
+  }
+  if (expandsUnionMembers(issue)) {
+    for (const member of issue.issues) walk(member, at, context);
+    return;
+  }
+  const literals = issue.ast.types.every((member) => member._tag === "Literal");
+  report(literals ? "invalid_value" : "invalid_union", issue, at, context);
+}
+
+function walk(issue: SchemaIssue.Issue, at: WalkPosition, context: WalkContext): void {
   switch (issue._tag) {
     case "Pointer":
-      walk(issue.issue, [...path, ...issue.path], filter, options, leaves);
+      walk(issue.issue, { ...at, path: [...at.path, ...issue.path] }, context);
       return;
     case "Composite":
-      for (const child of issue.issues) walk(child, path, filter, options, leaves);
+      for (const child of issue.issues) walk(child, at, context);
       return;
     case "Filter":
-      walk(issue.issue, path, issue.filter, options, leaves);
+      walk(issue.issue, { ...at, filter: issue.filter }, context);
       return;
     case "Encoding":
-      walk(issue.issue, path, filter, options, leaves);
+      walk(issue.issue, at, context);
       return;
-    case "AnyOf": {
-      const [only, ...rest] = issue.issues;
-      const whole = wholeUnionReports.has(issue.ast);
-      if (whole && !(options.expandWholeUnions && issue.issues.length > 0)) {
-        leaves.push({ code: "invalid_union", path, issue, filter });
-      } else if (whole || (only !== undefined && rest.length === 0)) {
-        for (const member of issue.issues) walk(member, path, filter, options, leaves);
-      } else {
-        const literals = issue.ast.types.every((member) => member._tag === "Literal");
-        leaves.push({ code: literals ? "invalid_value" : "invalid_union", path, issue, filter });
-      }
+    case "AnyOf":
+      walkAnyOf(issue, at, context);
       return;
-    }
     default:
-      leaves.push({ code: leafCode(issue, filter), path, issue, filter });
+      report(leafCode(issue, at.filter), issue, at, context);
   }
 }
 
@@ -186,7 +207,7 @@ export function schemaIssueLeaves(
   options: WalkOptions = { expandWholeUnions: false },
 ): SchemaIssueLeaf[] {
   const leaves: SchemaIssueLeaf[] = [];
-  walk(error.issue, [], undefined, options, leaves);
+  walk(error.issue, { path: [], filter: undefined }, { options, leaves });
   return leaves;
 }
 

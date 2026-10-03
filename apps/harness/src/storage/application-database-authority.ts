@@ -39,6 +39,11 @@ export type ApplicationDatabaseAuthority = Readonly<{
   stop(): Promise<void>;
 }>;
 
+function isEmptyPlainFile(entry: Awaited<ReturnType<typeof lstatIfPresent>>): boolean {
+  if (entry === undefined || entry.isSymbolicLink()) return false;
+  return entry.isFile() && entry.size === 0;
+}
+
 function stoppedError(): ProjectStorageUnavailableError {
   return new ProjectStorageUnavailableError("Project Storage application database is stopped.");
 }
@@ -185,28 +190,40 @@ export function createApplicationDatabaseAuthority(
     });
   };
 
+  // Confirms an uncertain migration commit on a replacement client and returns it; the
+  // original migration error stands when the schema is still not current.
+  const verifyUncertainCommit = async (migrationError: unknown): Promise<LocalLibsqlClient> => {
+    await requireExistingFile();
+    const client = openClient();
+    try {
+      await requireForeignKeys(client);
+      await withWriteTransaction(client, async (transaction) => {
+        const remaining = await firstRequiredApplicationMigration(transaction, false);
+        if (remaining !== null) throw migrationError;
+      });
+      return client;
+    } catch (error) {
+      await client.close();
+      throw error;
+    }
+  };
+
   // Brings the schema current on an admitted client and returns the client to keep using;
   // an uncertain migration commit is verified on a replacement client. Closes on failure.
   const migrateOn = async (opened: LocalLibsqlClient): Promise<LocalLibsqlClient> => {
     let client: LocalLibsqlClient | undefined = opened;
     try {
-      await requireForeignKeys(client);
-      const migration = await migrateApplicationDatabase(client, {
+      await requireForeignKeys(opened);
+      const migration = await migrateApplicationDatabase(opened, {
         migrationResourcesRoot: input.migrationResourcesRoot,
         fresh: createdEmpty,
         failures: input.failures,
       });
       if (migration.status === "failed") {
         if (migration.commit !== "uncertain") throw migration.error;
-        await client.close();
+        await opened.close();
         client = undefined;
-        await requireExistingFile();
-        client = openClient();
-        await requireForeignKeys(client);
-        await withWriteTransaction(client, async (transaction) => {
-          const remaining = await firstRequiredApplicationMigration(transaction, false);
-          if (remaining !== null) throw migration.error;
-        });
+        client = await verifyUncertainCommit(migration.error);
       }
       createdEmpty = false;
       observed = true;
@@ -245,8 +262,7 @@ export function createApplicationDatabaseAuthority(
   const discardFailedCreation = async (error: unknown): Promise<unknown> => {
     if (!createdEmpty || initializing !== 1) return error;
     try {
-      const entry = await lstatIfPresent({ targetPath: applicationDatabasePath });
-      if (entry?.isFile() === true && !entry.isSymbolicLink() && entry.size === 0) {
+      if (isEmptyPlainFile(await lstatIfPresent({ targetPath: applicationDatabasePath }))) {
         await unlink(applicationDatabasePath);
       }
       return error;

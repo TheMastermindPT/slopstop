@@ -180,28 +180,40 @@ export async function firstRequiredApplicationMigration(
     await requireApplicationSchema(transaction, databaseSpecs.application);
     return null;
   }
-  if (metadata.lastMigrationId === "0001_project_registration") {
-    await requireApplicationSchema(transaction, previousRegistrationDatabaseSpec);
-    return 2;
-  }
-  if (metadata.lastMigrationId === "0002_identity_query_attempts") {
-    await requireApplicationSchema(transaction, previousIdentityQueryDatabaseSpec);
-    return 3;
-  }
-  if (metadata.lastMigrationId === "0003_registration_proposals") {
-    await requireApplicationSchema(transaction, previousProposalDatabaseSpec);
-    return 4;
-  }
-  if (metadata.lastMigrationId === "0004_registration_reservations") {
-    await requireApplicationSchema(transaction, previousReservationDatabaseSpec);
-    return 5;
-  }
-  if (metadata.lastMigrationId !== PREVIOUS_APPLICATION_DATABASE_HEAD) {
+  const known = knownPreviousHeads.get(metadata.lastMigrationId);
+  if (known === undefined) {
     throw new ApplicationDatabaseFault({ status: "broken", code: "REGISTRY_SCHEMA_UNKNOWN" });
   }
-  await requireApplicationSchema(transaction, previousApplicationDatabaseSpec);
-  return 1;
+  await requireApplicationSchema(transaction, known.spec);
+  return known.firstRequiredMigration;
 }
+
+// Each historical head, the schema it must match, and the first migration still to apply.
+const knownPreviousHeads = new Map<
+  string,
+  Readonly<{ spec: DatabaseSpec; firstRequiredMigration: number }>
+>([
+  [
+    PREVIOUS_APPLICATION_DATABASE_HEAD,
+    { spec: previousApplicationDatabaseSpec, firstRequiredMigration: 1 },
+  ],
+  [
+    "0001_project_registration",
+    { spec: previousRegistrationDatabaseSpec, firstRequiredMigration: 2 },
+  ],
+  [
+    "0002_identity_query_attempts",
+    { spec: previousIdentityQueryDatabaseSpec, firstRequiredMigration: 3 },
+  ],
+  [
+    "0003_registration_proposals",
+    { spec: previousProposalDatabaseSpec, firstRequiredMigration: 4 },
+  ],
+  [
+    "0004_registration_reservations",
+    { spec: previousReservationDatabaseSpec, firstRequiredMigration: 5 },
+  ],
+]);
 
 async function applyStatements(
   transaction: LocalLibsqlTransaction,

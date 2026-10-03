@@ -154,29 +154,44 @@ const ConversationMessageSchema = Schema.Struct({
 
 type ProjectedBranch = typeof ConversationBranchSchema.Type;
 
+function hasMissingParent(
+  branch: ProjectedBranch,
+  branchIds: ReadonlySet<ConversationBranchId>,
+): boolean {
+  return branch.parentBranchId !== null && !branchIds.has(branch.parentBranchId);
+}
+
+// Follows parent links from the branch; revisiting a branch means the chain is a cycle.
+function reachesCycle(
+  branch: ProjectedBranch,
+  byId: ReadonlyMap<ConversationBranchId, ProjectedBranch>,
+): boolean {
+  const visited = new Set<ConversationBranchId>();
+  let current: ConversationBranchId | null = branch.id;
+  while (current !== null) {
+    if (visited.has(current)) return true;
+    visited.add(current);
+    current = byId.get(current)?.parentBranchId ?? null;
+  }
+  return false;
+}
+
 function branchIssues(branches: readonly ProjectedBranch[]): Issue[] {
   const branchIds = new Set(branches.map((branch) => branch.id));
   const byId = new Map(branches.map((branch) => [branch.id, branch]));
   const issues: Issue[] = [];
   for (const branch of branches) {
-    if (branch.parentBranchId !== null && !branchIds.has(branch.parentBranchId)) {
+    if (hasMissingParent(branch, branchIds)) {
       issues.push({
         path: ["branches"],
         message: "Conversation branch parents must exist in the projection.",
       });
     }
-    const visited = new Set<ConversationBranchId>();
-    let current: ConversationBranchId | null = branch.id;
-    while (current !== null) {
-      if (visited.has(current)) {
-        issues.push({
-          path: ["branches"],
-          message: "Conversation branch parents must be acyclic.",
-        });
-        break;
-      }
-      visited.add(current);
-      current = byId.get(current)?.parentBranchId ?? null;
+    if (reachesCycle(branch, byId)) {
+      issues.push({
+        path: ["branches"],
+        message: "Conversation branch parents must be acyclic.",
+      });
     }
   }
   return issues;
