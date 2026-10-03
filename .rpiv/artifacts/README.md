@@ -48,7 +48,7 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 ## Current Authority
 
 - Coordination handoff: `handoffs/2026-10-03_21-16-54_claude-project-coordinator.md` transfers coordination from OpenCode to the separate Herdr agent `coordenador-claude`, after a completed read-and-teach-back exchange. The existing `claude` session remains the implementation author; the handoff distinguishes current approvals, unfinished migration/feature work and deferred strategy.
-- `evidence/2026-10-03_baseline-measurement-log.md` is the running five-line-per-task baseline log of work done before Ragnarok (first project: chess; MaxReps is the gymapp comparison candidate).
+- `evidence/2026-10-03_baseline-measurement-log.md` is the running five-line-per-task baseline log of work done before Ragnarok (baseline project: a copy of MaxReps, the user's gymapp; chess no longer used).
 - `evidence/2026-10-03_pc-s1-guarantee-scope-decision.md` records three user decisions: reduced PC-S1 scope (additional worktree association and Linux deferred, recovery detect-only, reduced limit matrices; data/trust guarantees retained), application.db verify-before-commit with approved oracle changes, and checkpoint commits on the Effect branch without merge or push.
 
 - `plans/2026-08-25_14-53-19_workspace-production-boundary-tracer-bullet.md` is the implemented five-phase Workspace production-boundary plan.
