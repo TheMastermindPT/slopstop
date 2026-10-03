@@ -10,6 +10,8 @@ tags: [metrics, baseline, dogfooding]
 
 User decision (2026-10-03): measure a baseline now, with the current manual method (Herdr + existing agent CLIs), so later Ragnarok runs on equivalent work can be compared. Baseline project: **a copy of MaxReps** (the user's gymapp and the accepted v1 proof scenario), decided by the user on 2026-10-03, replacing the earlier choice of `C:/Users/pedro/Documents/GitHub/chess`. Work on the copy keeps the original MaxReps untouched. The chess repository keeps its first commit (`3fd700f`) but is no longer the baseline project.
 
+Baseline copy setup (2026-10-03): `C:/Users/pedro/Documents/GitHub/maxreps-baseline`, cloned from `C:/Users/pedro/Documents/GymApp` at branch `lib-business-layer-architecture-hardening` (`625137c`), remote `origin` removed. Commit `94c936f` isolates its local Supabase stack (project `MaxRepsBaseline`, ports 553xx) from the original `GymApp` stack (5432x); all 47 migrations applied. Its git-ignored `.env` points only at that local stack; API keys and secrets are left for the user to fill.
+
 Metrics follow `research/2026-10-03_product-thesis.md`. Keep each entry to five lines; no extra ceremony.
 
 ## Entry template
