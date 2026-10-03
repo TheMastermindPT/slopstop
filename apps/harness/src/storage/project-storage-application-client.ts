@@ -1,4 +1,5 @@
 import { unlink } from "node:fs/promises";
+import { Deferred, Effect } from "effect";
 import type { LocalLibsqlClient } from "./local-libsql-worker-client.js";
 import {
   ProjectStorageApplicationClientInitializationError,
@@ -91,7 +92,8 @@ export function createApplicationClientManager(input: {
   initialize(client: LocalLibsqlClient): Promise<void>;
 }): ApplicationClientManager {
   let applicationClient: LocalLibsqlClient | undefined;
-  let initialization: Promise<LocalLibsqlClient | undefined> | undefined;
+  // One in-flight initialization shared by concurrent callers, with its exact outcome.
+  let initialization: Deferred.Deferred<LocalLibsqlClient | undefined, unknown> | undefined;
   let stopped = false;
 
   const initializeCandidate = async (
@@ -126,12 +128,17 @@ export function createApplicationClientManager(input: {
 
   const acquire = async (createIfMissing: boolean): Promise<LocalLibsqlClient | undefined> => {
     if (stopped) throw new ProjectStorageUnavailableError("Project Storage registry is stopped.");
-    if (initialization !== undefined) return initialization;
+    if (initialization !== undefined) return Effect.runPromise(Deferred.await(initialization));
     if (applicationClient !== undefined) return applicationClient;
-    const candidate = initializeCandidate(createIfMissing);
+    const candidate = Deferred.makeUnsafe<LocalLibsqlClient | undefined, unknown>();
     initialization = candidate;
     try {
-      return await candidate;
+      const client = await initializeCandidate(createIfMissing);
+      Deferred.doneUnsafe(candidate, Effect.succeed(client));
+      return client;
+    } catch (error) {
+      Deferred.doneUnsafe(candidate, Effect.fail(error));
+      throw error;
     } finally {
       if (initialization === candidate) initialization = undefined;
     }
@@ -183,7 +190,8 @@ export function createApplicationClientManager(input: {
     stop: async () => {
       if (stopped) return;
       stopped = true;
-      await initialization;
+      // An in-flight initialization finishes (or fails this stop) before the client closes.
+      if (initialization !== undefined) await Effect.runPromise(Deferred.await(initialization));
       const retained = applicationClient;
       applicationClient = undefined;
       await retained?.close();
