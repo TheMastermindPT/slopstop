@@ -64,6 +64,8 @@ const tables = [
   "command_receipts",
   "command_rejections",
   "project_state",
+  "project_workspaces",
+  "repository_bindings",
   "schema_metadata",
   "storage_identity",
   "writer_fence",
@@ -159,8 +161,8 @@ function verifyStorage(
     metadata_key: "canonical",
     database_kind: "canonical",
     format_version: 1,
-    schema_version: 2,
-    last_migration_id: "0001_canonical_project_writer",
+    schema_version: 3,
+    last_migration_id: "0002_initial_repository_binding",
   });
   const state = only(value, "project_state");
   const updated = decodeStrict(utc, state["updated_at"]);
