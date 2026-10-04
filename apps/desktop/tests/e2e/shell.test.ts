@@ -83,7 +83,7 @@ test.describe("built desktop shell", () => {
     }
     const page = await application.firstWindow();
 
-    await expect(page.getByRole("heading", { name: "SlopStop" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ragnarok", level: 1 })).toBeVisible();
     await expect(page.getByRole("status")).toContainText("Harness ready");
     const boundary = await page.evaluate(() => {
       return {
@@ -154,7 +154,9 @@ test.describe("built desktop shell", () => {
 
     await expect(page.getByRole("status")).toContainText("Harness ready");
     await expect(page.getByRole("status")).toBeInViewport({ ratio: 1 });
-    await expect(page.locator("footer")).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("complementary", { name: "Projects" })).toBeInViewport({
+      ratio: 1,
+    });
     const dimensions = await page.evaluate(() => ({
       viewportWidth: innerWidth,
       viewportHeight: innerHeight,
