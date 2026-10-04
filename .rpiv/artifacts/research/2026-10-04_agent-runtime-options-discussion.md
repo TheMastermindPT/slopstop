@@ -84,3 +84,19 @@ Um **spike delimitado** (protótipo descartável, ~1 dia, depois da migração e
 - **Direção C aprovada para testar:** Workers como CLIs oficiais em worktrees, governados pelo Ragnarok; Conversation/Frame por SDK direto com API key; o Mastra não é necessário para este caminho.
 - **Primeiro fornecedor da Conversation: API da Anthropic.**
 - Ainda por decidir: teto de custo mensal de API. O spike delimitado (secção 7) corre depois da migração Effect e do merge, antes de rever o ADR 0009. O ADR 0009 continua em vigor até essa revisão.
+
+## Medição real de custos (2026-10-04)
+
+Fonte: histórico local das sessões do Claude Code (só números de tokens; nenhum conteúdo saiu da máquina), recalculado com os preços atuais da API. Preços por milhão de tokens: Haiku 4.5 $1 entrada / $5 saída / $0,10 leitura de cache; Sonnet 5.5 $2 / $10 / $0,20; Opus 5.5 $4 / $20 / $0,20. Escrita em cache ≈1,25× o preço de entrada (TTL de 5 min); leitura ≈0,1×.
+
+| Sessão | Pedidos humanos | Chamadas ao modelo | Contexto médio por chamada | Sonnet 5.5 com cache | Sonnet 5.5 sem cache | Opus 5.5 com cache |
+| --- | --- | --- | --- | --- | --- | --- |
+| Coordenação (esta sessão, ~15 h) | 53 | 192 | ~259k tokens | ~$13 (~$0,25 por pedido) | ~$101 | ~$16 |
+| Implementação Effect (Worker, ~21 h) | 46 | 1150 | ~486k tokens | ~$127 | ~$1128 | ~$142 |
+| Sessão pinescript (junho) | 28 | 122 | ~441k tokens | ~$26 | ~$114 | ~$41 |
+
+Conclusões:
+1. **O caching é decisivo:** 8 a 15 vezes mais barato. O Ragnarok tem de manter o prefixo estável e o histórico só com acrescentos (append-only).
+2. **O trabalho de Worker por API seria caro:** um dia intenso de implementação custaria ~$130 com Sonnet, mesmo com cache. Confirma a direção C (Workers pelos CLIs com subscrição).
+3. **O contexto do Claude Code é enorme** (260k–490k por chamada: prompt de sistema, ferramentas, histórico completo, saídas das ferramentas). Uma Conversation do Ragnarok com contexto limitado (por exemplo ~40k) e cache custaria à volta de **$0,02 por mensagem com Sonnet**, ou seja, ~$1/dia e ~$20/mês para 50 mensagens/dia; com Haiku, cerca de metade. Estimativa a confirmar quando houver uso real.
+4. Limites: as sessões medidas incluem ciclos de ferramentas, por isso não são conversa pura; o Haiku tem janela de 200k e não cabia nas sessões medidas sem compactação; tokens de raciocínio contam como saída.
