@@ -31,7 +31,7 @@ import {
   consentRegistryOptions,
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
-import { installedGit } from "./registration-git-fixture.js";
+import { confirmationRequest, installedGit } from "./registration-git-fixture.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -131,48 +131,52 @@ async function expectIdentityChangeRefused(f: RegisteredFixture, displace: () =>
   }
 }
 
-async function registeredFixture(existingRoot?: string) {
-  const root = existingRoot ?? (await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-select-")));
-  if (existingRoot === undefined) roots.push(root);
-  const directory = path.join(
-    root,
-    existingRoot === undefined ? "repository" : `repository-${randomUUID()}`,
+/**
+ * Registers `count` fresh repositories through one registry session: one executable consent,
+ * then each repository's own selection, trust, preparation and confirmation.
+ */
+async function registeredProjects(count: number) {
+  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-select-"));
+  roots.push(root);
+  const directories = Array.from({ length: count }, (_, index) =>
+    path.join(root, index === 0 ? "repository" : `repository-${randomUUID()}`),
   );
-  const git = installedGit;
-  execFileSync(git, ["init", "--quiet", directory]);
+  for (const directory of directories) execFileSync(installedGit, ["init", "--quiet", directory]);
+  let next = 0;
   const scenario = await createControlledIdentityConsent(
     root,
-    { select: async () => ({ status: "selected", directory }) },
-    git,
+    { select: async () => ({ status: "selected", directory: directories[next++] ?? root }) },
+    installedGit,
   );
   const options = { ...consentRegistryOptions(root), applicationVersion: "0.0.0" };
   const owner = createProjectRegistrationOwner(scenario.registry, options, root);
   try {
-    const selected = await scenario.registry.selectRepository();
-    if (selected.status !== "prepared") throw new Error("Selection missing");
-    const trust = { repositorySelectionId: selected.repositorySelectionId, trustId: randomUUID() };
-    await scenario.registry.decideRepositoryTrust(
-      decodeStrict(RepositoryTrustDecisionSchema, { ...trust, decision: "accepted" }),
-    );
     await scenario.registry.decideIdentityQueries({ ...scenario.request, decision: "accepted" });
-    const preparation = {
-      version: 1,
-      requestId: randomUUID(),
-      admission: { ...scenario.request, ...trust },
-    };
-    const proposal = await owner.prepare(preparation);
-    if (proposal.status !== "prepared") throw new Error("Preparation missing");
-    const registered = decodeStrict(
-      RegisteredProjectSchema,
-      await owner.confirm({
+    const projects = [];
+    for (const directory of directories) {
+      const selected = await scenario.registry.selectRepository();
+      if (selected.status !== "prepared") throw new Error("Selection missing");
+      const trust = {
+        repositorySelectionId: selected.repositorySelectionId,
+        trustId: randomUUID(),
+      };
+      await scenario.registry.decideRepositoryTrust(
+        decodeStrict(RepositoryTrustDecisionSchema, { ...trust, decision: "accepted" }),
+      );
+      const preparation = {
         version: 1,
         requestId: randomUUID(),
-        preparation,
-        proposalId: proposal.proposalId,
-        proposalFingerprint: proposal.proposalFingerprint,
-      }),
-    );
-    return { root, directory, options, registered };
+        admission: { ...scenario.request, ...trust },
+      };
+      const proposal = await owner.prepare(preparation);
+      if (proposal.status !== "prepared") throw new Error("Preparation missing");
+      const registered = decodeStrict(
+        RegisteredProjectSchema,
+        await owner.confirm(confirmationRequest(preparation, proposal)),
+      );
+      projects.push({ root, directory, options, registered });
+    }
+    return projects;
   } finally {
     await owner.close();
     await scenario.observer.close();
@@ -180,11 +184,17 @@ async function registeredFixture(existingRoot?: string) {
   }
 }
 
+async function registeredFixture() {
+  const [project] = await registeredProjects(1);
+  if (project === undefined) throw new Error("Registered Project missing");
+  return project;
+}
+
 it.runIf(process.platform === "win32")(
   "runtime switches between two registered Projects and releases the old writer without creating Storage",
   async () => {
-    const a = await registeredFixture();
-    const b = await registeredFixture(a.root);
+    const [a, b] = await registeredProjects(2);
+    if (a === undefined || b === undefined) throw new Error("Registered Projects missing");
     expect(b.registered.projectId).not.toBe(a.registered.projectId);
     const before = rows(a, "SELECT * FROM storage_generations ORDER BY project_id");
     expect(before).toHaveLength(2);
