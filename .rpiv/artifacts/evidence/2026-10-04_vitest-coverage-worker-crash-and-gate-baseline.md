@@ -43,3 +43,13 @@ tags: [testing, gate, vitest, coverage, pre-existing]
 - Known upstream defect matching the symptom: when a worker_thread that loaded the libsql addon exits, Node unloads the DLL while libsql runtime threads still run. Fixed by libsql-js PR #235 (merged 2026-09-18, verified), shipped only in `0.6.0-pre.42`/`pre.43`; the project uses `libsql` 0.5.29. A rarer double `sqlite3_close_v2` crash remains unfixed upstream.
 - Production exposure: the harness also runs libSQL in worker threads, so the product may be affected, not only tests.
 - User decisions: experiment A (load the addon once on each test fork's main thread, diagnostic only); if it confirms the cause, option B: upgrade to `libsql` `0.6.0-pre.43`.
+
+## Capture and narrowing, investigation parked (2026-10-04)
+
+- Experiment A refuted: with the addon pinned on each fork's main thread, run 3 of 3 crashed in a pinned fork. Option B therefore not taken.
+- ProcDump (user level, attached only to own forks) captured the crash: read access violation in `@libsql/win32-x64-msvc/index.node` (libsql 0.5.29) at `+0x55661e`, heap address (use-after-free pattern); `koffi.node` loaded but absent from the faulting stack. Dump deleted.
+- Reproduces in isolation, without coverage: `registration-identity-query-lifecycle.integration.test.ts` crashes in ~12-25% of 14 s runs. Coverage is not required.
+- Findings: `@libsql/client` 0.17.4 `transaction()` detaches the connection and nothing closes it explicitly; in libsql 0.5.29 `Database.close()` only drops an `Arc`, so files are released only by GC finalizers (why the worker forces `gc()`). Explicit per-transaction close could not release the file; removing `client.close()` made crashes more frequent; libsql `0.6.0-pre.43` (rewritten, deterministic close, module pin) crashed as often or more, and its published optional dependencies use unscoped names that 404.
+- Narrowing: cases "preserves cancellation instant" and "rechecks settlement" crash (~2/15 each); "does not settle late success" 0/15. No parent `terminate()` occurred in a crashing fork; the crash follows a `close-client` with no pending request (worker-side close, forced `gc()`, finalizers, or fork exit). Timing-sensitive: synchronous logging hides it.
+- Unknown: exact trigger and function. Earlier full-run crashes also hit other registration files, so quarantining one file may not suffice.
+- Status: investigation parked by the coordinator after the agreed limit; next cheap step if resumed: a focused dump of this file to see whether the stack is in the close/finalizer path.
