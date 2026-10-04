@@ -256,7 +256,9 @@ void (async () => {
     // libsql releases Windows file handles from native finalizers, not close(). Collect on
     // every close: other clients staying open must not keep this client's files locked.
     collectGarbage();
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    // One macrotask lets the finalizers queued by the collection run before the next request.
+    // A fixed timer here costs ~15 ms per close on Windows, its timer granularity.
+    await new Promise((resolve) => setImmediate(resolve));
     return null;
   };
   const handleClientRequest = async (request) => {
