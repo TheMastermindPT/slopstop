@@ -5,6 +5,7 @@ import {
   createProjectCreateResultEvent,
   createProjectListResultEvent,
   createProjectOpenResultEvent,
+  createProjectRegistrationResultEvent,
   createProjectSwitchResultEvent,
   createReadyEvent,
   createRequestFailureEvent,
@@ -24,6 +25,7 @@ import {
 import { Deferred, Effect } from "effect";
 import type { CanonicalProjectApplication } from "./canonical-project-application.js";
 import type { ProjectStorageApplication } from "./project-storage-application.js";
+import type { ProjectRegistrationFlow } from "./registration/project-registration-flow.js";
 import type { WorkspaceApplication } from "./workspace-application.js";
 
 export interface HarnessTransport {
@@ -35,6 +37,7 @@ export type StopHarnessRuntime = () => Promise<void>;
 
 type HarnessRuntimeOptions = Readonly<{
   projectListing?: Readonly<{ list(): Promise<ProjectListResult>; stop(): Promise<void> }>;
+  projectRegistration?: ProjectRegistrationFlow;
   // The harness's shared application database authority, stopped last when Storage stopped.
   applicationDatabase?: Readonly<{ stop(): Promise<void> }>;
   transport: HarnessTransport;
@@ -126,6 +129,17 @@ type ProjectStorageMessage = Extract<
   DesktopMessage,
   { command: "project.open" | "project.create" | "project.close" }
 >;
+type WorkspaceMessage = Extract<
+  DesktopMessage,
+  { command: "workspace.query" | "workspace.intent" }
+>;
+type RegistryMessage = Extract<
+  DesktopMessage,
+  { command: "project.list" | "project.registration" }
+>;
+function isWorkspaceMessage(message: DesktopMessage): message is WorkspaceMessage {
+  return message.command === "workspace.query" || message.command === "workspace.intent";
+}
 function isCanonicalProjectMessage(message: DesktopMessage): message is CanonicalProjectMessage {
   return (
     message.command === "project.activate" ||
@@ -213,6 +227,39 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     }
   };
 
+  // The Project list and registration steps both answer from the registration registry.
+  const handleRegistryMessage = async (message: RegistryMessage): Promise<void> => {
+    if (message.command === "project.list") {
+      const result =
+        (await options.projectListing?.list()) ??
+        ({ status: "unavailable", code: "PROJECT_LIST_UNAVAILABLE" } as const);
+      options.transport.send(createProjectListResultEvent(nextMetadata(message.messageId), result));
+      return;
+    }
+    const result =
+      options.projectRegistration === undefined
+        ? ({ status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" } as const)
+        : await Effect.runPromise(options.projectRegistration.handle(message.payload));
+    options.transport.send(
+      createProjectRegistrationResultEvent(nextMetadata(message.messageId), result),
+    );
+  };
+
+  const handleWorkspaceMessage = async (message: WorkspaceMessage): Promise<void> => {
+    // Sequence numbers follow emission order, so metadata is taken after the answer settles.
+    if (message.command === "workspace.query") {
+      const result = await options.workspaceApplication.query(message.payload);
+      options.transport.send(
+        createWorkspaceQueryResultEvent(nextMetadata(message.messageId), result),
+      );
+      return;
+    }
+    const result = await options.workspaceApplication.submit(message.payload);
+    options.transport.send(
+      createWorkspaceIntentResultEvent(nextMetadata(message.messageId), result),
+    );
+  };
+
   const handleMessage = async (message: unknown): Promise<void> => {
     const parsed = parseDesktopMessage(message);
     const causationId = readMessageId(message);
@@ -228,28 +275,12 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
 
     if (isCanonicalProjectMessage(parsed.value)) return handleCanonicalProjectMessage(parsed.value);
     if (isProjectStorageMessage(parsed.value)) return handleProjectStorageMessage(parsed.value);
-    switch (parsed.value.command) {
-      case "project.list": {
-        const result =
-          (await options.projectListing?.list()) ??
-          ({ status: "unavailable", code: "PROJECT_LIST_UNAVAILABLE" } as const);
-        options.transport.send(createProjectListResultEvent(nextMetadata(causationId), result));
-        return;
-      }
-      case "system.handshake":
-        options.transport.send(createReadyEvent(nextMetadata(causationId), options.harnessVersion));
-        return;
-      case "workspace.query": {
-        const result = await options.workspaceApplication.query(parsed.value.payload);
-        options.transport.send(createWorkspaceQueryResultEvent(nextMetadata(causationId), result));
-        return;
-      }
-      case "workspace.intent": {
-        const result = await options.workspaceApplication.submit(parsed.value.payload);
-        options.transport.send(createWorkspaceIntentResultEvent(nextMetadata(causationId), result));
-        return;
-      }
+    if (isWorkspaceMessage(parsed.value)) return handleWorkspaceMessage(parsed.value);
+    if (parsed.value.command === "system.handshake") {
+      options.transport.send(createReadyEvent(nextMetadata(causationId), options.harnessVersion));
+      return;
     }
+    return handleRegistryMessage(parsed.value);
   };
 
   const stopMessages = options.transport.subscribe((message) => {

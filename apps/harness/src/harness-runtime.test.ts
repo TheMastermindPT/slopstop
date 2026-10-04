@@ -4,6 +4,7 @@ import {
   createProjectCommand,
   createProjectCreateCommand,
   createProjectOpenCommand,
+  createProjectRegistrationCommand,
   createWorkspaceIntentCommand,
   createWorkspaceQueryCommand,
   decodeStrict,
@@ -146,7 +147,7 @@ function canonicalRuntimeFixture() {
     request,
   );
   const expected = (event: string, payload: unknown, number: number, causationId: string) => ({
-    protocolVersion: 4,
+    protocolVersion: 5,
     messageType: "event",
     messageId: `00000000-0000-4000-8000-${String(900 + number).padStart(12, "0")}`,
     sentAt: options.now(),
@@ -309,7 +310,7 @@ const failureScopeCases = [
   {
     kind: "message",
     input: {
-      protocolVersion: 4,
+      protocolVersion: 5,
       messageType: "command",
       messageId: "00000000-0000-4000-8000-000000000202",
       sentAt: "2026-08-14T12:00:00.000Z",
@@ -375,7 +376,7 @@ describe("harness runtime transport", () => {
         }
         expect(transport.sent).toEqual([
           {
-            protocolVersion: 4,
+            protocolVersion: 5,
             messageType: "event",
             messageId: "00000000-0000-4000-8000-000000000002",
             sentAt: "2026-08-14T12:00:01.000Z",
@@ -622,7 +623,7 @@ describe("harness runtime transport", () => {
 
     expect(transport.sent).toMatchObject([
       {
-        protocolVersion: 4,
+        protocolVersion: 5,
         sequence: 1,
         causationId: open.messageId,
         event: "project.open.result",
@@ -633,7 +634,7 @@ describe("harness runtime transport", () => {
         },
       },
       {
-        protocolVersion: 4,
+        protocolVersion: 5,
         sequence: 2,
         causationId: create.messageId,
         event: "project.create.result",
@@ -644,7 +645,7 @@ describe("harness runtime transport", () => {
         },
       },
       {
-        protocolVersion: 4,
+        protocolVersion: 5,
         sequence: 3,
         causationId: close.messageId,
         event: "project.close.result",
@@ -656,6 +657,28 @@ describe("harness runtime transport", () => {
       },
     ]);
 
+    await stop();
+  });
+
+  it("answers registration steps as unavailable when no registration owner is installed", async () => {
+    const transport = new TestTransport();
+    const stop = startRuntime(transport);
+    const command = createProjectRegistrationCommand(
+      { messageId: "00000000-0000-4000-8000-000000000031", sentAt: "2026-10-04T12:00:00.000Z" },
+      { step: "prepare-git" },
+    );
+
+    transport.emit(command);
+    await vi.waitFor(() => expect(transport.sent).toHaveLength(1));
+
+    expect(transport.sent).toMatchObject([
+      {
+        protocolVersion: 5,
+        causationId: command.messageId,
+        event: "project.registration.result",
+        payload: { status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" },
+      },
+    ]);
     await stop();
   });
 
@@ -690,7 +713,7 @@ describe("harness runtime transport", () => {
 
     expect(transport.sent).toEqual([
       {
-        protocolVersion: 4,
+        protocolVersion: 5,
         messageType: "event",
         messageId: "00000000-0000-4000-8000-000000000002",
         sentAt: "2026-08-14T12:00:01.000Z",
