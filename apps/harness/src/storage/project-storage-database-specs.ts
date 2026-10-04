@@ -1266,6 +1266,20 @@ const identityQueryColumnNames = [
   "settled_at",
 ];
 
+/** Required TEXT columns in declaration order, the first one being the primary key. */
+function requiredTextColumns(table: string, names: readonly string[]): ColumnSpec[] {
+  return names.map((name, cid) => ({
+    table,
+    cid,
+    name,
+    type: "TEXT",
+    notNull: 1,
+    defaultValue: null,
+    primaryKey: cid === 0 ? 1 : 0,
+    hidden: 0,
+  }));
+}
+
 function withIdentityQuerySpec(previous: DatabaseSpec): DatabaseSpec {
   const table = "registration_identity_query_attempts";
   return {
@@ -1339,24 +1353,13 @@ function withProposalSpec(previous: DatabaseSpec): DatabaseSpec {
     tables: [...previous.tables, table],
     columns: [
       ...previous.columns,
-      ...[
+      ...requiredTextColumns(table, [
         "request_id",
         "proposal_id",
         "input_fingerprint",
         "proposal_fingerprint",
         "record_json",
-      ].map(
-        (name, cid): ColumnSpec => ({
-          table,
-          cid,
-          name,
-          type: "TEXT",
-          notNull: 1,
-          defaultValue: null,
-          primaryKey: cid === 0 ? 1 : 0,
-          hidden: 0,
-        }),
-      ),
+      ]),
     ],
     checks: [
       ...previous.checks,
@@ -1402,20 +1405,7 @@ function withReservationSpec(previous: DatabaseSpec): DatabaseSpec {
       table: request,
       names: ["request_id", "input_fingerprint", "request_json", "reservation_id"],
     },
-  ].flatMap(({ table, names }) =>
-    names.map(
-      (name, cid): ColumnSpec => ({
-        table,
-        cid,
-        name,
-        type: "TEXT",
-        notNull: 1,
-        defaultValue: null,
-        primaryKey: cid === 0 ? 1 : 0,
-        hidden: 0,
-      }),
-    ),
-  );
+  ].flatMap(({ table, names }) => requiredTextColumns(table, names));
   return {
     ...previous,
     tables: [...previous.tables, reservation, request],
@@ -1473,18 +1463,12 @@ function withPublicationSpec(previous: DatabaseSpec): DatabaseSpec {
     tables: [...previous.tables, table],
     columns: [
       ...previous.columns,
-      ...["reservation_id", "request_id", "result_json", "result_fingerprint"].map(
-        (name, cid): ColumnSpec => ({
-          table,
-          cid,
-          name,
-          type: "TEXT",
-          notNull: 1,
-          defaultValue: null,
-          primaryKey: cid === 0 ? 1 : 0,
-          hidden: 0,
-        }),
-      ),
+      ...requiredTextColumns(table, [
+        "reservation_id",
+        "request_id",
+        "result_json",
+        "result_fingerprint",
+      ]),
     ],
     checks: [
       ...previous.checks,

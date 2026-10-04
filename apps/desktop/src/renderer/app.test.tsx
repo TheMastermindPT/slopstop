@@ -29,6 +29,24 @@ function exposeApi(api: SlopStopApi): void {
   });
 }
 
+/** One registered, present Project whose Storage state the test chooses. */
+function registeredProjectList(id: string, storage: unknown) {
+  return decodeStrict(ProjectListResultSchema, {
+    status: "listed",
+    projects: [
+      {
+        registration: "registered",
+        projectId: id,
+        repositoryBindingId: id,
+        workspaceId: id,
+        access: "not-assessed",
+        repositoryLocation: { status: "present" },
+        storage,
+      },
+    ],
+  });
+}
+
 const unusedWorkspaceApi = {
   listProjects: async () => ({ status: "listed" as const, projects: [] }),
   activateProject: async () => {
@@ -79,25 +97,12 @@ describe("desktop shell", () => {
         retryHarness: async () => ({ ok: true }),
         subscribeHarnessStatus: () => () => {},
         listProjects: async () =>
-          decodeStrict(ProjectListResultSchema, {
-            status: "listed",
-            projects: [
-              {
-                registration: "registered",
-                projectId: id,
-                repositoryBindingId: id,
-                workspaceId: id,
-                access: "not-assessed",
-                repositoryLocation: { status: "present" },
-                storage: {
-                  status: "safe-mode",
-                  storageId: id,
-                  generationId: id,
-                  canonical,
-                  runtime,
-                },
-              },
-            ],
+          registeredProjectList(id, {
+            status: "safe-mode",
+            storageId: id,
+            generationId: id,
+            canonical,
+            runtime,
           }),
         activateProject: async (request) =>
           decodeStrict(CanonicalProjectActivationResultSchema, {
@@ -273,20 +278,7 @@ describe("desktop shell", () => {
       retryHarness: async () => ({ ok: true }),
       subscribeHarnessStatus: () => () => {},
       listProjects: async () =>
-        decodeStrict(ProjectListResultSchema, {
-          status: "listed",
-          projects: [
-            {
-              registration: "registered",
-              projectId: id,
-              repositoryBindingId: id,
-              workspaceId: id,
-              access: "not-assessed",
-              repositoryLocation: { status: "present" },
-              storage: { status: "healthy", storageId: id, generationId: id },
-            },
-          ],
-        }),
+        registeredProjectList(id, { status: "healthy", storageId: id, generationId: id }),
       activateProject: async (request) => {
         await gate;
         return decodeStrict(CanonicalProjectActivationResultSchema, {

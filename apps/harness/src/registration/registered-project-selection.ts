@@ -31,18 +31,26 @@ function refused(
   });
 }
 
+/** Reads the Project's registration record, if any, in one admitted transaction. */
+async function readRegistrationRecord(
+  options: RegistrationDatabaseOptions,
+  request: CanonicalProjectActivationRequest,
+) {
+  const records = await withRegistrationDatabase(
+    options,
+    (client) => withWriteTransaction(client, readProjectRegistrationRecords),
+    "existing-only",
+  );
+  return records.find(({ reservation }) => reservation.projectId === request.projectId);
+}
+
 export function createRegisteredProjectSessionValidation(options: RegistrationDatabaseOptions) {
   return async (
     request: CanonicalProjectActivationRequest,
     session: Extract<ProjectStorageActivationSession, { mode: "read-write" }>,
   ): Promise<CanonicalProjectActivationResult | undefined> => {
     try {
-      const records = await withRegistrationDatabase(
-        options,
-        (client) => withWriteTransaction(client, readProjectRegistrationRecords),
-        "existing-only",
-      );
-      const record = records.find(({ reservation }) => reservation.projectId === request.projectId);
+      const record = await readRegistrationRecord(options, request);
       if (record === undefined) return undefined;
       if (record.publication === undefined)
         return refused(request, { status: "unavailable", code: "REGISTRATION_INCOMPLETE" });
@@ -73,6 +81,27 @@ export function createRegisteredProjectSessionValidation(options: RegistrationDa
   };
 }
 
+type SavedProposal = NonNullable<
+  Awaited<ReturnType<typeof readRegistrationRecord>>
+>["reservation"]["proposal"];
+type PhysicalObservation = Awaited<ReturnType<typeof discoverSelectedPhysical>>;
+
+const identityChanged = { status: "rejected", code: "REPOSITORY_IDENTITY_CHANGED" } as const;
+
+/** The refusal for a fresh observation that no longer matches the saved repository, if any. */
+function observationFailure(saved: SavedProposal, observed: PhysicalObservation) {
+  if (observed.status === "unresolved") return identityChanged;
+  if (observed.status === "unavailable" && observed.code === "REPOSITORY_TRUST_REQUIRED")
+    return identityChanged;
+  if (observed.status === "cancelled")
+    return { status: "unavailable", code: "OBSERVATION_LIMIT_EXCEEDED" } as const;
+  if (observed.status !== "captured") return observed;
+  const unchanged = (["worktree", "gitDirectory", "commonDirectory"] as const).every((key) =>
+    samePhysicalIdentity(saved.observation.physical[key], observed.snapshot.physical[key]),
+  );
+  return unchanged ? undefined : identityChanged;
+}
+
 // Runs inside the existing coordinator lifecycle. It does not acquire a writer,
 // execute Git or hold a registry transaction while Storage opens.
 export function createRegisteredProjectTargetValidation(options: RegistrationDatabaseOptions) {
@@ -80,12 +109,7 @@ export function createRegisteredProjectTargetValidation(options: RegistrationDat
     request: CanonicalProjectActivationRequest,
   ): Promise<CanonicalProjectActivationResult | undefined> => {
     try {
-      const records = await withRegistrationDatabase(
-        options,
-        (client) => withWriteTransaction(client, readProjectRegistrationRecords),
-        "existing-only",
-      );
-      const record = records.find(({ reservation }) => reservation.projectId === request.projectId);
+      const record = await readRegistrationRecord(options, request);
       // Existing Storage-only Projects retain the coordinator's legacy opening contract.
       if (record === undefined) return undefined;
       if (record.publication === undefined)
@@ -100,20 +124,8 @@ export function createRegisteredProjectTargetValidation(options: RegistrationDat
           },
           phase.control,
         );
-        if (observed.status === "unresolved")
-          return refused(request, { status: "rejected", code: "REPOSITORY_IDENTITY_CHANGED" });
-        if (observed.status === "unavailable" && observed.code === "REPOSITORY_TRUST_REQUIRED")
-          return refused(request, { status: "rejected", code: "REPOSITORY_IDENTITY_CHANGED" });
-        if (observed.status === "cancelled")
-          return refused(request, { status: "unavailable", code: "OBSERVATION_LIMIT_EXCEEDED" });
-        if (observed.status !== "captured") return refused(request, observed);
-        if (
-          !(["worktree", "gitDirectory", "commonDirectory"] as const).every((key) =>
-            samePhysicalIdentity(saved.observation.physical[key], observed.snapshot.physical[key]),
-          )
-        )
-          return refused(request, { status: "rejected", code: "REPOSITORY_IDENTITY_CHANGED" });
-        return undefined;
+        const failure = observationFailure(saved, observed);
+        return failure === undefined ? undefined : refused(request, failure);
       } finally {
         phase.dispose();
       }
