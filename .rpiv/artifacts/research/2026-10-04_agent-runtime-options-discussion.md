@@ -101,3 +101,21 @@ Conclusões:
 2. **O trabalho de Worker por API seria caro:** um dia intenso de implementação custaria ~$130 com Sonnet, mesmo com cache. Confirma a direção C (Workers pelos CLIs com subscrição).
 3. **O contexto do Claude Code é enorme** (260k–490k por chamada: prompt de sistema, ferramentas, histórico completo, saídas das ferramentas). Uma Conversation do Ragnarok com contexto limitado (por exemplo ~40k) e cache custaria à volta de **$0,02 por mensagem com Sonnet**, ou seja, ~$1/dia e ~$20/mês para 50 mensagens/dia; com Haiku, cerca de metade. Estimativa a confirmar quando houver uso real.
 4. Limites: as sessões medidas incluem ciclos de ferramentas, por isso não são conversa pura; o Haiku tem janela de 200k e não cabia nas sessões medidas sem compactação; tokens de raciocínio contam como saída.
+
+## Decisão do utilizador: um só modo de pagamento (2026-10-04)
+
+- **Cada utilizador usa um só modo de pagamento: subscrição OU API, nunca os dois.** Razões: não complicar a vida do utilizador nem arriscar gastos em várias fontes; a API da Anthropic e da OpenAI é cara; é o padrão da maior parte do software.
+- Consequência por papel:
+
+| Papel | Modo subscrição | Modo API |
+| --- | --- | --- |
+| Workers | CLI oficial com o login do utilizador | O mesmo CLI com API key |
+| Waypoint parent | CLI (`claude -p`) | SDK direto, chamadas seladas |
+| Conversation / Frame | CLI (`claude -p`) | SDK direto |
+
+- **Substitui** a decisão anterior "Waypoint parent por API" (mesmo dia): essa passa a valer **só no modo API**. No modo subscrição, o Waypoint parent e a Conversation correm pelo CLI oficial.
+- Modelos baratos (GPT-6 Luna, DeepSeek-V4.1-Flash) só existem no modo API.
+- **Riscos principais passam a ser os termos e os limites de uso**, não o custo: usar o CLI como motor da Conversation e do Waypoint parent fica mais perto da zona cinzenta dos termos da Anthropic ("ordinary, individual usage"); com muitos agentes, o limite do plano pode esgotar. Para abrir ao público: confirmação escrita da Anthropic.
+- **Novo foco do protótipo (substitui a secção 7):** testar se o `claude -p` consegue servir de Waypoint parent e de Conversation com controlo suficiente (prompt de sistema próprio, ferramentas desligadas, sem `CLAUDE.md` nem memória, resposta em formato fixo validável, contexto conhecido) e quanto do limite do plano consome; e, secundariamente, os Workers numa worktree com aprovação por hook e testes corridos pelo Ragnarok.
+- **Análise de viabilidade com duas perguntas:** modo subscrição: os limites de uso e os termos chegam? Modo API: o custo é aceitável?
+- O ADR 0009 revisto terá de tratar o **modo de pagamento** como escolha central, com garantias diferentes por modo.
