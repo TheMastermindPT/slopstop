@@ -83,6 +83,7 @@ Um **spike delimitado** (protótipo descartável, ~1 dia, depois da migração e
 
 - **Direção C aprovada para testar:** Workers como CLIs oficiais em worktrees, governados pelo Ragnarok; Conversation/Frame por SDK direto com API key; o Mastra não é necessário para este caminho.
 - **Primeiro fornecedor da Conversation: API da Anthropic.**
+- **Waypoint parent por API** (decisão do utilizador, 2026-10-04): o modelo que planeia e supervisiona os Workers corre dentro do Ragnarok, com chamadas seladas, orçamento e recuperação, usando a API key do utilizador. Razões: pelos termos verificados, tudo o que o próprio Ragnarok executa tem de usar API key; e as decisões de coordenação ficam observáveis em vez de presas num ciclo opaco de CLI. Só os Workers usam a subscrição, através dos CLIs oficiais. O registo em ADR fica para a revisão do ADR 0009 depois do spike.
 - Ainda por decidir: teto de custo mensal de API. O spike delimitado (secção 7) corre depois da migração Effect e do merge, antes de rever o ADR 0009. O ADR 0009 continua em vigor até essa revisão.
 
 ## Medição real de custos (2026-10-04)
