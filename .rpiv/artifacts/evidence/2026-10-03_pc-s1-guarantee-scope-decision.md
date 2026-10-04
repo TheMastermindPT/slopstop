@@ -116,3 +116,15 @@ A push attempt (CLI and GitHub Desktop) failed because the `.husky/pre-push` dee
 - **Invalid folders.** Inside `.git`, bare repositories and "not a worktree" share one screen, with the `REPOSITORY_INVALID` reference. The harness observation oracles stay unchanged.
 - **Approach B is approved.** A new read-only query compares the worktree physical identity with the stored reservation. It decides `already-registered`, `belongs-to-project` (B1) or `REGISTRATION_INCOMPLETE` (B2) at prepare time, with no `registration_requests` row written; a late race at confirm is mapped the same way.
 - **Effect SQL.** New reads go through `registration/registry-effect.ts`, as Effect over the application.db authority facade.
+
+## 12. Git executable discovery — Human Decision (2026-10-05)
+
+- **Discovery order.**
+  1. Look first for `%ProgramFiles%\Git\cmd\git.exe`.
+  2. If it is absent, resolve `git.exe` from the harness process's own `PATH`, with these limits:
+     - absolute entries only;
+     - never the current directory or the selected repository;
+     - no shell.
+- **Unchanged contract.** Stage 1 shows the exact absolute path for confirmation. The identity tuple, digest and version are pinned as D8/PC-B10 require. A replaced executable invalidates both stages.
+- **Accepted residual risk.** A user-writable `PATH` entry could present a different `git.exe` when Program Files has none. The visible path and identity pinning mitigate it.
+- **Loss accepted in section 10, now narrower.** That loss was a Git outside the standard location; it now applies only to a Git that is neither in Program Files nor on `PATH`.
