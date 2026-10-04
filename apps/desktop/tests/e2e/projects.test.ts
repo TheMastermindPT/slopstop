@@ -3,9 +3,10 @@ import { mkdtemp, readFile, rename, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { _electron as electron, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { decodeStrict, RegisteredProjectSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
+import { launchBuiltDesktop } from "./electron-launch.js";
 
 test("lists and switches real saved Projects through the sandboxed Electron preload", async () => {
   test.setTimeout(150_000);
@@ -37,17 +38,7 @@ test("lists and switches real saved Projects through the sandboxed Electron prel
   const first = projects[0];
   const second = projects[1];
   if (first === undefined || second === undefined) throw new Error("Seeded Projects missing");
-  const shim = path.join(proof, "launch.cjs");
-  await writeFile(
-    shim,
-    `const {app}=require('electron');app.setPath('userData',${JSON.stringify(userData)});require(${JSON.stringify(path.resolve(".vite/build/main.cjs"))});`,
-  );
-  const executablePath = path.join(
-    path.dirname(require.resolve("electron/package.json")),
-    "dist",
-    "electron.exe",
-  );
-  const application = await electron.launch({ executablePath, args: [shim] });
+  const application = await launchBuiltDesktop(proof, userData);
   try {
     expect(await application.evaluate(({ app }) => app.getPath("userData"))).toBe(userData);
     const page = await application.firstWindow();

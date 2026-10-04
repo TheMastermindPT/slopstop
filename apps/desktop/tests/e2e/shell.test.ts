@@ -98,9 +98,12 @@ test.describe("built desktop shell", () => {
       requireType: "undefined",
       exposedApi: [
         "activateProject",
+        "chooseRepository",
         "getHarnessStatus",
+        "getRegistrationCapability",
         "listProjects",
         "queryWorkspace",
+        "registerProject",
         "retryHarness",
         "submitWorkspaceIntent",
         "subscribeHarnessStatus",

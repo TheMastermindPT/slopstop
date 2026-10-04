@@ -23,12 +23,8 @@ const PreparationFields = {
 /** A Project answered for the folder; its name is the registered worktree folder name. */
 const NamedProjectFields = { projectId: ProjectIdSchema, name: NonEmptyTextSchema };
 
-/**
- * One step of adding an existing repository. The selected directory comes from the desktop
- * main process's native folder dialog, never from the renderer.
- */
-export const ProjectRegistrationRequestSchema = Schema.Union([
-  Schema.Struct({ step: Schema.Literal("select-repository"), directory: NonEmptyTextSchema }),
+/** The registration steps the renderer may request through the preload API. */
+const RendererRegistrationSteps = [
   Schema.Struct({
     step: Schema.Literal("decide-trust"),
     repositorySelectionId: UuidTextSchema,
@@ -57,6 +53,15 @@ export const ProjectRegistrationRequestSchema = Schema.Union([
     proposalId: UuidTextSchema,
     proposalFingerprint: Sha256TextSchema,
   }),
+] as const;
+
+/**
+ * One step of adding an existing repository. The selected directory comes from the desktop
+ * main process's native folder dialog, never from the renderer.
+ */
+export const ProjectRegistrationRequestSchema = Schema.Union([
+  Schema.Struct({ step: Schema.Literal("select-repository"), directory: NonEmptyTextSchema }),
+  ...RendererRegistrationSteps,
 ]);
 export type ProjectRegistrationRequest = typeof ProjectRegistrationRequestSchema.Type;
 
@@ -70,6 +75,7 @@ const ProjectRegistrationFailureSchemas = [
       "REGISTRY_SCHEMA_NEWER",
       "REGISTRY_CORRUPT",
       "INTERNAL_FAILURE",
+      "PROJECT_REGISTRATION_TRANSPORT_FAILED",
     ]),
   }),
   Schema.Struct({
@@ -143,3 +149,31 @@ export const ProjectRegistrationResultSchema = wholeUnion([
   ...ProjectRegistrationFailureSchemas,
 ]);
 export type ProjectRegistrationResult = typeof ProjectRegistrationResultSchema.Type;
+
+/** A registration step the renderer requests; it can never carry a directory. */
+export const RendererRegistrationRequestSchema = Schema.Union(RendererRegistrationSteps);
+export type RendererRegistrationRequest = typeof RendererRegistrationRequestSchema.Type;
+
+/**
+ * The outcome of the main process's own folder dialog: the selection it recorded, with the
+ * chosen directory for display only.
+ */
+export const RepositoryChoiceResultSchema = wholeUnion([
+  Schema.Struct({
+    status: Schema.Literal("repository-selected"),
+    repositorySelectionId: UuidTextSchema,
+    directory: NonEmptyTextSchema,
+  }),
+  ...ProjectRegistrationFailureSchemas,
+]);
+export type RepositoryChoiceResult = typeof RepositoryChoiceResultSchema.Type;
+
+/** Whether this platform can add repositories at all, known before any folder dialog (B4). */
+export const RegistrationCapabilitySchema = Schema.Union([
+  Schema.Struct({ status: Schema.Literal("available") }),
+  Schema.Struct({
+    status: Schema.Literal("unavailable"),
+    code: Schema.Literal("IDENTITY_CAPABILITY_UNAVAILABLE"),
+  }),
+]);
+export type RegistrationCapability = typeof RegistrationCapabilitySchema.Type;

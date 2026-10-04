@@ -35,6 +35,7 @@ import {
   validatePackageSmokeResult,
 } from "./package-smoke-verifier.js";
 import { createProjectEntryBridge, type ProjectEntryBridge } from "./project-entry-bridge.js";
+import { registerProjectRegistrationIpc } from "./project-registration-ipc.js";
 import {
   createProjectStorageHarnessBootstrap,
   projectStorageMigrationResourcesRoot,
@@ -366,6 +367,7 @@ async function bootstrap(): Promise<void> {
       now: () => new Date().toISOString(),
     });
     registerHarnessIpc(supervisor);
+    registerProjectRegistrationIpc(projects);
     registerWorkspaceIpc(workspaceBridge);
     supervisor.subscribe(broadcastHarnessStatus);
     workspaceBridge.subscribe(broadcastWorkspaceNotification);

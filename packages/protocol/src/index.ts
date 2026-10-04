@@ -79,10 +79,16 @@ export {
 export type {
   ProjectRegistrationRequest,
   ProjectRegistrationResult,
+  RegistrationCapability,
+  RendererRegistrationRequest,
+  RepositoryChoiceResult,
 } from "./project-registration-flow-protocol.js";
 export {
   ProjectRegistrationRequestSchema,
   ProjectRegistrationResultSchema,
+  RegistrationCapabilitySchema,
+  RendererRegistrationRequestSchema,
+  RepositoryChoiceResultSchema,
 } from "./project-registration-flow-protocol.js";
 export type {
   InitialRepositoryBinding,

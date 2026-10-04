@@ -8,11 +8,15 @@ import {
   CanonicalProjectSwitchResultSchema,
   createProjectActivateCommand,
   createProjectListCommand,
+  createProjectRegistrationCommand,
   createProjectSwitchCommand,
   type DesktopMessage,
   decodeStrict,
   type HarnessMessage,
   ProjectListResultSchema,
+  type ProjectRegistrationRequest,
+  ProjectRegistrationRequestSchema,
+  ProjectRegistrationResultSchema,
 } from "@slopstop/protocol";
 import { dispatchPendingHarnessEvent, requestHarness } from "./harness-pending-request.js";
 import type { HarnessSessionClient } from "./harness-session.js";
@@ -83,6 +87,18 @@ export function createProjectEntryBridge(options: {
         (value) => decodeStrict(ProjectListResultSchema, value),
         () => ({ status: "broken" as const, code: "PROJECT_LIST_TRANSPORT_FAILED" as const }),
       ),
+    register: (input: ProjectRegistrationRequest) => {
+      const step = decodeStrict(ProjectRegistrationRequestSchema, input);
+      return request(
+        () => createProjectRegistrationCommand(metadata(), step),
+        "project.registration.result",
+        (value) => decodeStrict(ProjectRegistrationResultSchema, value),
+        () => ({
+          status: "broken" as const,
+          code: "PROJECT_REGISTRATION_TRANSPORT_FAILED" as const,
+        }),
+      );
+    },
     activate: (input: CanonicalProjectActivationRequest) => {
       const inputRequest = decodeStrict(CanonicalProjectActivationRequestSchema, input);
       const broken = () =>

@@ -50,6 +50,13 @@ function registeredProjectList(id: string, storage: unknown) {
 
 const unusedWorkspaceApi = {
   listProjects: async () => ({ status: "listed" as const, projects: [] }),
+  getRegistrationCapability: async () => ({ status: "available" as const }),
+  chooseRepository: async () => {
+    throw new Error("chooseRepository is not used by this test.");
+  },
+  registerProject: async () => {
+    throw new Error("registerProject is not used by this test.");
+  },
   activateProject: async () => {
     throw new Error("Activation unused");
   },
@@ -71,6 +78,9 @@ const unusedWorkspaceApi = {
   | "listProjects"
   | "activateProject"
   | "switchProject"
+  | "getRegistrationCapability"
+  | "chooseRepository"
+  | "registerProject"
 >;
 
 describe("desktop shell", () => {
