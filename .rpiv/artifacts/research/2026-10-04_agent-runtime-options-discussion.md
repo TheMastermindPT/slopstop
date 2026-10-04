@@ -119,3 +119,20 @@ Conclusões:
 - **Novo foco do protótipo (substitui a secção 7):** testar se o `claude -p` consegue servir de Waypoint parent e de Conversation com controlo suficiente (prompt de sistema próprio, ferramentas desligadas, sem `CLAUDE.md` nem memória, resposta em formato fixo validável, contexto conhecido) e quanto do limite do plano consome; e, secundariamente, os Workers numa worktree com aprovação por hook e testes corridos pelo Ragnarok.
 - **Análise de viabilidade com duas perguntas:** modo subscrição: os limites de uso e os termos chegam? Modo API: o custo é aceitável?
 - O ADR 0009 revisto terá de tratar o **modo de pagamento** como escolha central, com garantias diferentes por modo.
+
+## Decisão de viabilidade do utilizador (2026-10-04)
+
+- **O projeto é viável.** Base: os resultados do protótipo `claude -p` e a medição do limite do plano em `evidence/2026-10-04_claude-p-subscription-spike-results.md`.
+  - O modo subscrição serve os três papéis.
+  - O planeamento e a conversa consomem pouco do limite: cerca de 40 chamadas de planeamento com Opus gastam ~1% da janela de 5 h.
+- **Riscos assumidos:**
+  - os termos da Anthropic (zona cinzenta para uso pessoal; confirmação escrita antes de abrir ao público);
+  - o consumo semanal dos Workers, que não foi medido;
+  - o custo dos Workers no modo API.
+- **Segue-se a ordem aprovada:**
+  1. revisão do ADR 0009;
+  2. o resto da opção C;
+  3. o PC-S1 reduzido;
+  4. a Conversation;
+  5. o caminho 2 do SQL (corpos SQL em Effect sobre o worker atual).
+- O crash nativo do libsql continua estacionado e bloqueia o push. A avaliação dos modelos baratos do modo API fica para mais tarde.
