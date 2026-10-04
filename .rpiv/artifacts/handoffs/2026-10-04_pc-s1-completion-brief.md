@@ -38,6 +38,13 @@ tags: [pc-s1, add-repository, ui, remove-from-list, windows]
 
 ## Method
 
+- **Effect conventions, as the migration set them.**
+  - Harness: new code is written as Effect programs on the harness runtime and Layers, with typed errors.
+  - Protocol: Effect Schema, decoded through the strict policy.
+  - New SQL: written as Effect programs over the current libSQL worker, not as `async/await` bodies.
+  - Promise boundaries: only those the migration already justified.
+  - Desktop and renderer: keep their current pattern.
+
 - **Plan first, without code.** Send the coordinator a vertical slice plan of 3–7 slices, each with:
   - its behaviour;
   - its public test seam;
