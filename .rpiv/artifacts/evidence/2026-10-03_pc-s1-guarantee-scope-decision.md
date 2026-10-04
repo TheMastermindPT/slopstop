@@ -82,3 +82,21 @@ A push attempt (CLI and GitHub Desktop) failed because the `.husky/pre-push` dee
 - `feat/effect-migration` merged into main with `--no-ff` as `8dbbd5e`, no conflicts, no push (user decision). Final state: all migration-caused regressions fixed; knip and jscpd at 0; the coverage gate runs on half the cores (`1cf118a`), timeouts down from 4 to 0–1.
 - Remaining push blockers are pre-existing: the Vitest worker crash under coverage (3 of 6 coverage runs) and the "runtime switches between two registered Projects" test at the 15 s limit. Order approved by the user: bounded crash investigation (~1 h) → lighter version of that one test (option C brought forward only for it) → one deep gate run → push with the archive tag and removal of `origin/decision/ticket-63-evidence-ledgers`. Work continues on branch `fix/coverage-gate-stability` from main.
 - Housekeeping: worktree `ragnarok-pc-s1` and branch `feat/project-registration` removed (fully contained in main).
+
+## 10. PC-S1 completion plan answers — Human Decisions (2026-10-04)
+
+- **Plan.** The 7-slice completion plan is approved:
+  - S1: consent-stage commands across the protocol;
+  - S2: prepare and confirm, with every outcome;
+  - S3: the desktop bridge, the preload API and the native folder dialog;
+  - S4: the renderer flow, following the prototype;
+  - S5: Remove from list;
+  - S6: the reduced limit matrices;
+  - S7: the packaged proof.
+- **Project name is persisted.** The default Project name is persisted at registration (application.db migration) and survives a missing repository.
+- **Detected Git only.** Stage 1 offers only the detected Git program in PC-S1. "Choose a different Git program" is deferred. Accepted loss: a user whose only Git is outside PATH (for example the copy bundled with GitHub Desktop) must install Git first.
+- **Reference codes shown.** Stable reference codes are shown under error messages.
+- **Answered by the coordinator from existing decisions.**
+  - The protocol version moves from 4 to 5, once, in S1.
+  - The approved prototype text is the answer for its remaining open wording questions.
+  - Any oracle change still needs the user's approval.
