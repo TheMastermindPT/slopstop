@@ -60,3 +60,5 @@ A migração até aqui foi muito mais rápida do que estimado (passos de 7 a 35 
 
 - **Agora não.** Concorda com a recomendação: código SQL novo em Effect sobre o worker atual; o existente numa passagem dedicada mais tarde.
 - A passagem dedicada fica para **depois do protótipo `claude -p` e da análise de custos de API pelo utilizador**. O utilizador sublinhou que, se o custo da API for demasiado alto para o que a app entrega, o projeto deixa de ser válido; essa análise é por isso um ponto de decisão sobre a viabilidade do projeto.
+- **Condicional aprovado (2026-10-04):** se a análise de custos der resposta positiva sobre a viabilidade, segue-se o **caminho 2** (corpos SQL em Effect sobre o worker atual, sem biblioteca nova), em passagem dedicada, limitada e módulo a módulo, com medição de desempenho antes e depois.
+- Ordem aprovada: fechar o gate e push → protótipo `claude -p` + avaliação de custos (incluindo o Waypoint parent por API com Opus) → decisão de viabilidade do utilizador → restante opção C, PC-S1, Conversation e, se a resposta for positiva, o caminho 2.
