@@ -106,6 +106,19 @@ it("S6-R1 B11 public activation rejects a conflict code on the original receipt"
   }
 });
 
+// Switching away releases the recovered source and activates the second target.
+async function expectSwitchToRecoveredTarget(f: RecoveryRuntime) {
+  f.clock.mockReturnValueOnce(recoveryReleaseTime).mockReturnValueOnce(recoveryActivationTime);
+  expect(await f.send(4, "project.switch", settlementSwitch)).toEqual(
+    recoveryEnvelope(4, 4, "project.switch.result", {
+      status: "target-result",
+      sourceReleased: true,
+      request: settlementSwitch,
+      target: recoveryActive(2),
+    }),
+  );
+}
+
 async function expectB13ExplicitRetries(f: RecoveryRuntime, landed: boolean) {
   const resolved = await f.snapshot();
   configureRecoveryRetry(f, landed);
@@ -163,15 +176,7 @@ it.each([false, true])("S6 G5 B13 exact seven real-port envelopes landed %s", as
       ),
     );
     expect(f.calls).toEqual(calls);
-    f.clock.mockReturnValueOnce(recoveryReleaseTime).mockReturnValueOnce(recoveryActivationTime);
-    expect(await f.send(4, "project.switch", settlementSwitch)).toEqual(
-      recoveryEnvelope(4, 4, "project.switch.result", {
-        status: "target-result",
-        sourceReleased: true,
-        request: settlementSwitch,
-        target: recoveryActive(2),
-      }),
-    );
+    await expectSwitchToRecoveredTarget(f);
     const resolved = await f.snapshot();
     expectRecoveryActivationRows(failed, resolved, landed, false);
     expect(f.prepare).toHaveBeenCalledTimes(1);
@@ -226,15 +231,7 @@ it.each([false, true])(
       expect(f.prepare).toHaveBeenCalledTimes(1);
       expect((await f.snapshot())["writer_recovery_records"]).toEqual([]);
       expect(f.dependencies.createRecoveryRecordId).not.toHaveBeenCalled();
-      f.clock.mockReturnValueOnce(recoveryReleaseTime).mockReturnValueOnce(recoveryActivationTime);
-      expect(await f.send(4, "project.switch", settlementSwitch)).toEqual(
-        recoveryEnvelope(4, 4, "project.switch.result", {
-          status: "target-result",
-          sourceReleased: true,
-          request: settlementSwitch,
-          target: recoveryActive(2),
-        }),
-      );
+      await expectSwitchToRecoveredTarget(f);
       const marker = expectedUnresolvedRecoveryRow();
       marker.splice(7, 3, landed ? "receipt-found" : "receipt-absent", 2, recoveryActivationTime);
       expect((await f.snapshot())["writer_recovery_records"]).toEqual([marker]);

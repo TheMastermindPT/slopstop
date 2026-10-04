@@ -73,6 +73,8 @@ export {
   ProjectListResultSchema,
   ProjectListSchema,
   ProjectListStorageSchema,
+  RegistrationIdempotencyConflictSchema,
+  RegistryPendingRecoverySchema,
 } from "./project-list-protocol.js";
 export type {
   InitialRepositoryBinding,

@@ -1,3 +1,7 @@
+import {
+  RegistrationIdempotencyConflictSchema,
+  RegistryPendingRecoverySchema,
+} from "@slopstop/protocol";
 import { Schema } from "effect";
 import { ApplicationDatabaseFault } from "../storage/application-database-migration.js";
 import { storageErrorCode } from "../storage/project-storage-node-errors.js";
@@ -11,14 +15,8 @@ export const RegistryFailureSchema = Schema.Union([
     status: Schema.Literal("unavailable"),
     code: Schema.Literal("REGISTRY_BUSY"),
   }),
-  Schema.Struct({
-    status: Schema.Literal("pending-recovery"),
-    code: Schema.Literals(["REGISTRY_MISSING_WITH_WITNESS", "OBSERVER_CLEANUP_UNCONFIRMED"]),
-  }),
-  Schema.Struct({
-    status: Schema.Literal("rejected"),
-    code: Schema.Literal("REGISTRATION_IDEMPOTENCY_CONFLICT"),
-  }),
+  RegistryPendingRecoverySchema,
+  RegistrationIdempotencyConflictSchema,
 ]);
 
 export type RegistryFailure = typeof RegistryFailureSchema.Type;

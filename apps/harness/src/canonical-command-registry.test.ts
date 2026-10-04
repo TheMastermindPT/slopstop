@@ -6,6 +6,7 @@ import {
 } from "@slopstop/protocol";
 import { Schema, SchemaTransformation } from "effect";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import { counterPayloadSchema } from "../tests/integration/conformance-counter-command.js";
 import * as registryApi from "./canonical-command-registry.js";
 import {
   type CanonicalCommandTransaction,
@@ -179,15 +180,7 @@ describe("G3 public command decision schema", () => {
     },
   );
 });
-const payloadSchema = Schema.Struct({
-  value: Schema.Number.check(
-    Schema.isInt(),
-    Schema.isGreaterThanOrEqualTo(0),
-    Schema.isLessThanOrEqualTo(10),
-  ),
-  meta: Schema.optional(Schema.Struct({ a: Schema.Number, b: Schema.Number })),
-  tags: Schema.optional(Schema.Array(Schema.String)),
-});
+const payloadSchema = counterPayloadSchema;
 // This unused SQL port permits registry execution, not the G5 real-facade proof.
 const transaction: CanonicalCommandTransaction = {
   execute: () => {

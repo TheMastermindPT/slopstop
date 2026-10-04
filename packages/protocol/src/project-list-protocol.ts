@@ -9,6 +9,18 @@ import {
 } from "./project-storage-protocol.js";
 import { EmptyObjectSchema, wholeUnion } from "./schema-codec.js";
 
+/** Registry recovery outcome shared by the harness registry and the Project list result. */
+export const RegistryPendingRecoverySchema = Schema.Struct({
+  status: Schema.Literal("pending-recovery"),
+  code: Schema.Literals(["REGISTRY_MISSING_WITH_WITNESS", "OBSERVER_CLEANUP_UNCONFIRMED"]),
+});
+
+/** Registration request reuse with a different payload, shared like the recovery outcome. */
+export const RegistrationIdempotencyConflictSchema = Schema.Struct({
+  status: Schema.Literal("rejected"),
+  code: Schema.Literal("REGISTRATION_IDEMPOTENCY_CONFLICT"),
+});
+
 export const ProjectListStorageSchema = Schema.Union([
   Schema.Struct({
     status: Schema.Literal("healthy"),
@@ -91,13 +103,7 @@ export const ProjectListResultSchema = wholeUnion([
     status: Schema.Literal("unavailable"),
     code: Schema.Literals(["REGISTRY_BUSY", "PROJECT_LIST_UNAVAILABLE"]),
   }),
-  Schema.Struct({
-    status: Schema.Literal("pending-recovery"),
-    code: Schema.Literals(["REGISTRY_MISSING_WITH_WITNESS", "OBSERVER_CLEANUP_UNCONFIRMED"]),
-  }),
-  Schema.Struct({
-    status: Schema.Literal("rejected"),
-    code: Schema.Literal("REGISTRATION_IDEMPOTENCY_CONFLICT"),
-  }),
+  RegistryPendingRecoverySchema,
+  RegistrationIdempotencyConflictSchema,
 ]);
 export type ProjectListResult = typeof ProjectListResultSchema.Type;

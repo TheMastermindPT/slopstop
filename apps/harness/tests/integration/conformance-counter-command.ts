@@ -751,7 +751,7 @@ function settlementChannel(
   };
 }
 
-const counterPayloadSchema = Schema.Struct({
+export const counterPayloadSchema = Schema.Struct({
   value: Schema.Number.check(
     Schema.isInt(),
     Schema.isGreaterThanOrEqualTo(0),
