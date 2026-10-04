@@ -70,3 +70,9 @@ Update (2026-10-04): the user then chose **C unconditionally** ("passa para a C"
 ## 8. Push policy — Human Decision (2026-10-04)
 
 A push attempt (CLI and GitHub Desktop) failed because the `.husky/pre-push` deep gate fails on main's pre-Effect code (a Vitest worker exited unexpectedly in `pnpm check`, under load). The user confirmed: **never bypass the hook with `--no-verify`**; push only after the Effect merge, running the full deep gate once on the integrated tree without parallel test load, fixing any failure first. The archive tag push and the removal of `origin/decision/ticket-63-evidence-ledgers` follow that push.
+
+## 8. PC-S1 additions from the UI prototype review — Human Decisions (2026-10-04)
+
+- **Default Project name** = the name of the worktree root folder; no editing in PC-S1.
+- **"Remove from list" (option A) joins PC-S1:** hides a Project from the saved list while keeping its Ragnarok data; the Git repository is never touched; only a non-active Project can be removed; explicit confirmation; registry busy vs broken stay distinct with the list unchanged; re-adding the same folder returns the same Project without duplication. **Deleting Ragnarok data (option B) stays deferred** to the explicit-removal work (ADR 0018).
+- Answers given by the coordinator from existing contracts: Linux can be refused before the folder picker (platform known at startup) while volume capability is only known after selection; the Git executable approval (D8) is tied to the executable identity and persists across folders, while trusted-local consent (D6) is always per folder; adding an already-registered folder returns `already-registered` with an Open action.
