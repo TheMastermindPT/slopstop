@@ -35,3 +35,11 @@ tags: [testing, gate, vitest, coverage, pre-existing]
 - Option C step done: `cc4fd69` registers both Projects of the selection-switch test in one registry session (same assertions and 15 s timeout); 9.0 s -> 7.9 s without coverage, ~8.8 s -> ~8.7 s under coverage.
 - User decision (2026-10-04): use pool `threads` **only** in `vitest.coverage.config.ts` (tests, timeouts, thresholds and `maxWorkers` unchanged). This works around the crash, it does not root-cause it. The next single `check:deep` run counts as the third sample; if the crash reappears, the gate is reported as broken, without reruns.
 - First `check:deep` after that decision (HEAD `ac78ab6`, 562 s, machine free): `pnpm check` passed; `test:coverage` failed with 4141 passed / 1 failed / 3 skipped, 1 timeout (selection-switch test, 15018 ms) and 1 native worker crash (~9 tests lost). The output named `Worker forks`: the root `pool` key never reached the file-based projects (no `extends`), so this run was still on forks and says nothing about threads. Experiment 3 had used the CLI flag `--pool=threads`, which overrides every project. Fix: pass `--pool=threads --maxWorkers=50%` in the `test:coverage` script, as measured; same decision, implemented correctly.
+
+## Probable cause: libsql-js worker-thread unload on Windows (2026-10-04)
+
+- `threads` did not fix the crash: with the CLI flag confirmed active, the whole Vitest process died with `0xC0000005` after ~480 s. Reverted to forks in `3ef03c9` (`--maxWorkers=50%` kept as a CLI flag).
+- The crash also occurs with the istanbul coverage provider, so it is not specific to V8 coverage. Subset runs (libSQL-only, koffi-using) did not crash in isolation.
+- Known upstream defect matching the symptom: when a worker_thread that loaded the libsql addon exits, Node unloads the DLL while libsql runtime threads still run. Fixed by libsql-js PR #235 (merged 2026-09-18, verified), shipped only in `0.6.0-pre.42`/`pre.43`; the project uses `libsql` 0.5.29. A rarer double `sqlite3_close_v2` crash remains unfixed upstream.
+- Production exposure: the harness also runs libSQL in worker threads, so the product may be affected, not only tests.
+- User decisions: experiment A (load the addon once on each test fork's main thread, diagnostic only); if it confirms the cause, option B: upgrade to `libsql` `0.6.0-pre.43`.
