@@ -26,3 +26,11 @@ tags: [testing, gate, vitest, coverage, pre-existing]
 - The remaining four timeouts occur only with V8 coverage instrumentation and all 89 files in parallel; in isolation the same tests take ~7–11 s with coverage (HEAD 5–15% slower than base).
 - User decision (2026-10-04): **option A**, i.e. reduce parallelism only for the coverage run, keeping every test, assertion, timeout and threshold. Making the heavy registration tests lighter (option C) stays as a later improvement. Raising timeouts was not chosen.
 - User confirmation (2026-10-04): option C (lighter heavy registration tests) is planned **after the Effect migration and merge**, as the preferred long-term fix.
+
+## Bounded crash diagnosis after the merge (2026-10-04, ~55 min, diagnostic only)
+
+- Experiment 2, forced `gc()` removed from the libSQL worker client: the native `0xC0000005` crash still appeared (1 in the first run). The forced `gc()` is **not** the cause. Without it, files stay locked and the run degenerates (600+ hook timeouts), so it was stopped after ~25 min.
+- Experiment 3, Vitest pool `threads` instead of `forks` (coverage on, `maxWorkers: "50%"`): 2 runs, 0 native crashes. Run 1 (674 s, 6 timeouts, coverage report failed because `coverage/.tmp` was deleted) was contaminated by a residual process from experiment 2. Run 2 (clean): 494 s, 88 files, 4148 passed / 3 skipped, 0 failures, 0 timeouts, thresholds met.
+- Known: the crash is native and tied to the `forks` pool under V8 coverage. Unknown: the exact native module; whether `threads` stays stable over more samples. Deeper diagnosis (crash dumps) needs administrator rights, which the user declined.
+- Option C step done: `cc4fd69` registers both Projects of the selection-switch test in one registry session (same assertions and 15 s timeout); 9.0 s -> 7.9 s without coverage, ~8.8 s -> ~8.7 s under coverage.
+- User decision (2026-10-04): use pool `threads` **only** in `vitest.coverage.config.ts` (tests, timeouts, thresholds and `maxWorkers` unchanged). This works around the crash, it does not root-cause it. The next single `check:deep` run counts as the third sample; if the crash reappears, the gate is reported as broken, without reruns.
