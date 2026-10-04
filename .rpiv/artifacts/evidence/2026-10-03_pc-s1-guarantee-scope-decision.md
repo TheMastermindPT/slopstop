@@ -128,3 +128,24 @@ A push attempt (CLI and GitHub Desktop) failed because the `.husky/pre-push` dee
 - **Unchanged contract.** Stage 1 shows the exact absolute path for confirmation. The identity tuple, digest and version are pinned as D8/PC-B10 require. A replaced executable invalidates both stages.
 - **Accepted residual risk.** A user-writable `PATH` entry could present a different `git.exe` when Program Files has none. The visible path and identity pinning mitigate it.
 - **Loss accepted in section 10, now narrower.** That loss was a Git outside the standard location; it now applies only to a Git that is neither in Program Files nor on `PATH`.
+
+## 13. S4 wording and row-label oracle — Human Decisions (2026-10-05)
+
+- **W1, Git unavailable.**
+  - Body: "Ragnarok couldn't find or start Git. Install Git for Windows, then try again."
+  - Actions: "Try again" and "Cancel".
+  - Reference: `GIT_UNAVAILABLE`.
+- **W2, one invalid-folder screen** for `NOT_WORKING_TREE`, `BARE_REPOSITORY` and `REPOSITORY_INVALID`.
+  - Title: "This folder can't be added as a Project".
+  - Body: it asks for the working folder that contains the checked-out files, and says that a `.git` folder or a bare repository can't be added.
+  - "Nothing was created."
+  - The reference shows the actual code.
+- **W3, generic error screen** for codes without a prototype screen. It is distinct and never looks like success or an empty list.
+  - Title: "Ragnarok couldn't add this repository".
+  - "Nothing was created."
+  - The reference shows the actual code.
+  - `REPOSITORY_IDENTITY_CHANGED` has its own title: "The folder changed since it was checked".
+- **O1, approved oracle change.**
+  - Project rows are labelled "Open Project {name}"; unbound rows read "Open Project without a repository {short id}".
+  - The workspace heading reads "Project {name}".
+  - Only the row selectors and the heading assertions change, in the e2e `projects.test` and the renderer `app.test`.
