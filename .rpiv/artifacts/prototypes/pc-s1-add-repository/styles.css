@@ -250,8 +250,8 @@ code,
   line-height: 1.6;
   margin: 0;
 }
-.aside-note {
-  margin-top: auto !important;
+.sidebar .aside-note {
+  margin-top: auto;
   font-size: 0.75rem;
 }
 
@@ -643,8 +643,8 @@ code,
   color: var(--muted);
   padding-inline: 0.3rem;
 }
-.shell .link:hover {
-  background: transparent !important;
+.shell .link:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: transparent;
   color: var(--ink);
 }
 .kbd-hint {
@@ -869,11 +869,11 @@ body.notes-on .note-tag {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+  .shell button,
+  .shell .project-list button.is-flash,
+  .step {
+    animation: none;
+    transition: none;
   }
   .spinner {
     animation: none;

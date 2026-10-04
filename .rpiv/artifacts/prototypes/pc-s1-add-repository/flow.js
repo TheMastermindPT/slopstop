@@ -431,7 +431,7 @@ const OUTCOMES = {
     icon: "info",
     note: "Q17",
     title: `${f.name} is already registered`,
-    body: ["This folder already belongs to Project " + f.name + ". No second Project was created."],
+    body: [`This folder already belongs to Project ${f.name}. No second Project was created.`],
     actions: [
       { label: `Open ${f.name}`, act: `open:${f.name}`, primary: true },
       { label: "Back to Projects", act: "back" },
@@ -686,9 +686,9 @@ function render({ focus = "heading" } = {}) {
   requestAnimationFrame(() => {
     if (focus === "heading") $("#ws-heading")?.focus();
     else if (focus === "add") $("#btn-add").focus();
-    else if (focus && focus.startsWith("project:"))
+    else if (focus?.startsWith("project:"))
       document.querySelector(`[data-project="${focus.slice(8)}"]`)?.focus();
-    else if (focus && focus.startsWith("remove:"))
+    else if (focus?.startsWith("remove:"))
       document.querySelector(`[data-remove="${focus.slice(7)}"]`)?.focus();
   });
 }
@@ -987,7 +987,7 @@ document.addEventListener("click", (e) => {
     );
   }
   if (btn.id === "rail-projects") return $("#projects-heading").focus();
-  if (btn.dataset.act && !btn.disabled) handleAct(btn.dataset.act, btn);
+  if (btn.dataset.act && !btn.disabled) void handleAct(btn.dataset.act, btn);
 });
 
 $("#os-picker").addEventListener("cancel", (e) => {
