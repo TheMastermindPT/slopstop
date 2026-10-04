@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Add Repository Prototype</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Prototype-only controls. Not part of the product UI. -->
+    <section class="proto-bar" aria-label="Prototype controls">
+      <strong class="proto-label">Prototype controls <span>not part of the app</span></strong>
+      <label>
+        Platform
+        <select id="ctl-platform">
+          <option value="windows">Windows</option>
+          <option value="linux">Linux (Add disabled)</option>
+        </select>
+      </label>
+      <label>
+        Saved Projects
+        <select id="ctl-registry">
+          <option value="ok">Listed (2 Projects)</option>
+          <option value="empty">Listed (none yet)</option>
+          <option value="busy">Registry busy</option>
+          <option value="broken">Registry broken</option>
+        </select>
+      </label>
+      <label>
+        Remove result
+        <select id="ctl-remove">
+          <option value="ok">Succeeds</option>
+          <option value="busy">Registry busy</option>
+          <option value="broken">Registry broken</option>
+        </select>
+      </label>
+      <label>
+        Jump to screen
+        <select id="ctl-jump">
+          <option value="">—</option>
+          <optgroup label="Flow">
+            <option value="trust">Trust decision</option>
+            <option value="git1">Git stage 1: version</option>
+            <option value="git2">Git stage 2: identity</option>
+            <option value="preparing">Preparing</option>
+            <option value="proposal">Proposal ready</option>
+          </optgroup>
+          <optgroup label="Remove from list">
+            <option value="r:confirm">Remove confirmation</option>
+            <option value="r:blocked">Remove blocked (Project open)</option>
+            <option value="r:busy">Remove fails: registry busy</option>
+            <option value="r:broken">Remove fails: registry broken</option>
+          </optgroup>
+          <optgroup label="Outcomes">
+            <option value="o:registered">Registered</option>
+            <option value="o:worktree">Worktree of existing Project</option>
+            <option value="o:already">Already registered</option>
+            <option value="o:restored">Removed Project comes back</option>
+            <option value="o:incomplete">Incomplete (interrupted)</option>
+            <option value="o:notFound">Repository not found</option>
+            <option value="o:inaccessible">Inaccessible</option>
+            <option value="o:notWorkingTree">Not a working tree</option>
+            <option value="o:bare">Bare repository</option>
+            <option value="o:queryFailed">Git could not read folder</option>
+            <option value="o:capability">Drive cannot be identified (after picking)</option>
+            <option value="o:gitChanged">Git changed</option>
+            <option value="o:gitUnavailable">Git unavailable</option>
+            <option value="o:busy">Registry busy on confirm</option>
+          </optgroup>
+        </select>
+      </label>
+      <label class="proto-check">
+        <input type="checkbox" id="ctl-notes" /> Show wording questions
+      </label>
+      <button type="button" id="ctl-reset">Reset</button>
+    </section>
+
+    <main class="shell" id="app">
+      <nav class="rail" aria-label="Workspace">
+        <span class="mark" aria-hidden="true">R</span>
+        <button type="button" class="rail-btn" aria-label="Projects" aria-pressed="true" id="rail-projects">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5V18a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18V9.5A1.5 1.5 0 0 0 19.5 8h-7.4L10 5.5H4.5A1.5 1.5 0 0 0 3 7Z" /></svg>
+        </button>
+      </nav>
+
+      <header class="header">
+        <h1>Ragnarok</h1>
+        <p role="status" class="harness"><span class="dot" aria-hidden="true"></span><strong>Harness ready</strong><span>Local only</span></p>
+      </header>
+
+      <aside class="sidebar" aria-label="Projects">
+        <div class="list-header">
+          <h2 id="projects-heading" tabindex="-1">Projects</h2>
+          <button type="button" id="btn-refresh">Refresh</button>
+        </div>
+        <button type="button" class="add-btn" id="btn-add" aria-describedby="add-hint">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5V18a1.5 1.5 0 0 0 1.5 1.5h15A1.5 1.5 0 0 0 21 18V9.5A1.5 1.5 0 0 0 19.5 8h-7.4L10 5.5H4.5A1.5 1.5 0 0 0 3 7Z" /><path d="M12 11v6M9 14h6" /></svg>
+          Add existing repository
+        </button>
+        <p class="add-hint" id="add-hint" data-note="Q1">Choose a Git repository folder on this computer.</p>
+        <div id="project-list" aria-live="polite"></div>
+        <p class="aside-note">Local Projects. No repository commands run while listing.</p>
+      </aside>
+
+      <section class="workspace" aria-label="Project workspace" id="workspace"></section>
+    </main>
+
+    <!-- Placeholder for the native OS dialog. Its look is not being designed. -->
+    <dialog class="os-picker" id="os-picker" aria-labelledby="os-picker-title">
+      <p class="os-tag">Placeholder: native Windows dialog (not designed)</p>
+      <h2 id="os-picker-title">Select folder</h2>
+      <p class="os-help">Each folder simulates one case. Cancel or Esc simulates closing the system dialog.</p>
+      <ul class="os-list" id="os-list"></ul>
+      <div class="os-actions"><button type="button" id="os-cancel">Cancel</button></div>
+    </dialog>
+
+    <p class="sr-only" aria-live="polite" id="announcer"></p>
+
+    <script src="flow.js"></script>
+  </body>
+</html>
