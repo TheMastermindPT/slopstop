@@ -53,3 +53,8 @@ tags: [testing, gate, vitest, coverage, pre-existing]
 - Narrowing: cases "preserves cancellation instant" and "rechecks settlement" crash (~2/15 each); "does not settle late success" 0/15. No parent `terminate()` occurred in a crashing fork; the crash follows a `close-client` with no pending request (worker-side close, forced `gc()`, finalizers, or fork exit). Timing-sensitive: synchronous logging hides it.
 - Unknown: exact trigger and function. Earlier full-run crashes also hit other registration files, so quarantining one file may not suffice.
 - Status: investigation parked by the coordinator after the agreed limit; next cheap step if resumed: a focused dump of this file to see whether the stack is in the close/finalizer path.
+
+## Option C closed; timeout levers deferred (2026-10-04)
+
+- The remaining heavy registration tests have no incidental setup to share. Each test registers one Project in its own installation and asserts on that installation's state. Alone under coverage they stay below ~7.5 s, and they cross 15 s only under parallel coverage load. Four observer "deadline" cases wait a real 5 s cleanup budget by design.
+- User decision: the remaining levers (fewer coverage workers for the integration project, or different timeouts) will be adjusted later, once the libsql crash no longer blocks the gate.
