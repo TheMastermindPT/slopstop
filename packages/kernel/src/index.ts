@@ -13,9 +13,12 @@ export type {
   WriterGeneration,
 } from "./project-storage-identifiers.js";
 export {
+  CanonicalEventOrdinalSchema,
   isCanonicalEventOrdinal,
   isProjectSequence,
   isWriterGeneration,
+  ProjectSequenceSchema,
+  WriterGenerationSchema,
 } from "./project-storage-identifiers.js";
 export type {
   AcceptedRevisionId,
@@ -36,6 +39,8 @@ export type {
   WorkspaceProjectionRevision,
 } from "./workspace-identifiers.js";
 export {
+  DomainIdentityTextSchema,
   isDomainIdentity,
   isWorkspaceProjectionRevision,
+  WorkspaceProjectionRevisionSchema,
 } from "./workspace-identifiers.js";

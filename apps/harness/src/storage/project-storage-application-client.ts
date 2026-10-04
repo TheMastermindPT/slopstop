@@ -1,4 +1,5 @@
 import { unlink } from "node:fs/promises";
+import { Deferred, Effect } from "effect";
 import type { LocalLibsqlClient } from "./local-libsql-worker-client.js";
 import {
   ProjectStorageApplicationClientInitializationError,
@@ -82,27 +83,44 @@ async function rejectInitialization(input: {
   throw applicationClientInitializationFailure(cause);
 }
 
+// Initialization failures keep their cause under the caller's message; others normalize.
+function translateAcquisitionFailure(error: unknown, message: string): never {
+  if (error instanceof ApplicationClientInitializationFailure) {
+    throw new ProjectStorageApplicationClientInitializationError(message, { cause: error.cause });
+  }
+  normalizeStorageError({ error, message });
+}
+
 export function createApplicationClientManager(input: {
   applicationDatabasePath: string;
   applicationStorageRoot: string;
+  // Initializes application.db through its shared authority before a client is retained.
+  ensureInitialized(createIfMissing: boolean): Promise<"absent" | "present">;
   createClient(): LocalLibsqlClient;
   initialize(client: LocalLibsqlClient): Promise<void>;
 }): ApplicationClientManager {
   let applicationClient: LocalLibsqlClient | undefined;
-  let initialization: Promise<LocalLibsqlClient | undefined> | undefined;
+  // One in-flight initialization shared by concurrent callers, with its exact outcome.
+  let initialization: Deferred.Deferred<LocalLibsqlClient | undefined, unknown> | undefined;
   let stopped = false;
+
+  // The plain-file policy, then the shared authority's initialization.
+  const prepareCandidate = async (createIfMissing: boolean): Promise<boolean> => {
+    const available = await prepareApplicationDatabase({
+      applicationDatabasePath: input.applicationDatabasePath,
+      applicationStorageRoot: input.applicationStorageRoot,
+      createIfMissing,
+    });
+    if (!available) return false;
+    return (await input.ensureInitialized(createIfMissing)) === "present";
+  };
 
   const initializeCandidate = async (
     createIfMissing: boolean,
   ): Promise<LocalLibsqlClient | undefined> => {
     const existed =
       (await lstatIfPresent({ targetPath: input.applicationDatabasePath })) !== undefined;
-    const available = await prepareApplicationDatabase({
-      applicationDatabasePath: input.applicationDatabasePath,
-      applicationStorageRoot: input.applicationStorageRoot,
-      createIfMissing,
-    });
-    if (!available) return undefined;
+    if (!(await prepareCandidate(createIfMissing))) return undefined;
     try {
       return await initializeRetainedApplicationClient(
         input.createClient(),
@@ -121,33 +139,35 @@ export function createApplicationClientManager(input: {
     }
   };
 
-  const acquire = async (createIfMissing: boolean): Promise<LocalLibsqlClient | undefined> => {
-    if (stopped) throw new ProjectStorageUnavailableError("Project Storage registry is stopped.");
-    if (initialization !== undefined) return initialization;
-    if (applicationClient !== undefined) return applicationClient;
-    const candidate = initializeCandidate(createIfMissing);
+  // Runs one initialization and publishes its exact outcome to every concurrent caller.
+  const initializeShared = async (
+    createIfMissing: boolean,
+  ): Promise<LocalLibsqlClient | undefined> => {
+    const candidate = Deferred.makeUnsafe<LocalLibsqlClient | undefined, unknown>();
     initialization = candidate;
     try {
-      return await candidate;
+      const client = await initializeCandidate(createIfMissing);
+      Deferred.doneUnsafe(candidate, Effect.succeed(client));
+      return client;
+    } catch (error) {
+      Deferred.doneUnsafe(candidate, Effect.fail(error));
+      throw error;
     } finally {
       if (initialization === candidate) initialization = undefined;
     }
+  };
+
+  const acquire = async (createIfMissing: boolean): Promise<LocalLibsqlClient | undefined> => {
+    if (stopped) throw new ProjectStorageUnavailableError("Project Storage registry is stopped.");
+    if (initialization !== undefined) return Effect.runPromise(Deferred.await(initialization));
+    return applicationClient ?? initializeShared(createIfMissing);
   };
 
   const existing = async (): Promise<LocalLibsqlClient | undefined> => {
     try {
       return await acquire(false);
     } catch (error) {
-      if (error instanceof ApplicationClientInitializationFailure) {
-        throw new ProjectStorageApplicationClientInitializationError(
-          "Project Storage application authority is invalid.",
-          { cause: error.cause },
-        );
-      }
-      normalizeStorageError({
-        error,
-        message: "Project Storage application authority is invalid.",
-      });
+      translateAcquisitionFailure(error, "Project Storage application authority is invalid.");
     }
   };
 
@@ -165,22 +185,17 @@ export function createApplicationClientManager(input: {
         }
         return created;
       } catch (error) {
-        if (error instanceof ApplicationClientInitializationFailure) {
-          throw new ProjectStorageApplicationClientInitializationError(
-            "Project Storage application authority cannot be created.",
-            { cause: error.cause },
-          );
-        }
-        normalizeStorageError({
+        translateAcquisitionFailure(
           error,
-          message: "Project Storage application authority cannot be created.",
-        });
+          "Project Storage application authority cannot be created.",
+        );
       }
     },
     stop: async () => {
       if (stopped) return;
       stopped = true;
-      await initialization;
+      // An in-flight initialization finishes (or fails this stop) before the client closes.
+      if (initialization !== undefined) await Effect.runPromise(Deferred.await(initialization));
       const retained = applicationClient;
       applicationClient = undefined;
       await retained?.close();

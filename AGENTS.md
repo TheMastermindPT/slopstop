@@ -39,8 +39,8 @@ Explanations and status updates must be in plain Portuguese (Portugal). The user
 
 ## Architecture
 
-- `packages/kernel` owns framework-independent domain behavior and depends on no workspace package.
-- `packages/protocol` owns versioned Zod schemas for process boundaries and may depend on `packages/kernel`.
+- `packages/kernel` owns framework-independent domain behavior and depends on no workspace package. Its only external dependency is `effect`, limited to pure data modules (`Schema`, `Brand`, `Data`); no services, layers, or runtime in the kernel.
+- `packages/protocol` owns versioned Effect Schema definitions for process boundaries, the strict decode policy, and the project-owned issue vocabulary, and may depend on `packages/kernel`.
 - `apps/harness` may depend on kernel and protocol. Mastra, Drizzle, libSQL, provider SDKs, repository tools, and process execution belong here.
 - `apps/desktop` may depend on protocol and Electron. It never imports harness source or framework-owned domain behavior.
 - Applications never import one another. Electron launches the built harness artifact across a process boundary.
@@ -50,7 +50,7 @@ Explanations and status updates must be in plain Portuguese (Portugal). The user
 ## TypeScript
 
 - Use strict TypeScript and ESM.
-- Zod schemas are the source of truth at trust boundaries; infer types from schemas.
+- Effect Schema definitions are the source of truth at trust boundaries; derive types from them (`typeof X.Type`). Decode untrusted values through the protocol strict policy (`decodeStrict`/`decodeStrictResult`), which rejects unknown keys at every level. Zod is not a project dependency.
 - Model mutually exclusive states as discriminated unions.
 - Use branded UUID strings for durable identity, explicit non-negative sequence numbers for ordering, and RFC 3339 UTC strings at storage/process boundaries.
 - Expected failures cross boundaries as discriminated result envelopes with stable codes. Catch unexpected exceptions once at process boundaries and convert them to a distinct internal failure.

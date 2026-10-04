@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { z } from "zod";
+import { decodeStrict, TrimmedNonEmptyTextSchema } from "@slopstop/protocol";
+import { Schema } from "effect";
 import type { GeneratedMigration } from "./generated-migrations.js";
 import type { DatabaseSpec } from "./project-storage-database-specs.js";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
@@ -11,21 +12,25 @@ import {
   scanSqliteSchemaTokens,
 } from "./sqlite-schema-scanner.js";
 
-const drizzleJournalSchema = z.strictObject({
-  version: z.string().trim().min(1),
-  dialect: z.literal("sqlite"),
-  entries: z.array(
-    z.strictObject({
-      idx: z.number().int().nonnegative(),
-      version: z.string().trim().min(1),
-      when: z.number().int().nonnegative(),
-      tag: z.string().regex(/^[0-9]{4}_[a-z0-9_]+$/u),
-      breakpoints: z.boolean(),
+const NonnegativeIntegerSchema = Schema.Number.check(
+  Schema.isInt(),
+  Schema.isGreaterThanOrEqualTo(0),
+);
+const drizzleJournalSchema = Schema.Struct({
+  version: TrimmedNonEmptyTextSchema,
+  dialect: Schema.Literal("sqlite"),
+  entries: Schema.Array(
+    Schema.Struct({
+      idx: NonnegativeIntegerSchema,
+      version: TrimmedNonEmptyTextSchema,
+      when: NonnegativeIntegerSchema,
+      tag: Schema.String.check(Schema.isPattern(/^[0-9]{4}_[a-z0-9_]+$/u)),
+      breakpoints: Schema.Boolean,
     }),
   ),
 });
 
-type DrizzleJournal = z.infer<typeof drizzleJournalSchema>;
+type DrizzleJournal = typeof drizzleJournalSchema.Type;
 
 function equalStrings(first: readonly string[], second: readonly string[]): boolean {
   return first.length === second.length && first.every((value, index) => value === second[index]);
@@ -96,7 +101,7 @@ async function readJournal(input: { journalPath: string }): Promise<DrizzleJourn
     message: "Generated migration journal is unavailable.",
   });
   try {
-    return drizzleJournalSchema.parse(JSON.parse(source));
+    return decodeStrict(drizzleJournalSchema, JSON.parse(source));
   } catch {
     throw new ProjectStorageBrokenError("Generated migration journal is invalid.");
   }
@@ -258,16 +263,25 @@ function requireCanonicalRebuild(input: {
   if (predecessor === undefined) invalid();
   if (original === undefined) invalid();
   if (successor === undefined) invalid();
+  const binding = input.migrations[2];
+  const generationThree =
+    input.spec.schemaVersion === 3 &&
+    input.migrations.length === 3 &&
+    input.sources.length === 3 &&
+    binding?.migrationId === "0002_initial_repository_binding" &&
+    createHash("sha256").update(JSON.stringify(binding.statements)).digest("hex") ===
+      "332ea4d600ae9c32789d760f86b215ac9bbd578f12f17a27061c03696779d134";
   const authorityAgrees = [
     input.spec.resourceKind === "canonical",
     input.spec.databaseKind === "canonical",
     input.spec.metadataKey === "canonical",
     input.spec.metadataTable === "schema_metadata",
     input.spec.formatVersion === 1,
-    input.spec.schemaVersion === 2,
+    (input.spec.schemaVersion === 2 &&
+      input.migrations.length === 2 &&
+      input.sources.length === 2) ||
+      generationThree,
     !input.spec.tables.includes("__new_storage_identity"),
-    input.migrations.length === 2,
-    input.sources.length === 2,
     original.migrationId === "0000_fat_doctor_octopus",
     successor.migrationId === "0001_canonical_project_writer",
   ].every(Boolean);
@@ -318,7 +332,10 @@ function requireAuthorizedSql(
       createdTables.add(object.name);
     }
   }
-  if (hasRebuildCandidate || (spec.resourceKind === "canonical" && spec.schemaVersion === 2)) {
+  if (
+    hasRebuildCandidate ||
+    (spec.resourceKind === "canonical" && [2, 3].includes(spec.schemaVersion))
+  ) {
     requireCanonicalRebuild({ sources, migrations, spec });
   }
   if (!equalStrings(sortedStrings(createdTables), sortedStrings(spec.tables))) {

@@ -7,10 +7,13 @@ import type {
   ProjectStorageOpenResult,
 } from "@slopstop/protocol";
 import {
+  decodeStrict,
+  decodeStrictResult,
   ProjectStorageCloseResultSchema,
   ProjectStorageCreateResultSchema,
   ProjectStorageOpenResultSchema,
 } from "@slopstop/protocol";
+import { type Schema, Result as SchemaResult } from "effect";
 
 export type ProjectStorageOwnerOutcome =
   | Readonly<{ status: "ready"; result: unknown }>
@@ -58,12 +61,7 @@ export interface ProjectStorageApplication {
   stop(): Promise<void>;
 }
 
-type ResultSchema<Result> = Readonly<{
-  parse(value: unknown): Result;
-  safeParse(
-    value: unknown,
-  ): Readonly<{ success: true; data: Result }> | Readonly<{ success: false }>;
-}>;
+type ResultSchema<Result> = Schema.Decoder<Result>;
 
 type BrokenCode = "PROJECT_STORAGE_OWNER_FAILED" | "PROJECT_STORAGE_RESULT_INVALID";
 
@@ -83,9 +81,9 @@ function mapOwnerOutcome<Request, Result>(
 ): Result {
   switch (outcome.status) {
     case "ready": {
-      const parsed = contract.schema.safeParse(outcome.result);
-      return parsed.success && contract.requestMatches(parsed.data, request)
-        ? parsed.data
+      const parsed = decodeStrictResult(contract.schema, outcome.result);
+      return SchemaResult.isSuccess(parsed) && contract.requestMatches(parsed.success, request)
+        ? parsed.success
         : brokenResult(
             request,
             "PROJECT_STORAGE_RESULT_INVALID",
@@ -131,7 +129,7 @@ function unavailableResult<Request, Result>(
   message: string,
   schema: ResultSchema<Result>,
 ): Result {
-  return schema.parse({
+  return decodeStrict(schema, {
     status: "unavailable",
     request,
     diagnostic: { code: "PROJECT_STORAGE_UNAVAILABLE", message },
@@ -144,7 +142,7 @@ function brokenResult<Request, Result>(
   message: string,
   schema: ResultSchema<Result>,
 ): Result {
-  return schema.parse({
+  return decodeStrict(schema, {
     status: "broken",
     request,
     diagnostic: { code, message },

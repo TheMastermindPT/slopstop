@@ -8,6 +8,7 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
+    "build/**/*.ts",
     "tests/**/*.ts",
     "tests/**/*.mjs",
     "forge.config.ts",

@@ -4,6 +4,7 @@ import {
   createProjectCloseCommand,
   createProjectCreateCommand,
   createProjectOpenCommand,
+  decodeStrict,
   type ProjectId,
   type ProjectStorageCreateRequest,
   ProjectStorageOpenRequestSchema,
@@ -16,6 +17,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   createProjectStorageApplication,
   createUnavailableWorkspaceApplication,
+  type ProjectStorageApplication,
   startHarnessRuntime,
 } from "../../src/index.js";
 import { ProjectStorageUnavailableError } from "../../src/storage/project-storage-errors.js";
@@ -38,19 +40,21 @@ import {
   transportFor,
 } from "./project-storage-create-fixture.js";
 
-const projectA = ProjectStorageOpenRequestSchema.parse({
+const projectA = decodeStrict(ProjectStorageOpenRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000071",
 }).projectId;
-const projectB = ProjectStorageOpenRequestSchema.parse({
+const projectB = decodeStrict(ProjectStorageOpenRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000072",
 }).projectId;
 const identity = {
-  storageId: StorageIdSchema.parse("00000000-0000-4000-8000-000000000073"),
-  generationId: StorageGenerationIdSchema.parse("00000000-0000-4000-8000-000000000074"),
-  canonicalDatabaseLineageId: CanonicalDatabaseLineageIdSchema.parse(
+  storageId: decodeStrict(StorageIdSchema, "00000000-0000-4000-8000-000000000073"),
+  generationId: decodeStrict(StorageGenerationIdSchema, "00000000-0000-4000-8000-000000000074"),
+  canonicalDatabaseLineageId: decodeStrict(
+    CanonicalDatabaseLineageIdSchema,
     "00000000-0000-4000-8000-000000000075",
   ),
-  runtimeDatabaseLineageId: RuntimeDatabaseLineageIdSchema.parse(
+  runtimeDatabaseLineageId: decodeStrict(
+    RuntimeDatabaseLineageIdSchema,
     "00000000-0000-4000-8000-000000000076",
   ),
 };
@@ -373,7 +377,22 @@ function createCreateBoundaryTransportFixture(
       },
     },
   } satisfies ProjectStorageStoreDependencies;
-  const application = createProjectStorageApplication(createProjectStorageOwner(dependencies));
+  const storageApplication = createProjectStorageApplication(
+    createProjectStorageOwner(dependencies),
+  );
+  // The runtime stops Storage only after canonical release (2a shutdown contract), so
+  // direct post-stop calls wait for that request instead of assuming the same turn.
+  let markStorageStopRequested: () => void = () => undefined;
+  const storageStopRequested = new Promise<void>((resolve) => {
+    markStorageStopRequested = resolve;
+  });
+  const application: ProjectStorageApplication = {
+    ...storageApplication,
+    stop: () => {
+      markStorageStopRequested();
+      return storageApplication.stop();
+    },
+  };
   const { port1, port2 } = new MessageChannel();
   let generatedId = 600;
   let commandId = 700;
@@ -402,6 +421,7 @@ function createCreateBoundaryTransportFixture(
     registryStop,
     shutdownEvents,
     started: gate.started,
+    storageStopRequested,
     release: gate.release,
     create(request: ProjectStorageCreateRequest): Promise<unknown> {
       const metadata = {
@@ -862,6 +882,30 @@ it("aggregates a real unavailable failure from an opening pending at stop", asyn
   expect(fixture.registryStop).toHaveBeenCalledOnce();
 });
 
+it("settles operations admitted before Storage stop once the held create drains", async () => {
+  const root = await createTemporaryApplicationRoot();
+  const fixture = createCreateBoundaryTransportFixture(root, "createCanonical");
+  const created = fixture.application.create(createRequest);
+  await fixture.started;
+  const queued = [
+    fixture.application.open({ projectId: createRequest.projectId }),
+    fixture.application.close({ projectId: createRequest.projectId }),
+  ];
+  const stopping = fixture.stop();
+  await fixture.storageStopRequested;
+  fixture.release();
+
+  const outcomes = await Promise.all([created, ...queued]);
+  expect(outcomes.map(({ status }) => status)).toEqual([
+    "unavailable",
+    "unavailable",
+    "unavailable",
+  ]);
+  await expect(stopping).resolves.toBeUndefined();
+  expect(fixture.registryStop).toHaveBeenCalledOnce();
+  expect(fixture.projectLockCount()).toBe(3);
+});
+
 it.each(createBoundaries)(
   "stops create after $boundary without crossing the next durable boundary",
   async (boundary) => {
@@ -877,6 +921,8 @@ it.each(createBoundaries)(
       expect(stop.repeatedStop).toBe(stop.stopPromise);
       expect(stop.isSettled()).toBe(false);
       expect(fixture.registryStop).not.toHaveBeenCalled();
+      await fixture.storageStopRequested;
+      expect(stop.isSettled()).toBe(false);
       await expectPostStopOperationsUnavailable(fixture);
     } finally {
       fixture.release();

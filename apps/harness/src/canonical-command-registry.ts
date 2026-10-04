@@ -4,11 +4,14 @@ import {
   CanonicalJsonValueSchema,
   type CommandRejection,
   CommandRejectionSchema,
+  decodeStrict,
+  decodeStrictResult,
+  NonBlankTextSchema,
   type ProjectId,
   type TypedCommand,
   TypedCommandSchema,
 } from "@slopstop/protocol";
-import { z } from "zod";
+import { Result, Schema } from "effect";
 import {
   CanonicalStoredIdentitySchema,
   canonicalJsonText,
@@ -17,22 +20,24 @@ import {
 import type { LocalLibsqlTransaction } from "./storage/local-libsql-worker-client.js";
 
 export type CanonicalCommandTransaction = Readonly<Pick<LocalLibsqlTransaction, "execute">>;
-const nonblankTextSchema = z.string().refine((value) => value.trim().length > 0);
-export const CanonicalEventInputSchema = z.strictObject({
-  aggregateType: nonblankTextSchema,
-  aggregateId: CanonicalStoredIdentitySchema.refine(isDomainIdentity),
-  aggregateVersion: TypedCommandSchema.shape.version,
-  eventType: nonblankTextSchema,
-  eventVersion: TypedCommandSchema.shape.version,
+export const CanonicalEventInputSchema = Schema.Struct({
+  aggregateType: NonBlankTextSchema,
+  aggregateId: CanonicalStoredIdentitySchema.check(Schema.makeFilter(isDomainIdentity)),
+  aggregateVersion: TypedCommandSchema.fields.version,
+  eventType: NonBlankTextSchema,
+  eventVersion: TypedCommandSchema.fields.version,
   payload: CanonicalJsonValueSchema,
 });
-export type CanonicalEventInput = z.infer<typeof CanonicalEventInputSchema>;
-export const CanonicalCommandDecisionSchema = z.discriminatedUnion("outcome", [
-  z.strictObject({ outcome: z.literal("applied"), events: z.array(CanonicalEventInputSchema) }),
-  z.strictObject({ outcome: z.literal("unchanged") }),
-  z.strictObject({ outcome: z.literal("rejected"), rejection: CommandRejectionSchema }),
+export type CanonicalEventInput = typeof CanonicalEventInputSchema.Type;
+export const CanonicalCommandDecisionSchema = Schema.Union([
+  Schema.Struct({
+    outcome: Schema.Literal("applied"),
+    events: Schema.Array(CanonicalEventInputSchema),
+  }),
+  Schema.Struct({ outcome: Schema.Literal("unchanged") }),
+  Schema.Struct({ outcome: Schema.Literal("rejected"), rejection: CommandRejectionSchema }),
 ]);
-export type CanonicalCommandDecision = z.infer<typeof CanonicalCommandDecisionSchema>;
+export type CanonicalCommandDecision = typeof CanonicalCommandDecisionSchema.Type;
 
 export type PreparedCanonicalCommand =
   | Readonly<{ status: "rejected"; rejection: CommandRejection }>
@@ -49,13 +54,16 @@ export type RegisteredCanonicalCommand = Readonly<{
   prepare(payload: CanonicalJsonValue): PreparedCanonicalCommand;
 }>;
 
-const registrationKeySchema = TypedCommandSchema.pick({ type: true, version: true });
+const registrationKeySchema = Schema.Struct({
+  type: TypedCommandSchema.fields.type,
+  version: TypedCommandSchema.fields.version,
+});
 
 export function defineCanonicalCommand<Payload>(
   input: Readonly<{
     type: string;
     version: number;
-    payloadSchema: z.ZodType<Payload>;
+    payloadSchema: Schema.Decoder<Payload>;
     handle: (
       context: Readonly<{
         projectId: ProjectId;
@@ -65,7 +73,7 @@ export function defineCanonicalCommand<Payload>(
     ) => CanonicalCommandDecision | Promise<CanonicalCommandDecision>;
   }>,
 ): RegisteredCanonicalCommand {
-  const { type, version } = registrationKeySchema.parse({
+  const { type, version } = decodeStrict(registrationKeySchema, {
     type: input.type,
     version: input.version,
   });
@@ -75,14 +83,15 @@ export function defineCanonicalCommand<Payload>(
     type,
     version,
     prepare: (payload: CanonicalJsonValue): PreparedCanonicalCommand => {
-      const parsed = payloadSchema.safeParse(payload);
-      if (!parsed.success) {
+      const parsed = decodeStrictResult(payloadSchema, payload);
+      if (Result.isFailure(parsed)) {
         return {
           status: "rejected",
           rejection: { code: "COMMAND_PAYLOAD_INVALID", retryable: false },
         };
       }
-      return { status: "ready", run: (context) => handle({ ...context, payload: parsed.data }) };
+      const decoded = parsed.success;
+      return { status: "ready", run: (context) => handle({ ...context, payload: decoded }) };
     },
   });
 }
@@ -96,7 +105,7 @@ export function createCanonicalCommandRegistry(
 ): CanonicalCommandRegistry {
   const types = new Map<string, Map<number, RegisteredCanonicalCommand["prepare"]>>();
   for (const definition of definitions) {
-    const { type, version } = registrationKeySchema.parse({
+    const { type, version } = decodeStrict(registrationKeySchema, {
       type: definition.type,
       version: definition.version,
     });

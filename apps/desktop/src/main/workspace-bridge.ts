@@ -3,6 +3,7 @@ import {
   createWorkspaceIntentCommand,
   createWorkspaceQueryCommand,
   type DesktopMessage,
+  decodeStrict,
   type WorkspaceCapability,
   type WorkspaceIntent,
   type WorkspaceIntentResult,
@@ -59,7 +60,7 @@ function brokenQuery(
     | "WORKSPACE_TRANSPORT_FAILED"
     | "WORKSPACE_PROJECTION_INVALID" = "WORKSPACE_TRANSPORT_FAILED",
 ): WorkspaceQueryResult {
-  return WorkspaceQueryResultSchema.parse({
+  return decodeStrict(WorkspaceQueryResultSchema, {
     status: "broken",
     query,
     diagnostic: { code, message },
@@ -67,7 +68,7 @@ function brokenQuery(
 }
 
 function brokenIntent(capability: WorkspaceCapability, message: string): WorkspaceIntentResult {
-  return WorkspaceIntentResultSchema.parse({
+  return decodeStrict(WorkspaceIntentResultSchema, {
     status: "broken",
     capability,
     diagnostic: { code: "WORKSPACE_TRANSPORT_FAILED", message },
@@ -233,7 +234,7 @@ class WorkspaceBridge implements WorkspaceBridgeClient {
   }
 
   #publishNotification(notification: WorkspaceNotification): void {
-    const parsed = WorkspaceNotificationSchema.parse(notification);
+    const parsed = decodeStrict(WorkspaceNotificationSchema, notification);
     const key = revisionKey(parsed.capability, parsed.scope);
     const previous = this.#projectionRevisions.get(key);
     if (previous !== undefined && parsed.revision <= previous) {
@@ -250,7 +251,7 @@ class WorkspaceBridge implements WorkspaceBridgeClient {
     if (request?.kind !== "query") {
       return;
     }
-    const parsed = WorkspaceQueryResultSchema.parse(result);
+    const parsed = decodeStrict(WorkspaceQueryResultSchema, result);
     if (!isDeepStrictEqual(parsed.query, request.query)) {
       request.resolve(brokenQuery(request.query, "Harness returned a mismatched workspace query."));
       return;
@@ -278,7 +279,7 @@ class WorkspaceBridge implements WorkspaceBridgeClient {
     if (request?.kind !== "intent") {
       return;
     }
-    const parsed = WorkspaceIntentResultSchema.parse(result);
+    const parsed = decodeStrict(WorkspaceIntentResultSchema, result);
     if (parsed.capability !== request.capability) {
       request.resolve(
         brokenIntent(request.capability, "Harness returned a mismatched workspace capability."),

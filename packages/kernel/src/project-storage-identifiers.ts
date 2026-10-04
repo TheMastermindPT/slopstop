@@ -1,3 +1,4 @@
+import { Schema } from "effect";
 import type { DomainIdentity } from "./workspace-identifiers.js";
 
 export type StorageId = DomainIdentity<"StorageId">;
@@ -10,29 +11,24 @@ export type CommandId = DomainIdentity<"CommandId">;
 export type CommandReceiptId = DomainIdentity<"CommandReceiptId">;
 export type CanonicalEventId = DomainIdentity<"CanonicalEventId">;
 
-declare const writerGenerationBrand: unique symbol;
-export type WriterGeneration = number & {
-  readonly [writerGenerationBrand]: "WriterGeneration";
-};
+const PositiveSafeIntegerSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThan(0));
 
-declare const projectSequenceBrand: unique symbol;
-export type ProjectSequence = number & {
-  readonly [projectSequenceBrand]: "ProjectSequence";
-};
+export const WriterGenerationSchema = PositiveSafeIntegerSchema.pipe(
+  Schema.brand("WriterGeneration"),
+);
+export type WriterGeneration = typeof WriterGenerationSchema.Type;
 
-declare const canonicalEventOrdinalBrand: unique symbol;
-export type CanonicalEventOrdinal = number & {
-  readonly [canonicalEventOrdinalBrand]: "CanonicalEventOrdinal";
-};
+export const ProjectSequenceSchema = PositiveSafeIntegerSchema.pipe(
+  Schema.brand("ProjectSequence"),
+);
+export type ProjectSequence = typeof ProjectSequenceSchema.Type;
 
-export function isWriterGeneration(value: number): value is WriterGeneration {
-  return Number.isSafeInteger(value) && value > 0;
-}
+export const CanonicalEventOrdinalSchema = Schema.Number.check(
+  Schema.isInt(),
+  Schema.isGreaterThanOrEqualTo(0),
+).pipe(Schema.brand("CanonicalEventOrdinal"));
+export type CanonicalEventOrdinal = typeof CanonicalEventOrdinalSchema.Type;
 
-export function isProjectSequence(value: number): value is ProjectSequence {
-  return Number.isSafeInteger(value) && value > 0;
-}
-
-export function isCanonicalEventOrdinal(value: number): value is CanonicalEventOrdinal {
-  return Number.isSafeInteger(value) && value >= 0;
-}
+export const isWriterGeneration = Schema.is(WriterGenerationSchema);
+export const isProjectSequence = Schema.is(ProjectSequenceSchema);
+export const isCanonicalEventOrdinal = Schema.is(CanonicalEventOrdinalSchema);

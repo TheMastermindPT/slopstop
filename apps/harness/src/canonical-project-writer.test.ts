@@ -1,6 +1,7 @@
 import {
   CanonicalCommandReceiptSchema,
   CanonicalProjectCommandRequestSchema,
+  decodeStrict,
   ProjectActivationIdSchema,
   ProjectIdSchema,
   WriterGenerationSchema,
@@ -12,7 +13,7 @@ import type { CanonicalCommandSettlementResult } from "./storage/canonical-comma
 import { CanonicalWriterLeaseError } from "./storage/canonical-writer-lease.js";
 
 function submission() {
-  return CanonicalProjectCommandRequestSchema.parse({
+  return decodeStrict(CanonicalProjectCommandRequestSchema, {
     projectId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
     activationId: "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
     command: {
@@ -25,7 +26,7 @@ function submission() {
 }
 const commandText =
   '{"commandId":"44444444-4444-4444-8444-444444444501","fingerprintVersion":1,"payload":{"meta":{"a":1,"b":2},"tags":["x","y"],"value":7},"projectId":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1","type":"conformance.counter.set","version":1}';
-const receipt = CanonicalCommandReceiptSchema.parse({
+const receipt = decodeStrict(CanonicalCommandReceiptSchema, {
   receiptId: "66666666-6666-4666-8666-666666666501",
   projectId: submission().projectId,
   commandId: submission().command.commandId,
@@ -44,7 +45,7 @@ function writerFixture(settle: CanonicalCommandRepository["settle"]) {
   const request = submission();
   const repository = {
     projectId: request.projectId,
-    writerGeneration: WriterGenerationSchema.parse(2),
+    writerGeneration: decodeStrict(WriterGenerationSchema, 2),
     settle: vi.fn(settle),
     verifyFence: vi.fn<CanonicalCommandRepository["verifyFence"]>(async () => ({
       status: "current",
@@ -355,8 +356,8 @@ it("refuses stale fences and preserves native close failure", async () => {
     },
   ] as const) {
     const { status, code } = scenario;
-    const projectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000010");
-    const writerGeneration = WriterGenerationSchema.parse(1);
+    const projectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000010");
+    const writerGeneration = decodeStrict(WriterGenerationSchema, 1);
     const repository = {
       projectId,
       writerGeneration,
@@ -373,7 +374,7 @@ it("refuses stale fences and preserves native close failure", async () => {
     const writer = create({
       projectId,
       writerGeneration,
-      activationId: ProjectActivationIdSchema.parse("00000000-0000-4000-8000-000000000011"),
+      activationId: decodeStrict(ProjectActivationIdSchema, "00000000-0000-4000-8000-000000000011"),
       repository,
       lease,
     });
@@ -399,8 +400,8 @@ it("retains failed release ownership and resumes cleanup on stop retry", async (
         throw new Error("failure");
       }
     };
-    const projectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000010");
-    const writerGeneration = WriterGenerationSchema.parse(1);
+    const projectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000010");
+    const writerGeneration = decodeStrict(WriterGenerationSchema, 1);
     const repository = {
       projectId,
       writerGeneration,
@@ -426,7 +427,7 @@ it("retains failed release ownership and resumes cleanup on stop retry", async (
     const writer = create({
       projectId,
       writerGeneration,
-      activationId: ProjectActivationIdSchema.parse("00000000-0000-4000-8000-000000000011"),
+      activationId: decodeStrict(ProjectActivationIdSchema, "00000000-0000-4000-8000-000000000011"),
       repository,
       lease,
     });

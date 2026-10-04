@@ -1,7 +1,13 @@
 import type { Dirent } from "node:fs";
 import { lstat, mkdir, readdir } from "node:fs/promises";
 import path from "node:path";
-import { ProjectIdSchema, StorageGenerationIdSchema } from "@slopstop/protocol";
+import {
+  acceptsStrict,
+  decodeStrictResult,
+  ProjectIdSchema,
+  StorageGenerationIdSchema,
+} from "@slopstop/protocol";
+import { Result } from "effect";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
 import {
   canonicalDatabaseFilename,
@@ -76,14 +82,14 @@ const maximumGenerationDirectoryEntries = 16;
 export type FilesystemWitnessScan = Readonly<{
   kinds: readonly PriorStateWitnessKind[];
   hasStagingGeneration: boolean;
-  ordinaryGenerationIds: readonly ReturnType<typeof StorageGenerationIdSchema.parse>[];
+  ordinaryGenerationIds: readonly (typeof StorageGenerationIdSchema.Type)[];
   hasRootDatabaseWitness: boolean;
 }>;
 
 type MutableFilesystemWitnessScan = {
   kinds: Set<PriorStateWitnessKind>;
   hasStagingGeneration: boolean;
-  ordinaryGenerationIds: ReturnType<typeof StorageGenerationIdSchema.parse>[];
+  ordinaryGenerationIds: (typeof StorageGenerationIdSchema.Type)[];
   hasRootDatabaseWitness: boolean;
 };
 
@@ -206,7 +212,7 @@ function recordReservedRootWitness(input: {
 }
 
 type ParsedGenerationDirectory = Readonly<{
-  generationId: ReturnType<typeof StorageGenerationIdSchema.parse>;
+  generationId: typeof StorageGenerationIdSchema.Type;
   isStaging: boolean;
 }>;
 
@@ -214,11 +220,11 @@ function parseGenerationDirectory(input: { name: string }): ParsedGenerationDire
   const stagingPrefix = ".staging-";
   const isStaging = input.name.startsWith(stagingPrefix);
   const generationText = isStaging ? input.name.slice(stagingPrefix.length) : input.name;
-  const generationId = StorageGenerationIdSchema.safeParse(generationText);
-  if (!generationId.success) {
+  const generationId = decodeStrictResult(StorageGenerationIdSchema, generationText);
+  if (Result.isFailure(generationId)) {
     throw new ProjectStorageBrokenError("Project Storage root contains an unknown witness.");
   }
-  return { generationId: generationId.data, isStaging };
+  return { generationId: generationId.success, isStaging };
 }
 
 function recordGenerationIdentity(input: {
@@ -339,8 +345,8 @@ export function assertStagingPath(input: {
   const valid = [
     path.dirname(projectsRoot) === input.applicationStorageRoot,
     path.basename(projectsRoot) === "projects",
-    ProjectIdSchema.safeParse(path.basename(projectRoot)).success,
-    StorageGenerationIdSchema.safeParse(stagingGenerationText(input.directoryPath)).success,
+    acceptsStrict(ProjectIdSchema, path.basename(projectRoot)),
+    acceptsStrict(StorageGenerationIdSchema, stagingGenerationText(input.directoryPath)),
   ].every(Boolean);
   if (!valid) throw new ProjectStorageBrokenError("Project Storage staging path is invalid.");
 }

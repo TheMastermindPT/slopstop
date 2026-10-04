@@ -1,5 +1,11 @@
 import {
+  CanonicalProjectActivationRequestSchema,
+  CanonicalProjectActivationResultSchema,
+  CanonicalProjectSwitchRequestSchema,
+  CanonicalProjectSwitchResultSchema,
+  decodeStrict,
   HarnessStatusSchema,
+  ProjectListResultSchema,
   RetryHarnessResultSchema,
   WorkspaceIntentResultSchema,
   WorkspaceIntentSchema,
@@ -11,17 +17,42 @@ import { contextBridge, type IpcRendererEvent, ipcRenderer } from "electron";
 import { desktopIpcChannels, type SlopStopApi } from "../shared/desktop-api.js";
 
 const api: SlopStopApi = {
+  listProjects: async () =>
+    decodeStrict(
+      ProjectListResultSchema,
+      await ipcRenderer.invoke(desktopIpcChannels.listProjects, {}),
+    ),
+  activateProject: async (request) =>
+    decodeStrict(
+      CanonicalProjectActivationResultSchema,
+      await ipcRenderer.invoke(
+        desktopIpcChannels.activateProject,
+        decodeStrict(CanonicalProjectActivationRequestSchema, request),
+      ),
+    ),
+  switchProject: async (request) =>
+    decodeStrict(
+      CanonicalProjectSwitchResultSchema,
+      await ipcRenderer.invoke(
+        desktopIpcChannels.switchProject,
+        decodeStrict(CanonicalProjectSwitchRequestSchema, request),
+      ),
+    ),
   getHarnessStatus: async () => {
-    return HarnessStatusSchema.parse(await ipcRenderer.invoke(desktopIpcChannels.getHarnessStatus));
+    return decodeStrict(
+      HarnessStatusSchema,
+      await ipcRenderer.invoke(desktopIpcChannels.getHarnessStatus),
+    );
   },
   retryHarness: async () => {
-    return RetryHarnessResultSchema.parse(
+    return decodeStrict(
+      RetryHarnessResultSchema,
       await ipcRenderer.invoke(desktopIpcChannels.retryHarness),
     );
   },
   subscribeHarnessStatus: (listener) => {
     const receive = (_event: IpcRendererEvent, value: unknown) => {
-      listener(HarnessStatusSchema.parse(value));
+      listener(decodeStrict(HarnessStatusSchema, value));
     };
     ipcRenderer.on(desktopIpcChannels.harnessStatusChanged, receive);
     return () => {
@@ -29,20 +60,22 @@ const api: SlopStopApi = {
     };
   },
   queryWorkspace: async (query: unknown) => {
-    const validated = WorkspaceQuerySchema.parse(query);
-    return WorkspaceQueryResultSchema.parse(
+    const validated = decodeStrict(WorkspaceQuerySchema, query);
+    return decodeStrict(
+      WorkspaceQueryResultSchema,
       await ipcRenderer.invoke(desktopIpcChannels.queryWorkspace, validated),
     );
   },
   submitWorkspaceIntent: async (intent: unknown) => {
-    const validated = WorkspaceIntentSchema.parse(intent);
-    return WorkspaceIntentResultSchema.parse(
+    const validated = decodeStrict(WorkspaceIntentSchema, intent);
+    return decodeStrict(
+      WorkspaceIntentResultSchema,
       await ipcRenderer.invoke(desktopIpcChannels.submitWorkspaceIntent, validated),
     );
   },
   subscribeWorkspaceNotifications: (listener) => {
     const receive = (_event: IpcRendererEvent, value: unknown) => {
-      listener(WorkspaceNotificationSchema.parse(value));
+      listener(decodeStrict(WorkspaceNotificationSchema, value));
     };
     ipcRenderer.on(desktopIpcChannels.workspaceNotification, receive);
     return () => {

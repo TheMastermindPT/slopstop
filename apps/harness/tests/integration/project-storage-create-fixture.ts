@@ -9,6 +9,7 @@ import {
   createProjectCommand,
   createProjectOpenCommand,
   createProjectSwitchCommand,
+  decodeStrict,
   ProjectActivationIdSchema,
   ProjectIdSchema,
   type ProjectStorageOpenResult,
@@ -64,20 +65,23 @@ export {
 // Fixed S4 contract values; expected results never come from the coordinator.
 export const switchProjects = {
   A: {
-    projectId: ProjectIdSchema.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"),
-    activationId: ProjectActivationIdSchema.parse("eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"),
+    projectId: decodeStrict(ProjectIdSchema, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"),
+    activationId: decodeStrict(ProjectActivationIdSchema, "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"),
   },
   B: {
-    projectId: ProjectIdSchema.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2"),
-    activationId: ProjectActivationIdSchema.parse("ebbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2"),
+    projectId: decodeStrict(ProjectIdSchema, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2"),
+    activationId: decodeStrict(ProjectActivationIdSchema, "ebbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2"),
   },
   C: {
-    projectId: ProjectIdSchema.parse("cccccccc-cccc-4ccc-8ccc-ccccccccccc3"),
-    activationId: ProjectActivationIdSchema.parse("eccccccc-cccc-4ccc-8ccc-ccccccccccc3"),
+    projectId: decodeStrict(ProjectIdSchema, "cccccccc-cccc-4ccc-8ccc-ccccccccccc3"),
+    activationId: decodeStrict(ProjectActivationIdSchema, "eccccccc-cccc-4ccc-8ccc-ccccccccccc3"),
   },
 };
 export type SwitchProjectName = keyof typeof switchProjects;
-export const newAEpoch = ProjectActivationIdSchema.parse("eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2");
+export const newAEpoch = decodeStrict(
+  ProjectActivationIdSchema,
+  "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
+);
 export const switchTimes = {
   T0: "2026-09-05T12:00:00.000Z",
   T1: "2026-09-05T12:00:01.000Z",
@@ -96,7 +100,7 @@ function switchCommand(
   suffix: string,
   epoch = switchProjects[name].activationId,
 ) {
-  return CanonicalProjectCommandRequestSchema.parse({
+  return decodeStrict(CanonicalProjectCommandRequestSchema, {
     projectId: switchProjects[name].projectId,
     activationId: epoch,
     command: {
@@ -223,8 +227,14 @@ export function switchActive(
         },
       };
 }
-export function switchTarget(target: unknown = switchActive("B"), request = switchRequests.AB) {
-  return { status: "target-result", request, target };
+// sourceReleased is true once the source activation was released before activating the target,
+// and false only when target validation refused the switch before any release.
+export function switchTarget(
+  target: unknown = switchActive("B"),
+  request = switchRequests.AB,
+  sourceReleased = true,
+) {
+  return { status: "target-result", sourceReleased, request, target };
 }
 export function switchReleaseFailure(code: string, request = switchRequests.AB) {
   return {
@@ -319,7 +329,7 @@ function switchObservations() {
   };
 }
 function switchStorageResult(name: SwitchProjectName) {
-  const result = ProjectStorageOpenResultSchema.parse({
+  const result = decodeStrict(ProjectStorageOpenResultSchema, {
     status: "opened",
     mode: "read-write",
     request: { projectId: switchProjects[name].projectId },
@@ -344,7 +354,7 @@ function switchRepositoryPorts(
   const run = (stage: string) => observations.run(`${name}.${stage}`);
   const repository = {
     projectId: switchProjects[name].projectId,
-    writerGeneration: WriterGenerationSchema.parse(1),
+    writerGeneration: decodeStrict(WriterGenerationSchema, 1),
     settle: vi.fn((text: string) => {
       if (!realCommands) throw new Error("Unexpected lifecycle-only settlement.");
       return real.settle(text);
@@ -377,7 +387,7 @@ function switchRepositoryPorts(
           ? await real.activate(input)
           : {
               status: "activated" as const,
-              writerGeneration: WriterGenerationSchema.parse(++generation),
+              writerGeneration: decodeStrict(WriterGenerationSchema, ++generation),
               repository,
             };
         if (result.status !== "activated") return result;
@@ -469,7 +479,7 @@ export function switchFixture(realCommands = false) {
     }),
     createWriterToken: vi.fn(() => {
       observations.touch(`${selected}.token`);
-      return WriterCapabilityTokenSchema.parse("a".repeat(64));
+      return decodeStrict(WriterCapabilityTokenSchema, "a".repeat(64));
     }),
     now: vi.fn(() => {
       observations.all.push("clock");
@@ -523,7 +533,7 @@ export const targetAcquireOrder = [
   `B.repository.activate@${switchTimes.T2}`,
 ];
 export function safeSwitchStorage(f: SwitchFixture) {
-  const result = ProjectStorageOpenResultSchema.parse({
+  const result = decodeStrict(ProjectStorageOpenResultSchema, {
     ...f.projects.B.session.result,
     status: "safe-mode",
     mode: "safe-mode",

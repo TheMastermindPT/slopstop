@@ -1,5 +1,12 @@
+import { Schema } from "effect";
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { z } from "zod";
+import { decodeWithIssues } from "./decode-with-issues.test-support.js";
+import { decodeStrict } from "./schema-codec.js";
+
+function isDecoder(value: unknown): value is Schema.Decoder<unknown> {
+  return Schema.isSchema(value);
+}
+
 import type { CanonicalProjectSwitchRequest, CanonicalProjectSwitchResult } from "./index.js";
 import * as protocol from "./index.js";
 import {
@@ -38,7 +45,7 @@ import {
 
 it("accepts the terminal harness shutdown diagnostic", () => {
   expect(
-    HarnessStatusSchema.parse({
+    decodeStrict(HarnessStatusSchema, {
       state: "degraded",
       attempt: 1,
       diagnostic: {
@@ -51,7 +58,7 @@ it("accepts the terminal harness shutdown diagnostic", () => {
 
 it("accepts only plain local file URLs as trusted harness roots", () => {
   expect(
-    HarnessBootstrapSchema.parse({
+    decodeStrict(HarnessBootstrapSchema, {
       kind: "harness.connect",
       applicationStorageRootUrl: "file:///C:/Users/example/AppData/SlopStop/storage",
       migrationResourcesRootUrl: "file:///C:/Program%20Files/SlopStop/harness-migrations",
@@ -78,7 +85,7 @@ it("accepts only plain local file URLs as trusted harness roots", () => {
     { migrationResourcesRootUrl: "not-a-url" },
   ]) {
     expect(
-      HarnessBootstrapSchema.safeParse({
+      decodeWithIssues(HarnessBootstrapSchema, {
         kind: "harness.connect",
         applicationStorageRootUrl: "file:///C:/storage",
         migrationResourcesRootUrl: "file:///C:/migrations",
@@ -86,16 +93,16 @@ it("accepts only plain local file URLs as trusted harness roots", () => {
       }).success,
     ).toBe(false);
   }
-  expect(HarnessBootstrapSchema.safeParse({ kind: "harness.connect" }).success).toBe(false);
+  expect(decodeWithIssues(HarnessBootstrapSchema, { kind: "harness.connect" }).success).toBe(false);
   expect(
-    HarnessBootstrapSchema.safeParse({
+    decodeWithIssues(HarnessBootstrapSchema, {
       kind: "harness.disconnect",
       applicationStorageRootUrl: "file:///C:/storage",
       migrationResourcesRootUrl: "file:///C:/migrations",
     }).success,
   ).toBe(false);
   expect(
-    HarnessBootstrapSchema.safeParse({
+    decodeWithIssues(HarnessBootstrapSchema, {
       kind: "harness.connect",
       applicationStorageRootUrl: "file:///C:/storage",
       migrationResourcesRootUrl: "file:///C:/migrations",
@@ -122,12 +129,12 @@ const storageUnavailable = {
 } as const;
 
 function workspaceExchange() {
-  const query = WorkspaceQuerySchema.parse({
+  const query = decodeStrict(WorkspaceQuerySchema, {
     query: "memory-library.read",
     projectId: "00000000-0000-4000-8000-000000000010",
     cursor: null,
   });
-  const result = WorkspaceQueryResultSchema.parse({
+  const result = decodeStrict(WorkspaceQueryResultSchema, {
     status: "unavailable",
     query,
     diagnostic: {
@@ -156,13 +163,17 @@ function workspaceExchange() {
 
 function projectStorageExchanges() {
   const sentAt = "2026-08-14T12:00:00.000Z";
-  const projectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000010");
-  const createRequestId = ProjectStorageCreateRequestIdSchema.parse(
+  const projectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000010");
+  const createRequestId = decodeStrict(
+    ProjectStorageCreateRequestIdSchema,
     "00000000-0000-4000-8000-000000000011",
   );
-  const openRequest = ProjectStorageOpenRequestSchema.parse({ projectId });
-  const createRequest = ProjectStorageCreateRequestSchema.parse({ projectId, createRequestId });
-  const closeRequest = ProjectStorageCloseRequestSchema.parse({ projectId });
+  const openRequest = decodeStrict(ProjectStorageOpenRequestSchema, { projectId });
+  const createRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
+    projectId,
+    createRequestId,
+  });
+  const closeRequest = decodeStrict(ProjectStorageCloseRequestSchema, { projectId });
   const open = createProjectOpenCommand(
     { messageId: "00000000-0000-4000-8000-000000000021", sentAt },
     openRequest,
@@ -175,47 +186,41 @@ function projectStorageExchanges() {
     { messageId: "00000000-0000-4000-8000-000000000023", sentAt },
     closeRequest,
   );
+  const resultMetadata = (sequence: number, causationId: string) => ({
+    messageId: `00000000-0000-4000-8000-00000000003${sequence}`,
+    sentAt,
+    sequence,
+    causationId,
+  });
   return [
     {
       command: open,
       commandName: "project.open",
-      event: createProjectOpenResultEvent(
-        {
-          messageId: "00000000-0000-4000-8000-000000000031",
-          sentAt,
-          sequence: 1,
-          causationId: open.messageId,
-        },
-        { status: "unavailable", request: openRequest, ...storageUnavailable },
-      ),
+      event: createProjectOpenResultEvent(resultMetadata(1, open.messageId), {
+        status: "unavailable",
+        request: openRequest,
+        ...storageUnavailable,
+      }),
       eventName: "project.open.result",
     },
     {
       command: create,
       commandName: "project.create",
-      event: createProjectCreateResultEvent(
-        {
-          messageId: "00000000-0000-4000-8000-000000000032",
-          sentAt,
-          sequence: 2,
-          causationId: create.messageId,
-        },
-        { status: "unavailable", request: createRequest, ...storageUnavailable },
-      ),
+      event: createProjectCreateResultEvent(resultMetadata(2, create.messageId), {
+        status: "unavailable",
+        request: createRequest,
+        ...storageUnavailable,
+      }),
       eventName: "project.create.result",
     },
     {
       command: close,
       commandName: "project.close",
-      event: createProjectCloseResultEvent(
-        {
-          messageId: "00000000-0000-4000-8000-000000000033",
-          sentAt,
-          sequence: 3,
-          causationId: close.messageId,
-        },
-        { status: "unavailable", request: closeRequest, ...storageUnavailable },
-      ),
+      event: createProjectCloseResultEvent(resultMetadata(3, close.messageId), {
+        status: "unavailable",
+        request: closeRequest,
+        ...storageUnavailable,
+      }),
       eventName: "project.close.result",
     },
   ] as const;
@@ -392,7 +397,7 @@ describe("desktop protocol parsing", () => {
   });
 
   it("creates exact intent and invalidation envelopes", () => {
-    const intent = WorkspaceIntentSchema.parse({
+    const intent = decodeStrict(WorkspaceIntentSchema, {
       intent: "memory.proposal.review",
       projectId: "00000000-0000-4000-8000-000000000010",
       proposalId: "00000000-0000-4000-8000-000000000011",
@@ -406,7 +411,7 @@ describe("desktop protocol parsing", () => {
       },
       intent,
     );
-    const result = WorkspaceIntentResultSchema.parse({
+    const result = decodeStrict(WorkspaceIntentResultSchema, {
       status: "forwarded",
       capability: "memory",
     });
@@ -419,7 +424,7 @@ describe("desktop protocol parsing", () => {
       },
       result,
     );
-    const notification = WorkspaceNotificationSchema.parse({
+    const notification = decodeStrict(WorkspaceNotificationSchema, {
       capability: "memory",
       scope: {
         kind: "project",
@@ -501,7 +506,7 @@ describe("desktop protocol parsing", () => {
   });
 
   it("creates canonical command and event envelopes", () => {
-    const messageId = MessageIdSchema.parse("00000000-0000-4000-8000-000000000002");
+    const messageId = decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000002");
     const metadata = {
       messageId,
       sentAt: "2026-08-14T12:00:01.000Z",
@@ -509,7 +514,7 @@ describe("desktop protocol parsing", () => {
     const eventMetadata = {
       ...metadata,
       sequence: 1,
-      causationId: MessageIdSchema.parse(validHandshake.messageId),
+      causationId: decodeStrict(MessageIdSchema, validHandshake.messageId),
     };
 
     expect(createHandshakeCommand(metadata, "0.0.0")).toMatchObject({
@@ -747,10 +752,10 @@ describe.each([
       expect(typeof factory).toBe("function");
       if (typeof factory !== "function") throw new Error("Expected a public switch factory.");
       const schema: unknown = Reflect.get(protocol, schemaName);
-      expect(schema).toBeInstanceOf(z.ZodType);
-      if (!(schema instanceof z.ZodType)) throw new Error("Expected a public switch schema.");
-      expect(schema.parse(payload)).toEqual(payload);
-      const actual: unknown = factory(metadata, schema.parse(payload));
+      expect(Schema.isSchema(schema)).toBe(true);
+      if (!isDecoder(schema)) throw new Error("Expected a public switch schema.");
+      expect(decodeStrict(schema, payload)).toEqual(payload);
+      const actual: unknown = factory(metadata, decodeStrict(schema, payload));
       expect(actual).toEqual(envelope);
       expect(parse(actual)).toEqual({ ok: true, value: envelope });
       expect(parse({ ...envelope, extra: true })).toEqual({
@@ -768,10 +773,10 @@ describe.each([
         },
       });
       expectTypeOf<CanonicalProjectSwitchRequest>().toEqualTypeOf<
-        z.infer<typeof protocol.CanonicalProjectSwitchRequestSchema>
+        typeof protocol.CanonicalProjectSwitchRequestSchema.Type
       >();
       expectTypeOf<CanonicalProjectSwitchResult>().toEqualTypeOf<
-        z.infer<typeof protocol.CanonicalProjectSwitchResultSchema>
+        typeof protocol.CanonicalProjectSwitchResultSchema.Type
       >();
       expectTypeOf<
         Parameters<typeof protocol.createProjectSwitchCommand>[1]

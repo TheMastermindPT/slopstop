@@ -113,3 +113,12 @@ SlopStop starts as an empty private repository but already has confirmed product
 - Framework and persistence packages cannot become unused architectural placeholders.
 - The separate process and strict protocol add initial ceremony but keep renderer security, runtime replacement, and crash recovery testable.
 - Visual variant work remains free to replace the shell without undoing process, schema, or repository decisions.
+
+## Amendment 2026-10-03: Effect Schema Replaces Zod
+
+The user approved the full Effect migration on 2026-10-03 (record: main `.rpiv/artifacts/evidence/2026-10-03_effect-migration-authority.md`, commit `8f58420`). The original decisions above remain the historical record; this amendment supersedes only the schema-library choices:
+
+- Protocol, harness, and configuration validation use Effect Schema (`effect` 4.0.0) instead of Zod. The protocol package owns one strict decode policy (unknown keys rejected at every level) and a project-owned issue vocabulary; public `ProtocolParseIssue` diagnostics keep their former codes and paths.
+- The kernel still depends on no workspace package. It may import `effect` pure data modules (`Schema`, `Brand`, `Data`) so identity brands and ordering values have one definition; it contains no services, layers, or runtime.
+- Wire formats are unchanged: UUID text, RFC 3339 strings that are never converted to `Date`, bigint/number behavior, optional-versus-absent members, decoded key order (persisted fingerprints), and shallow output freezing where the former schemas froze values.
+- Effect runtime, services, and resource management for harness and Electron main are separate later migration units; SQL client choice is undecided and owned by the user.

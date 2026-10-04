@@ -6,7 +6,13 @@ import type {
   WorkspaceQuery,
   WorkspaceQueryResult,
 } from "@slopstop/protocol";
-import { WorkspaceIntentResultSchema, WorkspaceQueryResultSchema } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  decodeStrictResult,
+  WorkspaceIntentResultSchema,
+  WorkspaceQueryResultSchema,
+} from "@slopstop/protocol";
+import { Result } from "effect";
 
 type ConversationQuery = Extract<
   WorkspaceQuery,
@@ -76,12 +82,12 @@ type WorkspaceApplicationOptions = Readonly<{
 }>;
 
 function readyQueryResult(query: WorkspaceQuery, projection: unknown): WorkspaceQueryResult | null {
-  const parsed = WorkspaceQueryResultSchema.safeParse({
+  const parsed = decodeStrictResult(WorkspaceQueryResultSchema, {
     status: "ready",
     query,
     projection,
   });
-  return parsed.success ? parsed.data : null;
+  return Result.isSuccess(parsed) ? parsed.success : null;
 }
 
 function unavailableQueryResult(
@@ -89,7 +95,7 @@ function unavailableQueryResult(
   capability: WorkspaceCapability,
   message: string,
 ): WorkspaceQueryResult {
-  return WorkspaceQueryResultSchema.parse({
+  return decodeStrict(WorkspaceQueryResultSchema, {
     status: "unavailable",
     query,
     diagnostic: {
@@ -105,7 +111,7 @@ function brokenQueryResult(
   code: "WORKSPACE_PRODUCER_FAILED" | "WORKSPACE_PROJECTION_INVALID",
   message: string,
 ): WorkspaceQueryResult {
-  return WorkspaceQueryResultSchema.parse({
+  return decodeStrict(WorkspaceQueryResultSchema, {
     status: "broken",
     query,
     diagnostic: {
@@ -154,9 +160,9 @@ function intentResult(
 ): WorkspaceIntentResult {
   switch (outcome.status) {
     case "forwarded":
-      return WorkspaceIntentResultSchema.parse({ status: "forwarded", capability });
+      return decodeStrict(WorkspaceIntentResultSchema, { status: "forwarded", capability });
     case "unavailable":
-      return WorkspaceIntentResultSchema.parse({
+      return decodeStrict(WorkspaceIntentResultSchema, {
         status: "unavailable",
         capability,
         diagnostic: {
@@ -165,7 +171,7 @@ function intentResult(
         },
       });
     case "broken":
-      return WorkspaceIntentResultSchema.parse({
+      return decodeStrict(WorkspaceIntentResultSchema, {
         status: "broken",
         capability,
         diagnostic: {

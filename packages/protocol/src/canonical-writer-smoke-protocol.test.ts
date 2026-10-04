@@ -1,5 +1,8 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
+import { decodeWithIssues } from "./decode-with-issues.test-support.js";
 import {
+  acceptsStrict,
+  decodeStrict,
   type MessageId,
   type WriterProofControl,
   WriterProofControlSchema,
@@ -192,31 +195,31 @@ const envelopes = [
 
 describe.each(envelopes)("$name closed envelope", ({ schema, value }) => {
   it("round-trips the exact approved fields unchanged", () => {
-    expect(schema.parse(value)).toEqual(value);
+    expect(decodeStrict(schema, value)).toEqual(value);
   });
   it.each(Object.keys(value))("rejects missing field %s", (key) => {
     const incomplete = Object.fromEntries(Object.entries(value).filter(([field]) => field !== key));
-    expect(schema.safeParse(incomplete).success).toBe(false);
+    expect(decodeWithIssues(schema, incomplete).success).toBe(false);
   });
   it.each(privateFields)("rejects extra/private field %s", (key) => {
-    expect(schema.safeParse({ ...value, [key]: "private" }).success).toBe(false);
+    expect(decodeWithIssues(schema, { ...value, [key]: "private" }).success).toBe(false);
   });
   it.each([0, 2, "1", null])("rejects version %j", (version) => {
-    expect(schema.safeParse({ ...value, version }).success).toBe(false);
+    expect(decodeWithIssues(schema, { ...value, version }).success).toBe(false);
   });
   it("rejects a different kind", () => {
-    expect(schema.safeParse({ ...value, kind: "writer-proof.wrong" }).success).toBe(false);
+    expect(decodeWithIssues(schema, { ...value, kind: "writer-proof.wrong" }).success).toBe(false);
   });
   it.each(invalidMessageIds)("rejects smoke proofId %s", (proofId) => {
-    expect(schema.safeParse({ ...value, proofId }).success).toBe(false);
+    expect(decodeWithIssues(schema, { ...value, proofId }).success).toBe(false);
   });
   it("retains valid uppercase MessageId spelling", () => {
     const uppercase = { ...value, proofId: uppercaseMessageId };
-    expect(schema.parse(uppercase)).toEqual(uppercase);
+    expect(decodeStrict(schema, uppercase)).toEqual(uppercase);
   });
   it("rejects fixture kinds at both product boundaries", () => {
-    expect(DesktopMessageSchema.safeParse(value).success).toBe(false);
-    expect(HarnessMessageSchema.safeParse(value).success).toBe(false);
+    expect(acceptsStrict(DesktopMessageSchema, value)).toBe(false);
+    expect(acceptsStrict(HarnessMessageSchema, value)).toBe(false);
     const metadata = {
       protocolVersion: 4,
       messageId: correlation.requestId,
@@ -224,17 +227,20 @@ describe.each(envelopes)("$name closed envelope", ({ schema, value }) => {
       payload: value,
     };
     expect(
-      DesktopMessageSchema.safeParse({ ...metadata, messageType: "command", command: value.kind })
-        .success,
+      decodeWithIssues(DesktopMessageSchema, {
+        ...metadata,
+        messageType: "command",
+        command: value.kind,
+      }).success,
     ).toBe(false);
     expect(
-      HarnessMessageSchema.safeParse({
+      acceptsStrict(HarnessMessageSchema, {
         ...metadata,
         messageType: "event",
         event: value.kind,
         sequence: 1,
         causationId: correlation.requestId,
-      }).success,
+      }),
     ).toBe(false);
   });
 });
@@ -243,24 +249,24 @@ describe.each(envelopes.filter(({ name }) => name !== "start"))(
   "$name correlation",
   ({ schema, value }) => {
     it.each(invalidMessageIds)("rejects smoke requestId %s", (requestId) => {
-      expect(schema.safeParse({ ...value, requestId }).success).toBe(false);
+      expect(decodeWithIssues(schema, { ...value, requestId }).success).toBe(false);
     });
     it("retains valid uppercase requestId spelling", () => {
       const uppercase = { ...value, requestId: uppercaseMessageId };
-      expect(schema.parse(uppercase)).toEqual(uppercase);
+      expect(decodeStrict(schema, uppercase)).toEqual(uppercase);
     });
     it.each([0, 1, 2, 3, 4, 5, 1.5, "1", null])(
       "requires its exact stepNumber %j",
       (stepNumber) => {
         if (!("stepNumber" in value))
           throw new Error("Control/result fixture requires stepNumber.");
-        expect(schema.safeParse({ ...value, stepNumber }).success).toBe(
+        expect(decodeWithIssues(schema, { ...value, stepNumber }).success).toBe(
           stepNumber === value.stepNumber,
         );
       },
     );
     it("rejects unknown steps", () => {
-      expect(schema.safeParse({ ...value, step: "stale.unknown" }).success).toBe(false);
+      expect(decodeWithIssues(schema, { ...value, step: "stale.unknown" }).success).toBe(false);
     });
   },
 );
@@ -274,7 +280,7 @@ describe("start bootstrap and general MessageId owner", () => {
     expectTypeOf<WriterProofEvent["requestId"]>().toEqualTypeOf<MessageId>();
   });
   it.each([nil, max, uppercaseMessageId])("preserves legacy MessageId acceptance %s", (value) => {
-    expect(MessageIdSchema.parse(value)).toBe(value);
+    expect(decodeStrict(MessageIdSchema, value)).toBe(value);
   });
   it.each([
     { kind: "writer-proof.connect" },
@@ -284,15 +290,17 @@ describe("start bootstrap and general MessageId owner", () => {
     { token: "private" },
   ])("rejects invalid bootstrap %j", (change) => {
     expect(
-      WriterProofStartSchema.safeParse({ ...start, bootstrap: { ...start.bootstrap, ...change } })
-        .success,
+      decodeWithIssues(WriterProofStartSchema, {
+        ...start,
+        bootstrap: { ...start.bootstrap, ...change },
+      }).success,
     ).toBe(false);
   });
   it.each(Object.keys(start.bootstrap))("rejects missing bootstrap field %s", (key) => {
     const bootstrap = Object.fromEntries(
       Object.entries(start.bootstrap).filter(([field]) => field !== key),
     );
-    expect(WriterProofStartSchema.safeParse({ ...start, bootstrap }).success).toBe(false);
+    expect(acceptsStrict(WriterProofStartSchema, { ...start, bootstrap })).toBe(false);
   });
 });
 
@@ -302,20 +310,20 @@ describe("control audit receipt authority", () => {
       (activationIds) => ({ activationIds }),
     ),
   )("rejects invalid activation pairs %j", ({ activationIds }) => {
-    expect(WriterProofControlSchema.safeParse({ ...auditControl, activationIds }).success).toBe(
-      false,
-    );
+    expect(acceptsStrict(WriterProofControlSchema, { ...auditControl, activationIds })).toBe(false);
   });
   it.each(invalidIdentities)("rejects malformed durable activation %s", (identity) => {
     expect(
-      WriterProofControlSchema.safeParse({ ...attemptControl, replacementActivationId: identity })
-        .success,
+      decodeWithIssues(WriterProofControlSchema, {
+        ...attemptControl,
+        replacementActivationId: identity,
+      }).success,
     ).toBe(false);
     for (const activationIds of [
       [identity, activation2],
       [activation1, identity],
     ]) {
-      expect(WriterProofControlSchema.safeParse({ ...auditControl, activationIds }).success).toBe(
+      expect(acceptsStrict(WriterProofControlSchema, { ...auditControl, activationIds })).toBe(
         false,
       );
     }
@@ -329,7 +337,7 @@ describe("control audit receipt authority", () => {
       [receipt1, { ...receipt2, receiptId: receipt1.receiptId }],
     ].map((expectedReceipts) => ({ expectedReceipts })),
   )("rejects wrong receipt tuple %j", ({ expectedReceipts }) => {
-    expect(WriterProofControlSchema.safeParse({ ...auditControl, expectedReceipts }).success).toBe(
+    expect(acceptsStrict(WriterProofControlSchema, { ...auditControl, expectedReceipts })).toBe(
       false,
     );
   });
@@ -352,17 +360,17 @@ describe("control audit receipt authority", () => {
       [{ ...receipt1, ...change }, receipt2],
       [receipt1, { ...receipt2, ...change }],
     ]) {
-      expect(
-        WriterProofControlSchema.safeParse({ ...auditControl, expectedReceipts }).success,
-      ).toBe(false);
+      expect(acceptsStrict(WriterProofControlSchema, { ...auditControl, expectedReceipts })).toBe(
+        false,
+      );
     }
   });
   it("rejects a retry receipt relabelled with the replacement generation", () => {
     expect(
-      WriterProofControlSchema.safeParse({
+      acceptsStrict(WriterProofControlSchema, {
         ...auditControl,
         expectedReceipts: [{ ...receipt1, writerGeneration: 2 }, receipt2],
-      }).success,
+      }),
     ).toBe(false);
   });
   it("rejects relabelled first and second sequence/generation bindings", () => {
@@ -371,9 +379,9 @@ describe("control audit receipt authority", () => {
       [receipt1, { ...receipt2, projectSequence: 1 }],
       [receipt1, { ...receipt2, writerGeneration: 1 }],
     ]) {
-      expect(
-        WriterProofControlSchema.safeParse({ ...auditControl, expectedReceipts }).success,
-      ).toBe(false);
+      expect(acceptsStrict(WriterProofControlSchema, { ...auditControl, expectedReceipts })).toBe(
+        false,
+      );
     }
   });
   it.each(Object.keys(receipt1))("rejects missing receipt field %s", (key) => {
@@ -381,10 +389,10 @@ describe("control audit receipt authority", () => {
       Object.entries(receipt1).filter(([field]) => field !== key),
     );
     expect(
-      WriterProofControlSchema.safeParse({
+      acceptsStrict(WriterProofControlSchema, {
         ...auditControl,
         expectedReceipts: [incomplete, receipt2],
-      }).success,
+      }),
     ).toBe(false);
   });
   it.each(["receiptId", "projectId", "commandId"])(
@@ -392,10 +400,10 @@ describe("control audit receipt authority", () => {
     (key) => {
       for (const identity of invalidIdentities) {
         expect(
-          WriterProofControlSchema.safeParse({
+          acceptsStrict(WriterProofControlSchema, {
             ...auditControl,
             expectedReceipts: [{ ...receipt1, [key]: identity }, receipt2],
-          }).success,
+          }),
         ).toBe(false);
       }
     },
@@ -406,10 +414,10 @@ describe("control audit receipt authority", () => {
       { ...receipt1, rejection: { ...receipt1.rejection, [key]: "private" } },
     ]) {
       expect(
-        WriterProofControlSchema.safeParse({
+        acceptsStrict(WriterProofControlSchema, {
           ...auditControl,
           expectedReceipts: [first, receipt2],
-        }).success,
+        }),
       ).toBe(false);
     }
   });
@@ -437,34 +445,34 @@ describe.each([
   { name: "result", schema: WriterProofEventSchema, value: attemptResult },
 ])("$name replacement generation", ({ schema, value }) => {
   it.each([-1, 0, 1, 3, 2.5, "2", null])("rejects generation %j", (replacementWriterGeneration) => {
-    expect(schema.safeParse({ ...value, replacementWriterGeneration }).success).toBe(false);
+    expect(decodeWithIssues(schema, { ...value, replacementWriterGeneration }).success).toBe(false);
   });
 });
 
 describe("result durable identities and exact proof observations", () => {
   it.each(invalidIdentities)("rejects invalid result identities %s", (identity) => {
     for (const value of [initializeResult, attemptResult]) {
-      expect(WriterProofEventSchema.safeParse({ ...value, activationId: identity }).success).toBe(
+      expect(acceptsStrict(WriterProofEventSchema, { ...value, activationId: identity })).toBe(
         false,
       );
-      expect(WriterProofEventSchema.safeParse({ ...value, projectId: identity }).success).toBe(
-        false,
-      );
+      expect(acceptsStrict(WriterProofEventSchema, { ...value, projectId: identity })).toBe(false);
     }
     expect(
-      WriterProofEventSchema.safeParse({ ...attemptResult, replacementActivationId: identity })
-        .success,
+      decodeWithIssues(WriterProofEventSchema, {
+        ...attemptResult,
+        replacementActivationId: identity,
+      }).success,
     ).toBe(false);
-    expect(
-      WriterProofEventSchema.safeParse({ ...attemptResult, commandId: identity }).success,
-    ).toBe(false);
+    expect(acceptsStrict(WriterProofEventSchema, { ...attemptResult, commandId: identity })).toBe(
+      false,
+    );
   });
   it("rejects repeated old and replacement epochs", () => {
     expect(
-      WriterProofEventSchema.safeParse({
+      acceptsStrict(WriterProofEventSchema, {
         ...attemptResult,
         replacementActivationId: oldActivation,
-      }).success,
+      }),
     ).toBe(false);
   });
   it.each([
@@ -481,7 +489,7 @@ describe("result durable identities and exact proof observations", () => {
     { writerClose: "closed" },
     { operationalReleaseAuthorized: true },
   ])("rejects weakened stale observations %j", (change) => {
-    expect(WriterProofEventSchema.safeParse({ ...attemptResult, ...change }).success).toBe(false);
+    expect(acceptsStrict(WriterProofEventSchema, { ...attemptResult, ...change })).toBe(false);
   });
   it.each([
     { projectId: staleProjectId },
@@ -498,31 +506,32 @@ describe("result durable identities and exact proof observations", () => {
     { uncertainRecoveryRecords: 1 },
     { fence: "active" },
   ])("rejects weakened audit observations %j", (change) => {
-    expect(WriterProofEventSchema.safeParse({ ...auditResult, ...change }).success).toBe(false);
+    expect(acceptsStrict(WriterProofEventSchema, { ...auditResult, ...change })).toBe(false);
   });
   it("rejects wrong initialization identity and generation", () => {
     for (const change of [{ projectId }, { writerGeneration: 0 }, { writerGeneration: 2 }]) {
-      expect(WriterProofEventSchema.safeParse({ ...initializeResult, ...change }).success).toBe(
-        false,
-      );
+      expect(acceptsStrict(WriterProofEventSchema, { ...initializeResult, ...change })).toBe(false);
     }
   });
   it("rejects weakened release and teardown witnesses", () => {
     for (const change of [{ testLeaseReleased: false }, { oldWriterRetained: false }]) {
       expect(
-        WriterProofEventSchema.safeParse({
+        acceptsStrict(WriterProofEventSchema, {
           ...release,
           kind: "writer-proof.result",
           testLeaseReleased: true,
           oldWriterRetained: true,
           ...change,
-        }).success,
+        }),
       ).toBe(false);
     }
     for (const teardown of ["complete", "operational-release", "test-resources-only "]) {
       expect(
-        WriterProofEventSchema.safeParse({ ...finish, kind: "writer-proof.result", teardown })
-          .success,
+        decodeWithIssues(WriterProofEventSchema, {
+          ...finish,
+          kind: "writer-proof.result",
+          teardown,
+        }).success,
       ).toBe(false);
     }
   });
@@ -531,12 +540,14 @@ describe("result durable identities and exact proof observations", () => {
 describe("native metadata", () => {
   it.each(targets)("accepts pinned metadata for supported target %s", (target) => {
     const metadata = { ...native, target };
-    expect(WriterProofNativeMetadataSchema.parse(metadata)).toEqual(metadata);
-    expect(WriterProofEventSchema.parse({ ...initializeResult, native: metadata })).toEqual({
-      ...initializeResult,
-      native: metadata,
-    });
-    expect(WriterProofEventSchema.parse({ ...auditResult, native: metadata })).toEqual({
+    expect(decodeStrict(WriterProofNativeMetadataSchema, metadata)).toEqual(metadata);
+    expect(decodeStrict(WriterProofEventSchema, { ...initializeResult, native: metadata })).toEqual(
+      {
+        ...initializeResult,
+        native: metadata,
+      },
+    );
+    expect(decodeStrict(WriterProofEventSchema, { ...auditResult, native: metadata })).toEqual({
       ...auditResult,
       native: metadata,
     });
@@ -555,16 +566,14 @@ describe("native metadata", () => {
     ...privateFields.map((key) => ({ [key]: "private" })),
   ])("rejects mismatched or leaking native metadata %j", (change) => {
     const metadata = { ...native, ...change };
-    expect(WriterProofNativeMetadataSchema.safeParse(metadata).success).toBe(false);
-    expect(
-      WriterProofEventSchema.safeParse({ ...initializeResult, native: metadata }).success,
-    ).toBe(false);
-    expect(WriterProofEventSchema.safeParse({ ...auditResult, native: metadata }).success).toBe(
+    expect(acceptsStrict(WriterProofNativeMetadataSchema, metadata)).toBe(false);
+    expect(acceptsStrict(WriterProofEventSchema, { ...initializeResult, native: metadata })).toBe(
       false,
     );
+    expect(acceptsStrict(WriterProofEventSchema, { ...auditResult, native: metadata })).toBe(false);
   });
   it.each(Object.keys(native))("rejects missing native field %s", (key) => {
     const metadata = Object.fromEntries(Object.entries(native).filter(([field]) => field !== key));
-    expect(WriterProofNativeMetadataSchema.safeParse(metadata).success).toBe(false);
+    expect(acceptsStrict(WriterProofNativeMetadataSchema, metadata)).toBe(false);
   });
 });

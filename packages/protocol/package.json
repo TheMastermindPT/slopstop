@@ -12,6 +12,6 @@
   },
   "dependencies": {
     "@slopstop/kernel": "workspace:*",
-    "zod": "catalog:"
+    "effect": "catalog:"
   }
 }

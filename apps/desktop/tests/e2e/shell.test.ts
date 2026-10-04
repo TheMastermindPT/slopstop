@@ -7,14 +7,14 @@ import {
   type Page,
   test,
 } from "@playwright/test";
-import { WorkspaceIntentSchema, WorkspaceQuerySchema } from "@slopstop/protocol";
+import { decodeStrict, WorkspaceIntentSchema, WorkspaceQuerySchema } from "@slopstop/protocol";
 
-const query = WorkspaceQuerySchema.parse({
+const query = decodeStrict(WorkspaceQuerySchema, {
   query: "memory-library.read",
   projectId: "11111111-1111-4111-8111-111111111111",
   cursor: null,
 });
-const intent = WorkspaceIntentSchema.parse({
+const intent = decodeStrict(WorkspaceIntentSchema, {
   intent: "memory.proposal.review",
   projectId: "11111111-1111-4111-8111-111111111111",
   proposalId: "22222222-2222-4222-8222-222222222222",
@@ -83,7 +83,7 @@ test.describe("built desktop shell", () => {
     }
     const page = await application.firstWindow();
 
-    await expect(page.getByRole("heading", { name: "SlopStop" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ragnarok", level: 1 })).toBeVisible();
     await expect(page.getByRole("status")).toContainText("Harness ready");
     const boundary = await page.evaluate(() => {
       return {
@@ -97,12 +97,15 @@ test.describe("built desktop shell", () => {
       processType: "undefined",
       requireType: "undefined",
       exposedApi: [
+        "activateProject",
         "getHarnessStatus",
+        "listProjects",
         "queryWorkspace",
         "retryHarness",
         "submitWorkspaceIntent",
         "subscribeHarnessStatus",
         "subscribeWorkspaceNotifications",
+        "switchProject",
       ],
     });
   });
@@ -151,7 +154,9 @@ test.describe("built desktop shell", () => {
 
     await expect(page.getByRole("status")).toContainText("Harness ready");
     await expect(page.getByRole("status")).toBeInViewport({ ratio: 1 });
-    await expect(page.locator("footer")).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("complementary", { name: "Projects" })).toBeInViewport({
+      ratio: 1,
+    });
     const dimensions = await page.evaluate(() => ({
       viewportWidth: innerWidth,
       viewportHeight: innerHeight,

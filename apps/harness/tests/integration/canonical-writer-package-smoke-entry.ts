@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  decodeStrict,
   type WriterProofControl,
   WriterProofControlSchema,
   WriterProofEventSchema,
@@ -147,7 +148,7 @@ export function startWriterProofController(dependencies: ControllerDependencies)
   const receive = (message: unknown) => {
     if (failed || exited) return;
     try {
-      const control = WriterProofControlSchema.parse(message);
+      const control = decodeStrict(WriterProofControlSchema, message);
       requireFixture(start);
       requireFixture(control.proofId === start.proofId);
       requireFixture(!busy);
@@ -161,7 +162,7 @@ export function startWriterProofController(dependencies: ControllerDependencies)
         requireFixture(!failed);
         const observation = await fixture.control(control);
         requireFixture(!failed);
-        const result = WriterProofEventSchema.parse({
+        const result = decodeStrict(WriterProofEventSchema, {
           version: 1,
           kind: "writer-proof.result",
           proofId: control.proofId,
@@ -189,13 +190,13 @@ export function startWriterProofController(dependencies: ControllerDependencies)
         started = true;
         port = ports[0];
         requireFixture(ports.length === 1 && port);
-        start = WriterProofStartSchema.parse(message);
+        start = decodeStrict(WriterProofStartSchema, message);
         const roots = rootsFor(start);
         port.subscribe(receive, () => {
           if (expected === "completed" && !busy && !failed) finishExit(0);
           else fail();
         });
-        native = WriterProofNativeMetadataSchema.parse(dependencies.nativePreflight());
+        native = decodeStrict(WriterProofNativeMetadataSchema, dependencies.nativePreflight());
         ready = Promise.resolve(dependencies.createFixture(roots)).then((value) => {
           fixture = value;
         });
@@ -219,7 +220,7 @@ const hashes = {
 };
 
 function nativePaths(bundleDirectory: string) {
-  const target = WriterProofNativeTargetSchema.parse(`${process.platform}-${process.arch}`);
+  const target = decodeStrict(WriterProofNativeTargetSchema, `${process.platform}-${process.arch}`);
   const resources = path.resolve(bundleDirectory, "../../..");
   requireFixture(bundleDirectory === path.join(resources, "app.asar", ".vite", "build"));
   const suffix = path.join(".vite", "build", "node_modules", "fs-native-extensions");
@@ -275,7 +276,7 @@ export function verifyFixtureNativeOrigin(bundleDirectory: string) {
     const input = nativePaths(bundleDirectory);
     verifyNativeFiles(input);
     observeFixtureNative(bundleDirectory, input);
-    return WriterProofNativeMetadataSchema.parse({
+    return decodeStrict(WriterProofNativeMetadataSchema, {
       packageName: "fs-native-extensions",
       packageVersion: "1.5.1",
       target: input.target,

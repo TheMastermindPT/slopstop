@@ -147,9 +147,16 @@ function resources(output: string) {
     ".vite/build/node_modules/fs-native-extensions",
     ".vite/build/node_modules/fs-native-extensions/prebuilds",
     ".vite/build/node_modules/fs-native-extensions/prebuilds/win32-x64",
+    ".vite/build/node_modules/@koromix",
+    ".vite/build/node_modules/@koromix/koffi-win32-x64",
+    ".vite/build/node_modules/@koromix/koffi-win32-x64/win32_x64",
   ])
     put(path.join(root, "app.asar.unpacked", dir), { kind: "dir" });
   put(path.join(modules, "@libsql/win32-x64/index.node"), { kind: "file", value: "binding" });
+  put(path.join(modules, "@koromix/koffi-win32-x64/win32_x64/koffi.node"), {
+    kind: "file",
+    value: "binding",
+  });
   put(path.join(modules, "fs-native-extensions/prebuilds/win32-x64/fs-native-extensions.node"), {
     kind: "file",
     value: native,
@@ -712,6 +719,13 @@ it.each(["", "\r\n"])("keeps non-Windows stdout empty with bound runtime: %j", a
       put(path.join(base, target), { kind: "dir" });
       put(path.join(base, target, "index.node"), { kind: "file" });
     }
+    const koffi = path.join(
+      root,
+      "app.asar.unpacked/.vite/build/node_modules/@koromix/koffi-linux-x64",
+    );
+    put(koffi, { kind: "dir" });
+    put(path.join(koffi, "linux_x64"), { kind: "dir" });
+    put(path.join(koffi, "linux_x64/koffi.node"), { kind: "file" });
     const installed = path.dirname(
       createRequire(path.resolve("apps/harness/package.json")).resolve("fs-native-extensions"),
     );

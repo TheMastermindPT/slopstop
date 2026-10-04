@@ -2,8 +2,8 @@ import { cp, readFile, realpath, rm } from "node:fs/promises";
 import { builtinModules } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Plugin } from "vite";
 import { defineConfig } from "vite";
+import { harnessRuntimeStagingPlugin } from "./build/harness-runtime-staging-plugin.js";
 
 const nodeBuiltins = [...builtinModules, ...builtinModules.map((module) => `node:${module}`)];
 const harnessRoot = fileURLToPath(new URL("../harness", import.meta.url));
@@ -29,6 +29,17 @@ function targetBindingPackages(): readonly string[] {
     default:
       throw new Error(`Unsupported libSQL package target: ${target}`);
   }
+}
+
+// Effect ships sources, declarations, and source maps; the worker needs only its ESM runtime.
+function isStagedRuntimeFile(staged: StagedPackage, candidate: string): boolean {
+  if (staged.name !== "effect") return true;
+  const relative = path.relative(staged.root, candidate).split(path.sep);
+  if (relative.length === 1)
+    return ["", "dist", "package.json", "LICENSE"].includes(relative[0] ?? "");
+  if (relative[0] !== "dist") return false;
+  const name = relative.at(-1) ?? "";
+  return !name.includes(".") || name.endsWith(".js");
 }
 
 function isMissingFile(error: unknown): boolean {
@@ -85,59 +96,78 @@ async function resolveInstalledPackageRoot(packageName: string, fromRoot: string
   }
 }
 
+type StagedPackage = Readonly<{ name: string; root: string }>;
+
+// True when the package is already staged from the same root; a different root is a conflict.
+function isAlreadyStaged(packages: ReadonlyMap<string, string>, staged: StagedPackage): boolean {
+  const current = packages.get(staged.name);
+  if (current === undefined) return false;
+  if (current !== staged.root) {
+    throw new Error(`Conflicting staged versions found for ${staged.name}.`);
+  }
+  return true;
+}
+
+async function requirePackageManifest(staged: StagedPackage): Promise<RuntimePackageManifest> {
+  const manifest = await readPackageManifest(path.join(staged.root, "package.json"));
+  if (manifest === undefined) {
+    throw new Error(`Could not read package manifest for ${staged.name}.`);
+  }
+  return manifest;
+}
+
+function requireStagedRoot(packages: ReadonlyMap<string, string>, packageName: string): string {
+  const root = packages.get(packageName);
+  if (root === undefined) throw new Error(`${packageName} was not included in the staged runtime.`);
+  return root;
+}
+
 async function collectRuntimePackages(): Promise<ReadonlyMap<string, string>> {
   const packages = new Map<string, string>();
   const collect = async (packageName: string, fromRoot: string): Promise<void> => {
-    const packageRoot = await resolveInstalledPackageRoot(packageName, fromRoot);
-    const current = packages.get(packageName);
-    if (current !== undefined) {
-      if (current !== packageRoot) {
-        throw new Error(`Conflicting staged versions found for ${packageName}.`);
-      }
-      return;
-    }
-    const manifest = await readPackageManifest(path.join(packageRoot, "package.json"));
-    if (manifest === undefined) {
-      throw new Error(`Could not read package manifest for ${packageName}.`);
-    }
-    packages.set(packageName, packageRoot);
-    await Promise.all(manifest.dependencies.map((dependency) => collect(dependency, packageRoot)));
+    const staged = {
+      name: packageName,
+      root: await resolveInstalledPackageRoot(packageName, fromRoot),
+    };
+    if (isAlreadyStaged(packages, staged)) return;
+    const manifest = await requirePackageManifest(staged);
+    packages.set(staged.name, staged.root);
+    await Promise.all(manifest.dependencies.map((dependency) => collect(dependency, staged.root)));
   };
 
   await Promise.all(
-    ["@libsql/client", "fs-native-extensions", "libsql", "zod"].map((packageName) =>
+    ["@libsql/client", "fs-native-extensions", "libsql", "koffi", "effect"].map((packageName) =>
       collect(packageName, harnessRoot),
     ),
   );
-  const libsqlRoot = packages.get("libsql");
-  if (libsqlRoot === undefined) {
-    throw new Error("libsql was not included in the staged runtime.");
-  }
+  const libsqlRoot = requireStagedRoot(packages, "libsql");
   await Promise.all(targetBindingPackages().map((packageName) => collect(packageName, libsqlRoot)));
+  // Koffi ships its native module as an optional per-target package beside koffi.
+  await collect(
+    `@koromix/koffi-${process.platform}-${process.arch}`,
+    requireStagedRoot(packages, "koffi"),
+  );
   return packages;
 }
 
-function stageHarnessRuntime(): Plugin {
-  return {
-    name: "stage-harness-runtime",
-    async closeBundle() {
-      await rm(migrationOutput, { recursive: true, force: true });
-      await rm(nativeModulesOutput, { recursive: true, force: true });
-      await cp(migrationSource, migrationOutput, { recursive: true });
-      const runtimePackages = await collectRuntimePackages();
-      for (const [packageName, source] of runtimePackages) {
-        const destination = path.join(nativeModulesOutput, ...packageName.split("/"));
-        await cp(source, destination, {
-          recursive: true,
-          filter: (candidate) => candidate !== path.join(source, "node_modules"),
-        });
-      }
-    },
-  };
+async function stageHarnessRuntime(): Promise<void> {
+  await rm(migrationOutput, { recursive: true, force: true });
+  await rm(nativeModulesOutput, { recursive: true, force: true });
+  await cp(migrationSource, migrationOutput, { recursive: true });
+  const runtimePackages = await collectRuntimePackages();
+  for (const [packageName, source] of runtimePackages) {
+    const destination = path.join(nativeModulesOutput, ...packageName.split("/"));
+    await cp(source, destination, {
+      recursive: true,
+      filter: (candidate) =>
+        candidate !== path.join(source, "node_modules") &&
+        isStagedRuntimeFile({ name: packageName, root: source }, candidate),
+    });
+  }
 }
 
 export default defineConfig({
-  plugins: [stageHarnessRuntime()],
+  plugins: [harnessRuntimeStagingPlugin(stageHarnessRuntime)],
   build: {
     outDir: ".vite/build",
     emptyOutDir: false,
@@ -151,7 +181,7 @@ export default defineConfig({
       formats: ["cjs"],
     },
     rollupOptions: {
-      external: [...nodeBuiltins, "fs-native-extensions", "libsql"],
+      external: [...nodeBuiltins, "fs-native-extensions", "libsql", "koffi"],
     },
   },
 });

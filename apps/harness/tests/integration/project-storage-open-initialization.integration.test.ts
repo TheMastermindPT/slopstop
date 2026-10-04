@@ -1,4 +1,4 @@
-import { ProjectStorageOpenRequestSchema } from "@slopstop/protocol";
+import { decodeStrict, ProjectStorageOpenRequestSchema } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
 import type { LocalLibsqlClient } from "../../src/storage/local-libsql-worker-client.js";
 import { createNodeProjectStorageDependencies } from "../../src/storage/project-storage-node-adapters.js";
@@ -87,7 +87,7 @@ it(
   "shares one deferred application-client initialization across Projects",
   async () => {
     const root = await createHealthyProjectStorageFixture();
-    const otherRequest = ProjectStorageOpenRequestSchema.parse({
+    const otherRequest = decodeStrict(ProjectStorageOpenRequestSchema, {
       projectId: "00000000-0000-4000-8000-000000000099",
     });
     const started = deferred();
@@ -139,7 +139,7 @@ it(
   "clears only the failed shared initialization and retries once",
   async () => {
     const root = await createHealthyProjectStorageFixture();
-    const otherRequest = ProjectStorageOpenRequestSchema.parse({
+    const otherRequest = decodeStrict(ProjectStorageOpenRequestSchema, {
       projectId: "00000000-0000-4000-8000-000000000099",
     });
     const initializationFailure = new Error(`${root}: first initialization failed`);

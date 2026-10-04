@@ -1,4 +1,5 @@
 import {
+  decodeStrict,
   HarnessStatusSchema,
   RetryHarnessResultSchema,
   WorkspaceIntentResultSchema,
@@ -45,19 +46,19 @@ function exposedApi(): ExposedApi {
   return call[1] as ExposedApi;
 }
 
-const query = WorkspaceQuerySchema.parse({
+const query = decodeStrict(WorkspaceQuerySchema, {
   query: "memory-library.read",
   projectId: "00000000-0000-4000-8000-000000000001",
   cursor: null,
 });
-const intent = WorkspaceIntentSchema.parse({
+const intent = decodeStrict(WorkspaceIntentSchema, {
   intent: "memory.proposal.review",
   projectId: "00000000-0000-4000-8000-000000000001",
   proposalId: "00000000-0000-4000-8000-000000000002",
   decision: "accept",
   expectedProjectionRevision: 0,
 });
-const queryResult = WorkspaceQueryResultSchema.parse({
+const queryResult = decodeStrict(WorkspaceQueryResultSchema, {
   status: "unavailable",
   query,
   diagnostic: {
@@ -65,7 +66,7 @@ const queryResult = WorkspaceQueryResultSchema.parse({
     message: "Memory producer is unavailable.",
   },
 });
-const intentResult = WorkspaceIntentResultSchema.parse({
+const intentResult = decodeStrict(WorkspaceIntentResultSchema, {
   status: "unavailable",
   capability: "memory",
   diagnostic: {
@@ -82,12 +83,12 @@ beforeEach(() => {
 
 describe("preload workspace API", () => {
   it("validates harness status methods and subscriptions", async () => {
-    const status = HarnessStatusSchema.parse({
+    const status = decodeStrict(HarnessStatusSchema, {
       state: "ready",
       attempt: 1,
       harnessVersion: "0.0.0",
     });
-    const retry = RetryHarnessResultSchema.parse({ ok: true });
+    const retry = decodeStrict(RetryHarnessResultSchema, { ok: true });
     electronMocks.invoke.mockImplementation((channel) => {
       if (channel === desktopIpcChannels.getHarnessStatus) {
         return Promise.resolve(status);
@@ -161,7 +162,7 @@ describe("preload workspace API", () => {
     const listener = vi.fn();
     const unsubscribe = api.subscribeWorkspaceNotifications(listener);
     const firstReceive = electronMocks.on.mock.calls[0]?.[1];
-    const notification = WorkspaceNotificationSchema.parse({
+    const notification = decodeStrict(WorkspaceNotificationSchema, {
       capability: "memory",
       scope: {
         kind: "project",

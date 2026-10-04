@@ -12,8 +12,10 @@ import {
   CanonicalProjectActivationResultSchema,
   CanonicalProjectCommandResultSchema,
   CanonicalProjectSwitchResultSchema,
+  decodeStrict,
   type ProjectId,
 } from "@slopstop/protocol";
+import { Deferred, Effect } from "effect";
 import {
   type CanonicalProjectWriter,
   CanonicalProjectWriterReleaseError,
@@ -36,7 +38,8 @@ import {
   CanonicalWriterLeaseError,
   type CanonicalWriterLeaseFactory,
 } from "./storage/canonical-writer-lease.js";
-import { SerialLock } from "./storage/serial-lock.js";
+import { createPermitLock, withPermit } from "./storage/permit-lock.js";
+import { retryableAttempt } from "./storage/retryable-attempt.js";
 export interface ActiveProjectCoordinator {
   activate(request: CanonicalProjectActivationRequest): Promise<CanonicalProjectActivationResult>;
   switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
@@ -44,6 +47,13 @@ export interface ActiveProjectCoordinator {
   stop(): Promise<void>;
 }
 export type ActiveProjectCoordinatorDependencies = Readonly<{
+  validateTarget?(
+    request: CanonicalProjectActivationRequest,
+  ): Promise<CanonicalProjectActivationResult | undefined>;
+  validateSession?(
+    request: CanonicalProjectActivationRequest,
+    session: Extract<ProjectStorageActivationSession, { mode: "read-write" }>,
+  ): Promise<CanonicalProjectActivationResult | undefined>;
   storage: ProjectStorageActivationPort;
   leases: CanonicalWriterLeaseFactory;
   repositories: CanonicalCommandRepositoryFactory;
@@ -98,7 +108,7 @@ function activationFailure(
   message: string,
   retryable = false,
 ): CanonicalProjectActivationResult {
-  return CanonicalProjectActivationResultSchema.parse({
+  return decodeStrict(CanonicalProjectActivationResultSchema, {
     status,
     request,
     diagnostic: { code, message, retryable },
@@ -190,7 +200,7 @@ function commandFailure(
   request: CanonicalProjectCommandRequest,
   status: keyof typeof commandDiagnostics,
 ): CanonicalProjectCommandResult {
-  return CanonicalProjectCommandResultSchema.parse({
+  return decodeStrict(CanonicalProjectCommandResultSchema, {
     status,
     projectId: request.projectId,
     activationId: request.activationId,
@@ -425,21 +435,27 @@ async function acquireProject(
       runtimeHealth: session.result.runtimeHealth,
     };
   }
+  const refused = await dependencies.validateSession?.(request, session);
+  if (refused !== undefined) {
+    const closed = await context.cleanup();
+    if (closed.status === "failed") return context.retain(closed.ownership, closed.code);
+    return refused;
+  }
   return acquireWritable(context, session);
 }
 
 export function createActiveProjectCoordinator(
   dependencies: ActiveProjectCoordinatorDependencies,
 ): ActiveProjectCoordinator {
-  const lifecycle = new SerialLock();
-  const admitted = new Set<Promise<void>>();
+  const lifecycle = createPermitLock();
+  // Completion of each admitted command; release drains them before giving up ownership.
+  const admitted = new Set<Deferred.Deferred<void>>();
   let state: State = { status: "inactive" };
-  let stopAttempt: Promise<void> | undefined;
   let pendingLifecycle = 0;
 
   const enqueue = <Result>(operation: () => Promise<Result>): Promise<Result> => {
     pendingLifecycle++;
-    return lifecycle.run(async () => {
+    return withPermit(lifecycle, async () => {
       try {
         return await operation();
       } finally {
@@ -455,7 +471,12 @@ export function createActiveProjectCoordinator(
       ownership: Ownership;
     }>,
   ): Promise<ReleaseResult> => {
-    await Promise.all([...admitted]);
+    await Effect.runPromise(
+      Effect.forEach([...admitted], (completion) => Deferred.await(completion), {
+        concurrency: "unbounded",
+        discard: true,
+      }),
+    );
     // Clock failure must leave the original active or retained state intact.
     const time = dependencies.now();
     state = { ...owned, status: "releasing" };
@@ -491,6 +512,8 @@ export function createActiveProjectCoordinator(
   ): Promise<CanonicalProjectActivationResult> => {
     const rejected = activationRejection(state, request);
     if (rejected !== undefined) return rejected;
+    const refused = await dependencies.validateTarget?.(request);
+    if (refused !== undefined) return refused;
     state = { status: "activating" };
     let ownership: Ownership | undefined;
     let cleanupAttempt: Promise<ReleaseResult> | undefined;
@@ -550,6 +573,8 @@ export function createActiveProjectCoordinator(
     if (result.status === "failed") throw new Error("Canonical Project activation release failed.");
     state = { status: "stopped" };
   };
+  // A failed release leaves stop retryable; a successful stop stays the shared answer.
+  const stopOnce = retryableAttempt(() => enqueue(stop));
 
   return {
     activate: (request) => enqueue(() => activateWithinLifecycle(request)),
@@ -557,14 +582,17 @@ export function createActiveProjectCoordinator(
       enqueue(async () => {
         const rejected = rejectSwitchSource(state, request);
         if (rejected !== undefined)
-          return CanonicalProjectSwitchResultSchema.parse({
+          return decodeStrict(CanonicalProjectSwitchResultSchema, {
             status: rejected,
             request,
             diagnostic: switchDiagnostics[rejected],
           });
+        const refused = await dependencies.validateTarget?.(request.to);
+        if (refused !== undefined)
+          return { status: "target-result", sourceReleased: false, request, target: refused };
         const released = await release(ownedActivation(state));
         if (released.status === "failed")
-          return CanonicalProjectSwitchResultSchema.parse({
+          return decodeStrict(CanonicalProjectSwitchResultSchema, {
             status: "release-failed",
             request,
             diagnostic: {
@@ -575,6 +603,7 @@ export function createActiveProjectCoordinator(
           });
         return {
           status: "target-result",
+          sourceReleased: true,
           request,
           target: await activateWithinLifecycle(request.to),
         };
@@ -592,26 +621,15 @@ export function createActiveProjectCoordinator(
       const submission = active.writer.settle(request.command);
       if (submission.status === "completed") return submission.result;
       const operation = submission.result;
-      const completion = operation.then(
-        () => undefined,
-        () => undefined,
-      );
+      const completion = Deferred.makeUnsafe<void>();
       admitted.add(completion);
       try {
         return await operation;
       } finally {
-        await completion;
+        Deferred.doneUnsafe(completion, Effect.void);
         admitted.delete(completion);
       }
     },
-    stop: () => {
-      if (stopAttempt !== undefined) return stopAttempt;
-      const attempt = enqueue(stop);
-      stopAttempt = attempt;
-      void attempt.catch(() => {
-        if (stopAttempt === attempt) stopAttempt = undefined;
-      });
-      return attempt;
-    },
+    stop: stopOnce,
   };
 }

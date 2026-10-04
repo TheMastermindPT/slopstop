@@ -8,6 +8,7 @@ import {
   createProjectOpenCommand,
   createWorkspaceIntentCommand,
   createWorkspaceQueryCommand,
+  decodeStrict,
   ProjectStorageCloseRequestSchema,
   ProjectStorageCreateRequestSchema,
   ProjectStorageOpenRequestSchema,
@@ -56,7 +57,7 @@ function workspaceApplicationWithNotifications(
 ): WorkspaceApplication {
   return {
     query: async (query) =>
-      WorkspaceQueryResultSchema.parse({
+      decodeStrict(WorkspaceQueryResultSchema, {
         status: "unavailable",
         query,
         diagnostic: {
@@ -65,7 +66,7 @@ function workspaceApplicationWithNotifications(
         },
       }),
     submit: async () =>
-      WorkspaceIntentResultSchema.parse({
+      decodeStrict(WorkspaceIntentResultSchema, {
         status: "unavailable",
         capability: "memory",
         diagnostic: {
@@ -104,12 +105,12 @@ function startRuntimeFixture(
 
 function projectStorageCommandCases() {
   const projectId = "00000000-0000-4000-8000-000000000010";
-  const openRequest = ProjectStorageOpenRequestSchema.parse({ projectId });
-  const createRequest = ProjectStorageCreateRequestSchema.parse({
+  const openRequest = decodeStrict(ProjectStorageOpenRequestSchema, { projectId });
+  const createRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId,
     createRequestId: "00000000-0000-4000-8000-000000000011",
   });
-  const closeRequest = ProjectStorageCloseRequestSchema.parse({ projectId });
+  const closeRequest = decodeStrict(ProjectStorageCloseRequestSchema, { projectId });
   const metadata = (suffix: string) => ({
     messageId: `00000000-0000-4000-8000-${suffix}`,
     sentAt: "2026-08-14T12:00:00.000Z",
@@ -130,7 +131,7 @@ function projectStorageCommandCases() {
   ] as const;
 }
 
-const memoryIntent = WorkspaceIntentSchema.parse({
+const memoryIntent = decodeStrict(WorkspaceIntentSchema, {
   intent: "memory.proposal.review",
   projectId: "00000000-0000-4000-8000-000000000010",
   proposalId: "00000000-0000-4000-8000-000000000011",
@@ -138,7 +139,7 @@ const memoryIntent = WorkspaceIntentSchema.parse({
   expectedProjectionRevision: 0,
 });
 
-const memoryNotification = WorkspaceNotificationSchema.parse({
+const memoryNotification = decodeStrict(WorkspaceNotificationSchema, {
   capability: "memory",
   scope: {
     kind: "project",
@@ -180,7 +181,7 @@ describe("harness message channel integration", () => {
             messageId: "00000000-0000-4000-8000-000000000201",
             sentAt: "2026-08-14T12:00:00.000Z",
           },
-          ProjectStorageOpenRequestSchema.parse({
+          decodeStrict(ProjectStorageOpenRequestSchema, {
             projectId: "00000000-0000-4000-8000-000000000010",
           }),
         ),
@@ -210,7 +211,7 @@ describe("harness message channel integration", () => {
 
   it("round-trips an unavailable workspace query over structured clone", async () => {
     const { port1, port2, stop } = startRuntimeFixture(createUnavailableWorkspaceApplication());
-    const query = WorkspaceQuerySchema.parse({
+    const query = decodeStrict(WorkspaceQuerySchema, {
       query: "memory-library.read",
       projectId: "00000000-0000-4000-8000-000000000010",
       cursor: null,
@@ -509,7 +510,10 @@ function isolatedSwitchOwner(f: ReturnType<typeof switchFixture>, kind: string) 
   return {
     ...f.owner,
     switchProject: async (request: Parameters<typeof f.owner.switchProject>[0]) => {
-      const result = CanonicalProjectSwitchResultSchema.parse(await f.owner.switchProject(request));
+      const result = decodeStrict(
+        CanonicalProjectSwitchResultSchema,
+        await f.owner.switchProject(request),
+      );
       Reflect.set(result, "writerToken", switchPrivateFailure);
       return result;
     },

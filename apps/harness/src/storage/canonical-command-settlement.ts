@@ -1,9 +1,11 @@
 import {
+  acceptsStrict,
   type CanonicalCommandReceipt,
   CanonicalCommandReceiptSchema,
   CanonicalEventIdSchema,
   CanonicalSettlementTimeSchema,
   CommandReceiptIdSchema,
+  decodeStrict,
   type ProjectId,
   SystemCommandRejectionCodeSchema,
   type WriterGeneration,
@@ -69,12 +71,13 @@ function handlerTransaction(tx: LocalLibsqlTransaction) {
 }
 
 function snapshotHandlerDecision(value: unknown): CanonicalCommandDecision {
-  const decision = CanonicalCommandDecisionSchema.parse(
+  const decision = decodeStrict(
+    CanonicalCommandDecisionSchema,
     parseCanonicalJson(canonicalJsonText(value)),
   );
   if (
     decision.outcome === "rejected" &&
-    SystemCommandRejectionCodeSchema.safeParse(decision.rejection.code).success
+    acceptsStrict(SystemCommandRejectionCodeSchema, decision.rejection.code)
   )
     throw new Error("Handler rejection uses a reserved system code.");
   return decision;
@@ -111,7 +114,7 @@ function settlementEvents(
   return decision.events.map(({ payload, ...source }, eventOrdinal) => ({
     ...source,
     eventOrdinal,
-    eventId: CanonicalEventIdSchema.parse(dependencies.createEventId()),
+    eventId: decodeStrict(CanonicalEventIdSchema, dependencies.createEventId()),
     payloadText: canonicalJsonText(payload),
     payloadHash: hashCanonicalJson(payload),
   }));
@@ -142,10 +145,10 @@ export async function settleFirstCanonicalCommand(
           rejection: { code: "IDEMPOTENCY_CONFLICT", retryable: false },
         }
       : await prepareDecision(tx, command, dependencies);
-  const settledAt = CanonicalSettlementTimeSchema.parse(dependencies.now());
-  const receiptId = CommandReceiptIdSchema.parse(dependencies.createReceiptId());
+  const settledAt = decodeStrict(CanonicalSettlementTimeSchema, dependencies.now());
+  const receiptId = decodeStrict(CommandReceiptIdSchema, dependencies.createReceiptId());
   const events = settlementEvents(decision, dependencies);
-  const receipt = CanonicalCommandReceiptSchema.parse({
+  const receipt = decodeStrict(CanonicalCommandReceiptSchema, {
     receiptId,
     projectId: command.projectId,
     commandId: command.commandId,

@@ -1,5 +1,6 @@
 import type { InArgs, InStatement } from "@libsql/client";
-import { z } from "zod";
+import { decodeStrict, NonEmptyTextSchema } from "@slopstop/protocol";
+import { Schema } from "effect";
 import type {
   ColumnSpec,
   DatabaseSpec,
@@ -8,6 +9,7 @@ import type {
   NamedIndexSpec,
 } from "./project-storage-database-specs.js";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
+import { SqlIntegerSchema } from "./sql-integer-schema.js";
 import { canonicalizeSqliteSchemaExpression } from "./sqlite-schema-expression.js";
 import {
   isUnquotedSqliteKeyword,
@@ -54,42 +56,49 @@ type MutableForeignKey = {
   match: string;
 };
 
-const sqlIntegerSchema = z
-  .union([z.number().int(), z.bigint()])
-  .transform((value) => Number(value))
-  .pipe(z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER));
-const tableNameRowSchema = z.strictObject({ name: z.string().min(1) });
-const tableSqlRowSchema = z.strictObject({
-  tableName: z.string().min(1),
-  sql: z.string().min(1),
+const sqlIntegerSchema = SqlIntegerSchema.check(Schema.isGreaterThanOrEqualTo(0));
+const sqlFlagSchema = sqlIntegerSchema.pipe(
+  Schema.refine((value: number): value is 0 | 1 => value === 0 || value === 1),
+);
+const tableNameRowsSchema = Schema.Array(Schema.Struct({ name: NonEmptyTextSchema }));
+const tableSqlRowSchema = Schema.Struct({
+  tableName: NonEmptyTextSchema,
+  sql: NonEmptyTextSchema,
 });
-const columnMetadataRowSchema = z.strictObject({
-  cid: sqlIntegerSchema,
-  name: z.string().min(1),
-  type: z.string(),
-  notNull: sqlIntegerSchema.refine((value) => value === 0 || value === 1),
-  defaultValue: z.string().nullable(),
-  primaryKey: sqlIntegerSchema,
-  hidden: sqlIntegerSchema,
-});
-const indexMetadataRowSchema = z.strictObject({
-  name: z.string().min(1),
-  isUnique: sqlIntegerSchema.refine((value) => value === 0 || value === 1),
-  partial: sqlIntegerSchema.refine((value) => value === 0 || value === 1),
-  sequence: sqlIntegerSchema,
-  columnName: z.string().nullable(),
-  indexSql: z.string().min(1),
-});
-const foreignKeyMetadataRowSchema = z.strictObject({
-  id: sqlIntegerSchema,
-  sequence: sqlIntegerSchema,
-  referencedTable: z.string().min(1),
-  columnName: z.string().min(1),
-  referencedColumn: z.string().min(1),
-  onUpdate: z.string().min(1),
-  onDelete: z.string().min(1),
-  match: z.string().min(1),
-});
+const tableSqlRowsSchema = Schema.Array(tableSqlRowSchema);
+const columnMetadataRowsSchema = Schema.Array(
+  Schema.Struct({
+    cid: sqlIntegerSchema,
+    name: NonEmptyTextSchema,
+    type: Schema.String,
+    notNull: sqlFlagSchema,
+    defaultValue: Schema.NullOr(Schema.String),
+    primaryKey: sqlIntegerSchema,
+    hidden: sqlIntegerSchema,
+  }),
+);
+const indexMetadataRowsSchema = Schema.Array(
+  Schema.Struct({
+    name: NonEmptyTextSchema,
+    isUnique: sqlFlagSchema,
+    partial: sqlFlagSchema,
+    sequence: sqlIntegerSchema,
+    columnName: Schema.NullOr(Schema.String),
+    indexSql: NonEmptyTextSchema,
+  }),
+);
+const foreignKeyMetadataRowsSchema = Schema.Array(
+  Schema.Struct({
+    id: sqlIntegerSchema,
+    sequence: sqlIntegerSchema,
+    referencedTable: NonEmptyTextSchema,
+    columnName: NonEmptyTextSchema,
+    referencedColumn: NonEmptyTextSchema,
+    onUpdate: NonEmptyTextSchema,
+    onDelete: NonEmptyTextSchema,
+    match: NonEmptyTextSchema,
+  }),
+);
 
 function resultObjects(result: SchemaResultSet): unknown[] {
   return result.rows.map((row) =>
@@ -105,17 +114,14 @@ export async function tableNames(client: SchemaExecutor): Promise<readonly strin
   const result = await client.execute(
     "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
   );
-  return tableNameRowSchema
-    .array()
-    .parse(resultObjects(result))
-    .map((row) => row.name);
+  return decodeStrict(tableNameRowsSchema, resultObjects(result)).map((row) => row.name);
 }
 
 async function requireNoForbiddenSchemaObjects(client: SchemaExecutor): Promise<void> {
   const result = await client.execute(
     "SELECT name FROM sqlite_schema WHERE type IN ('trigger', 'view') ORDER BY type, name",
   );
-  if (tableNameRowSchema.array().parse(resultObjects(result)).length > 0) {
+  if (decodeStrict(tableNameRowsSchema, resultObjects(result)).length > 0) {
     throw new ProjectStorageBrokenError("Database contains a forbidden schema object.");
   }
 }
@@ -183,7 +189,7 @@ function requireCheckOpening(input: {
 }
 
 function namedCheckAt(input: {
-  definition: z.infer<typeof tableSqlRowSchema>;
+  definition: typeof tableSqlRowSchema.Type;
   tokens: ReturnType<typeof scanSqliteSchemaTokens>;
   index: number;
 }): Readonly<{ check: NamedCheckSpec; end: number }> | undefined {
@@ -226,7 +232,7 @@ function tokenIndexAtOrAfter(input: {
   }
 }
 
-function checksFromDefinition(definition: z.infer<typeof tableSqlRowSchema>): NamedCheckSpec[] {
+function checksFromDefinition(definition: typeof tableSqlRowSchema.Type): NamedCheckSpec[] {
   const checks: NamedCheckSpec[] = [];
   const tokens = scanSqliteSchemaTokens({ source: definition.sql });
   let index = 0;
@@ -247,23 +253,22 @@ async function readNamedChecks(client: SchemaExecutor): Promise<readonly NamedCh
     "SELECT name AS tableName, sql FROM sqlite_schema " +
       "WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
   );
-  return tableSqlRowSchema
-    .array()
-    .parse(resultObjects(result))
-    .flatMap((definition) => checksFromDefinition(definition));
+  return decodeStrict(tableSqlRowsSchema, resultObjects(result)).flatMap((definition) =>
+    checksFromDefinition(definition),
+  );
 }
 
 async function readDeclaredTableDefinitions(
   client: SchemaExecutor,
   tables: readonly string[],
-): Promise<readonly z.infer<typeof tableSqlRowSchema>[]> {
+): Promise<readonly (typeof tableSqlRowSchema.Type)[]> {
   const definitions = await Promise.all(
     tables.map(async (table) => {
       const result = await client.execute({
         sql: "SELECT name AS tableName, sql FROM sqlite_schema WHERE type = 'table' AND name = ?",
         args: [table],
       });
-      return tableSqlRowSchema.array().parse(resultObjects(result));
+      return decodeStrict(tableSqlRowsSchema, resultObjects(result));
     }),
   );
   return definitions.flat();
@@ -278,7 +283,7 @@ async function requireNoForbiddenSchemaObjectsForTables(
       sql: "SELECT name FROM sqlite_schema WHERE type = 'trigger' AND tbl_name = ? COLLATE NOCASE ORDER BY name",
       args: [table],
     });
-    if (tableNameRowSchema.array().parse(resultObjects(result)).length > 0) {
+    if (decodeStrict(tableNameRowsSchema, resultObjects(result)).length > 0) {
       throw new ProjectStorageBrokenError("Database contains a forbidden schema object.");
     }
   }
@@ -290,7 +295,8 @@ async function readColumns(
 ): Promise<readonly ColumnSpec[]> {
   const columns: ColumnSpec[] = [];
   for (const table of tables) {
-    const rows = columnMetadataRowSchema.array().parse(
+    const rows = decodeStrict(
+      columnMetadataRowsSchema,
       resultObjects(
         await client.execute({
           sql: `SELECT cid, name, type, "notnull" AS "notNull",
@@ -330,7 +336,8 @@ async function readIndexes(
 ): Promise<readonly MutableIndex[]> {
   const indexes: MutableIndex[] = [];
   for (const table of tables) {
-    const rows = indexMetadataRowSchema.array().parse(
+    const rows = decodeStrict(
+      indexMetadataRowsSchema,
       resultObjects(
         await client.execute({
           sql: `SELECT il.name AS name, il."unique" AS isUnique,
@@ -381,7 +388,8 @@ async function readForeignKeys(
 ): Promise<readonly ObservedForeignKey[]> {
   const foreignKeys: MutableForeignKey[] = [];
   for (const table of tables) {
-    const rows = foreignKeyMetadataRowSchema.array().parse(
+    const rows = decodeStrict(
+      foreignKeyMetadataRowsSchema,
       resultObjects(
         await client.execute({
           sql: `SELECT id, seq AS sequence, "table" AS referencedTable,

@@ -2,6 +2,7 @@ import { lstat, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
+  decodeStrict,
   type OpenedStorageIdentity,
   type ProjectDatabaseHealth,
   ProjectStorageCloseRequestSchema,
@@ -9,6 +10,7 @@ import {
   ProjectStorageOpenRequestSchema,
 } from "@slopstop/protocol";
 import { expect } from "vitest";
+import { databaseSpecs } from "../../src/storage/project-storage-database-specs.js";
 import {
   parseProjectStorageManifest,
   serializeProjectStorageManifest,
@@ -22,10 +24,10 @@ import {
   sha256File,
 } from "./project-storage-create-fixture.js";
 
-export const openRequest = ProjectStorageOpenRequestSchema.parse({
+export const openRequest = decodeStrict(ProjectStorageOpenRequestSchema, {
   projectId: createRequest.projectId,
 });
-export const closeRequest = ProjectStorageCloseRequestSchema.parse({
+export const closeRequest = decodeStrict(ProjectStorageCloseRequestSchema, {
   projectId: createRequest.projectId,
 });
 export const recoveryRequiredHealth = {
@@ -173,7 +175,7 @@ export async function createHealthyProjectStorageFixture(): Promise<ApplicationR
 
 export async function initializeApplicationAuthority(root: ApplicationRootPath): Promise<void> {
   const initializer = await createStorageRuntimeForRoot(root);
-  const request = ProjectStorageCreateRequestSchema.parse({
+  const request = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId: "00000000-0000-4000-8000-000000000050",
     createRequestId: "00000000-0000-4000-8000-000000000051",
   });
@@ -298,16 +300,21 @@ export function expectExistingCanonicalSafeMode({
 export async function seedNewerCanonicalAuthority(root: ApplicationRootPath): Promise<void> {
   const paths = generationPaths(root);
   const manifest = parseProjectStorageManifest(await readFile(paths.manifest, "utf8"));
+  // Strictly newer than the supported canonical spec, so the seed tracks future schema bumps.
+  const formatVersion = databaseSpecs.canonical.formatVersion + 1;
+  const schemaVersion = databaseSpecs.canonical.schemaVersion + 1;
   await writeFile(
     paths.manifest,
     serializeProjectStorageManifest({
       ...manifest,
-      canonical: { ...manifest.canonical, formatVersion: 2, schemaVersion: 2 },
+      canonical: { ...manifest.canonical, formatVersion, schemaVersion },
     }),
   );
   const database = new DatabaseSync(paths.canonical);
   try {
-    database.exec("UPDATE schema_metadata SET format_version = 2, schema_version = 2");
+    database
+      .prepare("UPDATE schema_metadata SET format_version = ?, schema_version = ?")
+      .run(formatVersion, schemaVersion);
   } finally {
     database.close();
   }

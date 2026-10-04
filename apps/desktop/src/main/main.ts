@@ -2,8 +2,12 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  CanonicalProjectActivationRequestSchema,
+  CanonicalProjectSwitchRequestSchema,
+  decodeStrict,
   type HarnessStatus,
   HarnessStatusSchema,
+  ProjectListRequestSchema,
   RetryHarnessResultSchema,
   type WorkspaceIntent,
   WorkspaceIntentSchema,
@@ -30,6 +34,7 @@ import {
   packageSmokeRendererScript,
   validatePackageSmokeResult,
 } from "./package-smoke-verifier.js";
+import { createProjectEntryBridge, type ProjectEntryBridge } from "./project-entry-bridge.js";
 import {
   createProjectStorageHarnessBootstrap,
   projectStorageMigrationResourcesRoot,
@@ -48,10 +53,14 @@ import { createWorkspaceBridge, type WorkspaceBridgeClient } from "./workspace-b
 let supervisor: HarnessSupervisor | undefined;
 let projectStorageBridge: ProjectStorageBridgeClient | undefined;
 let workspaceBridge: WorkspaceBridgeClient | undefined;
+let projectEntryBridge: ProjectEntryBridge | undefined;
 let packageSmokeState: "inactive" | "pending" | "passed" = "inactive";
 const desktopShutdown = createDesktopShutdown({
   stopProjectStorageBridge: () => projectStorageBridge?.stop(),
-  stopWorkspaceBridge: () => workspaceBridge?.stop(),
+  stopWorkspaceBridge: () => {
+    workspaceBridge?.stop();
+    projectEntryBridge?.stop();
+  },
   stopHarness: () => supervisor?.stop() ?? Promise.resolve(),
   requestedExitCodeOnQuit: () => (packageSmokeState === "pending" ? 1 : undefined),
   quit: () => app.quit(),
@@ -193,7 +202,7 @@ function reportPackageSmokeFailure(results: readonly PromiseSettledResult<unknow
 }
 
 function broadcastHarnessStatus(status: HarnessStatus): void {
-  const validated = HarnessStatusSchema.parse(status);
+  const validated = decodeStrict(HarnessStatusSchema, status);
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) {
       window.webContents.send(desktopIpcChannels.harnessStatusChanged, validated);
@@ -204,12 +213,12 @@ function broadcastHarnessStatus(status: HarnessStatus): void {
 function registerHarnessIpc(harnessSupervisor: HarnessSupervisor): void {
   ipcMain.handle(desktopIpcChannels.getHarnessStatus, () => harnessSupervisor.getStatus());
   ipcMain.handle(desktopIpcChannels.retryHarness, () => {
-    return RetryHarnessResultSchema.parse(harnessSupervisor.retry());
+    return decodeStrict(RetryHarnessResultSchema, harnessSupervisor.retry());
   });
 }
 
 export function broadcastWorkspaceNotification(notification: WorkspaceNotification): void {
-  const validated = WorkspaceNotificationSchema.parse(notification);
+  const validated = decodeStrict(WorkspaceNotificationSchema, notification);
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) {
       window.webContents.send(desktopIpcChannels.workspaceNotification, validated);
@@ -219,10 +228,10 @@ export function broadcastWorkspaceNotification(notification: WorkspaceNotificati
 
 export function registerWorkspaceIpc(bridge: WorkspaceBridgeClient): void {
   ipcMain.handle(desktopIpcChannels.queryWorkspace, (_event, value: unknown) => {
-    return bridge.query(WorkspaceQuerySchema.parse(value) satisfies WorkspaceQuery);
+    return bridge.query(decodeStrict(WorkspaceQuerySchema, value) satisfies WorkspaceQuery);
   });
   ipcMain.handle(desktopIpcChannels.submitWorkspaceIntent, (_event, value: unknown) => {
-    return bridge.submit(WorkspaceIntentSchema.parse(value) satisfies WorkspaceIntent);
+    return bridge.submit(decodeStrict(WorkspaceIntentSchema, value) satisfies WorkspaceIntent);
   });
 }
 
@@ -330,6 +339,22 @@ async function bootstrap(): Promise<void> {
     });
     supervisor = new HarnessSupervisor(harnessEntryPath(__dirname), logger, harnessBootstrap);
     const harnessSession = supervisor.getSession();
+    projectEntryBridge = createProjectEntryBridge({
+      session: harnessSession,
+      createId: randomUUID,
+      now: () => new Date().toISOString(),
+    });
+    const projects = projectEntryBridge;
+    ipcMain.handle(desktopIpcChannels.listProjects, (_event, value: unknown) => {
+      decodeStrict(ProjectListRequestSchema, value);
+      return projects.list();
+    });
+    ipcMain.handle(desktopIpcChannels.activateProject, (_event, value: unknown) =>
+      projects.activate(decodeStrict(CanonicalProjectActivationRequestSchema, value)),
+    );
+    ipcMain.handle(desktopIpcChannels.switchProject, (_event, value: unknown) =>
+      projects.switchProject(decodeStrict(CanonicalProjectSwitchRequestSchema, value)),
+    );
     projectStorageBridge = createProjectStorageBridge({
       session: harnessSession,
       createId: randomUUID,

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import {
   createHandshakeCommand,
+  decodeStrict,
   type HarnessBootstrap,
   HarnessBootstrapSchema,
   type HarnessMessage,
@@ -9,6 +10,7 @@ import {
   HarnessStatusSchema,
   type RetryHarnessResult,
 } from "@slopstop/protocol";
+import { Deferred, Duration, Effect, type Fiber } from "effect";
 import { MessageChannelMain, type UtilityProcess, utilityProcess } from "electron";
 import type { Logger } from "pino";
 import { reportHarnessCrash } from "./crash-reporting.js";
@@ -43,10 +45,10 @@ export class HarnessSupervisor {
   readonly #observationCleanup = new Map<UtilityProcess, () => void>();
   #attempt = 0;
   #child: UtilityProcess | undefined;
-  #handshakeTimer: NodeJS.Timeout | undefined;
+  #handshakeTimer: Fiber.Fiber<void> | undefined;
   #manualRetryPending = false;
   #restartBlocked = false;
-  #restartTimer: NodeJS.Timeout | undefined;
+  #restartTimer: Fiber.Fiber<void> | undefined;
   readonly #session = new HarnessSession();
   #status: HarnessStatus = { state: "stopped" };
   #stopPromise: Promise<void> | undefined;
@@ -55,7 +57,7 @@ export class HarnessSupervisor {
   constructor(entryPath: string, logger: Logger, bootstrap: HarnessBootstrap) {
     this.#entryPath = entryPath;
     this.#logger = logger;
-    this.#bootstrap = HarnessBootstrapSchema.parse(bootstrap);
+    this.#bootstrap = decodeStrict(HarnessBootstrapSchema, bootstrap);
     this.#session.subscribe((event) => {
       this.#handleSessionEvent(event);
     });
@@ -124,54 +126,70 @@ export class HarnessSupervisor {
   }
 
   #clearTimers(): void {
-    if (this.#handshakeTimer !== undefined) {
-      clearTimeout(this.#handshakeTimer);
-      this.#handshakeTimer = undefined;
-    }
-    if (this.#restartTimer !== undefined) {
-      clearTimeout(this.#restartTimer);
-      this.#restartTimer = undefined;
-    }
+    this.#handshakeTimer?.interruptUnsafe();
+    this.#handshakeTimer = undefined;
+    this.#restartTimer?.interruptUnsafe();
+    this.#restartTimer = undefined;
   }
 
+  // Waits for the child's exit for one grace period, kills it, then waits one more grace
+  // period; still running then is a shutdown timeout. A late exit only clears the child.
   #stopChild(child: UtilityProcess): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      let gracefulTimer: NodeJS.Timeout | undefined;
-      let terminalTimer: NodeJS.Timeout | undefined;
-      let terminalTimedOut = false;
-      const finish = (): void => {
-        if (gracefulTimer !== undefined) clearTimeout(gracefulTimer);
-        if (terminalTimer !== undefined) clearTimeout(terminalTimer);
-        if (this.#child === child) this.#child = undefined;
-        if (terminalTimedOut) {
-          this.#stopping = false;
-          return;
-        }
-        this.#setStatus({ state: "stopped" });
-        this.#stopping = false;
-        resolve();
-      };
-      child.once("exit", finish);
-      gracefulTimer = setTimeout(() => {
-        try {
-          child.kill();
-        } catch {
-          // The terminal deadline remains authoritative when kill itself fails.
-        }
-        terminalTimer = setTimeout(() => {
-          terminalTimedOut = true;
-          this.#setStatus({
-            state: "degraded",
-            attempt: this.#attempt,
-            diagnostic: {
-              code: "HARNESS_SHUTDOWN_TIMEOUT",
-              message: "Harness shutdown timed out.",
-            },
-          });
-          reject(new Error("Harness shutdown timed out."));
-        }, harnessShutdownGraceMs);
-      }, harnessShutdownGraceMs);
+    const exited = Deferred.makeUnsafe<void>();
+    let terminalTimedOut = false;
+    child.once("exit", () => {
+      if (this.#child === child) this.#child = undefined;
+      if (terminalTimedOut) this.#stopping = false;
+      Deferred.doneUnsafe(exited, Effect.void);
     });
+    const kill = Effect.sync(() => {
+      try {
+        child.kill();
+      } catch {
+        // The terminal deadline remains authoritative when kill itself fails.
+      }
+    });
+    const timedOut = Effect.suspend(() => {
+      terminalTimedOut = true;
+      this.#setStatus({
+        state: "degraded",
+        attempt: this.#attempt,
+        diagnostic: {
+          code: "HARNESS_SHUTDOWN_TIMEOUT",
+          message: "Harness shutdown timed out.",
+        },
+      });
+      return Effect.fail(new Error("Harness shutdown timed out."));
+    });
+    const graceful = Deferred.await(exited).pipe(
+      Effect.timeoutOrElse({
+        duration: Duration.millis(harnessShutdownGraceMs),
+        orElse: () =>
+          kill.pipe(
+            Effect.andThen(
+              Deferred.await(exited).pipe(
+                Effect.timeoutOrElse({
+                  duration: Duration.millis(harnessShutdownGraceMs),
+                  orElse: () => timedOut,
+                }),
+              ),
+            ),
+          ),
+      }),
+      Effect.andThen(
+        Effect.sync(() => {
+          this.#setStatus({ state: "stopped" });
+          this.#stopping = false;
+        }),
+      ),
+    );
+    return Effect.runPromise(graceful);
+  }
+
+  #after(delayMs: number, action: () => void): Fiber.Fiber<void> {
+    return Effect.runFork(
+      Effect.sleep(Duration.millis(delayMs)).pipe(Effect.andThen(Effect.sync(action))),
+    );
   }
 
   #handleHarnessMessage(message: HarnessMessage): void {
@@ -194,10 +212,8 @@ export class HarnessSupervisor {
         }
         return;
       case "system.ready":
-        if (this.#handshakeTimer !== undefined) {
-          clearTimeout(this.#handshakeTimer);
-          this.#handshakeTimer = undefined;
-        }
+        this.#handshakeTimer?.interruptUnsafe();
+        this.#handshakeTimer = undefined;
         this.#setStatus({
           state: "ready",
           attempt: this.#attempt,
@@ -239,10 +255,8 @@ export class HarnessSupervisor {
 
     this.#child = undefined;
     this.#session.detach();
-    if (this.#handshakeTimer !== undefined) {
-      clearTimeout(this.#handshakeTimer);
-      this.#handshakeTimer = undefined;
-    }
+    this.#handshakeTimer?.interruptUnsafe();
+    this.#handshakeTimer = undefined;
 
     if (this.#stopping) {
       return;
@@ -277,14 +291,14 @@ export class HarnessSupervisor {
       },
     });
     const delay = restartBaseDelayMs * 2 ** Math.max(0, this.#attempt - 1);
-    this.#restartTimer = setTimeout(() => {
+    this.#restartTimer = this.#after(delay, () => {
       this.#restartTimer = undefined;
       this.#spawn();
-    }, delay);
+    });
   }
 
   #setStatus(status: HarnessStatus): void {
-    this.#status = HarnessStatusSchema.parse(status);
+    this.#status = decodeStrict(HarnessStatusSchema, status);
     for (const listener of this.#listeners) {
       listener(this.#status);
     }
@@ -419,7 +433,7 @@ export class HarnessSupervisor {
       child.kill();
       return;
     }
-    this.#handshakeTimer = setTimeout(() => {
+    this.#handshakeTimer = this.#after(handshakeTimeoutMs, () => {
       this.#logger.error({ attempt: this.#attempt }, "Harness handshake timed out.");
       this.#setStatus({
         state: "degraded",
@@ -430,7 +444,7 @@ export class HarnessSupervisor {
         },
       });
       child.kill();
-    }, handshakeTimeoutMs);
+    });
   }
 
   #spawn(): void {

@@ -2,6 +2,7 @@ import {
   CanonicalProjectActivationResultSchema,
   CanonicalProjectCommandRequestSchema,
   CanonicalProjectCommandResultSchema,
+  decodeStrict,
 } from "@slopstop/protocol";
 import { vi } from "vitest";
 
@@ -19,7 +20,7 @@ export function unusedCanonicalApplication(switchProject: () => Promise<never>) 
 }
 
 function canonicalRuntimeInputs() {
-  const request = CanonicalProjectCommandRequestSchema.parse({
+  const request = decodeStrict(CanonicalProjectCommandRequestSchema, {
     projectId: "00000000-0000-4000-8000-000000000010",
     activationId: "00000000-0000-4000-8000-000000000011",
     command: {
@@ -29,7 +30,7 @@ function canonicalRuntimeInputs() {
       payload: {},
     },
   });
-  const activationResult = CanonicalProjectActivationResultSchema.parse({
+  const activationResult = decodeStrict(CanonicalProjectActivationResultSchema, {
     status: "active",
     request: { projectId: request.projectId },
     access: "read-only",
@@ -41,7 +42,7 @@ function canonicalRuntimeInputs() {
       retryable: true,
     },
   });
-  const commandResult = CanonicalProjectCommandResultSchema.parse({
+  const commandResult = decodeStrict(CanonicalProjectCommandResultSchema, {
     status: "read-only",
     projectId: request.projectId,
     activationId: request.activationId,

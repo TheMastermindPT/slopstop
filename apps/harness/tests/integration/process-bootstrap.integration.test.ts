@@ -14,6 +14,7 @@ import {
   createProjectCommand,
   createProjectCreateCommand,
   createProjectOpenCommand,
+  decodeStrict,
   ProjectStorageCloseRequestSchema,
   ProjectStorageCreateRequestSchema,
   ProjectStorageOpenRequestSchema,
@@ -33,8 +34,12 @@ import {
 } from "./project-storage-create-fixture.js";
 
 const sentAt = "2026-08-31T12:00:00.000Z";
-const openRequest = ProjectStorageOpenRequestSchema.parse({ projectId: createRequest.projectId });
-const closeRequest = ProjectStorageCloseRequestSchema.parse({ projectId: createRequest.projectId });
+const openRequest = decodeStrict(ProjectStorageOpenRequestSchema, {
+  projectId: createRequest.projectId,
+});
+const closeRequest = decodeStrict(ProjectStorageCloseRequestSchema, {
+  projectId: createRequest.projectId,
+});
 
 function createProcessTransportFixture() {
   const { port1, port2 } = new MessageChannel();
@@ -94,7 +99,7 @@ function bootstrapEvent(raw: unknown) {
 
 async function createBootstrapCommand(session: ReturnType<typeof createProcessTransportFixture>) {
   const projectId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
-  const request = ProjectStorageCreateRequestSchema.parse({
+  const request = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId,
     createRequestId: "44444444-4444-4444-8444-444444444500",
   });
@@ -119,7 +124,7 @@ async function createBootstrapCommand(session: ReturnType<typeof createProcessTr
           messageId: "11111111-1111-4111-8111-111111111501",
           sentAt,
         },
-        CanonicalProjectActivationRequestSchema.parse({ projectId }),
+        decodeStrict(CanonicalProjectActivationRequestSchema, { projectId }),
       ),
     ),
   );
@@ -128,7 +133,7 @@ async function createBootstrapCommand(session: ReturnType<typeof createProcessTr
   expect(activated.payload.access).toBe("read-write");
   return {
     generationId: created.payload.identity.generationId,
-    command: CanonicalProjectCommandRequestSchema.parse({
+    command: decodeStrict(CanonicalProjectCommandRequestSchema, {
       projectId,
       activationId: activated.payload.activationId,
       command: {
@@ -185,7 +190,7 @@ async function expectBootstrapSettlementRows(file: string, receipt: CanonicalCom
 }
 
 function expectUnsupportedBootstrapReceipt(value: unknown) {
-  const receipt = CanonicalCommandReceiptSchema.parse(value);
+  const receipt = decodeStrict(CanonicalCommandReceiptSchema, value);
   expect(receipt).toEqual({
     receiptId: receipt.receiptId,
     projectId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",

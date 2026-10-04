@@ -1,6 +1,6 @@
 import type { ProjectActivationId, ProjectId, WriterGeneration } from "@slopstop/protocol";
-import { WriterGenerationSchema } from "@slopstop/protocol";
-import { z } from "zod";
+import { decodeStrict, UuidTextSchema, WriterGenerationSchema } from "@slopstop/protocol";
+import { Schema } from "effect";
 import {
   type CanonicalCommandSnapshot,
   canonicalChangedOnce as changedOnce,
@@ -36,8 +36,8 @@ import {
   withWriteTransaction,
 } from "./project-storage-transaction.js";
 
-export const WriterCapabilityTokenSchema = digestSchema.brand<"WriterCapabilityToken">();
-export type WriterCapabilityToken = z.infer<typeof WriterCapabilityTokenSchema>;
+export const WriterCapabilityTokenSchema = digestSchema.pipe(Schema.brand("WriterCapabilityToken"));
+export type WriterCapabilityToken = typeof WriterCapabilityTokenSchema.Type;
 export type WriterFenceCheck = Readonly<{ status: "current" }> | Readonly<{ status: "stale" }>;
 export interface CanonicalCommandRepository {
   readonly projectId: ProjectId;
@@ -98,12 +98,19 @@ export class CanonicalCommandRepositoryError extends Error {
   }
 }
 
-const identitySchema = z.uuid().refine((value) => value === value.toLowerCase());
-const summarySchema = z.strictObject({
-  last: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-  count: z.number().int().nonnegative(),
-  maximum: WriterGenerationSchema.nullable(),
-});
+const identitySchema = UuidTextSchema.check(
+  Schema.makeFilter((value: string) => value === value.toLowerCase()),
+);
+const SqlCountSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0));
+const summaryRowsSchema = Schema.Array(
+  Schema.Struct({
+    last: SqlCountSchema,
+    count: SqlCountSchema,
+    maximum: Schema.NullOr(WriterGenerationSchema),
+  }),
+);
+const foreignKeysRowsSchema = Schema.Array(Schema.Struct({ foreign_keys: Schema.Literal(1) }));
+const fenceRowsSchema = Schema.Array(fenceSchema);
 type PriorFence = NonNullable<Awaited<ReturnType<typeof readCanonicalWriterFence>>>;
 
 function configuredClient(client: LocalLibsqlClient): LocalLibsqlClient {
@@ -114,10 +121,7 @@ function configuredClient(client: LocalLibsqlClient): LocalLibsqlClient {
       await client.execute("PRAGMA foreign_keys = ON");
       await client.execute("PRAGMA busy_timeout = 5000");
       one(
-        z
-          .strictObject({ foreign_keys: z.literal(1) })
-          .array()
-          .parse(objects(await client.execute("PRAGMA foreign_keys"))),
+        decodeStrict(foreignKeysRowsSchema, objects(await client.execute("PRAGMA foreign_keys"))),
       );
       return client.transaction(mode);
     },
@@ -127,8 +131,9 @@ function configuredClient(client: LocalLibsqlClient): LocalLibsqlClient {
 async function readFenceRows(
   executor: Pick<LocalLibsqlClient, "execute">,
   projectId: ProjectId,
-): Promise<z.infer<typeof fenceSchema>[]> {
-  return fenceSchema.array().parse(
+): Promise<readonly (typeof fenceSchema.Type)[]> {
+  return decodeStrict(
+    fenceRowsSchema,
     objects(
       await executor.execute({
         sql: `SELECT f.writer_generation AS generation, f.token_digest AS tokenDigest, f.state,
@@ -148,7 +153,8 @@ async function priorFence(
   projectId: ProjectId,
 ): Promise<PriorFence | undefined> {
   const summary = one(
-    summarySchema.array().parse(
+    decodeStrict(
+      summaryRowsSchema,
       objects(
         await tx.execute({
           sql: `SELECT last_writer_generation AS last,
@@ -207,7 +213,7 @@ async function recordHandoff(
       sql: "INSERT INTO writer_handoffs (project_id,handoff_id,from_writer_generation,to_writer_generation,kind,recorded_at) VALUES (?,?,?,?,?,?)",
       args: [
         input.projectId,
-        identitySchema.parse(dependencies.createHandoffId()),
+        decodeStrict(identitySchema, dependencies.createHandoffId()),
         previous?.generation ?? null,
         generation,
         kind,
@@ -241,7 +247,7 @@ async function recordRecovery(
       VALUES (?,?,?,'abandoned-active-fence',NULL,NULL,?,'generation-superseded',?,?)`,
       args: [
         input.projectId,
-        identitySchema.parse(dependencies.createRecoveryRecordId()),
+        decodeStrict(identitySchema, dependencies.createRecoveryRecordId()),
         previous.generation,
         input.activatedAt,
         generation,
@@ -256,7 +262,7 @@ async function activateFence(context: ActivationTransaction): Promise<WriterGene
   const previous = await priorFence(tx, input.projectId);
   const recovery = await inspectCanonicalRecovery(tx, input.projectId, previous);
   const last = previous?.generation ?? 0;
-  const generation = WriterGenerationSchema.parse(last + 1);
+  const generation = decodeStrict(WriterGenerationSchema, last + 1);
   changedOnce(
     await tx.execute({
       sql: "UPDATE project_state SET last_writer_generation=?, updated_at=? WHERE project_id=? AND last_writer_generation=?",
@@ -387,7 +393,7 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
   private async settleOwned(
     command: CanonicalCommandSnapshot,
   ): Promise<CanonicalCommandSettlementResult> {
-    const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
+    const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
     const fingerprint = hashCanonicalJson(command);
     const outcome = await runClassifiedWriteTransaction<
       LocalLibsqlTransaction,
@@ -411,7 +417,7 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
 
   async verifyFence(): Promise<WriterFenceCheck> {
     try {
-      const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
+      const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
       const rows = await readFenceRows(this.owner.client, this.projectId);
       if (rows.length === 0) return { status: "stale" };
       const row = one(rows);
@@ -433,8 +439,8 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
   async releaseFence(releasedAt: string): Promise<WriterFenceCheck> {
     try {
       return await this.owner.exclusively(async () => {
-        const time = utcInstantSchema.parse(releasedAt);
-        const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
+        const time = decodeStrict(utcInstantSchema, releasedAt);
+        const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
         if ((await this.recordUncertainty(digest)).status === "stale") return { status: "stale" };
         return await withWriteTransaction<LocalLibsqlTransaction, WriterFenceCheck>(
           this.owner,
@@ -464,7 +470,7 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
     try {
       await this.owner.close(async () => {
         if (this.uncertainty === undefined || this.uncertaintyRecorded) return;
-        const digest = digestSchema.parse(await this.sha256Text(this.input.writerToken));
+        const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
         if ((await this.recordUncertainty(digest)).status === "stale")
           throw new Error("Canonical Writer uncertainty authority is stale.");
       });
@@ -536,9 +542,9 @@ export function createCanonicalCommandRepositoryFactory(
           configuredClient(dependencies.openClient(input.canonicalDatabasePath)),
         );
         client = owner;
-        const writerToken = WriterCapabilityTokenSchema.parse(input.writerToken);
-        const activatedAt = utcInstantSchema.parse(input.activatedAt);
-        const digest = digestSchema.parse(await dependencies.sha256Text(writerToken));
+        const writerToken = decodeStrict(WriterCapabilityTokenSchema, input.writerToken);
+        const activatedAt = decodeStrict(utcInstantSchema, input.activatedAt);
+        const digest = decodeStrict(digestSchema, await dependencies.sha256Text(writerToken));
         const validated = { ...input, writerToken, activatedAt };
         const writerGeneration = await owner.exclusively(() =>
           withWriteTransaction(owner, (tx) =>

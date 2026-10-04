@@ -5,7 +5,7 @@ import type {
   TypedCommand,
   WriterGeneration,
 } from "@slopstop/protocol";
-import { CanonicalProjectCommandResultSchema } from "@slopstop/protocol";
+import { CanonicalProjectCommandResultSchema, decodeStrict } from "@slopstop/protocol";
 import { snapshotCanonicalCommand } from "./canonical-json.js";
 import type { CanonicalCommandRepository } from "./storage/canonical-command-repository.js";
 import type {
@@ -13,6 +13,7 @@ import type {
   CanonicalWriterLeaseFailureCode,
 } from "./storage/canonical-writer-lease.js";
 import { CanonicalWriterLeaseError } from "./storage/canonical-writer-lease.js";
+import { retryableAttempt } from "./storage/retryable-attempt.js";
 export type CanonicalProjectWriterReleaseFailureCode =
   | "WRITER_FENCE_STALE"
   | "WRITER_FENCE_RELEASE_FAILED"
@@ -75,7 +76,7 @@ function writerFailure(
       retryable: false,
     },
   } as const;
-  return CanonicalProjectCommandResultSchema.parse({
+  return decodeStrict(CanonicalProjectCommandResultSchema, {
     status,
     projectId: input.projectId,
     activationId: input.activationId,
@@ -88,11 +89,29 @@ export function createCanonicalProjectWriter(
   input: CanonicalProjectWriterInput,
 ): CanonicalProjectWriter {
   const release = stagedWriterRelease(input);
-  let attempt: Promise<void> | undefined;
   let admissionClosed = false;
   let inFlight:
     | Readonly<{ key: string; result: Promise<CanonicalProjectCommandResult> }>
     | undefined;
+  let requestedCloseTime = "";
+  // The release time is the one given by the call that starts each close attempt.
+  const closeOnce = retryableAttempt(() => {
+    const time = requestedCloseTime;
+    const settlement = inFlight?.result;
+    return (async () => {
+      // Drain only; the original result still rejects for every admitted caller.
+      if (settlement !== undefined)
+        await settlement.then(
+          () => undefined,
+          () => undefined,
+        );
+      await release(time);
+    })();
+  });
+  const closeAttempt = (time: string): Promise<void> => {
+    requestedCloseTime = time;
+    return closeOnce();
+  };
   const runSettlement = async (
     key: string,
     commandId: TypedCommand["commandId"],
@@ -143,22 +162,7 @@ export function createCanonicalProjectWriter(
     },
     close: (time) => {
       admissionClosed = true;
-      if (attempt !== undefined) return attempt;
-      const settlement = inFlight?.result;
-      const pending = (async () => {
-        // Drain only; the original result still rejects for every admitted caller.
-        if (settlement !== undefined)
-          await settlement.then(
-            () => undefined,
-            () => undefined,
-          );
-        await release(time);
-      })();
-      attempt = pending;
-      void pending.catch(() => {
-        if (attempt === pending) attempt = undefined;
-      });
-      return pending;
+      return closeAttempt(time);
     },
   };
 }
@@ -170,7 +174,7 @@ async function settleWriterCommand(
 ): Promise<CanonicalProjectCommandResult> {
   const outcome = await input.repository.settle(key);
   if (outcome.status !== "settled") return writerFailure(input, commandId, outcome.status);
-  return CanonicalProjectCommandResultSchema.parse({
+  return decodeStrict(CanonicalProjectCommandResultSchema, {
     status: "settled",
     projectId: input.projectId,
     activationId: input.activationId,

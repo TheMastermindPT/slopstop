@@ -4,6 +4,7 @@ import { MessageChannel } from "node:worker_threads";
 import {
   type CanonicalProjectCommandRequest,
   type DesktopMessage,
+  decodeStrict,
   ProjectActivationIdSchema,
   ProjectIdSchema,
   parseHarnessMessage,
@@ -51,9 +52,13 @@ import {
 } from "./conformance-counter-command.js";
 import { checkedInMigrationRoot, transportFor } from "./project-storage-create-fixture.js";
 
-export const recoveryOtherProject = ProjectIdSchema.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
+export const recoveryOtherProject = decodeStrict(
+  ProjectIdSchema,
+  "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2",
+);
 
-export const recoveryNextEpoch = ProjectActivationIdSchema.parse(
+export const recoveryNextEpoch = decodeStrict(
+  ProjectActivationIdSchema,
   "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2",
 );
 
@@ -257,8 +262,10 @@ export async function createRecoveryRuntime(
     .fn(() => recoveryNextEpoch)
     .mockReturnValueOnce(options.next ? recoveryNextEpoch : settlementRequest.activationId);
   const token = vi
-    .fn(() => WriterCapabilityTokenSchema.parse("2".repeat(64)))
-    .mockReturnValueOnce(WriterCapabilityTokenSchema.parse((options.next ? "2" : "1").repeat(64)));
+    .fn(() => decodeStrict(WriterCapabilityTokenSchema, "2".repeat(64)))
+    .mockReturnValueOnce(
+      decodeStrict(WriterCapabilityTokenSchema, (options.next ? "2" : "1").repeat(64)),
+    );
   const coordinator = createActiveProjectCoordinator({
     storage: { acquireActivation: acquire },
     repositories: { activate },

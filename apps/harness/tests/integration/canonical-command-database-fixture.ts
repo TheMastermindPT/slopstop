@@ -2,6 +2,7 @@ import path from "node:path";
 import type { InStatement } from "@libsql/client";
 import {
   CanonicalProjectCommandRequestSchema,
+  decodeStrict,
   ProjectStorageCreateRequestSchema,
   parseHarnessMessage,
 } from "@slopstop/protocol";
@@ -23,7 +24,7 @@ export const canonicalCommandProjectId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 export const canonicalCommandAggregateId = "55555555-5555-4555-8555-555555555501";
 export const settlementT0 = "2026-09-05T12:00:00.000Z";
 export const settlementT1 = "2026-09-05T12:00:01.000Z";
-export const settlementRequest = CanonicalProjectCommandRequestSchema.parse({
+export const settlementRequest = decodeStrict(CanonicalProjectCommandRequestSchema, {
   projectId: canonicalCommandProjectId,
   activationId: "eaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
   command: {
@@ -164,7 +165,7 @@ export async function createCanonicalCommandDatabase(
   projectId = canonicalCommandProjectId,
 ): Promise<string> {
   const root = await createTemporaryApplicationRoot();
-  const request = ProjectStorageCreateRequestSchema.parse({
+  const request = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId,
     createRequestId: "44444444-4444-4444-8444-444444444500",
   });

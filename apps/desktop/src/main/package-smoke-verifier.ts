@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import {
+  decodeStrict,
   WorkspaceIntentResultSchema,
   WorkspaceIntentSchema,
   WorkspaceQueryResultSchema,
@@ -13,12 +14,12 @@ import {
   writerProofNativePackageVersion,
 } from "@slopstop/protocol";
 
-const smokeQuery = WorkspaceQuerySchema.parse({
+const smokeQuery = decodeStrict(WorkspaceQuerySchema, {
   query: "memory-library.read",
   projectId: "00000000-0000-4000-8000-000000000001",
   cursor: null,
 });
-const smokeIntent = WorkspaceIntentSchema.parse({
+const smokeIntent = decodeStrict(WorkspaceIntentSchema, {
   intent: "memory.proposal.review",
   projectId: "00000000-0000-4000-8000-000000000001",
   proposalId: "00000000-0000-4000-8000-000000000002",
@@ -26,12 +27,15 @@ const smokeIntent = WorkspaceIntentSchema.parse({
   expectedProjectionRevision: 0,
 });
 const expectedMethods = [
+  "activateProject",
   "getHarnessStatus",
+  "listProjects",
   "queryWorkspace",
   "retryHarness",
   "submitWorkspaceIntent",
   "subscribeHarnessStatus",
   "subscribeWorkspaceNotifications",
+  "switchProject",
 ] as const;
 const expectedResultKeys = [
   "intentResult",
@@ -40,7 +44,7 @@ const expectedResultKeys = [
   "queryResult",
   "requireType",
 ] as const;
-const expectedQueryResult = WorkspaceQueryResultSchema.parse({
+const expectedQueryResult = decodeStrict(WorkspaceQueryResultSchema, {
   status: "unavailable",
   query: smokeQuery,
   diagnostic: {
@@ -48,7 +52,7 @@ const expectedQueryResult = WorkspaceQueryResultSchema.parse({
     message: "Memory producer is unavailable.",
   },
 });
-const expectedIntentResult = WorkspaceIntentResultSchema.parse({
+const expectedIntentResult = decodeStrict(WorkspaceIntentResultSchema, {
   status: "unavailable",
   capability: "memory",
   diagnostic: {
@@ -102,14 +106,14 @@ function validatePreloadMethods(value: Readonly<Record<string, unknown>>): void 
 }
 
 function validateQueryResult(value: unknown): void {
-  const result = WorkspaceQueryResultSchema.parse(value);
+  const result = decodeStrict(WorkspaceQueryResultSchema, value);
   if (!isDeepStrictEqual(result, expectedQueryResult)) {
     failPackageSmoke();
   }
 }
 
 function validateIntentResult(value: unknown): void {
-  const result = WorkspaceIntentResultSchema.parse(value);
+  const result = decodeStrict(WorkspaceIntentResultSchema, value);
   if (!isDeepStrictEqual(result, expectedIntentResult)) {
     failPackageSmoke();
   }
@@ -247,7 +251,10 @@ function observeNativeLoad(
 
 export function verifyPackagedWriterNative(input: WriterNativeInput): void {
   try {
-    const target = WriterProofNativeTargetSchema.parse(`${process.platform}-${process.arch}`);
+    const target = decodeStrict(
+      WriterProofNativeTargetSchema,
+      `${process.platform}-${process.arch}`,
+    );
     const { virtualRoot, unpackedRoot } = nativePackagePaths(input);
     const suffix = path.join("prebuilds", target, writerProofNativeBindingFilename);
     const unpackedBinding = path.join(unpackedRoot, suffix);

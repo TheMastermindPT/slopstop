@@ -2,6 +2,7 @@ import { setImmediate as nextTurn } from "node:timers/promises";
 import {
   type CanonicalProjectCommandRequest,
   CanonicalProjectCommandRequestSchema,
+  decodeStrict,
   ProjectActivationIdSchema,
   ProjectIdSchema,
   ProjectStorageOpenResultSchema,
@@ -45,10 +46,13 @@ import {
   CanonicalWriterLeaseError,
 } from "./storage/canonical-writer-lease.js";
 
-const projectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000010");
-const activationId = ProjectActivationIdSchema.parse("00000000-0000-4000-8000-000000000011");
+const projectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000010");
+const activationId = decodeStrict(
+  ProjectActivationIdSchema,
+  "00000000-0000-4000-8000-000000000011",
+);
 const request = { projectId };
-const command = CanonicalProjectCommandRequestSchema.parse({
+const command = decodeStrict(CanonicalProjectCommandRequestSchema, {
   projectId,
   activationId,
   command: {
@@ -114,7 +118,7 @@ const alreadyActive = {
 };
 
 function openedResult() {
-  const result = ProjectStorageOpenResultSchema.parse({
+  const result = decodeStrict(ProjectStorageOpenResultSchema, {
     status: "opened",
     request,
     mode: "read-write",
@@ -177,7 +181,7 @@ function fixture(realCommands = false) {
   };
   const repository = {
     projectId,
-    writerGeneration: WriterGenerationSchema.parse(1),
+    writerGeneration: decodeStrict(WriterGenerationSchema, 1),
     settle: vi.fn((text: string) => (realCommands ? real.settle(text) : unexpectedSettlement())),
     verifyFence: vi.fn(async (): Promise<WriterFenceCheck> => ({ status: "current" })),
     releaseFence: vi.fn(async (): Promise<WriterFenceCheck> => {
@@ -207,7 +211,7 @@ function fixture(realCommands = false) {
       ),
     },
     createActivationId: vi.fn(() => activationId),
-    createWriterToken: vi.fn(() => WriterCapabilityTokenSchema.parse("a".repeat(64))),
+    createWriterToken: vi.fn(() => decodeStrict(WriterCapabilityTokenSchema, "a".repeat(64))),
     now: () => "2026-09-04T12:00:00.000Z",
   };
   const create = coordinators.createActiveProjectCoordinator;
@@ -263,7 +267,7 @@ it("maps non-writable Project Storage activation branches without acquiring a Wr
   for (const status of ["unavailable", "broken", "not-registered", "safe-mode"] as const) {
     const f = fixture();
     if (status === "safe-mode") {
-      const result = ProjectStorageOpenResultSchema.parse({
+      const result = decodeStrict(ProjectStorageOpenResultSchema, {
         ...f.session.result,
         status,
         mode: status,
@@ -364,11 +368,11 @@ it("admits Typed commands in Project, activation, access, then fence order", asy
   await activation;
   const stale = {
     ...command,
-    activationId: ProjectActivationIdSchema.parse("00000000-0000-4000-8000-000000000021"),
+    activationId: decodeStrict(ProjectActivationIdSchema, "00000000-0000-4000-8000-000000000021"),
   };
   const wrong: CanonicalProjectCommandRequest = {
     ...stale,
-    projectId: ProjectIdSchema.parse("00000000-0000-4000-8000-000000000020"),
+    projectId: decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000020"),
   };
   expect(await f.owner.execute(wrong)).toEqual(failure("project-mismatch", wrong));
   expect(await f.owner.execute(stale)).toEqual(failure("stale-activation", stale));

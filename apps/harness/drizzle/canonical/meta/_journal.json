@@ -15,6 +15,13 @@
       "when": 1788629554451,
       "tag": "0001_canonical_project_writer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790887541570,
+      "tag": "0002_initial_repository_binding",
+      "breakpoints": true
     }
   ]
 }

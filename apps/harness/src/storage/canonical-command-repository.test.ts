@@ -4,9 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { InStatement } from "@libsql/client";
-import { CommandIdSchema, ProjectActivationIdSchema, ProjectIdSchema } from "@slopstop/protocol";
+import {
+  CommandIdSchema,
+  decodeStrict,
+  ProjectActivationIdSchema,
+  ProjectIdSchema,
+} from "@slopstop/protocol";
+import { Schema } from "effect";
 import { expect, it, vi } from "vitest";
-import { z } from "zod";
 import { createCanonicalCommandRegistry } from "../canonical-command-registry.js";
 import { snapshotCanonicalCommand } from "../canonical-json.js";
 import * as repositories from "./canonical-command-repository.js";
@@ -17,7 +22,7 @@ import {
   type LocalLibsqlTransaction,
 } from "./local-libsql-worker-client.js";
 
-const projectId = ProjectIdSchema.parse("00000000-0000-4000-8000-000000000010");
+const projectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000010");
 const times = [
   "2026-09-04T12:00:00.000Z",
   "2026-09-04T12:01:00.000Z",
@@ -61,6 +66,23 @@ function database<T>(file: string, action: (db: DatabaseSync) => T): T {
   }
 }
 
+// Applies the canonical migrations and the Project state row the writer expects.
+async function seedCanonicalDatabase(file: string) {
+  const migrations = await Promise.all(
+    ["0000_fat_doctor_octopus.sql", "0001_canonical_project_writer.sql"].map((name) =>
+      readFile(path.resolve(import.meta.dirname, "../../drizzle/canonical", name), "utf8"),
+    ),
+  );
+  database(file, (db) => {
+    for (const migration of migrations) db.exec(migration);
+    db.prepare("INSERT INTO project_state VALUES (?, 0, 0, ?, ?)").run(
+      projectId,
+      times[0],
+      times[0],
+    );
+  });
+}
+
 async function fixture() {
   const roots: LocalLibsqlClient[] = [];
   let nextId = 100;
@@ -77,26 +99,16 @@ async function fixture() {
   };
   const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-durable-writer-"));
   const file = path.join(root, "slopstop.db");
-  const migrations = await Promise.all(
-    ["0000_fat_doctor_octopus.sql", "0001_canonical_project_writer.sql"].map((name) =>
-      readFile(path.resolve(import.meta.dirname, "../../drizzle/canonical", name), "utf8"),
-    ),
-  );
-  database(file, (db) => {
-    for (const migration of migrations) db.exec(migration);
-    db.prepare("INSERT INTO project_state VALUES (?, 0, 0, ?, ?)").run(
-      projectId,
-      times[0],
-      times[0],
-    );
-  });
+  await seedCanonicalDatabase(file);
   const input = (generation: number) => ({
     canonicalDatabasePath: file,
     projectId,
-    activationId: ProjectActivationIdSchema.parse(
+    activationId: decodeStrict(
+      ProjectActivationIdSchema,
       `00000000-0000-4000-8000-${String(generation + 10).padStart(12, "0")}`,
     ),
-    writerToken: repositories.WriterCapabilityTokenSchema.parse(
+    writerToken: decodeStrict(
+      repositories.WriterCapabilityTokenSchema,
       String.fromCharCode(96 + generation).repeat(64),
     ),
     activatedAt: times[Math.min(generation - 1, 2)] ?? times[0],
@@ -298,19 +310,25 @@ it("verifies and releases only the current durable Writer fence", async () => {
   await verifyBrokenQueries();
 }, 30_000);
 
-const sqliteScalars = z.array(z.union([z.string(), z.number(), z.bigint(), z.null()]));
+const sqliteScalars = Schema.Array(
+  Schema.Union([Schema.String, Schema.Number, Schema.BigInt, Schema.Null]),
+);
 
 function memoryClient(db: DatabaseSync): LocalLibsqlClient {
   const execute: LocalLibsqlClient["execute"] = async (input, args) => {
     const statement = db.prepare(sqlOf(input));
-    const bound = sqliteScalars.parse(
+    const bound = decodeStrict(
+      sqliteScalars,
       typeof input === "string" ? (args ?? []) : (input.args ?? []),
     );
     const columns = statement.columns().map((column) => column.name);
     if (columns.length !== 0) {
-      const rows = statement
-        .all(...bound)
-        .map((row) => sqliteScalars.parse(columns.map((column) => row[column])));
+      const rows = statement.all(...bound).map((row) =>
+        decodeStrict(
+          sqliteScalars,
+          columns.map((column) => row[column]),
+        ),
+      );
       return { columns, rows, rowsAffected: 0, lastInsertRowid: null };
     }
     const result = statement.run(...bound);
@@ -373,8 +391,8 @@ async function memoryFixture() {
     const result = await owner.activate({
       canonicalDatabasePath: ":memory:",
       projectId,
-      activationId: ProjectActivationIdSchema.parse("00000000-0000-4000-8000-000000000011"),
-      writerToken: repositories.WriterCapabilityTokenSchema.parse("a".repeat(64)),
+      activationId: decodeStrict(ProjectActivationIdSchema, "00000000-0000-4000-8000-000000000011"),
+      writerToken: decodeStrict(repositories.WriterCapabilityTokenSchema, "a".repeat(64)),
       activatedAt: times[0],
     });
     expect(result.status).toBe("activated");
@@ -483,7 +501,7 @@ it.each([
 );
 
 function seedAppliedMemoryReceipt(db: DatabaseSync) {
-  const commandId = CommandIdSchema.parse("44444444-4444-4444-8444-444444444501");
+  const commandId = decodeStrict(CommandIdSchema, "44444444-4444-4444-8444-444444444501");
   const receiptId = "66666666-6666-4666-8666-666666666501";
   const fingerprint = hash(
     '{"commandId":"44444444-4444-4444-8444-444444444501","fingerprintVersion":1,"payload":{"value":7},"projectId":"00000000-0000-4000-8000-000000000010","type":"conformance.counter.set","version":1}',
@@ -649,9 +667,9 @@ it("fences settlement before mutations and distinguishes malformed authority: wr
     const begin = vi.spyOn(client, "transaction");
     const before = f.snapshot();
     const text = snapshotCanonicalCommand(
-      ProjectIdSchema.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2"),
+      decodeStrict(ProjectIdSchema, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2"),
       {
-        commandId: CommandIdSchema.parse("44444444-4444-4444-8444-444444444501"),
+        commandId: decodeStrict(CommandIdSchema, "44444444-4444-4444-8444-444444444501"),
         type: "conformance.counter.set",
         version: 1,
         payload: { value: 7 },

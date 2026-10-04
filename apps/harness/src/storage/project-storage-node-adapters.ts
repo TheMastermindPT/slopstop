@@ -3,6 +3,7 @@ import { lstat } from "node:fs/promises";
 import path from "node:path";
 import {
   CanonicalDatabaseLineageIdSchema,
+  decodeStrict,
   type ProjectId,
   ProjectIdSchema,
   type ProjectStorageCreateRequest,
@@ -10,6 +11,11 @@ import {
   StorageGenerationIdSchema,
   StorageIdSchema,
 } from "@slopstop/protocol";
+import {
+  type ApplicationDatabaseAuthority,
+  createApplicationDatabaseAuthority,
+} from "./application-database-authority.js";
+import { ApplicationDatabaseFault } from "./application-database-migration.js";
 import {
   requireDeclaredSchemaObjects,
   requireOwnedSchemaObjects,
@@ -102,7 +108,6 @@ import type {
   ProjectStorageStoreDependencies,
 } from "./project-storage-store.js";
 import { withWriteTransaction } from "./project-storage-transaction.js";
-import { SerialLock } from "./serial-lock.js";
 
 export { requireDeclaredSchemaObjects } from "./database-schema-verifier.js";
 export { loadGeneratedMigrations } from "./generated-migration-resources.js";
@@ -124,7 +129,7 @@ type ClosedDatabaseBuild = Awaited<
 type CreateInspection = Awaited<
   ReturnType<ProjectStorageStoreDependencies["registry"]["inspectCreate"]>
 >;
-type ProjectLockEntry = { lock: SerialLock; users: number };
+type ProjectLockEntry = { lock: PermitLock; users: number };
 type OpeningSelection = Readonly<{
   identity: Extract<ProjectStorageOpenEvidence, { status: "selected-current" }>["identity"];
   generation: GenerationRow;
@@ -145,6 +150,7 @@ type MutableOpeningClients = {
 const maximumRegistryGenerationsPerProject = 256;
 
 export type NodeProjectStorageOptions = Readonly<{
+  initialRepositoryBinding?: InitialRepositoryBinding;
   applicationStorageRoot: string;
   migrationResourcesRoot: string;
   applicationVersion: string;
@@ -152,6 +158,8 @@ export type NodeProjectStorageOptions = Readonly<{
   clock?: ProjectStorageStoreDependencies["clock"];
   failures?: ProjectStorageStoreDependencies["failures"];
   initializeApplicationClient?: (client: LocalClient) => Promise<void>;
+  // The harness's shared application database authority; a standalone owner gets its own.
+  applicationDatabase?: ApplicationDatabaseAuthority;
   openProjectDatabaseClient?: (input: {
     databaseKind: "canonical" | "runtime-adapter";
     open(): LocalLibsqlClient;
@@ -209,7 +217,7 @@ async function metadataRows(
       format_version AS formatVersion, schema_version AS schemaVersion,
       last_migration_id AS lastMigrationId FROM ${spec.metadataTable}`,
   );
-  return metadataRowSchema.array().parse(resultObjects(result));
+  return decodeStrict(Schema.Array(metadataRowSchema), resultObjects(result));
 }
 
 function migrationMetadataSql(spec: DatabaseSpec): string {
@@ -381,7 +389,7 @@ async function insertDatabaseIdentity(
   creation: AllocatedCreation,
 ): Promise<void> {
   if (spec.databaseKind === "canonical") {
-    const row = canonicalIdentityRowSchema.parse({
+    const row = decodeStrict(canonicalIdentityRowSchema, {
       identityKey: "storage",
       projectId: creation.projectId,
       storageId: creation.storageId,
@@ -405,7 +413,7 @@ async function insertDatabaseIdentity(
     });
     return;
   }
-  const row = runtimeIdentityRowSchema.parse({
+  const row = decodeStrict(runtimeIdentityRowSchema, {
     identityKey: "storage",
     projectId: creation.projectId,
     storageId: creation.storageId,
@@ -442,7 +450,7 @@ async function databaseIdentityMatches(
         created_at AS createdAt FROM storage_identity`,
     );
     const row = exactlyOne(
-      canonicalIdentityRowSchema.array().parse(resultObjects(result)),
+      decodeStrict(Schema.Array(canonicalIdentityRowSchema), resultObjects(result)),
       "Canonical Storage identity must contain exactly one row.",
     );
     return [
@@ -460,7 +468,7 @@ async function databaseIdentityMatches(
       created_at AS createdAt FROM slopstop_runtime_storage_identity`,
   );
   const row = exactlyOne(
-    runtimeIdentityRowSchema.array().parse(resultObjects(result)),
+    decodeStrict(Schema.Array(runtimeIdentityRowSchema), resultObjects(result)),
     "Runtime Storage identity must contain exactly one row.",
   );
   return [
@@ -490,6 +498,7 @@ async function buildDatabase(
   spec: typeof databaseSpecs.canonical | typeof databaseSpecs.runtime,
   creation: AllocatedCreation,
   loadMigrations: (spec: DatabaseSpec) => Promise<readonly GeneratedMigration[]>,
+  initialBinding?: InitialRepositoryBinding,
 ): Promise<ClosedDatabaseBuild> {
   try {
     await requirePlainDirectory(
@@ -511,6 +520,8 @@ async function buildDatabase(
         migrations,
       });
       if (spec.databaseKind === "canonical") await insertCanonicalProjectState(client, creation);
+      if (spec.databaseKind === "canonical" && initialBinding !== undefined)
+        await seedInitialRepositoryBinding(client, creation, initialBinding);
       await insertDatabaseIdentity(client, spec, creation);
       await requireDeclaredSchemaObjects(client, spec);
       const metadata = await requireCurrentMetadata(client, spec, migrations);
@@ -666,7 +677,7 @@ async function generationRowsByRequest(
       FROM storage_generations WHERE create_request_id = ?`,
     args: [createRequestId],
   });
-  return generationRowSchema.array().parse(resultObjects(result));
+  return decodeStrict(Schema.Array(generationRowSchema), resultObjects(result));
 }
 
 async function registrationRowsByProject(
@@ -681,7 +692,7 @@ async function registrationRowsByProject(
       FROM storage_registrations WHERE project_id = ?`,
     args: [projectId],
   });
-  return registrationRowSchema.array().parse(resultObjects(result));
+  return decodeStrict(Schema.Array(registrationRowSchema), resultObjects(result));
 }
 
 async function generationRowsByProject(
@@ -701,7 +712,7 @@ async function generationRowsByProject(
       WHERE project_id = ? LIMIT ?`,
     args: [projectId, maximumRegistryGenerationsPerProject + 1],
   });
-  const generations = generationRowSchema.array().parse(resultObjects(result));
+  const generations = decodeStrict(Schema.Array(generationRowSchema), resultObjects(result));
   if (generations.length > maximumRegistryGenerationsPerProject) {
     throw new ProjectStorageBrokenError("Project Storage registry witness set is unbounded.");
   }
@@ -720,7 +731,7 @@ async function locationRowsByStorage(
       WHERE storage_id = ? AND location_id = ?`,
     args: [storageId, locationId],
   });
-  return locationRowSchema.array().parse(resultObjects(result));
+  return decodeStrict(Schema.Array(locationRowSchema), resultObjects(result));
 }
 
 async function locationRowsByNormalizedPath(
@@ -734,7 +745,7 @@ async function locationRowsByNormalizedPath(
       WHERE normalized_path = ?`,
     args: [normalizedProjectRoot],
   });
-  return locationRowSchema.array().parse(resultObjects(result));
+  return decodeStrict(Schema.Array(locationRowSchema), resultObjects(result));
 }
 
 async function hasGenerationLocationWitness(
@@ -1296,7 +1307,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
   const migrationResourcesRoot = path.resolve(options.migrationResourcesRoot);
   const applicationDatabasePath = path.join(applicationStorageRoot, "application.db");
   const projectRootFor = (projectId: ProjectId): string =>
-    path.join(applicationStorageRoot, "projects", ProjectIdSchema.parse(projectId));
+    path.join(applicationStorageRoot, "projects", decodeStrict(ProjectIdSchema, projectId));
   const migrationCache = new Map<string, Promise<readonly GeneratedMigration[]>>();
   const loadMigrations = (spec: DatabaseSpec): Promise<readonly GeneratedMigration[]> => {
     const existing = migrationCache.get(spec.resourceKind);
@@ -1313,18 +1324,18 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
   const ids =
     options.ids ??
     ({
-      storageId: () => StorageIdSchema.parse(randomUUID()),
-      locationId: () => privateLocationIdSchema.parse(randomUUID()),
-      generationId: () => StorageGenerationIdSchema.parse(randomUUID()),
-      canonicalLineageId: () => CanonicalDatabaseLineageIdSchema.parse(randomUUID()),
-      runtimeLineageId: () => RuntimeDatabaseLineageIdSchema.parse(randomUUID()),
+      storageId: () => decodeStrict(StorageIdSchema, randomUUID()),
+      locationId: () => decodeStrict(privateLocationIdSchema, randomUUID()),
+      generationId: () => decodeStrict(StorageGenerationIdSchema, randomUUID()),
+      canonicalLineageId: () => decodeStrict(CanonicalDatabaseLineageIdSchema, randomUUID()),
+      runtimeLineageId: () => decodeStrict(RuntimeDatabaseLineageIdSchema, randomUUID()),
     } satisfies ProjectStorageStoreDependencies["ids"]);
   const clock =
     options.clock ??
     ({
-      now: () => utcInstantSchema.parse(new Date().toISOString()),
+      now: () => decodeStrict(utcInstantSchema, new Date().toISOString()),
     } satisfies ProjectStorageStoreDependencies["clock"]);
-  const createLock = new SerialLock();
+  const createLock = createPermitLock();
   const projectLocks = new Map<ProjectId, ProjectLockEntry>();
   const paths: ProjectStorageStoreDependencies["paths"] = {
     forCreation: (projectId, generationId) => {
@@ -1344,10 +1355,35 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     },
   };
 
+  const ownsApplicationDatabase = options.applicationDatabase === undefined;
+  const applicationDatabase =
+    options.applicationDatabase ??
+    createApplicationDatabaseAuthority({ applicationStorageRoot, migrationResourcesRoot });
+  if (applicationDatabase.applicationDatabasePath !== applicationDatabasePath)
+    throw new Error("Application database authority belongs to another installation root.");
+  // The authority only initializes; Storage keeps its own authority contract. A broken
+  // existing database is refused without initialization, so Storage's checks that follow
+  // still report its precise broken diagnostic instead of the registry's coarser code.
+  const ensureApplicationDatabase = async (
+    createIfMissing: boolean,
+  ): Promise<"absent" | "present"> => {
+    try {
+      const state = await applicationDatabase.ensureCurrent({ createIfMissing });
+      return state === "absent" ? "absent" : "present";
+    } catch (error) {
+      if (!(error instanceof ApplicationDatabaseFault) || error.failure.status !== "broken")
+        throw error;
+      // A definite schema mismatch keeps the shared verifier's precise Storage diagnostic.
+      if (error.cause instanceof ProjectStorageBrokenError) throw error.cause;
+      return "present";
+    }
+  };
   const applicationClients = createApplicationClientManager({
     applicationDatabasePath,
     applicationStorageRoot,
-    createClient: () => createLocalClient(applicationDatabasePath, "application"),
+    ensureInitialized: ensureApplicationDatabase,
+    createClient: () =>
+      applicationDatabase.admitClient(createLocalClient(applicationDatabasePath, "application")),
     initialize: options.initializeApplicationClient ?? requireForeignKeys,
   });
   const existingApplicationClient = applicationClients.existing;
@@ -1375,13 +1411,8 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     try {
       const client = await mutableApplicationClient();
       const migrations = await loadMigrations(databaseSpecs.application);
-      await applyGeneratedMigrations({
-        target: createMigrationTarget(client, databaseSpecs.application),
-        expectedKind: databaseSpecs.application.databaseKind,
-        expectedFormatVersion: databaseSpecs.application.formatVersion,
-        expectedSchemaVersion: databaseSpecs.application.schemaVersion,
-        migrations,
-      });
+      // The shared authority is the only application schema initializer.
+      await ensureApplicationDatabase(true);
       await requireDeclaredSchemaObjects(client, databaseSpecs.application);
       await requireCurrentMetadata(client, databaseSpecs.application, migrations);
       await requireDatabaseIntegrity(client);
@@ -1487,17 +1518,41 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     ]);
     requireUniqueRegistryWitnessRows({ registrations, directLocations });
     const hasGenerationLinkedLocation = await hasGenerationLocationWitness(client, generations);
-    return registryWitnessKinds({
+    const kinds = registryWitnessKinds({
       registrations,
       directLocations,
       generations,
       hasGenerationLinkedLocation,
     });
+    const reservationTable = await client.execute(
+      "SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'registration_reservations'",
+    );
+    if (reservationTable.rows.length === 0) return kinds;
+    const reservations = await client.execute({
+      sql: "SELECT reservation_id, record_fingerprint FROM registration_reservations WHERE json_extract(record_json, '$.projectId') = ?",
+      args: [projectId],
+    });
+    if (reservations.rows.length === 0) return kinds;
+    const seed = options.initialRepositoryBinding;
+    if (
+      seed !== undefined &&
+      seed.projectId === projectId &&
+      JSON.stringify(reservations.rows) ===
+        JSON.stringify([[seed.reservationId, seed.reservationFingerprint]])
+    )
+      return kinds;
+    return [...kinds, "registration-record"];
   };
 
   const databases: ProjectStorageStoreDependencies["databases"] = {
     createCanonical: (databasePath, creation) =>
-      buildDatabase(databasePath, databaseSpecs.canonical, creation, loadMigrations),
+      buildDatabase(
+        databasePath,
+        databaseSpecs.canonical,
+        creation,
+        loadMigrations,
+        options.initialRepositoryBinding,
+      ),
     createRuntime: (databasePath, creation) =>
       buildDatabase(databasePath, databaseSpecs.runtime, creation, loadMigrations),
     verifySealed: (generationPaths, creation) =>
@@ -1508,7 +1563,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     inspectCreate,
     prepareCreate,
     declareStaging: async (creation, creationPaths) => {
-      const declaration = stagingDeclarationSchema.parse({
+      const declaration = decodeStrict(stagingDeclarationSchema, {
         ...creation,
         observedAt: clock.now(),
         normalizedPath: path.resolve(creationPaths.projectRoot),
@@ -1564,7 +1619,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
       }
     },
     activate: async (creation, creationPaths) => {
-      const activation = activationSchema.parse({
+      const activation = decodeStrict(activationSchema, {
         projectId: creation.projectId,
         storageId: creation.storageId,
         locationId: creation.locationId,
@@ -1609,6 +1664,8 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     },
     stop: async () => {
       await applicationClients.stop();
+      // A shared authority outlives this consumer; only a standalone owner's own one stops here.
+      if (ownsApplicationDatabase) await applicationDatabase.stop();
     },
   };
 
@@ -1642,17 +1699,18 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     databases,
     failures,
     locks: {
-      forCreate: (operation) => createLock.run(operation),
-      afterCreateDrain: (operation) => createLock.runAfterPending(operation),
+      forCreate: (operation) => withPermit(createLock, operation),
+      // Queues behind every create already waiting for or holding the create permit.
+      afterCreateDrain: (operation) => withPermit(createLock, operation),
       forProject: (projectId, operation) => {
         let entry = projectLocks.get(projectId);
         if (entry === undefined) {
-          entry = { lock: new SerialLock(), users: 0 };
+          entry = { lock: createPermitLock(), users: 0 };
           projectLocks.set(projectId, entry);
         }
         const retainedEntry = entry;
         retainedEntry.users += 1;
-        return retainedEntry.lock.run(operation).finally(() => {
+        return withPermit(retainedEntry.lock, operation).finally(() => {
           retainedEntry.users -= 1;
           if (retainedEntry.users === 0 && projectLocks.get(projectId) === retainedEntry) {
             projectLocks.delete(projectId);
@@ -1670,3 +1728,8 @@ export function createNodeProjectStorageDependencies(
 }
 
 export { createOpeningRelease };
+
+import type { InitialRepositoryBinding } from "@slopstop/protocol";
+import { Schema } from "effect";
+import { seedInitialRepositoryBinding } from "./initial-repository-binding.js";
+import { createPermitLock, type PermitLock, withPermit } from "./permit-lock.js";

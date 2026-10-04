@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { ProjectActivationIdSchema, ProjectIdSchema } from "@slopstop/protocol";
+import { decodeStrict, ProjectActivationIdSchema, ProjectIdSchema } from "@slopstop/protocol";
 import { expect } from "vitest";
 import { createCanonicalCommandRegistry } from "../../src/canonical-command-registry.js";
 import {
@@ -240,7 +240,7 @@ async function expectAbsentConflictRetry(
 }
 
 export async function expectOtherProjectRecoveryIsolation() {
-  const other = ProjectIdSchema.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
+  const other = decodeStrict(ProjectIdSchema, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
   const file = await createCanonicalCommandDatabase(true, other);
   const f = await prepareRecoveryActivation(true);
   const client = createWorkerLocalLibsqlClient(file, "generation");
@@ -254,8 +254,8 @@ export async function expectOtherProjectRecoveryIsolation() {
     const result = await factory.activate({
       canonicalDatabasePath: file,
       projectId: other,
-      activationId: ProjectActivationIdSchema.parse("ebbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1"),
-      writerToken: WriterCapabilityTokenSchema.parse("3".repeat(64)),
+      activationId: decodeStrict(ProjectActivationIdSchema, "ebbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1"),
+      writerToken: decodeStrict(WriterCapabilityTokenSchema, "3".repeat(64)),
       activatedAt: recoveryActivationTime,
     });
     expect(result.status).toBe("activated");

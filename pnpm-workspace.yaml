@@ -45,12 +45,14 @@ catalog:
   dependency-cruiser: 18.2.0
   drizzle-kit: 0.31.10
   drizzle-orm: 0.45.2
+  effect: 4.0.0
   electron: 43.4.0
   fs-native-extensions: 1.5.1
   husky: 9.1.7
   jscpd: 5.0.15
   jsdom: 30.0.1
   knip: 6.34.0
+  koffi: 3.2.1
   likec4: 1.59.2
   libsql: 0.5.29
   lint-staged: 17.3.0
@@ -61,8 +63,8 @@ catalog:
   typescript: 6.0.2
   vite: 8.2.1
   vitest: 4.1.10
-  zod: 4.4.3
 
 allowBuilds:
   electron: true
   esbuild: true
+  koffi: true

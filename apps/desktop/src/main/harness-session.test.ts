@@ -1,5 +1,10 @@
 import { EventEmitter } from "node:events";
-import { createHandshakeCommand, createReadyEvent, MessageIdSchema } from "@slopstop/protocol";
+import {
+  createHandshakeCommand,
+  createReadyEvent,
+  decodeStrict,
+  MessageIdSchema,
+} from "@slopstop/protocol";
 import { describe, expect, it, vi } from "vitest";
 import { HarnessSession, type HarnessSessionEvent } from "./harness-session.js";
 
@@ -10,12 +15,12 @@ class FakePort extends EventEmitter {
 }
 
 const commandMetadata = {
-  messageId: MessageIdSchema.parse("00000000-0000-4000-8000-000000000001"),
+  messageId: decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000001"),
   sentAt: "2026-08-14T12:00:00.000Z",
 };
 
 const eventMetadata = {
-  messageId: MessageIdSchema.parse("00000000-0000-4000-8000-000000000002"),
+  messageId: decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000002"),
   sentAt: "2026-08-14T12:00:01.000Z",
   sequence: 1,
   causationId: commandMetadata.messageId,

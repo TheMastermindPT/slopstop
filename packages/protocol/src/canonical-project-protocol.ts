@@ -1,134 +1,145 @@
-import type {
-  CanonicalEventId as KernelCanonicalEventId,
-  CanonicalEventOrdinal as KernelCanonicalEventOrdinal,
-  CommandId as KernelCommandId,
-  CommandReceiptId as KernelCommandReceiptId,
-  ProjectActivationId as KernelProjectActivationId,
-  ProjectSequence as KernelProjectSequence,
-  WriterGeneration as KernelWriterGeneration,
+import {
+  CanonicalEventOrdinalSchema as KernelCanonicalEventOrdinalSchema,
+  ProjectSequenceSchema as KernelProjectSequenceSchema,
+  WriterGenerationSchema as KernelWriterGenerationSchema,
 } from "@slopstop/kernel";
-import { isCanonicalEventOrdinal, isProjectSequence, isWriterGeneration } from "@slopstop/kernel";
-import { z } from "zod";
+import { Schema } from "effect";
+import { LowercaseDomainIdentityTextSchema, ProjectIdSchema } from "./domain-identity-schema.js";
 import {
-  domainIdentitySchema,
-  lowercaseDomainIdentitySchema,
-  ProjectIdSchema,
-} from "./domain-identity-schema.js";
+  type RegisteredProjectSelectionCode,
+  registeredProjectSelectionCodes,
+} from "./project-registration-protocol.js";
 import {
-  CanonicalDatabaseLineageIdSchema,
   ProjectDatabaseHealthSchema,
-  RuntimeDatabaseLineageIdSchema,
-  StorageGenerationIdSchema,
-  StorageIdSchema,
+  SafeModeStorageIdentitySchema,
 } from "./project-storage-protocol.js";
+import {
+  dateTimeTextSchema,
+  frozenOutput,
+  NonEmptyTextSchema,
+  TrimmedNonEmptyTextSchema,
+  wholeUnion,
+} from "./schema-codec.js";
 
-export const ProjectActivationIdSchema = lowercaseDomainIdentitySchema(
-  domainIdentitySchema<KernelProjectActivationId>(),
+export const ProjectActivationIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("ProjectActivationId"),
 );
-export type ProjectActivationId = z.infer<typeof ProjectActivationIdSchema>;
-export const CommandIdSchema = lowercaseDomainIdentitySchema(
-  domainIdentitySchema<KernelCommandId>(),
-);
-export type CommandId = z.infer<typeof CommandIdSchema>;
-export const WriterGenerationSchema = z.custom<KernelWriterGeneration>(
-  (value) => typeof value === "number" && isWriterGeneration(value),
-  { message: "Writer generation must be a positive safe integer." },
-);
-export type WriterGeneration = z.infer<typeof WriterGenerationSchema>;
+export type ProjectActivationId = typeof ProjectActivationIdSchema.Type;
+export const CommandIdSchema = LowercaseDomainIdentityTextSchema.pipe(Schema.brand("CommandId"));
+export type CommandId = typeof CommandIdSchema.Type;
+export const WriterGenerationSchema = KernelWriterGenerationSchema.annotate({
+  message: "Writer generation must be a positive safe integer.",
+});
+export type WriterGeneration = typeof WriterGenerationSchema.Type;
 
-export const CommandReceiptIdSchema = lowercaseDomainIdentitySchema(
-  domainIdentitySchema<KernelCommandReceiptId>(),
+export const CommandReceiptIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("CommandReceiptId"),
 );
-export type CommandReceiptId = z.infer<typeof CommandReceiptIdSchema>;
-export const CanonicalEventIdSchema = lowercaseDomainIdentitySchema(
-  domainIdentitySchema<KernelCanonicalEventId>(),
+export type CommandReceiptId = typeof CommandReceiptIdSchema.Type;
+export const CanonicalEventIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("CanonicalEventId"),
 );
-export type CanonicalEventId = z.infer<typeof CanonicalEventIdSchema>;
-export const ProjectSequenceSchema = z.custom<KernelProjectSequence>(
-  (value) => typeof value === "number" && isProjectSequence(value),
-);
-export type ProjectSequence = z.infer<typeof ProjectSequenceSchema>;
-export const CanonicalEventOrdinalSchema = z.custom<KernelCanonicalEventOrdinal>(
-  (value) => typeof value === "number" && isCanonicalEventOrdinal(value),
-);
-export type CanonicalEventOrdinal = z.infer<typeof CanonicalEventOrdinalSchema>;
-export const CanonicalSettlementTimeSchema = z.iso
-  .datetime({ offset: true })
-  .refine((value) => /T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u.test(value), {
+export type CanonicalEventId = typeof CanonicalEventIdSchema.Type;
+export const ProjectSequenceSchema = KernelProjectSequenceSchema;
+export type ProjectSequence = typeof ProjectSequenceSchema.Type;
+export const CanonicalEventOrdinalSchema = KernelCanonicalEventOrdinalSchema;
+export type CanonicalEventOrdinal = typeof CanonicalEventOrdinalSchema.Type;
+export const CanonicalSettlementTimeSchema = dateTimeTextSchema({ offset: true }).check(
+  Schema.isPattern(/T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u, {
     message: "Settlement time must include seconds and use UTC Z notation.",
-  });
+  }),
+);
 
-export const SystemCommandRejectionCodeSchema = z.enum([
+const systemCommandRejectionCodes = [
   "IDEMPOTENCY_CONFLICT",
   "COMMAND_TYPE_UNSUPPORTED",
   "COMMAND_PAYLOAD_INVALID",
-]);
-export const CommandRejectionCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{0,63}$/u);
-export const CommandRejectionSchema = z
-  .strictObject({
+] as const;
+export const SystemCommandRejectionCodeSchema = Schema.Literals(systemCommandRejectionCodes);
+const isSystemCommandRejectionCode = Schema.is(SystemCommandRejectionCodeSchema);
+export const CommandRejectionCodeSchema = Schema.String.check(
+  Schema.isPattern(/^[A-Z][A-Z0-9_]{0,63}$/u),
+);
+export const CommandRejectionSchema = frozenOutput(
+  Schema.Struct({
     code: CommandRejectionCodeSchema,
-    retryable: z.boolean(),
-  })
-  .refine(
-    (value) => !SystemCommandRejectionCodeSchema.safeParse(value.code).success || !value.retryable,
-    { message: "System command rejections are not retryable." },
-  )
-  .readonly();
-export type CommandRejection = z.infer<typeof CommandRejectionSchema>;
+    retryable: Schema.Boolean,
+  }).check(
+    Schema.makeFilter(
+      (value) =>
+        !isSystemCommandRejectionCode(value.code) ||
+        !value.retryable ||
+        "System command rejections are not retryable.",
+    ),
+  ),
+);
+export type CommandRejection = typeof CommandRejectionSchema.Type;
 
-export const CommandReceiptMetadataSchema = z.strictObject({
+const PositiveVersionSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThan(0));
+
+export const CommandReceiptMetadataSchema = Schema.Struct({
   receiptId: CommandReceiptIdSchema,
   projectId: ProjectIdSchema,
   commandId: CommandIdSchema,
-  commandType: z
-    .string()
-    .min(1)
-    .refine((value) => value === value.trim()),
-  commandVersion: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  commandType: NonEmptyTextSchema.check(Schema.isTrimmed()),
+  commandVersion: PositiveVersionSchema,
   projectSequence: ProjectSequenceSchema,
   writerGeneration: WriterGenerationSchema,
   settledAt: CanonicalSettlementTimeSchema,
 });
-const eventReferenceSchema = z
-  .strictObject({
+const eventReferenceSchema = frozenOutput(
+  Schema.Struct({
     eventId: CanonicalEventIdSchema,
     eventOrdinal: CanonicalEventOrdinalSchema,
-  })
-  .readonly();
-const eventReferencesSchema = z
-  .array(eventReferenceSchema)
-  .refine(
-    (events) =>
-      new Set(events.map((event) => event.eventId)).size === events.length &&
-      events.every((event, index) => event.eventOrdinal === index),
-    { message: "Event references must be unique and in contiguous ordinal order." },
-  )
-  .readonly();
-export const CanonicalCommandReceiptSchema = z
-  .discriminatedUnion("outcome", [
-    CommandReceiptMetadataSchema.extend({
-      outcome: z.literal("applied"),
-      events: eventReferencesSchema,
-    }),
-    CommandReceiptMetadataSchema.extend({
-      outcome: z.literal("unchanged"),
-      events: z.tuple([]).readonly(),
-    }),
-    CommandReceiptMetadataSchema.extend({
-      outcome: z.literal("rejected"),
-      events: z.tuple([]).readonly(),
-      rejection: CommandRejectionSchema,
-    }),
-  ])
-  .readonly();
-export type CanonicalCommandReceipt = z.infer<typeof CanonicalCommandReceiptSchema>;
+  }),
+);
+const eventReferencesSchema = frozenOutput(
+  Schema.Array(eventReferenceSchema).check(
+    Schema.makeFilter(
+      (events) =>
+        (new Set(events.map((event) => event.eventId)).size === events.length &&
+          events.every((event, index) => event.eventOrdinal === index)) ||
+        "Event references must be unique and in contiguous ordinal order.",
+    ),
+  ),
+);
+const NoEventsSchema = frozenOutput(Schema.Tuple([]));
+const CanonicalCommandReceiptVariantsSchema = Schema.Union([
+  Schema.Struct({
+    ...CommandReceiptMetadataSchema.fields,
+    outcome: Schema.Literal("applied"),
+    events: eventReferencesSchema,
+  }),
+  Schema.Struct({
+    ...CommandReceiptMetadataSchema.fields,
+    outcome: Schema.Literal("unchanged"),
+    events: NoEventsSchema,
+  }),
+  Schema.Struct({
+    ...CommandReceiptMetadataSchema.fields,
+    outcome: Schema.Literal("rejected"),
+    events: NoEventsSchema,
+    rejection: CommandRejectionSchema,
+  }),
+]);
+export const CanonicalCommandReceiptSchema = frozenOutput(CanonicalCommandReceiptVariantsSchema);
+export type CanonicalCommandReceipt = typeof CanonicalCommandReceiptSchema.Type;
 
-const diagnosticSchema = z.strictObject({
-  code: z.string().min(1),
-  message: z.string().min(1),
-  retryable: z.boolean(),
-});
-export const CanonicalProjectActivationDiagnosticCodeSchema = z.enum([
+const diagnosticFields = {
+  code: NonEmptyTextSchema,
+  message: NonEmptyTextSchema,
+  retryable: Schema.Boolean,
+};
+
+function diagnosticSchema<CodeSchema extends Schema.Top, RetryableSchema extends Schema.Top>(
+  code: CodeSchema,
+  retryable: RetryableSchema,
+) {
+  return Schema.Struct({ ...diagnosticFields, code, retryable });
+}
+
+const canonicalProjectActivationDiagnosticCodes = [
+  ...registeredProjectSelectionCodes,
   "PROJECT_ALREADY_ACTIVE",
   "PROJECT_COORDINATOR_UNAVAILABLE",
   "PROJECT_STORAGE_UNAVAILABLE",
@@ -142,73 +153,92 @@ export const CanonicalProjectActivationDiagnosticCodeSchema = z.enum([
   "WRITER_FENCE_STALE",
   "WRITER_FENCE_RELEASE_FAILED",
   "WRITER_REPOSITORY_CLOSE_FAILED",
-]);
-export type CanonicalProjectActivationDiagnosticCode = z.infer<
-  typeof CanonicalProjectActivationDiagnosticCodeSchema
->;
-export const CanonicalProjectActivationRequestSchema = z.strictObject({
+] as const;
+export const CanonicalProjectActivationDiagnosticCodeSchema = Schema.Literals(
+  canonicalProjectActivationDiagnosticCodes,
+);
+export type CanonicalProjectActivationDiagnosticCode =
+  typeof CanonicalProjectActivationDiagnosticCodeSchema.Type;
+export const CanonicalProjectActivationRequestSchema = Schema.Struct({
   projectId: ProjectIdSchema,
 });
-export type CanonicalProjectActivationRequest = z.infer<
-  typeof CanonicalProjectActivationRequestSchema
->;
+export type CanonicalProjectActivationRequest = typeof CanonicalProjectActivationRequestSchema.Type;
 const activationBase = { request: CanonicalProjectActivationRequestSchema };
 
-function activationFailureSchema<const Status extends "rejected" | "unavailable" | "broken">(
-  status: Status,
-  codes: readonly [
+function activationFailureSchema<
+  const Status extends "rejected" | "unavailable" | "broken",
+  const Codes extends readonly [
     CanonicalProjectActivationDiagnosticCode,
     ...CanonicalProjectActivationDiagnosticCode[],
   ],
-) {
-  return z.strictObject({
-    status: z.literal(status),
+>(status: Status, codes: Codes) {
+  return Schema.Struct({
+    status: Schema.Literal(status),
     ...activationBase,
-    diagnostic: diagnosticSchema.extend({ code: z.enum(codes) }),
+    diagnostic: diagnosticSchema(Schema.Literals(codes), Schema.Boolean),
   });
 }
 
-export const CanonicalProjectActivationResultSchema = z.union([
-  z.discriminatedUnion("access", [
-    z.strictObject({
-      status: z.literal("active"),
-      ...activationBase,
-      access: z.literal("read-write"),
-      activationId: ProjectActivationIdSchema,
-      writerGeneration: WriterGenerationSchema,
-    }),
-    z.strictObject({
-      status: z.literal("active"),
-      ...activationBase,
-      access: z.literal("read-only"),
-      activationId: ProjectActivationIdSchema,
-      writerGeneration: z.null(),
-      diagnostic: diagnosticSchema.extend({
-        code: z.literal("WRITER_UNAVAILABLE"),
-        retryable: z.literal(true),
-      }),
-    }),
-  ]),
-  z.strictObject({
-    status: z.literal("safe-mode"),
+const selectionCodes = <const Codes extends readonly RegisteredProjectSelectionCode[]>(
+  codes: Codes,
+) => codes;
+
+export const CanonicalProjectActivationResultSchema = wholeUnion([
+  Schema.Struct({
+    status: Schema.Literal("active"),
     ...activationBase,
-    identity: z.strictObject({
-      storageId: StorageIdSchema.nullable(),
-      generationId: StorageGenerationIdSchema.nullable(),
-      canonicalDatabaseLineageId: CanonicalDatabaseLineageIdSchema.nullable(),
-      runtimeDatabaseLineageId: RuntimeDatabaseLineageIdSchema.nullable(),
-    }),
+    access: Schema.Literal("read-write"),
+    activationId: ProjectActivationIdSchema,
+    writerGeneration: WriterGenerationSchema,
+  }),
+  Schema.Struct({
+    status: Schema.Literal("active"),
+    ...activationBase,
+    access: Schema.Literal("read-only"),
+    activationId: ProjectActivationIdSchema,
+    writerGeneration: Schema.Null,
+    diagnostic: diagnosticSchema(Schema.Literal("WRITER_UNAVAILABLE"), Schema.Literal(true)),
+  }),
+  Schema.Struct({
+    status: Schema.Literal("safe-mode"),
+    ...activationBase,
+    identity: SafeModeStorageIdentitySchema,
     canonicalHealth: ProjectDatabaseHealthSchema,
     runtimeHealth: ProjectDatabaseHealthSchema,
   }),
-  z.strictObject({ status: z.literal("not-registered"), ...activationBase }),
-  activationFailureSchema("rejected", ["PROJECT_ALREADY_ACTIVE"]),
+  Schema.Struct({ status: Schema.Literal("not-registered"), ...activationBase }),
+  activationFailureSchema("rejected", [
+    "PROJECT_ALREADY_ACTIVE",
+    ...selectionCodes([
+      "REPOSITORY_NOT_FOUND",
+      "REPOSITORY_IDENTITY_CHANGED",
+      "REPOSITORY_INVALID",
+      "OBSERVATION_INVALID",
+      "REGISTRATION_IDEMPOTENCY_CONFLICT",
+    ]),
+  ]),
   activationFailureSchema("unavailable", [
     "PROJECT_COORDINATOR_UNAVAILABLE",
     "PROJECT_STORAGE_UNAVAILABLE",
+    ...selectionCodes([
+      "REGISTRY_BUSY",
+      "REGISTRY_MISSING_WITH_WITNESS",
+      "OBSERVER_CLEANUP_UNCONFIRMED",
+      "REGISTRATION_INCOMPLETE",
+      "REPOSITORY_INACCESSIBLE",
+      "IDENTITY_CAPABILITY_UNAVAILABLE",
+      "REPOSITORY_UNSUPPORTED",
+      "OBSERVATION_LIMIT_EXCEEDED",
+    ]),
   ]),
   activationFailureSchema("broken", [
     "PROJECT_STORAGE_BROKEN",
+    ...selectionCodes([
+      "REGISTRY_SCHEMA_UNKNOWN",
+      "REGISTRY_SCHEMA_NEWER",
+      "REGISTRY_CORRUPT",
+      "INTERNAL_FAILURE",
+    ]),
     "PROJECT_STORAGE_RELEASE_FAILED",
     "WRITER_LEASE_OPEN_FAILED",
     "WRITER_LEASE_LOCK_FAILED",
@@ -220,9 +250,7 @@ export const CanonicalProjectActivationResultSchema = z.union([
     "WRITER_REPOSITORY_CLOSE_FAILED",
   ]),
 ]);
-export type CanonicalProjectActivationResult = z.infer<
-  typeof CanonicalProjectActivationResultSchema
->;
+export type CanonicalProjectActivationResult = typeof CanonicalProjectActivationResultSchema.Type;
 
 function isFiniteJson(value: unknown, ancestors: Set<object>): boolean {
   if (value === null) return true;
@@ -270,26 +298,33 @@ function isFiniteJsonContainer(value: object, ancestors: Set<object>): boolean {
   }
 }
 
-export const CanonicalJsonValueSchema = z.custom<z.infer<ReturnType<typeof z.json>>>(
-  (value) => isFiniteJson(value, new Set()),
+export type CanonicalJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | CanonicalJsonValue[]
+  | { [key: string]: CanonicalJsonValue };
+
+export const CanonicalJsonValueSchema = Schema.declare<CanonicalJsonValue>(
+  (value): value is CanonicalJsonValue => isFiniteJson(value, new Set()),
   { message: "Value must be finite JSON data." },
 );
-export type CanonicalJsonValue = z.infer<typeof CanonicalJsonValueSchema>;
 
-export const TypedCommandSchema = z.strictObject({
+export const TypedCommandSchema = Schema.Struct({
   commandId: CommandIdSchema,
-  type: z.string().trim().min(1),
-  version: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  type: TrimmedNonEmptyTextSchema,
+  version: PositiveVersionSchema,
   payload: CanonicalJsonValueSchema,
 });
-export type TypedCommand = z.infer<typeof TypedCommandSchema>;
-export const CanonicalProjectCommandRequestSchema = z.strictObject({
+export type TypedCommand = typeof TypedCommandSchema.Type;
+export const CanonicalProjectCommandRequestSchema = Schema.Struct({
   projectId: ProjectIdSchema,
   activationId: ProjectActivationIdSchema,
   command: TypedCommandSchema,
 });
-export type CanonicalProjectCommandRequest = z.infer<typeof CanonicalProjectCommandRequestSchema>;
-export const CanonicalProjectCommandDiagnosticCodeSchema = z.enum([
+export type CanonicalProjectCommandRequest = typeof CanonicalProjectCommandRequestSchema.Type;
+export const CanonicalProjectCommandDiagnosticCodeSchema = Schema.Literals([
   "PROJECT_INACTIVE",
   "PROJECT_NOT_ACTIVE",
   "PROJECT_ACTIVATION_STALE",
@@ -301,60 +336,62 @@ export const CanonicalProjectCommandDiagnosticCodeSchema = z.enum([
   "PROJECT_SEQUENCE_EXHAUSTED",
   "PROJECT_COORDINATOR_UNAVAILABLE",
 ]);
-export type CanonicalProjectCommandDiagnosticCode = z.infer<
-  typeof CanonicalProjectCommandDiagnosticCodeSchema
->;
+export type CanonicalProjectCommandDiagnosticCode =
+  typeof CanonicalProjectCommandDiagnosticCodeSchema.Type;
 
 function commandOutcomeSchema<
   const Status extends string,
   const Code extends CanonicalProjectCommandDiagnosticCode,
->(status: Status, code: Code, retryable: boolean) {
-  return z.strictObject({
-    status: z.literal(status),
+  const Retryable extends boolean,
+>(status: Status, code: Code, retryable: Retryable) {
+  return Schema.Struct({
+    status: Schema.Literal(status),
     projectId: ProjectIdSchema,
     activationId: ProjectActivationIdSchema,
     commandId: CommandIdSchema,
-    diagnostic: diagnosticSchema.extend({ code: z.literal(code), retryable: z.literal(retryable) }),
+    diagnostic: diagnosticSchema(Schema.Literal(code), Schema.Literal(retryable)),
   });
 }
-export const CanonicalProjectCommandResultSchema = z
-  .discriminatedUnion("status", [
-    z.strictObject({
-      status: z.literal("settled"),
-      projectId: ProjectIdSchema,
-      activationId: ProjectActivationIdSchema,
-      commandId: CommandIdSchema,
-      receipt: CanonicalCommandReceiptSchema,
-    }),
-    commandOutcomeSchema("command-busy", "COMMAND_IN_PROGRESS", true),
-    commandOutcomeSchema("writer-unavailable", "WRITER_UNAVAILABLE", false),
-    commandOutcomeSchema("sequence-exhausted", "PROJECT_SEQUENCE_EXHAUSTED", false),
-    commandOutcomeSchema("inactive", "PROJECT_INACTIVE", false),
-    commandOutcomeSchema("project-mismatch", "PROJECT_NOT_ACTIVE", false),
-    commandOutcomeSchema("stale-activation", "PROJECT_ACTIVATION_STALE", false),
-    commandOutcomeSchema("read-only", "WRITER_UNAVAILABLE", true),
-    commandOutcomeSchema("stale-writer", "WRITER_FENCE_STALE", false),
-    commandOutcomeSchema("broken", "WRITER_FENCE_CHECK_FAILED", false),
-    commandOutcomeSchema("settlement-unavailable", "COMMAND_SETTLEMENT_UNAVAILABLE", false),
-    commandOutcomeSchema("coordinator-unavailable", "PROJECT_COORDINATOR_UNAVAILABLE", false),
-  ])
-  .refine(
+export const CanonicalProjectCommandResultSchema = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("settled"),
+    projectId: ProjectIdSchema,
+    activationId: ProjectActivationIdSchema,
+    commandId: CommandIdSchema,
+    receipt: CanonicalCommandReceiptSchema,
+  }),
+  commandOutcomeSchema("command-busy", "COMMAND_IN_PROGRESS", true),
+  commandOutcomeSchema("writer-unavailable", "WRITER_UNAVAILABLE", false),
+  commandOutcomeSchema("sequence-exhausted", "PROJECT_SEQUENCE_EXHAUSTED", false),
+  commandOutcomeSchema("inactive", "PROJECT_INACTIVE", false),
+  commandOutcomeSchema("project-mismatch", "PROJECT_NOT_ACTIVE", false),
+  commandOutcomeSchema("stale-activation", "PROJECT_ACTIVATION_STALE", false),
+  commandOutcomeSchema("read-only", "WRITER_UNAVAILABLE", true),
+  commandOutcomeSchema("stale-writer", "WRITER_FENCE_STALE", false),
+  commandOutcomeSchema("broken", "WRITER_FENCE_CHECK_FAILED", false),
+  commandOutcomeSchema("settlement-unavailable", "COMMAND_SETTLEMENT_UNAVAILABLE", false),
+  commandOutcomeSchema("coordinator-unavailable", "PROJECT_COORDINATOR_UNAVAILABLE", false),
+]).check(
+  Schema.makeFilter(
     (result) =>
       result.status !== "settled" ||
       (result.receipt.projectId === result.projectId &&
-        result.receipt.commandId === result.commandId),
-    { path: ["receipt"], message: "Receipt must match command result correlation." },
-  );
-export type CanonicalProjectCommandResult = z.infer<typeof CanonicalProjectCommandResultSchema>;
+        result.receipt.commandId === result.commandId) || {
+        path: ["receipt"],
+        issue: "Receipt must match command result correlation.",
+      },
+  ),
+);
+export type CanonicalProjectCommandResult = typeof CanonicalProjectCommandResultSchema.Type;
 
-export const CanonicalProjectSwitchRequestSchema = z.strictObject({
-  from: z.strictObject({
+export const CanonicalProjectSwitchRequestSchema = Schema.Struct({
+  from: Schema.Struct({
     projectId: ProjectIdSchema,
     activationId: ProjectActivationIdSchema,
   }),
   to: CanonicalProjectActivationRequestSchema,
 });
-export type CanonicalProjectSwitchRequest = z.infer<typeof CanonicalProjectSwitchRequestSchema>;
+export type CanonicalProjectSwitchRequest = typeof CanonicalProjectSwitchRequestSchema.Type;
 
 function switchOutcomeSchema<
   const Status extends
@@ -364,23 +401,17 @@ function switchOutcomeSchema<
     | "coordinator-unavailable",
   const Code extends CanonicalProjectCommandDiagnosticCode,
 >(status: Status, code: Code) {
-  return z.strictObject({
-    status: z.literal(status),
+  return Schema.Struct({
+    status: Schema.Literal(status),
     request: CanonicalProjectSwitchRequestSchema,
-    diagnostic: diagnosticSchema.extend({
-      code: z.literal(code),
-      retryable: z.literal(false),
-    }),
+    diagnostic: diagnosticSchema(Schema.Literal(code), Schema.Literal(false)),
   });
 }
 
-const switchReleaseDiagnosticSchema = z.union([
-  diagnosticSchema.extend({
-    code: CanonicalProjectActivationDiagnosticCodeSchema.extract(["WRITER_FENCE_STALE"]),
-    retryable: z.literal(false),
-  }),
-  diagnosticSchema.extend({
-    code: CanonicalProjectActivationDiagnosticCodeSchema.extract([
+const switchReleaseDiagnosticSchema = wholeUnion([
+  diagnosticSchema(Schema.Literal("WRITER_FENCE_STALE"), Schema.Literal(false)),
+  diagnosticSchema(
+    Schema.Literals([
       "WRITER_FENCE_RELEASE_FAILED",
       "WRITER_REPOSITORY_CLOSE_FAILED",
       "WRITER_LEASE_OPEN_FAILED",
@@ -389,34 +420,34 @@ const switchReleaseDiagnosticSchema = z.union([
       "WRITER_LEASE_CLOSE_FAILED",
       "PROJECT_STORAGE_RELEASE_FAILED",
     ]),
-    retryable: z.literal(true),
-  }),
+    Schema.Literal(true),
+  ),
 ]);
 
-export const CanonicalProjectSwitchResultSchema = z
-  .discriminatedUnion("status", [
-    z.strictObject({
-      status: z.literal("target-result"),
-      request: CanonicalProjectSwitchRequestSchema,
-      target: CanonicalProjectActivationResultSchema,
-    }),
-    switchOutcomeSchema("inactive", "PROJECT_INACTIVE"),
-    switchOutcomeSchema("project-mismatch", "PROJECT_NOT_ACTIVE"),
-    switchOutcomeSchema("stale-activation", "PROJECT_ACTIVATION_STALE"),
-    switchOutcomeSchema("coordinator-unavailable", "PROJECT_COORDINATOR_UNAVAILABLE"),
-    z.strictObject({
-      status: z.literal("release-failed"),
-      request: CanonicalProjectSwitchRequestSchema,
-      diagnostic: switchReleaseDiagnosticSchema,
-    }),
-  ])
-  .refine(
+export const CanonicalProjectSwitchResultSchema = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("target-result"),
+    sourceReleased: Schema.optional(Schema.Boolean),
+    request: CanonicalProjectSwitchRequestSchema,
+    target: CanonicalProjectActivationResultSchema,
+  }),
+  switchOutcomeSchema("inactive", "PROJECT_INACTIVE"),
+  switchOutcomeSchema("project-mismatch", "PROJECT_NOT_ACTIVE"),
+  switchOutcomeSchema("stale-activation", "PROJECT_ACTIVATION_STALE"),
+  switchOutcomeSchema("coordinator-unavailable", "PROJECT_COORDINATOR_UNAVAILABLE"),
+  Schema.Struct({
+    status: Schema.Literal("release-failed"),
+    request: CanonicalProjectSwitchRequestSchema,
+    diagnostic: switchReleaseDiagnosticSchema,
+  }),
+]).check(
+  Schema.makeFilter(
     (result) =>
       result.status !== "target-result" ||
-      result.target.request.projectId === result.request.to.projectId,
-    {
-      path: ["target", "request", "projectId"],
-      message: "Switch target Project must match the requested destination.",
-    },
-  );
-export type CanonicalProjectSwitchResult = z.infer<typeof CanonicalProjectSwitchResultSchema>;
+      result.target.request.projectId === result.request.to.projectId || {
+        path: ["target", "request", "projectId"],
+        issue: "Switch target Project must match the requested destination.",
+      },
+  ),
+);
+export type CanonicalProjectSwitchResult = typeof CanonicalProjectSwitchResultSchema.Type;

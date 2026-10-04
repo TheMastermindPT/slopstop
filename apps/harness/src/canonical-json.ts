@@ -2,15 +2,18 @@ import { createHash } from "node:crypto";
 import {
   type CanonicalJsonValue,
   CanonicalJsonValueSchema,
+  decodeStrict,
+  frozenOutput,
   type ProjectId,
   ProjectIdSchema,
   type TypedCommand,
   TypedCommandSchema,
+  UuidTextSchema,
 } from "@slopstop/protocol";
-import { z } from "zod";
+import { Schema } from "effect";
 import type { LocalLibsqlResultSet } from "./storage/local-libsql-worker-client.js";
 
-export const CanonicalSha256Schema = z.string().regex(/^[0-9a-f]{64}$/u);
+export const CanonicalSha256Schema = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u));
 
 export function canonicalResultObjects(result: LocalLibsqlResultSet): unknown[] {
   if (new Set(result.columns).size !== result.columns.length)
@@ -32,9 +35,9 @@ export function canonicalChangedOnce(result: LocalLibsqlResultSet): void {
     throw new Error("Canonical Writer row was not changed exactly once.");
 }
 
-export const CanonicalStoredIdentitySchema = z
-  .uuid()
-  .refine((value) => value === value.toLowerCase());
+export const CanonicalStoredIdentitySchema = UuidTextSchema.check(
+  Schema.makeFilter((value: string) => value === value.toLowerCase()),
+);
 
 function renderJson(value: CanonicalJsonValue): string {
   if (value === null || typeof value !== "object") {
@@ -50,32 +53,35 @@ function renderJson(value: CanonicalJsonValue): string {
 }
 
 export function canonicalJsonText(value: unknown): string {
-  return renderJson(CanonicalJsonValueSchema.parse(value));
+  return renderJson(decodeStrict(CanonicalJsonValueSchema, value));
 }
 
 export function hashCanonicalJson(value: unknown): string {
   return createHash("sha256").update(canonicalJsonText(value), "utf8").digest("hex");
 }
 
-const commandSnapshotSchema = TypedCommandSchema.extend({
-  projectId: ProjectIdSchema,
-  fingerprintVersion: z.literal(1),
-}).readonly();
-export type CanonicalCommandSnapshot = z.infer<typeof commandSnapshotSchema>;
+const commandSnapshotSchema = frozenOutput(
+  Schema.Struct({
+    ...TypedCommandSchema.fields,
+    projectId: ProjectIdSchema,
+    fingerprintVersion: Schema.Literal(1),
+  }),
+);
+export type CanonicalCommandSnapshot = typeof commandSnapshotSchema.Type;
 
 export function snapshotCanonicalCommand(projectId: ProjectId, command: TypedCommand): string {
   return canonicalJsonText(
-    commandSnapshotSchema.parse({ ...command, projectId, fingerprintVersion: 1 }),
+    decodeStrict(commandSnapshotSchema, { ...command, projectId, fingerprintVersion: 1 }),
   );
 }
 
 export function parseCanonicalJson(text: string): CanonicalJsonValue {
   const value: unknown = JSON.parse(text);
-  return CanonicalJsonValueSchema.parse(value);
+  return decodeStrict(CanonicalJsonValueSchema, value);
 }
 
 export function readCanonicalCommandSnapshot(text: string): CanonicalCommandSnapshot {
-  const snapshot = commandSnapshotSchema.parse(parseCanonicalJson(text));
+  const snapshot = decodeStrict(commandSnapshotSchema, parseCanonicalJson(text));
   if (canonicalJsonText(snapshot) !== text) throw new Error("Command snapshot is not canonical.");
   return snapshot;
 }

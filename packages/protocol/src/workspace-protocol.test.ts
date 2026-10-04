@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { decodeWithIssues } from "./decode-with-issues.test-support.js";
 import {
+  acceptsStrict,
+  decodeStrict,
   ProjectIdSchema,
   WorkspaceIntentResultSchema,
   WorkspaceIntentSchema,
@@ -223,16 +226,16 @@ describe("workspace protocol", () => {
   it("accepts branded identities and safe non-negative projection revisions", () => {
     const projectId = "018f47a3-4e3d-7d2b-9c41-7df4605c0a11";
 
-    expect(ProjectIdSchema.parse(projectId)).toBe(projectId);
-    expect(WorkspaceProjectionRevisionSchema.parse(0)).toBe(0);
-    expect(WorkspaceProjectionRevisionSchema.parse(Number.MAX_SAFE_INTEGER)).toBe(
+    expect(decodeStrict(ProjectIdSchema, projectId)).toBe(projectId);
+    expect(decodeStrict(WorkspaceProjectionRevisionSchema, 0)).toBe(0);
+    expect(decodeStrict(WorkspaceProjectionRevisionSchema, Number.MAX_SAFE_INTEGER)).toBe(
       Number.MAX_SAFE_INTEGER,
     );
 
-    expect(ProjectIdSchema.safeParse("not-a-uuid").success).toBe(false);
-    expect(WorkspaceProjectionRevisionSchema.safeParse(-1).success).toBe(false);
-    expect(WorkspaceProjectionRevisionSchema.safeParse(0.5).success).toBe(false);
-    expect(WorkspaceProjectionRevisionSchema.safeParse(Number.MAX_SAFE_INTEGER + 1).success).toBe(
+    expect(acceptsStrict(ProjectIdSchema, "not-a-uuid")).toBe(false);
+    expect(acceptsStrict(WorkspaceProjectionRevisionSchema, -1)).toBe(false);
+    expect(acceptsStrict(WorkspaceProjectionRevisionSchema, 0.5)).toBe(false);
+    expect(acceptsStrict(WorkspaceProjectionRevisionSchema, Number.MAX_SAFE_INTEGER + 1)).toBe(
       false,
     );
   });
@@ -247,7 +250,7 @@ describe("workspace protocol", () => {
 
     for (const pair of exactPairs) {
       const result = { status: "ready", ...pair } as const;
-      expect(WorkspaceQueryResultSchema.parse(result)).toEqual(result);
+      expect(decodeStrict(WorkspaceQueryResultSchema, result)).toEqual(result);
     }
   });
 
@@ -280,10 +283,10 @@ describe("workspace protocol", () => {
       },
     ];
     for (const result of mismatchedIdentities) {
-      expect(WorkspaceQueryResultSchema.safeParse(result).success).toBe(false);
+      expect(acceptsStrict(WorkspaceQueryResultSchema, result)).toBe(false);
     }
     expect(
-      WorkspaceQueryResultSchema.safeParse({
+      acceptsStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query: conversationQuery(),
         projection: {
@@ -294,15 +297,15 @@ describe("workspace protocol", () => {
             waypointId: ids.waypoint,
           },
         },
-      }).success,
+      }),
     ).toBe(false);
 
     expect(
-      WorkspaceQueryResultSchema.safeParse({
+      acceptsStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query: conversationQuery(),
         projection: memoryProjection(),
-      }).success,
+      }),
     ).toBe(false);
   });
 
@@ -316,51 +319,51 @@ describe("workspace protocol", () => {
       scope: waypointQuery.scope,
     };
     expect(
-      WorkspaceQueryResultSchema.safeParse({
+      acceptsStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query: waypointQuery,
         projection: waypointProjection,
-      }).success,
+      }),
     ).toBe(true);
     for (const scope of [
       { ...waypointQuery.scope, projectId: ids.otherProject },
       { ...waypointQuery.scope, waypointId: ids.otherProject },
     ]) {
       expect(
-        WorkspaceQueryResultSchema.safeParse({
+        acceptsStrict(WorkspaceQueryResultSchema, {
           status: "ready",
           query: waypointQuery,
           projection: { ...waypointProjection, scope },
-        }).success,
+        }),
       ).toBe(false);
     }
     expect(
-      WorkspaceQueryResultSchema.safeParse({
+      acceptsStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query: { ...memoryQuery(), fixture: true },
         projection: memoryProjection(),
-      }).success,
+      }),
     ).toBe(false);
     expect(
-      WorkspaceQueryResultSchema.safeParse({
+      acceptsStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query: memoryQuery(),
         projection: { ...memoryProjection(), fixture: true },
-      }).success,
+      }),
     ).toBe(false);
   });
 
   it("accepts valid conversation identities and references", () => {
     const validConversation = validConversationProjection();
     expect(
-      WorkspaceQueryResultSchema.safeParse({
+      acceptsStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query: conversationQuery(),
         projection: validConversation,
-      }).success,
+      }),
     ).toBe(true);
     expect(
-      WorkspaceQueryResultSchema.safeParse({
+      acceptsStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query: conversationQuery(),
         projection: {
@@ -387,7 +390,7 @@ describe("workspace protocol", () => {
             ],
           },
         },
-      }).success,
+      }),
     ).toBe(true);
   });
 
@@ -439,11 +442,11 @@ describe("workspace protocol", () => {
     ];
     for (const projection of invalidConversations) {
       expect(
-        WorkspaceQueryResultSchema.safeParse({
+        acceptsStrict(WorkspaceQueryResultSchema, {
           status: "ready",
           query: conversationQuery(),
           projection,
-        }).success,
+        }),
       ).toBe(false);
     }
   });
@@ -466,11 +469,11 @@ describe("workspace protocol", () => {
     ];
     for (const projection of invalidContextRecords) {
       expect(
-        WorkspaceQueryResultSchema.safeParse({
+        acceptsStrict(WorkspaceQueryResultSchema, {
           status: "ready",
           query: contextRecordQuery(),
           projection,
-        }).success,
+        }),
       ).toBe(false);
     }
   });
@@ -497,11 +500,11 @@ describe("workspace protocol", () => {
       decisions: [decision],
     };
     expect(
-      WorkspaceQueryResultSchema.safeParse({
+      acceptsStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query: frameQuery(),
         projection: validFrame,
-      }).success,
+      }),
     ).toBe(true);
     const otherSection = {
       ...frameSection,
@@ -509,7 +512,7 @@ describe("workspace protocol", () => {
       title: "Technical plan",
     } as const;
     expect(
-      WorkspaceQueryResultSchema.safeParse({
+      acceptsStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query: frameQuery(),
         projection: {
@@ -525,7 +528,7 @@ describe("workspace protocol", () => {
           ],
           decisions: [decision, { sectionId: otherSection.id, state: "draft" }],
         },
-      }).success,
+      }),
     ).toBe(true);
     const invalidFrames = [
       { ...validFrame, sections: [frameSection, frameSection] },
@@ -536,11 +539,11 @@ describe("workspace protocol", () => {
     ];
     for (const projection of invalidFrames) {
       expect(
-        WorkspaceQueryResultSchema.safeParse({
+        acceptsStrict(WorkspaceQueryResultSchema, {
           status: "ready",
           query: frameQuery(),
           projection,
-        }).success,
+        }),
       ).toBe(false);
     }
   });
@@ -567,15 +570,15 @@ describe("workspace protocol", () => {
       [verified, verified],
     ]) {
       expect(
-        WorkspaceQueryResultSchema.safeParse({
+        acceptsStrict(WorkspaceQueryResultSchema, {
           status: "ready",
           query: memoryQuery(),
           projection: { ...memoryProjection(), items },
-        }).success,
+        }),
       ).toBe(false);
     }
     expect(
-      WorkspaceQueryResultSchema.safeParse({
+      acceptsStrict(WorkspaceQueryResultSchema, {
         status: "ready",
         query: memoryQuery(),
         projection: {
@@ -590,7 +593,7 @@ describe("workspace protocol", () => {
             },
           ],
         },
-      }).success,
+      }),
     ).toBe(true);
   });
 
@@ -611,7 +614,7 @@ describe("workspace protocol", () => {
           message: "Producer is unavailable.",
         },
       } as const;
-      expect(WorkspaceQueryResultSchema.parse(unavailable)).toEqual(unavailable);
+      expect(decodeStrict(WorkspaceQueryResultSchema, unavailable)).toEqual(unavailable);
 
       for (const code of ["WORKSPACE_PRODUCER_FAILED", "WORKSPACE_TRANSPORT_FAILED"] as const) {
         const broken = {
@@ -619,30 +622,30 @@ describe("workspace protocol", () => {
           query,
           diagnostic: { code, message: "Workspace request failed." },
         } as const;
-        expect(WorkspaceQueryResultSchema.parse(broken)).toEqual(broken);
+        expect(decodeStrict(WorkspaceQueryResultSchema, broken)).toEqual(broken);
         expect(
-          WorkspaceQueryResultSchema.safeParse({
+          acceptsStrict(WorkspaceQueryResultSchema, {
             ...unavailable,
             diagnostic: { ...unavailable.diagnostic, code },
-          }).success,
+          }),
         ).toBe(false);
       }
 
       expect(
-        WorkspaceQueryResultSchema.safeParse({
+        acceptsStrict(WorkspaceQueryResultSchema, {
           status: "broken",
           query,
           diagnostic: unavailable.diagnostic,
-        }).success,
+        }),
       ).toBe(false);
       expect(
-        WorkspaceQueryResultSchema.safeParse({
+        acceptsStrict(WorkspaceQueryResultSchema, {
           ...unavailable,
           projection: memoryProjection(),
-        }).success,
+        }),
       ).toBe(false);
       expect(
-        WorkspaceQueryResultSchema.safeParse({
+        acceptsStrict(WorkspaceQueryResultSchema, {
           status: "broken",
           query,
           diagnostic: {
@@ -650,29 +653,29 @@ describe("workspace protocol", () => {
             message: "Producer failed.",
           },
           projection: memoryProjection(),
-        }).success,
+        }),
       ).toBe(false);
     }
   });
 
   it("parses only declared workspace intents and forwarded transport results", () => {
     for (const intent of workspaceIntents) {
-      expect(WorkspaceIntentSchema.parse(intent)).toEqual(intent);
-      expect(WorkspaceIntentSchema.safeParse({ ...intent, accepted: true }).success).toBe(false);
+      expect(decodeStrict(WorkspaceIntentSchema, intent)).toEqual(intent);
+      expect(acceptsStrict(WorkspaceIntentSchema, { ...intent, accepted: true })).toBe(false);
     }
     expect(
-      WorkspaceIntentSchema.safeParse({
+      acceptsStrict(WorkspaceIntentSchema, {
         intent: "run.start",
         projectId: ids.project,
         expectedProjectionRevision: 7,
-      }).success,
+      }),
     ).toBe(false);
 
     for (const capability of ["conversation", "frame", "memory"] as const) {
       const forwarded = { status: "forwarded", capability } as const;
-      expect(WorkspaceIntentResultSchema.parse(forwarded)).toEqual(forwarded);
+      expect(decodeStrict(WorkspaceIntentResultSchema, forwarded)).toEqual(forwarded);
       for (const extra of ["applied", "receipt", "revision"] as const) {
-        expect(WorkspaceIntentResultSchema.safeParse({ ...forwarded, [extra]: true }).success).toBe(
+        expect(acceptsStrict(WorkspaceIntentResultSchema, { ...forwarded, [extra]: true })).toBe(
           false,
         );
       }
@@ -688,7 +691,7 @@ describe("workspace protocol", () => {
       excludedMessageIds: [ids.otherMessage],
       expectedProjectionRevision: 7,
     } as const;
-    expect(WorkspaceIntentSchema.parse(selection)).toEqual(selection);
+    expect(decodeStrict(WorkspaceIntentSchema, selection)).toEqual(selection);
 
     const invalidSelections = [
       {
@@ -723,7 +726,7 @@ describe("workspace protocol", () => {
     ] as const;
 
     for (const invalid of invalidSelections) {
-      const parsed = WorkspaceIntentSchema.safeParse(invalid.value);
+      const parsed = decodeWithIssues(WorkspaceIntentSchema, invalid.value);
       expect(parsed.success).toBe(false);
       if (!parsed.success) {
         expect(parsed.error.issues.map((issue) => issue.path.join("."))).toContain(invalid.path);
@@ -759,12 +762,12 @@ describe("workspace protocol", () => {
       },
     ] as const;
     for (const notification of notifications) {
-      expect(WorkspaceNotificationSchema.parse(notification)).toEqual(notification);
+      expect(decodeStrict(WorkspaceNotificationSchema, notification)).toEqual(notification);
     }
 
     for (const capability of ["frame", "memory"] as const) {
       expect(
-        WorkspaceNotificationSchema.safeParse({
+        acceptsStrict(WorkspaceNotificationSchema, {
           capability,
           scope: {
             kind: "waypoint",
@@ -772,25 +775,25 @@ describe("workspace protocol", () => {
             waypointId: ids.waypoint,
           },
           revision: 12,
-        }).success,
+        }),
       ).toBe(false);
     }
     for (const revision of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
       expect(
-        WorkspaceNotificationSchema.safeParse({
+        acceptsStrict(WorkspaceNotificationSchema, {
           capability: "conversation",
           scope: { kind: "project", projectId: ids.project },
           revision,
-        }).success,
+        }),
       ).toBe(false);
     }
     expect(
-      WorkspaceNotificationSchema.safeParse({
+      acceptsStrict(WorkspaceNotificationSchema, {
         capability: "memory",
         scope: { kind: "project", projectId: ids.project },
         revision: 12,
         projection: memoryProjection(),
-      }).success,
+      }),
     ).toBe(false);
   });
 });

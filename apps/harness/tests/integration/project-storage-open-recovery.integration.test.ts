@@ -1,7 +1,7 @@
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { type OpenedStorageIdentity, StorageIdSchema } from "@slopstop/protocol";
+import { decodeStrict, type OpenedStorageIdentity, StorageIdSchema } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import {
   createRequest,
@@ -35,6 +35,43 @@ const absentIdentity: RecoveryIdentity = {
   canonicalDatabaseLineageId: null,
   runtimeDatabaseLineageId: null,
 };
+
+/**
+ * application.db is an installation resource, not part of one Storage create attempt: after a
+ * failed client initialization it stays migrated to the current schema with no rows from that
+ * attempt, no Project files exist, and the next start creates the Project normally.
+ */
+async function expectHealthyEmptyApplicationDatabase(root: string) {
+  expect(await inspectApplicationStorageRoot(root)).toMatchObject({
+    rootEntries: ["application.db"],
+    projectEntries: null,
+    targetExists: false,
+  });
+  const database = new DatabaseSync(path.join(root, "application.db"), { readOnly: true });
+  try {
+    expect(database.prepare("SELECT last_migration_id FROM schema_metadata").all()).toEqual([
+      { last_migration_id: "0005_registration_publications" },
+    ]);
+    const tables = database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map(({ name }) => String(name))
+      .filter((name) => name.startsWith("storage_") || name.startsWith("registration_"));
+    expect(tables.length).toBeGreaterThan(0);
+    for (const table of tables)
+      expect(database.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({
+        count: 0,
+      });
+  } finally {
+    database.close();
+  }
+  const runtime = await createStorageRuntimeForRoot(root);
+  try {
+    expect(payloadOf(await runtime.create(createRequest))).toMatchObject({ status: "created" });
+  } finally {
+    await runtime.stop();
+  }
+}
 
 function expectRecoveryResult(result: unknown, identity: RecoveryIdentity) {
   expect(result).toMatchObject({ event: "project.open.result" });
@@ -149,7 +186,7 @@ it(
   async () => {
     const root = await createTemporaryApplicationRoot();
     await initializeApplicationAuthority(root);
-    const storageId = StorageIdSchema.parse("00000000-0000-4000-8000-000000000071");
+    const storageId = decodeStrict(StorageIdSchema, "00000000-0000-4000-8000-000000000071");
     const database = new DatabaseSync(path.join(root, "application.db"));
     try {
       database
@@ -267,7 +304,8 @@ it.each(["existing", "mutable"] as const)(
         message: "Project Storage owner failed.",
       },
     });
-    expect(await inspectApplicationStorageRoot(root)).toEqual(before);
+    if (kind === "existing") expect(await inspectApplicationStorageRoot(root)).toEqual(before);
+    else await expectHealthyEmptyApplicationDatabase(root);
     expectNotToExpose(result, root);
     expectNotToExpose(result, caughtText);
   },

@@ -20,10 +20,11 @@
     "@slopstop/kernel": "workspace:*",
     "@slopstop/protocol": "workspace:*",
     "drizzle-orm": "catalog:",
+    "effect": "catalog:",
     "fs-native-extensions": "catalog:",
+    "koffi": "catalog:",
     "libsql": "catalog:",
-    "pino": "catalog:",
-    "zod": "catalog:"
+    "pino": "catalog:"
   },
   "devDependencies": {
     "drizzle-kit": "catalog:"

@@ -8,6 +8,41 @@
       "when": 1788404224482,
       "tag": "0000_gray_eddie_brock",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789278600414,
+      "tag": "0001_project_registration",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790509264265,
+      "tag": "0002_identity_query_attempts",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790875463248,
+      "tag": "0003_registration_proposals",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790881158291,
+      "tag": "0004_registration_reservations",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790887540132,
+      "tag": "0005_registration_publications",
+      "breakpoints": true
     }
   ]
 }

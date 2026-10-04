@@ -1,4 +1,5 @@
 import {
+  decodeStrict,
   WorkspaceIntentSchema,
   WorkspaceNotificationSchema,
   WorkspaceQuerySchema,
@@ -19,21 +20,21 @@ const ids = {
 } as const;
 
 const queries = [
-  WorkspaceQuerySchema.parse({
+  decodeStrict(WorkspaceQuerySchema, {
     query: "conversation.read",
     scope: { kind: "project", projectId: ids.project },
     cursor: null,
   }),
-  WorkspaceQuerySchema.parse({
+  decodeStrict(WorkspaceQuerySchema, {
     query: "context-record.read",
     projectId: ids.project,
     contextRecordId: ids.contextRecord,
   }),
-  WorkspaceQuerySchema.parse({
+  decodeStrict(WorkspaceQuerySchema, {
     query: "frame-review.read",
     projectId: ids.project,
   }),
-  WorkspaceQuerySchema.parse({
+  decodeStrict(WorkspaceQuerySchema, {
     query: "memory-library.read",
     projectId: ids.project,
     cursor: null,
@@ -41,7 +42,7 @@ const queries = [
 ] as const;
 
 const intents = [
-  WorkspaceIntentSchema.parse({
+  decodeStrict(WorkspaceIntentSchema, {
     intent: "conversation.message.submit",
     scope: { kind: "project", projectId: ids.project },
     branchId: "00000000-0000-4000-8000-000000000003",
@@ -49,7 +50,7 @@ const intents = [
     contextProposalId: "00000000-0000-4000-8000-000000000004",
     expectedProjectionRevision: 0,
   }),
-  WorkspaceIntentSchema.parse({
+  decodeStrict(WorkspaceIntentSchema, {
     intent: "conversation.influence.select",
     projectId: ids.project,
     frameDraftId: "00000000-0000-4000-8000-000000000005",
@@ -57,7 +58,7 @@ const intents = [
     excludedMessageIds: [],
     expectedProjectionRevision: 0,
   }),
-  WorkspaceIntentSchema.parse({
+  decodeStrict(WorkspaceIntentSchema, {
     intent: "frame-review.annotate",
     projectId: ids.project,
     frameDraftId: "00000000-0000-4000-8000-000000000005",
@@ -66,20 +67,20 @@ const intents = [
     comment: "Clarify this.",
     expectedProjectionRevision: 0,
   }),
-  WorkspaceIntentSchema.parse({
+  decodeStrict(WorkspaceIntentSchema, {
     intent: "frame.decision.accept",
     projectId: ids.project,
     frameDraftId: "00000000-0000-4000-8000-000000000005",
     sectionId: "00000000-0000-4000-8000-000000000007",
     expectedProjectionRevision: 0,
   }),
-  WorkspaceIntentSchema.parse({
+  decodeStrict(WorkspaceIntentSchema, {
     intent: "frame.accept",
     projectId: ids.project,
     frameDraftId: "00000000-0000-4000-8000-000000000005",
     expectedProjectionRevision: 0,
   }),
-  WorkspaceIntentSchema.parse({
+  decodeStrict(WorkspaceIntentSchema, {
     intent: "memory.proposal.review",
     projectId: ids.project,
     proposalId: "00000000-0000-4000-8000-000000000008",
@@ -129,7 +130,7 @@ function ownerNotification<C extends "conversation" | "frame" | "memory">(
   capability: C,
   revision: number,
 ): WorkspaceOwnerNotification<C> {
-  const parsed = WorkspaceNotificationSchema.parse({
+  const parsed = decodeStrict(WorkspaceNotificationSchema, {
     capability,
     scope: { kind: "project", projectId: ids.project },
     revision,

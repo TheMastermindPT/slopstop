@@ -8,6 +8,7 @@ import {
   createProjectActivateCommand,
   createProjectCommand,
   createProjectCreateCommand,
+  decodeStrict,
   ProjectActivationIdSchema,
   parseHarnessMessage,
 } from "@slopstop/protocol";
@@ -95,8 +96,8 @@ it("configures every canonical activation and release transaction", async () => 
     const result = await factory.activate({
       canonicalDatabasePath: file,
       projectId: createRequest.projectId,
-      activationId: ProjectActivationIdSchema.parse("00000000-0000-4000-8000-000000000011"),
-      writerToken: repositories.WriterCapabilityTokenSchema.parse("a".repeat(64)),
+      activationId: decodeStrict(ProjectActivationIdSchema, "00000000-0000-4000-8000-000000000011"),
+      writerToken: decodeStrict(repositories.WriterCapabilityTokenSchema, "a".repeat(64)),
       activatedAt: "2026-09-04T12:00:00.000Z",
     });
     expect(result.status).toBe("activated");
@@ -205,7 +206,7 @@ function activationTransport(
       throw new Error("Contender must not create a token.");
     },
     createActivationId: () =>
-      ProjectActivationIdSchema.parse("00000000-0000-4000-8000-000000000011"),
+      decodeStrict(ProjectActivationIdSchema, "00000000-0000-4000-8000-000000000011"),
     now: () => "2026-09-04T12:00:00.000Z",
   });
   const app = createCanonicalProjectApplication(coordinator);
@@ -272,7 +273,7 @@ function activationTransport(
       exchange(
         createProjectCommand(
           { messageId: "00000000-0000-4000-8000-000000000102", sentAt },
-          CanonicalProjectCommandRequestSchema.parse({
+          decodeStrict(CanonicalProjectCommandRequestSchema, {
             projectId: createRequest.projectId,
             activationId: "00000000-0000-4000-8000-000000000011",
             command: {
@@ -356,7 +357,7 @@ async function productionTransport() {
   };
 }
 
-const bootstrapInput = CanonicalProjectCommandRequestSchema.parse({
+const bootstrapInput = decodeStrict(CanonicalProjectCommandRequestSchema, {
   projectId: createRequest.projectId,
   activationId: "00000000-0000-4000-8000-000000000011",
   command: {

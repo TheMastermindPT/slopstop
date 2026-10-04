@@ -7,6 +7,8 @@ import {
   CanonicalSettlementTimeSchema,
   CommandReceiptMetadataSchema,
   CommandRejectionSchema,
+  dateTimeTextSchema,
+  decodeStrict,
   ProjectActivationIdSchema,
   type ProjectId,
   ProjectIdSchema,
@@ -14,7 +16,7 @@ import {
   type WriterGeneration,
   WriterGenerationSchema,
 } from "@slopstop/protocol";
-import { z } from "zod";
+import { Schema } from "effect";
 import {
   type CanonicalEventInput,
   CanonicalEventInputSchema,
@@ -31,38 +33,41 @@ import {
 } from "../canonical-json.js";
 import type { LocalLibsqlTransaction } from "./local-libsql-worker-client.js";
 
-export const canonicalWriterUtcInstantSchema = z.iso
-  .datetime({ offset: true })
-  .refine((value) => /T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u.test(value));
-export const canonicalWriterFenceSchema = z.strictObject({
+export const canonicalWriterUtcInstantSchema = dateTimeTextSchema({ offset: true }).check(
+  Schema.isPattern(/T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u),
+);
+export const canonicalWriterFenceSchema = Schema.Struct({
   generation: WriterGenerationSchema,
   tokenDigest: CanonicalSha256Schema,
-  state: z.enum(["active", "released"]),
+  state: Schema.Literals(["active", "released"]),
   activatedAt: canonicalWriterUtcInstantSchema,
-  releasedAt: canonicalWriterUtcInstantSchema.nullable(),
-  generationNumber: WriterGenerationSchema.nullable(),
-  generationDigest: CanonicalSha256Schema.nullable(),
-  generationAcquiredAt: canonicalWriterUtcInstantSchema.nullable(),
-  generationReleasedAt: canonicalWriterUtcInstantSchema.nullable(),
+  releasedAt: Schema.NullOr(canonicalWriterUtcInstantSchema),
+  generationNumber: Schema.NullOr(WriterGenerationSchema),
+  generationDigest: Schema.NullOr(CanonicalSha256Schema),
+  generationAcquiredAt: Schema.NullOr(canonicalWriterUtcInstantSchema),
+  generationReleasedAt: Schema.NullOr(canonicalWriterUtcInstantSchema),
 });
-const settlementFenceSchema = canonicalWriterFenceSchema.extend({
-  projectId: ProjectIdSchema,
-  generationProjectId: ProjectIdSchema,
-  generationActivationId: ProjectActivationIdSchema,
-  generationNumber: WriterGenerationSchema,
-  generationDigest: CanonicalSha256Schema,
-  generationAcquiredAt: canonicalWriterUtcInstantSchema,
-});
+const settlementFenceRowsSchema = Schema.Array(
+  Schema.Struct({
+    ...canonicalWriterFenceSchema.fields,
+    projectId: ProjectIdSchema,
+    generationProjectId: ProjectIdSchema,
+    generationActivationId: ProjectActivationIdSchema,
+    generationNumber: WriterGenerationSchema,
+    generationDigest: CanonicalSha256Schema,
+    generationAcquiredAt: canonicalWriterUtcInstantSchema,
+  }),
+);
+const SqlCountSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0));
 
 export function normalizedUtc(value: string): string {
-  const [seconds, fraction = ""] = canonicalWriterUtcInstantSchema
-    .parse(value)
+  const [seconds, fraction = ""] = decodeStrict(canonicalWriterUtcInstantSchema, value)
     .slice(0, -1)
     .split(".");
   return `${seconds}.${fraction.replace(/0+$/u, "")}`;
 }
 export function coherentCanonicalWriterRelease(
-  fence: z.infer<typeof canonicalWriterFenceSchema>,
+  fence: typeof canonicalWriterFenceSchema.Type,
 ): boolean {
   if (fence.state === "active")
     return fence.releasedAt === null && fence.generationReleasedAt === null;
@@ -86,7 +91,8 @@ export async function currentCanonicalSettlementFence(
 }
 
 export async function readCanonicalWriterFence(tx: LocalLibsqlTransaction, projectId: ProjectId) {
-  const rows = settlementFenceSchema.array().parse(
+  const rows = decodeStrict(
+    settlementFenceRowsSchema,
     canonicalResultObjects(
       await tx.execute({
         sql: `SELECT f.project_id AS projectId, f.writer_generation AS generation,
@@ -122,39 +128,46 @@ export type AppliedEventRow = Omit<CanonicalEventInput, "payload"> &
     payloadHash: string;
   }>;
 
-const storedReceiptSchema = CommandReceiptMetadataSchema.extend({
-  outcome: z.enum(["applied", "unchanged", "rejected"]),
+const storedReceiptSchema = Schema.Struct({
+  ...CommandReceiptMetadataSchema.fields,
+  outcome: Schema.Literals(["applied", "unchanged", "rejected"]),
   fingerprint: CanonicalSha256Schema,
-  generationProjectId: CommandReceiptMetadataSchema.shape.projectId,
-  generationNumber: CommandReceiptMetadataSchema.shape.writerGeneration,
+  generationProjectId: CommandReceiptMetadataSchema.fields.projectId,
+  generationNumber: CommandReceiptMetadataSchema.fields.writerGeneration,
 });
+type StoredReceipt = typeof storedReceiptSchema.Type;
+const storedReceiptRowsSchema = Schema.Array(storedReceiptSchema);
 type CommandIdentity = Pick<CanonicalCommandSnapshot, "projectId" | "commandId">;
 type SettlementLookup = Readonly<{
   command: CommandIdentity;
   fingerprint: string;
   lastProjectSequence: number;
   writerGeneration: WriterGeneration;
-  checkRequested?: (row: z.infer<typeof storedReceiptSchema>, conflict: boolean) => void;
+  checkRequested?: (row: StoredReceipt, conflict: boolean) => void;
 }>;
-const pointerSchema = CommandReceiptMetadataSchema.pick({
-  projectId: true,
-  commandId: true,
-  receiptId: true,
-}).extend({
-  fingerprint: CanonicalSha256Schema,
-  createdAt: CanonicalSettlementTimeSchema,
-});
-const storedEventSchema = CanonicalEventInputSchema.omit({ payload: true }).extend({
-  projectId: CommandReceiptMetadataSchema.shape.projectId,
-  receiptId: CommandReceiptMetadataSchema.shape.receiptId,
-  receiptOutcome: z.literal("applied"),
+const pointerRowsSchema = Schema.Array(
+  Schema.Struct({
+    projectId: CommandReceiptMetadataSchema.fields.projectId,
+    commandId: CommandReceiptMetadataSchema.fields.commandId,
+    receiptId: CommandReceiptMetadataSchema.fields.receiptId,
+    fingerprint: CanonicalSha256Schema,
+    createdAt: CanonicalSettlementTimeSchema,
+  }),
+);
+const { payload: _payload, ...eventInputFields } = CanonicalEventInputSchema.fields;
+const storedEventSchema = Schema.Struct({
+  ...eventInputFields,
+  projectId: CommandReceiptMetadataSchema.fields.projectId,
+  receiptId: CommandReceiptMetadataSchema.fields.receiptId,
+  receiptOutcome: Schema.Literal("applied"),
   projectSequence: ProjectSequenceSchema,
   eventId: CanonicalEventIdSchema,
   eventOrdinal: CanonicalEventOrdinalSchema,
   occurredAt: CanonicalSettlementTimeSchema,
-  payloadText: z.string(),
+  payloadText: Schema.String,
   payloadHash: CanonicalSha256Schema,
 });
+const storedEventRowsSchema = Schema.Array(storedEventSchema);
 const receiptSelect = `SELECT r.project_id AS projectId, r.receipt_id AS receiptId, r.command_id AS commandId,
   r.command_type AS commandType, r.command_version AS commandVersion, r.outcome,
   r.project_sequence AS projectSequence, r.writer_generation AS writerGeneration, r.settled_at AS settledAt,
@@ -162,19 +175,21 @@ const receiptSelect = `SELECT r.project_id AS projectId, r.receipt_id AS receipt
   FROM command_receipts AS r LEFT JOIN writer_generations AS g
   ON g.project_id=r.project_id AND g.writer_generation=r.writer_generation WHERE r.project_id=?`;
 
-const storedRejectionSchema = CommandReceiptMetadataSchema.pick({
-  projectId: true,
-  receiptId: true,
-  projectSequence: true,
-}).extend({
-  receiptOutcome: z.literal("rejected"),
-  code: z.string(),
-  retryable: z.union([z.literal(0), z.literal(1)]),
-  detailsText: z.string(),
-  detailsHash: CanonicalSha256Schema,
-});
+const storedRejectionRowsSchema = Schema.Array(
+  Schema.Struct({
+    projectId: CommandReceiptMetadataSchema.fields.projectId,
+    receiptId: CommandReceiptMetadataSchema.fields.receiptId,
+    projectSequence: CommandReceiptMetadataSchema.fields.projectSequence,
+    receiptOutcome: Schema.Literal("rejected"),
+    code: Schema.String,
+    retryable: Schema.Literals([0, 1]),
+    detailsText: Schema.String,
+    detailsHash: CanonicalSha256Schema,
+  }),
+);
+const rejectionDetailsSchema = Schema.Struct({ version: Schema.Literal(1) });
 
-async function readRejection(tx: LocalLibsqlTransaction, row: z.infer<typeof storedReceiptSchema>) {
+async function readRejection(tx: LocalLibsqlTransaction, row: StoredReceipt) {
   const rows = canonicalResultObjects(
     await tx.execute({
       sql: "SELECT project_id AS projectId, receipt_id AS receiptId, receipt_outcome AS receiptOutcome, project_sequence AS projectSequence, rejection_code AS code, retryable, details_json AS detailsText, details_hash AS detailsHash FROM command_rejections WHERE project_id=? AND receipt_id=?",
@@ -186,23 +201,24 @@ async function readRejection(tx: LocalLibsqlTransaction, row: z.infer<typeof sto
       throw new Error("Canonical non-rejected receipt has rejection children.");
     return {};
   }
-  const child = canonicalExactlyOne(storedRejectionSchema.array().parse(rows));
+  const child = canonicalExactlyOne(decodeStrict(storedRejectionRowsSchema, rows));
   const bound = [
     child.projectId === row.projectId,
     child.receiptId === row.receiptId,
     child.projectSequence === row.projectSequence,
   ].every(Boolean);
   if (!bound) throw new Error("Canonical rejection source binding is inconsistent.");
-  const details = z
-    .strictObject({ version: z.literal(1) })
-    .parse(parseCanonicalJson(child.detailsText));
+  const details = decodeStrict(rejectionDetailsSchema, parseCanonicalJson(child.detailsText));
   const intact = [
     canonicalJsonText(details) === child.detailsText,
     hashCanonicalJson(details) === child.detailsHash,
   ].every(Boolean);
   if (!intact) throw new Error("Canonical rejection details integrity is inconsistent.");
   return {
-    rejection: CommandRejectionSchema.parse({ code: child.code, retryable: child.retryable === 1 }),
+    rejection: decodeStrict(CommandRejectionSchema, {
+      code: child.code,
+      retryable: child.retryable === 1,
+    }),
   };
 }
 
@@ -213,19 +229,18 @@ async function originalReceipt(
   writerGeneration: WriterGeneration,
 ) {
   const count = canonicalExactlyOne(
-    z
-      .strictObject({ receiptCount: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER) })
-      .array()
-      .parse(
-        canonicalResultObjects(
-          await tx.execute({
-            sql: "SELECT COUNT(*) AS receiptCount FROM command_receipts WHERE project_id=? AND command_id=?",
-            args: [command.projectId, command.commandId],
-          }),
-        ),
+    decodeStrict(
+      Schema.Array(Schema.Struct({ receiptCount: SqlCountSchema })),
+      canonicalResultObjects(
+        await tx.execute({
+          sql: "SELECT COUNT(*) AS receiptCount FROM command_receipts WHERE project_id=? AND command_id=?",
+          args: [command.projectId, command.commandId],
+        }),
       ),
+    ),
   );
-  const pointers = pointerSchema.array().parse(
+  const pointers = decodeStrict(
+    pointerRowsSchema,
     canonicalResultObjects(
       await tx.execute({
         sql: "SELECT project_id AS projectId, command_id AS commandId, original_receipt_id AS receiptId, original_command_fingerprint AS fingerprint, created_at AS createdAt FROM command_idempotency WHERE project_id=? AND command_id=?",
@@ -239,7 +254,8 @@ async function originalReceipt(
   }
   const pointer = canonicalExactlyOne(pointers);
   const receipt = canonicalExactlyOne(
-    storedReceiptSchema.array().parse(
+    decodeStrict(
+      storedReceiptRowsSchema,
       canonicalResultObjects(
         await tx.execute({
           sql: `${receiptSelect} AND r.receipt_id=?`,
@@ -266,10 +282,7 @@ async function originalReceipt(
   return receipt;
 }
 
-function readEventReference(
-  event: z.infer<typeof storedEventSchema>,
-  row: z.infer<typeof storedReceiptSchema>,
-) {
+function readEventReference(event: typeof storedEventSchema.Type, row: StoredReceipt) {
   const bound = [
     event.projectId === row.projectId,
     event.receiptId === row.receiptId,
@@ -286,12 +299,10 @@ function readEventReference(
   return { eventId: event.eventId, eventOrdinal: event.eventOrdinal };
 }
 
-async function readOutcomeReceipt(
-  tx: LocalLibsqlTransaction,
-  row: z.infer<typeof storedReceiptSchema>,
-) {
+async function readOutcomeReceipt(tx: LocalLibsqlTransaction, row: StoredReceipt) {
   const rejection = await readRejection(tx, row);
-  const events = storedEventSchema.array().parse(
+  const events = decodeStrict(
+    storedEventRowsSchema,
     canonicalResultObjects(
       await tx.execute({
         sql: `SELECT project_id AS projectId, receipt_id AS receiptId, receipt_outcome AS receiptOutcome,
@@ -312,7 +323,7 @@ async function readOutcomeReceipt(
     generationNumber: _generation,
     ...metadata
   } = row;
-  return CanonicalCommandReceiptSchema.parse({
+  return decodeStrict(CanonicalCommandReceiptSchema, {
     ...metadata,
     ...rejection,
     events: events.map((event) => readEventReference(event, row)),
@@ -324,19 +335,15 @@ export async function readCanonicalProjectSequence(
   projectId: ProjectId,
 ) {
   const state = canonicalExactlyOne(
-    z
-      .strictObject({
-        lastProjectSequence: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-      })
-      .array()
-      .parse(
-        canonicalResultObjects(
-          await tx.execute({
-            sql: "SELECT last_project_sequence AS lastProjectSequence FROM project_state WHERE project_id=?",
-            args: [projectId],
-          }),
-        ),
+    decodeStrict(
+      Schema.Array(Schema.Struct({ lastProjectSequence: SqlCountSchema })),
+      canonicalResultObjects(
+        await tx.execute({
+          sql: "SELECT last_project_sequence AS lastProjectSequence FROM project_state WHERE project_id=?",
+          args: [projectId],
+        }),
       ),
+    ),
   );
   return state.lastProjectSequence;
 }
@@ -375,7 +382,7 @@ export async function readCheckedCanonicalSettlement(
       return { status: "sequence-exhausted" as const };
     return {
       status: "new" as const,
-      projectSequence: ProjectSequenceSchema.parse(lastProjectSequence + 1),
+      projectSequence: decodeStrict(ProjectSequenceSchema, lastProjectSequence + 1),
     };
   }
   const receipt = await readOriginalReceiptOutcome(tx, original);
@@ -383,7 +390,8 @@ export async function readCheckedCanonicalSettlement(
     return readConflict(tx, lookup, original);
   }
   const row = canonicalExactlyOne(
-    storedReceiptSchema.array().parse(
+    decodeStrict(
+      storedReceiptRowsSchema,
       canonicalResultObjects(
         await tx.execute({
           sql: `${receiptSelect} AND r.command_id=? AND r.command_fingerprint=?`,
@@ -398,10 +406,7 @@ export async function readCheckedCanonicalSettlement(
   return { status: "settled" as const, receipt };
 }
 
-async function readOriginalReceiptOutcome(
-  tx: LocalLibsqlTransaction,
-  original: z.infer<typeof storedReceiptSchema>,
-) {
+async function readOriginalReceiptOutcome(tx: LocalLibsqlTransaction, original: StoredReceipt) {
   const receipt = await readOutcomeReceipt(tx, original);
   if (receipt.outcome === "rejected" && receipt.rejection.code === "IDEMPOTENCY_CONFLICT")
     throw new Error("Canonical original receipt authority is inconsistent.");
@@ -411,10 +416,11 @@ async function readOriginalReceiptOutcome(
 async function readConflict(
   tx: LocalLibsqlTransaction,
   lookup: SettlementLookup,
-  original: z.infer<typeof storedReceiptSchema>,
+  original: StoredReceipt,
 ) {
   const { command, fingerprint, lastProjectSequence, writerGeneration } = lookup;
-  const rows = storedReceiptSchema.array().parse(
+  const rows = decodeStrict(
+    storedReceiptRowsSchema,
     canonicalResultObjects(
       await tx.execute({
         sql: `${receiptSelect} AND r.command_id=? AND r.command_fingerprint=?`,
@@ -427,7 +433,7 @@ async function readConflict(
       return { status: "sequence-exhausted" as const };
     return {
       status: "conflict" as const,
-      projectSequence: ProjectSequenceSchema.parse(lastProjectSequence + 1),
+      projectSequence: decodeStrict(ProjectSequenceSchema, lastProjectSequence + 1),
     };
   }
   const row = canonicalExactlyOne(rows);
@@ -450,11 +456,7 @@ async function readConflict(
   return { status: "settled" as const, receipt };
 }
 
-function checkRequestedReceipt(
-  lookup: SettlementLookup,
-  row: z.infer<typeof storedReceiptSchema>,
-  conflict: boolean,
-) {
+function checkRequestedReceipt(lookup: SettlementLookup, row: StoredReceipt, conflict: boolean) {
   lookup.checkRequested?.(row, conflict);
 }
 

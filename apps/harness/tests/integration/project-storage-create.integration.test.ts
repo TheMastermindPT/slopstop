@@ -3,6 +3,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
   CanonicalDatabaseLineageIdSchema,
+  decodeStrict,
   type ProjectStorageCreateRequest,
   ProjectStorageCreateRequestSchema,
   RuntimeDatabaseLineageIdSchema,
@@ -35,7 +36,7 @@ import {
 } from "./project-storage-create-fixture.js";
 import {
   canonicalConstraintCases,
-  canonicalGenerationTwoTables,
+  canonicalCurrentTables,
   canonicalTableCounts,
   expectCreatedCanonicalSchema,
   type SqlTransform,
@@ -45,6 +46,7 @@ import {
   seedCanonicalConstraintAuthority,
   sqliteExecutor,
 } from "./project-storage-schema-cases.js";
+import { applicationRegistrationTables } from "./registration-schema-fixture.js";
 
 type CreatedGenerationPaths = Readonly<{
   directory: string;
@@ -197,7 +199,7 @@ async function readDatabaseCheck(databasePath: string) {
 }
 
 it(
-  "creates the exact canonical generation-2 schema",
+  "creates the exact canonical generation-3 schema",
   async () => {
     const root = await createTemporaryApplicationRoot();
     const runtime = await createStorageRuntimeForRoot(root, {
@@ -228,13 +230,8 @@ it(
       canonical.close();
     }
 
-    await expect(readTableNames(applicationPath)).resolves.toEqual([
-      "schema_metadata",
-      "storage_generations",
-      "storage_locations",
-      "storage_registrations",
-    ]);
-    await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalGenerationTwoTables);
+    await expect(readTableNames(applicationPath)).resolves.toEqual(applicationRegistrationTables);
+    await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalCurrentTables);
     await expect(readTableNames(runtimePath)).resolves.toEqual([
       "slopstop_runtime_schema_metadata",
       "slopstop_runtime_storage_identity",
@@ -255,7 +252,7 @@ it(
 );
 
 it(
-  "enforces canonical generation-2 trust-spine constraints",
+  "enforces canonical generation-3 trust-spine constraints",
   async () => {
     const root = await createTemporaryApplicationRoot();
     const runtime = await createStorageRuntimeForRoot(root);
@@ -267,13 +264,13 @@ it(
       await runtime.stop();
     }
     const canonicalPath = createdGenerationPaths({ root }).canonical;
-    await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalGenerationTwoTables);
+    await expect(readTableNames(canonicalPath)).resolves.toEqual(canonicalCurrentTables);
     const database = new DatabaseSync(canonicalPath);
     try {
       database.exec("PRAGMA foreign_keys = ON");
       seedCanonicalConstraintAuthority(database);
       const before = canonicalTableCounts(database);
-      expect(before).toEqual([1, 0, 3, 0, 1, 1, 1, 0, 3, 0, 0]);
+      expect(before).toEqual([1, 0, 3, 0, 1, 0, 0, 1, 1, 0, 3, 0, 0]);
       for (const scenario of canonicalConstraintCases) {
         database.exec("SAVEPOINT invalid_case");
         try {
@@ -609,18 +606,14 @@ async function createWithTransformedMigrations(root: string, transform: SqlTrans
   }
 }
 
-async function expectNoProjectAllocation(root: string): Promise<void> {
+// The application schema is verified before its initialization commits (user-approved
+// contract, 2026-10-03): a rejected fresh schema rolls back and leaves no application
+// database, so the next start initializes again instead of failing internally.
+async function expectRolledBackFreshInitialization(root: string): Promise<void> {
   await expect(pathExists(path.join(root, "projects", createRequest.projectId))).resolves.toBe(
     false,
   );
-  const applicationPath = path.join(root, "application.db");
-  await expect(
-    Promise.all([
-      readRows(applicationPath, "SELECT * FROM storage_generations"),
-      readRows(applicationPath, "SELECT * FROM storage_locations"),
-      readRows(applicationPath, "SELECT * FROM storage_registrations"),
-    ]),
-  ).resolves.toEqual([[], [], []]);
+  await expect(pathExists(path.join(root, "application.db"))).resolves.toBe(false);
 }
 
 it.each(sameNameSchemaMutationCases)(
@@ -637,8 +630,7 @@ it.each(sameNameSchemaMutationCases)(
 
     const root = await createTemporaryApplicationRoot();
     const rejected = await createWithTransformedMigrations(root, mutate);
-
-    expect(rejected.result).toMatchObject({
+    const rejectedPayload = {
       event: "project.create.result",
       payload: {
         status: "broken",
@@ -647,11 +639,20 @@ it.each(sameNameSchemaMutationCases)(
           message: expectedMessage,
         },
       },
-    });
+    };
+
+    expect(rejected.result).toMatchObject(rejectedPayload);
     expect(rejected.allocationCount()).toBe(0);
-    await expectNoProjectAllocation(root);
+    await expectRolledBackFreshInitialization(root);
     expect(JSON.stringify(rejected.result)).not.toContain(root);
     expect(JSON.stringify(rejected.result)).not.toContain(rejected.migrationResourcesRoot);
+
+    // A restart with the same resources reports the same precise refusal, never an
+    // internal failure from a schema-less database left behind.
+    const restarted = await createWithTransformedMigrations(root, mutate);
+    expect(restarted.result).toMatchObject(rejectedPayload);
+    expect(restarted.allocationCount()).toBe(0);
+    await expectRolledBackFreshInitialization(root);
   },
   30_000,
 );
@@ -696,11 +697,11 @@ it.each(["canonical_lineage_id", "runtime_lineage_id"] as const)(
   projectStorageIntegrationTimeout,
 );
 
-const foreignConflictRequest = ProjectStorageCreateRequestSchema.parse({
+const foreignConflictRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000020",
   createRequestId: createRequest.createRequestId,
 });
-const differentCreateRequest = ProjectStorageCreateRequestSchema.parse({
+const differentCreateRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: createRequest.projectId,
   createRequestId: "00000000-0000-4000-8000-000000000099",
 });
@@ -993,7 +994,7 @@ it.each(["format_version", "schema_version"] as const)(
 
 async function seedOrphanLocation(input: { root: string }): Promise<string> {
   const initializer = await createStorageRuntimeForRoot(input.root);
-  const initializerRequest = ProjectStorageCreateRequestSchema.parse({
+  const initializerRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId: "00000000-0000-4000-8000-000000000050",
     createRequestId: "00000000-0000-4000-8000-000000000051",
   });
@@ -1034,14 +1035,19 @@ function createCountingStorageOwner(input: { root: string }) {
       migrationResourcesRoot: checkedInMigrationRoot,
       applicationVersion: "0.0.0",
       ids: {
-        storageId: () => allocate(StorageIdSchema.parse("00000000-0000-4000-8000-000000000071")),
+        storageId: () =>
+          allocate(decodeStrict(StorageIdSchema, "00000000-0000-4000-8000-000000000071")),
         locationId: () => allocate("00000000-0000-4000-8000-000000000072"),
         generationId: () =>
-          allocate(StorageGenerationIdSchema.parse("00000000-0000-4000-8000-000000000073")),
+          allocate(decodeStrict(StorageGenerationIdSchema, "00000000-0000-4000-8000-000000000073")),
         canonicalLineageId: () =>
-          allocate(CanonicalDatabaseLineageIdSchema.parse("00000000-0000-4000-8000-000000000074")),
+          allocate(
+            decodeStrict(CanonicalDatabaseLineageIdSchema, "00000000-0000-4000-8000-000000000074"),
+          ),
         runtimeLineageId: () =>
-          allocate(RuntimeDatabaseLineageIdSchema.parse("00000000-0000-4000-8000-000000000075")),
+          allocate(
+            decodeStrict(RuntimeDatabaseLineageIdSchema, "00000000-0000-4000-8000-000000000075"),
+          ),
       },
     }),
   );

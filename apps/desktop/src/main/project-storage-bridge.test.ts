@@ -6,6 +6,7 @@ import {
   createSystemFailureEvent,
   type DesktopMessage,
   DesktopMessageSchema,
+  decodeStrict,
   MessageIdSchema,
   ProjectStorageCloseRequestSchema,
   type ProjectStorageCloseResult,
@@ -26,22 +27,27 @@ import type {
 import { createProjectStorageBridge } from "./project-storage-bridge.js";
 
 function messageId(value: number): string {
-  return MessageIdSchema.parse(`00000000-0000-4000-8000-${String(value).padStart(12, "0")}`);
+  return decodeStrict(
+    MessageIdSchema,
+    `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`,
+  );
 }
 
 const projectId = messageId(10);
-const openRequest = ProjectStorageOpenRequestSchema.parse({ projectId });
-const createRequest = ProjectStorageCreateRequestSchema.parse({
+const openRequest = decodeStrict(ProjectStorageOpenRequestSchema, { projectId });
+const createRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId,
   createRequestId: messageId(11),
 });
-const closeRequest = ProjectStorageCloseRequestSchema.parse({ projectId });
-const otherOpenRequest = ProjectStorageOpenRequestSchema.parse({ projectId: messageId(16) });
-const notRegisteredResult = ProjectStorageOpenResultSchema.parse({
+const closeRequest = decodeStrict(ProjectStorageCloseRequestSchema, { projectId });
+const otherOpenRequest = decodeStrict(ProjectStorageOpenRequestSchema, {
+  projectId: messageId(16),
+});
+const notRegisteredResult = decodeStrict(ProjectStorageOpenResultSchema, {
   status: "not-registered",
   request: openRequest,
 });
-const createdResult = ProjectStorageCreateResultSchema.parse({
+const createdResult = decodeStrict(ProjectStorageCreateResultSchema, {
   status: "created",
   request: createRequest,
   mode: "read-write",
@@ -52,13 +58,13 @@ const createdResult = ProjectStorageCreateResultSchema.parse({
     runtimeDatabaseLineageId: messageId(15),
   },
 });
-const closedResult = ProjectStorageCloseResultSchema.parse({
+const closedResult = decodeStrict(ProjectStorageCloseResultSchema, {
   status: "closed",
   request: closeRequest,
 });
 
 function transportBrokenOpenResult(message: string): ProjectStorageOpenResult {
-  return ProjectStorageOpenResultSchema.parse({
+  return decodeStrict(ProjectStorageOpenResultSchema, {
     status: "broken",
     request: openRequest,
     diagnostic: { code: "PROJECT_STORAGE_TRANSPORT_FAILED", message },
@@ -66,7 +72,7 @@ function transportBrokenOpenResult(message: string): ProjectStorageOpenResult {
 }
 
 function transportBrokenCreateResult(message: string): ProjectStorageCreateResult {
-  return ProjectStorageCreateResultSchema.parse({
+  return decodeStrict(ProjectStorageCreateResultSchema, {
     status: "broken",
     request: createRequest,
     diagnostic: { code: "PROJECT_STORAGE_TRANSPORT_FAILED", message },
@@ -74,7 +80,7 @@ function transportBrokenCreateResult(message: string): ProjectStorageCreateResul
 }
 
 function transportBrokenCloseResult(message: string): ProjectStorageCloseResult {
-  return ProjectStorageCloseResultSchema.parse({
+  return decodeStrict(ProjectStorageCloseResultSchema, {
     status: "broken",
     request: closeRequest,
     diagnostic: { code: "PROJECT_STORAGE_TRANSPORT_FAILED", message },
@@ -148,7 +154,7 @@ class FakeHarnessSession implements HarnessSessionClient {
 
   send(message: unknown): HarnessSessionSendResult {
     if (this.sendError !== undefined) throw this.sendError;
-    if (this.sendResult.ok) this.sent.push(DesktopMessageSchema.parse(message));
+    if (this.sendResult.ok) this.sent.push(decodeStrict(DesktopMessageSchema, message));
     return this.sendResult;
   }
 
@@ -194,7 +200,7 @@ it("request failure settles only its correlated Project Storage operation", asyn
           messageId: messageId(901),
           sentAt: "2026-08-14T12:00:01.000Z",
           sequence: 1,
-          causationId: MessageIdSchema.parse("00000000-0000-4000-8000-000000000301"),
+          causationId: decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000301"),
         },
         {
           code: "HARNESS_INTERNAL_FAILURE",
@@ -278,10 +284,10 @@ it("maps a thrown send failure and releases the request identity", async () => {
 it("correlates against the validated command payload instead of caller mutation", async () => {
   const session = new FakeHarnessSession();
   const bridge = bridgeWith(session, [messageId(1)]);
-  const mutableRequest = ProjectStorageOpenRequestSchema.parse({ projectId });
+  const mutableRequest = decodeStrict(ProjectStorageOpenRequestSchema, { projectId });
   const pending = bridge.open(mutableRequest);
 
-  mutableRequest.projectId = otherOpenRequest.projectId;
+  Reflect.set(mutableRequest, "projectId", otherOpenRequest.projectId);
   session.emitProjectResult(messageId(1), { kind: "open", result: notRegisteredResult });
 
   await expect(pending).resolves.toEqual(notRegisteredResult);
@@ -306,7 +312,7 @@ it("rejects mismatched, uncorrelated, disconnected, and stopped requests", async
   const mismatch = mismatchBridge.open(openRequest);
   mismatchSession.emitProjectResult(messageId(1), {
     kind: "open",
-    result: ProjectStorageOpenResultSchema.parse({
+    result: decodeStrict(ProjectStorageOpenResultSchema, {
       ...notRegisteredResult,
       request: otherOpenRequest,
     }),

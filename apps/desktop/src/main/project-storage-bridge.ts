@@ -4,6 +4,7 @@ import {
   createProjectCreateCommand,
   createProjectOpenCommand,
   type DesktopMessage,
+  decodeStrict,
   type ProjectStorageCloseRequest,
   ProjectStorageCloseRequestSchema,
   type ProjectStorageCloseResult,
@@ -17,6 +18,7 @@ import {
   type ProjectStorageOpenResult,
   ProjectStorageOpenResultSchema,
 } from "@slopstop/protocol";
+import type { Schema } from "effect";
 import { dispatchPendingHarnessEvent, requestHarness } from "./harness-pending-request.js";
 import { harnessSendFailureMessage } from "./harness-send-failure.js";
 import type { HarnessSessionClient, HarnessSessionEvent } from "./harness-session.js";
@@ -34,15 +36,15 @@ type ProjectStorageBridgeOptions = Readonly<{
   now(): string;
 }>;
 
-type ResultSchema<Result> = Readonly<{ parse(value: unknown): Result }>;
-type RequestSchema<Request> = Readonly<{ parse(value: unknown): Request }>;
+type ResultSchema<Result> = Schema.Decoder<Result>;
+type RequestSchema<Request> = Schema.Decoder<Request>;
 
 function brokenResult<Request, Result>(
   schema: ResultSchema<Result>,
   request: Request,
   message: string,
 ): Result {
-  return schema.parse({
+  return decodeStrict(schema, {
     status: "broken",
     request,
     diagnostic: { code: "PROJECT_STORAGE_TRANSPORT_FAILED", message },
@@ -62,7 +64,7 @@ function pendingOperation<
   return {
     kind,
     settle(value) {
-      const result = schema.parse(value);
+      const result = decodeStrict(schema, value);
       resolve(
         isDeepStrictEqual(result.request, request)
           ? result
@@ -154,7 +156,8 @@ class ProjectStorageBridge implements ProjectStorageBridgeClient {
   ): Promise<Result> {
     return this.#request(
       createCommand,
-      (resolve) => pendingOperation(kind, requestSchema.parse(request), resultSchema, resolve),
+      (resolve) =>
+        pendingOperation(kind, decodeStrict(requestSchema, request), resultSchema, resolve),
       (message) => brokenResult(resultSchema, request, message),
     );
   }

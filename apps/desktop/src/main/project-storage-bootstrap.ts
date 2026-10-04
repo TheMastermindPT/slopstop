@@ -1,6 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { type HarnessBootstrap, HarnessBootstrapSchema } from "@slopstop/protocol";
+import { decodeStrict, type HarnessBootstrap, HarnessBootstrapSchema } from "@slopstop/protocol";
 
 export function projectStorageMigrationResourcesRoot(
   input: Readonly<{
@@ -20,7 +20,7 @@ export function createProjectStorageHarnessBootstrap(
     migrationResourcesRoot: string;
   }>,
 ): HarnessBootstrap {
-  return HarnessBootstrapSchema.parse({
+  return decodeStrict(HarnessBootstrapSchema, {
     kind: "harness.connect",
     applicationStorageRootUrl: pathToFileURL(path.join(input.userDataRoot, "storage")).href,
     migrationResourcesRootUrl: pathToFileURL(input.migrationResourcesRoot).href,

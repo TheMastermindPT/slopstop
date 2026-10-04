@@ -3,6 +3,7 @@ import {
   createProjectCloseResultEvent,
   createProjectCommandResultEvent,
   createProjectCreateResultEvent,
+  createProjectListResultEvent,
   createProjectOpenResultEvent,
   createProjectSwitchResultEvent,
   createReadyEvent,
@@ -12,12 +13,15 @@ import {
   createWorkspaceProjectionInvalidatedEvent,
   createWorkspaceQueryResultEvent,
   type DesktopMessage,
+  decodeStrict,
   type HarnessFailureCode,
   type MessageId,
+  type ProjectListResult,
   parseDesktopMessage,
   readMessageId,
   WorkspaceNotificationSchema,
 } from "@slopstop/protocol";
+import { Deferred, Effect } from "effect";
 import type { CanonicalProjectApplication } from "./canonical-project-application.js";
 import type { ProjectStorageApplication } from "./project-storage-application.js";
 import type { WorkspaceApplication } from "./workspace-application.js";
@@ -30,6 +34,9 @@ export interface HarnessTransport {
 export type StopHarnessRuntime = () => Promise<void>;
 
 type HarnessRuntimeOptions = Readonly<{
+  projectListing?: Readonly<{ list(): Promise<ProjectListResult>; stop(): Promise<void> }>;
+  // The harness's shared application database authority, stopped last when Storage stopped.
+  applicationDatabase?: Readonly<{ stop(): Promise<void> }>;
   transport: HarnessTransport;
   canonicalProjectApplication: CanonicalProjectApplication;
   projectStorageApplication: ProjectStorageApplication;
@@ -53,6 +60,62 @@ function runtimeShutdownFailure(failures: readonly unknown[]): unknown {
   return failures.length === 1
     ? failures[0]
     : new AggregateError(failures, "Harness runtime shutdown failed.");
+}
+
+type StopFailures = readonly unknown[];
+
+// Invokes a cleanup in the caller's turn (same-turn admission is part of the shutdown
+// contract) and exposes its settlement as an Effect that never fails.
+function startStop(stop: () => Promise<void> | undefined): Effect.Effect<StopFailures> {
+  let started: Promise<void> | undefined;
+  try {
+    started = stop();
+  } catch (error) {
+    return Effect.succeed([error]);
+  }
+  return Effect.promise(() =>
+    Promise.resolve(started).then(
+      () => [],
+      (error: unknown) => [error],
+    ),
+  );
+}
+
+// Storage stops only after canonical release succeeds (a failed release may still hold
+// it); the shared application database stops only after Storage stopped and the listing
+// drained, so a withheld Storage keeps it alive.
+function shutdownAfterIntake(
+  options: HarnessRuntimeOptions,
+  intakeFailures: StopFailures,
+): Effect.Effect<void, unknown> {
+  const canonical = startStop(() => options.canonicalProjectApplication.stop());
+  const listing = startStop(() => options.projectListing?.stop());
+  const storage = Effect.flatMap(canonical, (failures) =>
+    failures.length > 0
+      ? Effect.succeed({ withheld: true, failures })
+      : Effect.map(
+          Effect.suspend(() => startStop(() => options.projectStorageApplication.stop())),
+          (storageFailures) => ({
+            withheld: storageFailures.length > 0,
+            failures: storageFailures,
+          }),
+        ),
+  );
+  return Effect.gen(function* () {
+    const [storageOutcome, listingFailures] = yield* Effect.all([storage, listing], {
+      concurrency: "unbounded",
+    });
+    const databaseFailures = storageOutcome.withheld
+      ? []
+      : yield* Effect.suspend(() => startStop(() => options.applicationDatabase?.stop()));
+    const failures = [
+      ...intakeFailures,
+      ...storageOutcome.failures,
+      ...listingFailures,
+      ...databaseFailures,
+    ];
+    if (failures.length > 0) return yield* Effect.fail(runtimeShutdownFailure(failures));
+  });
 }
 
 type CanonicalProjectMessage = Extract<
@@ -166,6 +229,13 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     if (isCanonicalProjectMessage(parsed.value)) return handleCanonicalProjectMessage(parsed.value);
     if (isProjectStorageMessage(parsed.value)) return handleProjectStorageMessage(parsed.value);
     switch (parsed.value.command) {
+      case "project.list": {
+        const result =
+          (await options.projectListing?.list()) ??
+          ({ status: "unavailable", code: "PROJECT_LIST_UNAVAILABLE" } as const);
+        options.transport.send(createProjectListResultEvent(nextMetadata(causationId), result));
+        return;
+      }
       case "system.handshake":
         options.transport.send(createReadyEvent(nextMetadata(causationId), options.harnessVersion));
         return;
@@ -189,7 +259,7 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
   });
   const stopNotifications = options.workspaceApplication.subscribe((notification) => {
     try {
-      const validated = WorkspaceNotificationSchema.parse(notification);
+      const validated = decodeStrict(WorkspaceNotificationSchema, notification);
       options.transport.send(
         createWorkspaceProjectionInvalidatedEvent(nextMetadata(null), validated),
       );
@@ -198,46 +268,31 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     }
   });
 
+  // One completion shared by every stop request, published before any cleanup callback
+  // runs so a callback that re-enters stop receives the same promise.
+  const completion = Deferred.makeUnsafe<void, unknown>();
   let stopPromise: Promise<void> | undefined;
   return () => {
     if (stopPromise !== undefined) {
       return stopPromise;
     }
-    const failures: unknown[] = [];
-    const settlement = {
-      resolve: (): void => undefined,
-      reject: (_reason: unknown): void => undefined,
-    };
-    stopPromise = new Promise<void>((resolve, reject) => {
-      settlement.resolve = resolve;
-      settlement.reject = reject;
-    });
+    stopPromise = Effect.runPromise(Deferred.await(completion));
+    const intakeFailures: unknown[] = [];
     try {
       stopMessages();
     } catch (error) {
-      failures.push(error);
+      intakeFailures.push(error);
     }
     try {
       stopNotifications();
     } catch (error) {
-      failures.push(error);
+      intakeFailures.push(error);
     }
-    void (async () => {
-      try {
-        await options.canonicalProjectApplication.stop();
-      } catch (error) {
-        failures.push(error);
-        settlement.reject(runtimeShutdownFailure(failures));
-        return;
-      }
-      try {
-        await options.projectStorageApplication.stop();
-      } catch (error) {
-        failures.push(error);
-      }
-      if (failures.length === 0) settlement.resolve();
-      else settlement.reject(runtimeShutdownFailure(failures));
-    })();
+    Effect.runFork(
+      Effect.exit(shutdownAfterIntake(options, intakeFailures)).pipe(
+        Effect.flatMap((exit) => Deferred.done(completion, exit)),
+      ),
+    );
     return stopPromise;
   };
 }

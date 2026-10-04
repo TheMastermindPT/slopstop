@@ -12,6 +12,7 @@ import type {
   StorageGenerationId,
   StorageId,
 } from "@slopstop/protocol";
+import { Deferred, Effect, Result } from "effect";
 import type {
   ProjectStorageActivationOutcome,
   ProjectStorageActivationSession,
@@ -124,11 +125,8 @@ type AdmittedProjectStorageSession = Readonly<{
   session: RetainedProjectStorageSession;
 }>;
 
-type AdmittedProjectStorageOperation = Readonly<{
-  admissionOrder: number;
-  settlement: Promise<void>;
-  failure(): Readonly<{ error: unknown }> | undefined;
-}>;
+// Completes once its admitted operation settles; fails only with a shutdown-relevant error.
+type AdmittedOperationCompletion = Deferred.Deferred<void, unknown>;
 
 type ProjectStorageOperationResult =
   | ProjectStorageOpenResult
@@ -143,34 +141,41 @@ function shutdownOperationFailure(error: unknown): unknown {
     : error;
 }
 
-async function collectOperationShutdownErrors(
-  admittedOperations: ReadonlySet<AdmittedProjectStorageOperation>,
-): Promise<unknown[]> {
-  const errors: unknown[] = [];
-  const operations = [...admittedOperations].sort(
-    (left, right) => left.admissionOrder - right.admissionOrder,
-  );
-  await Promise.all(operations.map(({ settlement }) => settlement));
-  for (const operation of operations) {
-    const failure = operation.failure();
-    if (failure !== undefined) errors.push(shutdownOperationFailure(failure.error));
-  }
-  return errors;
+function failureOf<A>(result: Result.Result<A, unknown>): unknown[] {
+  return Result.isFailure(result) ? [result.failure] : [];
 }
 
-async function collectSessionShutdownErrors(
+function attempt(operation: () => Promise<void>): Effect.Effect<unknown[]> {
+  return Effect.map(
+    Effect.result(Effect.tryPromise({ try: operation, catch: (error) => error })),
+    failureOf,
+  );
+}
+
+// Waits for every admitted operation, reporting failures in admission order.
+function drainAdmittedOperations(
+  admittedOperations: ReadonlyMap<number, AdmittedOperationCompletion>,
+): Effect.Effect<unknown[]> {
+  const ordered = [...admittedOperations.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([, completion]) => completion);
+  return Effect.map(
+    Effect.forEach(ordered, (completion) => Effect.result(Deferred.await(completion)), {
+      concurrency: "unbounded",
+    }),
+    (results) => results.flatMap(failureOf).map(shutdownOperationFailure),
+  );
+}
+
+// Closes retained sessions one at a time in admission order, keeping every failure.
+function closeSessionsInAdmissionOrder(
   sessions: readonly Readonly<{ admissionOrder: number; close(): Promise<void> }>[],
-): Promise<unknown[]> {
-  const errors: unknown[] = [];
+): Effect.Effect<unknown[]> {
   const ordered = [...sessions].sort((left, right) => left.admissionOrder - right.admissionOrder);
-  for (const session of ordered) {
-    try {
-      await session.close();
-    } catch (error) {
-      errors.push(error);
-    }
-  }
-  return errors;
+  return Effect.map(
+    Effect.forEach(ordered, (session) => attempt(() => session.close())),
+    (failures) => failures.flat(),
+  );
 }
 
 export interface ProjectStorageStoreDependencies {
@@ -504,7 +509,7 @@ export function createProjectStorageOwner(
   const activationSessions = new Set<
     Readonly<{ admissionOrder: number; session: ProjectStorageActivationSession }>
   >();
-  const admittedOperations = new Set<AdmittedProjectStorageOperation>();
+  const admittedOperations = new Map<number, AdmittedOperationCompletion>();
   const ownerStoppedError = new ProjectStorageUnavailableError("Project Storage owner is stopped.");
 
   const lifecycle: ProjectStorageLifecycle = {
@@ -547,26 +552,22 @@ export function createProjectStorageOwner(
     }
   };
 
-  const trackAdmittedOperation = <Result>(operation: () => Promise<Result>): Promise<Result> => {
+  const trackAdmittedOperation = <Value>(operation: () => Promise<Value>): Promise<Value> => {
     const admissionOrder = nextOperationAdmissionOrder;
     nextOperationAdmissionOrder += 1;
+    // Registered only once admitted: an operation that throws synchronously never started.
     const pendingOperation = operation();
-    let failure: Readonly<{ error: unknown }> | undefined;
-    const settlement = pendingOperation.then(
-      () => undefined,
-      (error: unknown) => {
-        if (error !== ownerStoppedError) {
-          failure = { error };
-        }
-      },
+    const completion: AdmittedOperationCompletion = Deferred.makeUnsafe<void, unknown>();
+    admittedOperations.set(admissionOrder, completion);
+    const settle = (outcome: Effect.Effect<void, unknown>) => {
+      Deferred.doneUnsafe(completion, outcome);
+      admittedOperations.delete(admissionOrder);
+    };
+    void pendingOperation.then(
+      () => settle(Effect.void),
+      // A refusal because the owner stopped is expected during shutdown, not a failure.
+      (error: unknown) => settle(error === ownerStoppedError ? Effect.void : Effect.fail(error)),
     );
-    const admittedOperation = {
-      admissionOrder,
-      settlement,
-      failure: () => failure,
-    } satisfies AdmittedProjectStorageOperation;
-    admittedOperations.add(admittedOperation);
-    void settlement.then(() => admittedOperations.delete(admittedOperation));
     return pendingOperation;
   };
 
@@ -714,38 +715,38 @@ export function createProjectStorageOwner(
         return stopPromise;
       }
       stopped = true;
-      const attempt = (async () => {
-        const shutdownErrors = await collectOperationShutdownErrors(admittedOperations);
-        shutdownErrors.push(
-          ...(await collectSessionShutdownErrors([
-            ...[...sessions.entries()].map(([projectId, admitted]) => ({
-              admissionOrder: admitted.admissionOrder,
-              close: () => closeSession(projectId),
-            })),
-            ...[...activationSessions].map((admitted) => ({
-              admissionOrder: admitted.admissionOrder,
-              close: admitted.session.close,
-            })),
-          ])),
-        );
-        try {
-          await closeRegistry();
-        } catch (error) {
-          shutdownErrors.push(error);
-        }
+      // Drain admitted operations, then close sessions in admission order, then close the
+      // registry after any pending create; every failure is kept.
+      const shutdown = Effect.gen(function* () {
+        const operationFailures = yield* drainAdmittedOperations(admittedOperations);
+        const sessionFailures = yield* closeSessionsInAdmissionOrder([
+          ...[...sessions.entries()].map(([projectId, admitted]) => ({
+            admissionOrder: admitted.admissionOrder,
+            close: () => closeSession(projectId),
+          })),
+          ...[...activationSessions].map((admitted) => ({
+            admissionOrder: admitted.admissionOrder,
+            close: admitted.session.close,
+          })),
+        ]);
+        const registryFailures = yield* attempt(closeRegistry);
+        return [...operationFailures, ...sessionFailures, ...registryFailures];
+      });
+      const stopAttempt = Effect.runPromise(shutdown).then((shutdownErrors) => {
         if (shutdownErrors.length > 0) {
           throw new AggregateError(
             [...new Set(shutdownErrors)],
             "Project Storage shutdown failed.",
           );
         }
-      })();
-      stopPromise = attempt;
-      void attempt.catch(() => {
-        if (sessions.size + activationSessions.size === 0) return;
-        if (stopPromise === attempt) stopPromise = undefined;
       });
-      return attempt;
+      stopPromise = stopAttempt;
+      // A failed stop that still retains sessions may be retried; otherwise it is final.
+      void stopAttempt.catch(() => {
+        if (sessions.size + activationSessions.size === 0) return;
+        if (stopPromise === stopAttempt) stopPromise = undefined;
+      });
+      return stopAttempt;
     },
   };
 }

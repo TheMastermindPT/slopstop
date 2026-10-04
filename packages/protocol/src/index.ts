@@ -65,6 +65,28 @@ export {
   writerProofStaleCreateRequestId,
   writerProofStaleProjectId,
 } from "./canonical-writer-smoke-protocol.js";
+export type { ProjectList, ProjectListResult } from "./project-list-protocol.js";
+export {
+  ProjectListEntrySchema,
+  ProjectListLocationSchema,
+  ProjectListRequestSchema,
+  ProjectListResultSchema,
+  ProjectListSchema,
+  ProjectListStorageSchema,
+  RegistrationIdempotencyConflictSchema,
+  RegistryPendingRecoverySchema,
+} from "./project-list-protocol.js";
+export type {
+  InitialRepositoryBinding,
+  RegisteredProject,
+  RegisteredProjectSelectionCode,
+} from "./project-registration-protocol.js";
+export {
+  InitialRepositoryBindingSchema,
+  RegisteredProjectSchema,
+  RegisteredProjectSelectionCodeSchema,
+  registeredProjectSelectionCodes,
+} from "./project-registration-protocol.js";
 export type {
   CanonicalDatabaseLineageId,
   OpenedStorageIdentity,
@@ -120,6 +142,8 @@ export {
   createProjectCommandResultEvent,
   createProjectCreateCommand,
   createProjectCreateResultEvent,
+  createProjectListCommand,
+  createProjectListResultEvent,
   createProjectOpenCommand,
   createProjectOpenResultEvent,
   createProjectSwitchCommand,
@@ -145,6 +169,21 @@ export {
   RetryHarnessResultSchema,
   readMessageId,
 } from "./protocol.js";
+export type { SchemaIssueSummary } from "./schema-codec.js";
+export {
+  acceptsStrict,
+  dateTimeTextSchema,
+  decodeStrict,
+  decodeStrictResult,
+  EmptyObjectSchema,
+  frozenOutput,
+  NonBlankTextSchema,
+  NonEmptyTextSchema,
+  strictParseOptions,
+  summarizeSchemaError,
+  TrimmedNonEmptyTextSchema,
+  UuidTextSchema,
+} from "./schema-codec.js";
 export type {
   AcceptedRevisionId,
   ContextProposalId,
