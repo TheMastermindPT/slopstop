@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { decodeStrict } from "@slopstop/protocol";
-import { afterEach, expect, it, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 import type {
   IdentityQueryChildPort,
   IdentityQueryKind,
@@ -17,13 +17,9 @@ import {
   consentRegistryOptions,
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
-import { installedGit } from "./registration-git-fixture.js";
+import { installedGit, trackTemporaryRoots } from "./registration-git-fixture.js";
 
-const roots: string[] = [];
-afterEach(async () => {
-  vi.restoreAllMocks();
-  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
-});
+const roots = trackTemporaryRoots({ realTimers: false });
 
 async function physicalFixture() {
   const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-physical-"));

@@ -13,6 +13,7 @@ import {
   consentRegistryOptions,
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
+import { confirmationRequest } from "./registration-git-fixture.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -29,6 +30,11 @@ async function editRegistry(options: ReturnType<typeof consentRegistryOptions>, 
   } finally {
     await client.close();
   }
+}
+
+/** The row count of one registry table. */
+async function registryCount(options: ReturnType<typeof consentRegistryOptions>, table: string) {
+  return (await editRegistry(options, `SELECT count(*) FROM ${table}`)).rows;
 }
 
 async function fixture() {
@@ -103,6 +109,19 @@ async function fixture() {
   };
 }
 
+/** Only the six preparation queries ran and no Storage generation was created. */
+async function expectPreparationOnly(f: Awaited<ReturnType<typeof fixture>>) {
+  expect(f.dispatches()).toBe(6);
+  expect(await registryCount(f.options, "storage_generations")).toEqual([[0]]);
+}
+
+/** Prepares the fixture's request and returns the confirmation for its proposal. */
+async function preparedConfirmation(f: Awaited<ReturnType<typeof fixture>>) {
+  const proposal = await f.prepare();
+  if (proposal.status !== "prepared") throw new Error("Preparation unavailable");
+  return confirmationRequest(f.request, proposal);
+}
+
 it.runIf(process.platform === "win32" && process.arch === "x64")(
   "refuses confirmation after persisted executable consent loses its applicable selection",
   async () => {
@@ -171,15 +190,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
   async () => {
     const f = await fixture();
     try {
-      const proposal = await f.prepare();
-      if (proposal.status !== "prepared") throw new Error("Preparation unavailable");
-      const request = {
-        version: 1,
-        requestId: randomUUID(),
-        preparation: f.request,
-        proposalId: proposal.proposalId,
-        proposalFingerprint: proposal.proposalFingerprint,
-      };
+      const request = await preparedConfirmation(f);
       const expected = {
         status: "pending-recovery",
         code: "REGISTRATION_INCOMPLETE",
@@ -193,9 +204,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
       const requests = (await editRegistry(f.options, "SELECT * FROM registration_requests")).rows;
       expect(reservations).toHaveLength(1);
       expect(requests).toHaveLength(1);
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM storage_generations")).rows,
-      ).toEqual([[0]]);
+      expect(await registryCount(f.options, "storage_generations")).toEqual([[0]]);
       await f.restart();
       await rm(f.directory, { recursive: true });
       expect(await f.confirm(request)).toEqual(expected);
@@ -217,15 +226,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
   async () => {
     const f = await fixture();
     try {
-      const proposal = await f.prepare();
-      if (proposal.status !== "prepared") throw new Error("Preparation unavailable");
-      const request = {
-        version: 1,
-        requestId: randomUUID(),
-        preparation: f.request,
-        proposalId: proposal.proposalId,
-        proposalFingerprint: proposal.proposalFingerprint,
-      };
+      const request = await preparedConfirmation(f);
       expect(await f.confirm(request)).toMatchObject({
         status: "pending-recovery",
         code: "REGISTRATION_INCOMPLETE",
@@ -251,15 +252,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
   async () => {
     const f = await fixture();
     try {
-      const proposal = await f.prepare();
-      if (proposal.status !== "prepared") throw new Error("Preparation unavailable");
-      const request = {
-        version: 1,
-        requestId: randomUUID(),
-        preparation: f.request,
-        proposalId: proposal.proposalId,
-        proposalFingerprint: proposal.proposalFingerprint,
-      };
+      const request = await preparedConfirmation(f);
       expect(await f.confirm(request)).toMatchObject({
         status: "pending-recovery",
         code: "REGISTRATION_INCOMPLETE",
@@ -271,9 +264,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
       );
       expect(await f.confirm(request)).toEqual({ status: "broken", code: "REGISTRY_CORRUPT" });
       expect(f.dispatches()).toBe(12);
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM registration_reservations")).rows,
-      ).toEqual([[1]]);
+      expect(await registryCount(f.options, "registration_reservations")).toEqual([[1]]);
     } finally {
       await f.close();
     }
@@ -288,13 +279,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
       const prepared = await f.prepare();
       if (prepared.status !== "prepared") throw new Error("Preparation unavailable");
       await f.restart();
-      const request = {
-        version: 1,
-        requestId: randomUUID(),
-        preparation: f.request,
-        proposalId: prepared.proposalId,
-        proposalFingerprint: prepared.proposalFingerprint,
-      };
+      const request = confirmationRequest(f.request, prepared);
       expect(await f.validateConfirmation(request)).toEqual({
         status: "confirmation-validated",
         requestId: request.requestId,
@@ -302,12 +287,8 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
         proposalFingerprint: prepared.proposalFingerprint,
       });
       expect(f.dispatches()).toBe(12);
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM registration_proposals")).rows,
-      ).toEqual([[1]]);
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM storage_registrations")).rows,
-      ).toEqual([[0]]);
+      expect(await registryCount(f.options, "registration_proposals")).toEqual([[1]]);
+      expect(await registryCount(f.options, "storage_registrations")).toEqual([[0]]);
     } finally {
       await f.close();
     }
@@ -325,25 +306,16 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
       await rename(path.join(f.directory, ".git"), path.join(f.directory, ".git-preserved"));
       const git = path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe");
       execFileSync(git, ["init", "--quiet", f.directory]);
-      expect(
-        await f.confirm({
-          version: 1,
-          requestId: randomUUID(),
-          preparation: f.request,
-          proposalId: prepared.proposalId,
-          proposalFingerprint: prepared.proposalFingerprint,
-        }),
-      ).toEqual({ status: "rejected", code: "REPOSITORY_IDENTITY_CHANGED" });
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM registration_reservations")).rows,
-      ).toEqual([[0]]);
+      expect(await f.confirm(confirmationRequest(f.request, prepared))).toEqual({
+        status: "rejected",
+        code: "REPOSITORY_IDENTITY_CHANGED",
+      });
+      expect(await registryCount(f.options, "registration_reservations")).toEqual([[0]]);
       expect(f.dispatches()).toBe(12);
       expect((await editRegistry(f.options, "SELECT * FROM registration_proposals")).rows).toEqual(
         before,
       );
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM storage_generations")).rows,
-      ).toEqual([[0]]);
+      expect(await registryCount(f.options, "storage_generations")).toEqual([[0]]);
     } finally {
       await f.close();
     }
@@ -360,19 +332,11 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
       await f.restart();
       await rm(f.directory, { recursive: true });
       expect(await f.prepare()).toEqual(prepared);
-      expect(
-        await f.validateConfirmation({
-          version: 1,
-          requestId: randomUUID(),
-          preparation: f.request,
-          proposalId: prepared.proposalId,
-          proposalFingerprint: prepared.proposalFingerprint,
-        }),
-      ).toEqual({ status: "rejected", code: "REPOSITORY_NOT_FOUND" });
-      expect(f.dispatches()).toBe(6);
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM storage_generations")).rows,
-      ).toEqual([[0]]);
+      expect(await f.validateConfirmation(confirmationRequest(f.request, prepared))).toEqual({
+        status: "rejected",
+        code: "REPOSITORY_NOT_FOUND",
+      });
+      await expectPreparationOnly(f);
     } finally {
       await f.close();
     }
@@ -388,23 +352,14 @@ it
     try {
       const prepared = await f.prepare();
       if (prepared.status !== "prepared") throw new Error("Preparation unavailable");
-      const request = {
-        version: 1,
-        requestId: randomUUID(),
-        preparation: f.request,
-        proposalId: prepared.proposalId,
-        proposalFingerprint: prepared.proposalFingerprint,
-      };
+      const request = confirmationRequest(f.request, prepared);
       expect(
         await f.validateConfirmation({
           ...request,
           [field]: field === "proposalId" ? randomUUID() : "0".repeat(64),
         }),
       ).toEqual({ status: "rejected", code: "REGISTRATION_IDEMPOTENCY_CONFLICT" });
-      expect(f.dispatches()).toBe(6);
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM storage_generations")).rows,
-      ).toEqual([[0]]);
+      await expectPreparationOnly(f);
     } finally {
       await f.close();
     }
@@ -471,9 +426,7 @@ it
     await editRegistry(f.options, sql);
     expect(await f.prepare()).toEqual({ status: "broken", code: "REGISTRY_CORRUPT" });
     expect(f.dispatches()).toBe(6);
-    expect(
-      (await editRegistry(f.options, "SELECT count(*) FROM registration_proposals")).rows,
-    ).toEqual([[1]]);
+    expect(await registryCount(f.options, "registration_proposals")).toEqual([[1]]);
   } finally {
     await f.close();
   }
@@ -510,9 +463,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
         ).rows,
       ).toEqual(before.rows);
       expect(f.dispatches()).toBe(6);
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM registration_proposals")).rows,
-      ).toEqual([[1]]);
+      expect(await registryCount(f.options, "registration_proposals")).toEqual([[1]]);
     } finally {
       await f.close();
     }
@@ -536,12 +487,8 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
         code: "REPOSITORY_NOT_FOUND",
       });
       expect(f.dispatches()).toBe(12);
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM registration_proposals")).rows,
-      ).toEqual([[2]]);
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM storage_registrations")).rows,
-      ).toEqual([[0]]);
+      expect(await registryCount(f.options, "registration_proposals")).toEqual([[2]]);
+      expect(await registryCount(f.options, "storage_registrations")).toEqual([[0]]);
     } finally {
       await f.close();
     }
@@ -560,9 +507,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
         exitCode: 128,
       });
       expect(f.dispatches()).toBe(1);
-      expect(
-        (await editRegistry(f.options, "SELECT count(*) FROM registration_proposals")).rows,
-      ).toEqual([[0]]);
+      expect(await registryCount(f.options, "registration_proposals")).toEqual([[0]]);
     } finally {
       await f.close();
     }

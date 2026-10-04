@@ -10,7 +10,7 @@ import {
   RegisteredProjectSchema,
 } from "@slopstop/protocol";
 import { Schema } from "effect";
-import { afterEach, expect, it, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 import { createProjectRegistrationOwner } from "../../src/registration/project-registration-owner.js";
 import { createProjectRegistrationPreparation } from "../../src/registration/project-registration-preparation.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
@@ -24,14 +24,10 @@ import {
   countingIdentityChild,
   createSelectedGitRepository,
   gate,
+  trackTemporaryRoots,
 } from "./registration-git-fixture.js";
 
-const roots: string[] = [];
-afterEach(async () => {
-  vi.useRealTimers();
-  vi.restoreAllMocks();
-  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
-});
+const roots = trackTemporaryRoots({ realTimers: true });
 
 /** The created generation's canonical database holds exactly one seeded binding. */
 function expectSeededCanonicalBinding(

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { decodeStrict, UuidTextSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
-import { afterEach, expect, it, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 import { REGISTRATION_CLEANUP_BUDGET_MS } from "../../src/registration/observer-limits.js";
 import { createProjectRegistrationPreparation } from "../../src/registration/project-registration-preparation.js";
 import * as identity from "../../src/registration/repository-identity-query-owner.js";
@@ -14,15 +14,10 @@ import {
   consentRegistryOptions,
   createRepositoryTrustScenario,
 } from "./registration-consent-fixture.js";
-import { gate } from "./registration-git-fixture.js";
+import { gate, trackTemporaryRoots } from "./registration-git-fixture.js";
 
 const pending = { status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" } as const;
-const roots: string[] = [];
-afterEach(async () => {
-  vi.useRealTimers();
-  vi.restoreAllMocks();
-  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
-});
+const roots = trackTemporaryRoots({ realTimers: true });
 
 async function fixture(
   closeObservation: () => Promise<{ status: "closed" } | typeof pending>,

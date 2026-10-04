@@ -1,6 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { rm } from "node:fs/promises";
 import path from "node:path";
+import { afterEach, vi } from "vitest";
 import { createWindowsIdentityQueryChild } from "../../src/registration/windows-version-child.js";
 import { createControlledIdentityConsent } from "./registration-consent-fixture.js";
 
@@ -56,4 +58,15 @@ export function gate() {
     release = resolve;
   });
   return { promise, release };
+}
+
+/** Temporary roots removed after each test, with mocks (and optionally fake timers) restored. */
+export function trackTemporaryRoots(options: Readonly<{ realTimers: boolean }>) {
+  const roots: string[] = [];
+  afterEach(async () => {
+    if (options.realTimers) vi.useRealTimers();
+    vi.restoreAllMocks();
+    for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
+  });
+  return roots;
 }

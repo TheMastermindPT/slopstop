@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { decodeStrict } from "@slopstop/protocol";
-import { afterEach, expect, it, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 import type { IdentityQueryChildPort } from "../../src/registration/identity-query-child.js";
 import { createRepositoryIdentityQueryOwner } from "../../src/registration/repository-identity-query-owner.js";
 import { RepositoryIdentityAdmissionRequestSchema } from "../../src/registration/repository-trust.js";
@@ -13,13 +13,9 @@ import {
   consentRegistryOptions,
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
-import { installedGit } from "./registration-git-fixture.js";
+import { installedGit, trackTemporaryRoots } from "./registration-git-fixture.js";
 
-const roots: string[] = [];
-afterEach(async () => {
-  vi.restoreAllMocks();
-  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
-});
+const roots = trackTemporaryRoots({ realTimers: false });
 
 const kinds = [
   "inside-work-tree",
