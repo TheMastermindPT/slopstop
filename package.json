@@ -28,7 +28,7 @@
     "postinstall": "pnpm --filter @slopstop/desktop exec install-electron",
     "prepare": "husky",
     "test": "pnpm test:unit",
-    "test:coverage": "vitest run --coverage --config vitest.coverage.config.ts --pool=threads --maxWorkers=50%",
+    "test:coverage": "vitest run --coverage --config vitest.coverage.config.ts --maxWorkers=50%",
     "test:e2e": "pnpm --filter @slopstop/desktop test:e2e",
     "test:integration": "vitest run --config apps/harness/vitest.integration.config.ts",
     "test:mutation": "stryker run",
