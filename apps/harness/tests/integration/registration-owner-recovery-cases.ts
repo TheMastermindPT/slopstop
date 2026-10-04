@@ -1,7 +1,6 @@
 import { expect, it } from "vitest";
 import { createWindowsObserverAbsencePort } from "../../src/registration/windows-observer-absence.js";
 import { createWindowsVersionChild } from "../../src/registration/windows-version-child.js";
-import { switchDeferred } from "./project-storage-runtime-fixture.js";
 import { absenceFaults } from "./registration-absence-fixture.js";
 import {
   heldHistoricalChild,
@@ -13,9 +12,41 @@ import {
   observeIdentityRecovery,
   observeOwnerDeath,
 } from "./registration-recovery-scenarios.js";
-import { createRegistryVersionScenario, readObserverRows } from "./registration-version-fixture.js";
+import {
+  createRegistryVersionScenario,
+  holdAfterTerminalRecord,
+  readObserverRows,
+} from "./registration-version-fixture.js";
 
 // Registered only by the agreed public project-registration integration entrypoint.
+type OwnerAbsenceObservation = Readonly<{
+  freshSelectionId: unknown;
+  requests: Readonly<{
+    original: unknown;
+    fresh: unknown;
+    repeatedOriginal: unknown;
+    repeatedFresh: unknown;
+    before: unknown;
+    after: unknown;
+  }>;
+}>;
+
+/** The original request reconciles as exact owner absence and one fresh request is admitted. */
+function expectExactOwnerAbsenceRequests(observed: OwnerAbsenceObservation) {
+  expect(observed.requests.original).toEqual({
+    status: "broken",
+    code: "INTERNAL_FAILURE",
+    reconciliation: "exact-owner-absence",
+  });
+  expect(observed.requests.fresh).toMatchObject({
+    status: "prepared",
+    selectionId: observed.freshSelectionId,
+  });
+  expect(observed.requests.repeatedOriginal).toEqual(observed.requests.original);
+  expect(observed.requests.repeatedFresh).toEqual(observed.requests.fresh);
+  expect([observed.requests.before, observed.requests.after]).toEqual([0, 1]);
+}
+
 export function defineOwnerRecoveryCases(createRoot: (prefix: string) => Promise<string>) {
   it("PC-OR recovers after actual observer owner death with durable child identity", async () => {
     const root = await createRoot("pc-s1-owner-death-");
@@ -29,18 +60,7 @@ export function defineOwnerRecoveryCases(createRoot: (prefix: string) => Promise
       result: { status: "settled" },
       unsettled: false,
     });
-    expect(observed.requests.original).toEqual({
-      status: "broken",
-      code: "INTERNAL_FAILURE",
-      reconciliation: "exact-owner-absence",
-    });
-    expect(observed.requests.fresh).toMatchObject({
-      status: "prepared",
-      selectionId: observed.freshSelectionId,
-    });
-    expect(observed.requests.repeatedOriginal).toEqual(observed.requests.original);
-    expect(observed.requests.repeatedFresh).toEqual(observed.requests.fresh);
-    expect([observed.requests.before, observed.requests.after]).toEqual([0, 1]);
+    expectExactOwnerAbsenceRequests(observed);
   }, 15000);
 
   it.each(["intent", "before-child"] as const)(
@@ -154,18 +174,7 @@ export function defineOwnerRecoveryCases(createRoot: (prefix: string) => Promise
       aliveBefore: true,
       aliveAfter: true,
     });
-    expect(observed.requests.original).toEqual({
-      status: "broken",
-      code: "INTERNAL_FAILURE",
-      reconciliation: "exact-owner-absence",
-    });
-    expect(observed.requests.fresh).toMatchObject({
-      status: "prepared",
-      selectionId: observed.freshSelectionId,
-    });
-    expect(observed.requests.repeatedOriginal).toEqual(observed.requests.original);
-    expect(observed.requests.repeatedFresh).toEqual(observed.requests.fresh);
-    expect([observed.requests.before, observed.requests.after]).toEqual([0, 1]);
+    expectExactOwnerAbsenceRequests(observed);
   }, 15000);
 
   it.each(absenceFaults)(
@@ -233,19 +242,11 @@ export function defineOwnerRecoveryCases(createRoot: (prefix: string) => Promise
 
   it("PC-OR fences the old publisher after recovery admits a new request", async () => {
     const root = await createRoot("pc-s1-recovery-new-request-");
-    const release = switchDeferred<void>();
-    const terminalStored = switchDeferred<void>();
+    const { release, terminalStored, journalFor } = holdAfterTerminalRecord();
     const scenario = await createRegistryVersionScenario(
       root,
       createWindowsVersionChild(root),
-      (journal) => ({
-        ...journal,
-        recordTerminal: async (id, terminal) => {
-          await journal.recordTerminal(id, terminal);
-          terminalStored.resolve();
-          await release.promise;
-        },
-      }),
+      journalFor,
     );
     const observation = scenario.observer.inspectGitVersion(scenario.request);
     const recovery = recoveringObserver(root, scenario.registry);

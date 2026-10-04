@@ -65,6 +65,7 @@ import {
   createRecordedNativeObserver,
   createRegistryVersionScenario,
   createStoredVersionConsent,
+  holdAfterTerminalRecord,
   inspectStoredConsent,
   readObserverRows,
 } from "./registration-version-fixture.js";
@@ -77,6 +78,34 @@ const versionRequest = (consentId: string | null) =>
     selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
     consentId,
   });
+
+/** A registration registry over the root with the checked-in migrations. */
+function registryAt(root: string) {
+  return createRegistrationRegistry({ applicationStorageRoot: root, migrationResourcesRoot });
+}
+
+/** Prepares an executable that does not exist under the root. */
+function prepareAbsentExecutable(registry: ReturnType<typeof registryAt>, root: string) {
+  return registry.prepareExecutable({
+    selectionId: versionRequest(null).selectionId,
+    executablePath: path.join(root, "absent.exe"),
+  });
+}
+
+/** The registry refuses as corrupt and leaves its previous state untouched. */
+async function expectCorruptRegistryUnchanged(root: string) {
+  const before = await readPreviousRegistryState(root);
+  const registry = registryAt(root);
+  try {
+    expect(await prepareAbsentExecutable(registry, root)).toEqual({
+      status: "broken",
+      code: "REGISTRY_CORRUPT",
+    });
+    expect(await readPreviousRegistryState(root)).toEqual(before);
+  } finally {
+    await registry.stop();
+  }
+}
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -213,10 +242,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
       restorePreviousRegistryFixture(root);
       const beforeFiles = await oldProjectFileHashes(root);
       const beforeRegistry = await readPreviousRegistryState(root);
-      const registry = createRegistrationRegistry({
-        applicationStorageRoot: root,
-        migrationResourcesRoot,
-      });
+      const registry = registryAt(root);
       try {
         expect(await registry.hasUnsettled()).toBe(false);
         const afterRegistry = await readPreviousRegistryState(root);
@@ -368,18 +394,9 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
       const root = await createRoot("pc-s1-registry-witness-");
       const witness = path.join(root, "application.db-wal");
       await writeFile(witness, "prior-registry-witness");
-      const registry = createRegistrationRegistry({
-        applicationStorageRoot: root,
-        migrationResourcesRoot,
-      });
+      const registry = registryAt(root);
       try {
-        const request = versionRequest(null);
-        expect(
-          await registry.prepareExecutable({
-            selectionId: request.selectionId,
-            executablePath: path.join(root, "absent.exe"),
-          }),
-        ).toEqual({
+        expect(await prepareAbsentExecutable(registry, root)).toEqual({
           status: "pending-recovery",
           code: "REGISTRY_MISSING_WITH_WITNESS",
         });
@@ -407,18 +424,9 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
       } finally {
         await edit.close();
       }
-      const registry = createRegistrationRegistry({
-        applicationStorageRoot: root,
-        migrationResourcesRoot,
-      });
+      const registry = registryAt(root);
       try {
-        const request = versionRequest(null);
-        expect(
-          await registry.prepareExecutable({
-            selectionId: request.selectionId,
-            executablePath: path.join(root, "absent.exe"),
-          }),
-        ).toEqual({
+        expect(await prepareAbsentExecutable(registry, root)).toEqual({
           status: "broken",
           code: "REGISTRY_CORRUPT",
         });
@@ -450,18 +458,9 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         "application",
       );
       const held = await locker.transaction("write");
-      const registry = createRegistrationRegistry({
-        applicationStorageRoot: root,
-        migrationResourcesRoot,
-      });
+      const registry = registryAt(root);
       try {
-        const request = versionRequest(null);
-        expect(
-          await registry.prepareExecutable({
-            selectionId: request.selectionId,
-            executablePath: path.join(root, "absent.exe"),
-          }),
-        ).toEqual({
+        expect(await prepareAbsentExecutable(registry, root)).toEqual({
           status: "unavailable",
           code: "REGISTRY_BUSY",
         });
@@ -484,10 +483,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
 
     it("replays a version consent without rewriting its decision", async () => {
       const root = await createRoot("pc-s1-consent-replay-");
-      const registry = createRegistrationRegistry({
-        applicationStorageRoot: root,
-        migrationResourcesRoot,
-      });
+      const registry = registryAt(root);
       const request = versionRequest(admittedConsentId);
       if (request.consentId === null) throw new Error("Test consent missing");
       const decision = {
@@ -526,10 +522,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
 
     it("rejects changed consent content before looking up another executable selection", async () => {
       const root = await createRoot("pc-s1-consent-conflict-");
-      const registry = createRegistrationRegistry({
-        applicationStorageRoot: root,
-        migrationResourcesRoot,
-      });
+      const registry = registryAt(root);
       const request = versionRequest(admittedConsentId);
       if (request.consentId === null) throw new Error("Test consent missing");
       try {
@@ -677,23 +670,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         await createPreviousRegistry(root);
         if (head === "current") await expectIndependentUnsettled(root, false);
         await seedMismatchedRegistryGeneration(root);
-        const before = await readPreviousRegistryState(root);
-        const registry = createRegistrationRegistry({
-          applicationStorageRoot: root,
-          migrationResourcesRoot,
-        });
-        try {
-          const request = versionRequest(null);
-          expect(
-            await registry.prepareExecutable({
-              selectionId: request.selectionId,
-              executablePath: path.join(root, "absent.exe"),
-            }),
-          ).toEqual({ status: "broken", code: "REGISTRY_CORRUPT" });
-          expect(await readPreviousRegistryState(root)).toEqual(before);
-        } finally {
-          await registry.stop();
-        }
+        await expectCorruptRegistryUnchanged(root);
       },
     );
 
@@ -713,23 +690,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         } finally {
           await edit.close();
         }
-        const before = await readPreviousRegistryState(root);
-        const registry = createRegistrationRegistry({
-          applicationStorageRoot: root,
-          migrationResourcesRoot,
-        });
-        try {
-          const request = versionRequest(null);
-          expect(
-            await registry.prepareExecutable({
-              selectionId: request.selectionId,
-              executablePath: path.join(root, "absent.exe"),
-            }),
-          ).toEqual({ status: "broken", code: "REGISTRY_CORRUPT" });
-          expect(await readPreviousRegistryState(root)).toEqual(before);
-        } finally {
-          await registry.stop();
-        }
+        await expectCorruptRegistryUnchanged(root);
       },
     );
 
@@ -749,13 +710,10 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         },
       });
       try {
-        const request = versionRequest(null);
-        expect(
-          await registry.prepareExecutable({
-            selectionId: request.selectionId,
-            executablePath: path.join(root, "absent.exe"),
-          }),
-        ).toEqual({ status: "broken", code: "INTERNAL_FAILURE" });
+        expect(await prepareAbsentExecutable(registry, root)).toEqual({
+          status: "broken",
+          code: "INTERNAL_FAILURE",
+        });
         expect(await readPreviousRegistryState(root)).toEqual(before);
         expect(attempts.filter((point) => point === "before-ddl")).toHaveLength(1);
         expect(attempts.filter((point) => point === "commit-before-boundary")).toHaveLength(1);
@@ -815,10 +773,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         } finally {
           await registry.stop();
         }
-        const reopened = createRegistrationRegistry({
-          applicationStorageRoot: root,
-          migrationResourcesRoot,
-        });
+        const reopened = registryAt(root);
         try {
           const restarted = createProjectRegistrationObserver(
             {
@@ -881,26 +836,15 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
 
     it("reconciles durable native terminal proof and fences the former publisher", async () => {
       const root = await createRoot("pc-s1-terminal-reconciliation-");
-      const release = switchDeferred<void>();
-      const terminalStored = switchDeferred<void>();
+      const { release, terminalStored, journalFor } = holdAfterTerminalRecord();
       const { registry, observer, request } = await createRegistryVersionScenario(
         root,
         createWindowsVersionChild(root),
-        (journal) => ({
-          ...journal,
-          recordTerminal: async (id, terminal) => {
-            await journal.recordTerminal(id, terminal);
-            terminalStored.resolve();
-            await release.promise;
-          },
-        }),
+        journalFor,
       );
       const observation = observer.inspectGitVersion(request);
       const guard = setTimeout(() => release.resolve(), 8000);
-      const restarted = createRegistrationRegistry({
-        applicationStorageRoot: root,
-        migrationResourcesRoot,
-      });
+      const restarted = registryAt(root);
       try {
         await terminalStored.promise;
         expect(await restarted.hasUnsettled()).toBe(true);
@@ -941,10 +885,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
       } finally {
         await registry.stop();
       }
-      const restarted = createRegistrationRegistry({
-        applicationStorageRoot: root,
-        migrationResourcesRoot,
-      });
+      const restarted = registryAt(root);
       try {
         expect(await restarted.reconcileObservers(createWindowsObserverAbsencePort())).toEqual({
           status: "settled",

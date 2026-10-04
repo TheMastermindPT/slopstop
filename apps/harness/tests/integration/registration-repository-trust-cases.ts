@@ -56,6 +56,17 @@ function captureAdmissions() {
   return { admitted, port };
 }
 
+/** The scenario admission now reaches the port with the selected directory only. */
+async function expectAdmitsSelectedDirectory(
+  scenario: Awaited<ReturnType<typeof createRepositoryTrustScenario>>,
+  { admitted, port }: ReturnType<typeof captureAdmissions>,
+) {
+  expect(await scenario.registry.admitRepositoryIdentityQueries(scenario.admission, port)).toEqual(
+    admittedResult,
+  );
+  expect(admitted).toEqual([scenario.directory]);
+}
+
 async function beginUnsettledObserver(
   scenario: Awaited<ReturnType<typeof createRepositoryTrustScenario>>,
 ) {
@@ -503,10 +514,7 @@ export function defineRepositoryTrustCases(createRoot: (prefix: string) => Promi
         code,
       });
       expect(admitted).toEqual([]);
-      expect(
-        await scenario.registry.admitRepositoryIdentityQueries(scenario.admission, port),
-      ).toEqual(admittedResult);
-      expect(admitted).toEqual([scenario.directory]);
+      await expectAdmitsSelectedDirectory(scenario, { admitted, port });
     } finally {
       await scenario.observer.close();
       await scenario.registry.stop();
@@ -549,10 +557,7 @@ export function defineRepositoryTrustCases(createRoot: (prefix: string) => Promi
       ).toEqual({ status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" });
       expect(admitted).toEqual([]);
       await scenario.registry.recordNoDispatch(observationId);
-      expect(
-        await scenario.registry.admitRepositoryIdentityQueries(scenario.admission, port),
-      ).toEqual(admittedResult);
-      expect(admitted).toEqual([scenario.directory]);
+      await expectAdmitsSelectedDirectory(scenario, { admitted, port });
     } finally {
       await scenario.observer.close();
       await scenario.registry.stop();

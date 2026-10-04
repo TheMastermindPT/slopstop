@@ -145,12 +145,7 @@ it.each(["update-close", "update-deadline", "committed-close", "committed-deadli
     const gate = holdSettlement(committed);
     let now = 0;
     vi.spyOn(performance, "now").mockImplementation(() => now);
-    const owner = createRepositoryIdentityQueryOwner(
-      scenario.registry,
-      consentRegistryOptions(scenario.root),
-      scenario.root,
-      completedChild(),
-    );
+    const owner = completedOwner(scenario);
     const work = owner.inspectInsideWorkTree(scenario.admission);
     try {
       await gate.entered.promise;
@@ -180,6 +175,16 @@ it.each(["update-close", "update-deadline", "committed-close", "committed-deadli
 );
 
 // Controlled completed-child proof; these tests exercise real persistence and owner timing, not native execution.
+/** An identity owner whose native child completes every query. */
+function completedOwner(scenario: Awaited<ReturnType<typeof scenarioForLifecycle>>) {
+  return createRepositoryIdentityQueryOwner(
+    scenario.registry,
+    consentRegistryOptions(scenario.root),
+    scenario.root,
+    completedChild(),
+  );
+}
+
 function completedChild(afterOwned: () => void = () => undefined): IdentityQueryChildPort {
   return {
     run: async (request) => {
@@ -220,12 +225,7 @@ it.each(["close", "deadline"] as const)(
     });
     let now = 0;
     vi.spyOn(performance, "now").mockImplementation(() => now);
-    const owner = createRepositoryIdentityQueryOwner(
-      scenario.registry,
-      consentRegistryOptions(scenario.root),
-      scenario.root,
-      completedChild(),
-    );
+    const owner = completedOwner(scenario);
     const work = owner.inspectInsideWorkTree(scenario.admission);
     try {
       await entered.promise;

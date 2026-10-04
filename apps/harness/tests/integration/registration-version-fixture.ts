@@ -118,6 +118,21 @@ export async function createStoredVersionConsent(root: string) {
   return { registry, request };
 }
 
+/** A journal that stores the native terminal, signals it, then waits for the test's release. */
+export function holdAfterTerminalRecord() {
+  const release = switchDeferred<void>();
+  const terminalStored = switchDeferred<void>();
+  const journalFor = (journal: RegistrationRegistry): VersionObserverJournal => ({
+    ...journal,
+    recordTerminal: async (id, terminal) => {
+      await journal.recordTerminal(id, terminal);
+      terminalStored.resolve();
+      await release.promise;
+    },
+  });
+  return { release, terminalStored, journalFor };
+}
+
 export async function createRegistryVersionScenario(
   root: string,
   child: GitVersionChildPort,

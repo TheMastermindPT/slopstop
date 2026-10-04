@@ -14,10 +14,36 @@ import {
   consentRegistryOptions,
   createRepositoryTrustScenario,
 } from "./registration-consent-fixture.js";
-import { gate, trackTemporaryRoots } from "./registration-git-fixture.js";
+import { confirmationRequest, gate, trackTemporaryRoots } from "./registration-git-fixture.js";
 
 const pending = { status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" } as const;
 const roots = trackTemporaryRoots({ realTimers: true });
+
+/** Each close keeps the cleanup refusal and no registry row was written. */
+async function expectPendingCloseWithoutRows(
+  f: Awaited<ReturnType<typeof fixture>>,
+  closes: number,
+) {
+  for (let attempt = 0; attempt < closes; attempt += 1)
+    expect(await f.owner.close()).toEqual(pending);
+  expect(await f.rows()).toEqual([]);
+}
+
+/** Holds the second observation close until the test releases it. */
+function holdSecondObservation() {
+  const entered = gate();
+  const release = gate();
+  let observations = 0;
+  const closeObservation = async () => {
+    observations += 1;
+    if (observations === 2) {
+      entered.release();
+      await release.promise;
+    }
+    return { status: "closed" } as const;
+  };
+  return { entered, release, closeObservation };
+}
 
 async function fixture(
   closeObservation: () => Promise<{ status: "closed" } | typeof pending>,
@@ -107,8 +133,7 @@ it
     const f = await fixture(async () => pending, trigger);
     try {
       expect(await f.owner.prepare(f.request)).toEqual({ ...pending, trigger });
-      expect(await f.owner.close()).toEqual(pending);
-      expect(await f.rows()).toEqual([]);
+      await expectPendingCloseWithoutRows(f, 1);
     } finally {
       await f.dispose();
     }
@@ -118,26 +143,11 @@ it
 it.runIf(process.platform === "win32")(
   "reserves one common identity across overlapping independent confirmation owners",
   async () => {
-    const entered = gate();
-    const release = gate();
-    let observations = 0;
-    const f = await fixture(async () => {
-      observations += 1;
-      if (observations === 2) {
-        entered.release();
-        await release.promise;
-      }
-      return { status: "closed" };
-    });
+    const { entered, release, closeObservation } = holdSecondObservation();
+    const f = await fixture(closeObservation);
     const proposal = await f.owner.prepare(f.request);
     if (proposal.status !== "prepared") throw new Error("Preparation unavailable");
-    const request = {
-      version: 1,
-      requestId: randomUUID(),
-      preparation: f.request,
-      proposalId: proposal.proposalId,
-      proposalFingerprint: proposal.proposalFingerprint,
-    };
+    const request = confirmationRequest(f.request, proposal);
     const first = f.owner.confirm(request);
     const other = f.createOwner();
     try {
@@ -178,26 +188,11 @@ it.runIf(process.platform === "win32")(
 it.runIf(process.platform === "win32")(
   "cancels confirmation validation on owner close without a late validation result",
   async () => {
-    const entered = gate();
-    const release = gate();
-    let observations = 0;
-    const f = await fixture(async () => {
-      observations += 1;
-      if (observations === 2) {
-        entered.release();
-        await release.promise;
-      }
-      return { status: "closed" };
-    });
+    const { entered, release, closeObservation } = holdSecondObservation();
+    const f = await fixture(closeObservation);
     const prepared = await f.owner.prepare(f.request);
     if (prepared.status !== "prepared") throw new Error("Preparation unavailable");
-    const work = f.owner.validateConfirmation({
-      version: 1,
-      requestId: randomUUID(),
-      preparation: f.request,
-      proposalId: prepared.proposalId,
-      proposalFingerprint: prepared.proposalFingerprint,
-    });
+    const work = f.owner.validateConfirmation(confirmationRequest(f.request, prepared));
     try {
       await entered.promise;
       const closing = f.owner.close();
@@ -219,9 +214,7 @@ it.runIf(process.platform === "win32")(
     const f = await fixture(async () => pending);
     try {
       expect(await f.owner.prepare(f.request)).toEqual(pending);
-      expect(await f.owner.close()).toEqual(pending);
-      expect(await f.owner.close()).toEqual(pending);
-      expect(await f.rows()).toEqual([]);
+      await expectPendingCloseWithoutRows(f, 2);
     } finally {
       await f.dispose();
     }
@@ -255,8 +248,7 @@ it.runIf(process.platform === "win32")(
       vi.useRealTimers();
       release.release();
       expect(await work).toEqual({ status: "cancelled" });
-      expect(await f.owner.close()).toEqual(pending);
-      expect(await f.rows()).toEqual([]);
+      await expectPendingCloseWithoutRows(f, 1);
     } finally {
       vi.useRealTimers();
       release.release();

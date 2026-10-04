@@ -31,6 +31,7 @@ import {
   consentRegistryOptions,
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
+import { installedGit } from "./registration-git-fixture.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -88,6 +89,48 @@ function rows(f: Awaited<ReturnType<typeof registeredFixture>>, sql: string) {
   }
 }
 
+type RegisteredFixture = Awaited<ReturnType<typeof registeredFixture>>;
+
+/** The registered generation's canonical database. */
+function canonicalDatabasePath(f: RegisteredFixture) {
+  return path.join(
+    f.options.applicationStorageRoot,
+    "projects",
+    f.registered.projectId,
+    f.registered.generationId,
+    "slopstop.db",
+  );
+}
+
+/** No writer generation was ever acquired in the registered canonical database. */
+function expectNoWriterGeneration(f: RegisteredFixture) {
+  const canonical = new DatabaseSync(canonicalDatabasePath(f));
+  try {
+    expect(canonical.prepare("SELECT count(*) AS total FROM writer_generations").get()).toEqual({
+      total: 0,
+    });
+  } finally {
+    canonical.close();
+  }
+}
+
+/** A fresh repository replacing the registered one is refused without Storage changes. */
+async function expectIdentityChangeRefused(f: RegisteredFixture, displace: () => Promise<void>) {
+  const before = rows(f, "SELECT * FROM storage_generations");
+  await displace();
+  execFileSync(installedGit, ["init", "--quiet", f.directory]);
+  const host = runtime(f.options);
+  try {
+    expect(await activate(host, f.registered.projectId)).toMatchObject({
+      status: "rejected",
+      diagnostic: { code: "REPOSITORY_IDENTITY_CHANGED" },
+    });
+    expect(rows(f, "SELECT * FROM storage_generations")).toEqual(before);
+  } finally {
+    await host.stop();
+  }
+}
+
 async function registeredFixture(existingRoot?: string) {
   const root = existingRoot ?? (await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-select-")));
   if (existingRoot === undefined) roots.push(root);
@@ -95,7 +138,7 @@ async function registeredFixture(existingRoot?: string) {
     root,
     existingRoot === undefined ? "repository" : `repository-${randomUUID()}`,
   );
-  const git = path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe");
+  const git = installedGit;
   execFileSync(git, ["init", "--quiet", directory]);
   const scenario = await createControlledIdentityConsent(
     root,
@@ -235,22 +278,7 @@ it.runIf(process.platform === "win32")(
         event: "project.activate.result",
         payload: { status: "rejected", diagnostic: { code: "REPOSITORY_NOT_FOUND" } },
       });
-      const canonical = new DatabaseSync(
-        path.join(
-          f.options.applicationStorageRoot,
-          "projects",
-          f.registered.projectId,
-          f.registered.generationId,
-          "slopstop.db",
-        ),
-      );
-      try {
-        expect(canonical.prepare("SELECT count(*) AS total FROM writer_generations").get()).toEqual(
-          { total: 0 },
-        );
-      } finally {
-        canonical.close();
-      }
+      expectNoWriterGeneration(f);
     } finally {
       await host.stop();
     }
@@ -261,15 +289,7 @@ it.runIf(process.platform === "win32")(
   "runtime refuses a canonical binding that disagrees with its registration",
   async () => {
     const f = await registeredFixture();
-    const canonical = new DatabaseSync(
-      path.join(
-        f.options.applicationStorageRoot,
-        "projects",
-        f.registered.projectId,
-        f.registered.generationId,
-        "slopstop.db",
-      ),
-    );
+    const canonical = new DatabaseSync(canonicalDatabasePath(f));
     try {
       canonical
         .prepare("UPDATE repository_bindings SET registration_request_id = ?")
@@ -293,39 +313,8 @@ it.runIf(process.platform === "win32")(
   "runtime rejects replacement of the registered root without writer or Storage changes",
   async () => {
     const f = await registeredFixture();
-    const before = rows(f, "SELECT * FROM storage_generations");
-    await rename(f.directory, `${f.directory}-preserved`);
-    execFileSync(path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe"), [
-      "init",
-      "--quiet",
-      f.directory,
-    ]);
-    const host = runtime(f.options);
-    try {
-      expect(await activate(host, f.registered.projectId)).toMatchObject({
-        status: "rejected",
-        diagnostic: { code: "REPOSITORY_IDENTITY_CHANGED" },
-      });
-      expect(rows(f, "SELECT * FROM storage_generations")).toEqual(before);
-      const canonical = new DatabaseSync(
-        path.join(
-          f.options.applicationStorageRoot,
-          "projects",
-          f.registered.projectId,
-          f.registered.generationId,
-          "slopstop.db",
-        ),
-      );
-      try {
-        expect(canonical.prepare("SELECT count(*) AS total FROM writer_generations").get()).toEqual(
-          { total: 0 },
-        );
-      } finally {
-        canonical.close();
-      }
-    } finally {
-      await host.stop();
-    }
+    await expectIdentityChangeRefused(f, () => rename(f.directory, `${f.directory}-preserved`));
+    expectNoWriterGeneration(f);
   },
 );
 
@@ -333,23 +322,9 @@ it.runIf(process.platform === "win32")(
   "runtime refuses changed Git administration without changing Project Storage",
   async () => {
     const f = await registeredFixture();
-    const before = rows(f, "SELECT * FROM storage_generations");
-    await rename(path.join(f.directory, ".git"), path.join(f.directory, ".git-old"));
-    execFileSync(path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe"), [
-      "init",
-      "--quiet",
-      f.directory,
-    ]);
-    const host = runtime(f.options);
-    try {
-      expect(await activate(host, f.registered.projectId)).toMatchObject({
-        status: "rejected",
-        diagnostic: { code: "REPOSITORY_IDENTITY_CHANGED" },
-      });
-      expect(rows(f, "SELECT * FROM storage_generations")).toEqual(before);
-    } finally {
-      await host.stop();
-    }
+    await expectIdentityChangeRefused(f, () =>
+      rename(path.join(f.directory, ".git"), path.join(f.directory, ".git-old")),
+    );
   },
 );
 
