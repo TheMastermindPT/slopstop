@@ -100,3 +100,19 @@ A push attempt (CLI and GitHub Desktop) failed because the `.husky/pre-push` dee
   - The protocol version moves from 4 to 5, once, in S1.
   - The approved prototype text is the answer for its remaining open wording questions.
   - Any oracle change still needs the user's approval.
+
+## 11. S2 decisions — Human Decisions (2026-10-04)
+
+- **A1: the name comes from the existing record.** The Project name is the last segment of the worktree path stored in the fingerprinted, immutable registration reservation. This satisfies "persist the name" (section 10) with no migration. Option A2, a new column, was not chosen.
+- **Approved oracle change.** Registered and incomplete list entries gain a non-empty `name`. The exact-entry assertions change in five files:
+  - `registration-list.integration`;
+  - `project-list-runtime.integration`;
+  - `application-database-authority.integration`;
+  - desktop `project-entry-bridge.test`;
+  - desktop `app.test`.
+  
+  No other oracle changes.
+- **Unbound Projects.** Entries with no repository have no `name`. The UI shows "Project without a repository" with the short id.
+- **Invalid folders.** Inside `.git`, bare repositories and "not a worktree" share one screen, with the `REPOSITORY_INVALID` reference. The harness observation oracles stay unchanged.
+- **Approach B is approved.** A new read-only query compares the worktree physical identity with the stored reservation. It decides `already-registered`, `belongs-to-project` (B1) or `REGISTRATION_INCOMPLETE` (B2) at prepare time, with no `registration_requests` row written; a late race at confirm is mapped the same way.
+- **Effect SQL.** New reads go through `registration/registry-effect.ts`, as Effect over the application.db authority facade.
