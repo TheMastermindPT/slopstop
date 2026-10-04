@@ -50,6 +50,8 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 ## Current Authority
 
 - Coordination handoff: `handoffs/2026-10-03_21-16-54_claude-project-coordinator.md` transfers coordination from OpenCode to the separate Herdr agent `coordenador-claude`, after a completed read-and-teach-back exchange. The existing `claude` session remains the implementation author; the handoff distinguishes current approvals, unfinished migration/feature work and deferred strategy.
+- `evidence/2026-10-04_vitest-coverage-worker-crash-and-gate-baseline.md` records the pre-existing Vitest worker crash and the coverage gate comparison (187 failures before Effect vs 4 timeouts after), plus the user's choice to reduce coverage parallelism without weakening the gate.
+- `handoffs/2026-10-04_ui-ux-pc-s1-add-repository-brief.md` briefs the `ui-ux` Herdr agent on the throwaway PC-S1 add-repository screen prototype.
 - `evidence/2026-10-03_baseline-measurement-log.md` is the running five-line-per-task baseline log of work done before Ragnarok (baseline project: a copy of MaxReps, the user's gymapp; chess no longer used).
 - `evidence/2026-10-03_pc-s1-guarantee-scope-decision.md` records three user decisions: reduced PC-S1 scope (additional worktree association and Linux deferred, recovery detect-only, reduced limit matrices; data/trust guarantees retained), application.db verify-before-commit with approved oracle changes, and checkpoint commits on the Effect branch without merge or push.
 
