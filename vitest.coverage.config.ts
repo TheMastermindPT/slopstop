@@ -11,5 +11,10 @@ export default defineConfig({
      * unchanged timeouts. Half the cores keeps every test, timeout and threshold as is.
      */
     maxWorkers: "50%",
+    /**
+     * Forked workers under V8 coverage intermittently die with a native access violation
+     * (0xC0000005) on Windows; worker threads have not shown it. A workaround, not a root cause.
+     */
+    pool: "threads",
   },
 });
