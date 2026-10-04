@@ -1,6 +1,6 @@
 # ADR 0009: Provider-Neutral Agent Runtime And Turn Contracts
 
-- Status: Accepted
+- Status: Accepted; amended 2026-10-04 (see Amendment 1)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
@@ -190,3 +190,137 @@ Execution completes ADR 0007's `model_attempts` family and adds these related ow
 - Portable turn boundaries allow Run pause and cancellation, Worker stop and replacement, Waypoint-parent model recovery, adapter replacement, and restart without trusting opaque provider memory, while preserving uncertainty when in-flight work cannot be reconciled.
 - Independent Worker turn sequences preserve non-nesting attribution and safe parallelism; deterministic Waypoint parent fan-out and fan-in remain explicit rather than becoming hidden runtime behavior.
 - Adapters lose some convenient autonomous loop, retry, memory, and fallback features. That restriction is intentional because convenience cannot outrank Worker authority, budget accounting, recovery, or failure visibility.
+
+## Amendment 1: Billing Modes And Governed CLI Sessions
+
+- Status: Accepted
+- Date: 2026-10-04
+- Decision owners: Pedro Mesquita
+- Evidence:
+  - `.rpiv/artifacts/research/2026-10-04_agent-runtime-options-discussion.md`
+  - `.rpiv/artifacts/research/2026-10-03_provider-subscription-terms.md`
+  - `.rpiv/artifacts/evidence/2026-10-04_claude-p-subscription-spike-results.md`
+
+### Amendment Context
+
+The decisions above assume that Execution prepares and admits every provider call and executes every tool effect itself. Three facts changed that assumption.
+
+1. Paying for coding Workers per token costs about $130 for an intensive day, even with caching. That is too expensive for the intended users.
+2. Anthropic does not allow a third-party application to route requests through subscription credentials. It does allow signing in to the unmodified official CLI.
+3. The `claude -p` spike showed that an official CLI session can be isolated, observed, and governed tool call by tool call through a PreToolUse hook. It cannot be made fully transparent.
+
+The user then fixed one billing mode per user. This amendment adds a governed CLI session path for that mode. Every decision above stays in force except where a rule below explicitly relaxes or replaces it.
+
+### Billing Mode
+
+- Each user selects exactly one billing mode, `subscription` or `api`. Each Run pins the billing mode that was current when it was prepared. Mixing modes inside a Run is prohibited, and so is switching modes automatically. A changed mode applies only to Runs prepared after the change.
+- Route each role by mode:
+
+| Role | `subscription` | `api` |
+| --- | --- | --- |
+| Worker | Governed CLI session, signed in with the user's subscription | Governed CLI session, using the user's API key |
+| Waypoint parent | Governed CLI session with no tools | Direct provider adapter (decisions above, unchanged) |
+| Conversation | Governed CLI session with no tools, one stateless call per turn | Direct provider adapter |
+
+- Credentials stay in the official CLI's own store or in operating-system-backed `safeStorage`. A Sealed Invocation records the credential source class (`cli-subscription-login` or `api-key`) and never a credential value.
+- Subscription mode is limited to the account owner's personal use of an unmodified official CLI. Before SlopStop is offered to the public with subscription mode, Anthropic must confirm in writing that this use is permitted. That confirmation is a release gate, not a runtime check.
+
+### Governed CLI Session Adapter
+
+- Add `governed-cli-session` as a provider adapter kind behind the same `AgentRuntime` port.
+- **Seal.** One Sealed Invocation covers one CLI session. It pins all of the following:
+  - the CLI binary identity and version;
+  - the exact argument list and environment overrides;
+  - the hashes of the settings file and the hook program;
+  - the system-prompt artifact;
+  - the visible CLI tool names and their mapping to project tool identities;
+  - the model and effort;
+  - the Run workspace used as working directory;
+  - the billing mode and credential source class;
+  - the capability report for that CLI version.
+- **Pre-boundary record.** The pre-boundary contract above applies to the whole session: Recovery Journal intent and `started`, the accepted `EFFECT_STARTED_UNSETTLED` decision, and one durable Model attempt of kind `cli-session` created before the process launches.
+- **Model calls inside a session.** These are observed from `stream-json` as ordered, attributed observations (turns, usage, rate-limit utilization, the terminal result). They are not admitted one by one. For this adapter kind only, this replaces the rule "each admitted provider-dispatch attempt has one durable Model attempt and one Sealed Invocation" and the ban on hidden agent loops. The loop must stay observed and bounded by the session's budget and timeout; it is never unreported.
+- **Tool calls.** Every CLI tool call reaches Execution through a PreToolUse hook before it runs. The hook is the Tool-invocation proposal point:
+  - Execution allocates a `ToolInvocationId`, runs and persists the proposed-argument validation, and answers allow or deny with a stable reason.
+  - The hook never rewrites arguments.
+  - A hook that fails, times out, or cannot be reached denies the call (fail closed).
+- **Effects.** The CLI executes allowed tools inside its own process. For this adapter kind, this relaxes the rule that every `effect-request` runs through the coordinator as a separate Process job. Effects stay confined in these ways:
+  - the session process as a whole is one Process job, with launch, timeout, termination, and job-object containment;
+  - the session works only in an isolated Run workspace (ADR 0008 and ADR 0015);
+  - the session holds that workspace's mutation lease for its whole duration;
+  - tool policy denies network, credential, and out-of-workspace effects by default.
+
+  Individual shell commands inside the session are Tool invocations. They are not separate Process jobs.
+- **Completion.** The CLI's terminal result is a transport observation only. A Worker completes only from verification that Execution runs itself, under ADR 0012: tests, the Workspace fingerprint, and the diff. It never completes from the CLI's own report.
+
+### Isolation And Injected Context
+
+- **Required isolation.** A governed CLI session always runs with:
+  - empty setting sources;
+  - strict MCP configuration with no servers;
+  - slash commands disabled;
+  - an explicit tool list;
+  - the system prompt supplied as a file;
+  - session persistence disabled.
+
+  The capability report pins and verifies the exact flags per CLI version. Use the CLI's safe mode only for sessions without tools, because hooks do not run under safe mode.
+- **History.** SlopStop owns all history. CLI session resume is prohibited. Each Conversation turn and each continuation is a new stateless session, with a bounded transcript compiled from durable SlopStop records. No CLI transcript may be written outside Electron `userData`.
+- **Injected context.** Content that the CLI injects and no flag can remove is recorded in the Invocation context record as source kind `cli-injected`, with its measured token contribution and trust classification. This covers the fixed identity line, the account-email reminder, the environment block, and the attribution reminder. For this adapter kind, this replaces the ban on hidden system instructions, which becomes a ban on *unrecorded* injected content.
+- **New CLI versions.** A new CLI version must pass conformance before use. That conformance detects and records any change in injected content.
+- **Privacy.** Raw request bodies and transcripts hold the account email. They are captured only for diagnosis, redacted before they are stored as artifacts, and never sent to Sentry.
+
+### Recovery, Pause And Stop
+
+- **Crash or interruption.** A session that crashes or is interrupted after launch is `invocation-uncertain`. Partial workspace changes are reconciled through the Workspace fingerprint. A session is never resumed; any continuation is a new Worker attempt under the rules above.
+- **Pause and stop.** The hook denies every new tool call as soon as a pause or stop is requested, and the session process is then terminated through its Process job. A Safe checkpoint additionally requires the session process to have exited, with its terminal observations recorded.
+
+### Usage And Budgets
+
+- **Usage.** Usage comes from the CLI's reported tokens, turns, and cost.
+  - In subscription mode, the reported cost is recorded as `reported-list-price`, not as a billed amount.
+  - Plan utilization from rate-limit events is recorded as an attributed observation.
+- **Budgets.**
+  - In subscription mode, budgets count tokens, turns, elapsed time, and utilization.
+  - In API mode, they count money as well.
+
+### Mastra
+
+- Mastra is no longer the planned first optional runtime adapter. This supersedes the Mastra rules in "Authority And Runtime Boundary" and "Physical Records" for new work.
+- Removing `mastra.db` from the storage layout (ADR 0006 and the Project Storage manifest), and Mastra references from ADR 0001, ADR 0002 and the architecture model, is a separate follow-up change.
+
+### Conformance Additions
+
+The shared contract suite adds these governed-CLI-session cases:
+
+- the seal pins the CLI version, flags and hook hash;
+- the hook fails closed;
+- a deny reason is delivered to the model;
+- the proposed-argument validation is persisted for every hook call;
+- no argument rewriting happens through the hook;
+- injected context is recorded;
+- isolation flags are verified per CLI version;
+- no transcript is written outside `userData`;
+- a session crash maps to `invocation-uncertain`;
+- stop denies new tools and terminates the session;
+- no session resume occurs;
+- Worker completion requires verification run by Execution.
+
+### Amendment Consequences
+
+- **Workers.** Workers can use the user's existing subscription. The project's measured costs make this the only viable path for most users.
+- **Weaker control in sessions.** Inside a governed CLI session, SlopStop gives up per-call admission and direct execution of each command. It keeps tool-by-tool approval, workspace isolation, whole-session process control, attribution, and its own verification. API-mode parent and Conversation calls keep the full control of the decisions above.
+- **Context is not fully exact.** Sessions always carry some CLI-injected content. SlopStop makes that content visible and measured instead of claiming it is absent.
+- **Terms risk.** Subscription mode depends on the provider's terms and plan limits. Public release waits for written confirmation.
+- **Who approves tool calls.** Tool-call approval through the hook is automatic and follows Ragnarok policy. The user is asked only for the exceptions that policy routes to Attention. The CLI's own automatic permission mode is not used, because its decisions would not be validated and recorded by Execution. The hook takes its place.
+- **Accepted limits in subscription mode.**
+  - The exact per-call context inside a Worker session is not recorded.
+  - Pausing a Worker means stopping it and later starting a new attempt from durable records; reasoning that was in progress is lost.
+  - A user approval needed in the middle of a session also stops the session, because hook waits are bounded.
+  - Budgets cannot use money as a unit.
+  - Each Conversation turn pays CLI startup latency.
+  - A Worker session cannot be replayed exactly.
+- **To verify when Workers are built.**
+  - Project-owned tools (for example typed retrieval and the ADR 0016 Language tools) exposed to sessions through a Ragnarok MCP server.
+  - Whether the CLI's automatic context compaction can be disabled; until then it counts as unrecorded lossy compaction.
+  - Weekly plan consumption with parallel Workers.
+  - Other providers' official CLIs.
