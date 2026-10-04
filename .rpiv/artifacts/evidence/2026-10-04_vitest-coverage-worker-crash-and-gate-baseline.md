@@ -25,3 +25,4 @@ tags: [testing, gate, vitest, coverage, pre-existing]
 - The coverage gate was **never green** before the migration. The `registered-project-selection` "runtime switches between two registered Projects" timeout already existed at the base.
 - The remaining four timeouts occur only with V8 coverage instrumentation and all 89 files in parallel; in isolation the same tests take ~7–11 s with coverage (HEAD 5–15% slower than base).
 - User decision (2026-10-04): **option A**, i.e. reduce parallelism only for the coverage run, keeping every test, assertion, timeout and threshold. Making the heavy registration tests lighter (option C) stays as a later improvement. Raising timeouts was not chosen.
+- User confirmation (2026-10-04): option C (lighter heavy registration tests) is planned **after the Effect migration and merge**, as the preferred long-term fix.
