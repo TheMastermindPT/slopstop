@@ -97,9 +97,6 @@ export function decodeGitIdentityPaths(outputs: unknown, platform: "win32" | "li
   return { status: "decoded", paths: { worktree, gitDirectory, commonDirectory } } as const;
 }
 
-export type GitIdentityBooleanResult = ReturnType<typeof decodeGitIdentityBooleans>;
-export type GitIdentityPathResult = ReturnType<typeof decodeGitIdentityPaths>;
-
 // The first query alone cannot classify bare/admin scope; it is not a phase result.
 function decodeSingleOutput(output: unknown) {
   const parsed = decodeStrictResult(settledOutput, output);
@@ -122,7 +119,7 @@ function decodeSingleOutput(output: unknown) {
   return { status: "decoded", line } as const;
 }
 
-export function decodeInsideWorkTreeOutput(output: unknown) {
+function decodeInsideWorkTreeOutput(output: unknown) {
   const decoded = decodeSingleOutput(output);
   if (decoded.status !== "decoded") return decoded;
   if (!acceptsStrict(booleanLine, decoded.line)) return invalid;

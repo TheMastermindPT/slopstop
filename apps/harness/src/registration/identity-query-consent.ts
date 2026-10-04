@@ -22,7 +22,7 @@ export const IdentityQueryConsentRequestSchema = Schema.Struct({
   consentId: UuidTextSchema.pipe(Schema.brand("IdentityQueryConsentId")),
 });
 const ConsentDecisionSchema = Schema.Literals(["accepted", "declined"]);
-export const IdentityQueryDecisionSchema = Schema.Struct({
+const IdentityQueryDecisionSchema = Schema.Struct({
   ...IdentityQueryConsentRequestSchema.fields,
   decision: ConsentDecisionSchema,
 });

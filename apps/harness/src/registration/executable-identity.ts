@@ -8,7 +8,7 @@ export const ExecutableIdentitySchema = Schema.Struct({
 
 export type ExecutableIdentity = typeof ExecutableIdentitySchema.Type;
 
-export const ExecutableIdentityObservationSchema = Schema.Union([
+const ExecutableIdentityObservationSchema = Schema.Union([
   Schema.Struct({ status: Schema.Literal("observed"), identity: ExecutableIdentitySchema }),
   Schema.Struct({
     status: Schema.Literal("unavailable"),

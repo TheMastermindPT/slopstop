@@ -7,8 +7,6 @@ import {
 import {
   type ApplicationDatabaseMigrationFailures,
   applicationDatabaseRows,
-  CURRENT_APPLICATION_DATABASE_HEAD,
-  PREVIOUS_APPLICATION_DATABASE_HEAD,
 } from "../storage/application-database-migration.js";
 import type {
   LocalLibsqlClient,
@@ -36,9 +34,6 @@ export type PreparedRegistryRunner = <Prepared, Result>(
   prepare: () => Promise<Prepared>,
   operation: (prepared: Prepared, reopen: RegistryRunner) => Promise<Result>,
 ) => Promise<Result>;
-
-export const PREVIOUS_REGISTRY_HEAD = PREVIOUS_APPLICATION_DATABASE_HEAD;
-export const CURRENT_REGISTRY_HEAD = CURRENT_APPLICATION_DATABASE_HEAD;
 
 export function registryRows(result: LocalLibsqlResultSet): unknown[] {
   return applicationDatabaseRows(result);

@@ -37,7 +37,7 @@ export function samePhysicalIdentity(left: PhysicalIdentity, right: PhysicalIden
   );
 }
 
-export const RepositoryDirectoryObservationSchema = Schema.Union([
+const RepositoryDirectoryObservationSchema = Schema.Union([
   Schema.Struct({ status: Schema.Literal("observed"), key: PhysicalDirectoryKeySchema }),
   Schema.Struct({
     status: Schema.Literal("unavailable"),

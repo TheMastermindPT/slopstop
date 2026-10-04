@@ -54,8 +54,8 @@ export type ApplicationDatabaseMigrationFailures = Readonly<{
   checkpoint(point: ApplicationDatabaseMigrationCheckpoint): Promise<void>;
 }>;
 
-export const PREVIOUS_APPLICATION_DATABASE_HEAD = "0000_gray_eddie_brock";
-export const CURRENT_APPLICATION_DATABASE_HEAD = "0005_registration_publications";
+const PREVIOUS_APPLICATION_DATABASE_HEAD = "0000_gray_eddie_brock";
+const CURRENT_APPLICATION_DATABASE_HEAD = "0005_registration_publications";
 
 const noMigrationFailures: ApplicationDatabaseMigrationFailures = {
   checkpoint: async () => undefined,

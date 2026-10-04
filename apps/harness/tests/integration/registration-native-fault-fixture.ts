@@ -69,7 +69,7 @@ export function cleanupFault(api: ReturnType<typeof createWindowsObserverApi>, f
   };
 }
 
-export async function createNativeTriggerScenario(root: string, trigger: Trigger, fault: Fault) {
+async function createNativeTriggerScenario(root: string, trigger: Trigger, fault: Fault) {
   const source =
     trigger === "stdout" || trigger === "stderr"
       ? createNativeOverflowApi(trigger)
@@ -150,7 +150,7 @@ export async function observeHeldDeadline(root: string) {
   }
 }
 
-export function createNativeOverflowApi(stream: "stdout" | "stderr") {
+function createNativeOverflowApi(stream: "stdout" | "stderr") {
   const api = createWindowsObserverApi();
   const kernel = koffi.load("kernel32.dll");
   const info = kernel.func(

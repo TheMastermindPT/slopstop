@@ -200,11 +200,11 @@ async function withinPhysicalDeadline<Result>(
   }
 }
 
-export function captureRepositoryPhysical(worktree: string, control: IdentityQueryControl) {
+function captureRepositoryPhysical(worktree: string, control: IdentityQueryControl) {
   return withinPhysicalDeadline(control, () => capture(worktree, control));
 }
 
-export async function captureSelectedPhysical(
+async function captureSelectedPhysical(
   worktree: string,
   selected: PhysicalIdentity,
   control: IdentityQueryControl,
@@ -267,7 +267,7 @@ export async function revalidateRepositoryPhysical(
   return { status: "matched" } as const;
 }
 
-export function matchReportedPhysical(
+function matchReportedPhysical(
   paths: { worktree: string; gitDirectory: string; commonDirectory: string },
   expected: RepositoryPhysicalSnapshot,
   control: IdentityQueryControl,

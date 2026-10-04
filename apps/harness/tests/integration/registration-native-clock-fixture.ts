@@ -227,7 +227,7 @@ function manualClock() {
   };
 }
 
-export async function createNativeBoundaryScenario(root: string, example: BoundaryCase) {
+async function createNativeBoundaryScenario(root: string, example: BoundaryCase) {
   const time = manualClock();
   const api = createWindowsObserverApi();
   const forceOffsets: number[] = [];
@@ -286,13 +286,13 @@ export async function createNativeBoundaryScenario(root: string, example: Bounda
   };
 }
 
-export async function createCancellationLagScenario(root: string) {
+async function createCancellationLagScenario(root: string) {
   const time = manualClock();
   const native = createWindowsVersionChild(root, createWindowsObserverApi, time.clock);
   return { ...(await createHeldNativeVersionScenario(root, native)), time };
 }
 
-export async function createNativeCompletionScenario(
+async function createNativeCompletionScenario(
   input: Readonly<{ root: string; completedAt: number }>,
 ) {
   const { root, completedAt } = input;

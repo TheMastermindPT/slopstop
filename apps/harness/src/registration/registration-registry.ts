@@ -27,7 +27,7 @@ import {
 } from "./repository-trust.js";
 import type { VersionObserverJournal } from "./version-observation-execution.js";
 
-export type ExecutableSelectionRequest = Readonly<{
+type ExecutableSelectionRequest = Readonly<{
   selectionId: GitVersionInspectionRequest["selectionId"];
   executablePath: string;
 }>;

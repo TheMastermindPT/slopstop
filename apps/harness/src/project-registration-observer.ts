@@ -20,7 +20,7 @@ export const PreparedGitVersionSchema = Schema.Struct({
   version: NonEmptyTextSchema,
 });
 
-export const ObserverFailureTriggerSchema = Schema.Literals([
+const ObserverFailureTriggerSchema = Schema.Literals([
   "INTERNAL_FAILURE",
   "OBSERVATION_LIMIT_EXCEEDED",
   "CANCELLED",
