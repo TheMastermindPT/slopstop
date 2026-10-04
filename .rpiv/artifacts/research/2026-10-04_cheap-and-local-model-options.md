@@ -63,3 +63,29 @@ Critérios: qualidade das respostas e das decisões, respostas estruturadas vál
 - Com caching, a Conversation com Haiku fica em ~$12/mês para uso intenso, abaixo da estimativa anterior de ~$20. Os modelos baratos descem para $1–5/mês, e os locais para zero.
 - A poupança entre alojados baratos é de poucos dólares; a escolha deve pesar sobretudo **qualidade e privacidade**.
 - O modelo local é promissor para diálogo de rotina com contexto curto; contextos longos são o risco a testar primeiro.
+
+## Correção: modelos atuais (verificação às listas oficiais e notas de lançamento, 04/10/2026)
+
+O utilizador apontou que a lista acima parecia desatualizada; estava, em parte. Esta secção substitui a tabela e os candidatos acima onde diverge.
+
+| Fornecedor | Modelo barato atual | Data | Entrada / cache / saída por MTok | $/mês nesta carga [I] | Estado da lista anterior |
+| --- | --- | --- | --- | --- | --- |
+| OpenAI | **GPT-6 Luna** | maio ou setembro de 2026 (fontes oficiais contraditórias) | $0,10 / $0,01 / $0,50; contexto 1,05M | **~1,2** | Substitui gpt-5.4-mini/nano e gpt-5-mini/nano; a OpenAI passou a usar os nomes Luna/Sol/Astra [V] ([Luna](https://developers.openai.com/api/docs/models/gpt-6-luna), [changelog](https://developers.openai.com/api/docs/changelog)) |
+| Google | **Gemini 3.5 Flash-Lite** | GA 21/07/2026 | $0,30 / $0,03 / $2,50 | ~4,6 | Continua o nível mais barato; o Gemini 3.8 Flash (GA 02/09/2026) é o Flash atual [V] ([changelog](https://ai.google.dev/gemini-api/docs/changelog)) |
+| DeepSeek | **DeepSeek-V4.1-Flash** (`deepseek-flash`) | 10/09/2026 | $0,15–0,30 / $0,003–0,006 / $0,60–1,20; contexto 1M | ~1,3–2,5 | Versão mais nova, com o mesmo preço [V] ([updates](https://api-docs.deepseek.com/updates)) |
+| Mistral | **Mistral Small 4** | março de 2026 | preço por confirmar | — | Ainda é o Small mais recente [V] ([changelog](https://docs.mistral.ai/getting-started/changelog)) |
+| xAI | sem modelo pequeno; o mais barato é `grok-build-0.1` | — | $1 / $0,20 / $2 | — | Não é competitivo no preço [V] ([models](https://docs.x.ai/docs/models)) |
+
+Locais (8 GB VRAM):
+- **Gemma 4 E4B** (Apache 2.0, 4,5B efetivos / 8B no total, contexto 128K) substitui o Gemma 3 12B [V] ([card](https://huggingface.co/google/gemma-4-E4B)). Velocidade na RTX 3070 ~46–79 tok/s, mas segundo estimadores de terceiros, não medições [S]; a versão de maior precisão quase não cabe em 8 GB [S].
+- **Qwen:** as famílias mais novas (Qwen3.6, Qwen3.8) não têm um tamanho novo de 4–14B que caiba em 8 GB; o **Qwen3.5-9B** continua a ser o Qwen mais recente que cabe [I, com base em V/S].
+- **Llama 3.1 8B:** antigo, mas não encontrámos substituto oficial pequeno da Meta [S]. gpt-oss-20b precisa de 16 GB. Phi-4-reasoning-vision-15B (março de 2026) é demasiado grande para caber bem em 8 GB [I]. Granite 4.1 e Nemotron 3 Nano por verificar.
+
+Candidatos revistos para a avaliação emparelhada:
+1. Haiku 4.5 (referência, ~$12/mês);
+2. **GPT-6 Luna** (~$1,2/mês; verificar os termos de dados da OpenAI);
+3. Gemini 3.5 Flash-Lite, nível pago (~$4,6/mês);
+4. DeepSeek-V4.1-Flash, só com conversas não sensíveis (~$1,3–2,5/mês);
+5. Locais: **Gemma 4 E4B** e **Qwen3.5-9B** via Ollama, testados a 8k, 16k e 30k de contexto.
+
+Lacunas: data do GPT-6 Luna (as fontes oficiais divergem); preço do Mistral; preço do cache e contexto do Gemini; não há medições reais na RTX 3070 para os modelos novos.
