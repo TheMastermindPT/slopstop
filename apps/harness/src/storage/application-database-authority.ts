@@ -28,6 +28,11 @@ import { withWriteTransaction } from "./project-storage-transaction.js";
 // which executes one request at a time, so a single non-transactional read issued through
 // that worker never overlaps another of its connections' COMMIT. External connections are
 // not covered; consistent multi-statement reads must run inside an admitted transaction.
+//
+// The Promise interface is a deliberate boundary: its consumers (Storage, registration and
+// listing owners) are still Promise code. Admission, initialization and stop drain run on
+// Effect primitives behind it, with no coordination logic outside Effect. It goes away when
+// those consumers become Effect programs and can use the primitives directly.
 export type ApplicationDatabaseAuthority = Readonly<{
   applicationDatabasePath: string;
   admitClient(client: LocalLibsqlClient): LocalLibsqlClient;
