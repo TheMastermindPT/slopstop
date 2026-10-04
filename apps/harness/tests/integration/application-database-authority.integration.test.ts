@@ -57,6 +57,74 @@ function readApplicationDatabase(databasePath: string) {
   }
 }
 
+type ApplicationRegistryBase = ReturnType<typeof consentRegistryOptions>;
+type ProjectStorageOwner = ReturnType<typeof createProjectStorageOwner>;
+type ProjectId = (typeof ProjectStorageCreateRequestSchema.Type)["projectId"];
+type ProjectListing = ReturnType<ReturnType<typeof createProjectRegistrationOwner>["listProjects"]>;
+
+// Proves the create waited behind the migration and then created the Project.
+async function expectWaitingCreateCompleted(
+  creating: ReturnType<ProjectStorageOwner["create"]>,
+  early: unknown,
+) {
+  const created = await creating;
+  expect({
+    early: early === "waiting" ? early : "settled",
+    created: created.status,
+    message: created.status === "ready" ? undefined : created.message,
+  }).toEqual({ early: "waiting", created: "ready", message: undefined });
+  if (created.status !== "ready") throw new Error("Project create did not complete.");
+  expect(decodeStrict(ProjectStorageCreateResultSchema, created.result).status).toBe("created");
+}
+
+// Proves the listing completed with only the created Project.
+async function expectListedOnly(listing: ProjectListing, projectId: ProjectId) {
+  const listed = await listing;
+  expect(listed.status).toBe("listed");
+  if (listed.status !== "listed") throw new Error("Project listing did not complete.");
+  for (const project of listed.projects) expect(project.projectId).toBe(projectId);
+}
+
+// Proves the created Project opens and closes cleanly.
+async function expectOpensAndCloses(storage: ProjectStorageOwner, projectId: ProjectId) {
+  const opened = await storage.open({ projectId });
+  if (opened.status !== "ready") throw new Error("Project open did not complete.");
+  expect(decodeStrict(ProjectStorageOpenResultSchema, opened.result).status).toBe("opened");
+  expect((await storage.close({ projectId })).status).toBe("ready");
+}
+
+// Proves a fresh authority over the same application database still lists the Project.
+async function expectReopenedListing(
+  base: ApplicationRegistryBase,
+  root: string,
+  projectId: string,
+) {
+  const reopenedDatabase = createApplicationDatabaseAuthority(base);
+  const reopenedOptions = {
+    ...base,
+    applicationVersion: "0.0.0",
+    applicationDatabase: reopenedDatabase,
+  };
+  const reopenedRegistry = createRegistrationRegistry(reopenedOptions);
+  const reopenedRegistration = createProjectRegistrationOwner(
+    reopenedRegistry,
+    reopenedOptions,
+    root,
+  );
+  try {
+    const relisted = await reopenedRegistration.listProjects();
+    expect(relisted).toMatchObject({
+      status: "listed",
+      projects: [{ registration: "unbound", projectId }],
+    });
+  } finally {
+    await reopenedRegistration.close();
+    await reopenedRegistry.stop();
+    await reopenedDatabase.stop();
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+  }
+}
+
 it("admits a fresh Project create behind the registry's initial migration on one application database", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "slopstop-application-authority-"));
   const barrier = migrationBarrier();
@@ -92,23 +160,9 @@ it("admits a fresh Project create behind the registry's initial migration on one
     const early = await Promise.race([creating, delay(250).then(() => "waiting" as const)]);
     barrier.open();
 
-    const created = await creating;
-    expect({
-      early: early === "waiting" ? early : "settled",
-      created: created.status,
-      message: created.status === "ready" ? undefined : created.message,
-    }).toEqual({ early: "waiting", created: "ready", message: undefined });
-    if (created.status !== "ready") throw new Error("Project create did not complete.");
-    expect(decodeStrict(ProjectStorageCreateResultSchema, created.result).status).toBe("created");
-    const listed = await listing;
-    expect(listed.status).toBe("listed");
-    if (listed.status !== "listed") throw new Error("Project listing did not complete.");
-    for (const project of listed.projects) expect(project.projectId).toBe(request.projectId);
-
-    const opened = await storage.open({ projectId: request.projectId });
-    if (opened.status !== "ready") throw new Error("Project open did not complete.");
-    expect(decodeStrict(ProjectStorageOpenResultSchema, opened.result).status).toBe("opened");
-    expect((await storage.close({ projectId: request.projectId })).status).toBe("ready");
+    await expectWaitingCreateCompleted(creating, early);
+    await expectListedOnly(listing, request.projectId);
+    await expectOpensAndCloses(storage, request.projectId);
   } finally {
     barrier.open();
     await storage.stop();
@@ -128,30 +182,7 @@ it("admits a fresh Project create behind the registry's initial migration on one
     },
   );
 
-  const reopenedDatabase = createApplicationDatabaseAuthority(base);
-  const reopenedOptions = {
-    ...base,
-    applicationVersion: "0.0.0",
-    applicationDatabase: reopenedDatabase,
-  };
-  const reopenedRegistry = createRegistrationRegistry(reopenedOptions);
-  const reopenedRegistration = createProjectRegistrationOwner(
-    reopenedRegistry,
-    reopenedOptions,
-    root,
-  );
-  try {
-    const relisted = await reopenedRegistration.listProjects();
-    expect(relisted).toMatchObject({
-      status: "listed",
-      projects: [{ registration: "unbound", projectId: request.projectId }],
-    });
-  } finally {
-    await reopenedRegistration.close();
-    await reopenedRegistry.stop();
-    await reopenedDatabase.stop();
-    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
-  }
+  await expectReopenedListing(base, root, request.projectId);
 });
 
 it("refuses a schema-less application database left by an interrupted start without touching it", async () => {

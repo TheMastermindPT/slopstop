@@ -58,25 +58,23 @@ import { createPreviousRegistry } from "./registration-schema-fixture.js";
 const manifestReadFailure = vi.hoisted(() => ({ filePath: undefined as string | undefined }));
 const previousRegistryProjectId = "71938cf7-9874-4dd8-8f10-7507a8ef9a82";
 
-function readApplicationHead(root: ApplicationRootPath | string) {
+function queryApplicationDatabase(root: ApplicationRootPath | string, sql: string) {
   const database = new DatabaseSync(path.join(root, "application.db"), { readOnly: true });
   try {
-    return database.prepare("SELECT last_migration_id FROM schema_metadata").get();
+    return database.prepare(sql).all();
   } finally {
     database.close();
   }
 }
 
-function readPreviousRegistrations(root: ApplicationRootPath | string) {
-  const database = new DatabaseSync(path.join(root, "application.db"), { readOnly: true });
-  try {
-    return database
-      .prepare("SELECT storage_id, project_id, created_at FROM storage_registrations")
-      .all();
-  } finally {
-    database.close();
-  }
-}
+const readApplicationHead = (root: ApplicationRootPath | string) =>
+  queryApplicationDatabase(root, "SELECT last_migration_id FROM schema_metadata")[0];
+
+const readPreviousRegistrations = (root: ApplicationRootPath | string) =>
+  queryApplicationDatabase(
+    root,
+    "SELECT storage_id, project_id, created_at FROM storage_registrations",
+  );
 
 const applicationUpgradeCreateRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: openRequest.projectId,

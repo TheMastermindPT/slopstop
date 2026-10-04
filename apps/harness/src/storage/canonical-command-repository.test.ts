@@ -66,6 +66,23 @@ function database<T>(file: string, action: (db: DatabaseSync) => T): T {
   }
 }
 
+// Applies the canonical migrations and the Project state row the writer expects.
+async function seedCanonicalDatabase(file: string) {
+  const migrations = await Promise.all(
+    ["0000_fat_doctor_octopus.sql", "0001_canonical_project_writer.sql"].map((name) =>
+      readFile(path.resolve(import.meta.dirname, "../../drizzle/canonical", name), "utf8"),
+    ),
+  );
+  database(file, (db) => {
+    for (const migration of migrations) db.exec(migration);
+    db.prepare("INSERT INTO project_state VALUES (?, 0, 0, ?, ?)").run(
+      projectId,
+      times[0],
+      times[0],
+    );
+  });
+}
+
 async function fixture() {
   const roots: LocalLibsqlClient[] = [];
   let nextId = 100;
@@ -82,19 +99,7 @@ async function fixture() {
   };
   const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-durable-writer-"));
   const file = path.join(root, "slopstop.db");
-  const migrations = await Promise.all(
-    ["0000_fat_doctor_octopus.sql", "0001_canonical_project_writer.sql"].map((name) =>
-      readFile(path.resolve(import.meta.dirname, "../../drizzle/canonical", name), "utf8"),
-    ),
-  );
-  database(file, (db) => {
-    for (const migration of migrations) db.exec(migration);
-    db.prepare("INSERT INTO project_state VALUES (?, 0, 0, ?, ?)").run(
-      projectId,
-      times[0],
-      times[0],
-    );
-  });
+  await seedCanonicalDatabase(file);
   const input = (generation: number) => ({
     canonicalDatabasePath: file,
     projectId,

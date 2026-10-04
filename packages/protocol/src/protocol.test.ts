@@ -186,47 +186,41 @@ function projectStorageExchanges() {
     { messageId: "00000000-0000-4000-8000-000000000023", sentAt },
     closeRequest,
   );
+  const resultMetadata = (sequence: number, causationId: string) => ({
+    messageId: `00000000-0000-4000-8000-00000000003${sequence}`,
+    sentAt,
+    sequence,
+    causationId,
+  });
   return [
     {
       command: open,
       commandName: "project.open",
-      event: createProjectOpenResultEvent(
-        {
-          messageId: "00000000-0000-4000-8000-000000000031",
-          sentAt,
-          sequence: 1,
-          causationId: open.messageId,
-        },
-        { status: "unavailable", request: openRequest, ...storageUnavailable },
-      ),
+      event: createProjectOpenResultEvent(resultMetadata(1, open.messageId), {
+        status: "unavailable",
+        request: openRequest,
+        ...storageUnavailable,
+      }),
       eventName: "project.open.result",
     },
     {
       command: create,
       commandName: "project.create",
-      event: createProjectCreateResultEvent(
-        {
-          messageId: "00000000-0000-4000-8000-000000000032",
-          sentAt,
-          sequence: 2,
-          causationId: create.messageId,
-        },
-        { status: "unavailable", request: createRequest, ...storageUnavailable },
-      ),
+      event: createProjectCreateResultEvent(resultMetadata(2, create.messageId), {
+        status: "unavailable",
+        request: createRequest,
+        ...storageUnavailable,
+      }),
       eventName: "project.create.result",
     },
     {
       command: close,
       commandName: "project.close",
-      event: createProjectCloseResultEvent(
-        {
-          messageId: "00000000-0000-4000-8000-000000000033",
-          sentAt,
-          sequence: 3,
-          causationId: close.messageId,
-        },
-        { status: "unavailable", request: closeRequest, ...storageUnavailable },
-      ),
+      event: createProjectCloseResultEvent(resultMetadata(3, close.messageId), {
+        status: "unavailable",
+        request: closeRequest,
+        ...storageUnavailable,
+      }),
       eventName: "project.close.result",
     },
   ] as const;

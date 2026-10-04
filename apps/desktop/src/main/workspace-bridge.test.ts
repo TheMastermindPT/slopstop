@@ -744,7 +744,11 @@ describe("WorkspaceBridge", () => {
     };
     const otherWaypointScope = { ...waypointScope, waypointId: id(41) };
 
-    const publish = (notification: WorkspaceNotification) => {
+    const publish = (
+      capability: WorkspaceNotification["capability"],
+      scope: typeof projectScope | typeof waypointScope,
+      revision: number,
+    ) => {
       session.emit({
         type: "message",
         message: createWorkspaceProjectionInvalidatedEvent(
@@ -754,40 +758,14 @@ describe("WorkspaceBridge", () => {
             sequence: 1,
             causationId: null,
           },
-          notification,
+          decodeStrict(WorkspaceNotificationSchema, { capability, scope, revision }),
         ),
       });
     };
-    for (const revision of [4, 3, 4, 5]) {
-      publish(
-        decodeStrict(WorkspaceNotificationSchema, {
-          capability: "conversation",
-          scope: projectScope,
-          revision,
-        }),
-      );
-    }
-    publish(
-      decodeStrict(WorkspaceNotificationSchema, {
-        capability: "conversation",
-        scope: waypointScope,
-        revision: 1,
-      }),
-    );
-    publish(
-      decodeStrict(WorkspaceNotificationSchema, {
-        capability: "conversation",
-        scope: otherWaypointScope,
-        revision: 1,
-      }),
-    );
-    publish(
-      decodeStrict(WorkspaceNotificationSchema, {
-        capability: "memory",
-        scope: projectScope,
-        revision: 1,
-      }),
-    );
+    for (const revision of [4, 3, 4, 5]) publish("conversation", projectScope, revision);
+    publish("conversation", waypointScope, 1);
+    publish("conversation", otherWaypointScope, 1);
+    publish("memory", projectScope, 1);
 
     expect(
       received.map(({ capability, scope, revision }) => ({ capability, scope, revision })),
@@ -799,13 +777,7 @@ describe("WorkspaceBridge", () => {
       { capability: "memory", scope: projectScope, revision: 1 },
     ]);
     unsubscribe();
-    publish(
-      decodeStrict(WorkspaceNotificationSchema, {
-        capability: "memory",
-        scope: projectScope,
-        revision: 2,
-      }),
-    );
+    publish("memory", projectScope, 2);
     expect(received).toHaveLength(5);
   });
 

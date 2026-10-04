@@ -71,6 +71,13 @@ import {
 
 const migrationResourcesRoot = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
+const admittedConsentId = "fefb33aa-d12b-424a-b87a-6f757cd029a3";
+const versionRequest = (consentId: string | null) =>
+  decodeStrict(GitVersionInspectionRequestSchema, {
+    selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
+    consentId,
+  });
+
 const roots: string[] = [];
 afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
@@ -280,10 +287,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
 
     it("inspects the admitted installed Git version through the owned native child", async () => {
       const root = await createRoot("pc-s1-version-");
-      const request = decodeStrict(GitVersionInspectionRequestSchema, {
-        selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-        consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
-      });
+      const request = versionRequest(admittedConsentId);
       const expected = decodeStrict(GitVersionInspectionResultSchema, {
         status: "prepared",
         selectionId: request.selectionId,
@@ -369,10 +373,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         migrationResourcesRoot,
       });
       try {
-        const request = decodeStrict(GitVersionInspectionRequestSchema, {
-          selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-          consentId: null,
-        });
+        const request = versionRequest(null);
         expect(
           await registry.prepareExecutable({
             selectionId: request.selectionId,
@@ -411,10 +412,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         migrationResourcesRoot,
       });
       try {
-        const request = decodeStrict(GitVersionInspectionRequestSchema, {
-          selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-          consentId: null,
-        });
+        const request = versionRequest(null);
         expect(
           await registry.prepareExecutable({
             selectionId: request.selectionId,
@@ -457,10 +455,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         migrationResourcesRoot,
       });
       try {
-        const request = decodeStrict(GitVersionInspectionRequestSchema, {
-          selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-          consentId: null,
-        });
+        const request = versionRequest(null);
         expect(
           await registry.prepareExecutable({
             selectionId: request.selectionId,
@@ -493,10 +488,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         applicationStorageRoot: root,
         migrationResourcesRoot,
       });
-      const request = decodeStrict(GitVersionInspectionRequestSchema, {
-        selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-        consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
-      });
+      const request = versionRequest(admittedConsentId);
       if (request.consentId === null) throw new Error("Test consent missing");
       const decision = {
         selectionId: request.selectionId,
@@ -538,10 +530,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         applicationStorageRoot: root,
         migrationResourcesRoot,
       });
-      const request = decodeStrict(GitVersionInspectionRequestSchema, {
-        selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-        consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
-      });
+      const request = versionRequest(admittedConsentId);
       if (request.consentId === null) throw new Error("Test consent missing");
       try {
         expect(
@@ -601,10 +590,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
           },
         });
         try {
-          const request = decodeStrict(GitVersionInspectionRequestSchema, {
-            selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-            consentId: null,
-          });
+          const request = versionRequest(null);
           expect(
             await registry.prepareExecutable({
               selectionId: request.selectionId,
@@ -657,10 +643,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         },
       });
       try {
-        const request = decodeStrict(GitVersionInspectionRequestSchema, {
-          selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-          consentId: null,
-        });
+        const request = versionRequest(null);
         const outcome = await registry.prepareExecutable({
           selectionId: request.selectionId,
           executablePath: path.join(
@@ -700,10 +683,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
           migrationResourcesRoot,
         });
         try {
-          const request = decodeStrict(GitVersionInspectionRequestSchema, {
-            selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-            consentId: null,
-          });
+          const request = versionRequest(null);
           expect(
             await registry.prepareExecutable({
               selectionId: request.selectionId,
@@ -739,10 +719,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
           migrationResourcesRoot,
         });
         try {
-          const request = decodeStrict(GitVersionInspectionRequestSchema, {
-            selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-            consentId: null,
-          });
+          const request = versionRequest(null);
           expect(
             await registry.prepareExecutable({
               selectionId: request.selectionId,
@@ -772,10 +749,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         },
       });
       try {
-        const request = decodeStrict(GitVersionInspectionRequestSchema, {
-          selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
-          consentId: null,
-        });
+        const request = versionRequest(null);
         expect(
           await registry.prepareExecutable({
             selectionId: request.selectionId,
