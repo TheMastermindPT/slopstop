@@ -96,7 +96,7 @@ type WorkerRequest =
 
 type WorkerModuleUrls = Readonly<{
   libsqlClient: string;
-  effect: string;
+  effectSchema: string;
 }>;
 
 function resolveWorkerModuleUrl(packageName: string, entryPath: string): string {
@@ -116,7 +116,8 @@ function resolveWorkerModuleUrl(packageName: string, entryPath: string): string 
 
 const workerModuleUrls: WorkerModuleUrls = {
   libsqlClient: resolveWorkerModuleUrl("@libsql/client", "lib-esm/node.js"),
-  effect: resolveWorkerModuleUrl("effect", "dist/index.js"),
+  // The Schema module alone: the full Effect barrel costs each worker start ~100 ms more.
+  effectSchema: resolveWorkerModuleUrl("effect", "dist/Schema.js"),
 };
 
 const workerSource = `
@@ -139,9 +140,9 @@ const serializeError = (error, fallbackMessage = "Local libSQL operation failed.
 void (async () => {
   setFlagsFromString("--expose_gc");
   const collectGarbage = runInNewContext("gc");
-  const [{ createClient }, { Schema }] = await Promise.all([
+  const [{ createClient }, Schema] = await Promise.all([
     import(workerData.libsqlClient),
-    import(workerData.effect),
+    import(workerData.effectSchema),
   ]);
   const port = parentPort;
   if (port === null) throw new Error("Local libSQL worker has no parent port.");
