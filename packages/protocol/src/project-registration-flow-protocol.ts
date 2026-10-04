@@ -1,11 +1,27 @@
 import { Schema } from "effect";
+import { ProjectIdSchema } from "./domain-identity-schema.js";
 import {
   RegistrationIdempotencyConflictSchema,
   RegistryPendingRecoverySchema,
 } from "./project-list-protocol.js";
 import { NonEmptyTextSchema, UuidTextSchema, wholeUnion } from "./schema-codec.js";
 
+const Sha256TextSchema = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/));
+
 const DecisionSchema = Schema.Literals(["accepted", "declined"]);
+
+/** The folder trust and Git consent a proposal is prepared under. */
+const PreparationFields = {
+  preparationRequestId: UuidTextSchema,
+  selectionId: UuidTextSchema,
+  observationId: UuidTextSchema,
+  consentId: UuidTextSchema,
+  repositorySelectionId: UuidTextSchema,
+  trustId: UuidTextSchema,
+};
+
+/** A Project answered for the folder; its name is the registered worktree folder name. */
+const NamedProjectFields = { projectId: ProjectIdSchema, name: NonEmptyTextSchema };
 
 /**
  * One step of adding an existing repository. The selected directory comes from the desktop
@@ -32,6 +48,14 @@ export const ProjectRegistrationRequestSchema = Schema.Union([
     observationId: UuidTextSchema,
     consentId: UuidTextSchema,
     decision: DecisionSchema,
+  }),
+  Schema.Struct({ step: Schema.Literal("prepare"), ...PreparationFields }),
+  Schema.Struct({
+    step: Schema.Literal("confirm"),
+    requestId: UuidTextSchema,
+    ...PreparationFields,
+    proposalId: UuidTextSchema,
+    proposalFingerprint: Sha256TextSchema,
   }),
 ]);
 export type ProjectRegistrationRequest = typeof ProjectRegistrationRequestSchema.Type;
@@ -68,10 +92,22 @@ const ProjectRegistrationFailureSchemas = [
   }),
   Schema.Struct({
     status: Schema.Literal("rejected"),
-    code: Schema.Literals(["REPOSITORY_NOT_FOUND", "OBSERVATION_INVALID"]),
+    code: Schema.Literals([
+      "REPOSITORY_NOT_FOUND",
+      "OBSERVATION_INVALID",
+      "REPOSITORY_INVALID",
+      "NOT_WORKING_TREE",
+      "BARE_REPOSITORY",
+      "REPOSITORY_UNSUPPORTED",
+      "REPOSITORY_IDENTITY_CHANGED",
+    ]),
   }),
   RegistrationIdempotencyConflictSchema,
   RegistryPendingRecoverySchema,
+  Schema.Struct({
+    status: Schema.Literal("pending-recovery"),
+    code: Schema.Literals(["REGISTRATION_INCOMPLETE", "PRIOR_STATE_WITNESS"]),
+  }),
 ] as const;
 
 export const ProjectRegistrationResultSchema = wholeUnion([
@@ -92,6 +128,18 @@ export const ProjectRegistrationResultSchema = wholeUnion([
     version: NonEmptyTextSchema,
   }),
   Schema.Struct({ status: Schema.Literal("identity-queries-recorded") }),
+  Schema.Struct({
+    status: Schema.Literal("proposal-prepared"),
+    proposalId: UuidTextSchema,
+    proposalFingerprint: Sha256TextSchema,
+    name: NonEmptyTextSchema,
+    repositoryDirectory: NonEmptyTextSchema,
+    worktree: NonEmptyTextSchema,
+    gitVersion: NonEmptyTextSchema,
+  }),
+  Schema.Struct({ status: Schema.Literal("registered"), ...NamedProjectFields }),
+  Schema.Struct({ status: Schema.Literal("already-registered"), ...NamedProjectFields }),
+  Schema.Struct({ status: Schema.Literal("belongs-to-project"), ...NamedProjectFields }),
   ...ProjectRegistrationFailureSchemas,
 ]);
 export type ProjectRegistrationResult = typeof ProjectRegistrationResultSchema.Type;

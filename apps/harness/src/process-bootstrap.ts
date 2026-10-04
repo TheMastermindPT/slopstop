@@ -232,9 +232,10 @@ const projectRegistrationLayer = Layer.effect(
       ),
       registry,
     );
+    const owner = createProjectRegistrationOwner(registry, options, roots.applicationStorageRoot);
     return {
       registry,
-      owner: createProjectRegistrationOwner(registry, options, roots.applicationStorageRoot),
+      owner,
       observer,
       flow: createProjectRegistrationFlow({
         registry,
@@ -242,6 +243,8 @@ const projectRegistrationLayer = Layer.effect(
         selection,
         gitExecutablePath: installedGitPath(),
         createId: randomUUID,
+        owner,
+        options,
       }),
     };
   }),

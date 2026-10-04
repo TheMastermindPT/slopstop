@@ -37,6 +37,7 @@ function registeredProjectList(id: string, storage: unknown) {
       {
         registration: "registered",
         projectId: id,
+        name: "chess",
         repositoryBindingId: id,
         workspaceId: id,
         access: "not-assessed",
@@ -162,6 +163,7 @@ describe("desktop shell", () => {
               {
                 registration: "registered",
                 projectId,
+                name: "chess",
                 repositoryBindingId: projectId,
                 workspaceId: projectId,
                 access: "not-assessed",
@@ -227,6 +229,7 @@ describe("desktop shell", () => {
           projects: [first, second].map((projectId) => ({
             registration: "registered",
             projectId,
+            name: "chess",
             repositoryBindingId: projectId,
             workspaceId: projectId,
             access: "not-assessed",

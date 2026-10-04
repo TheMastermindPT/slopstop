@@ -7,7 +7,7 @@ import {
   StorageGenerationIdSchema,
   StorageIdSchema,
 } from "./project-storage-protocol.js";
-import { EmptyObjectSchema, wholeUnion } from "./schema-codec.js";
+import { EmptyObjectSchema, NonEmptyTextSchema, wholeUnion } from "./schema-codec.js";
 
 /** Registry recovery outcome shared by the harness registry and the Project list result. */
 export const RegistryPendingRecoverySchema = Schema.Struct({
@@ -66,6 +66,7 @@ const common = {
   access: Schema.Literal("not-assessed"),
 };
 const binding = {
+  name: NonEmptyTextSchema,
   repositoryBindingId: InitialRepositoryBindingSchema.fields.repositoryBindingId,
   workspaceId: InitialRepositoryBindingSchema.fields.workspaceId,
 };

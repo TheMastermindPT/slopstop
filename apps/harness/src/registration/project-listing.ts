@@ -13,6 +13,7 @@ import { createProjectStorageOwner } from "../storage/project-storage-store.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { observeRepositoryDirectory } from "../storage/repository-identity-observer.js";
 import { samePhysicalIdentity } from "./physical-identity.js";
+import { registeredName } from "./registered-name.js";
 import {
   type Reservation,
   readProjectRegistrationRecords,
@@ -124,6 +125,7 @@ export async function listRegisteredProjects(
             registration: publication === undefined ? "incomplete" : "registered",
             ...(publication === undefined ? { code: "REGISTRATION_INCOMPLETE" } : {}),
             projectId: reservation.projectId,
+            name: registeredName(reservation.proposal.observation.paths.worktree),
             repositoryBindingId: reservation.repositoryBindingId,
             workspaceId: reservation.workspaceId,
             repositoryLocation: await location(reservation),

@@ -149,6 +149,7 @@ it.runIf(process.platform === "win32").each([
           registration,
           ...(registration === "incomplete" ? { code: "REGISTRATION_INCOMPLETE" } : {}),
           projectId: registered.projectId,
+          name: "repository",
           repositoryBindingId: registered.repositoryBindingId,
           workspaceId: registered.workspaceId,
           repositoryLocation: { status: "present" },

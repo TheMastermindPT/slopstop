@@ -1,72 +1,8 @@
-import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { MessageChannel } from "node:worker_threads";
-import {
-  createHandshakeCommand,
-  createProjectRegistrationCommand,
-  type ProjectRegistrationRequest,
-  parseHarnessMessage,
-} from "@slopstop/protocol";
-import { afterEach, expect, it } from "vitest";
-import { startHarnessProcessRuntime } from "../../src/process-bootstrap.js";
-import { checkedInMigrationRoot, transportFor } from "./project-storage-runtime-fixture.js";
+import { expect, it } from "vitest";
+import { registrationSession, uuid } from "./registration-flow-fixture.js";
 import { installedGit } from "./registration-git-fixture.js";
-
-const roots: string[] = [];
-afterEach(async () => {
-  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
-});
-
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-
-async function registrationSession() {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-flow-"));
-  roots.push(root);
-  const directory = path.join(root, "repository");
-  execFileSync(installedGit, ["init", "--quiet", directory]);
-  const { port1, port2 } = new MessageChannel();
-  const stop = startHarnessProcessRuntime({
-    bootstrap: {
-      kind: "harness.connect",
-      applicationStorageRootUrl: pathToFileURL(path.join(root, "installation")).href,
-      migrationResourcesRootUrl: pathToFileURL(checkedInMigrationRoot).href,
-    },
-    transport: transportFor(port1),
-  });
-  let sequence = 100;
-  const exchange = async (command: unknown) => {
-    const response = new Promise<unknown>((resolve) => port2.once("message", resolve));
-    port2.postMessage(command);
-    const parsed = parseHarnessMessage(await response);
-    if (!parsed.ok) throw new Error("Harness answered with an invalid message.");
-    return parsed.value;
-  };
-  const metadata = () => ({
-    messageId: `00000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}`,
-    sentAt: "2026-10-04T12:00:00.000Z",
-  });
-  const register = async (request: ProjectRegistrationRequest) => {
-    const event = await exchange(createProjectRegistrationCommand(metadata(), request));
-    if (event.messageType !== "event" || event.event !== "project.registration.result")
-      throw new Error(`Unexpected harness event ${JSON.stringify(event)}`);
-    return event.payload;
-  };
-  await exchange(createHandshakeCommand(metadata(), "0.0.0"));
-  return {
-    root,
-    directory,
-    register,
-    dispose: async () => {
-      await stop();
-      port1.close();
-      port2.close();
-    },
-  };
-}
 
 it.runIf(process.platform === "win32")(
   "drives folder trust and both Git consent stages across the harness boundary",

@@ -5,30 +5,25 @@ import {
   type ProjectRegistrationResult,
   ProjectRegistrationResultSchema,
 } from "@slopstop/protocol";
-import { Data, Effect, Result, Semaphore } from "effect";
+import { Effect, Result, Semaphore } from "effect";
 import {
   GitVersionInspectionRequestSchema,
   type ProjectRegistrationObserver,
 } from "../project-registration-observer.js";
 import { IdentityQueryConsentRequestSchema } from "./identity-query-consent.js";
+import { createProposalSteps, type ProposalOwner } from "./registration-proposal-steps.js";
 import type { RegistrationRegistry } from "./registration-registry.js";
+import {
+  failureOf,
+  internalFailure,
+  type RegistrationStepDefect,
+  step,
+} from "./registration-step.js";
+import type { RegistrationDatabaseOptions } from "./registry-database.js";
 import {
   type NativeRepositorySelectionPort,
   RepositoryTrustDecisionSchema,
 } from "./repository-trust.js";
-
-/** A step's owner rejected instead of answering with a result envelope. */
-class RegistrationStepDefect extends Data.TaggedError("RegistrationStepDefect")<{
-  readonly cause: unknown;
-}> {}
-
-type Failure = Extract<
-  ProjectRegistrationResult,
-  { status: "cancelled" | "broken" | "unavailable" | "rejected" | "pending-recovery" }
->;
-type Outcome = Readonly<{ status: string; code?: string; exitCode?: number }>;
-
-const internalFailure = { status: "broken", code: "INTERNAL_FAILURE" } as const;
 
 /**
  * Hands the directory chosen by the desktop main process to the registry's selection port
@@ -48,25 +43,6 @@ export function createDirectoryHandoff() {
 
 export type DirectoryHandoff = ReturnType<typeof createDirectoryHandoff>;
 
-// Keeps only the wire fields of an owner failure; detail such as observer triggers stays
-// inside the harness. The boundary decode below rejects any code the protocol lacks.
-function failureOf(outcome: Outcome): Failure {
-  const failure =
-    outcome.code === undefined
-      ? { status: outcome.status }
-      : outcome.exitCode === undefined
-        ? { status: outcome.status, code: outcome.code }
-        : { status: outcome.status, code: outcome.code, exitCode: outcome.exitCode };
-  return failure as Failure;
-}
-
-function step<Value>(operation: () => Promise<Value>) {
-  return Effect.tryPromise({
-    try: operation,
-    catch: (cause) => new RegistrationStepDefect({ cause }),
-  });
-}
-
 export interface ProjectRegistrationFlow {
   handle(request: ProjectRegistrationRequest): Effect.Effect<ProjectRegistrationResult>;
 }
@@ -78,9 +54,12 @@ export function createProjectRegistrationFlow(
     selection: DirectoryHandoff;
     gitExecutablePath: string;
     createId: () => string;
+    owner: ProposalOwner;
+    options: RegistrationDatabaseOptions;
   }>,
 ): ProjectRegistrationFlow {
   const { registry, observer, selection } = dependencies;
+  const proposals = createProposalSteps(dependencies);
 
   const selectRepository = (directory: string) =>
     Effect.map(
@@ -201,6 +180,10 @@ export function createProjectRegistrationFlow(
         return decideGitVersion(request);
       case "decide-identity-queries":
         return decideIdentityQueries(request);
+      case "prepare":
+        return proposals.prepare(request);
+      case "confirm":
+        return proposals.confirm(request);
     }
   };
 
