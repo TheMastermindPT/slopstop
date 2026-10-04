@@ -89,3 +89,10 @@ Candidatos revistos para a avaliação emparelhada:
 5. Locais: **Gemma 4 E4B** e **Qwen3.5-9B** via Ollama, testados a 8k, 16k e 30k de contexto.
 
 Lacunas: data do GPT-6 Luna (as fontes oficiais divergem); preço do Mistral; preço do cache e contexto do Gemini; não há medições reais na RTX 3070 para os modelos novos.
+
+## Decisões do utilizador (2026-10-04)
+
+- **Modelos locais excluídos** da Conversation: risco de sugestões erradas ou inferiores em assuntos complexos.
+- **Assuntos complexos e decisões: Opus.** O utilizador não confia no Sonnet para tarefas complexas.
+- **Candidatos baratos para a rotina, a averiguar:** GPT-6 Luna e DeepSeek-V4.1-Flash, com o Haiku 4.5 como referência barata e o Opus como referência forte. Antes de enviar qualquer conversa real ao DeepSeek, ler a política de privacidade primária; usar só exemplos não sensíveis ou anonimizados.
+- **Script de avaliação emparelhada adiado:** fica para depois do merge do Effect e do protótipo `claude -p`. Método proposto: pedidos reais de rotina e complexos; um juiz forte compara às cegas; o utilizador avalia às cegas uma amostra pequena; medem-se também o formato estruturado válido, o português, a latência e o custo por tarefa concluída. Chaves de API só em variáveis de ambiente, nunca no Git.
