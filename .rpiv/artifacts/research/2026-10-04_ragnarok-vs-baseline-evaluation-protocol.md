@@ -87,3 +87,13 @@ Se o critério falhar, o resultado é informativo: diz onde o Ragnarok não acre
 1. O utilizador confirma ou ajusta as tarefas candidatas e o critério de sucesso (secção 9).
 2. Escrever os testes de aceitação escondidos das primeiras 2–3 tarefas.
 3. Correr a condição A nessas tarefas, já com este protocolo.
+
+## Projeto de avaliação alternativo — ideia do utilizador (2026-10-04)
+
+Candidato a substituir a cópia do MaxReps como projeto de avaliação, a debater depois do push:
+
+- **Ideia:** um programa de estudos para desenvolvedores, focado em exercícios práticos com dificuldade progressiva que o utilizador tem de concluir. Tecnologias: HTML, CSS, JavaScript, TypeScript, Node, React, MySQL. O modelo desenha o programa, incluindo os exercícios, e decide o que ensinar.
+- **Porque serve para avaliar [I]:** começa do zero (as duas condições partem da mesma especificação); rico em decisões de intenção (onde o Frame pesa); divide-se em trilhas paralelas (coordenação multiagente); os testes de cada exercício servem também de oráculo.
+- **Questões a fechar no debate:** para quem é e que nível; o programa é gerado **na construção** (conteúdo estático, sem custo de API para o aluno) ou **na utilização** (adaptativo, custo de API por aluno, ligado à viabilidade); como se verificam os exercícios e como se isola a execução do código do aluno (sandbox; MySQL acrescenta uma base de dados a gerir); plataforma; v1 mínima (por exemplo uma trilha HTML/CSS/JS com ~10 exercícios verificados automaticamente).
+- **Avaliação em duas partes** se for escolhido: qualidade do código (objetiva, secções 5–6) e qualidade pedagógica (às cegas, pelo utilizador, com rubrica).
+- O protocolo mantém-se; mudariam só as tarefas candidatas (secção 3).
