@@ -92,3 +92,17 @@ The dollar figures below are the list prices the CLI reports. A subscription doe
 - **Unexplained ~4 s** of extra wall time with `--json-schema`.
 - **No off-switch found** for the email and environment injection.
 - **Not tested:** whether `--setting-sources ""` without `--safe-mode` also gives a clean parent or Conversation context. Likely yes, given the Worker leak check.
+
+## Plan-quota measurement (2026-10-04, Max plan)
+
+- **Setup.**
+  - 40 sequential, realistic Waypoint-parent calls: Opus, the isolation flags, stateless, `--json-schema`, warm system-prompt cache.
+  - Quiet machine: other sessions idle, coordinator and implementer idle during the run.
+  - Run time: 7.5 min.
+- **Per call:** ~2.5k tokens of context (mostly cache reads), ~1.1k output tokens and ~10 s. One call needed a structured-output retry.
+- **Five-hour window:** 0.18 -> 0.19. About 40 calls per 1 point (bounds ~20–80), i.e. ~4,000 calls per window (bounds ~2,000–8,000). That is more than one sequential runner can make in 5 h, so for parent calls this window is not the practical limit.
+- **Seven-day window:** unchanged (0.32). Weekly capacity is not pinned; only a lower bound is known.
+- **Caveats.**
+  - Utilization has 1% resolution with unknown rounding.
+  - Other account usage cannot be excluded; it would make Ragnarok's true cost lower than measured.
+  - Workers were not measured. Tool-using, long-context sessions cost far more per call, but they are the same work the user already runs through Claude Code today.
