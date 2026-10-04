@@ -52,7 +52,7 @@ export function createProjectRegistrationFlow(
     registry: RegistrationRegistry;
     observer: ProjectRegistrationObserver;
     selection: DirectoryHandoff;
-    gitExecutablePath: string;
+    discoverGit: () => Effect.Effect<string | undefined>;
     createId: () => string;
     owner: ProposalOwner;
     options: RegistrationDatabaseOptions;
@@ -91,27 +91,18 @@ export function createProjectRegistrationFlow(
         recorded.status === "recorded" ? { status: "trust-recorded" } : failureOf(recorded),
     );
 
-  const prepareGit = Effect.suspend(() => {
+  const prepareGit = Effect.gen(function* () {
+    const executablePath = yield* dependencies.discoverGit();
+    if (executablePath === undefined)
+      return { status: "unavailable", code: "GIT_UNAVAILABLE" } as const;
     const { selectionId } = decodeStrict(GitVersionInspectionRequestSchema, {
       selectionId: dependencies.createId(),
       consentId: null,
     });
-    return Effect.map(
-      step(() =>
-        registry.prepareExecutable({
-          selectionId,
-          executablePath: dependencies.gitExecutablePath,
-        }),
-      ),
-      (prepared): ProjectRegistrationResult =>
-        prepared.status === "prepared"
-          ? {
-              status: "git-prepared",
-              selectionId: prepared.selectionId,
-              executablePath: dependencies.gitExecutablePath,
-            }
-          : failureOf(prepared),
-    );
+    const prepared = yield* step(() => registry.prepareExecutable({ selectionId, executablePath }));
+    return prepared.status === "prepared"
+      ? ({ status: "git-prepared", selectionId: prepared.selectionId, executablePath } as const)
+      : failureOf(prepared);
   });
 
   const decideGitVersion = (

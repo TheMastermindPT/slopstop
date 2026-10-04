@@ -156,11 +156,6 @@ function registrationListing(registration: ProjectRegistration["Service"]) {
 
 const currentTime = () => new Date().toISOString();
 
-/** PC-S1 offers only the detected Git for Windows installation. */
-function installedGitPath() {
-  return path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe");
-}
-
 type HarnessRootPaths = Readonly<{
   applicationStorageRoot: string;
   migrationResourcesRoot: string;
@@ -241,7 +236,7 @@ const projectRegistrationLayer = Layer.effect(
         registry,
         observer,
         selection,
-        gitExecutablePath: installedGitPath(),
+        discoverGit: () => discoverGitExecutable(process.env),
         createId: randomUUID,
         owner,
         options,
@@ -293,6 +288,7 @@ import {
   createProjectRegistrationObserver,
   type ProjectRegistrationObserver,
 } from "./project-registration-observer.js";
+import { discoverGitExecutable } from "./registration/git-executable-discovery.js";
 import { createGitVersionInspection } from "./registration/git-version-inspection.js";
 import {
   createDirectoryHandoff,
