@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -9,14 +8,15 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createProjectRegistrationOwner } from "../../src/registration/project-registration-owner.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
 import { RepositoryTrustDecisionSchema } from "../../src/registration/repository-trust.js";
-import { createWindowsIdentityQueryChild } from "../../src/registration/windows-version-child.js";
 import * as databaseClients from "../../src/storage/local-libsql-worker-client.js";
 import { parseProjectStorageManifest } from "../../src/storage/project-storage-manifest.js";
 import * as identityObservation from "../../src/storage/repository-identity-observer.js";
+import { consentRegistryOptions } from "./registration-consent-fixture.js";
 import {
-  consentRegistryOptions,
-  createControlledIdentityConsent,
-} from "./registration-consent-fixture.js";
+  confirmationRequest,
+  countingIdentityChild,
+  createSelectedGitRepository,
+} from "./registration-git-fixture.js";
 
 const roots: string[] = [];
 function failPublicationWrite() {
@@ -58,14 +58,7 @@ it
   async (mode) => {
     const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-bootstrap-"));
     roots.push(root);
-    const directory = path.join(root, "repository");
-    const git = path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe");
-    execFileSync(git, ["init", "--quiet", directory]);
-    const scenario = await createControlledIdentityConsent(
-      root,
-      { select: async () => ({ status: "selected", directory }) },
-      git,
-    );
+    const { directory, scenario } = await createSelectedGitRepository(root);
     const options = {
       ...consentRegistryOptions(root),
       applicationVersion: "0.0.0",
@@ -77,14 +70,7 @@ it
       },
     };
     let registry = scenario.registry;
-    const native = createWindowsIdentityQueryChild(root);
-    let dispatches = 0;
-    const child = {
-      run: (...args: Parameters<typeof native.run>) => {
-        dispatches += 1;
-        return native.run(...args);
-      },
-    };
+    const { child, calls: dispatches } = countingIdentityChild(root);
     let owner = createProjectRegistrationOwner(registry, options, root, child);
     try {
       const selected = await registry.selectRepository();
@@ -111,13 +97,7 @@ it
       };
       const proposal = await owner.prepare(preparation);
       if (proposal.status !== "prepared") throw new Error("Preparation unavailable");
-      const request = {
-        version: 1,
-        requestId: randomUUID(),
-        preparation,
-        proposalId: proposal.proposalId,
-        proposalFingerprint: proposal.proposalFingerprint,
-      };
+      const request = confirmationRequest(preparation, proposal);
       if (mode === "publication-failed") failPublicationWrite();
       const result = await owner.confirm(request);
       if (mode !== "complete") {
@@ -145,7 +125,7 @@ it
           code: "REGISTRATION_INCOMPLETE",
           requestId: request.requestId,
         });
-        expect(dispatches).toBe(12);
+        expect(dispatches()).toBe(12);
         expect(directoryReads).not.toHaveBeenCalled();
         expect(executableReads).not.toHaveBeenCalled();
         const database = new DatabaseSync(
@@ -167,7 +147,7 @@ it
         return;
       }
       expect(result).toMatchObject({ status: "registered", requestId: request.requestId });
-      expect(dispatches).toBe(12);
+      expect(dispatches()).toBe(12);
       const registered = decodeStrict(RegisteredProjectSchema, result);
       const generation = path.join(
         options.applicationStorageRoot,
@@ -236,7 +216,7 @@ it
         status: "rejected",
         code: "REGISTRATION_IDEMPOTENCY_CONFLICT",
       });
-      expect(dispatches).toBe(12);
+      expect(dispatches()).toBe(12);
       const application = new DatabaseSync(
         path.join(options.applicationStorageRoot, "application.db"),
       );

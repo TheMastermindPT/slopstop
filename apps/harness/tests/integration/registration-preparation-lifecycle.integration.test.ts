@@ -14,6 +14,7 @@ import {
   consentRegistryOptions,
   createRepositoryTrustScenario,
 } from "./registration-consent-fixture.js";
+import { gate } from "./registration-git-fixture.js";
 
 const pending = { status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" } as const;
 const roots: string[] = [];
@@ -22,14 +23,6 @@ afterEach(async () => {
   vi.restoreAllMocks();
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
-
-function gate() {
-  let release = () => {};
-  const promise = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  return { promise, release };
-}
 
 async function fixture(
   closeObservation: () => Promise<{ status: "closed" } | typeof pending>,

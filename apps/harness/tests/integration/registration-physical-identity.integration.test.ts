@@ -17,6 +17,7 @@ import {
   consentRegistryOptions,
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
+import { installedGit } from "./registration-git-fixture.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -29,7 +30,7 @@ async function physicalFixture() {
   roots.push(root);
   const hooks = path.join(root, "hooks");
   await mkdir(hooks);
-  const git = path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe");
+  const git = installedGit;
   const run = (...args: string[]) =>
     execFileSync(git, ["-c", `core.hooksPath=${hooks}`, "-c", "commit.gpgSign=false", ...args]);
   const main = path.join(root, "main");

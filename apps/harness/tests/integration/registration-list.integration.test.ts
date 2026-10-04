@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -14,17 +13,18 @@ import { afterEach, expect, it } from "vitest";
 import { createProjectRegistrationOwner } from "../../src/registration/project-registration-owner.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
 import { RepositoryTrustDecisionSchema } from "../../src/registration/repository-trust.js";
-import { createWindowsIdentityQueryChild } from "../../src/registration/windows-version-child.js";
 import {
   parseProjectStorageManifest,
   serializeProjectStorageManifest,
 } from "../../src/storage/project-storage-manifest.js";
 import { createNodeProjectStorageDependencies } from "../../src/storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
+import { consentRegistryOptions } from "./registration-consent-fixture.js";
 import {
-  consentRegistryOptions,
-  createControlledIdentityConsent,
-} from "./registration-consent-fixture.js";
+  confirmationRequest,
+  countingIdentityChild,
+  createSelectedGitRepository,
+} from "./registration-git-fixture.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -52,24 +52,10 @@ it.runIf(process.platform === "win32").each([
   },
 ] as const)("$name", async ({ registration }) => {
   const root = await newRoot();
-  const directory = path.join(root, "repository");
-  const git = path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe");
-  execFileSync(git, ["init", "--quiet", directory]);
-  const scenario = await createControlledIdentityConsent(
-    root,
-    { select: async () => ({ status: "selected", directory }) },
-    git,
-  );
+  const { directory, scenario } = await createSelectedGitRepository(root);
   const options = { ...consentRegistryOptions(root), applicationVersion: "0.0.0" };
   let registry = scenario.registry;
-  const native = createWindowsIdentityQueryChild(root);
-  let calls = 0;
-  const child = {
-    run: (...args: Parameters<typeof native.run>) => {
-      calls += 1;
-      return native.run(...args);
-    },
-  };
+  const { child, calls } = countingIdentityChild(root);
   let owner = createProjectRegistrationOwner(registry, options, root, child);
   try {
     const selected = await registry.selectRepository();
@@ -89,13 +75,7 @@ it.runIf(process.platform === "win32").each([
     };
     const proposal = await owner.prepare(preparation);
     if (proposal.status !== "prepared") throw new Error("Preparation missing");
-    const confirmation = {
-      version: 1,
-      requestId: randomUUID(),
-      preparation,
-      proposalId: proposal.proposalId,
-      proposalFingerprint: proposal.proposalFingerprint,
-    };
+    const confirmation = confirmationRequest(preparation, proposal);
     const registered = decodeStrict(RegisteredProjectSchema, await owner.confirm(confirmation));
     const otherRequestId = randomUUID();
     if (registration !== "incomplete")
@@ -145,7 +125,7 @@ it.runIf(process.platform === "win32").each([
       registry = createRegistrationRegistry(options);
       owner = createProjectRegistrationOwner(registry, options, root, child);
       expect(await owner.listProjects()).toEqual({ status: "broken", code: "REGISTRY_CORRUPT" });
-      expect(calls).toBe(18);
+      expect(calls()).toBe(18);
       expect(await readFile(databasePath)).toEqual(before);
       return;
     }
@@ -183,7 +163,7 @@ it.runIf(process.platform === "win32").each([
     };
     expect(await owner.listProjects()).toEqual(expected);
     expect(await owner.listProjects()).toEqual(expected);
-    expect(calls).toBe(registration === "registered" ? 18 : 12);
+    expect(calls()).toBe(registration === "registered" ? 18 : 12);
     expect(JSON.stringify(await owner.listProjects())).not.toContain(root);
     if (registration === "registered") {
       await rm(directory, { recursive: true });
@@ -194,7 +174,7 @@ it.runIf(process.platform === "win32").each([
           repositoryLocation: { status: "missing", code: "REPOSITORY_NOT_FOUND" },
         })),
       });
-      expect(calls).toBe(18);
+      expect(calls()).toBe(18);
     }
   } finally {
     await owner.close();

@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -16,14 +15,16 @@ import { createProjectRegistrationOwner } from "../../src/registration/project-r
 import { createProjectRegistrationPreparation } from "../../src/registration/project-registration-preparation.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
 import { RepositoryTrustDecisionSchema } from "../../src/registration/repository-trust.js";
-import { createWindowsIdentityQueryChild } from "../../src/registration/windows-version-child.js";
 import * as databaseClients from "../../src/storage/local-libsql-worker-client.js";
 import { createNodeProjectStorageDependencies } from "../../src/storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
+import { consentRegistryOptions } from "./registration-consent-fixture.js";
 import {
-  consentRegistryOptions,
-  createControlledIdentityConsent,
-} from "./registration-consent-fixture.js";
+  confirmationRequest,
+  countingIdentityChild,
+  createSelectedGitRepository,
+  gate,
+} from "./registration-git-fixture.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -32,12 +33,31 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
-function gate() {
-  let release = () => {};
-  const promise = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  return { promise, release };
+/** The created generation's canonical database holds exactly one seeded binding. */
+function expectSeededCanonicalBinding(
+  applicationStorageRoot: string,
+  generation: Record<string, unknown> | undefined,
+) {
+  if (
+    typeof generation?.["project_id"] !== "string" ||
+    typeof generation["generation_id"] !== "string"
+  )
+    throw new Error("Generation identity missing");
+  const canonical = new DatabaseSync(
+    path.join(
+      applicationStorageRoot,
+      "projects",
+      generation["project_id"],
+      generation["generation_id"],
+      "slopstop.db",
+    ),
+  );
+  try {
+    expect(canonical.prepare("SELECT * FROM repository_bindings").all()).toHaveLength(1);
+    expect(canonical.prepare("SELECT * FROM project_workspaces").all()).toHaveLength(1);
+  } finally {
+    canonical.close();
+  }
 }
 
 async function fixture(
@@ -45,27 +65,13 @@ async function fixture(
 ) {
   const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-bootstrap-guard-"));
   roots.push(root);
-  const directory = path.join(root, "repository");
-  const git = path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe");
-  execFileSync(git, ["init", "--quiet", directory]);
-  const scenario = await createControlledIdentityConsent(
-    root,
-    { select: async () => ({ status: "selected", directory }) },
-    git,
-  );
+  const { directory, scenario } = await createSelectedGitRepository(root);
   const options = {
     ...consentRegistryOptions(root),
     applicationVersion: "0.0.0",
     storageFailures: { checkpoint: (point: string) => checkpoint(point, directory) },
   };
-  const native = createWindowsIdentityQueryChild(root);
-  let calls = 0;
-  const child = {
-    run: (...args: Parameters<typeof native.run>) => {
-      calls += 1;
-      return native.run(...args);
-    },
-  };
+  const { child, calls } = countingIdentityChild(root);
   const owner = createProjectRegistrationOwner(scenario.registry, options, root, child);
   const selection = await scenario.registry.selectRepository();
   if (selection.status !== "prepared") throw new Error("Selection unavailable");
@@ -85,13 +91,7 @@ async function fixture(
   };
   const proposal = await owner.prepare(preparation);
   if (proposal.status !== "prepared") throw new Error("Preparation unavailable");
-  const request = {
-    version: 1,
-    requestId: randomUUID(),
-    preparation,
-    proposalId: proposal.proposalId,
-    proposalFingerprint: proposal.proposalFingerprint,
-  };
+  const request = confirmationRequest(preparation, proposal);
   const peers: Array<{ close(): Promise<unknown>; stopRegistry(): Promise<void> }> = [];
   return {
     owner,
@@ -99,7 +99,7 @@ async function fixture(
     request,
     directory,
     registry: scenario.registry,
-    calls: () => calls,
+    calls,
     rows: (sql: string) => {
       const database = new DatabaseSync(
         path.join(options.applicationStorageRoot, "application.db"),
@@ -212,27 +212,7 @@ it.runIf(process.platform === "win32")(
       expect(publicationCommitted).toBe(false);
       expect(f.rows("SELECT * FROM registration_publications")).toEqual([]);
       expect(f.rows("SELECT * FROM storage_generations")).toEqual(generations);
-      const generation = generations[0];
-      if (
-        typeof generation?.["project_id"] !== "string" ||
-        typeof generation["generation_id"] !== "string"
-      )
-        throw new Error("Generation identity missing");
-      const canonical = new DatabaseSync(
-        path.join(
-          f.options.applicationStorageRoot,
-          "projects",
-          generation["project_id"],
-          generation["generation_id"],
-          "slopstop.db",
-        ),
-      );
-      try {
-        expect(canonical.prepare("SELECT * FROM repository_bindings").all()).toHaveLength(1);
-        expect(canonical.prepare("SELECT * FROM project_workspaces").all()).toHaveLength(1);
-      } finally {
-        canonical.close();
-      }
+      expectSeededCanonicalBinding(f.options.applicationStorageRoot, generations[0]);
       expect(await f.peer().confirm(f.request)).toEqual(incomplete);
       expect(f.calls()).toBe(12);
       expect(publicationInserts).toBe(1);
@@ -367,27 +347,7 @@ it.runIf(process.platform === "win32").each(["close", "remove-target"] as const)
       expect(generations).toHaveLength(1);
       expect(generations[0]).toMatchObject({ creation_state: "active" });
       expect(f.rows("SELECT * FROM registration_publications")).toEqual([]);
-      const generation = generations[0];
-      if (
-        typeof generation?.["project_id"] !== "string" ||
-        typeof generation["generation_id"] !== "string"
-      )
-        throw new Error("Generation identity missing");
-      const canonical = new DatabaseSync(
-        path.join(
-          f.options.applicationStorageRoot,
-          "projects",
-          generation["project_id"],
-          generation["generation_id"],
-          "slopstop.db",
-        ),
-      );
-      try {
-        expect(canonical.prepare("SELECT * FROM repository_bindings").all()).toHaveLength(1);
-        expect(canonical.prepare("SELECT * FROM project_workspaces").all()).toHaveLength(1);
-      } finally {
-        canonical.close();
-      }
+      expectSeededCanonicalBinding(f.options.applicationStorageRoot, generations[0]);
       expect(await f.peer().confirm(f.request)).toEqual(incomplete);
       expect(f.calls()).toBe(12);
       expect(f.rows("SELECT * FROM storage_generations")).toEqual(generations);

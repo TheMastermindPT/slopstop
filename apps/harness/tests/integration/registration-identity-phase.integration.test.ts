@@ -13,6 +13,7 @@ import {
   consentRegistryOptions,
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
+import { installedGit } from "./registration-git-fixture.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -82,13 +83,28 @@ function addLinkedWorktree(git: string, args: string[], main: string, directory:
   ]);
 }
 
+/** An identity owner on the real native child that records each query it launches. */
+function recordingIdentityOwner(
+  registry: Parameters<typeof createRepositoryIdentityQueryOwner>[0],
+  root: string,
+  seen: string[],
+) {
+  const native = createWindowsIdentityQueryChild(root);
+  return createRepositoryIdentityQueryOwner(registry, consentRegistryOptions(root), root, {
+    run: (input, signal) => {
+      seen.push(input.query);
+      return native.run(input, signal);
+    },
+  });
+}
+
 async function createPhaseFixture(linked: boolean) {
   const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-six-query-"));
   roots.push(root);
   const main = path.join(root, "main");
   const hooks = path.join(root, "empty-hooks");
   await mkdir(hooks);
-  const git = path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe");
+  const git = installedGit;
   const args = ["-c", `core.hooksPath=${hooks}`, "-c", "commit.gpgSign=false"];
   execFileSync(git, [...args, "init", "--quiet", main]);
   const directory = linked ? path.join(root, "linked") : main;
@@ -197,18 +213,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
     const fixture = await createPhaseFixture(false);
     const { root, directory, scenario, request } = fixture;
     const seen: string[] = [];
-    const native = createWindowsIdentityQueryChild(root);
-    const owner = createRepositoryIdentityQueryOwner(
-      scenario.registry,
-      consentRegistryOptions(root),
-      root,
-      {
-        run: (input, signal) => {
-          seen.push(input.query);
-          return native.run(input, signal);
-        },
-      },
-    );
+    const owner = recordingIdentityOwner(scenario.registry, root, seen);
     try {
       await acceptPhase(fixture);
       await rm(path.join(directory, ".git"), { recursive: true });
@@ -303,18 +308,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64").each([false, tr
     const fixture = await createPhaseFixture(linked);
     const { root, main, directory, scenario, request } = fixture;
     const seen: string[] = [];
-    const native = createWindowsIdentityQueryChild(root);
-    const owner = createRepositoryIdentityQueryOwner(
-      scenario.registry,
-      consentRegistryOptions(root),
-      root,
-      {
-        run: (input, signal) => {
-          seen.push(input.query);
-          return native.run(input, signal);
-        },
-      },
-    );
+    const owner = recordingIdentityOwner(scenario.registry, root, seen);
     try {
       await authorizeWithRefusals(fixture, owner, seen);
       const result = await owner.inspectIdentity(request);
