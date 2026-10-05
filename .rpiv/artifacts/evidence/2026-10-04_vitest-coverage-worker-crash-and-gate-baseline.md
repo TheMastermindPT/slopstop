@@ -66,3 +66,4 @@ tags: [testing, gate, vitest, coverage, pre-existing]
 - **Not chosen:**
   - (B) a higher timeout for the registration tests;
   - (C) a separate low-parallelism registration project. This is the fallback if A proves too slow.
+- **Result** (`d4a5696`, merged into main by fast-forward). One full run on a quiet machine: exit 0 in 388.5 s, 1670 passed, 0 failures, 0 timeouts, 0 crashes. Compared with the 435.8 s baseline, the suite was faster, not slower: less CPU contention. This is one sample only, and it does not show that the intermittent libsql crash is gone.
