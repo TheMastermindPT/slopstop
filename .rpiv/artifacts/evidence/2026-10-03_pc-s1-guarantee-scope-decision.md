@@ -149,3 +149,49 @@ A push attempt (CLI and GitHub Desktop) failed because the `.husky/pre-push` dee
   - Project rows are labelled "Open Project {name}"; unbound rows read "Open Project without a repository {short id}".
   - The workspace heading reads "Project {name}".
   - Only the row selectors and the heading assertions change, in the e2e `projects.test` and the renderer `app.test`.
+
+## 14. PC-S1 completion status and open user queue (2026-10-05)
+
+- **Done** on `feat/pc-s1-completion` in `ragnarok-effect` (not merged, not pushed):
+
+| Slice | Commits |
+| --- | --- |
+| S1 consent stages across the protocol | `d1359ae` |
+| S2 prepare and confirm, with every outcome | `69384d4` |
+| Git discovery order | `dbcf242` |
+| S3 desktop bridge, preload API and native folder dialog | `be631a2` |
+| Bridge refactor | `fb8e1d9` |
+| S4a list presentation | `846493f` |
+| S4b add flow in the renderer | `b29d98f` |
+| S4c Electron journey through the UI | `d7da5d5` |
+| S5a Remove from list, harness (migration 0006) | `52b5bc2` |
+| Listing refactor | `d4e61e4` |
+| S5b Remove from list, renderer | `808c99a` |
+| S6a missing limit characterisations | `eb6227e` |
+| S7 packaged registration smoke (Proposal A, no dialog seam) | `4688eea` |
+| Verifier method list fix | `c417342` |
+
+  - `package:launch-smoke` had been red since `be631a2` because of the stale method list.
+- **Evidence.**
+  - `pnpm check`: green, with one plain unit run showing the parked native crash.
+  - E2E: 9/9 passed.
+  - `package:launch-smoke`: 1 failure at the Writer proof, then 2 passes. The registration scenario passed every time it ran.
+  - Full harness integration (quiet machine): 12 timeouts of 15 s in registration-heavy files, plus 1 native crash.
+- **Coordinator approvals made in the user's absence:**
+  - S5 technical shape: migration 0006, with only the head-pin and table-list assertion edits;
+  - S6a characterisations;
+  - S7 Proposal A;
+  - the verifier method-list fix, the same consequence as the already accepted `shell.test` change.
+- **Open for the user:**
+  - U1: preparing-screen progress (no fake progress today);
+  - U3: empty-list text when every Project is hidden;
+  - U4: generic remove-failure screen;
+  - U5: wording for a hidden Project's worktree;
+  - S6b: cutting the native permutation tests;
+  - provisional (a): the check-then-hide race;
+  - provisional (b): a hidden Project's linked worktree;
+  - integration timeouts (the levers deferred by the user, now affecting a quiet machine);
+  - the parked libsql crash;
+  - the Writer-proof smoke flake;
+  - authorization to integrate PC-S1 into main.
+- **Known limit:** Git approval reuse lasts only for the app session.
