@@ -1,6 +1,8 @@
-import type { InStatement } from "@libsql/client";
 import { expect, it } from "vitest";
-import type { LocalLibsqlResultSet } from "../../src/storage/local-libsql-worker-client.js";
+import type {
+  InStatement,
+  LocalLibsqlResultSet,
+} from "../../src/storage/local-libsql-worker-client.js";
 import {
   activated,
   fixture,

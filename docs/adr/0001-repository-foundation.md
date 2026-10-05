@@ -25,7 +25,7 @@ SlopStop starts as an empty private repository but already has confirmed product
 
 - Kernel depends on no workspace package.
 - Protocol may depend on kernel.
-- Harness may depend on kernel and protocol; only harness may own Mastra, Drizzle, libSQL, model providers, repository tools, or process execution.
+- Harness may depend on kernel and protocol; only harness may own Mastra, Drizzle, SQLite access through `node:sqlite` (amended 2026-10-05, see Persistence), model providers, repository tools, or process execution.
 - Desktop may depend on protocol; only desktop may own Electron.
 - Applications do not import one another. Forge integration wiring may point at the built harness entry but desktop source cannot import harness source.
 - Dependency-cruiser enforces these rules.
@@ -51,7 +51,8 @@ SlopStop starts as an empty private repository but already has confirmed product
 
 ### Persistence
 
-- Use `@libsql/client` with Drizzle when the first persistence behavior lands.
+- Use Drizzle to generate the SQL migrations, and Node's built-in `node:sqlite` inside the harness database worker to run them and every query.
+  - Amendment (2026-10-05): this replaces the original `@libsql/client` choice. The libSQL native addon crashed the worker from a GC finalizer that closed an already-freed connection; see `.rpiv/artifacts/evidence/2026-10-04_vitest-coverage-worker-crash-and-gate-baseline.md`.
 - Store canonical state in `slopstop.db` and Mastra-owned state in `mastra.db` under Electron `userData/projects/<project-id>/`.
 - Use WAL, foreign keys, a busy timeout, short transactions, and serialized canonical writes.
 - Commit Drizzle-generated SQL migrations. Before a forward migration, create and verify a database-native backup; refuse databases newer than the app.
@@ -76,7 +77,7 @@ SlopStop starts as an empty private repository but already has confirmed product
 ### Testing
 
 - Use Vitest for unit, contract, and integration tests; Testing Library with jsdom for React components; Playwright for Electron E2E; fast-check for later state-machine properties; and selective Stryker for kernel/safety behavior.
-- Install a dependency only with its first exercised behavior or active configuration. Mastra, Drizzle, libSQL, fast-check, and Stryker are recorded choices but are not foundation dependencies unless used.
+- Install a dependency only with its first exercised behavior or active configuration. Mastra, Drizzle, `node:sqlite` (amended 2026-10-05 from libSQL, see Persistence), fast-check, and Stryker are recorded choices but are not foundation dependencies unless used.
 - Test only approved public seams: protocol parse/dispatch, harness runtime through its transport port, and renderer behavior through the preload API in a real Electron launch.
 - Colocate unit/contract tests. Put adapter integration tests under workspace `tests/integration/` and Electron journeys under `apps/desktop/tests/e2e/`.
 - Use risk-based coverage thresholds: highest for kernel/protocol/safety, moderate for process and renderer adapters.

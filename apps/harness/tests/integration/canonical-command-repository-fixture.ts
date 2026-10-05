@@ -3,11 +3,11 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { InStatement } from "@libsql/client";
 import { decodeStrict, ProjectActivationIdSchema, ProjectIdSchema } from "@slopstop/protocol";
 import { expect, vi } from "vitest";
 import { createCanonicalCommandRegistry } from "../../src/canonical-command-registry.js";
 import * as repositories from "../../src/storage/canonical-command-repository.js";
+import type { InStatement } from "../../src/storage/local-libsql-worker-client.js";
 import {
   createWorkerLocalLibsqlClient,
   type LocalLibsqlClient,

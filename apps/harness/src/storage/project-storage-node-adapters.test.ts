@@ -2,12 +2,12 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { InStatement } from "@libsql/client";
 import { decodeStrict, ProjectStorageCreateRequestSchema } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
 import { canonicalGenerationTwoTables } from "../../tests/integration/project-storage-schema-cases.js";
 import type { ProjectStorageOwnerPort } from "../project-storage-application.js";
 import { createProjectStorageApplication } from "../project-storage-application.js";
+import type { InStatement } from "./local-libsql-worker-client.js";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
 import {
   createNodeProjectStorageDependencies,

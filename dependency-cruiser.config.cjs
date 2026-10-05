@@ -51,7 +51,7 @@ module.exports = {
       from: { pathNot: "^apps/harness/" },
       to: {
         dependencyTypes: ["npm"],
-        path: "^(@mastra/|@libsql/client$|drizzle-orm$)",
+        path: "^(@mastra/|drizzle-orm$)",
       },
     },
   ],

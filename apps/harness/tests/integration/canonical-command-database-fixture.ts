@@ -1,5 +1,4 @@
 import path from "node:path";
-import type { InStatement } from "@libsql/client";
 import {
   CanonicalProjectCommandRequestSchema,
   decodeStrict,
@@ -8,6 +7,7 @@ import {
 } from "@slopstop/protocol";
 import { expect } from "vitest";
 import { snapshotCanonicalCommand } from "../../src/canonical-json.js";
+import type { InStatement } from "../../src/storage/local-libsql-worker-client.js";
 import {
   createWorkerLocalLibsqlClient,
   type LocalLibsqlClient,

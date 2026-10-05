@@ -11,26 +11,6 @@ const migrationSource = fileURLToPath(new URL("../harness/drizzle", import.meta.
 const migrationOutput = fileURLToPath(new URL("./.vite/build/harness-migrations", import.meta.url));
 const nativeModulesOutput = fileURLToPath(new URL("./.vite/build/node_modules", import.meta.url));
 
-function targetBindingPackages(): readonly string[] {
-  const target = `${process.platform}-${process.arch}`;
-  switch (target) {
-    case "darwin-arm64":
-      return ["@libsql/darwin-arm64"];
-    case "darwin-x64":
-      return ["@libsql/darwin-x64"];
-    case "win32-x64":
-      return ["@libsql/win32-x64-msvc"];
-    case "linux-arm":
-      return ["@libsql/linux-arm-gnueabihf", "@libsql/linux-arm-musleabihf"];
-    case "linux-arm64":
-      return ["@libsql/linux-arm64-gnu", "@libsql/linux-arm64-musl"];
-    case "linux-x64":
-      return ["@libsql/linux-x64-gnu", "@libsql/linux-x64-musl"];
-    default:
-      throw new Error(`Unsupported libSQL package target: ${target}`);
-  }
-}
-
 // Effect ships sources, declarations, and source maps; the worker needs only its ESM runtime.
 function isStagedRuntimeFile(staged: StagedPackage, candidate: string): boolean {
   if (staged.name !== "effect") return true;
@@ -136,12 +116,10 @@ async function collectRuntimePackages(): Promise<ReadonlyMap<string, string>> {
   };
 
   await Promise.all(
-    ["@libsql/client", "fs-native-extensions", "libsql", "koffi", "effect"].map((packageName) =>
+    ["fs-native-extensions", "koffi", "effect"].map((packageName) =>
       collect(packageName, harnessRoot),
     ),
   );
-  const libsqlRoot = requireStagedRoot(packages, "libsql");
-  await Promise.all(targetBindingPackages().map((packageName) => collect(packageName, libsqlRoot)));
   // Koffi ships its native module as an optional per-target package beside koffi.
   await collect(
     `@koromix/koffi-${process.platform}-${process.arch}`,
@@ -181,7 +159,7 @@ export default defineConfig({
       formats: ["cjs"],
     },
     rollupOptions: {
-      external: [...nodeBuiltins, "fs-native-extensions", "libsql", "koffi"],
+      external: [...nodeBuiltins, "fs-native-extensions", "koffi"],
     },
   },
 });
