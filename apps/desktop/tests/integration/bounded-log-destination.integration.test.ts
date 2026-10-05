@@ -2,8 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it } from "vitest";
-import { createBoundedLogDestination } from "./bounded-log-destination.js";
-import { createMainLogger } from "./logger.js";
+import { createBoundedLogDestination } from "../../src/main/bounded-log-destination.js";
+import { createMainLogger } from "../../src/main/logger.js";
 
 const temporaryDirectories: string[] = [];
 
