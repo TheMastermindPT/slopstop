@@ -8,26 +8,13 @@ import {
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { SlopStopApi } from "../shared/desktop-api.js";
 import { App } from "./app.js";
+import { exposeApi, readyStatus, unusedWorkspaceApi } from "./test-api.js";
 
 const startingStatus: HarnessStatus = {
   state: "starting",
   attempt: 1,
 };
-
-const readyStatus: HarnessStatus = {
-  state: "ready",
-  attempt: 1,
-  harnessVersion: "0.0.0",
-};
-
-function exposeApi(api: SlopStopApi): void {
-  Object.defineProperty(window, "slopstop", {
-    configurable: true,
-    value: api,
-  });
-}
 
 /** One registered, present Project whose Storage state the test chooses. */
 function registeredProjectList(id: string, storage: unknown) {
@@ -37,7 +24,7 @@ function registeredProjectList(id: string, storage: unknown) {
       {
         registration: "registered",
         projectId: id,
-        name: "chess",
+        name: `repo-${id.slice(0, 8)}`,
         repositoryBindingId: id,
         workspaceId: id,
         access: "not-assessed",
@@ -47,41 +34,6 @@ function registeredProjectList(id: string, storage: unknown) {
     ],
   });
 }
-
-const unusedWorkspaceApi = {
-  listProjects: async () => ({ status: "listed" as const, projects: [] }),
-  getRegistrationCapability: async () => ({ status: "available" as const }),
-  chooseRepository: async () => {
-    throw new Error("chooseRepository is not used by this test.");
-  },
-  registerProject: async () => {
-    throw new Error("registerProject is not used by this test.");
-  },
-  activateProject: async () => {
-    throw new Error("Activation unused");
-  },
-  switchProject: async () => {
-    throw new Error("Switch unused");
-  },
-  queryWorkspace: async () => {
-    throw new Error("queryWorkspace is not used by this test.");
-  },
-  submitWorkspaceIntent: async () => {
-    throw new Error("submitWorkspaceIntent is not used by this test.");
-  },
-  subscribeWorkspaceNotifications: () => () => undefined,
-} satisfies Pick<
-  SlopStopApi,
-  | "queryWorkspace"
-  | "submitWorkspaceIntent"
-  | "subscribeWorkspaceNotifications"
-  | "listProjects"
-  | "activateProject"
-  | "switchProject"
-  | "getRegistrationCapability"
-  | "chooseRepository"
-  | "registerProject"
->;
 
 describe("desktop shell", () => {
   it.each([
@@ -130,7 +82,9 @@ describe("desktop shell", () => {
           }),
       });
       render(<App />);
-      const open = await screen.findByRole("button", { name: `Open project ${id}` });
+      const open = await screen.findByRole("button", {
+        name: `Open Project repo-${id.slice(0, 8)}`,
+      });
       expect(open.textContent).toContain(`Runtime ${runtime}`);
       if (canonical !== "healthy") expect(open.textContent).toContain(`Canonical ${canonical}`);
       await userEvent.setup().click(open);
@@ -173,7 +127,7 @@ describe("desktop shell", () => {
               {
                 registration: "registered",
                 projectId,
-                name: "chess",
+                name: `repo-${projectId.slice(0, 8)}`,
                 repositoryBindingId: projectId,
                 workspaceId: projectId,
                 access: "not-assessed",
@@ -197,18 +151,24 @@ describe("desktop shell", () => {
       render(<App />);
       const user = userEvent.setup();
       if (deferred === "activation")
-        await user.click(await screen.findByRole("button", { name: `Open project ${oldId}` }));
+        await user.click(
+          await screen.findByRole("button", { name: `Open Project repo-${oldId.slice(0, 8)}` }),
+        );
       else await screen.findByText("Loading saved Projects…");
       await act(async () => {
         notify({ ...readyStatus, attempt: 2 });
       });
-      await user.click(await screen.findByRole("button", { name: `Open project ${newId}` }));
-      await screen.findByRole("heading", { name: "Project 22222222" });
+      await user.click(
+        await screen.findByRole("button", { name: `Open Project repo-${newId.slice(0, 8)}` }),
+      );
+      await screen.findByRole("heading", { name: "Project repo-22222222" });
       await act(async () => {
         release();
       });
-      expect(screen.queryByRole("button", { name: `Open project ${oldId}` })).toBeNull();
-      expect(screen.getByRole("heading", { name: "Project 22222222" })).toBeTruthy();
+      expect(
+        screen.queryByRole("button", { name: `Open Project repo-${oldId.slice(0, 8)}` }),
+      ).toBeNull();
+      expect(screen.getByRole("heading", { name: "Project repo-22222222" })).toBeTruthy();
       expect(screen.getByText("Read-write")).toBeTruthy();
     },
   );
@@ -239,7 +199,7 @@ describe("desktop shell", () => {
           projects: [first, second].map((projectId) => ({
             registration: "registered",
             projectId,
-            name: "chess",
+            name: `repo-${projectId.slice(0, 8)}`,
             repositoryBindingId: projectId,
             workspaceId: projectId,
             access: "not-assessed",
@@ -273,10 +233,14 @@ describe("desktop shell", () => {
     });
     render(<App />);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: `Open project ${first}` }));
-    await user.click(screen.getByRole("button", { name: `Open project ${second}` }));
+    await user.click(
+      await screen.findByRole("button", { name: `Open Project repo-${first.slice(0, 8)}` }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: `Open Project repo-${second.slice(0, 8)}` }),
+    );
     expect((await screen.findByRole("alert")).textContent).toContain("Target unavailable");
-    expect(screen.getByRole("heading", { name: "Project 11111111" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Project repo-11111111" })).toBeTruthy();
     expect(screen.getByText("Read-write")).toBeTruthy();
   });
   it("shows real bridge Projects and waits for activation before presenting read-only access", async () => {
@@ -309,7 +273,7 @@ describe("desktop shell", () => {
       },
     });
     render(<App />);
-    const open = await screen.findByRole("button", { name: `Open project ${id}` });
+    const open = await screen.findByRole("button", { name: `Open Project repo-${id.slice(0, 8)}` });
     await userEvent.setup().click(open);
     expect(screen.getByRole("heading", { name: "No Project selected" })).toBeTruthy();
     await act(async () => {

@@ -2,14 +2,38 @@ import { FolderOpenIcon } from "@phosphor-icons/react";
 import type {
   CanonicalProjectActivationResult,
   HarnessStatus,
-  ProjectDatabaseHealth,
   ProjectId,
-  ProjectList,
   ProjectListResult,
+  RegistrationCapability,
 } from "@slopstop/protocol";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { AddRepositoryButton } from "./add-repository-button.js";
+import { type ListState, ProjectRows, projectName, safeModeLabel } from "./projects-list.js";
 import styles from "./projects-workspace.module.css";
 import "./prototype/prototype-global.css";
+
+/** Keeps each listed Project's name so the opened view can show it. */
+function rememberNames(names: Map<ProjectId, string>, result: ProjectListResult) {
+  if (result.status !== "listed") return;
+  for (const project of result.projects) names.set(project.projectId, projectName(project));
+}
+
+/** Whether this platform can add repositories, read once per harness connection. */
+function useRegistrationCapability(ready: boolean, attempt: number) {
+  const [capability, setCapability] = useState<RegistrationCapability>({ status: "available" });
+  useEffect(() => {
+    if (!ready) return;
+    let current = true;
+    void window.slopstop.getRegistrationCapability().then(
+      (value) => current && setCapability(value),
+      () => undefined,
+    );
+    return () => {
+      current = false;
+    };
+  }, [ready, attempt]);
+  return capability;
+}
 
 type Active = Extract<CanonicalProjectActivationResult, { status: "active" }>;
 type Session =
@@ -18,35 +42,10 @@ type Session =
   | { kind: "release-failed"; activation: Active };
 type View = {
   projectId: ProjectId;
+  name: string;
   label: string;
   mode: "active" | "safe-mode" | "release-failed";
 } | null;
-type ListState = ProjectListResult | { status: "loading" | "idle" };
-
-function safeModeLabel(
-  canonical: ProjectDatabaseHealth["status"],
-  runtime: ProjectDatabaseHealth["status"],
-) {
-  const failures = [
-    { name: "Canonical", status: canonical },
-    { name: "Runtime", status: runtime },
-  ]
-    .filter(({ status }) => status !== "healthy")
-    .map(({ name, status }) => `${name} ${status.replaceAll("-", " ")}`);
-  return ["Safe mode", ...failures].join(" · ");
-}
-
-function storageLabel(project: ProjectList["projects"][number]) {
-  if (project.registration === "incomplete") return "Registration incomplete — recovery required";
-  if (project.storage.status === "safe-mode")
-    return safeModeLabel(project.storage.canonical, project.storage.runtime);
-  if (
-    project.repositoryLocation.status !== "present" &&
-    project.repositoryLocation.status !== "not-bound"
-  )
-    return `Repository ${project.repositoryLocation.status}`;
-  return `Storage ${project.storage.status.replaceAll("-", " ")}`;
-}
 
 export function ProjectsWorkspace({
   status,
@@ -62,6 +61,9 @@ export function ProjectsWorkspace({
   const [view, setView] = useState<View>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const capability = useRegistrationCapability(ready, attempt);
+  const [announcement, setAnnouncement] = useState("");
+  const names = useRef(new Map<ProjectId, string>());
   const epoch = useRef(0);
   const request = useRef(0);
   const selecting = useRef(false);
@@ -72,6 +74,7 @@ export function ProjectsWorkspace({
     setList({ status: "loading" });
     try {
       const result = await window.slopstop.listProjects();
+      rememberNames(names.current, result);
       if (generation === epoch.current && current === request.current) setList(result);
     } catch {
       if (generation === epoch.current && current === request.current)
@@ -93,11 +96,14 @@ export function ProjectsWorkspace({
     };
   }, [ready, attempt, refresh]);
 
+  const nameOf = (projectId: ProjectId) => names.current.get(projectId) ?? projectId.slice(0, 8);
+
   function present(result: CanonicalProjectActivationResult) {
     if (result.status === "active") {
       setSession({ kind: "active", activation: result });
       setView({
         projectId: result.request.projectId,
+        name: nameOf(result.request.projectId),
         label: result.access === "read-only" ? "Read-only" : "Read-write",
         mode: "active",
       });
@@ -105,6 +111,7 @@ export function ProjectsWorkspace({
       setSession({ kind: "none" });
       setView({
         projectId: result.request.projectId,
+        name: nameOf(result.request.projectId),
         label: safeModeLabel(result.canonicalHealth.status, result.runtimeHealth.status),
         mode: "safe-mode",
       });
@@ -136,6 +143,7 @@ export function ProjectsWorkspace({
       setSession({ kind: "release-failed", activation });
       setView({
         projectId: activation.request.projectId,
+        name: nameOf(activation.request.projectId),
         label: "Release failed — writes unavailable",
         mode: "release-failed",
       });
@@ -208,60 +216,34 @@ export function ProjectsWorkspace({
             Refresh
           </button>
         </div>
+        <AddRepositoryButton
+          capability={capability}
+          list={list}
+          onAdd={() => undefined}
+          announce={setAnnouncement}
+        />
         <div aria-busy={list.status === "loading"}>
-          {list.status === "idle" ? <p>Connect to the harness to read saved Projects.</p> : null}
-          {list.status === "loading" ? <p aria-live="polite">Loading saved Projects…</p> : null}
-          {list.status === "listed" && list.projects.length === 0 ? (
-            <p>
-              No saved Projects yet. Registering a new repository in this interface is not available
-              yet.
-            </p>
-          ) : null}
-          {list.status !== "listed" && list.status !== "loading" && list.status !== "idle" ? (
-            <p role="alert">
-              Projects could not be read. {"code" in list ? list.code : "Request cancelled"}. Use
-              Refresh to try again.
-            </p>
-          ) : null}
-          {list.status === "listed" ? (
-            <ul className={styles["projectList"]}>
-              {list.projects.map((project) => {
-                const selected =
-                  session.kind === "active" &&
-                  session.activation.request.projectId === project.projectId;
-                const canOpen =
-                  (project.registration === "registered" &&
-                    project.repositoryLocation.status === "present") ||
-                  (project.registration === "unbound" && project.storage.status === "safe-mode");
-                return (
-                  <li key={project.projectId}>
-                    <button
-                      type="button"
-                      aria-label={`Open project ${project.projectId}`}
-                      aria-current={selected ? "true" : undefined}
-                      disabled={!ready || busy || !canOpen || selected}
-                      onClick={() => void open(project.projectId)}
-                    >
-                      <strong>Project {project.projectId.slice(0, 8)}</strong>
-                      <code>{project.projectId}</code>
-                      <span>{storageLabel(project)}</span>
-                      {selected ? (
-                        <span>
-                          Active ·{" "}
-                          {session.activation.access === "read-only" ? "Read-only" : "Read-write"}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
+          <ProjectRows
+            list={list}
+            activeProjectId={
+              session.kind === "active" ? session.activation.request.projectId : undefined
+            }
+            activeLabel={
+              session.kind === "active" && session.activation.access === "read-only"
+                ? "Read-only"
+                : "Read-write"
+            }
+            disabled={!ready || busy}
+            onOpen={(project) => void open(project.projectId)}
+          />
         </div>
         <p className={styles["asideNote"]}>
           Local Projects. No repository commands run while listing.
         </p>
       </aside>
+      <p className={styles["srOnly"]} aria-live="polite">
+        {announcement}
+      </p>
       <section className={styles["workspace"]} aria-label="Project workspace" aria-busy={busy}>
         {error ? (
           <p className={styles["error"]} role="alert">
@@ -269,7 +251,7 @@ export function ProjectsWorkspace({
           </p>
         ) : null}
         {busy ? <p aria-live="polite">Opening Project…</p> : null}
-        <h2>{view === null ? "No Project selected" : `Project ${view.projectId.slice(0, 8)}`}</h2>
+        <h2>{view === null ? "No Project selected" : `Project ${view.name}`}</h2>
         {view === null ? (
           <p>
             Choose a saved Project to open its local workspace. Access is checked when you open it.

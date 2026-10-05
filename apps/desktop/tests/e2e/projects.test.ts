@@ -8,11 +8,9 @@ import { decodeStrict, RegisteredProjectSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
 import { launchBuiltDesktop } from "./electron-launch.js";
 
-test("lists and switches real saved Projects through the sandboxed Electron preload", async () => {
-  test.setTimeout(150_000);
+/** Registers the two seed repositories (repository-a, repository-b) through the harness. */
+async function seedTwoProjects(userData: string) {
   const require = createRequire(import.meta.url);
-  const proof = await mkdtemp(path.join(tmpdir(), "opencode/pc-ui-proof-"));
-  const userData = path.join(proof, "user-data");
   const repo = path.resolve(import.meta.dirname, "../../../..");
   const vitest = path.join(path.dirname(require.resolve("vitest/package.json")), "vitest.mjs");
   execFileSync(
@@ -38,6 +36,14 @@ test("lists and switches real saved Projects through the sandboxed Electron prel
   const first = projects[0];
   const second = projects[1];
   if (first === undefined || second === undefined) throw new Error("Seeded Projects missing");
+  return [first, second] as const;
+}
+
+test("lists and switches real saved Projects through the sandboxed Electron preload", async () => {
+  test.setTimeout(150_000);
+  const proof = await mkdtemp(path.join(tmpdir(), "opencode/pc-ui-proof-"));
+  const userData = path.join(proof, "user-data");
+  const [first] = await seedTwoProjects(userData);
   const application = await launchBuiltDesktop(proof, userData);
   try {
     expect(await application.evaluate(({ app }) => app.getPath("userData"))).toBe(userData);
@@ -45,18 +51,14 @@ test("lists and switches real saved Projects through the sandboxed Electron prel
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
-    await page
-      .getByRole("button", { name: `Open project ${first.projectId}`, exact: true })
-      .click();
+    await page.getByRole("button", { name: "Open Project repository-a", exact: true }).click();
     await expect(
-      page.getByRole("heading", { name: `Project ${first.projectId.slice(0, 8)}`, exact: true }),
+      page.getByRole("heading", { name: "Project repository-a", exact: true }),
     ).toBeVisible();
     await expect(page.getByText("Read-write", { exact: true })).toBeVisible();
-    await page
-      .getByRole("button", { name: `Open project ${second.projectId}`, exact: true })
-      .click();
+    await page.getByRole("button", { name: "Open Project repository-b", exact: true }).click();
     await expect(
-      page.getByRole("heading", { name: `Project ${second.projectId.slice(0, 8)}`, exact: true }),
+      page.getByRole("heading", { name: "Project repository-b", exact: true }),
     ).toBeVisible();
     // A is released after switching to B. Remove only its disposable runtime database.
     const runtimeDatabase = path.join(
@@ -70,7 +72,7 @@ test("lists and switches real saved Projects through the sandboxed Electron prel
     await rename(runtimeDatabase, path.join(proof, "held-runtime.db"));
     await page.getByRole("button", { name: "Refresh", exact: true }).click();
     const safeProject = page.getByRole("button", {
-      name: `Open project ${first.projectId}`,
+      name: "Open Project repository-a",
       exact: true,
     });
     await expect(safeProject).toContainText("Runtime missing");
