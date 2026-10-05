@@ -1,26 +1,24 @@
 import { setImmediate as nextTurn } from "node:timers/promises";
-import {
-  type CanonicalProjectCommandRequest,
-  CanonicalProjectCommandRequestSchema,
-  decodeStrict,
-  ProjectActivationIdSchema,
-  ProjectIdSchema,
-  ProjectStorageOpenResultSchema,
-  WriterGenerationSchema,
-} from "@slopstop/protocol";
+import { decodeStrict, ProjectStorageOpenResultSchema } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
 import {
-  createMigratedSettlement,
-  migratedUnsupported,
-} from "../tests/integration/conformance-counter-command.js";
+  activationId,
+  command,
+  failure,
+  fixture,
+  request,
+  unavailableMessage,
+} from "../tests/integration/active-project-coordinator-fixture.js";
+import {
+  closesCoordinatorAdmission,
+  rejectsIneligibleSwitchSource,
+} from "../tests/integration/command-admission-cases.js";
 import {
   activateSwitchSource,
   expectNoSwitchAcquisition,
   newAEpoch,
-  observeSwitchPromise,
   requireSwitch,
   switchActive,
-  switchAlreadyActive,
   switchBrokenTarget,
   switchCommandFailure,
   switchCommands,
@@ -32,36 +30,9 @@ import {
   switchTarget,
   switchTimes,
 } from "../tests/integration/project-storage-create-fixture.js";
-import * as coordinators from "./active-project-coordinator.js";
-import type { ProjectStorageActivationOutcome } from "./project-storage-application.js";
-import {
-  type CanonicalCommandRepository,
-  type CanonicalCommandRepositoryActivationResult,
-  CanonicalCommandRepositoryError,
-  WriterCapabilityTokenSchema,
-  type WriterFenceCheck,
-} from "./storage/canonical-command-repository.js";
-import {
-  type CanonicalWriterLeaseAcquisition,
-  CanonicalWriterLeaseError,
-} from "./storage/canonical-writer-lease.js";
+import { CanonicalCommandRepositoryError } from "./storage/canonical-command-repository.js";
+import { CanonicalWriterLeaseError } from "./storage/canonical-writer-lease.js";
 
-const projectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000010");
-const activationId = decodeStrict(
-  ProjectActivationIdSchema,
-  "00000000-0000-4000-8000-000000000011",
-);
-const request = { projectId };
-const command = decodeStrict(CanonicalProjectCommandRequestSchema, {
-  projectId,
-  activationId,
-  command: {
-    commandId: "00000000-0000-4000-8000-000000000012",
-    type: "conformance.noop",
-    version: 1,
-    payload: { private: "secret command payload" },
-  },
-});
 const writable = {
   status: "active",
   request,
@@ -81,32 +52,6 @@ const readonlyResult = {
     retryable: true,
   },
 };
-const unavailableMessage = "Canonical Project coordination is unavailable.";
-const commandFailures = {
-  inactive: ["PROJECT_INACTIVE", "No Project is active for Typed commands.", false],
-  "project-mismatch": ["PROJECT_NOT_ACTIVE", "The command Project is not active.", false],
-  "stale-activation": ["PROJECT_ACTIVATION_STALE", "The command activation is stale.", false],
-  "read-only": ["WRITER_UNAVAILABLE", "The active Project has no write authority.", true],
-  "stale-writer": ["WRITER_FENCE_STALE", "The active Writer fence is stale.", false],
-  broken: ["WRITER_FENCE_CHECK_FAILED", "The active Writer fence could not be verified.", false],
-  "settlement-unavailable": [
-    "COMMAND_SETTLEMENT_UNAVAILABLE",
-    "Typed-command settlement is not available in this release slice.",
-    false,
-  ],
-  "coordinator-unavailable": ["PROJECT_COORDINATOR_UNAVAILABLE", unavailableMessage, false],
-} as const;
-
-function failure(status: keyof typeof commandFailures, input = command) {
-  const [code, message, retryable] = commandFailures[status];
-  return {
-    status,
-    projectId: input.projectId,
-    activationId: input.activationId,
-    commandId: input.command.commandId,
-    diagnostic: { code, message, retryable },
-  };
-}
 const alreadyActive = {
   status: "rejected",
   request,
@@ -116,119 +61,6 @@ const alreadyActive = {
     retryable: false,
   },
 };
-
-function openedResult() {
-  const result = decodeStrict(ProjectStorageOpenResultSchema, {
-    status: "opened",
-    request,
-    mode: "read-write",
-    identity: {
-      storageId: "00000000-0000-4000-8000-000000000013",
-      generationId: "00000000-0000-4000-8000-000000000014",
-      canonicalDatabaseLineageId: "00000000-0000-4000-8000-000000000015",
-      runtimeDatabaseLineageId: "00000000-0000-4000-8000-000000000016",
-    },
-    canonicalHealth: { status: "healthy" },
-    runtimeHealth: { status: "healthy" },
-  });
-  if (result.status !== "opened") throw new Error("Invalid storage fixture.");
-  return result;
-}
-
-async function unexpectedSettlement(): Promise<never> {
-  throw new Error("Unexpected coordinator lifecycle settlement.");
-}
-
-async function activateCoordinatorRepository(
-  realCommands: boolean,
-  real: ReturnType<typeof createMigratedSettlement>,
-  repository: CanonicalCommandRepository,
-  input: Parameters<typeof real.activate>[0],
-): Promise<CanonicalCommandRepositoryActivationResult> {
-  if (!realCommands)
-    return { status: "activated", repository, writerGeneration: repository.writerGeneration };
-  const result = await real.activate(input);
-  return result.status === "activated" ? { ...result, repository } : result;
-}
-
-function coordinatorObservations() {
-  const calls: string[] = [];
-  const faults = new Map<string, unknown>();
-  const touch = (stage: string) => {
-    calls.push(stage);
-    if (faults.has(stage)) {
-      const error = faults.get(stage);
-      faults.delete(stage);
-      throw error;
-    }
-  };
-  return { calls, faults, touch };
-}
-
-function fixture(realCommands = false) {
-  const real = createMigratedSettlement(projectId);
-  const { calls, faults, touch } = coordinatorObservations();
-  const result = openedResult();
-  const session = {
-    mode: "read-write" as const,
-    result,
-    canonicalDatabasePath: "active/slopstop.db",
-    writerLeasePath: "project/.slopstop-writer.lock",
-    close: vi.fn(async () => {
-      touch("storage");
-      await real.closeStorage();
-    }),
-  };
-  const repository = {
-    projectId,
-    writerGeneration: decodeStrict(WriterGenerationSchema, 1),
-    settle: vi.fn((text: string) => (realCommands ? real.settle(text) : unexpectedSettlement())),
-    verifyFence: vi.fn(async (): Promise<WriterFenceCheck> => ({ status: "current" })),
-    releaseFence: vi.fn(async (): Promise<WriterFenceCheck> => {
-      touch("fence");
-      return realCommands ? real.releaseFence("2026-09-05T12:00:04.000Z") : { status: "current" };
-    }),
-    close: vi.fn(async () => {
-      touch("repository");
-      await real.close();
-    }),
-  };
-  const lease = { release: vi.fn(async () => touch("lease")) };
-  const dependencies = {
-    storage: {
-      acquireActivation: vi.fn(
-        async (): Promise<ProjectStorageActivationOutcome> => ({ status: "ready", session }),
-      ),
-    },
-    leases: {
-      acquire: vi.fn(
-        async (): Promise<CanonicalWriterLeaseAcquisition> => ({ status: "acquired", lease }),
-      ),
-    },
-    repositories: {
-      activate: vi.fn((input: Parameters<typeof real.activate>[0]) =>
-        activateCoordinatorRepository(realCommands, real, repository, input),
-      ),
-    },
-    createActivationId: vi.fn(() => activationId),
-    createWriterToken: vi.fn(() => decodeStrict(WriterCapabilityTokenSchema, "a".repeat(64))),
-    now: () => "2026-09-04T12:00:00.000Z",
-  };
-  const create = coordinators.createActiveProjectCoordinator;
-  expect(create).toBeTypeOf("function");
-  if (typeof create !== "function") throw new Error("Coordinator factory is missing.");
-  return {
-    owner: create(dependencies),
-    dependencies,
-    session,
-    repository,
-    lease,
-    calls,
-    faults,
-    touch,
-    real,
-  };
-}
 
 function noAcquisition(f: ReturnType<typeof fixture>): void {
   expect(f.dependencies.createActivationId).not.toHaveBeenCalled();
@@ -344,69 +176,6 @@ it("retains a read-only activation on native contention without creating a repos
   expect(f.calls).toEqual(["storage"]);
 });
 
-function deferred<Value>() {
-  let resolve: (value: Value) => void = () => undefined;
-  const promise = new Promise<Value>((settle) => {
-    resolve = settle;
-  });
-  return { promise, resolve };
-}
-
-it("admits Typed commands in Project, activation, access, then fence order", async () => {
-  const f = fixture(true);
-  expect(await f.owner.execute(command)).toEqual(failure("inactive"));
-  const pending = deferred<ProjectStorageActivationOutcome>();
-  const entered = deferred<void>();
-  f.dependencies.storage.acquireActivation.mockImplementationOnce(() => {
-    entered.resolve();
-    return pending.promise;
-  });
-  const activation = f.owner.activate(request);
-  await entered.promise;
-  expect(await f.owner.execute(command)).toEqual(failure("coordinator-unavailable"));
-  pending.resolve({ status: "ready", session: f.session });
-  await activation;
-  const stale = {
-    ...command,
-    activationId: decodeStrict(ProjectActivationIdSchema, "00000000-0000-4000-8000-000000000021"),
-  };
-  const wrong: CanonicalProjectCommandRequest = {
-    ...stale,
-    projectId: decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000020"),
-  };
-  expect(await f.owner.execute(wrong)).toEqual(failure("project-mismatch", wrong));
-  expect(await f.owner.execute(stale)).toEqual(failure("stale-activation", stale));
-  expect(f.repository.settle).not.toHaveBeenCalled();
-  expect(await f.owner.execute(command)).toEqual(migratedUnsupported(command));
-  f.real.observation.after = (sql, rows) =>
-    sql.includes("FROM writer_fence") ? { ...rows, rows: [] } : rows;
-  expect(await f.owner.execute(command)).toEqual(failure("stale-writer"));
-  const sentinel = new Error("secret command payload");
-  f.real.observation.after = () => {
-    throw sentinel;
-  };
-  await expect(f.owner.execute(command)).rejects.toBe(sentinel);
-  delete f.real.observation.after;
-  const closing = deferred<void>();
-  const closeEntered = deferred<void>();
-  f.session.close.mockImplementationOnce(async () => {
-    closeEntered.resolve();
-    await closing.promise;
-    throw new Error("close failed");
-  });
-  const stopping = f.owner.stop();
-  const failureObserved = expect(stopping).rejects.toThrow(
-    "Canonical Project activation release failed.",
-  );
-  await closeEntered.promise;
-  expect(await f.owner.execute(command)).toEqual(failure("coordinator-unavailable"));
-  closing.resolve();
-  await failureObserved;
-  expect(await f.owner.execute(command)).toEqual(failure("coordinator-unavailable"));
-  await f.owner.stop();
-  expect(await f.owner.execute(command)).toEqual(failure("coordinator-unavailable"));
-});
-
 it("retains failed release ownership and resumes cleanup on stop retry", async () => {
   for (const stage of ["fence", "repository", "lease", "storage"] as const) {
     const f = fixture();
@@ -516,156 +285,14 @@ it("retains a repository client when failed activation cleanup cannot close it",
   }
 });
 
-const ineligibleSources = [
-  "inactive",
-  "stopped",
-  "wrong-project",
-  "wrong-epoch",
-  "failed-acquisition",
-] as const;
-async function arrangeIneligibleSource(
-  f: ReturnType<typeof switchFixture>,
-  state: (typeof ineligibleSources)[number],
-) {
-  let expected: "inactive" | "coordinator-unavailable" | "project-mismatch" | "stale-activation" =
-    "inactive";
-  if (state === "stopped") {
-    await f.owner.stop();
-    expected = "coordinator-unavailable";
-  }
-  if (state === "wrong-project") {
-    expect(await f.owner.activate(switchRequests.AB.to)).toEqual(switchActive("B"));
-    expected = "project-mismatch";
-  }
-  if (state === "wrong-epoch") {
-    f.dependencies.createActivationId.mockReturnValueOnce(newAEpoch);
-    expect(await f.owner.activate(switchRequests.AA.to)).toEqual({
-      ...switchActive("A"),
-      activationId: newAEpoch,
-    });
-    expected = "stale-activation";
-  }
-  if (state === "failed-acquisition") {
-    f.faults.set("A.repository.close", [new Error("private failed acquisition close")]);
-    f.projects.A.activate.mockImplementationOnce(async () => {
-      try {
-        await f.projects.A.repository.close();
-      } catch {
-        return {
-          status: "broken",
-          error: new CanonicalCommandRepositoryError("WRITER_REPOSITORY_CLOSE_FAILED"),
-          cleanup: { close: f.projects.A.repository.close },
-        };
-      }
-      throw new Error("Expected acquisition cleanup failure.");
-    });
-    expect(await f.owner.activate(switchRequests.AA.to)).toEqual({
-      ...switchBrokenTarget("WRITER_REPOSITORY_CLOSE_FAILED"),
-      request: switchRequests.AA.to,
-    });
-    expect(f.projects.A.repository.close).toHaveBeenCalledTimes(1);
-    expected = "coordinator-unavailable";
-  }
-  return expected;
-}
-
-it.each(ineligibleSources)(
+it.each(["inactive", "stopped", "failed-acquisition"] as const)(
   "rejects ineligible switch sources before touching dependencies",
-  async (state) => {
-    const f = switchFixture(state === "wrong-project" || state === "wrong-epoch");
-    const switchProject = requireSwitch(f.owner);
-    const expected = await arrangeIneligibleSource(f, state);
-    f.reset();
-    expect(await switchProject(switchRequests.AB)).toEqual(switchSourceFailure(expected));
-    expect(f.all).toEqual([]);
-    const altered = {
-      ...switchRequests.AB,
-      from: { ...switchProjects.A, activationId: newAEpoch },
-    };
-    if (state === "wrong-project" || state === "failed-acquisition") {
-      expect(await switchProject(altered)).toEqual(switchSourceFailure(expected, altered));
-      expect(f.all).toEqual([]);
-    }
-    if (state === "wrong-project")
-      expect(await f.owner.execute(switchCommands.B)).toEqual(
-        migratedUnsupported(switchCommands.B),
-      );
-    if (state === "wrong-epoch")
-      expect(await f.owner.execute(switchCommands.ANew)).toEqual(
-        migratedUnsupported(switchCommands.ANew),
-      );
-    if (state === "failed-acquisition")
-      expect(await f.owner.execute(switchCommands.A)).toEqual(
-        switchCommandFailure("coordinator-unavailable"),
-      );
-    await f.owner.stop();
-  },
+  rejectsIneligibleSwitchSource,
 );
 
-it.each(["switch", "activate", "stop", "initial"] as const)(
+it.each(["stop", "initial"] as const)(
   "closes command admission in the same turn as lifecycle enqueue",
-  async (operation) => {
-    const f = switchFixture(operation === "switch" || operation === "activate");
-    if (operation !== "initial") await activateSwitchSource(f);
-    const startSwitch = () => requireSwitch(f.owner)(switchRequests.AB);
-    const actions = {
-      switch: startSwitch,
-      activate: () => f.owner.activate(switchRequests.AB.to),
-      stop: () => f.owner.stop(),
-      initial: () => f.owner.activate(switchRequests.AA.to),
-    };
-    const lifecycle = actions[operation]();
-    const command = f.owner.execute(switchCommands.A);
-    expect(await command).toEqual(switchCommandFailure("coordinator-unavailable"));
-    expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(0);
-    const result = await lifecycle;
-    if (operation === "switch") {
-      expect(result).toEqual(switchTarget());
-      expect(await f.owner.execute(switchCommands.B)).toEqual(
-        migratedUnsupported(switchCommands.B),
-      );
-      expect(await f.owner.execute(switchCommands.A)).toEqual(
-        switchCommandFailure("project-mismatch"),
-      );
-    }
-    if (operation === "activate") {
-      expect(result).toEqual(switchAlreadyActive("B"));
-      expect(await f.owner.execute(switchCommands.A)).toEqual(
-        migratedUnsupported(switchCommands.A),
-      );
-    }
-    if (operation === "initial") expect(result).toEqual(switchActive("A"));
-    await f.owner.stop();
-  },
-);
-
-it.each(["A.fence", "B.storage.acquire"])(
-  "closes command admission in the same turn as lifecycle enqueue",
-  async (stage) => {
-    const f = switchFixture(true);
-    const switchProject = requireSwitch(f.owner);
-    await activateSwitchSource(f);
-    const hold = f.hold(stage);
-    const switching = observeSwitchPromise(switchProject(switchRequests.AB));
-    await hold.entered;
-    expect(f.all).toContain(stage);
-    expect(switching.isSettled()).toBe(false);
-    for (const input of [switchCommands.A, switchCommands.B]) {
-      expect(await f.owner.execute(input)).toEqual(
-        switchCommandFailure("coordinator-unavailable", input),
-      );
-    }
-    expect(f.projects.A.repository.settle).toHaveBeenCalledTimes(0);
-    expect(f.projects.B.repository.settle).toHaveBeenCalledTimes(0);
-    expect(f.projects.A.storage).toHaveBeenCalledTimes(1);
-    hold.resolve();
-    expect(await switching.promise).toEqual(switchTarget());
-    expect(await f.owner.execute(switchCommands.B)).toEqual(migratedUnsupported(switchCommands.B));
-    expect(await f.owner.execute(switchCommands.A)).toEqual(
-      switchCommandFailure("project-mismatch"),
-    );
-    await f.owner.stop();
-  },
+  closesCoordinatorAdmission,
 );
 
 it.each(["switch", "stop"] as const)(
