@@ -28,9 +28,12 @@ const smokeIntent = decodeStrict(WorkspaceIntentSchema, {
 });
 const expectedMethods = [
   "activateProject",
+  "chooseRepository",
   "getHarnessStatus",
+  "getRegistrationCapability",
   "listProjects",
   "queryWorkspace",
+  "registerProject",
   "retryHarness",
   "submitWorkspaceIntent",
   "subscribeHarnessStatus",

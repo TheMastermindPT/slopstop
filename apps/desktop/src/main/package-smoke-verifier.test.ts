@@ -380,9 +380,12 @@ const exactResult = {
   requireType: "undefined",
   methods: [
     "activateProject",
+    "chooseRepository",
     "getHarnessStatus",
+    "getRegistrationCapability",
     "listProjects",
     "queryWorkspace",
+    "registerProject",
     "retryHarness",
     "submitWorkspaceIntent",
     "subscribeHarnessStatus",
