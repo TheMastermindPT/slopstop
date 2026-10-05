@@ -318,3 +318,8 @@
   color: var(--prototype-success);
   font-size: 0.75rem;
 }
+.rowReason {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--prototype-amber);
+}

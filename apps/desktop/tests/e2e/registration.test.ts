@@ -174,3 +174,41 @@ test("adds a repository through the add flow in the real window and opens it", a
     await application.close();
   }
 });
+
+test("removes a Project from the list in the real window and brings it back by re-adding", async () => {
+  test.setTimeout(120_000);
+  const { application, repository } = await launchWithFreshUserData();
+  try {
+    const page = await application.firstWindow();
+    await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
+    await answerFolderDialog(application, repository);
+    expect(await page.evaluate(registerThroughPreload)).toMatchObject({
+      result: { status: "registered" },
+    });
+    await page.getByRole("button", { name: "Refresh", exact: true }).click();
+    const heading = (name: string) => page.getByRole("heading", { level: 2, name, exact: true });
+
+    await page.getByRole("button", { name: "Remove repository from list" }).click();
+    await expect(heading("Remove repository from the list?")).toBeFocused();
+    await page.getByRole("button", { name: "Remove from list" }).click();
+    await expect(
+      page.locator("p[role=status]", {
+        hasText:
+          "repository was removed from the list. Its data is still saved; adding its folder again brings it back.",
+      }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Open Project repository/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add existing repository" })).toBeFocused();
+
+    await answerFolderDialog(application, repository);
+    await page.getByRole("button", { name: "Add existing repository" }).click();
+    await page.getByRole("button", { name: "Trust and continue" }).click();
+    // The earlier registration used the preload API, so this window approves Git first.
+    await page.getByRole("button", { name: "Run version check" }).click();
+    await page.getByRole("button", { name: "Allow 6 queries" }).click();
+    await expect(heading("repository is back in your list")).toBeFocused();
+    await expect(page.getByRole("button", { name: /^Open Project repository/ })).toBeVisible();
+  } finally {
+    await application.close();
+  }
+});

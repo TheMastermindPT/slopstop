@@ -58,6 +58,8 @@ type ProposalScreen = Readonly<{
 export type FlowHost = Readonly<{
   focusAdd(): void;
   registered(projectId: ProjectId): void;
+  /** A removed Project came back to the list; the list must be read again. */
+  restored(): void;
   open(projectId: ProjectId): void;
   show(projectId: ProjectId): void;
   announce(message: string): void;
@@ -107,6 +109,7 @@ export function useAddRepository(host: FlowHost) {
     };
     void register(preparation).then(
       guarded(token, (result) => {
+        if (result.status === "restored-to-list") host.restored();
         if (result.status !== "proposal-prepared")
           return finish(outcomeFor(result, selection.folder), { selection });
         setScreen({ kind: "proposal", selection, preparation, proposal: result, busy: false });

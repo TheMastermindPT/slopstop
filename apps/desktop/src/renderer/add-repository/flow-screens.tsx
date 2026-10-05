@@ -51,16 +51,8 @@ function StepsBar({ current }: Readonly<{ current: number }>) {
   );
 }
 
-/** The frame of a flow step: title, progress, and Esc as Cancel while the step is idle. */
-export function StepFrame(
-  props: Readonly<{
-    current: number;
-    cancellable: boolean;
-    onCancel(): void;
-    children: ReactNode;
-  }>,
-) {
-  const { cancellable, onCancel } = props;
+/** Esc acts as Cancel while a decision step is idle. */
+export function useEscape(cancellable: boolean, onCancel: () => void) {
   useEffect(() => {
     if (!cancellable) return;
     const onEscape = (event: KeyboardEvent) => {
@@ -71,6 +63,18 @@ export function StepFrame(
     document.addEventListener("keydown", onEscape);
     return () => document.removeEventListener("keydown", onEscape);
   }, [cancellable, onCancel]);
+}
+
+/** The frame of a flow step: title, progress, and Esc as Cancel while the step is idle. */
+export function StepFrame(
+  props: Readonly<{
+    current: number;
+    cancellable: boolean;
+    onCancel(): void;
+    children: ReactNode;
+  }>,
+) {
+  useEscape(props.cancellable, props.onCancel);
   return (
     <div className={styles["step"]}>
       <p className={styles["flowTitle"]}>Add existing repository</p>

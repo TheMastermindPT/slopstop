@@ -9,7 +9,13 @@ import { useAddRepository } from "./add-repository/use-add-repository.js";
 import { AddRepositoryButton } from "./add-repository-button.js";
 import { type ListState, ProjectRows, safeModeLabel } from "./projects-list.js";
 import styles from "./projects-workspace.module.css";
-import { rememberNames, useRegistrationCapability, workspaceFlowHost } from "./workspace-hooks.js";
+import { useRemoveFromList } from "./remove-from-list/use-remove-from-list.js";
+import {
+  rememberNames,
+  useRegistrationCapability,
+  workspaceFlowHost,
+  workspaceRemovalHost,
+} from "./workspace-hooks.js";
 import { type View, WorkspaceSection } from "./workspace-view.js";
 import "./prototype/prototype-global.css";
 
@@ -163,7 +169,17 @@ export function ProjectsWorkspace({
         setNewProjectId(projectId);
         void refresh();
       },
+      restored: () => void refresh(),
       open: (projectId) => void open(projectId),
+      announce: setAnnouncement,
+    }),
+  );
+
+  const removal = useRemoveFromList(
+    workspaceRemovalHost({
+      visibleOrder: () =>
+        list.status === "listed" ? list.projects.map((project) => project.projectId) : [],
+      refresh,
       announce: setAnnouncement,
     }),
   );
@@ -220,6 +236,11 @@ export function ProjectsWorkspace({
             newProjectId={newProjectId}
             disabled={!ready || busy}
             onOpen={(project) => void open(project.projectId)}
+            onRemove={(project) =>
+              project.registration !== "unbound" &&
+              removal.ask({ projectId: project.projectId, name: project.name })
+            }
+            announce={setAnnouncement}
           />
         </div>
         <p className={styles["asideNote"]}>
@@ -229,7 +250,7 @@ export function ProjectsWorkspace({
       <p className={styles["srOnly"]} aria-live="polite">
         {announcement}
       </p>
-      <WorkspaceSection flow={flow} view={view} error={error} busy={busy} />
+      <WorkspaceSection flow={flow} removal={removal} view={view} error={error} busy={busy} />
     </main>
   );
 }

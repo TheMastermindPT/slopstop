@@ -6,8 +6,9 @@ import type {
 } from "@slopstop/protocol";
 import { ListProblem } from "./project-list-problem.js";
 import styles from "./projects-workspace.module.css";
+import { RemoveButton } from "./remove-from-list/remove-button.js";
 
-type Entry = ProjectList["projects"][number];
+export type Entry = ProjectList["projects"][number];
 export type ListState = ProjectListResult | { status: "loading" | "idle" };
 
 /** How the Project is named everywhere: its folder name, or a short id when it has none. */
@@ -47,12 +48,14 @@ function canOpen(project: Entry): boolean {
   return project.registration === "unbound" && project.storage.status === "safe-mode";
 }
 
-type RowProps = Readonly<{
+export type RowProps = Readonly<{
   activeProjectId: ProjectId | undefined;
   newProjectId?: ProjectId | undefined;
   activeLabel: string | undefined;
   disabled: boolean;
   onOpen(project: Entry): void;
+  onRemove(project: Entry): void;
+  announce(message: string): void;
 }>;
 
 function ProjectRow({ project, ...props }: RowProps & Readonly<{ project: Entry }>) {
@@ -76,6 +79,7 @@ function ProjectRow({ project, ...props }: RowProps & Readonly<{ project: Entry 
         {isNew ? <span className={styles["badge"]}>New</span> : null}
         {selected ? <span>Active · {props.activeLabel}</span> : null}
       </button>
+      <RemoveButton project={project} selected={selected} {...props} />
     </li>
   );
 }

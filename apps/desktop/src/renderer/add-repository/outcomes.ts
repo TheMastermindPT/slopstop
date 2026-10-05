@@ -149,6 +149,21 @@ function codedOutcome(result: Coded, name: string): Outcome {
   return { ...fixed, reference: result.code };
 }
 
+// Provisional (queued for the user): the owning Project is hidden, so there is nothing to
+// show; the text says how to bring it back instead.
+function hiddenOwnerOutcome(name: string): Outcome {
+  return {
+    tone: "neutral",
+    word: "Not added",
+    title: "This worktree is part of a Project you removed from your list",
+    body: [
+      `This worktree belongs to Project ${name}, which is hidden from your list. Add ${name}'s own folder again to bring it back. Adding further worktrees is not supported yet.`,
+    ],
+    nothing: "Nothing was created or changed.",
+    actions: ["back"],
+  };
+}
+
 /** The outcome screen for a registration result that ends the flow. */
 export function outcomeFor(result: ProjectRegistrationResult, name: string): Outcome {
   switch (result.status) {
@@ -174,7 +189,20 @@ export function outcomeFor(result: ProjectRegistrationResult, name: string): Out
         projectId: result.projectId,
         projectName: result.name,
       };
+    case "restored-to-list":
+      return {
+        tone: "success",
+        word: "Back in your list",
+        title: `${result.name} is back in your list`,
+        body: [
+          "This folder was already registered, so Ragnarok brought back the same Project with its saved data. No second Project was created.",
+        ],
+        actions: ["open", "back"],
+        projectId: result.projectId,
+        projectName: result.name,
+      };
     case "belongs-to-project":
+      if (result.hiddenFromList === true) return hiddenOwnerOutcome(result.name);
       return {
         tone: "neutral",
         word: "Not added",

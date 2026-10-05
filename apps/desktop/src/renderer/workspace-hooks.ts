@@ -2,6 +2,7 @@ import type { ProjectId, ProjectListResult, RegistrationCapability } from "@slop
 import { useEffect, useState } from "react";
 import type { FlowHost } from "./add-repository/use-add-repository.js";
 import { projectName } from "./projects-list.js";
+import type { RemovalHost } from "./remove-from-list/use-remove-from-list.js";
 
 /** Keeps each listed Project's name so the opened view can show it. */
 export function rememberNames(names: Map<ProjectId, string>, result: ProjectListResult) {
@@ -26,9 +27,24 @@ export function useRegistrationCapability(ready: boolean, attempt: number) {
   return capability;
 }
 
+const focusSelector = (selector: string) =>
+  document.querySelector<HTMLButtonElement>(selector)?.focus();
+
+/** The removal's host: focus targets in the document plus the workspace's list. */
+export function workspaceRemovalHost(
+  actions: Pick<RemovalHost, "visibleOrder" | "refresh" | "announce">,
+): RemovalHost {
+  return {
+    ...actions,
+    focusAdd: () => document.getElementById("add-repository")?.focus(),
+    focusProject: (projectId: ProjectId) => focusSelector(`[data-project="${projectId}"]`),
+    focusRemove: (projectId: ProjectId) => focusSelector(`[data-remove="${projectId}"]`),
+  };
+}
+
 /** The add flow's host: focus targets in the document plus the workspace's own actions. */
 export function workspaceFlowHost(
-  actions: Pick<FlowHost, "registered" | "open" | "announce">,
+  actions: Pick<FlowHost, "registered" | "restored" | "open" | "announce">,
 ): FlowHost {
   return {
     ...actions,

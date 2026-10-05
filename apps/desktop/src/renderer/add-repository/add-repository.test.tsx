@@ -132,6 +132,14 @@ describe("Add existing repository", () => {
   type Expected = Readonly<{ word: string; title: string; reference?: string }>;
   const preparationOutcomes: ReadonlyArray<readonly [ProjectRegistrationResult, Expected]> = [
     [
+      { status: "restored-to-list", projectId, name: "repository" },
+      { word: "Back in your list", title: "repository is back in your list" },
+    ],
+    [
+      { status: "belongs-to-project", projectId, name: "chess", hiddenFromList: true },
+      { word: "Not added", title: "This worktree is part of a Project you removed from your list" },
+    ],
+    [
       { status: "already-registered", projectId, name: "repository" },
       { word: "Already registered", title: "repository is already registered" },
     ],
@@ -278,5 +286,24 @@ describe("Add existing repository", () => {
     await press(user, "Check Git again");
     expect(await heading("Check the Git program")).toBeTruthy();
     expect(fake.steps().at(-1)).toBe("prepare-git");
+  });
+  it("says a hidden Project's worktree belongs to it and how to bring it back", async () => {
+    const { user } = await startAdding(
+      registrationApi({
+        prepare: { status: "belongs-to-project", projectId, name: "chess", hiddenFromList: true },
+      }),
+    );
+    await heading("Do you trust this repository?");
+    await press(user, "Trust and continue");
+    await press(user, "Run version check");
+    await heading("Allow Git to identify repository?");
+    await press(user, "Allow 6 queries");
+    await heading("This worktree is part of a Project you removed from your list");
+    expect(
+      screen.getByText(
+        "This worktree belongs to Project chess, which is hidden from your list. Add chess's own folder again to bring it back. Adding further worktrees is not supported yet.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Show chess" })).toBeNull();
   });
 });
