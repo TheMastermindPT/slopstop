@@ -44,3 +44,9 @@ Baseline: the decisions recorded in `PRODUCT.md`, `discover/2026-08-22_19-18-10_
   4. Responses stream progressively and can be cancelled mid-turn.
 - **`@` is reserved for files** (supersedes section 2's use of `@` for Waypoints). Its behaviour follows current industry practice; when the attachments slice is planned, research VS Code chat and Claude Code `@` file references first and bring the details to the user.
 - **Waypoint references need another trigger.** Proposed: `#`, as GitHub uses for issues. Pending the user's confirmation.
+
+## 4. Conversation C1 plan answers (2026-10-05)
+
+- **Existing Projects: option A.** Add slice C1-0, a staged Project database upgrade under ADR 0005, limited to additive migrations: database-native backup, migrate copies in a staging generation, verify schema and integrity, activate the new generation atomically, keep the old one until verified. It runs automatically on activation. Rejected: B (pre-C1 Projects stay read-only), C (separate Conversation database, contradicts ADR 0006), D (in-place migration without backup, contradicts ADR 0005).
+- **Wording.** Button "Save locally"; note "No model is connected yet. Messages are saved on this computer."
+- **Message size limit.** 32 KiB of text per message.
