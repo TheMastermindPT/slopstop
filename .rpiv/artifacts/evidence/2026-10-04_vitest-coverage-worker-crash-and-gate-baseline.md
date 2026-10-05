@@ -73,3 +73,9 @@ tags: [testing, gate, vitest, coverage, pre-existing]
 - **User decision.** The 10 unit cases that build a real Project Storage move to the harness integration project, with assertions unchanged. They come from `active-project-coordinator.test.ts` and `harness-runtime.test.ts`, and take 0.7–1.9 s each when run alone. They take the integration timeout and the reduced parallelism. AGENTS.md classifies real-adapter tests as integration tests.
 - **Accepted loss.** These cases leave the fast `pnpm check` gate.
 - **Out of scope for now.** Six unit files import helpers from `tests/integration/`.
+- **Merged.** The reclassification was merged into main as `0749b58`; `pnpm check` is green on main (2558 passed).
+- **Second reclassification (user decision, 2026-10-05).** Two more cases in `canonical-command-repository.test.ts` move to the integration project:
+  - "validates and advances generation-2 Writer state", 4.86 s alone;
+  - "verifies and releases only the current durable Writer fence", 2.56 s alone.
+  
+  Every other test in the four direct-libSQL unit files takes under 0.4 s alone.
