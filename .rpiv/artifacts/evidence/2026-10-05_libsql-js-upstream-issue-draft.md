@@ -2,7 +2,7 @@
 date: 2026-10-05
 author: coordenador-claude (Claude Code), for Pedro Mesquita
 repository: slopstop
-status: draft-not-posted
+status: withdrawn
 target: https://github.com/tursodatabase/libsql-js/issues/new
 tags: [libsql, upstream, crash, windows]
 ---
@@ -60,3 +60,7 @@ A GC finalizer of a libsql handle calls `sqlite3_close` on a `sqlite3*` that ano
 - **Personal data.** The draft contains no paths, user names, email or project code.
 - **Posting.** It is posted from your GitHub account (with `gh issue create` or the web). Once posted it is public and permanent.
 - **Repository name.** The draft names libsql's GitHub repository. Check that it is still the correct one before posting.
+
+## Outcome — Human Decision (2026-10-05)
+
+- Not posted. The user considers the matter resolved by the move to `node:sqlite`, which stays.

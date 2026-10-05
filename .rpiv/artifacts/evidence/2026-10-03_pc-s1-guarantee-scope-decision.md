@@ -207,3 +207,9 @@ A push attempt (CLI and GitHub Desktop) failed because the `.husky/pre-push` dee
   - "Your list was not changed.";
   - a reference with the actual code.
 - **U5: approved, and provisional (b) becomes final.** A linked worktree of a hidden Project answers `belongs-to-project` and leaves the Project hidden, with the explanatory text.
+
+## 16. Follow-up queue — Human Decisions (2026-10-05)
+
+- **S6b approved.** Cut the native permutation tests from about 32 to about 8, keeping one case per distinct behaviour. Assertions of the kept cases do not change.
+- **SQL path 2 approved.** SQL bodies move to Effect programs over the database worker; it stays in the queue after Conversation.
+- **Provisional (a), the check-then-hide race:** explained to the user; decision pending.

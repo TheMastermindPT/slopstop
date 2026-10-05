@@ -136,3 +136,7 @@ Conclusões:
   4. a Conversation;
   5. o caminho 2 do SQL (corpos SQL em Effect sobre o worker atual).
 - O crash nativo do libsql continua estacionado e bloqueia o push. A avaliação dos modelos baratos do modo API fica para mais tarde.
+
+## Decisão do utilizador: teto de custo da API (2026-10-05)
+
+- O teto mensal de custo em modo `api` é de 10 €.
