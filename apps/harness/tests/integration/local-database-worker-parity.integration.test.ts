@@ -5,7 +5,7 @@ import { afterEach, expect, it } from "vitest";
 import {
   createWorkerLocalLibsqlClient,
   type LocalLibsqlClient,
-} from "./local-libsql-worker-client.js";
+} from "../../src/storage/local-libsql-worker-client.js";
 
 const roots: string[] = [];
 const clients: LocalLibsqlClient[] = [];
