@@ -30,7 +30,7 @@
     "test": "pnpm test:unit",
     "test:coverage": "vitest run --coverage --config vitest.coverage.config.ts --maxWorkers=50%",
     "test:e2e": "pnpm --filter @slopstop/desktop test:e2e",
-    "test:integration": "vitest run --config apps/harness/vitest.integration.config.ts",
+    "test:integration": "vitest run --config apps/harness/vitest.integration.config.ts --maxWorkers=50%",
     "test:mutation": "stryker run",
     "test:mutation:project-storage:desktop": "pnpm exec stryker run stryker.project-storage-desktop.config.json",
     "test:mutation:project-storage:harness": "pnpm exec stryker run stryker.project-storage.config.json",
