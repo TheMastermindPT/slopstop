@@ -6,6 +6,10 @@ import {
   decodeStrict,
   HarnessStatusSchema,
   ProjectListResultSchema,
+  ProjectRegistrationResultSchema,
+  RegistrationCapabilitySchema,
+  RendererRegistrationRequestSchema,
+  RepositoryChoiceResultSchema,
   RetryHarnessResultSchema,
   WorkspaceIntentResultSchema,
   WorkspaceIntentSchema,
@@ -36,6 +40,24 @@ const api: SlopStopApi = {
       await ipcRenderer.invoke(
         desktopIpcChannels.switchProject,
         decodeStrict(CanonicalProjectSwitchRequestSchema, request),
+      ),
+    ),
+  getRegistrationCapability: async () =>
+    decodeStrict(
+      RegistrationCapabilitySchema,
+      await ipcRenderer.invoke(desktopIpcChannels.getRegistrationCapability),
+    ),
+  chooseRepository: async () =>
+    decodeStrict(
+      RepositoryChoiceResultSchema,
+      await ipcRenderer.invoke(desktopIpcChannels.chooseRepository),
+    ),
+  registerProject: async (request) =>
+    decodeStrict(
+      ProjectRegistrationResultSchema,
+      await ipcRenderer.invoke(
+        desktopIpcChannels.registerProject,
+        decodeStrict(RendererRegistrationRequestSchema, request),
       ),
     ),
   getHarnessStatus: async () => {

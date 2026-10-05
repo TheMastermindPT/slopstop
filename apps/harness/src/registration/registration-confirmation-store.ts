@@ -171,7 +171,7 @@ export async function readConfirmation(
   } as const;
 }
 
-async function findCommonReservation(
+export async function findCommonReservation(
   transaction: LocalLibsqlTransaction,
   proposal: RegistrationProposalRecord,
 ) {
@@ -241,7 +241,10 @@ export async function reserveConfirmation(
   return { status: "reserved" as const, reservation, request: input.request, created };
 }
 
-async function readPublication(transaction: LocalLibsqlTransaction, reservation: Reservation) {
+export async function readPublication(
+  transaction: LocalLibsqlTransaction,
+  reservation: Reservation,
+) {
   const result = await transaction.execute({
     sql: "SELECT request_id AS requestId, result_json AS resultJson, result_fingerprint AS fingerprint FROM registration_publications WHERE reservation_id = ?",
     args: [reservation.reservationId],

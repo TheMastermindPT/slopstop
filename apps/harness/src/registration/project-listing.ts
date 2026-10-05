@@ -7,12 +7,15 @@ import {
   ProjectStorageCloseResultSchema,
   ProjectStorageOpenResultSchema,
 } from "@slopstop/protocol";
-import { Result, Schema } from "effect";
+import { Effect, Result, Schema } from "effect";
+import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { createNodeProjectStorageDependencies } from "../storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../storage/project-storage-store.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { observeRepositoryDirectory } from "../storage/repository-identity-observer.js";
+import { readHiddenProjectIds } from "./list-visibility.js";
 import { samePhysicalIdentity } from "./physical-identity.js";
+import { registeredName } from "./registered-name.js";
 import {
   type Reservation,
   readProjectRegistrationRecords,
@@ -26,6 +29,30 @@ import {
 import { RegistryFault, registryFailure } from "./registry-failure.js";
 
 const storedProjectRowsSchema = Schema.Array(Schema.Struct({ projectId: ProjectIdSchema }));
+
+// A removed Project leaves the list only once published; incomplete ones stay.
+function visibleRecords(
+  records: Awaited<ReturnType<typeof readProjectRegistrationRecords>>,
+  hidden: ReadonlySet<string>,
+) {
+  return records.filter(
+    ({ reservation, publication }) =>
+      publication === undefined || !hidden.has(reservation.projectId),
+  );
+}
+
+function byProjectId(a: Readonly<{ projectId: string }>, b: Readonly<{ projectId: string }>) {
+  if (a.projectId === b.projectId) return 0;
+  return a.projectId < b.projectId ? -1 : 1;
+}
+
+// Storage with a reservation, shown or removed, is bound; only the rest lists as unbound.
+function boundProjectIds(
+  records: ReadonlyArray<Readonly<{ reservation: Reservation }>>,
+  hidden: ReadonlySet<string>,
+): ReadonlySet<string> {
+  return new Set([...hidden, ...records.map(({ reservation }) => reservation.projectId)]);
+}
 
 async function location(reservation: Reservation) {
   const result = await observeRepositoryDirectory(
@@ -86,72 +113,108 @@ async function storageHealth(
   return inspected.value;
 }
 
+type StorageOwner = ReturnType<typeof createProjectStorageOwner>;
+type Entry = typeof ProjectListEntrySchema.Type;
+
+async function readListingState(transaction: LocalLibsqlTransaction) {
+  const records = await readProjectRegistrationRecords(transaction);
+  const hidden = await Effect.runPromise(readHiddenProjectIds(transaction));
+  const stored = decodeStrictResult(
+    storedProjectRowsSchema,
+    registryRows(
+      await transaction.execute(
+        "SELECT project_id AS projectId FROM storage_registrations ORDER BY project_id",
+      ),
+    ),
+  );
+  if (Result.isFailure(stored))
+    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+  return { records: visibleRecords(records, hidden), storedProjects: stored.success, hidden };
+}
+
+type ListingState = Awaited<ReturnType<typeof readListingState>>;
+
+async function registeredEntry(
+  { reservation, publication }: ListingState["records"][number],
+  owner: StorageOwner,
+) {
+  return decodeStrict(ProjectListEntrySchema, {
+    registration: publication === undefined ? "incomplete" : "registered",
+    ...(publication === undefined ? { code: "REGISTRATION_INCOMPLETE" } : {}),
+    projectId: reservation.projectId,
+    name: registeredName(reservation.proposal.observation.paths.worktree),
+    repositoryBindingId: reservation.repositoryBindingId,
+    workspaceId: reservation.workspaceId,
+    repositoryLocation: await location(reservation),
+    storage: await storageHealth(owner, reservation.projectId),
+    access: "not-assessed",
+  });
+}
+
+async function unboundEntry(projectId: Reservation["projectId"], owner: StorageOwner) {
+  return decodeStrict(ProjectListEntrySchema, {
+    registration: "unbound",
+    projectId,
+    repositoryLocation: { status: "not-bound" },
+    storage: await storageHealth(owner, projectId),
+    access: "not-assessed",
+  });
+}
+
+// Entries in listing order, one Storage health check at a time; undefined once cancelled.
+async function collectEntries(state: ListingState, owner: StorageOwner, signal: AbortSignal) {
+  const bound = boundProjectIds(state.records, state.hidden);
+  const pending = [
+    ...state.records.map((record) => () => registeredEntry(record, owner)),
+    ...state.storedProjects
+      .filter(({ projectId }) => !bound.has(projectId))
+      .map(
+        ({ projectId }) =>
+          () =>
+            unboundEntry(projectId, owner),
+      ),
+  ];
+  const entries: Entry[] = [];
+  for (const next of pending) {
+    if (signal.aborted) return undefined;
+    entries.push(await next());
+  }
+  return entries;
+}
+
+function listingStorageOwner(
+  options: RegistrationDatabaseOptions & { applicationVersion: string },
+) {
+  return createProjectStorageOwner(
+    createNodeProjectStorageDependencies({
+      applicationStorageRoot: options.applicationStorageRoot,
+      migrationResourcesRoot: options.migrationResourcesRoot,
+      applicationVersion: options.applicationVersion,
+      applicationDatabase: applicationDatabaseFor(options),
+    }),
+  );
+}
+
 export async function listRegisteredProjects(
   options: RegistrationDatabaseOptions & { applicationVersion: string },
   signal: AbortSignal,
 ) {
   try {
-    const { records, storedProjects } = await withRegistrationDatabase(options, (client) =>
-      withWriteTransaction(client, async (transaction) => {
-        const records = await readProjectRegistrationRecords(transaction);
-        const stored = decodeStrictResult(
-          storedProjectRowsSchema,
-          registryRows(
-            await transaction.execute(
-              "SELECT project_id AS projectId FROM storage_registrations ORDER BY project_id",
-            ),
-          ),
-        );
-        if (Result.isFailure(stored))
-          throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-        return { records, storedProjects: stored.success };
-      }),
+    const state = await withRegistrationDatabase(options, (client) =>
+      withWriteTransaction(client, readListingState),
     );
-    const owner = createProjectStorageOwner(
-      createNodeProjectStorageDependencies({
-        applicationStorageRoot: options.applicationStorageRoot,
-        migrationResourcesRoot: options.migrationResourcesRoot,
-        applicationVersion: options.applicationVersion,
-        applicationDatabase: applicationDatabaseFor(options),
-      }),
-    );
-    const projects = [];
+    const owner = listingStorageOwner(options);
+    let entries: Entry[] | undefined;
     try {
-      for (const { reservation, publication } of records) {
-        if (signal.aborted) return { status: "cancelled" } as const;
-        projects.push(
-          decodeStrict(ProjectListEntrySchema, {
-            registration: publication === undefined ? "incomplete" : "registered",
-            ...(publication === undefined ? { code: "REGISTRATION_INCOMPLETE" } : {}),
-            projectId: reservation.projectId,
-            repositoryBindingId: reservation.repositoryBindingId,
-            workspaceId: reservation.workspaceId,
-            repositoryLocation: await location(reservation),
-            storage: await storageHealth(owner, reservation.projectId),
-            access: "not-assessed",
-          }),
-        );
-      }
-      const bound = new Set(records.map(({ reservation }) => reservation.projectId));
-      for (const { projectId } of storedProjects) {
-        if (bound.has(projectId)) continue;
-        if (signal.aborted) return { status: "cancelled" } as const;
-        projects.push(
-          decodeStrict(ProjectListEntrySchema, {
-            registration: "unbound",
-            projectId,
-            repositoryLocation: { status: "not-bound" },
-            storage: await storageHealth(owner, projectId),
-            access: "not-assessed",
-          }),
-        );
-      }
+      entries = await collectEntries(state, owner, signal);
     } finally {
       await owner.stop();
     }
-    if (signal.aborted) return { status: "cancelled" } as const;
-    projects.sort((a, b) => (a.projectId < b.projectId ? -1 : a.projectId > b.projectId ? 1 : 0));
-    return decodeStrict(ProjectListSchema, { status: "listed", projects });
+    if (entries === undefined || signal.aborted) return { status: "cancelled" } as const;
+    return decodeStrict(ProjectListSchema, {
+      status: "listed",
+      projects: entries.sort(byProjectId),
+    });
   } catch (error) {
     return registryFailure(error);
   }

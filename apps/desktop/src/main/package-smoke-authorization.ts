@@ -86,6 +86,26 @@ function validateBootstrapRoot(root: string, scenario: ProjectStoragePackageSmok
   }
 }
 
+/** The registration proof's repository: the only entry beside the marker, a plain directory. */
+export const packageSmokeRepositoryDirectory = "repository";
+
+function validateRegistrationRoot(
+  root: string,
+  scenario: ProjectStoragePackageSmokeScenario,
+): void {
+  if (scenario !== "registration") {
+    return;
+  }
+  const entries = readdirSync(root).sort();
+  if (!isDeepStrictEqual(entries, [packageSmokeMarkerFilename, packageSmokeRepositoryDirectory])) {
+    failAuthorization();
+  }
+  const repository = lstatSync(path.join(root, packageSmokeRepositoryDirectory));
+  if (!repository.isDirectory() || repository.isSymbolicLink()) {
+    failAuthorization();
+  }
+}
+
 function validateAuthorizedRoot(input: ValidatedPackageSmokeInput): void {
   const rootEntry = lstatSync(input.root);
   if (!rootEntry.isDirectory()) {
@@ -108,6 +128,7 @@ function validateAuthorizedRoot(input: ValidatedPackageSmokeInput): void {
     failAuthorization();
   }
   validateBootstrapRoot(input.root, input.scenario);
+  validateRegistrationRoot(input.root, input.scenario);
 }
 
 export function applyPackageSmokeAuthorization(

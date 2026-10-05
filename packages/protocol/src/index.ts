@@ -77,6 +77,20 @@ export {
   RegistryPendingRecoverySchema,
 } from "./project-list-protocol.js";
 export type {
+  ProjectRegistrationRequest,
+  ProjectRegistrationResult,
+  RegistrationCapability,
+  RendererRegistrationRequest,
+  RepositoryChoiceResult,
+} from "./project-registration-flow-protocol.js";
+export {
+  ProjectRegistrationRequestSchema,
+  ProjectRegistrationResultSchema,
+  RegistrationCapabilitySchema,
+  RendererRegistrationRequestSchema,
+  RepositoryChoiceResultSchema,
+} from "./project-registration-flow-protocol.js";
+export type {
   InitialRepositoryBinding,
   RegisteredProject,
   RegisteredProjectSelectionCode,
@@ -146,6 +160,8 @@ export {
   createProjectListResultEvent,
   createProjectOpenCommand,
   createProjectOpenResultEvent,
+  createProjectRegistrationCommand,
+  createProjectRegistrationResultEvent,
   createProjectSwitchCommand,
   createProjectSwitchResultEvent,
   createReadyEvent,

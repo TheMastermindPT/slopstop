@@ -70,7 +70,7 @@ export function record(value: unknown): Record<string, unknown> {
 }
 export function ready(command: Record<string, unknown>): Record<string, unknown> {
   return {
-    protocolVersion: 4,
+    protocolVersion: 5,
     messageType: "event",
     messageId: id(900),
     sentAt: "2026-09-05T12:00:01.000Z",

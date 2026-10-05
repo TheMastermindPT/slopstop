@@ -46,6 +46,12 @@ export interface ActiveProjectCoordinator {
   execute(request: CanonicalProjectCommandRequest): Promise<CanonicalProjectCommandResult>;
   stop(): Promise<void>;
 }
+/** The coordinator plus a read of the Project it holds, for owners outside its queue. */
+export type ActiveProjectCoordinatorWithHeld = ActiveProjectCoordinator &
+  Readonly<{
+    /** The Project this session currently holds, including one it is still releasing. */
+    activeProjectId(): ProjectId | undefined;
+  }>;
 export type ActiveProjectCoordinatorDependencies = Readonly<{
   validateTarget?(
     request: CanonicalProjectActivationRequest,
@@ -93,6 +99,11 @@ type State =
       activationId: ProjectActivationId | null;
       ownership: Ownership;
     }>;
+function heldProjectId(state: State): ProjectId | undefined {
+  if (state.status === "active") return state.activation.projectId;
+  if (state.status === "releasing" || state.status === "release-failed") return state.projectId;
+  return undefined;
+}
 type ReleaseResult =
   | Readonly<{ status: "released" }>
   | Readonly<{
@@ -446,7 +457,7 @@ async function acquireProject(
 
 export function createActiveProjectCoordinator(
   dependencies: ActiveProjectCoordinatorDependencies,
-): ActiveProjectCoordinator {
+): ActiveProjectCoordinatorWithHeld {
   const lifecycle = createPermitLock();
   // Completion of each admitted command; release drains them before giving up ownership.
   const admitted = new Set<Deferred.Deferred<void>>();
@@ -577,6 +588,7 @@ export function createActiveProjectCoordinator(
   const stopOnce = retryableAttempt(() => enqueue(stop));
 
   return {
+    activeProjectId: () => heldProjectId(state),
     activate: (request) => enqueue(() => activateWithinLifecycle(request)),
     switchProject: (request) =>
       enqueue(async () => {

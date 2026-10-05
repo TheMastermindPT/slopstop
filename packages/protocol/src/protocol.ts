@@ -18,6 +18,12 @@ import {
   type ProjectListResult,
   ProjectListResultSchema,
 } from "./project-list-protocol.js";
+import {
+  type ProjectRegistrationRequest,
+  ProjectRegistrationRequestSchema,
+  type ProjectRegistrationResult,
+  ProjectRegistrationResultSchema,
+} from "./project-registration-flow-protocol.js";
 import type {
   ProjectStorageCloseRequest,
   ProjectStorageCloseResult,
@@ -57,7 +63,7 @@ import {
   WorkspaceQuerySchema,
 } from "./workspace-protocol.js";
 
-export const protocolVersion = 4 as const;
+export const protocolVersion = 5 as const;
 
 export const MessageIdSchema = UuidTextSchema.pipe(Schema.brand("MessageId"));
 export type MessageId = typeof MessageIdSchema.Type;
@@ -99,6 +105,11 @@ const WorkspaceQueryCommandSchema = Schema.Struct({
   ...DesktopCommandMetadataSchema,
   command: Schema.Literal("workspace.query"),
   payload: WorkspaceQuerySchema,
+});
+const ProjectRegistrationCommandSchema = Schema.Struct({
+  ...DesktopCommandMetadataSchema,
+  command: Schema.Literal("project.registration"),
+  payload: ProjectRegistrationRequestSchema,
 });
 const WorkspaceIntentCommandSchema = Schema.Struct({
   ...DesktopCommandMetadataSchema,
@@ -211,6 +222,11 @@ const WorkspaceIntentResultEventSchema = Schema.Struct({
   event: Schema.Literal("workspace.intent.result"),
   payload: WorkspaceIntentResultSchema,
 });
+const ProjectRegistrationResultEventSchema = Schema.Struct({
+  ...HarnessEventMetadataSchema,
+  event: Schema.Literal("project.registration.result"),
+  payload: ProjectRegistrationResultSchema,
+});
 const WorkspaceProjectionInvalidatedEventSchema = Schema.Struct({
   ...HarnessEventMetadataSchema,
   event: Schema.Literal("workspace.projection.invalidated"),
@@ -244,6 +260,7 @@ export const DesktopMessageSchema = Schema.Union([
   ProjectCloseCommandSchema,
   WorkspaceQueryCommandSchema,
   WorkspaceIntentCommandSchema,
+  ProjectRegistrationCommandSchema,
 ]);
 export type DesktopMessage = typeof DesktopMessageSchema.Type;
 
@@ -277,6 +294,7 @@ export const HarnessMessageSchema = Schema.Union([
   WorkspaceQueryResultEventSchema,
   WorkspaceIntentResultEventSchema,
   WorkspaceProjectionInvalidatedEventSchema,
+  ProjectRegistrationResultEventSchema,
 ]);
 export type HarnessMessage = typeof HarnessMessageSchema.Type;
 
@@ -529,6 +547,20 @@ export function createWorkspaceIntentCommand(
   intent: WorkspaceIntent,
 ): DesktopMessage {
   return createCommand(metadata, "workspace.intent", intent);
+}
+
+export function createProjectRegistrationCommand(
+  metadata: CommandMetadata,
+  request: ProjectRegistrationRequest,
+): DesktopMessage {
+  return createCommand(metadata, "project.registration", request);
+}
+
+export function createProjectRegistrationResultEvent(
+  metadata: EventMetadata,
+  result: ProjectRegistrationResult,
+): HarnessMessage {
+  return createEvent(metadata, "project.registration.result", result);
 }
 
 export function readMessageId(value: unknown): MessageId | null {

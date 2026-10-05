@@ -232,7 +232,7 @@ describe("desktop protocol parsing", () => {
     const activation = { ...validHandshake, command: "project.activate", payload: request };
     expect(parseDesktopMessage(activation)).toEqual({ ok: true, value: activation });
     const result = {
-      protocolVersion: 4,
+      protocolVersion: 5,
       messageType: "event",
       messageId: "00000000-0000-4000-8000-000000000002",
       sentAt: validHandshake.sentAt,
@@ -263,9 +263,9 @@ describe("desktop protocol parsing", () => {
       },
     });
   });
-  it("parses only correctly scoped failure events at protocol version 4", () => {
+  it("parses only correctly scoped failure events at protocol version 5", () => {
     const requestFailure = {
-      protocolVersion: 4,
+      protocolVersion: 5,
       messageType: "event",
       messageId: "00000000-0000-4000-8000-000000000101",
       sentAt: "2026-09-04T12:00:00.000Z",
@@ -300,7 +300,7 @@ describe("desktop protocol parsing", () => {
         issues: [{ code: "invalid_type", path: "causationId" }],
       },
     });
-    expect(parseHarnessMessage({ ...requestFailure, protocolVersion: 3 })).toEqual({
+    expect(parseHarnessMessage({ ...requestFailure, protocolVersion: 4 })).toEqual({
       ok: false,
       error: {
         code: "PROTOCOL_VERSION_UNSUPPORTED",
@@ -309,26 +309,26 @@ describe("desktop protocol parsing", () => {
     });
   });
 
-  it("parses workspace commands and correlated result events under protocol version 4", () => {
+  it("parses workspace commands and correlated result events under protocol version 5", () => {
     const { command, event, query, result } = workspaceExchange();
 
-    expect(protocolVersion).toBe(4);
+    expect(protocolVersion).toBe(5);
     expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
     expect(command).toMatchObject({
-      protocolVersion: 4,
+      protocolVersion: 5,
       messageId: "00000000-0000-4000-8000-000000000001",
       payload: query,
     });
     expect(parseHarnessMessage(event)).toEqual({ ok: true, value: event });
     expect(event).toMatchObject({
-      protocolVersion: 4,
+      protocolVersion: 5,
       causationId: command.messageId,
       payload: result,
     });
   });
 
-  it("round-trips Project Storage envelopes under protocol version 4", () => {
-    expect(protocolVersion).toBe(4);
+  it("round-trips Project Storage envelopes under protocol version 5", () => {
+    expect(protocolVersion).toBe(5);
     for (const { command, commandName, event, eventName } of projectStorageExchanges()) {
       expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
       expect(parseHarnessMessage(event)).toEqual({ ok: true, value: event });
@@ -591,7 +591,7 @@ describe("S5 G2 receipt envelopes", () => {
     receipt,
   };
   const envelope = {
-    protocolVersion: 4,
+    protocolVersion: 5,
     messageType: "event",
     messageId: "99999999-9999-4999-8999-999999999501",
     sentAt: "2026-09-05T12:00:06.000Z",
@@ -645,7 +645,7 @@ const switchRequest = {
   to: { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
 };
 const switchCommandEnvelope = {
-  protocolVersion: 4,
+  protocolVersion: 5,
   messageType: "command",
   messageId: "11111111-1111-4111-8111-111111111402",
   sentAt: "2026-09-05T12:00:00.000Z",
@@ -664,7 +664,7 @@ const switchResult = {
   },
 };
 const switchEventEnvelope = {
-  protocolVersion: 4,
+  protocolVersion: 5,
   messageType: "event",
   messageId: "99999999-9999-4999-8999-999999999402",
   sentAt: "2026-09-05T12:00:04.000Z",

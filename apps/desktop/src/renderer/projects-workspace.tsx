@@ -2,13 +2,21 @@ import { FolderOpenIcon } from "@phosphor-icons/react";
 import type {
   CanonicalProjectActivationResult,
   HarnessStatus,
-  ProjectDatabaseHealth,
   ProjectId,
-  ProjectList,
-  ProjectListResult,
 } from "@slopstop/protocol";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useAddRepository } from "./add-repository/use-add-repository.js";
+import { AddRepositoryButton } from "./add-repository-button.js";
+import { type ListState, ProjectRows, safeModeLabel } from "./projects-list.js";
 import styles from "./projects-workspace.module.css";
+import { useRemoveFromList } from "./remove-from-list/use-remove-from-list.js";
+import {
+  rememberNames,
+  useRegistrationCapability,
+  workspaceFlowHost,
+  workspaceRemovalHost,
+} from "./workspace-hooks.js";
+import { type View, WorkspaceSection } from "./workspace-view.js";
 import "./prototype/prototype-global.css";
 
 type Active = Extract<CanonicalProjectActivationResult, { status: "active" }>;
@@ -16,37 +24,6 @@ type Session =
   | { kind: "none" }
   | { kind: "active"; activation: Active }
   | { kind: "release-failed"; activation: Active };
-type View = {
-  projectId: ProjectId;
-  label: string;
-  mode: "active" | "safe-mode" | "release-failed";
-} | null;
-type ListState = ProjectListResult | { status: "loading" | "idle" };
-
-function safeModeLabel(
-  canonical: ProjectDatabaseHealth["status"],
-  runtime: ProjectDatabaseHealth["status"],
-) {
-  const failures = [
-    { name: "Canonical", status: canonical },
-    { name: "Runtime", status: runtime },
-  ]
-    .filter(({ status }) => status !== "healthy")
-    .map(({ name, status }) => `${name} ${status.replaceAll("-", " ")}`);
-  return ["Safe mode", ...failures].join(" · ");
-}
-
-function storageLabel(project: ProjectList["projects"][number]) {
-  if (project.registration === "incomplete") return "Registration incomplete — recovery required";
-  if (project.storage.status === "safe-mode")
-    return safeModeLabel(project.storage.canonical, project.storage.runtime);
-  if (
-    project.repositoryLocation.status !== "present" &&
-    project.repositoryLocation.status !== "not-bound"
-  )
-    return `Repository ${project.repositoryLocation.status}`;
-  return `Storage ${project.storage.status.replaceAll("-", " ")}`;
-}
 
 export function ProjectsWorkspace({
   status,
@@ -62,6 +39,10 @@ export function ProjectsWorkspace({
   const [view, setView] = useState<View>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const capability = useRegistrationCapability(ready, attempt);
+  const [announcement, setAnnouncement] = useState("");
+  const names = useRef(new Map<ProjectId, string>());
+  const [newProjectId, setNewProjectId] = useState<ProjectId | undefined>(undefined);
   const epoch = useRef(0);
   const request = useRef(0);
   const selecting = useRef(false);
@@ -72,6 +53,7 @@ export function ProjectsWorkspace({
     setList({ status: "loading" });
     try {
       const result = await window.slopstop.listProjects();
+      rememberNames(names.current, result);
       if (generation === epoch.current && current === request.current) setList(result);
     } catch {
       if (generation === epoch.current && current === request.current)
@@ -93,11 +75,14 @@ export function ProjectsWorkspace({
     };
   }, [ready, attempt, refresh]);
 
+  const nameOf = (projectId: ProjectId) => names.current.get(projectId) ?? projectId.slice(0, 8);
+
   function present(result: CanonicalProjectActivationResult) {
     if (result.status === "active") {
       setSession({ kind: "active", activation: result });
       setView({
         projectId: result.request.projectId,
+        name: nameOf(result.request.projectId),
         label: result.access === "read-only" ? "Read-only" : "Read-write",
         mode: "active",
       });
@@ -105,6 +90,7 @@ export function ProjectsWorkspace({
       setSession({ kind: "none" });
       setView({
         projectId: result.request.projectId,
+        name: nameOf(result.request.projectId),
         label: safeModeLabel(result.canonicalHealth.status, result.runtimeHealth.status),
         mode: "safe-mode",
       });
@@ -136,6 +122,7 @@ export function ProjectsWorkspace({
       setSession({ kind: "release-failed", activation });
       setView({
         projectId: activation.request.projectId,
+        name: nameOf(activation.request.projectId),
         label: "Release failed — writes unavailable",
         mode: "release-failed",
       });
@@ -176,6 +163,27 @@ export function ProjectsWorkspace({
     }
   }
 
+  const flow = useAddRepository(
+    workspaceFlowHost({
+      registered: (projectId) => {
+        setNewProjectId(projectId);
+        void refresh();
+      },
+      restored: () => void refresh(),
+      open: (projectId) => void open(projectId),
+      announce: setAnnouncement,
+    }),
+  );
+
+  const removal = useRemoveFromList(
+    workspaceRemovalHost({
+      visibleOrder: () =>
+        list.status === "listed" ? list.projects.map((project) => project.projectId) : [],
+      refresh,
+      announce: setAnnouncement,
+    }),
+  );
+
   return (
     <main className={styles["shell"]}>
       <nav className={styles["rail"]} aria-label="Workspace">
@@ -208,84 +216,41 @@ export function ProjectsWorkspace({
             Refresh
           </button>
         </div>
+        <AddRepositoryButton
+          capability={capability}
+          list={list}
+          onAdd={flow.start}
+          announce={setAnnouncement}
+        />
         <div aria-busy={list.status === "loading"}>
-          {list.status === "idle" ? <p>Connect to the harness to read saved Projects.</p> : null}
-          {list.status === "loading" ? <p aria-live="polite">Loading saved Projects…</p> : null}
-          {list.status === "listed" && list.projects.length === 0 ? (
-            <p>
-              No saved Projects yet. Registering a new repository in this interface is not available
-              yet.
-            </p>
-          ) : null}
-          {list.status !== "listed" && list.status !== "loading" && list.status !== "idle" ? (
-            <p role="alert">
-              Projects could not be read. {"code" in list ? list.code : "Request cancelled"}. Use
-              Refresh to try again.
-            </p>
-          ) : null}
-          {list.status === "listed" ? (
-            <ul className={styles["projectList"]}>
-              {list.projects.map((project) => {
-                const selected =
-                  session.kind === "active" &&
-                  session.activation.request.projectId === project.projectId;
-                const canOpen =
-                  (project.registration === "registered" &&
-                    project.repositoryLocation.status === "present") ||
-                  (project.registration === "unbound" && project.storage.status === "safe-mode");
-                return (
-                  <li key={project.projectId}>
-                    <button
-                      type="button"
-                      aria-label={`Open project ${project.projectId}`}
-                      aria-current={selected ? "true" : undefined}
-                      disabled={!ready || busy || !canOpen || selected}
-                      onClick={() => void open(project.projectId)}
-                    >
-                      <strong>Project {project.projectId.slice(0, 8)}</strong>
-                      <code>{project.projectId}</code>
-                      <span>{storageLabel(project)}</span>
-                      {selected ? (
-                        <span>
-                          Active ·{" "}
-                          {session.activation.access === "read-only" ? "Read-only" : "Read-write"}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : null}
+          <ProjectRows
+            list={list}
+            activeProjectId={
+              session.kind === "active" ? session.activation.request.projectId : undefined
+            }
+            activeLabel={
+              session.kind === "active" && session.activation.access === "read-only"
+                ? "Read-only"
+                : "Read-write"
+            }
+            newProjectId={newProjectId}
+            disabled={!ready || busy}
+            onOpen={(project) => void open(project.projectId)}
+            onRemove={(project) =>
+              project.registration !== "unbound" &&
+              removal.ask({ projectId: project.projectId, name: project.name })
+            }
+            announce={setAnnouncement}
+          />
         </div>
         <p className={styles["asideNote"]}>
           Local Projects. No repository commands run while listing.
         </p>
       </aside>
-      <section className={styles["workspace"]} aria-label="Project workspace" aria-busy={busy}>
-        {error ? (
-          <p className={styles["error"]} role="alert">
-            {error}
-          </p>
-        ) : null}
-        {busy ? <p aria-live="polite">Opening Project…</p> : null}
-        <h2>{view === null ? "No Project selected" : `Project ${view.projectId.slice(0, 8)}`}</h2>
-        {view === null ? (
-          <p>
-            Choose a saved Project to open its local workspace. Access is checked when you open it.
-          </p>
-        ) : (
-          <>
-            <code>{view.projectId}</code>
-            <p className={styles["access"]}>{view.label}</p>
-            <p>
-              {view.mode === "active"
-                ? "Project identity and local Storage are connected. Conversation and repository registration controls are not available in this view yet."
-                : "Writes unavailable. Storage needs attention before this Project can be used."}
-            </p>
-          </>
-        )}
-      </section>
+      <p className={styles["srOnly"]} aria-live="polite">
+        {announcement}
+      </p>
+      <WorkspaceSection flow={flow} removal={removal} view={view} error={error} busy={busy} />
     </main>
   );
 }

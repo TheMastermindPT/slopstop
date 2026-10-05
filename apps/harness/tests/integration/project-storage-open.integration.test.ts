@@ -801,7 +801,7 @@ it(
     }
 
     expect(readApplicationHead(root)).toEqual({
-      last_migration_id: "0005_registration_publications",
+      last_migration_id: "0006_registration_list_visibility",
     });
     expect(readPreviousRegistrations(root)).toEqual(
       expect.arrayContaining(before.map((row) => expect.objectContaining(row))),
@@ -855,7 +855,7 @@ it(
       runtimeHealth: recoveryRequiredHealth,
     });
     expect(readApplicationHead(root)).toEqual({
-      last_migration_id: "0005_registration_publications",
+      last_migration_id: "0006_registration_list_visibility",
     });
     expect(readPreviousRegistrations(root)).toEqual(before);
     expect(await readFile(projectFile)).toEqual(projectBytes);

@@ -179,21 +179,31 @@ function validMarker(entry: Entry, token: string) {
   const marker = JSON.parse(entry.value);
   return Object.keys(marker).length === 2 && marker.version === 1 && marker.token === token;
 }
-function authorized(env: SmokeEnvironment) {
+// The root entries each scenario's authorization accepts beside a valid marker.
+function scenarioRootAccepted(input: Readonly<{ root: string; env: SmokeEnvironment }>) {
+  const { root } = input;
+  const scenario = input.env.SLOPSTOP_PACKAGE_SMOKE_SCENARIO;
+  const children = [...tree.keys()].filter((key) => path.dirname(key) === root);
+  if (scenario === "bootstrap") return children.length === 1;
+  if (scenario === "registration")
+    return children.length === 2 && get(path.join(root, "repository")).kind === "dir";
+  return ["writer-proof", "missing-runtime", "witnessed-staging"].includes(scenario ?? "");
+}
+// The root and token when both are well formed, otherwise undefined.
+function validInput(env: SmokeEnvironment) {
   const root = env.SLOPSTOP_PACKAGE_SMOKE_USER_DATA;
   const token = env.SLOPSTOP_PACKAGE_SMOKE_TOKEN;
+  if (root === undefined || token === undefined) return undefined;
+  return path.isAbsolute(root) && /^[a-f0-9]{64}$/.test(token) ? { root, token } : undefined;
+}
+function authorized(env: SmokeEnvironment) {
   try {
-    if (!root || !token) return false;
-    if (!path.isAbsolute(root)) return false;
-    if (!/^[a-f0-9]{64}$/.test(token)) return false;
-    if (get(root).kind !== "dir") return false;
-    const entry = get(path.join(root, ".slopstop-package-smoke.json"));
-    if (!validMarker(entry, token)) return false;
-    if (env.SLOPSTOP_PACKAGE_SMOKE_SCENARIO === "bootstrap")
-      return [...tree.keys()].filter((key) => path.dirname(key) === root).length === 1;
-    return ["writer-proof", "missing-runtime", "witnessed-staging"].includes(
-      env.SLOPSTOP_PACKAGE_SMOKE_SCENARIO ?? "",
-    );
+    const input = validInput(env);
+    if (input === undefined) return false;
+    if (get(input.root).kind !== "dir") return false;
+    const marker = get(path.join(input.root, ".slopstop-package-smoke.json"));
+    if (!validMarker(marker, input.token)) return false;
+    return scenarioRootAccepted({ root: input.root, env });
   } catch {
     return false;
   }
@@ -266,7 +276,15 @@ function finishChild(input: {
   }
   child.emit("close", code);
 }
-function spawn(_executable: string, _args: string[], launch: Launch) {
+// The registration scenario's `git init <root>/repository` before its launch.
+function gitInit(command: Readonly<{ args: readonly string[] }>) {
+  const child = makeChild();
+  put(path.normalize(command.args[2] ?? ""), { kind: "dir" });
+  setTimeout(() => child.emit("exit", 0), 0);
+  return child;
+}
+function spawn(_executable: string, args: string[], launch: Launch) {
+  if (args[0] === "init") return gitInit({ args });
   launches.push(launch);
   const child = makeChild();
   setTimeout(() => child.emit("spawn"), 0);
@@ -309,6 +327,10 @@ beforeEach(() => {
   stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   ports.spawn.mockImplementation(spawn);
   installFilesystem();
+  put(path.join(process.env["ProgramFiles"] ?? "C:Program Files", "Git", "cmd", "git.exe"), {
+    kind: "file",
+    value: "git",
+  });
 });
 function installFilesystem() {
   ports.open.mockImplementation(openFixtureFile);

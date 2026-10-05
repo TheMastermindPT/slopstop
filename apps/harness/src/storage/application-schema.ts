@@ -404,6 +404,12 @@ export const registrationPublications = sqliteTable(
   ],
 );
 
+/** A row hides a registered Project from the saved list; its data stays (Remove from list). */
+export const registrationListVisibility = sqliteTable("registration_list_visibility", {
+  projectId: text("project_id").primaryKey().notNull(),
+  hiddenAt: text("hidden_at").notNull(),
+});
+
 export const registrationProposals = sqliteTable(
   "registration_proposals",
   {

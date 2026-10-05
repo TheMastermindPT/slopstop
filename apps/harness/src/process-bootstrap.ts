@@ -8,7 +8,10 @@ import {
   ProjectActivationIdSchema,
 } from "@slopstop/protocol";
 import { Context, Effect, Layer, ManagedRuntime } from "effect";
-import { createActiveProjectCoordinator } from "./active-project-coordinator.js";
+import {
+  type ActiveProjectCoordinatorWithHeld,
+  createActiveProjectCoordinator,
+} from "./active-project-coordinator.js";
 import { createCanonicalCommandRegistry } from "./canonical-command-registry.js";
 import {
   type CanonicalProjectApplication,
@@ -115,16 +118,14 @@ export function startHarnessProcessRuntime(
     );
     const { registration } = services;
     const stopHarness = startHarnessRuntime({
-      projectListing: {
-        list: async () =>
-          decodeStrict(ProjectListResultSchema, await registration.owner.listProjects()),
-        stop: async () => {
-          const result = await registration.owner.close();
-          await registration.registry.stop();
-          if (result.status !== "closed")
-            throw new Error("Project listing cleanup is unconfirmed.");
-        },
-      },
+      projectRegistration: withListRemoval(
+        registration.flow,
+        createListRemoval({
+          options: registration.options,
+          activeProjectId: services.canonicalProjects.activeProjectId,
+        }),
+      ),
+      projectListing: registrationListing(registration),
       applicationDatabase: services.applicationDatabase,
       transport: input.transport,
       canonicalProjectApplication: services.canonicalProjects,
@@ -144,6 +145,22 @@ export function startHarnessProcessRuntime(
     void runtime.dispose();
     throw error;
   }
+}
+
+// Listing and registration share the registry: it stops after the owner and the observer.
+function registrationListing(registration: ProjectRegistration["Service"]) {
+  return {
+    list: async () =>
+      decodeStrict(ProjectListResultSchema, await registration.owner.listProjects()),
+    stop: async () => {
+      const result = await registration.owner.close();
+      const observer = await registration.observer.close();
+      await registration.registry.stop();
+      if (observer.status !== "closed")
+        throw new Error("Project registration observer cleanup is unconfirmed.");
+      if (result.status !== "closed") throw new Error("Project listing cleanup is unconfirmed.");
+    },
+  };
 }
 
 const currentTime = () => new Date().toISOString();
@@ -168,11 +185,15 @@ class ProjectRegistration extends Context.Service<
   Readonly<{
     registry: RegistrationRegistry;
     owner: ReturnType<typeof createProjectRegistrationOwner>;
+    observer: ProjectRegistrationObserver;
+    flow: ProjectRegistrationFlow;
+    options: RegistrationDatabaseOptions;
   }>
 >()("slopstop/harness/ProjectRegistration") {}
-class CanonicalProjects extends Context.Service<CanonicalProjects, CanonicalProjectApplication>()(
-  "slopstop/harness/CanonicalProjects",
-) {}
+class CanonicalProjects extends Context.Service<
+  CanonicalProjects,
+  CanonicalProjectApplication & Pick<ActiveProjectCoordinatorWithHeld, "activeProjectId">
+>()("slopstop/harness/CanonicalProjects") {}
 
 const applicationDatabaseLayer = Layer.effect(
   ApplicationDatabase,
@@ -204,10 +225,34 @@ const projectRegistrationLayer = Layer.effect(
       applicationVersion: "0.0.0",
       applicationDatabase: yield* ApplicationDatabase,
     };
-    const registry = createRegistrationRegistry(options);
+    const selection = createDirectoryHandoff();
+    const registry = createRegistrationRegistry(options, selection.port);
+    const observer = createProjectRegistrationObserver(
+      createGitVersionInspection(
+        registry,
+        createVersionObservationExecution({
+          inspectIdentity: observeSelectedExecutable,
+          journal: registry,
+          child: createWindowsVersionChild(roots.applicationStorageRoot),
+        }),
+      ),
+      registry,
+    );
+    const owner = createProjectRegistrationOwner(registry, options, roots.applicationStorageRoot);
     return {
       registry,
-      owner: createProjectRegistrationOwner(registry, options, roots.applicationStorageRoot),
+      owner,
+      observer,
+      options,
+      flow: createProjectRegistrationFlow({
+        registry,
+        observer,
+        selection,
+        discoverGit: () => discoverGitExecutable(process.env),
+        createId: randomUUID,
+        owner,
+        options,
+      }),
     };
   }),
 );
@@ -238,7 +283,10 @@ const canonicalProjectsLayer = Layer.effect(
         decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
       now: currentTime,
     });
-    return createCanonicalProjectApplication(coordinator);
+    return {
+      ...createCanonicalProjectApplication(coordinator),
+      activeProjectId: coordinator.activeProjectId,
+    };
   }),
 );
 
@@ -251,9 +299,25 @@ function harnessServicesLayer(roots: HarnessRootPaths) {
 }
 
 import { ProjectListResultSchema } from "@slopstop/protocol";
+import {
+  createProjectRegistrationObserver,
+  type ProjectRegistrationObserver,
+} from "./project-registration-observer.js";
+import { discoverGitExecutable } from "./registration/git-executable-discovery.js";
+import { createGitVersionInspection } from "./registration/git-version-inspection.js";
+import { createListRemoval, withListRemoval } from "./registration/list-visibility.js";
+import {
+  createDirectoryHandoff,
+  createProjectRegistrationFlow,
+  type ProjectRegistrationFlow,
+} from "./registration/project-registration-flow.js";
 import { createProjectRegistrationOwner } from "./registration/project-registration-owner.js";
 import {
   createRegisteredProjectSessionValidation,
   createRegisteredProjectTargetValidation,
 } from "./registration/registered-project-selection.js";
 import { createRegistrationRegistry } from "./registration/registration-registry.js";
+import type { RegistrationDatabaseOptions } from "./registration/registry-database.js";
+import { createVersionObservationExecution } from "./registration/version-observation-execution.js";
+import { createWindowsVersionChild } from "./registration/windows-version-child.js";
+import { observeSelectedExecutable } from "./storage/repository-identity-observer.js";

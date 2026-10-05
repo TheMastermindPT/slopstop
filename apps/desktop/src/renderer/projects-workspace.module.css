@@ -161,3 +161,165 @@
     display: none;
   }
 }
+.add {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+}
+.add button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-self: start;
+}
+.add button[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.add p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--prototype-muted);
+}
+.add p.blocked {
+  color: var(--prototype-amber);
+}
+.busyProblem,
+.brokenProblem {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--prototype-line-strong);
+}
+.busyProblem {
+  border-color: var(--prototype-amber);
+}
+.brokenProblem {
+  border-color: var(--prototype-danger);
+}
+.busyProblem p,
+.brokenProblem p,
+.busyProblem code,
+.brokenProblem code {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.step {
+  display: grid;
+  gap: 0.9rem;
+  max-width: 70ch;
+}
+.flowTitle {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--prototype-dim);
+}
+.steps [aria-current="step"] {
+  color: var(--prototype-ink);
+  font-weight: 600;
+}
+.target,
+.warning,
+.info {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.75rem;
+  border: 1px solid var(--prototype-line-strong);
+}
+.warning {
+  border-color: var(--prototype-amber);
+}
+.target code,
+.facts code,
+.queries code,
+.codeLine {
+  font-family: var(--prototype-font-code);
+  overflow-wrap: anywhere;
+}
+.facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.4rem 1rem;
+  margin: 0;
+}
+.facts dd {
+  margin: 0;
+}
+.queries {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.actions span,
+.footnote,
+.codeLine {
+  font-size: 0.85rem;
+  color: var(--prototype-dim);
+}
+.busyLine,
+.cancelNote,
+.nothing {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.outcomeHead {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.3rem 0.6rem;
+}
+.outcomeHead h2 {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.statusWord {
+  font-weight: 600;
+}
+.tone-success .statusWord {
+  color: var(--prototype-success);
+}
+.tone-warn .statusWord {
+  color: var(--prototype-amber);
+}
+.tone-error .statusWord {
+  color: var(--prototype-danger);
+}
+.badge {
+  justify-self: start;
+  padding: 0 0.4rem;
+  border: 1px solid var(--prototype-success);
+  color: var(--prototype-success);
+  font-size: 0.75rem;
+}
+.rowReason {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--prototype-amber);
+}

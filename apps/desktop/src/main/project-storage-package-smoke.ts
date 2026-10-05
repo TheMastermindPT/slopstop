@@ -21,7 +21,8 @@ export type ProjectStoragePackageSmokeScenario =
   | "bootstrap"
   | "writer-proof"
   | "missing-runtime"
-  | "witnessed-staging";
+  | "witnessed-staging"
+  | "registration";
 
 type ProjectStoragePackageSmokeFailureStage =
   | "absent-project-open"
@@ -57,6 +58,7 @@ export function parseProjectStoragePackageSmokeScenario(
     case "writer-proof":
     case "missing-runtime":
     case "witnessed-staging":
+    case "registration":
       return value;
     default:
       throw new Error("Invalid packaged Project Storage scenario.");
@@ -138,5 +140,8 @@ export async function runProjectStoragePackageSmoke(
       return;
     case "witnessed-staging":
       await runWitnessedStagingScenario(input.bridge);
+      return;
+    case "registration":
+      throw new Error("Registration proof runs through the Project entry bridge.");
   }
 }
