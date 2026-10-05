@@ -22,9 +22,9 @@ const unusedFlow: ProjectRegistrationFlow = {
   handle: () => Effect.die(new Error("Only Remove from list is exercised here.")),
 };
 
-/** A registered Project in a real installation, plus a runtime whose activation can be held. */
 type HeldProjectRunner = ReturnType<typeof fixture>["owner"]["withHeldProject"];
 
+/** A registered Project in a real installation, plus a runtime whose activation can be held. */
 async function raceRuntime(enterQueue?: HeldProjectRunner) {
   const session = await registrationSession();
   const { registered } = await registerFolder(session, session.directory);
@@ -68,7 +68,45 @@ async function raceRuntime(enterQueue?: HeldProjectRunner) {
     if (result.status !== "listed") throw new Error(`List unavailable: ${result.status}`);
     return result.projects.map((project) => project.projectId);
   };
-  return { projectId, coordinator, held, entered, transport, listed, dispose };
+  const send = {
+    activate: () => transport.emit(createProjectActivateCommand(metadata(), { projectId })),
+    remove: () =>
+      transport.emit(
+        createProjectRegistrationCommand(metadata(), { step: "remove-from-list", projectId }),
+      ),
+  };
+  const release = (outcome: ProjectStorageActivationOutcome) => held.resolve(outcome);
+  const ready = (): ProjectStorageActivationOutcome => ({
+    status: "ready",
+    session: coordinator.session,
+  });
+  return { projectId, held, entered, transport, listed, dispose, send, release, ready };
+}
+
+type Race = Awaited<ReturnType<typeof raceRuntime>>;
+
+async function withRace(
+  body: (race: Race) => Promise<void>,
+  enterQueue?: HeldProjectRunner,
+): Promise<void> {
+  const race = await raceRuntime(enterQueue);
+  try {
+    await body(race);
+  } finally {
+    race.release(race.ready());
+    await race.dispose();
+  }
+}
+
+// Admits an activation, sends the removal while it is held, then settles the activation.
+async function removeDuringHeldActivation(race: Race, outcome: ProjectStorageActivationOutcome) {
+  const activated = race.transport.settled("project.activate.result");
+  const removed = race.transport.settled("project.registration.result");
+  race.send.activate();
+  await race.entered.promise;
+  race.send.remove();
+  race.release(outcome);
+  return { activated: await activated, removed: await removed };
 }
 
 let sequence = 700;
@@ -88,6 +126,12 @@ class EventTransport extends TestTransport {
     if (typeof event === "string") this.#waiting.get(event)?.(Reflect.get(message, "payload"));
   }
 
+  eventNames(): unknown[] {
+    return this.sent.map((message) =>
+      typeof message === "object" && message !== null ? Reflect.get(message, "event") : undefined,
+    );
+  }
+
   settled(event: string): Promise<unknown> {
     return new Promise((resolve) => this.#waiting.set(event, resolve));
   }
@@ -95,98 +139,59 @@ class EventTransport extends TestTransport {
 
 it.runIf(process.platform === "win32")(
   "refuses to hide a Project whose activation was admitted before the removal",
-  async () => {
-    const race = await raceRuntime();
-    try {
-      const remove = { step: "remove-from-list", projectId: race.projectId } as const;
-      const activated = race.transport.settled("project.activate.result");
-      const removed = race.transport.settled("project.registration.result");
-
-      race.transport.emit(createProjectActivateCommand(metadata(), { projectId: race.projectId }));
-      await race.entered.promise;
-      race.transport.emit(createProjectRegistrationCommand(metadata(), remove));
-      race.held.resolve({ status: "ready", session: race.coordinator.session });
-
-      expect(await activated).toMatchObject({ status: "active" });
-      expect(await removed).toEqual({ status: "rejected", code: "PROJECT_ACTIVE" });
+  () =>
+    withRace(async (race) => {
+      const { activated, removed } = await removeDuringHeldActivation(race, race.ready());
+      expect(activated).toMatchObject({ status: "active" });
+      expect(removed).toEqual({ status: "rejected", code: "PROJECT_ACTIVE" });
       expect(await race.listed()).toEqual([race.projectId]);
-    } finally {
-      race.held.resolve({ status: "ready", session: race.coordinator.session });
-      await race.dispose();
-    }
-  },
+    }),
 );
 
 it.runIf(process.platform === "win32")(
   "activates a Project normally when its removal settled first",
-  async () => {
-    const race = await raceRuntime();
-    try {
-      const remove = { step: "remove-from-list", projectId: race.projectId } as const;
+  () =>
+    withRace(async (race) => {
       const removed = race.transport.settled("project.registration.result");
-      race.transport.emit(createProjectRegistrationCommand(metadata(), remove));
+      race.send.remove();
       expect(await removed).toEqual({ status: "removed", projectId: race.projectId });
 
       const activated = race.transport.settled("project.activate.result");
-      race.transport.emit(createProjectActivateCommand(metadata(), { projectId: race.projectId }));
+      race.send.activate();
       await race.entered.promise;
-      race.held.resolve({ status: "ready", session: race.coordinator.session });
+      race.release(race.ready());
 
       expect(await activated).toMatchObject({ status: "active" });
       expect(await race.listed()).toEqual([]);
-    } finally {
-      race.held.resolve({ status: "ready", session: race.coordinator.session });
-      await race.dispose();
-    }
-  },
+    }),
 );
 
 it.runIf(process.platform === "win32")(
   "hides the Project when the activation admitted before the removal fails",
-  async () => {
-    const race = await raceRuntime();
-    try {
-      const remove = { step: "remove-from-list", projectId: race.projectId } as const;
-      const activated = race.transport.settled("project.activate.result");
-      const removed = race.transport.settled("project.registration.result");
-
-      race.transport.emit(createProjectActivateCommand(metadata(), { projectId: race.projectId }));
-      await race.entered.promise;
-      race.transport.emit(createProjectRegistrationCommand(metadata(), remove));
-      race.held.resolve({ status: "broken", message: "private storage failure" });
-
-      expect(await activated).toMatchObject({ status: "broken" });
-      expect(await removed).toEqual({ status: "removed", projectId: race.projectId });
+  () =>
+    withRace(async (race) => {
+      const { activated, removed } = await removeDuringHeldActivation(race, {
+        status: "broken",
+        message: "private storage failure",
+      });
+      expect(activated).toMatchObject({ status: "broken" });
+      expect(removed).toEqual({ status: "removed", projectId: race.projectId });
       expect(await race.listed()).toEqual([]);
-    } finally {
-      race.held.resolve({ status: "ready", session: race.coordinator.session });
-      await race.dispose();
-    }
-  },
+    }),
 );
 
 it.runIf(process.platform === "win32")(
   "answers an internal failure, never removed, when the removal cannot enter the queue",
-  async () => {
-    const race = await raceRuntime(() => Promise.reject(new Error("private queue failure")));
-    try {
-      const remove = { step: "remove-from-list", projectId: race.projectId } as const;
-      const failed = race.transport.settled("request.failure");
-      race.transport.emit(createProjectRegistrationCommand(metadata(), remove));
+  () =>
+    withRace(
+      async (race) => {
+        const failed = race.transport.settled("request.failure");
+        race.send.remove();
 
-      expect(await failed).toMatchObject({ code: "HARNESS_INTERNAL_FAILURE" });
-      expect(
-        race.transport.sent.some(
-          (message) =>
-            typeof message === "object" &&
-            message !== null &&
-            Reflect.get(message, "event") === "project.registration.result",
-        ),
-      ).toBe(false);
-      expect(await race.listed()).toEqual([race.projectId]);
-    } finally {
-      race.held.resolve({ status: "ready", session: race.coordinator.session });
-      await race.dispose();
-    }
-  },
+        expect(await failed).toMatchObject({ code: "HARNESS_INTERNAL_FAILURE" });
+        expect(race.transport.eventNames()).not.toContain("project.registration.result");
+        expect(await race.listed()).toEqual([race.projectId]);
+      },
+      () => Promise.reject(new Error("private queue failure")),
+    ),
 );
