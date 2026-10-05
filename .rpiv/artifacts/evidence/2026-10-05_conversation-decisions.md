@@ -17,3 +17,20 @@ Baseline: the decisions recorded in `PRODUCT.md`, `discover/2026-08-22_19-18-10_
 - **Level 2, on explicit request.** A summary of a Waypoint's conversation enters a Project-scoped message only when the user asks for it, as a declared scope expansion that needs confirmation (FR48). How and when summaries are produced is decided later; a model-produced summary is its own recorded invocation.
 - **Level 3 rejected.** Full Waypoint conversation transcripts never enter the Project conversation.
 - Waypoint and Project conversation histories stay separate (FR45). Neither conversation controls the other; information moves through accepted decisions (canonical state) or explicit, confirmed attachment.
+
+## 2. Talking about Waypoints from the Project conversation (2026-10-05)
+
+- **Problem raised by the user.** Entering each Waypoint conversation for every change means many jumps between many Waypoints.
+- **Accepted: one place to talk, the destination always visible.**
+  - The Project conversation is the default place to write.
+  - When a request concerns concrete Waypoint work, the model may *suggest* a destination ("This concerns Waypoint X. Send it there?"). The user confirms or corrects it; nothing is routed silently.
+  - A message sent to a Waypoint is stored in that Waypoint's conversation, so its history stays focused. The Project conversation keeps a short linked line.
+  - The user enters a Waypoint conversation only for long, focused discussion.
+  - Changes to an accepted plan stay reviewed proposals; changes to running work use the existing Run amendment flow.
+- **Amends FR24.** Scope is never inferred *silently*: a model-suggested destination is allowed only as a visible suggestion the user confirms.
+- **Explicit Waypoint references.**
+  - On the map, a Waypoint's menu offers to put it into the composer as a removable reference chip.
+  - In the composer, typing `@` opens a searchable picker (keyboard equivalent), as in code editors. The same picker can later list other attachable items (files, selections), shown with distinct type markers.
+  - A chip makes the destination explicit, so no model guess is needed.
+  - Proposed split, to confirm when the slice is planned: "Mention" (talk about the Waypoint in the Project conversation; its detailed status joins the context) versus "Send to" (the message goes to the Waypoint's conversation).
+- **Timing.** Waypoint references arrive with the slice that builds the map and Waypoints (after Frame), not with the first Conversation slice. The `@` picker for files follows the attachments work.
