@@ -51,7 +51,8 @@ SlopStop starts as an empty private repository but already has confirmed product
 
 ### Persistence
 
-- Use `@libsql/client` with Drizzle when the first persistence behavior lands.
+- Use Drizzle to generate the SQL migrations, and Node's built-in `node:sqlite` inside the harness database worker to run them and every query.
+  - Amendment (2026-10-05): this replaces the original `@libsql/client` choice. The libSQL native addon crashed the worker from a GC finalizer that closed an already-freed connection; see `.rpiv/artifacts/evidence/2026-10-04_vitest-coverage-worker-crash-and-gate-baseline.md`.
 - Store canonical state in `slopstop.db` and Mastra-owned state in `mastra.db` under Electron `userData/projects/<project-id>/`.
 - Use WAL, foreign keys, a busy timeout, short transactions, and serialized canonical writes.
 - Commit Drizzle-generated SQL migrations. Before a forward migration, create and verify a database-native backup; refuse databases newer than the app.
