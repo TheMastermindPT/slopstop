@@ -95,3 +95,10 @@ tags: [testing, gate, vitest, coverage, pre-existing]
   - Approved oracle change: remove the packaged-smoke assertion that requires the libSQL binding.
   - Accepted risks: `node:sqlite` is still experimental (release-candidate stability) and tied to Electron's Node/SQLite version; SQLite message texts can differ; macOS/Linux and a long soak are not yet tested.
   - This supersedes the libSQL choice in ADR 0001 and in `evidence/2026-10-03_effect-sql-owner-decision.md` for the worker's database binding.
+
+## node:sqlite merged; registration project and disk-heavy test — Human Decisions (2026-10-05)
+
+- **Merge.** The swap was merged into main as `6a12c42`. Compared over 3 alternating rounds of the 13 registration files, libSQL against node:sqlite: no case was slower on node:sqlite by median, nothing hung, and the sum of medians fell from 377 s to 280 s.
+- **Residual timeouts.** The remaining full-suite timeouts come from the known near-limit registration family. The selection-switch case alone takes 11–14 s.
+- **User decision: option C.** The registration integration files run in their own Vitest project with low parallelism. Timeouts, assertions and thresholds stay unchanged.
+- **User decision: reclassify the rebuild-authorization case.** "authorizes only the pinned canonical storage-identity rebuild" (`project-storage-node-adapters.test.ts`) moves to the integration project. It performs about 400 real filesystem operations over 34 temporary trees, and Windows latency under parallel load (probably Defender) grows those operations 4–6 times, past 5 s. Its assertions stay unchanged.
