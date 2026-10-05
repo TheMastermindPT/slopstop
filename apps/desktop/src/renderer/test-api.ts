@@ -17,7 +17,7 @@ export function exposeApi(api: SlopStopApi): void {
 
 /** Preload methods a test does not exercise; each throws if it is called anyway. */
 export const unusedWorkspaceApi = {
-  listProjects: async () => ({ status: "listed" as const, projects: [] }),
+  listProjects: async () => ({ status: "listed" as const, projects: [], hiddenCount: 0 }),
   getRegistrationCapability: async () => ({ status: "available" as const }),
   chooseRepository: async () => {
     throw new Error("chooseRepository is not used by this test.");

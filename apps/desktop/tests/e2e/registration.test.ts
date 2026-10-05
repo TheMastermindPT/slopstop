@@ -131,6 +131,7 @@ test("refuses a renderer-supplied directory without reaching the harness", async
     expect(await page.evaluate(() => window.slopstop.listProjects())).toEqual({
       status: "listed",
       projects: [],
+      hiddenCount: 0,
     });
   } finally {
     await application.close();
@@ -198,6 +199,11 @@ test("removes a Project from the list in the real window and brings it back by r
       }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: /^Open Project repository/ })).toHaveCount(0);
+    await expect(
+      page.getByText(
+        "No Projects in your list. Removed Projects come back when you add their folder again.",
+      ),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Add existing repository" })).toBeFocused();
 
     await answerFolderDialog(application, repository);

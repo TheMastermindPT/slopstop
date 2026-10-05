@@ -38,6 +38,7 @@ function listOf(...ids: string[]): ProjectListResult {
   return decodeStrict(ProjectListResultSchema, {
     status: "listed",
     projects: all.filter((project) => ids.includes(project.projectId)),
+    hiddenCount: 0,
   });
 }
 

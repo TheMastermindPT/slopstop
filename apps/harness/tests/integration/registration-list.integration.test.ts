@@ -161,6 +161,7 @@ it.runIf(process.platform === "win32").each([
           access: "not-assessed",
         },
       ],
+      hiddenCount: 0,
     };
     expect(await owner.listProjects()).toEqual(expected);
     expect(await owner.listProjects()).toEqual(expected);
@@ -190,7 +191,7 @@ it("lists an empty new installation but never replaces witnessed or malformed re
   const registry = createRegistrationRegistry(options);
   const owner = createProjectRegistrationOwner(registry, options, root);
   try {
-    expect(await owner.listProjects()).toEqual({ status: "listed", projects: [] });
+    expect(await owner.listProjects()).toEqual({ status: "listed", projects: [], hiddenCount: 0 });
     await expect(
       lstat(path.join(options.applicationStorageRoot, "projects")),
     ).rejects.toMatchObject({ code: "ENOENT" });
@@ -302,6 +303,7 @@ it("lists older unbound Storage in migration-required safe mode without rewritin
           },
         },
       ],
+      hiddenCount: 0,
     });
     expect(await readFile(canonicalPath)).toEqual(beforeDatabase);
     expect(await readFile(manifestPath)).toEqual(beforeManifest);

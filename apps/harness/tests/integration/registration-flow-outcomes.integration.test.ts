@@ -48,6 +48,7 @@ it.runIf(process.platform === "win32")(
             name: "repository",
           }),
         ],
+        hiddenCount: 0,
       });
     } finally {
       await session.dispose();
@@ -130,7 +131,7 @@ it.runIf(process.platform === "win32")(
         code: "GIT_QUERY_FAILED",
         exitCode: 128,
       });
-      expect(await session.list()).toEqual({ status: "listed", projects: [] });
+      expect(await session.list()).toEqual({ status: "listed", projects: [], hiddenCount: 0 });
     } finally {
       await session.dispose();
     }

@@ -29,6 +29,7 @@ const namedAndUnbound = decodeStrict(ProjectListResultSchema, {
       storage: { status: "healthy", storageId: unboundId, generationId: unboundId },
     },
   ],
+  hiddenCount: 0,
 });
 
 function renderWithList(list: ProjectListResult, linux = false) {
@@ -108,9 +109,21 @@ describe("Projects list", () => {
   });
 
   it("invites adding a repository when no Projects are saved", async () => {
-    renderWithList({ status: "listed", projects: [] });
+    renderWithList({ status: "listed", projects: [], hiddenCount: 0 });
     expect(
       await screen.findByText("No saved Projects yet. Add an existing repository to start."),
     ).toBeTruthy();
+  });
+
+  it("says removed Projects come back when every saved Project is hidden", async () => {
+    renderWithList({ status: "listed", projects: [], hiddenCount: 2 });
+    expect(
+      await screen.findByText(
+        "No Projects in your list. Removed Projects come back when you add their folder again.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("No saved Projects yet. Add an existing repository to start."),
+    ).toBeNull();
   });
 });

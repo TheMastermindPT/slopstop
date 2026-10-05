@@ -32,6 +32,7 @@ function registeredProjectList(id: string, storage: unknown) {
         storage,
       },
     ],
+    hiddenCount: 0,
   });
 }
 
@@ -135,6 +136,7 @@ describe("desktop shell", () => {
                 storage: { status: "healthy", storageId: projectId, generationId: projectId },
               },
             ],
+            hiddenCount: 0,
           });
         },
         activateProject: async (request) => {
@@ -206,6 +208,7 @@ describe("desktop shell", () => {
             repositoryLocation: { status: "present" },
             storage: { status: "healthy", storageId: projectId, generationId: projectId },
           })),
+          hiddenCount: 0,
         }),
       activateProject: async (request) =>
         decodeStrict(CanonicalProjectActivationResultSchema, {

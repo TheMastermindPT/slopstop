@@ -89,6 +89,10 @@ export function ProjectRows({ list, ...props }: RowProps & Readonly<{ list: List
   if (list.status === "idle") return <p>Connect to the harness to read saved Projects.</p>;
   if (list.status === "loading") return <p aria-live="polite">Loading saved Projects…</p>;
   if (list.status !== "listed") return <ListProblem list={list} />;
+  if (list.projects.length === 0 && list.hiddenCount > 0)
+    return (
+      <p>No Projects in your list. Removed Projects come back when you add their folder again.</p>
+    );
   if (list.projects.length === 0)
     return <p>No saved Projects yet. Add an existing repository to start.</p>;
   return (

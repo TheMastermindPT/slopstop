@@ -66,6 +66,24 @@ it.runIf(process.platform === "win32")(
   },
 );
 
+it.runIf(process.platform === "win32")(
+  "reports how many Projects are hidden from the list",
+  async () => {
+    const session = await registrationSession();
+    try {
+      const { git, projectId } = await registeredProject(session);
+      expect(await session.list()).toMatchObject({ status: "listed", hiddenCount: 0 });
+      await session.register({ step: "remove-from-list", projectId });
+      expect(await session.list()).toEqual({ status: "listed", projects: [], hiddenCount: 1 });
+
+      await session.prepareFolder(session.directory, git);
+      expect(await session.list()).toMatchObject({ status: "listed", hiddenCount: 0 });
+    } finally {
+      await session.dispose();
+    }
+  },
+);
+
 it.runIf(process.platform === "win32")("keeps an interrupted registration visible", async () => {
   const session = await registrationSession();
   try {

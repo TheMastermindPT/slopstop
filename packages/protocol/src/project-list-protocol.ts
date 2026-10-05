@@ -83,6 +83,8 @@ export const ProjectListEntrySchema = Schema.Union([
 export const ProjectListSchema = Schema.Struct({
   status: Schema.Literal("listed"),
   projects: Schema.Array(ProjectListEntrySchema),
+  /** How many Projects Remove from list hid; they come back when their folder is added again. */
+  hiddenCount: Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0)),
 });
 export type ProjectList = typeof ProjectListSchema.Type;
 

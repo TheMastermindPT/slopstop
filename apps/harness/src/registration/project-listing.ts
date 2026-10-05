@@ -41,6 +41,17 @@ function visibleRecords(
   );
 }
 
+// A hidden Project counts only while the list leaves it out; incomplete ones stay listed.
+function hiddenProjectCount(
+  records: Awaited<ReturnType<typeof readProjectRegistrationRecords>>,
+  hidden: ReadonlySet<string>,
+) {
+  const listed = new Set<string>(
+    visibleRecords(records, hidden).map(({ reservation }) => reservation.projectId),
+  );
+  return [...hidden].filter((projectId) => !listed.has(projectId)).length;
+}
+
 function byProjectId(a: Readonly<{ projectId: string }>, b: Readonly<{ projectId: string }>) {
   if (a.projectId === b.projectId) return 0;
   return a.projectId < b.projectId ? -1 : 1;
@@ -129,7 +140,12 @@ async function readListingState(transaction: LocalLibsqlTransaction) {
   );
   if (Result.isFailure(stored))
     throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-  return { records: visibleRecords(records, hidden), storedProjects: stored.success, hidden };
+  return {
+    records: visibleRecords(records, hidden),
+    storedProjects: stored.success,
+    hidden,
+    hiddenCount: hiddenProjectCount(records, hidden),
+  };
 }
 
 type ListingState = Awaited<ReturnType<typeof readListingState>>;
@@ -214,6 +230,7 @@ export async function listRegisteredProjects(
     return decodeStrict(ProjectListSchema, {
       status: "listed",
       projects: entries.sort(byProjectId),
+      hiddenCount: state.hiddenCount,
     });
   } catch (error) {
     return registryFailure(error);

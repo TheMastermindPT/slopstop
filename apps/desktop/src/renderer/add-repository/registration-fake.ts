@@ -61,6 +61,7 @@ function listedRepository(): ProjectListResult {
         storage: { status: "healthy", storageId: projectId, generationId: projectId },
       },
     ],
+    hiddenCount: 0,
   });
 }
 
@@ -100,7 +101,7 @@ export function registrationApi(
       return result;
     },
     listProjects: async () =>
-      registered ? listedRepository() : { status: "listed", projects: [] },
+      registered ? listedRepository() : { status: "listed", projects: [], hiddenCount: 0 },
     ...overrides,
   });
   return { api, calls, chooseRepository, steps: () => calls.map((call) => call.step) };

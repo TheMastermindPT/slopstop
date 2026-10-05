@@ -40,9 +40,13 @@ it("returns a real list response and does not confuse disconnect with an empty i
   const { session, port, bridge } = setup();
   const listed = bridge.list();
   port.emit("message", {
-    data: createProjectListResultEvent(port.metadata(), { status: "listed", projects: [] }),
+    data: createProjectListResultEvent(port.metadata(), {
+      status: "listed",
+      projects: [],
+      hiddenCount: 0,
+    }),
   });
-  expect(await listed).toEqual({ status: "listed", projects: [] });
+  expect(await listed).toEqual({ status: "listed", projects: [], hiddenCount: 0 });
   const pending = bridge.list();
   session.detach();
   expect(await pending).toEqual({ status: "broken", code: "PROJECT_LIST_TRANSPORT_FAILED" });
