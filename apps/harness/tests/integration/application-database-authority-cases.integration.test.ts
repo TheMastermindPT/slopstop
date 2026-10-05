@@ -3,9 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { expect, it } from "vitest";
-import { createApplicationDatabaseAuthority } from "./application-database-authority.js";
-import { ApplicationDatabaseFault } from "./application-database-migration.js";
-import { createWorkerLocalLibsqlClient } from "./local-libsql-worker-client.js";
+import { createApplicationDatabaseAuthority } from "../../src/storage/application-database-authority.js";
+import { ApplicationDatabaseFault } from "../../src/storage/application-database-migration.js";
+import { createWorkerLocalLibsqlClient } from "../../src/storage/local-libsql-worker-client.js";
 
 const migrationResourcesRoot = path.resolve(import.meta.dirname, "../../drizzle");
 
