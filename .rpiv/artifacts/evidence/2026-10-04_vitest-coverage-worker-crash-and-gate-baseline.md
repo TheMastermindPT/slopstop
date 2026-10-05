@@ -79,3 +79,19 @@ tags: [testing, gate, vitest, coverage, pre-existing]
   - "verifies and releases only the current durable Writer fence", 2.56 s alone.
   
   Every other test in the four direct-libSQL unit files takes under 0.4 s alone.
+
+## Root cause found and libsql replaced by node:sqlite — Human Decision (2026-10-05)
+
+- **Root cause.** Found with a ProcDump capture, the official Node PDBs and a portable cdb. A N-API finalizer of a libsql handle, run as a native immediate on the libSQL worker thread's event loop after GC, calls `sqlite3_close` on an already freed `sqlite3*` (use-after-free; inferred from the struct layout, `eOpenState` at `+0x71`). Our code does not call it, and it is not worker teardown. The upstream issue draft is `evidence/2026-10-05_libsql-js-upstream-issue-draft.md`; it is not posted.
+- **Feasibility spike for `node:sqlite` inside the worker, with explicit close and no forced `gc()`:**
+  - Electron 43.4.0 ships Node 24.18.1 with SQLite 3.53.1, unflagged and with no warning;
+  - Drizzle is used only for schema and SQL generation;
+  - no libsql-only features are used;
+  - the repro loop gave 17/17 clean runs;
+  - rename right after close worked 20/20 with no GC;
+  - full integration: 1683 passed, 0 failures, 0 crashes, in 296 s;
+  - `package:launch-smoke` passed with no libsql addon.
+- **User decision: replace `@libsql/client`/`libsql` with `node:sqlite`.** The worker stays the native boundary, and the worker protocol stays the same.
+  - Approved oracle change: remove the packaged-smoke assertion that requires the libSQL binding.
+  - Accepted risks: `node:sqlite` is still experimental (release-candidate stability) and tied to Electron's Node/SQLite version; SQLite message texts can differ; macOS/Linux and a long soak are not yet tested.
+  - This supersedes the libSQL choice in ADR 0001 and in `evidence/2026-10-03_effect-sql-owner-decision.md` for the worker's database binding.
