@@ -67,3 +67,9 @@ tags: [testing, gate, vitest, coverage, pre-existing]
   - (B) a higher timeout for the registration tests;
   - (C) a separate low-parallelism registration project. This is the fallback if A proves too slow.
 - **Result** (`d4a5696`, merged into main by fast-forward). One full run on a quiet machine: exit 0 in 388.5 s, 1670 passed, 0 failures, 0 timeouts, 0 crashes. Compared with the 435.8 s baseline, the suite was faster, not slower: less CPU contention. This is one sample only, and it does not show that the intermittent libsql crash is gone.
+
+## Real-command unit cases become integration tests (2026-10-05)
+
+- **User decision.** The 10 unit cases that build a real Project Storage move to the harness integration project, with assertions unchanged. They come from `active-project-coordinator.test.ts` and `harness-runtime.test.ts`, and take 0.7–1.9 s each when run alone. They take the integration timeout and the reduced parallelism. AGENTS.md classifies real-adapter tests as integration tests.
+- **Accepted loss.** These cases leave the fast `pnpm check` gate.
+- **Out of scope for now.** Six unit files import helpers from `tests/integration/`.
