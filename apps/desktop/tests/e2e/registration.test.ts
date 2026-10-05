@@ -136,3 +136,41 @@ test("refuses a renderer-supplied directory without reaching the harness", async
     await application.close();
   }
 });
+
+test("adds a repository through the add flow in the real window and opens it", async () => {
+  test.setTimeout(120_000);
+  const { application, repository } = await launchWithFreshUserData();
+  try {
+    const page = await application.firstWindow();
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const add = page.getByRole("button", { name: "Add existing repository", exact: true });
+    await expect(add).toBeVisible();
+    await answerFolderDialog(application, repository);
+    await add.click();
+    const heading = (name: string) => page.getByRole("heading", { level: 2, name, exact: true });
+    await expect(heading("Do you trust this repository?")).toBeFocused();
+    await expect(page.getByText(repository, { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Trust and continue" }).click();
+    await expect(heading("Check the Git program")).toBeFocused();
+    await page.getByRole("button", { name: "Run version check" }).click();
+    await expect(heading("Allow Git to identify repository?")).toBeFocused();
+    await page.getByRole("button", { name: "Allow 6 queries" }).click();
+    await expect(heading("Ready to add repository")).toBeFocused();
+    await page.getByRole("button", { name: "Confirm registration" }).click();
+    await expect(heading("repository was added")).toBeFocused();
+    await expect(page.getByRole("button", { name: "Open Project repository, new" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Open Project", exact: true }).click();
+    await expect(heading("Project repository")).toBeVisible();
+    await expect(page.getByText("Read-write", { exact: true })).toBeVisible();
+
+    await answerFolderDialog(application, repository);
+    await add.click();
+    await page.getByRole("button", { name: "Trust and continue" }).click();
+    await expect(heading("repository is already registered")).toBeFocused();
+    expect(errors).toEqual([]);
+  } finally {
+    await application.close();
+  }
+});
