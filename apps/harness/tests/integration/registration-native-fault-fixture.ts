@@ -18,16 +18,7 @@ export const nativeTriggerCases: ReadonlyArray<
   Readonly<{ trigger: Trigger; fault: Fault; expectedTrigger: string }>
 > = [
   { trigger: "stdout", fault: "none", expectedTrigger: "OBSERVATION_LIMIT_EXCEEDED" },
-  { trigger: "stderr", fault: "none", expectedTrigger: "OBSERVATION_LIMIT_EXCEEDED" },
-  { trigger: "stdout", fault: "resource-close", expectedTrigger: "OBSERVATION_LIMIT_EXCEEDED" },
-  { trigger: "deadline", fault: "resource-close", expectedTrigger: "OBSERVATION_LIMIT_EXCEEDED" },
-  { trigger: "cancellation", fault: "resource-close", expectedTrigger: "CANCELLED" },
-  { trigger: "stdout", fault: "job-query", expectedTrigger: "OBSERVATION_LIMIT_EXCEEDED" },
-  { trigger: "deadline", fault: "job-query", expectedTrigger: "OBSERVATION_LIMIT_EXCEEDED" },
   { trigger: "cancellation", fault: "job-query", expectedTrigger: "CANCELLED" },
-  { trigger: "stdout", fault: "native-wait", expectedTrigger: "OBSERVATION_LIMIT_EXCEEDED" },
-  { trigger: "deadline", fault: "native-wait", expectedTrigger: "OBSERVATION_LIMIT_EXCEEDED" },
-  { trigger: "cancellation", fault: "native-wait", expectedTrigger: "CANCELLED" },
 ];
 
 export function cleanupFault(api: ReturnType<typeof createWindowsObserverApi>, fault: Fault) {

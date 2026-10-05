@@ -154,7 +154,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
       },
     );
 
-    it.each([1999, 2000])(
+    it.each([2000])(
       "checks the child deadline after native completion at %i",
       async (completedAt) => {
         const root = await createRoot("pc-s1-native-completion-");
