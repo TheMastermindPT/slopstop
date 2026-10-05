@@ -212,4 +212,4 @@ A push attempt (CLI and GitHub Desktop) failed because the `.husky/pre-push` dee
 
 - **S6b approved.** Cut the native permutation tests from about 32 to about 8, keeping one case per distinct behaviour. Assertions of the kept cases do not change.
 - **SQL path 2 approved.** SQL bodies move to Effect programs over the database worker; it stays in the queue after Conversation.
-- **Provisional (a), the check-then-hide race:** explained to the user; decision pending.
+- **Provisional (a) closed with option A (fix).** The active-Project check and the hide run inside the coordinator queue that already serialises activation, so no activation can land between them. A behaviour test reproduces the race first. Fixed before Conversation.
