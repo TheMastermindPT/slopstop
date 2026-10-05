@@ -5,7 +5,7 @@ import { Worker } from "node:worker_threads";
 import { Result, Schema } from "effect";
 
 /** A value a statement argument may carry, as the libSQL client accepted it. */
-export type InValue = null | string | number | bigint | ArrayBuffer | boolean | Uint8Array | Date;
+type InValue = null | string | number | bigint | ArrayBuffer | boolean | Uint8Array | Date;
 /** Positional or named statement arguments. */
 export type InArgs = ReadonlyArray<InValue> | Readonly<Record<string, InValue>>;
 /** One SQL statement, with or without arguments. */

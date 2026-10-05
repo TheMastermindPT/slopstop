@@ -22,7 +22,6 @@
         "src/process-entry.ts",
         "src/storage/{application,canonical,runtime}-schema.ts"
       ],
-      "ignoreDependencies": ["libsql"],
       "project": ["src/**/*.ts", "tests/**/*.ts"]
     },
     "packages/kernel": {

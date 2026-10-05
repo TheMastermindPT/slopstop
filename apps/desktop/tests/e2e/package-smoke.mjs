@@ -81,20 +81,6 @@ function packagedOutputDirectory() {
   return activePackageOutput;
 }
 
-function targetBindingPrefixes() {
-  const target = `${process.platform}-${process.arch}`;
-  switch (target) {
-    case "linux-arm":
-      return ["linux-arm-gnueabihf", "linux-arm-musleabihf"];
-    case "linux-arm64":
-      return ["linux-arm64-gnu", "linux-arm64-musl"];
-    case "linux-x64":
-      return ["linux-x64-gnu", "linux-x64-musl"];
-    default:
-      return [target];
-  }
-}
-
 function packagedExecutable() {
   const output = packagedOutputDirectory();
   if (process.platform === "win32") {
@@ -146,15 +132,6 @@ async function assertPackagedMigrations(resources) {
 async function assertPackagedNativeBindings(resources) {
   const nativeRoot = path.join(resources, "app.asar.unpacked");
   const bindings = await collectNodeBindings(nativeRoot);
-  for (const targetPrefix of targetBindingPrefixes()) {
-    const found = bindings.some((binding) => {
-      const packagedPath = path.relative(nativeRoot, binding).split(path.sep).join("/");
-      return packagedPath.startsWith(`.vite/build/node_modules/@libsql/${targetPrefix}`);
-    });
-    if (!found) {
-      throw new Error("Packaged SlopStop is missing the target libSQL native binding.");
-    }
-  }
   const koffiPrefix = `.vite/build/node_modules/@koromix/koffi-${process.platform}-${process.arch}/`;
   const koffiFound = bindings.some((binding) => {
     const packagedPath = path.relative(nativeRoot, binding).split(path.sep).join("/");

@@ -16,14 +16,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@libsql/client": "catalog:",
     "@slopstop/kernel": "workspace:*",
     "@slopstop/protocol": "workspace:*",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "fs-native-extensions": "catalog:",
     "koffi": "catalog:",
-    "libsql": "catalog:",
     "pino": "catalog:"
   },
   "devDependencies": {
