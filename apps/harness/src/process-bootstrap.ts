@@ -122,7 +122,7 @@ export function startHarnessProcessRuntime(
         registration.flow,
         createListRemoval({
           options: registration.options,
-          activeProjectId: services.canonicalProjects.activeProjectId,
+          withHeldProject: services.canonicalProjects.withHeldProject,
         }),
       ),
       projectListing: registrationListing(registration),
@@ -192,7 +192,7 @@ class ProjectRegistration extends Context.Service<
 >()("slopstop/harness/ProjectRegistration") {}
 class CanonicalProjects extends Context.Service<
   CanonicalProjects,
-  CanonicalProjectApplication & Pick<ActiveProjectCoordinatorWithHeld, "activeProjectId">
+  CanonicalProjectApplication & Pick<ActiveProjectCoordinatorWithHeld, "withHeldProject">
 >()("slopstop/harness/CanonicalProjects") {}
 
 const applicationDatabaseLayer = Layer.effect(
@@ -285,7 +285,7 @@ const canonicalProjectsLayer = Layer.effect(
     });
     return {
       ...createCanonicalProjectApplication(coordinator),
-      activeProjectId: coordinator.activeProjectId,
+      withHeldProject: coordinator.withHeldProject,
     };
   }),
 );

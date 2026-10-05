@@ -2,6 +2,7 @@ import {
   CanonicalProjectCommandRequestSchema,
   decodeStrict,
   ProjectActivationIdSchema,
+  type ProjectId,
   ProjectIdSchema,
   ProjectStorageOpenResultSchema,
   WriterGenerationSchema,
@@ -61,10 +62,10 @@ export function failure(status: keyof typeof commandFailures, input = command) {
   };
 }
 
-function openedResult() {
+function openedResult(id: ProjectId) {
   const result = decodeStrict(ProjectStorageOpenResultSchema, {
     status: "opened",
-    request,
+    request: { projectId: id },
     mode: "read-write",
     identity: {
       storageId: "00000000-0000-4000-8000-000000000013",
@@ -109,10 +110,11 @@ function coordinatorObservations() {
   return { calls, faults, touch };
 }
 
-export function fixture(realCommands = false) {
-  const real = createMigratedSettlement(projectId);
+/** A coordinator over controllable fakes; `id` names the Project its storage opens. */
+export function fixture(realCommands = false, id: ProjectId = projectId) {
+  const real = createMigratedSettlement(id);
   const { calls, faults, touch } = coordinatorObservations();
-  const result = openedResult();
+  const result = openedResult(id);
   const session = {
     mode: "read-write" as const,
     result,
@@ -124,7 +126,7 @@ export function fixture(realCommands = false) {
     }),
   };
   const repository = {
-    projectId,
+    projectId: id,
     writerGeneration: decodeStrict(WriterGenerationSchema, 1),
     settle: vi.fn((text: string) => (realCommands ? real.settle(text) : unexpectedSettlement())),
     verifyFence: vi.fn(async (): Promise<WriterFenceCheck> => ({ status: "current" })),

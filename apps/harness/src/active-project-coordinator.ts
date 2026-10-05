@@ -46,11 +46,16 @@ export interface ActiveProjectCoordinator {
   execute(request: CanonicalProjectCommandRequest): Promise<CanonicalProjectCommandResult>;
   stop(): Promise<void>;
 }
-/** The coordinator plus a read of the Project it holds, for owners outside its queue. */
+/** The coordinator plus a queued view of the Project it holds, for owners outside its queue. */
 export type ActiveProjectCoordinatorWithHeld = ActiveProjectCoordinator &
   Readonly<{
-    /** The Project this session currently holds, including one it is still releasing. */
-    activeProjectId(): ProjectId | undefined;
+    /**
+     * Runs `operation` in the lifecycle queue with the Project this session holds, including
+     * one it is still releasing, so no activation, switch or stop lands while it runs.
+     */
+    withHeldProject<Result>(
+      operation: (held: ProjectId | undefined) => Promise<Result>,
+    ): Promise<Result>;
   }>;
 export type ActiveProjectCoordinatorDependencies = Readonly<{
   validateTarget?(
@@ -588,7 +593,7 @@ export function createActiveProjectCoordinator(
   const stopOnce = retryableAttempt(() => enqueue(stop));
 
   return {
-    activeProjectId: () => heldProjectId(state),
+    withHeldProject: (operation) => enqueue(() => operation(heldProjectId(state))),
     activate: (request) => enqueue(() => activateWithinLifecycle(request)),
     switchProject: (request) =>
       enqueue(async () => {

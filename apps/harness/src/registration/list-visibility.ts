@@ -63,25 +63,34 @@ function hideProject(transaction: LocalLibsqlTransaction, projectId: ProjectId) 
 }
 
 /**
- * Remove from list (option A). The active-Project guard lives only here: it reads the Project
- * the session holds before hiding, so moving it into the coordinator's queue stays local.
+ * Remove from list (option A). The active-Project guard lives only here, and it runs with the
+ * hide inside the coordinator's lifecycle queue: no activation can land between the two.
  */
 export function createListRemoval(
   dependencies: Readonly<{
     options: RegistrationDatabaseOptions;
-    activeProjectId(): ProjectId | undefined;
+    withHeldProject<Result>(
+      operation: (held: ProjectId | undefined) => Promise<Result>,
+    ): Promise<Result>;
   }>,
 ) {
+  const hide = (projectId: ProjectId): Effect.Effect<ProjectRegistrationResult> =>
+    withRegistryTransaction(dependencies.options, (transaction) =>
+      hideProject(transaction, projectId),
+    ).pipe(
+      Effect.catchTag("RegistryReadFailed", (failed) => Effect.succeed(failureOf(failed.failure))),
+    );
   return (projectId: ProjectId): Effect.Effect<ProjectRegistrationResult> =>
-    dependencies.activeProjectId() === projectId
-      ? Effect.succeed({ status: "rejected", code: "PROJECT_ACTIVE" })
-      : withRegistryTransaction(dependencies.options, (transaction) =>
-          hideProject(transaction, projectId),
-        ).pipe(
-          Effect.catchTag("RegistryReadFailed", (failed) =>
-            Effect.succeed(failureOf(failed.failure)),
-          ),
-        );
+    Effect.promise(() =>
+      dependencies.withHeldProject((held) =>
+        held === projectId
+          ? Promise.resolve<ProjectRegistrationResult>({
+              status: "rejected",
+              code: "PROJECT_ACTIVE",
+            })
+          : Effect.runPromise(hide(projectId)),
+      ),
+    );
 }
 
 /** The registration flow with Remove from list answered by the removal owner. */
