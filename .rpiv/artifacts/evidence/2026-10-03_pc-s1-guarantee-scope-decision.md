@@ -213,3 +213,8 @@ A push attempt (CLI and GitHub Desktop) failed because the `.husky/pre-push` dee
 - **S6b approved.** Cut the native permutation tests from about 32 to about 8, keeping one case per distinct behaviour. Assertions of the kept cases do not change.
 - **SQL path 2 approved.** SQL bodies move to Effect programs over the database worker; it stays in the queue after Conversation.
 - **Provisional (a) closed with option A (fix).** The active-Project check and the hide run inside the coordinator queue that already serialises activation, so no activation can land between them. A behaviour test reproduces the race first. Fixed before Conversation.
+
+## 17. Adding several repositories at once — Human Decision (2026-10-05)
+
+- **Now:** registration stays one repository at a time. Choosing a folder that only contains repositories (for example `Documents/GitHub`) shows the invalid-folder screen.
+- **Follow-up, after Conversation C1:** discuss adding every repository found inside a chosen folder, in the style the user likes in GitHub Desktop. First verify how GitHub Desktop actually behaves. The design must reconcile per-folder trust and the two-stage Git consent with a batch (for example a checklist confirmed once).
