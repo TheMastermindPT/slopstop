@@ -58,3 +58,11 @@ tags: [testing, gate, vitest, coverage, pre-existing]
 
 - The remaining heavy registration tests have no incidental setup to share. Each test registers one Project in its own installation and asserts on that installation's state. Alone under coverage they stay below ~7.5 s, and they cross 15 s only under parallel coverage load. Four observer "deadline" cases wait a real 5 s cleanup budget by design.
 - User decision: the remaining levers (fewer coverage workers for the integration project, or different timeouts) will be adjusted later, once the libsql crash no longer blocks the gate.
+
+## Integration timeouts: option A chosen (2026-10-05)
+
+- **Baseline.** The full harness integration run on a quiet machine took 435.8 s, with 12 timeouts of 15 s in registration-heavy files and 1 native crash.
+- **User decision: option A.** `test:integration` runs with `--maxWorkers=50%` as a CLI flag. Tests, timeouts and thresholds stay unchanged. The suite is expected to take about 1.5 times longer.
+- **Not chosen:**
+  - (B) a higher timeout for the registration tests;
+  - (C) a separate low-parallelism registration project. This is the fallback if A proves too slow.
