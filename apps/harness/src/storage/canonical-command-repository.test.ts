@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { InStatement } from "@libsql/client";
 import {
   CommandIdSchema,
   decodeStrict,
@@ -24,6 +23,7 @@ import {
 } from "../../tests/integration/canonical-command-repository-fixture.js";
 import { snapshotCanonicalCommand } from "../canonical-json.js";
 import * as repositories from "./canonical-command-repository.js";
+import type { InStatement } from "./local-libsql-worker-client.js";
 import {
   createWorkerLocalLibsqlClient,
   type LocalLibsqlClient,

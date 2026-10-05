@@ -1,6 +1,6 @@
-import type { InArgs, InStatement } from "@libsql/client";
 import { decodeStrict, NonEmptyTextSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
+import type { InArgs, InStatement } from "./local-libsql-worker-client.js";
 import type {
   ColumnSpec,
   DatabaseSpec,

@@ -1,6 +1,6 @@
 import type { DatabaseSync, SQLInputValue } from "node:sqlite";
-import type { InArgs, InStatement } from "@libsql/client";
 import { expect } from "vitest";
+import type { InArgs, InStatement } from "../../src/storage/local-libsql-worker-client.js";
 import type { ColumnSpec } from "../../src/storage/project-storage-database-specs.js";
 import {
   type DatabaseSpec,
