@@ -23,7 +23,9 @@ const unusedFlow: ProjectRegistrationFlow = {
 };
 
 /** A registered Project in a real installation, plus a runtime whose activation can be held. */
-async function raceRuntime() {
+type HeldProjectRunner = ReturnType<typeof fixture>["owner"]["withHeldProject"];
+
+async function raceRuntime(enterQueue?: HeldProjectRunner) {
   const session = await registrationSession();
   const { registered } = await registerFolder(session, session.directory);
   if (registered.status !== "registered") throw new Error("Registration missing");
@@ -45,7 +47,10 @@ async function raceRuntime() {
     ...switchRuntimeOptions(coordinator.owner, transport),
     projectRegistration: withListRemoval(
       unusedFlow,
-      createListRemoval({ options, withHeldProject: coordinator.owner.withHeldProject }),
+      createListRemoval({
+        options,
+        withHeldProject: enterQueue ?? coordinator.owner.withHeldProject,
+      }),
     ),
   });
   const dispose = async () => {
@@ -129,6 +134,56 @@ it.runIf(process.platform === "win32")(
 
       expect(await activated).toMatchObject({ status: "active" });
       expect(await race.listed()).toEqual([]);
+    } finally {
+      race.held.resolve({ status: "ready", session: race.coordinator.session });
+      await race.dispose();
+    }
+  },
+);
+
+it.runIf(process.platform === "win32")(
+  "hides the Project when the activation admitted before the removal fails",
+  async () => {
+    const race = await raceRuntime();
+    try {
+      const remove = { step: "remove-from-list", projectId: race.projectId } as const;
+      const activated = race.transport.settled("project.activate.result");
+      const removed = race.transport.settled("project.registration.result");
+
+      race.transport.emit(createProjectActivateCommand(metadata(), { projectId: race.projectId }));
+      await race.entered.promise;
+      race.transport.emit(createProjectRegistrationCommand(metadata(), remove));
+      race.held.resolve({ status: "broken", message: "private storage failure" });
+
+      expect(await activated).toMatchObject({ status: "broken" });
+      expect(await removed).toEqual({ status: "removed", projectId: race.projectId });
+      expect(await race.listed()).toEqual([]);
+    } finally {
+      race.held.resolve({ status: "ready", session: race.coordinator.session });
+      await race.dispose();
+    }
+  },
+);
+
+it.runIf(process.platform === "win32")(
+  "answers an internal failure, never removed, when the removal cannot enter the queue",
+  async () => {
+    const race = await raceRuntime(() => Promise.reject(new Error("private queue failure")));
+    try {
+      const remove = { step: "remove-from-list", projectId: race.projectId } as const;
+      const failed = race.transport.settled("request.failure");
+      race.transport.emit(createProjectRegistrationCommand(metadata(), remove));
+
+      expect(await failed).toMatchObject({ code: "HARNESS_INTERNAL_FAILURE" });
+      expect(
+        race.transport.sent.some(
+          (message) =>
+            typeof message === "object" &&
+            message !== null &&
+            Reflect.get(message, "event") === "project.registration.result",
+        ),
+      ).toBe(false);
+      expect(await race.listed()).toEqual([race.projectId]);
     } finally {
       race.held.resolve({ status: "ready", session: race.coordinator.session });
       await race.dispose();
