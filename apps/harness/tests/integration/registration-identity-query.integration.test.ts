@@ -259,3 +259,47 @@ it
     }
   },
 );
+
+it.runIf(process.platform === "win32" && process.arch === "x64")(
+  "reports cleanup unconfirmed when an identity query outlives the close budget (B3)",
+  async () => {
+    const { root, scenario } = await createNativeScenario();
+    try {
+      const request = await selectQueryRequest(scenario);
+      await scenario.registry.decideIdentityQueries({ ...scenario.request, decision: "accepted" });
+      await scenario.registry.decideRepositoryTrust({
+        repositorySelectionId: request.repositorySelectionId,
+        trustId: request.trustId,
+        decision: "accepted",
+      });
+      let started = () => {};
+      const running = new Promise<void>((resolve) => (started = resolve));
+      let release: (value: { status: "unavailable"; code: "GIT_UNAVAILABLE" }) => void = () => {};
+      const child: IdentityQueryChildPort = {
+        run: () => {
+          started();
+          return new Promise((resolve) => (release = resolve));
+        },
+      };
+      const owner = createRepositoryIdentityQueryOwner(
+        scenario.registry,
+        consentRegistryOptions(root),
+        root,
+        child,
+      );
+      const inspection = owner.inspectInsideWorkTree(request);
+      await running;
+      const closing = performance.now();
+      expect(await owner.close()).toEqual({
+        status: "pending-recovery",
+        code: "OBSERVER_CLEANUP_UNCONFIRMED",
+      });
+      expect(performance.now() - closing).toBeGreaterThanOrEqual(4990);
+      release({ status: "unavailable", code: "GIT_UNAVAILABLE" });
+      await inspection;
+    } finally {
+      await scenario.observer.close();
+      await scenario.registry.stop();
+    }
+  },
+);

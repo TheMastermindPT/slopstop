@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { decodeGitIdentityBooleans, decodeGitIdentityPaths } from "./git-identity-query-results.js";
+import {
+  decodeGitIdentityBooleans,
+  decodeGitIdentityPaths,
+  decodeIdentityQueryOutput,
+} from "./git-identity-query-results.js";
 
 function exited(stdout: string | Uint8Array, exitCode = 0, stderr = new Uint8Array()) {
   return {
@@ -167,5 +171,22 @@ describe("settled Git identity path results", () => {
       code: "GIT_QUERY_FAILED",
       exitCode: 7,
     });
+  });
+});
+
+describe("single identity query output (B3: one case per limit)", () => {
+  const atLimit = new Uint8Array(8192).fill(0x61);
+  const overLimit = new Uint8Array(8193).fill(0x61);
+
+  it("bounds one query's streams at the shared byte limit before exit status", () => {
+    expect(decodeIdentityQueryOutput("show-toplevel", exited(overLimit, 128), "win32")).toEqual(
+      limit,
+    );
+    expect(
+      decodeIdentityQueryOutput("bare-repository", exited("false\n", 0, overLimit), "win32"),
+    ).toEqual(limit);
+    expect(
+      decodeIdentityQueryOutput("bare-repository", exited("false\n", 0, atLimit), "win32"),
+    ).toEqual({ status: "query-observed", value: false });
   });
 });
