@@ -48,6 +48,7 @@ import {
   projectStoragePackageSmokeFailureStage,
   runProjectStoragePackageSmoke,
 } from "./project-storage-package-smoke.js";
+import { runRegistrationPackageSmoke } from "./registration-package-smoke.js";
 import { configureSessionSecurity, lockNavigation } from "./security.js";
 import { createWorkspaceBridge, type WorkspaceBridgeClient } from "./workspace-bridge.js";
 
@@ -156,6 +157,22 @@ function readyPackageSmokeContext():
   return { authorization, bridge, window };
 }
 
+// The registration scenario proves add-and-list; the others prove Project Storage.
+function scenarioProof(context: NonNullable<ReturnType<typeof readyPackageSmokeContext>>) {
+  const entries = projectEntryBridge;
+  if (context.authorization.scenario !== "registration")
+    return runProjectStoragePackageSmoke({
+      bridge: context.bridge,
+      scenario: context.authorization.scenario,
+    });
+  if (entries === undefined) return Promise.reject(new Error("Project entry bridge missing."));
+  return runRegistrationPackageSmoke({
+    root: context.authorization.root,
+    register: entries.register,
+    runInRenderer: (script) => context.window.webContents.executeJavaScript(script),
+  });
+}
+
 const runPackageSmokeIfReady = (): void => {
   const context = readyPackageSmokeContext();
   if (context === undefined) {
@@ -166,10 +183,7 @@ const runPackageSmokeIfReady = (): void => {
       const rendererProof = context.window.webContents
         .executeJavaScript(packageSmokeRendererScript)
         .then((result: unknown) => validatePackageSmokeResult(result));
-      const storageProof = runProjectStoragePackageSmoke({
-        bridge: context.bridge,
-        scenario: context.authorization.scenario,
-      });
+      const storageProof = scenarioProof(context);
       const proofResults = await Promise.allSettled([rendererProof, storageProof]);
       if (proofResults.some((result) => result.status === "rejected")) {
         reportPackageSmokeFailure(proofResults);

@@ -22,6 +22,7 @@ import {
 
 const smokeTimeoutMs = 30_000;
 const writerTimeoutMs = 120_000;
+const registrationTimeoutMs = 60_000;
 const terminalCloseTimeoutMs = 5_000;
 const maxOutputBytes = 4_000;
 const markerFilename = ".slopstop-package-smoke.json";
@@ -276,7 +277,12 @@ function boundedOutput() {
 
 async function launchPackagedApp({ root, token, scenario }) {
   return new Promise((resolve) => {
-    const duration = scenario === "writer-proof" ? writerTimeoutMs : smokeTimeoutMs;
+    const duration =
+      scenario === "writer-proof"
+        ? writerTimeoutMs
+        : scenario === "registration"
+          ? registrationTimeoutMs
+          : smokeTimeoutMs;
     const deadline = performance.now() + duration;
     const executable = packagedExecutable();
     const env = {
@@ -735,19 +741,60 @@ async function runRootSymlinkAuthorizationCaseIfSupported(scenario = "bootstrap"
   }
 }
 
-async function runInvalidAuthorizationMatrix() {
+// The same invalid inputs per scenario; the marker-only-root case belongs to bootstrap alone.
+// The registration scenario's marker-only roots also lack the repository it requires.
+async function runInvalidAuthorizationScenario(scenario) {
   for (const testCase of invalidAuthorizationCases) {
-    await runInvalidAuthorizationCase(testCase);
-  }
-  await runSymlinkAuthorizationCaseIfSupported();
-  await runRootSymlinkAuthorizationCaseIfSupported();
-  for (const testCase of invalidAuthorizationCases) {
-    if (testCase.name !== "non-marker-only bootstrap root") {
-      await runInvalidAuthorizationCase(testCase, "writer-proof");
+    if (scenario === "bootstrap" || testCase.name !== "non-marker-only bootstrap root") {
+      await runInvalidAuthorizationCase(testCase, scenario);
     }
   }
-  await runSymlinkAuthorizationCaseIfSupported("writer-proof");
-  await runRootSymlinkAuthorizationCaseIfSupported("writer-proof");
+  await runSymlinkAuthorizationCaseIfSupported(scenario);
+  await runRootSymlinkAuthorizationCaseIfSupported(scenario);
+}
+
+async function runInvalidAuthorizationMatrix() {
+  for (const scenario of ["bootstrap", "writer-proof", "registration"]) {
+    await runInvalidAuthorizationScenario(scenario);
+  }
+}
+
+// Git as the packaged harness finds it: Program Files, then absolute PATH entries.
+async function installedGit() {
+  const candidates = [
+    path.join(process.env.ProgramFiles ?? "C:\\Program Files", "Git", "cmd", "git.exe"),
+    ...(process.env.PATH ?? "")
+      .split(";")
+      .filter((entry) => /^(?:[A-Za-z]:[\\/]|[\\/]{2}[^\\/]+[\\/][^\\/]+)/u.test(entry))
+      .map((entry) => path.join(entry, "git.exe")),
+  ];
+  for (const candidate of candidates) {
+    if ((await lstat(candidate).catch(() => undefined))?.isFile()) return candidate;
+  }
+  throw new Error("Package smoke registration needs Git for Windows (Program Files or PATH).");
+}
+
+async function runRegistrationScenario() {
+  activeSmokeStage = "registration git";
+  const git = await installedGit();
+  activeSmokeStage = "registration root creation";
+  const { root, token } = await createAuthorizedSmokeRoot();
+  try {
+    await new Promise((resolve, reject) => {
+      const child = spawn(git, ["init", "--quiet", path.join(root, "repository")], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+      child.once("error", reject);
+      child.once("exit", (code) => (code === 0 ? resolve() : reject(new Error("git init failed"))));
+    });
+    activeSmokeStage = "registration scenario";
+    await launchScenario(root, token, "registration");
+  } finally {
+    if (cleanupSafe) {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
 }
 
 function isPlainGenerationEntry(entries, writerCompleted) {
@@ -826,6 +873,7 @@ async function runPackageSmoke() {
     activeSmokeStage = "package resource preflight";
     await assertPackagedStorageResources();
     await runInvalidAuthorizationMatrix();
+    await runRegistrationScenario();
     activeSmokeStage = "authorized root creation";
     const { root, token } = await createAuthorizedSmokeRoot();
 
