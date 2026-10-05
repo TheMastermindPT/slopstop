@@ -35,6 +35,7 @@ export function AddRepositoryButton(
   return (
     <div className={styles["add"]}>
       <button
+        id="add-repository"
         type="button"
         aria-describedby="add-hint"
         aria-disabled={blocked ? "true" : undefined}

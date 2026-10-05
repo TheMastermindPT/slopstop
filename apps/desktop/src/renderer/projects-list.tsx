@@ -49,6 +49,7 @@ function canOpen(project: Entry): boolean {
 
 type RowProps = Readonly<{
   activeProjectId: ProjectId | undefined;
+  newProjectId?: ProjectId | undefined;
   activeLabel: string | undefined;
   disabled: boolean;
   onOpen(project: Entry): void;
@@ -56,11 +57,13 @@ type RowProps = Readonly<{
 
 function ProjectRow({ project, ...props }: RowProps & Readonly<{ project: Entry }>) {
   const selected = props.activeProjectId === project.projectId;
+  const isNew = props.newProjectId === project.projectId;
   return (
     <li>
       <button
         type="button"
-        aria-label={`Open Project ${projectName(project)}`}
+        data-project={project.projectId}
+        aria-label={`Open Project ${projectName(project)}${isNew ? ", new" : ""}`}
         aria-current={selected ? "true" : undefined}
         disabled={props.disabled || !canOpen(project) || selected}
         onClick={() => props.onOpen(project)}
@@ -70,6 +73,7 @@ function ProjectRow({ project, ...props }: RowProps & Readonly<{ project: Entry 
         </strong>
         <code>{project.projectId.slice(0, 8)}</code>
         <span>{storageLabel(project)}</span>
+        {isNew ? <span className={styles["badge"]}>New</span> : null}
         {selected ? <span>Active · {props.activeLabel}</span> : null}
       </button>
     </li>

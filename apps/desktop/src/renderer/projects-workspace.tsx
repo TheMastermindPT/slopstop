@@ -3,49 +3,21 @@ import type {
   CanonicalProjectActivationResult,
   HarnessStatus,
   ProjectId,
-  ProjectListResult,
-  RegistrationCapability,
 } from "@slopstop/protocol";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { useAddRepository } from "./add-repository/use-add-repository.js";
 import { AddRepositoryButton } from "./add-repository-button.js";
-import { type ListState, ProjectRows, projectName, safeModeLabel } from "./projects-list.js";
+import { type ListState, ProjectRows, safeModeLabel } from "./projects-list.js";
 import styles from "./projects-workspace.module.css";
+import { rememberNames, useRegistrationCapability, workspaceFlowHost } from "./workspace-hooks.js";
+import { type View, WorkspaceSection } from "./workspace-view.js";
 import "./prototype/prototype-global.css";
-
-/** Keeps each listed Project's name so the opened view can show it. */
-function rememberNames(names: Map<ProjectId, string>, result: ProjectListResult) {
-  if (result.status !== "listed") return;
-  for (const project of result.projects) names.set(project.projectId, projectName(project));
-}
-
-/** Whether this platform can add repositories, read once per harness connection. */
-function useRegistrationCapability(ready: boolean, attempt: number) {
-  const [capability, setCapability] = useState<RegistrationCapability>({ status: "available" });
-  useEffect(() => {
-    if (!ready) return;
-    let current = true;
-    void window.slopstop.getRegistrationCapability().then(
-      (value) => current && setCapability(value),
-      () => undefined,
-    );
-    return () => {
-      current = false;
-    };
-  }, [ready, attempt]);
-  return capability;
-}
 
 type Active = Extract<CanonicalProjectActivationResult, { status: "active" }>;
 type Session =
   | { kind: "none" }
   | { kind: "active"; activation: Active }
   | { kind: "release-failed"; activation: Active };
-type View = {
-  projectId: ProjectId;
-  name: string;
-  label: string;
-  mode: "active" | "safe-mode" | "release-failed";
-} | null;
 
 export function ProjectsWorkspace({
   status,
@@ -64,6 +36,7 @@ export function ProjectsWorkspace({
   const capability = useRegistrationCapability(ready, attempt);
   const [announcement, setAnnouncement] = useState("");
   const names = useRef(new Map<ProjectId, string>());
+  const [newProjectId, setNewProjectId] = useState<ProjectId | undefined>(undefined);
   const epoch = useRef(0);
   const request = useRef(0);
   const selecting = useRef(false);
@@ -184,6 +157,17 @@ export function ProjectsWorkspace({
     }
   }
 
+  const flow = useAddRepository(
+    workspaceFlowHost({
+      registered: (projectId) => {
+        setNewProjectId(projectId);
+        void refresh();
+      },
+      open: (projectId) => void open(projectId),
+      announce: setAnnouncement,
+    }),
+  );
+
   return (
     <main className={styles["shell"]}>
       <nav className={styles["rail"]} aria-label="Workspace">
@@ -219,7 +203,7 @@ export function ProjectsWorkspace({
         <AddRepositoryButton
           capability={capability}
           list={list}
-          onAdd={() => undefined}
+          onAdd={flow.start}
           announce={setAnnouncement}
         />
         <div aria-busy={list.status === "loading"}>
@@ -233,6 +217,7 @@ export function ProjectsWorkspace({
                 ? "Read-only"
                 : "Read-write"
             }
+            newProjectId={newProjectId}
             disabled={!ready || busy}
             onOpen={(project) => void open(project.projectId)}
           />
@@ -244,30 +229,7 @@ export function ProjectsWorkspace({
       <p className={styles["srOnly"]} aria-live="polite">
         {announcement}
       </p>
-      <section className={styles["workspace"]} aria-label="Project workspace" aria-busy={busy}>
-        {error ? (
-          <p className={styles["error"]} role="alert">
-            {error}
-          </p>
-        ) : null}
-        {busy ? <p aria-live="polite">Opening Project…</p> : null}
-        <h2>{view === null ? "No Project selected" : `Project ${view.name}`}</h2>
-        {view === null ? (
-          <p>
-            Choose a saved Project to open its local workspace. Access is checked when you open it.
-          </p>
-        ) : (
-          <>
-            <code>{view.projectId}</code>
-            <p className={styles["access"]}>{view.label}</p>
-            <p>
-              {view.mode === "active"
-                ? "Project identity and local Storage are connected. Conversation and repository registration controls are not available in this view yet."
-                : "Writes unavailable. Storage needs attention before this Project can be used."}
-            </p>
-          </>
-        )}
-      </section>
+      <WorkspaceSection flow={flow} view={view} error={error} busy={busy} />
     </main>
   );
 }
