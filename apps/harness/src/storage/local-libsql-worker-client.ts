@@ -143,10 +143,15 @@ const libsqlError = (code, message) => {
   error.code = code;
   return error;
 };
+const sqliteErrorCode = (error) => {
+  const isObject = typeof error === "object" && error !== null;
+  const errcode = isObject && error.code === "ERR_SQLITE_ERROR" ? error.errcode : undefined;
+  return typeof errcode === "number" ? errcode : undefined;
+};
 const mapSqliteError = (error) => {
-  if (error === null || typeof error !== "object" || error.code !== "ERR_SQLITE_ERROR") return error;
-  if (typeof error.errcode !== "number") return error;
-  const base = error.errcode & 0xff;
+  const errcode = sqliteErrorCode(error);
+  if (errcode === undefined) return error;
+  const base = errcode & 0xff;
   return libsqlError(baseCodes[base] ?? "SQLITE_UNKNOWN_" + base, error.message);
 };
 const transactionClosed = () => libsqlError("TRANSACTION_CLOSED", "The transaction is closed");

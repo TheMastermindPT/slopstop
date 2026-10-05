@@ -330,17 +330,14 @@ function indexPredicate(indexSql: string, partial: boolean): string | null {
   return predicate;
 }
 
-async function readIndexes(
-  client: SchemaExecutor,
-  tables: readonly string[],
-): Promise<readonly MutableIndex[]> {
-  const indexes: MutableIndex[] = [];
-  for (const table of tables) {
-    const rows = decodeStrict(
-      indexMetadataRowsSchema,
-      resultObjects(
-        await client.execute({
-          sql: `SELECT il.name AS name, il."unique" AS isUnique,
+type IndexMetadataRow = (typeof indexMetadataRowsSchema.Type)[number];
+
+async function readIndexRows(client: SchemaExecutor, table: string) {
+  return decodeStrict(
+    indexMetadataRowsSchema,
+    resultObjects(
+      await client.execute({
+        sql: `SELECT il.name AS name, il."unique" AS isUnique,
             il.partial AS partial, ii.seqno AS sequence, ii.name AS columnName,
             schema_object.sql AS indexSql
             FROM pragma_index_list(?) AS il
@@ -350,34 +347,50 @@ async function readIndexes(
               AND schema_object.name = il.name
               AND schema_object.tbl_name = ?
             WHERE il.origin = 'c' ORDER BY il.name, ii.seqno`,
-          args: [table, table],
-        }),
-      ),
-    );
-    for (const row of rows) {
-      const partial = row.partial === 1;
-      const predicate = indexPredicate(row.indexSql, partial);
-      const current = indexes.at(-1);
-      if (current !== undefined && current.table === table && current.name === row.name) {
-        if (
-          current.unique !== (row.isUnique === 1) ||
-          current.partial !== partial ||
-          current.predicate !== predicate
-        ) {
-          throw new ProjectStorageBrokenError("Database named index metadata is inconsistent.");
-        }
-        current.columns.push(row.columnName);
-      } else {
-        indexes.push({
-          table,
-          name: row.name,
-          unique: row.isUnique === 1,
-          partial,
-          columns: [row.columnName],
-          predicate,
-        });
-      }
-    }
+        args: [table, table],
+      }),
+    ),
+  );
+}
+
+function continuesIndex(current: MutableIndex | undefined, table: string, name: string) {
+  return current?.table === table && current.name === name;
+}
+
+function sameIndexShape(current: MutableIndex, candidate: MutableIndex): boolean {
+  if (current.unique !== candidate.unique) return false;
+  return current.partial === candidate.partial && current.predicate === candidate.predicate;
+}
+
+// Index rows arrive one per key column, ordered by index name and column sequence.
+function appendIndexRow(indexes: MutableIndex[], table: string, row: IndexMetadataRow): void {
+  const partial = row.partial === 1;
+  const candidate: MutableIndex = {
+    table,
+    name: row.name,
+    unique: row.isUnique === 1,
+    partial,
+    columns: [row.columnName],
+    predicate: indexPredicate(row.indexSql, partial),
+  };
+  const current = indexes.at(-1);
+  if (current === undefined || !continuesIndex(current, table, row.name)) {
+    indexes.push(candidate);
+    return;
+  }
+  if (!sameIndexShape(current, candidate)) {
+    throw new ProjectStorageBrokenError("Database named index metadata is inconsistent.");
+  }
+  current.columns.push(row.columnName);
+}
+
+async function readIndexes(
+  client: SchemaExecutor,
+  tables: readonly string[],
+): Promise<readonly MutableIndex[]> {
+  const indexes: MutableIndex[] = [];
+  for (const table of tables) {
+    for (const row of await readIndexRows(client, table)) appendIndexRow(indexes, table, row);
   }
   return indexes;
 }
