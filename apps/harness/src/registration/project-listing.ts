@@ -7,11 +7,12 @@ import {
   ProjectStorageCloseResultSchema,
   ProjectStorageOpenResultSchema,
 } from "@slopstop/protocol";
-import { Result, Schema } from "effect";
+import { Effect, Result, Schema } from "effect";
 import { createNodeProjectStorageDependencies } from "../storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../storage/project-storage-store.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { observeRepositoryDirectory } from "../storage/repository-identity-observer.js";
+import { readHiddenProjectIds } from "./list-visibility.js";
 import { samePhysicalIdentity } from "./physical-identity.js";
 import { registeredName } from "./registered-name.js";
 import {
@@ -27,6 +28,30 @@ import {
 import { RegistryFault, registryFailure } from "./registry-failure.js";
 
 const storedProjectRowsSchema = Schema.Array(Schema.Struct({ projectId: ProjectIdSchema }));
+
+// A removed Project leaves the list only once published; incomplete ones stay.
+function visibleRecords(
+  records: Awaited<ReturnType<typeof readProjectRegistrationRecords>>,
+  hidden: ReadonlySet<string>,
+) {
+  return records.filter(
+    ({ reservation, publication }) =>
+      publication === undefined || !hidden.has(reservation.projectId),
+  );
+}
+
+function byProjectId(a: Readonly<{ projectId: string }>, b: Readonly<{ projectId: string }>) {
+  if (a.projectId === b.projectId) return 0;
+  return a.projectId < b.projectId ? -1 : 1;
+}
+
+// Storage with a reservation, shown or removed, is bound; only the rest lists as unbound.
+function boundProjectIds(
+  records: ReadonlyArray<Readonly<{ reservation: Reservation }>>,
+  hidden: ReadonlySet<string>,
+): ReadonlySet<string> {
+  return new Set([...hidden, ...records.map(({ reservation }) => reservation.projectId)]);
+}
 
 async function location(reservation: Reservation) {
   const result = await observeRepositoryDirectory(
@@ -92,9 +117,10 @@ export async function listRegisteredProjects(
   signal: AbortSignal,
 ) {
   try {
-    const { records, storedProjects } = await withRegistrationDatabase(options, (client) =>
+    const { records, storedProjects, hidden } = await withRegistrationDatabase(options, (client) =>
       withWriteTransaction(client, async (transaction) => {
         const records = await readProjectRegistrationRecords(transaction);
+        const hidden = await Effect.runPromise(readHiddenProjectIds(transaction));
         const stored = decodeStrictResult(
           storedProjectRowsSchema,
           registryRows(
@@ -105,7 +131,11 @@ export async function listRegisteredProjects(
         );
         if (Result.isFailure(stored))
           throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-        return { records, storedProjects: stored.success };
+        return {
+          records: visibleRecords(records, hidden),
+          storedProjects: stored.success,
+          hidden,
+        };
       }),
     );
     const owner = createProjectStorageOwner(
@@ -134,7 +164,7 @@ export async function listRegisteredProjects(
           }),
         );
       }
-      const bound = new Set(records.map(({ reservation }) => reservation.projectId));
+      const bound = boundProjectIds(records, hidden);
       for (const { projectId } of storedProjects) {
         if (bound.has(projectId)) continue;
         if (signal.aborted) return { status: "cancelled" } as const;
@@ -152,7 +182,7 @@ export async function listRegisteredProjects(
       await owner.stop();
     }
     if (signal.aborted) return { status: "cancelled" } as const;
-    projects.sort((a, b) => (a.projectId < b.projectId ? -1 : a.projectId > b.projectId ? 1 : 0));
+    projects.sort(byProjectId);
     return decodeStrict(ProjectListSchema, { status: "listed", projects });
   } catch (error) {
     return registryFailure(error);

@@ -53,6 +53,7 @@ const RendererRegistrationSteps = [
     proposalId: UuidTextSchema,
     proposalFingerprint: Sha256TextSchema,
   }),
+  Schema.Struct({ step: Schema.Literal("remove-from-list"), projectId: ProjectIdSchema }),
 ] as const;
 
 /**
@@ -106,6 +107,9 @@ const ProjectRegistrationFailureSchemas = [
       "BARE_REPOSITORY",
       "REPOSITORY_UNSUPPORTED",
       "REPOSITORY_IDENTITY_CHANGED",
+      "PROJECT_ACTIVE",
+      "PROJECT_NOT_FOUND",
+      "REGISTRATION_INCOMPLETE",
     ]),
   }),
   RegistrationIdempotencyConflictSchema,
@@ -145,7 +149,14 @@ export const ProjectRegistrationResultSchema = wholeUnion([
   }),
   Schema.Struct({ status: Schema.Literal("registered"), ...NamedProjectFields }),
   Schema.Struct({ status: Schema.Literal("already-registered"), ...NamedProjectFields }),
-  Schema.Struct({ status: Schema.Literal("belongs-to-project"), ...NamedProjectFields }),
+  Schema.Struct({
+    status: Schema.Literal("belongs-to-project"),
+    ...NamedProjectFields,
+    /** Present when that Project was removed from the saved list. */
+    hiddenFromList: Schema.optional(Schema.Literal(true)),
+  }),
+  Schema.Struct({ status: Schema.Literal("restored-to-list"), ...NamedProjectFields }),
+  Schema.Struct({ status: Schema.Literal("removed"), projectId: ProjectIdSchema }),
   ...ProjectRegistrationFailureSchemas,
 ]);
 export type ProjectRegistrationResult = typeof ProjectRegistrationResultSchema.Type;

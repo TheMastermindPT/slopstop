@@ -1,0 +1,1455 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "fc3f8e9b-df61-44fb-b3fb-2e627c87a3ad",
+  "prevId": "071da7c7-4e5e-4832-b9d9-4d8719cf1f3b",
+  "tables": {
+    "schema_metadata": {
+      "name": "schema_metadata",
+      "columns": {
+        "metadata_key": {
+          "name": "metadata_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "database_kind": {
+          "name": "database_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "format_version": {
+          "name": "format_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "schema_version": {
+          "name": "schema_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_migration_id": {
+          "name": "last_migration_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "application_metadata_key": {
+          "name": "application_metadata_key",
+          "value": "\"schema_metadata\".\"metadata_key\" = 'application'"
+        },
+        "application_metadata_kind": {
+          "name": "application_metadata_kind",
+          "value": "\"schema_metadata\".\"database_kind\" = 'application'"
+        },
+        "application_format_nonnegative": {
+          "name": "application_format_nonnegative",
+          "value": "\"schema_metadata\".\"format_version\" >= 0"
+        },
+        "application_schema_nonnegative": {
+          "name": "application_schema_nonnegative",
+          "value": "\"schema_metadata\".\"schema_version\" >= 0"
+        },
+        "application_migration_nonempty": {
+          "name": "application_migration_nonempty",
+          "value": "length(trim(\"schema_metadata\".\"last_migration_id\")) > 0"
+        }
+      }
+    },
+    "registration_executable_selections": {
+      "name": "registration_executable_selections",
+      "columns": {
+        "selection_id": {
+          "name": "selection_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "executable_path": {
+          "name": "executable_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "volume_identity": {
+          "name": "volume_identity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "file_identity": {
+          "name": "file_identity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "birth_identity": {
+          "name": "birth_identity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "captured_at": {
+          "name": "captured_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_executable_selection_uuid": {
+          "name": "registration_executable_selection_uuid",
+          "value": "\n    length(\"registration_executable_selections\".\"selection_id\") = 36\n    and \"registration_executable_selections\".\"selection_id\" = lower(\"registration_executable_selections\".\"selection_id\")\n    and substr(\"registration_executable_selections\".\"selection_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"registration_executable_selections\".\"selection_id\", 9, 1) = '-'\n    and substr(\"registration_executable_selections\".\"selection_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"registration_executable_selections\".\"selection_id\", 14, 1) = '-'\n    and substr(\"registration_executable_selections\".\"selection_id\", 15, 1) glob '[1-8]'\n    and substr(\"registration_executable_selections\".\"selection_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"registration_executable_selections\".\"selection_id\", 19, 1) = '-'\n    and substr(\"registration_executable_selections\".\"selection_id\", 20, 1) glob '[89ab]'\n    and substr(\"registration_executable_selections\".\"selection_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"registration_executable_selections\".\"selection_id\", 24, 1) = '-'\n    and substr(\"registration_executable_selections\".\"selection_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "registration_executable_path_nonempty": {
+          "name": "registration_executable_path_nonempty",
+          "value": "length(\"registration_executable_selections\".\"executable_path\") > 0"
+        },
+        "registration_executable_platform": {
+          "name": "registration_executable_platform",
+          "value": "\"registration_executable_selections\".\"platform\" in ('win32', 'linux')"
+        },
+        "registration_executable_volume_positive": {
+          "name": "registration_executable_volume_positive",
+          "value": "substr(\"registration_executable_selections\".\"volume_identity\", 1, 1) between '1' and '9' and \"registration_executable_selections\".\"volume_identity\" not glob '*[^0-9]*'"
+        },
+        "registration_executable_file_positive": {
+          "name": "registration_executable_file_positive",
+          "value": "substr(\"registration_executable_selections\".\"file_identity\", 1, 1) between '1' and '9' and \"registration_executable_selections\".\"file_identity\" not glob '*[^0-9]*'"
+        },
+        "registration_executable_birth_positive": {
+          "name": "registration_executable_birth_positive",
+          "value": "substr(\"registration_executable_selections\".\"birth_identity\", 1, 1) between '1' and '9' and \"registration_executable_selections\".\"birth_identity\" not glob '*[^0-9]*'"
+        },
+        "registration_executable_sha256": {
+          "name": "registration_executable_sha256",
+          "value": "length(\"registration_executable_selections\".\"sha256\") = 64 and \"registration_executable_selections\".\"sha256\" = lower(\"registration_executable_selections\".\"sha256\") and \"registration_executable_selections\".\"sha256\" not glob '*[^0-9a-f]*'"
+        }
+      }
+    },
+    "registration_identity_consents": {
+      "name": "registration_identity_consents",
+      "columns": {
+        "consent_id": {
+          "name": "consent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "selection_id": {
+          "name": "selection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "observation_id": {
+          "name": "observation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decision": {
+          "name": "decision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "registration_identity_consents_selection_id_registration_executable_selections_selection_id_fk": {
+          "name": "registration_identity_consents_selection_id_registration_executable_selections_selection_id_fk",
+          "tableFrom": "registration_identity_consents",
+          "tableTo": "registration_executable_selections",
+          "columnsFrom": [
+            "selection_id"
+          ],
+          "columnsTo": [
+            "selection_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "registration_identity_consents_observation_id_registration_observer_outcomes_observation_id_fk": {
+          "name": "registration_identity_consents_observation_id_registration_observer_outcomes_observation_id_fk",
+          "tableFrom": "registration_identity_consents",
+          "tableTo": "registration_observer_outcomes",
+          "columnsFrom": [
+            "observation_id"
+          ],
+          "columnsTo": [
+            "observation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_identity_consent_decision": {
+          "name": "registration_identity_consent_decision",
+          "value": "\"registration_identity_consents\".\"decision\" in ('accepted', 'declined')"
+        }
+      }
+    },
+    "registration_identity_query_attempts": {
+      "name": "registration_identity_query_attempts",
+      "columns": {
+        "observation_id": {
+          "name": "observation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "repository_selection_id": {
+          "name": "repository_selection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "consent_id": {
+          "name": "consent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "query_kind": {
+          "name": "query_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scope_json": {
+          "name": "scope_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "child_json": {
+          "name": "child_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "terminal_json": {
+          "name": "terminal_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "result_json": {
+          "name": "result_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "registration_identity_query_attempts_repository_selection_id_registration_repository_selections_selection_id_fk": {
+          "name": "registration_identity_query_attempts_repository_selection_id_registration_repository_selections_selection_id_fk",
+          "tableFrom": "registration_identity_query_attempts",
+          "tableTo": "registration_repository_selections",
+          "columnsFrom": [
+            "repository_selection_id"
+          ],
+          "columnsTo": [
+            "selection_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "registration_identity_query_attempts_consent_id_registration_identity_consents_consent_id_fk": {
+          "name": "registration_identity_query_attempts_consent_id_registration_identity_consents_consent_id_fk",
+          "tableFrom": "registration_identity_query_attempts",
+          "tableTo": "registration_identity_consents",
+          "columnsFrom": [
+            "consent_id"
+          ],
+          "columnsTo": [
+            "consent_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "identity_query_kind": {
+          "name": "identity_query_kind",
+          "value": "\"registration_identity_query_attempts\".\"query_kind\" in ('inside-work-tree', 'bare-repository', 'inside-git-dir', 'show-toplevel', 'absolute-git-dir', 'git-common-dir')"
+        },
+        "identity_query_scope_json": {
+          "name": "identity_query_scope_json",
+          "value": "json_valid(\"registration_identity_query_attempts\".\"scope_json\")"
+        },
+        "identity_query_child_json": {
+          "name": "identity_query_child_json",
+          "value": "\"registration_identity_query_attempts\".\"child_json\" is null or json_valid(\"registration_identity_query_attempts\".\"child_json\")"
+        },
+        "identity_query_terminal_json": {
+          "name": "identity_query_terminal_json",
+          "value": "\"registration_identity_query_attempts\".\"terminal_json\" is null or json_valid(\"registration_identity_query_attempts\".\"terminal_json\")"
+        },
+        "identity_query_result_json": {
+          "name": "identity_query_result_json",
+          "value": "\"registration_identity_query_attempts\".\"result_json\" is null or json_valid(\"registration_identity_query_attempts\".\"result_json\")"
+        }
+      }
+    },
+    "registration_list_visibility": {
+      "name": "registration_list_visibility",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hidden_at": {
+          "name": "hidden_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "registration_observer_children": {
+      "name": "registration_observer_children",
+      "columns": {
+        "observation_id": {
+          "name": "observation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "identity_json": {
+          "name": "identity_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "registration_observer_children_observation_id_registration_observer_intents_observation_id_fk": {
+          "name": "registration_observer_children_observation_id_registration_observer_intents_observation_id_fk",
+          "tableFrom": "registration_observer_children",
+          "tableTo": "registration_observer_intents",
+          "columnsFrom": [
+            "observation_id"
+          ],
+          "columnsTo": [
+            "observation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_observer_child_json": {
+          "name": "registration_observer_child_json",
+          "value": "json_valid(\"registration_observer_children\".\"identity_json\")"
+        }
+      }
+    },
+    "registration_observer_intents": {
+      "name": "registration_observer_intents",
+      "columns": {
+        "observation_id": {
+          "name": "observation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "selection_id": {
+          "name": "selection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "consent_id": {
+          "name": "consent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "registration_observer_consent_uq": {
+          "name": "registration_observer_consent_uq",
+          "columns": [
+            "consent_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "registration_observer_intents_selection_id_registration_executable_selections_selection_id_fk": {
+          "name": "registration_observer_intents_selection_id_registration_executable_selections_selection_id_fk",
+          "tableFrom": "registration_observer_intents",
+          "tableTo": "registration_executable_selections",
+          "columnsFrom": [
+            "selection_id"
+          ],
+          "columnsTo": [
+            "selection_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "registration_observer_intents_consent_id_registration_version_consents_consent_id_fk": {
+          "name": "registration_observer_intents_consent_id_registration_version_consents_consent_id_fk",
+          "tableFrom": "registration_observer_intents",
+          "tableTo": "registration_version_consents",
+          "columnsFrom": [
+            "consent_id"
+          ],
+          "columnsTo": [
+            "consent_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_observer_observation_uuid": {
+          "name": "registration_observer_observation_uuid",
+          "value": "\n    length(\"registration_observer_intents\".\"observation_id\") = 36\n    and \"registration_observer_intents\".\"observation_id\" = lower(\"registration_observer_intents\".\"observation_id\")\n    and substr(\"registration_observer_intents\".\"observation_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"registration_observer_intents\".\"observation_id\", 9, 1) = '-'\n    and substr(\"registration_observer_intents\".\"observation_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"registration_observer_intents\".\"observation_id\", 14, 1) = '-'\n    and substr(\"registration_observer_intents\".\"observation_id\", 15, 1) glob '[1-8]'\n    and substr(\"registration_observer_intents\".\"observation_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"registration_observer_intents\".\"observation_id\", 19, 1) = '-'\n    and substr(\"registration_observer_intents\".\"observation_id\", 20, 1) glob '[89ab]'\n    and substr(\"registration_observer_intents\".\"observation_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"registration_observer_intents\".\"observation_id\", 24, 1) = '-'\n    and substr(\"registration_observer_intents\".\"observation_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        }
+      }
+    },
+    "registration_observer_outcomes": {
+      "name": "registration_observer_outcomes",
+      "columns": {
+        "observation_id": {
+          "name": "observation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "result_json": {
+          "name": "result_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "registration_observer_outcomes_observation_id_registration_observer_intents_observation_id_fk": {
+          "name": "registration_observer_outcomes_observation_id_registration_observer_intents_observation_id_fk",
+          "tableFrom": "registration_observer_outcomes",
+          "tableTo": "registration_observer_intents",
+          "columnsFrom": [
+            "observation_id"
+          ],
+          "columnsTo": [
+            "observation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_observer_outcome_json": {
+          "name": "registration_observer_outcome_json",
+          "value": "json_valid(\"registration_observer_outcomes\".\"result_json\")"
+        }
+      }
+    },
+    "registration_observer_terminals": {
+      "name": "registration_observer_terminals",
+      "columns": {
+        "observation_id": {
+          "name": "observation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "exit_code": {
+          "name": "exit_code",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "stdout_closed": {
+          "name": "stdout_closed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "stderr_closed": {
+          "name": "stderr_closed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tree_empty": {
+          "name": "tree_empty",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "registration_observer_terminals_observation_id_registration_observer_children_observation_id_fk": {
+          "name": "registration_observer_terminals_observation_id_registration_observer_children_observation_id_fk",
+          "tableFrom": "registration_observer_terminals",
+          "tableTo": "registration_observer_children",
+          "columnsFrom": [
+            "observation_id"
+          ],
+          "columnsTo": [
+            "observation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_observer_stdout_boolean": {
+          "name": "registration_observer_stdout_boolean",
+          "value": "\"registration_observer_terminals\".\"stdout_closed\" in (0, 1)"
+        },
+        "registration_observer_stderr_boolean": {
+          "name": "registration_observer_stderr_boolean",
+          "value": "\"registration_observer_terminals\".\"stderr_closed\" in (0, 1)"
+        },
+        "registration_observer_tree_boolean": {
+          "name": "registration_observer_tree_boolean",
+          "value": "\"registration_observer_terminals\".\"tree_empty\" in (0, 1)"
+        }
+      }
+    },
+    "registration_proposals": {
+      "name": "registration_proposals",
+      "columns": {
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "proposal_id": {
+          "name": "proposal_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "input_fingerprint": {
+          "name": "input_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "proposal_fingerprint": {
+          "name": "proposal_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "record_json": {
+          "name": "record_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "registration_proposal_id_uq": {
+          "name": "registration_proposal_id_uq",
+          "columns": [
+            "proposal_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_proposal_json": {
+          "name": "registration_proposal_json",
+          "value": "json_valid(\"registration_proposals\".\"record_json\")"
+        }
+      }
+    },
+    "registration_publications": {
+      "name": "registration_publications",
+      "columns": {
+        "reservation_id": {
+          "name": "reservation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "result_json": {
+          "name": "result_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "result_fingerprint": {
+          "name": "result_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "registration_publications_reservation_id_registration_reservations_reservation_id_fk": {
+          "name": "registration_publications_reservation_id_registration_reservations_reservation_id_fk",
+          "tableFrom": "registration_publications",
+          "tableTo": "registration_reservations",
+          "columnsFrom": [
+            "reservation_id"
+          ],
+          "columnsTo": [
+            "reservation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "registration_publications_request_id_registration_requests_request_id_fk": {
+          "name": "registration_publications_request_id_registration_requests_request_id_fk",
+          "tableFrom": "registration_publications",
+          "tableTo": "registration_requests",
+          "columnsFrom": [
+            "request_id"
+          ],
+          "columnsTo": [
+            "request_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_publication_json": {
+          "name": "registration_publication_json",
+          "value": "json_valid(\"registration_publications\".\"result_json\")"
+        }
+      }
+    },
+    "registration_repository_selections": {
+      "name": "registration_repository_selections",
+      "columns": {
+        "selection_id": {
+          "name": "selection_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "directory_path": {
+          "name": "directory_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "identity_json": {
+          "name": "identity_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "captured_at": {
+          "name": "captured_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_repository_identity_json": {
+          "name": "registration_repository_identity_json",
+          "value": "json_valid(\"registration_repository_selections\".\"identity_json\")"
+        }
+      }
+    },
+    "registration_repository_trust": {
+      "name": "registration_repository_trust",
+      "columns": {
+        "trust_id": {
+          "name": "trust_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "selection_id": {
+          "name": "selection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decision": {
+          "name": "decision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "registration_repository_trust_selection_id_registration_repository_selections_selection_id_fk": {
+          "name": "registration_repository_trust_selection_id_registration_repository_selections_selection_id_fk",
+          "tableFrom": "registration_repository_trust",
+          "tableTo": "registration_repository_selections",
+          "columnsFrom": [
+            "selection_id"
+          ],
+          "columnsTo": [
+            "selection_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_repository_trust_decision": {
+          "name": "registration_repository_trust_decision",
+          "value": "\"registration_repository_trust\".\"decision\" in ('accepted', 'declined')"
+        }
+      }
+    },
+    "registration_requests": {
+      "name": "registration_requests",
+      "columns": {
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "input_fingerprint": {
+          "name": "input_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "request_json": {
+          "name": "request_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reservation_id": {
+          "name": "reservation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "registration_requests_reservation_id_registration_reservations_reservation_id_fk": {
+          "name": "registration_requests_reservation_id_registration_reservations_reservation_id_fk",
+          "tableFrom": "registration_requests",
+          "tableTo": "registration_reservations",
+          "columnsFrom": [
+            "reservation_id"
+          ],
+          "columnsTo": [
+            "reservation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_request_json": {
+          "name": "registration_request_json",
+          "value": "json_valid(\"registration_requests\".\"request_json\")"
+        }
+      }
+    },
+    "registration_reservations": {
+      "name": "registration_reservations",
+      "columns": {
+        "reservation_id": {
+          "name": "reservation_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "common_platform": {
+          "name": "common_platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "common_volume_identity": {
+          "name": "common_volume_identity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "common_file_identity": {
+          "name": "common_file_identity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "common_birth_identity": {
+          "name": "common_birth_identity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "record_json": {
+          "name": "record_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "record_fingerprint": {
+          "name": "record_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "registration_common_identity_uq": {
+          "name": "registration_common_identity_uq",
+          "columns": [
+            "common_platform",
+            "common_volume_identity",
+            "common_file_identity",
+            "common_birth_identity"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_reservation_json": {
+          "name": "registration_reservation_json",
+          "value": "json_valid(\"registration_reservations\".\"record_json\")"
+        }
+      }
+    },
+    "registration_version_consents": {
+      "name": "registration_version_consents",
+      "columns": {
+        "consent_id": {
+          "name": "consent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "selection_id": {
+          "name": "selection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decision": {
+          "name": "decision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "registration_version_consent_selection_fk": {
+          "name": "registration_version_consent_selection_fk",
+          "tableFrom": "registration_version_consents",
+          "tableTo": "registration_executable_selections",
+          "columnsFrom": [
+            "selection_id"
+          ],
+          "columnsTo": [
+            "selection_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "registration_version_consent_uuid": {
+          "name": "registration_version_consent_uuid",
+          "value": "\n    length(\"registration_version_consents\".\"consent_id\") = 36\n    and \"registration_version_consents\".\"consent_id\" = lower(\"registration_version_consents\".\"consent_id\")\n    and substr(\"registration_version_consents\".\"consent_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"registration_version_consents\".\"consent_id\", 9, 1) = '-'\n    and substr(\"registration_version_consents\".\"consent_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"registration_version_consents\".\"consent_id\", 14, 1) = '-'\n    and substr(\"registration_version_consents\".\"consent_id\", 15, 1) glob '[1-8]'\n    and substr(\"registration_version_consents\".\"consent_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"registration_version_consents\".\"consent_id\", 19, 1) = '-'\n    and substr(\"registration_version_consents\".\"consent_id\", 20, 1) glob '[89ab]'\n    and substr(\"registration_version_consents\".\"consent_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"registration_version_consents\".\"consent_id\", 24, 1) = '-'\n    and substr(\"registration_version_consents\".\"consent_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "registration_version_consent_decision": {
+          "name": "registration_version_consent_decision",
+          "value": "\"registration_version_consents\".\"decision\" in ('accepted', 'declined')"
+        }
+      }
+    },
+    "storage_generations": {
+      "name": "storage_generations",
+      "columns": {
+        "storage_id": {
+          "name": "storage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generation_id": {
+          "name": "generation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "canonical_lineage_id": {
+          "name": "canonical_lineage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "runtime_lineage_id": {
+          "name": "runtime_lineage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "create_request_id": {
+          "name": "create_request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "create_request_fingerprint": {
+          "name": "create_request_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generation_directory_name": {
+          "name": "generation_directory_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "creation_state": {
+          "name": "creation_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "storage_generations_create_request_uq": {
+          "name": "storage_generations_create_request_uq",
+          "columns": [
+            "create_request_id"
+          ],
+          "isUnique": true
+        },
+        "storage_generations_directory_uq": {
+          "name": "storage_generations_directory_uq",
+          "columns": [
+            "storage_id",
+            "generation_directory_name"
+          ],
+          "isUnique": true
+        },
+        "storage_generations_one_active_uq": {
+          "name": "storage_generations_one_active_uq",
+          "columns": [
+            "storage_id"
+          ],
+          "isUnique": true,
+          "where": "\"storage_generations\".\"creation_state\" = 'active'"
+        },
+        "storage_generations_project_idx": {
+          "name": "storage_generations_project_idx",
+          "columns": [
+            "project_id"
+          ],
+          "isUnique": false
+        },
+        "storage_generations_state_idx": {
+          "name": "storage_generations_state_idx",
+          "columns": [
+            "storage_id",
+            "creation_state"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "storage_generations_location_fk": {
+          "name": "storage_generations_location_fk",
+          "tableFrom": "storage_generations",
+          "tableTo": "storage_locations",
+          "columnsFrom": [
+            "storage_id",
+            "location_id"
+          ],
+          "columnsTo": [
+            "storage_id",
+            "location_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "storage_generations_pk": {
+          "columns": [
+            "storage_id",
+            "generation_id"
+          ],
+          "name": "storage_generations_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "storage_generations_storage_id_uuid": {
+          "name": "storage_generations_storage_id_uuid",
+          "value": "\n    length(\"storage_generations\".\"storage_id\") = 36\n    and \"storage_generations\".\"storage_id\" = lower(\"storage_generations\".\"storage_id\")\n    and substr(\"storage_generations\".\"storage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"storage_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"storage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"storage_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"storage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"storage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"storage_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"storage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"storage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"storage_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"storage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_generation_id_uuid": {
+          "name": "storage_generations_generation_id_uuid",
+          "value": "\n    length(\"storage_generations\".\"generation_id\") = 36\n    and \"storage_generations\".\"generation_id\" = lower(\"storage_generations\".\"generation_id\")\n    and substr(\"storage_generations\".\"generation_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"generation_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"generation_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"generation_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"generation_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"generation_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"generation_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"generation_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"generation_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"generation_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"generation_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_project_id_uuid": {
+          "name": "storage_generations_project_id_uuid",
+          "value": "\n    length(\"storage_generations\".\"project_id\") = 36\n    and \"storage_generations\".\"project_id\" = lower(\"storage_generations\".\"project_id\")\n    and substr(\"storage_generations\".\"project_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"project_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"project_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"project_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"project_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"project_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"project_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"project_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"project_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"project_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"project_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_location_id_uuid": {
+          "name": "storage_generations_location_id_uuid",
+          "value": "\n    length(\"storage_generations\".\"location_id\") = 36\n    and \"storage_generations\".\"location_id\" = lower(\"storage_generations\".\"location_id\")\n    and substr(\"storage_generations\".\"location_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"location_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"location_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"location_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"location_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"location_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"location_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"location_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"location_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"location_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"location_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_canonical_lineage_uuid": {
+          "name": "storage_generations_canonical_lineage_uuid",
+          "value": "\n    length(\"storage_generations\".\"canonical_lineage_id\") = 36\n    and \"storage_generations\".\"canonical_lineage_id\" = lower(\"storage_generations\".\"canonical_lineage_id\")\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"canonical_lineage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_runtime_lineage_uuid": {
+          "name": "storage_generations_runtime_lineage_uuid",
+          "value": "\n    length(\"storage_generations\".\"runtime_lineage_id\") = 36\n    and \"storage_generations\".\"runtime_lineage_id\" = lower(\"storage_generations\".\"runtime_lineage_id\")\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"runtime_lineage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_create_request_uuid": {
+          "name": "storage_generations_create_request_uuid",
+          "value": "\n    length(\"storage_generations\".\"create_request_id\") = 36\n    and \"storage_generations\".\"create_request_id\" = lower(\"storage_generations\".\"create_request_id\")\n    and substr(\"storage_generations\".\"create_request_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"create_request_id\", 9, 1) = '-'\n    and substr(\"storage_generations\".\"create_request_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"create_request_id\", 14, 1) = '-'\n    and substr(\"storage_generations\".\"create_request_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_generations\".\"create_request_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"create_request_id\", 19, 1) = '-'\n    and substr(\"storage_generations\".\"create_request_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_generations\".\"create_request_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_generations\".\"create_request_id\", 24, 1) = '-'\n    and substr(\"storage_generations\".\"create_request_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_generations_fingerprint_sha256": {
+          "name": "storage_generations_fingerprint_sha256",
+          "value": "\n        length(\"storage_generations\".\"create_request_fingerprint\") = 64\n        and \"storage_generations\".\"create_request_fingerprint\" = lower(\"storage_generations\".\"create_request_fingerprint\")\n        and \"storage_generations\".\"create_request_fingerprint\" not glob '*[^0-9a-f]*'\n      "
+        },
+        "storage_generations_directory_identity": {
+          "name": "storage_generations_directory_identity",
+          "value": "\"storage_generations\".\"generation_directory_name\" = \"storage_generations\".\"generation_id\""
+        },
+        "storage_generations_activation_time": {
+          "name": "storage_generations_activation_time",
+          "value": "\n        (\"storage_generations\".\"creation_state\" = 'active' and \"storage_generations\".\"activated_at\" is not null)\n        or (\"storage_generations\".\"creation_state\" = 'staging' and \"storage_generations\".\"activated_at\" is null)\n      "
+        }
+      }
+    },
+    "storage_locations": {
+      "name": "storage_locations",
+      "columns": {
+        "storage_id": {
+          "name": "storage_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "location_id": {
+          "name": "location_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "normalized_path": {
+          "name": "normalized_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "location_state": {
+          "name": "location_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "storage_locations_normalized_path_uq": {
+          "name": "storage_locations_normalized_path_uq",
+          "columns": [
+            "normalized_path"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "storage_locations_pk": {
+          "columns": [
+            "storage_id",
+            "location_id"
+          ],
+          "name": "storage_locations_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "storage_locations_storage_id_uuid": {
+          "name": "storage_locations_storage_id_uuid",
+          "value": "\n    length(\"storage_locations\".\"storage_id\") = 36\n    and \"storage_locations\".\"storage_id\" = lower(\"storage_locations\".\"storage_id\")\n    and substr(\"storage_locations\".\"storage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"storage_id\", 9, 1) = '-'\n    and substr(\"storage_locations\".\"storage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"storage_id\", 14, 1) = '-'\n    and substr(\"storage_locations\".\"storage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_locations\".\"storage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"storage_id\", 19, 1) = '-'\n    and substr(\"storage_locations\".\"storage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_locations\".\"storage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"storage_id\", 24, 1) = '-'\n    and substr(\"storage_locations\".\"storage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_locations_location_id_uuid": {
+          "name": "storage_locations_location_id_uuid",
+          "value": "\n    length(\"storage_locations\".\"location_id\") = 36\n    and \"storage_locations\".\"location_id\" = lower(\"storage_locations\".\"location_id\")\n    and substr(\"storage_locations\".\"location_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"location_id\", 9, 1) = '-'\n    and substr(\"storage_locations\".\"location_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"location_id\", 14, 1) = '-'\n    and substr(\"storage_locations\".\"location_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_locations\".\"location_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"location_id\", 19, 1) = '-'\n    and substr(\"storage_locations\".\"location_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_locations\".\"location_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_locations\".\"location_id\", 24, 1) = '-'\n    and substr(\"storage_locations\".\"location_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_locations_state": {
+          "name": "storage_locations_state",
+          "value": "\"storage_locations\".\"location_state\" in ('staging', 'committed')"
+        }
+      }
+    },
+    "storage_registrations": {
+      "name": "storage_registrations",
+      "columns": {
+        "storage_id": {
+          "name": "storage_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "active_generation_id": {
+          "name": "active_generation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "active_location_id": {
+          "name": "active_location_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "storage_registrations_project_uq": {
+          "name": "storage_registrations_project_uq",
+          "columns": [
+            "project_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "storage_registrations_active_generation_fk": {
+          "name": "storage_registrations_active_generation_fk",
+          "tableFrom": "storage_registrations",
+          "tableTo": "storage_generations",
+          "columnsFrom": [
+            "storage_id",
+            "active_generation_id"
+          ],
+          "columnsTo": [
+            "storage_id",
+            "generation_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "storage_registrations_active_location_fk": {
+          "name": "storage_registrations_active_location_fk",
+          "tableFrom": "storage_registrations",
+          "tableTo": "storage_locations",
+          "columnsFrom": [
+            "storage_id",
+            "active_location_id"
+          ],
+          "columnsTo": [
+            "storage_id",
+            "location_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "storage_registrations_storage_id_uuid": {
+          "name": "storage_registrations_storage_id_uuid",
+          "value": "\n    length(\"storage_registrations\".\"storage_id\") = 36\n    and \"storage_registrations\".\"storage_id\" = lower(\"storage_registrations\".\"storage_id\")\n    and substr(\"storage_registrations\".\"storage_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"storage_id\", 9, 1) = '-'\n    and substr(\"storage_registrations\".\"storage_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"storage_id\", 14, 1) = '-'\n    and substr(\"storage_registrations\".\"storage_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_registrations\".\"storage_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"storage_id\", 19, 1) = '-'\n    and substr(\"storage_registrations\".\"storage_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_registrations\".\"storage_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"storage_id\", 24, 1) = '-'\n    and substr(\"storage_registrations\".\"storage_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_registrations_project_id_uuid": {
+          "name": "storage_registrations_project_id_uuid",
+          "value": "\n    length(\"storage_registrations\".\"project_id\") = 36\n    and \"storage_registrations\".\"project_id\" = lower(\"storage_registrations\".\"project_id\")\n    and substr(\"storage_registrations\".\"project_id\", 1, 8) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"project_id\", 9, 1) = '-'\n    and substr(\"storage_registrations\".\"project_id\", 10, 4) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"project_id\", 14, 1) = '-'\n    and substr(\"storage_registrations\".\"project_id\", 15, 1) glob '[1-8]'\n    and substr(\"storage_registrations\".\"project_id\", 16, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"project_id\", 19, 1) = '-'\n    and substr(\"storage_registrations\".\"project_id\", 20, 1) glob '[89ab]'\n    and substr(\"storage_registrations\".\"project_id\", 21, 3) not glob '*[^0-9a-f]*'\n    and substr(\"storage_registrations\".\"project_id\", 24, 1) = '-'\n    and substr(\"storage_registrations\".\"project_id\", 25, 12) not glob '*[^0-9a-f]*'\n  "
+        },
+        "storage_registrations_active_pair": {
+          "name": "storage_registrations_active_pair",
+          "value": "\n        (\n          \"storage_registrations\".\"active_generation_id\" is null\n          and \"storage_registrations\".\"active_location_id\" is null\n          and \"storage_registrations\".\"activated_at\" is null\n        )\n        or (\n          \"storage_registrations\".\"active_generation_id\" is not null\n          and \"storage_registrations\".\"active_location_id\" is not null\n          and \"storage_registrations\".\"activated_at\" is not null\n        )\n      "
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

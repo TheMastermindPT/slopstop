@@ -14,6 +14,7 @@ import {
   previousApplicationDatabaseSpec,
   previousIdentityQueryDatabaseSpec,
   previousProposalDatabaseSpec,
+  previousPublicationDatabaseSpec,
   previousRegistrationDatabaseSpec,
   previousReservationDatabaseSpec,
 } from "./project-storage-database-specs.js";
@@ -55,7 +56,7 @@ export type ApplicationDatabaseMigrationFailures = Readonly<{
 }>;
 
 const PREVIOUS_APPLICATION_DATABASE_HEAD = "0000_gray_eddie_brock";
-const CURRENT_APPLICATION_DATABASE_HEAD = "0005_registration_publications";
+const CURRENT_APPLICATION_DATABASE_HEAD = "0006_registration_list_visibility";
 
 const noMigrationFailures: ApplicationDatabaseMigrationFailures = {
   checkpoint: async () => undefined,
@@ -212,6 +213,10 @@ const knownPreviousHeads = new Map<
   [
     "0004_registration_reservations",
     { spec: previousReservationDatabaseSpec, firstRequiredMigration: 5 },
+  ],
+  [
+    "0005_registration_publications",
+    { spec: previousPublicationDatabaseSpec, firstRequiredMigration: 6 },
   ],
 ]);
 

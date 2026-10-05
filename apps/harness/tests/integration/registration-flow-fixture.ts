@@ -6,9 +6,12 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MessageChannel } from "node:worker_threads";
 import {
+  CanonicalProjectActivationRequestSchema,
   createHandshakeCommand,
+  createProjectActivateCommand,
   createProjectListCommand,
   createProjectRegistrationCommand,
+  decodeStrict,
   type ProjectRegistrationRequest,
   parseHarnessMessage,
 } from "@slopstop/protocol";
@@ -74,6 +77,17 @@ export async function registrationSession() {
       throw new Error(`Unexpected harness event ${JSON.stringify(event)}`);
     return event.payload;
   };
+  const activate = async (projectId: string) => {
+    const event = await exchange(
+      createProjectActivateCommand(
+        metadata(),
+        decodeStrict(CanonicalProjectActivationRequestSchema, { projectId }),
+      ),
+    );
+    if (event.event !== "project.activate.result")
+      throw new Error(`Unexpected harness event ${JSON.stringify(event)}`);
+    return event.payload;
+  };
   const approveGit = async (): Promise<GitConsent> => {
     const git = await register({ step: "prepare-git" });
     if (git.status !== "git-prepared") throw new Error("Git preparation missing");
@@ -124,6 +138,7 @@ export async function registrationSession() {
     directory,
     register,
     list,
+    activate,
     approveGit,
     prepareFolder,
     dispose: async () => {
@@ -132,4 +147,37 @@ export async function registrationSession() {
       port2.close();
     },
   };
+}
+
+export type Session = Awaited<ReturnType<typeof registrationSession>>;
+
+/** Approves Git, prepares the folder and confirms its proposal. */
+export async function registerFolder(session: Session, folder: string) {
+  const git = await session.approveGit();
+  const { preparation, result } = await session.prepareFolder(folder, git);
+  if (result.status !== "proposal-prepared") throw new Error("Proposal missing");
+  const registered = await session.register({
+    step: "confirm",
+    requestId: randomUUID(),
+    ...preparation,
+    proposalId: result.proposalId,
+    proposalFingerprint: result.proposalFingerprint,
+  });
+  return { git, proposal: result, registered };
+}
+
+/** Commits once in the repository and adds a linked worktree at `linked`. */
+export function commitAndLinkWorktree(directory: string, linked: string) {
+  const git = (...args: string[]) =>
+    execFileSync(installedGit, [
+      "-C",
+      directory,
+      "-c",
+      "user.name=t",
+      "-c",
+      "user.email=t@t",
+      ...args,
+    ]);
+  git("commit", "--quiet", "--allow-empty", "-m", "initial");
+  git("worktree", "add", "--quiet", linked);
 }

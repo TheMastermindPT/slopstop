@@ -1,44 +1,15 @@
-import { execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { expect, it } from "vitest";
-import { registrationSession, uuid } from "./registration-flow-fixture.js";
-import { installedGit } from "./registration-git-fixture.js";
+import {
+  commitAndLinkWorktree,
+  registerFolder,
+  registrationSession,
+  uuid,
+} from "./registration-flow-fixture.js";
 
 const fingerprint = /^[0-9a-f]{64}$/;
-
-type Session = Awaited<ReturnType<typeof registrationSession>>;
-
-async function registerFolder(session: Session, folder: string) {
-  const git = await session.approveGit();
-  const { preparation, result } = await session.prepareFolder(folder, git);
-  if (result.status !== "proposal-prepared") throw new Error("Proposal missing");
-  const registered = await session.register({
-    step: "confirm",
-    requestId: randomUUID(),
-    ...preparation,
-    proposalId: result.proposalId,
-    proposalFingerprint: result.proposalFingerprint,
-  });
-  return { git, proposal: result, registered };
-}
-
-function commitAndLinkWorktree(directory: string, linked: string) {
-  const git = (...args: string[]) =>
-    execFileSync(installedGit, [
-      "-C",
-      directory,
-      "-c",
-      "user.name=t",
-      "-c",
-      "user.email=t@t",
-      ...args,
-    ]);
-  git("commit", "--quiet", "--allow-empty", "-m", "initial");
-  git("worktree", "add", "--quiet", linked);
-}
 
 it.runIf(process.platform === "win32")(
   "proposes, registers and lists a Project named after its worktree, then returns it again",

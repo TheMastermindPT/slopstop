@@ -43,6 +43,7 @@ const defaults: Record<Step, ProjectRegistrationResult> = {
     gitVersion: "2.53.0.windows.1",
   },
   confirm: { status: "registered", projectId, name: "repository" },
+  "remove-from-list": { status: "removed", projectId },
 };
 
 function listedRepository(): ProjectListResult {

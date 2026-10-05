@@ -175,6 +175,9 @@ export function createProjectRegistrationFlow(
         return proposals.prepare(request);
       case "confirm":
         return proposals.confirm(request);
+      case "remove-from-list":
+        // Answered by the list removal owner wrapped around this flow (withListRemoval).
+        return Effect.succeed({ status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" });
     }
   };
 

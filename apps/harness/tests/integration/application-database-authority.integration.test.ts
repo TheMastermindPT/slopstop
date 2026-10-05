@@ -177,7 +177,7 @@ it("admits a fresh Project create behind the registry's initial migration on one
     {
       journalMode: { journal_mode: "delete" },
       metadata: [
-        { metadata_key: "application", last_migration_id: "0005_registration_publications" },
+        { metadata_key: "application", last_migration_id: "0006_registration_list_visibility" },
       ],
     },
   );

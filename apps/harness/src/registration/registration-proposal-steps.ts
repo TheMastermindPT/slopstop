@@ -47,9 +47,13 @@ function preparationOf(request: PrepareRequest) {
 function existingResult(
   existing: Exclude<ExistingRegistration, { status: "none" }>,
 ): ProjectRegistrationResult {
-  return existing.status === "incomplete"
-    ? { status: "pending-recovery", code: "REGISTRATION_INCOMPLETE" }
-    : { status: existing.status, projectId: existing.projectId, name: existing.name };
+  if (existing.status === "incomplete")
+    return { status: "pending-recovery", code: "REGISTRATION_INCOMPLETE" };
+  const named = { projectId: existing.projectId, name: existing.name };
+  if (existing.status !== "belongs-to-project") return { status: existing.status, ...named };
+  return existing.hidden
+    ? { status: existing.status, ...named, hiddenFromList: true }
+    : { status: existing.status, ...named };
 }
 
 function proposalResult(

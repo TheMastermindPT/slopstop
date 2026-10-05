@@ -8,7 +8,10 @@ import {
   ProjectActivationIdSchema,
 } from "@slopstop/protocol";
 import { Context, Effect, Layer, ManagedRuntime } from "effect";
-import { createActiveProjectCoordinator } from "./active-project-coordinator.js";
+import {
+  type ActiveProjectCoordinatorWithHeld,
+  createActiveProjectCoordinator,
+} from "./active-project-coordinator.js";
 import { createCanonicalCommandRegistry } from "./canonical-command-registry.js";
 import {
   type CanonicalProjectApplication,
@@ -115,7 +118,13 @@ export function startHarnessProcessRuntime(
     );
     const { registration } = services;
     const stopHarness = startHarnessRuntime({
-      projectRegistration: registration.flow,
+      projectRegistration: withListRemoval(
+        registration.flow,
+        createListRemoval({
+          options: registration.options,
+          activeProjectId: services.canonicalProjects.activeProjectId,
+        }),
+      ),
       projectListing: registrationListing(registration),
       applicationDatabase: services.applicationDatabase,
       transport: input.transport,
@@ -178,11 +187,13 @@ class ProjectRegistration extends Context.Service<
     owner: ReturnType<typeof createProjectRegistrationOwner>;
     observer: ProjectRegistrationObserver;
     flow: ProjectRegistrationFlow;
+    options: RegistrationDatabaseOptions;
   }>
 >()("slopstop/harness/ProjectRegistration") {}
-class CanonicalProjects extends Context.Service<CanonicalProjects, CanonicalProjectApplication>()(
-  "slopstop/harness/CanonicalProjects",
-) {}
+class CanonicalProjects extends Context.Service<
+  CanonicalProjects,
+  CanonicalProjectApplication & Pick<ActiveProjectCoordinatorWithHeld, "activeProjectId">
+>()("slopstop/harness/CanonicalProjects") {}
 
 const applicationDatabaseLayer = Layer.effect(
   ApplicationDatabase,
@@ -232,6 +243,7 @@ const projectRegistrationLayer = Layer.effect(
       registry,
       owner,
       observer,
+      options,
       flow: createProjectRegistrationFlow({
         registry,
         observer,
@@ -271,7 +283,10 @@ const canonicalProjectsLayer = Layer.effect(
         decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
       now: currentTime,
     });
-    return createCanonicalProjectApplication(coordinator);
+    return {
+      ...createCanonicalProjectApplication(coordinator),
+      activeProjectId: coordinator.activeProjectId,
+    };
   }),
 );
 
@@ -290,6 +305,7 @@ import {
 } from "./project-registration-observer.js";
 import { discoverGitExecutable } from "./registration/git-executable-discovery.js";
 import { createGitVersionInspection } from "./registration/git-version-inspection.js";
+import { createListRemoval, withListRemoval } from "./registration/list-visibility.js";
 import {
   createDirectoryHandoff,
   createProjectRegistrationFlow,
@@ -301,6 +317,7 @@ import {
   createRegisteredProjectTargetValidation,
 } from "./registration/registered-project-selection.js";
 import { createRegistrationRegistry } from "./registration/registration-registry.js";
+import type { RegistrationDatabaseOptions } from "./registration/registry-database.js";
 import { createVersionObservationExecution } from "./registration/version-observation-execution.js";
 import { createWindowsVersionChild } from "./registration/windows-version-child.js";
 import { observeSelectedExecutable } from "./storage/repository-identity-observer.js";

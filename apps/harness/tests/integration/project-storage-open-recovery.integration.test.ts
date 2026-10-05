@@ -50,7 +50,7 @@ async function expectHealthyEmptyApplicationDatabase(root: string) {
   const database = new DatabaseSync(path.join(root, "application.db"), { readOnly: true });
   try {
     expect(database.prepare("SELECT last_migration_id FROM schema_metadata").all()).toEqual([
-      { last_migration_id: "0005_registration_publications" },
+      { last_migration_id: "0006_registration_list_visibility" },
     ]);
     const tables = database
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")

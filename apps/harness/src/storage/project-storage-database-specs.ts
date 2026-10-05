@@ -1498,8 +1498,19 @@ function withPublicationSpec(previous: DatabaseSpec): DatabaseSpec {
   };
 }
 
+export const previousPublicationDatabaseSpec = withPublicationSpec(previousReservationDatabaseSpec);
+
+function withVisibilitySpec(previous: DatabaseSpec): DatabaseSpec {
+  const table = "registration_list_visibility";
+  return {
+    ...previous,
+    tables: [...previous.tables, table],
+    columns: [...previous.columns, ...requiredTextColumns(table, ["project_id", "hidden_at"])],
+  };
+}
+
 export const databaseSpecs = {
-  application: withPublicationSpec(previousReservationDatabaseSpec),
+  application: withVisibilitySpec(previousPublicationDatabaseSpec),
   canonical: {
     resourceKind: "canonical",
     databaseKind: "canonical",
