@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { Worker } from "node:worker_threads";
 import { expect, it, vi } from "vitest";
-import { createWorkerLocalLibsqlClient } from "./local-libsql-worker-client.js";
+import { createWorkerLocalLibsqlClient } from "../../src/storage/local-libsql-worker-client.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -128,7 +128,7 @@ it("releases a request that cannot be posted to the worker", async () => {
 it("does not keep a child process alive after an uncloneable request", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-libsql-child-exit-"));
   const moduleUrl = pathToFileURL(
-    path.join(import.meta.dirname, "local-libsql-worker-client.ts"),
+    path.join(import.meta.dirname, "../../src/storage/local-libsql-worker-client.ts"),
   ).href;
   const source = `
     void (async () => {
