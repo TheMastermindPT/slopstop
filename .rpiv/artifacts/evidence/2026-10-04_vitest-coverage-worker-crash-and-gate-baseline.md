@@ -102,3 +102,13 @@ tags: [testing, gate, vitest, coverage, pre-existing]
 - **Residual timeouts.** The remaining full-suite timeouts come from the known near-limit registration family. The selection-switch case alone takes 11–14 s.
 - **User decision: option C.** The registration integration files run in their own Vitest project with low parallelism. Timeouts, assertions and thresholds stay unchanged.
 - **User decision: reclassify the rebuild-authorization case.** "authorizes only the pinned canonical storage-identity rebuild" (`project-storage-node-adapters.test.ts`) moves to the integration project. It performs about 400 real filesystem operations over 34 temporary trees, and Windows latency under parallel load (probably Defender) grows those operations 4–6 times, past 5 s. Its assertions stay unchanged.
+
+## Push blocked by real-disk unit cases; standing reclassification rule — Human Decisions (2026-10-05)
+
+- **The failed push.** The push's `check:deep` failed in `test:coverage`: three `S5 G4` cases in `canonical-command-repository.test.ts` timed out at 5 s.
+  - The 5 s is not a design timer. The cases take about 0.25 s alone, and under the pre-push load (coverage, parallel forks, Defender scanning temp files) they slow down smoothly by 10–20×.
+- **User decision.** The real-file cases of that file move to the harness integration project, with assertions unchanged.
+- **Standing rule (user decision).** Tests that use the real disk, a real database or worker threads belong to the integration project (AGENTS.md: adapter integration tests). The coordinator may approve such moves without asking, provided that:
+  - assertions stay unchanged;
+  - no test is lost (the case count and name multiset are proven);
+  - each move is recorded here.
