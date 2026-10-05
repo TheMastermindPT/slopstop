@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   applyPackageSmokeAuthorization,
   PackageSmokeAuthorizationError,
-} from "./package-smoke-authorization.js";
+} from "../../src/main/package-smoke-authorization.js";
 
 const markerFilename = ".slopstop-package-smoke.json";
 const authorizationToken = "a".repeat(64);
