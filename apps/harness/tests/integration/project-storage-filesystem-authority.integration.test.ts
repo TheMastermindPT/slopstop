@@ -2,8 +2,8 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
-import { inspectFilesystemWitnesses } from "./project-storage-filesystem-authority.js";
-import { inspectUnregisteredOpening } from "./project-storage-opening.js";
+import { inspectFilesystemWitnesses } from "../../src/storage/project-storage-filesystem-authority.js";
+import { inspectUnregisteredOpening } from "../../src/storage/project-storage-opening.js";
 
 it("classifies the canonical Writer lease only at the Project root", async () => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), "slopstop-writer-witness-"));
