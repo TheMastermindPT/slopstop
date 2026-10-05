@@ -429,6 +429,15 @@ async function acquireWritable(
   });
 }
 
+// Closes what the activation holds; a failed close retains it instead of answering `settled`.
+async function closeThen(
+  context: AcquisitionContext,
+  settled: CanonicalProjectActivationResult,
+): Promise<CanonicalProjectActivationResult> {
+  const closed = await context.cleanup();
+  return closed.status === "failed" ? context.retain(closed.ownership, closed.code) : settled;
+}
+
 async function acquireProject(
   context: AcquisitionContext,
 ): Promise<CanonicalProjectActivationResult> {
@@ -440,23 +449,16 @@ async function acquireProject(
   }
   const session = storage.session;
   context.hold({ stage: "storage", session });
-  if (session.mode === "safe-mode") {
-    const closed = await context.cleanup();
-    if (closed.status === "failed") return context.retain(closed.ownership, closed.code);
-    return {
+  if (session.mode === "safe-mode")
+    return closeThen(context, {
       status: "safe-mode",
       request,
       identity: session.result.identity,
       canonicalHealth: session.result.canonicalHealth,
       runtimeHealth: session.result.runtimeHealth,
-    };
-  }
+    });
   const refused = await dependencies.validateSession?.(request, session);
-  if (refused !== undefined) {
-    const closed = await context.cleanup();
-    if (closed.status === "failed") return context.retain(closed.ownership, closed.code);
-    return refused;
-  }
+  if (refused !== undefined) return closeThen(context, refused);
   return acquireWritable(context, session);
 }
 
@@ -523,14 +525,8 @@ export function createActiveProjectCoordinator(
     );
   };
 
-  const activateWithinLifecycle = async (
-    request: CanonicalProjectActivationRequest,
-  ): Promise<CanonicalProjectActivationResult> => {
-    const rejected = activationRejection(state, request);
-    if (rejected !== undefined) return rejected;
-    const refused = await dependencies.validateTarget?.(request);
-    if (refused !== undefined) return refused;
-    state = { status: "activating" };
+  // What an activation in progress owns, and its one cleanup attempt.
+  const activationOwnership = (request: CanonicalProjectActivationRequest) => {
     let ownership: Ownership | undefined;
     let cleanupAttempt: Promise<ReleaseResult> | undefined;
     const cleanup = (): Promise<ReleaseResult> => {
@@ -544,37 +540,51 @@ export function createActiveProjectCoordinator(
       cleanupAttempt = release(retained);
       return cleanupAttempt;
     };
-    const failed = async (
-      code: CanonicalProjectActivationDiagnosticCode,
-      message: string,
+    const own = (owned: Ownership) => {
+      ownership = owned;
+    };
+    // Cleans up, then retains on a failed release or answers `otherwise`.
+    const afterCleanup = async (
+      otherwise: () => CanonicalProjectActivationResult,
     ): Promise<CanonicalProjectActivationResult> => {
       const result = await cleanup();
       if (result.status === "failed") return retainFailure(request, result.ownership, result.code);
-      return activationFailure(request, "broken", code, message);
+      return otherwise();
     };
+    return { cleanup, own, afterCleanup };
+  };
+
+  const activateWithinLifecycle = async (
+    request: CanonicalProjectActivationRequest,
+  ): Promise<CanonicalProjectActivationResult> => {
+    const rejected = activationRejection(state, request);
+    if (rejected !== undefined) return rejected;
+    const refused = await dependencies.validateTarget?.(request);
+    if (refused !== undefined) return refused;
+    state = { status: "activating" };
+    const { cleanup, own, afterCleanup } = activationOwnership(request);
     try {
       return await acquireProject({
         dependencies,
         request,
         cleanup,
-        failed,
-        hold: (owned) => {
-          ownership = owned;
-        },
+        failed: (code, message) =>
+          afterCleanup(() => activationFailure(request, "broken", code, message)),
+        hold: own,
         retain: (owned, code) => {
-          ownership = owned;
+          own(owned);
           return retainFailure(request, owned, code);
         },
         publish: (activation) => {
-          ownership = activation.ownership;
+          own(activation.ownership);
           state = { status: "active", activation };
           return activeResult(request, activation);
         },
       });
     } catch (error) {
-      const result = await cleanup();
-      if (result.status === "failed") return retainFailure(request, result.ownership, result.code);
-      throw error;
+      return afterCleanup(() => {
+        throw error;
+      });
     }
   };
 
