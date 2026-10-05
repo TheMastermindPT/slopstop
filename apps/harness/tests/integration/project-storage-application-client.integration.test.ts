@@ -3,12 +3,12 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
-import type { LocalLibsqlClient } from "./local-libsql-worker-client.js";
-import { createApplicationClientManager } from "./project-storage-application-client.js";
+import type { LocalLibsqlClient } from "../../src/storage/local-libsql-worker-client.js";
+import { createApplicationClientManager } from "../../src/storage/project-storage-application-client.js";
 import {
   ProjectStorageApplicationClientInitializationError,
   ProjectStorageUnavailableError,
-} from "./project-storage-errors.js";
+} from "../../src/storage/project-storage-errors.js";
 
 const { unlinkMock } = vi.hoisted(() => ({ unlinkMock: vi.fn() }));
 
