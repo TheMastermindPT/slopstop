@@ -50,3 +50,10 @@ Baseline: the decisions recorded in `PRODUCT.md`, `discover/2026-08-22_19-18-10_
 - **Existing Projects: option A.** Add slice C1-0, a staged Project database upgrade under ADR 0005, limited to additive migrations: database-native backup, migrate copies in a staging generation, verify schema and integrity, activate the new generation atomically, keep the old one until verified. It runs automatically on activation. Rejected: B (pre-C1 Projects stay read-only), C (separate Conversation database, contradicts ADR 0006), D (in-place migration without backup, contradicts ADR 0005).
 - **Wording.** Button "Save locally"; note "No model is connected yet. Messages are saved on this computer."
 - **Message size limit.** 32 KiB of text per message.
+
+## 5. C1-0 S1 build authorization (2026-10-06)
+
+- **Build authorized** for slice `c1-0-s1-staged-upgrade-engine` of `.rpiv/artifacts/designs/2026-10-05_20-37-14_project-database-staged-upgrade.md`, with the design's recorded residual risk. Branch requested by the implementer through the user.
+- **Adjustment 1: ADR 0005 amendment moves into S1.** The temporary single-marker form (`storage_upgrades`), manifest version 2 and the snapshots backup layout are recorded in ADR 0005/0006 in the same branch as the S1 code, not deferred to S4.
+- **Adjustment 2: typed Effect errors.** Each pipeline step's failure is a typed Effect error (tagged); conversion to the existing owner outcome shape (`ready` / `unavailable` / `broken`, `refused`, `failed`) happens once, at the owner boundary.
+- **Mitigation for the unreviewed final revision:** candidate-mode independent review of the real S1 source before S1 is accepted.
