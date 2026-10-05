@@ -195,3 +195,15 @@ A push attempt (CLI and GitHub Desktop) failed because the `.husky/pre-push` dee
   - the Writer-proof smoke flake;
   - authorization to integrate PC-S1 into main.
 - **Known limit:** Git approval reuse lasts only for the app session.
+
+## 15. PC-S1 wording queue — Human Decisions (2026-10-05)
+
+- **U1: kept.** The preparing screen lists the six queries without fake progress. No harness progress events are added.
+- **U3: prototype text adopted.** The list result reports how many Projects are hidden, and an all-hidden list shows "No Projects in your list. Removed Projects come back when you add their folder again." This approves an oracle change: the list result schema gains the hidden count, so the exact list assertions change accordingly, and nothing else does.
+- **U4: approved.** Generic remove failure:
+  - "Not removed";
+  - "{name} wasn't removed";
+  - "Ragnarok couldn't remove it from the list.";
+  - "Your list was not changed.";
+  - a reference with the actual code.
+- **U5: approved, and provisional (b) becomes final.** A linked worktree of a hidden Project answers `belongs-to-project` and leaves the Project hidden, with the explanatory text.
