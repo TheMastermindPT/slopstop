@@ -1,15 +1,18 @@
 import { defineConfig } from "vitest/config";
 import { coverageConfig, unitTestProjects } from "./vitest.config.js";
+import { integrationTestProjects } from "./vitest.integration.config.js";
 
 /**
- * The `test:coverage` script passes `--maxWorkers=50%`: file-based projects do not inherit root
- * `maxWorkers`, and only the CLI flag reaches them. Full parallelism makes the native suites cross
- * their timeouts under V8 coverage. Workers stay forked: a native access violation (0xC0000005)
- * seen under coverage kills one forked file, but with threads it kills the whole run.
+ * Half the workers by default: full parallelism makes the native suites cross their timeouts
+ * under V8 coverage. Projects without their own `maxWorkers` take this root value; the
+ * registration project keeps its own lower limit and runs in a later group order. Workers stay
+ * forked: a native access violation (0xC0000005) seen under coverage killed one forked file, but
+ * with threads it killed the whole run.
  */
 export default defineConfig({
   test: {
-    projects: [...unitTestProjects, "apps/harness/vitest.integration.config.ts"],
+    maxWorkers: "50%",
+    projects: [...unitTestProjects, ...integrationTestProjects],
     coverage: coverageConfig,
   },
 });
