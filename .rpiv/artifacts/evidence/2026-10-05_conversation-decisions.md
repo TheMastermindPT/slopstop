@@ -34,3 +34,13 @@ Baseline: the decisions recorded in `PRODUCT.md`, `discover/2026-08-22_19-18-10_
   - A chip makes the destination explicit, so no model guess is needed.
   - Proposed split, to confirm when the slice is planned: "Mention" (talk about the Waypoint in the Project conversation; its detailed status joins the context) versus "Send to" (the message goes to the Waypoint's conversation).
 - **Timing.** Waypoint references arrive with the slice that builds the map and Waypoints (after Frame), not with the first Conversation slice. The `@` picker for files follows the attachments work.
+
+## 3. First-slice choices and the `@` convention (2026-10-05)
+
+- **Accepted (user, "Sim, aceito"):**
+  1. First slice: save and reopen Conversation messages with no model; the real model follows in the next slice.
+  2. Subscription-mode model: Opus by default, with a visible per-message choice the user can change.
+  3. History sent per turn: the most recent messages up to a size limit, in a stable append-only order; automatic summaries later.
+  4. Responses stream progressively and can be cancelled mid-turn.
+- **`@` is reserved for files** (supersedes section 2's use of `@` for Waypoints). Its behaviour follows current industry practice; when the attachments slice is planned, research VS Code chat and Claude Code `@` file references first and bring the details to the user.
+- **Waypoint references need another trigger.** Proposed: `#`, as GitHub uses for issues. Pending the user's confirmation.
