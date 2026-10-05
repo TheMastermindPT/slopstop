@@ -9,6 +9,15 @@ import {
 } from "@slopstop/protocol";
 import { Schema } from "effect";
 import { expect, it, vi } from "vitest";
+import { snapshotCanonicalCommand } from "../../src/canonical-json.js";
+import * as repositories from "../../src/storage/canonical-command-repository.js";
+import type { InStatement } from "../../src/storage/local-libsql-worker-client.js";
+import {
+  createWorkerLocalLibsqlClient,
+  type LocalLibsqlClient,
+  type LocalLibsqlResultSet,
+  type LocalLibsqlTransaction,
+} from "../../src/storage/local-libsql-worker-client.js";
 import {
   activated,
   factory,
@@ -20,16 +29,7 @@ import {
   tables,
   times,
   transformTransactionResults,
-} from "../../tests/integration/canonical-command-repository-fixture.js";
-import { snapshotCanonicalCommand } from "../canonical-json.js";
-import * as repositories from "./canonical-command-repository.js";
-import type { InStatement } from "./local-libsql-worker-client.js";
-import {
-  createWorkerLocalLibsqlClient,
-  type LocalLibsqlClient,
-  type LocalLibsqlResultSet,
-  type LocalLibsqlTransaction,
-} from "./local-libsql-worker-client.js";
+} from "./canonical-command-repository-fixture.js";
 
 const sqliteScalars = Schema.Array(
   Schema.Union([Schema.String, Schema.Number, Schema.BigInt, Schema.Null]),
