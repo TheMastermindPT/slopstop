@@ -92,3 +92,10 @@ Relayed by the ui-ux agent and confirmed by the user in the coordinator session.
 - **The name "Feature" may change.** The user has not chosen a term; keep "Feature" until then.
 - **The Waypoint parent proposes; the user approves.** It never forwards or applies information to a Waypoint on its own (consistent with PRODUCT.md: model output never changes canonical state directly).
 - Naming note: "Wayfinder" already names the GitHub-issues decision map (`docs/agents/issue-tracker.md`); it is not adopted as a product term.
+
+## 10. C1-0 S3b build authorization (2026-10-07)
+
+- **Build authorized** for slice `c1-0-s3b-upgrade-window` of `.rpiv/artifacts/designs/2026-10-06_18-48-25_upgrade-window.md`, with the design's recorded residual risk (intent rounds 1-2 failed; round-2 fixes unreviewed; the window chooses `PROJECT_STORAGE_BROKEN` when the harness answers `upgraded` but the Project still needs migration; desktop-side protocol errors appear as `PROTOCOL_MESSAGE_INVALID`; no failure E2E). Mitigation: candidate-mode review of the real source, at most two rounds. Confirmed by the user in the coordinator session.
+- **Workspace:** the main working tree on branch `feat/c1-0-s3b-upgrade-window` (user choice instead of a linked worktree, although the slice touches preload and IPC).
+- **Test stability first:** before the S3b behaviours, a separate commit on the branch applies the pre-push timeout diagnosis options A (split multi-case loops into rows), B (long native files in their own low-parallelism project) and C (promise waits instead of default-deadline `vi.waitFor`), without raising any timeout. Option D (timeout changes) is not authorized.
+- **Pushes of main (2026-10-06/07):** three pre-push failures from load-induced stalls (different tests each time; the `recovery-required` result was a timeout side effect, per the implementer's diagnosis); the fourth attempt passed and `origin/main` is `0bc2f4f`.
