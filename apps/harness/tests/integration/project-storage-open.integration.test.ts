@@ -10,7 +10,7 @@ import {
 } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
 import {
-  type ProjectStorageManifestV1,
+  type ProjectStorageManifest,
   parseProjectStorageManifest,
   serializeProjectStorageManifest,
 } from "../../src/storage/project-storage-manifest.js";
@@ -49,6 +49,7 @@ import {
   rejectProjectDatabaseOpen,
   type StorageRuntimeOptions,
   seedConflictingCanonicalIdentity,
+  seedContradictoryActiveLocation,
   seedNewerCanonicalAuthority,
   unavailableHealth,
   unsupportedNewerHealth,
@@ -379,7 +380,7 @@ const openingHealthCases = [
 
 async function seedManifestIdentityConflict(
   root: ApplicationRootPath,
-  mutate: (manifest: ProjectStorageManifestV1) => unknown,
+  mutate: (manifest: ProjectStorageManifest) => unknown,
 ): Promise<void> {
   const paths = generationPaths(root);
   const manifest = parseProjectStorageManifest(await readFile(paths.manifest, "utf8"));
@@ -389,28 +390,28 @@ async function seedManifestIdentityConflict(
 const manifestIdentityConflictCases = [
   {
     name: "Project ID",
-    mutate: (manifest: ProjectStorageManifestV1) => ({
+    mutate: (manifest: ProjectStorageManifest) => ({
       ...manifest,
       projectId: "00000000-0000-4000-8000-000000000099",
     }),
   },
   {
     name: "Storage ID",
-    mutate: (manifest: ProjectStorageManifestV1) => ({
+    mutate: (manifest: ProjectStorageManifest) => ({
       ...manifest,
       storageId: "00000000-0000-4000-8000-000000000099",
     }),
   },
   {
     name: "generation ID",
-    mutate: (manifest: ProjectStorageManifestV1) => ({
+    mutate: (manifest: ProjectStorageManifest) => ({
       ...manifest,
       generationId: "00000000-0000-4000-8000-000000000099",
     }),
   },
   {
     name: "create request ID",
-    mutate: (manifest: ProjectStorageManifestV1) => ({
+    mutate: (manifest: ProjectStorageManifest) => ({
       ...manifest,
       provenance: {
         ...manifest.provenance,
@@ -420,7 +421,7 @@ const manifestIdentityConflictCases = [
   },
   {
     name: "canonical lineage ID",
-    mutate: (manifest: ProjectStorageManifestV1) => ({
+    mutate: (manifest: ProjectStorageManifest) => ({
       ...manifest,
       canonical: {
         ...manifest.canonical,
@@ -430,7 +431,7 @@ const manifestIdentityConflictCases = [
   },
   {
     name: "runtime lineage ID",
-    mutate: (manifest: ProjectStorageManifestV1) => ({
+    mutate: (manifest: ProjectStorageManifest) => ({
       ...manifest,
       runtime: {
         ...manifest.runtime,
@@ -440,7 +441,7 @@ const manifestIdentityConflictCases = [
   },
   {
     name: "creation time",
-    mutate: (manifest: ProjectStorageManifestV1) => ({
+    mutate: (manifest: ProjectStorageManifest) => ({
       ...manifest,
       createdAt: "2026-08-31T12:00:01.000Z",
     }),
@@ -491,7 +492,7 @@ const manifestHealthCases = [
   {
     name: "unsupported-newer",
     seed: async (root: ApplicationRootPath) => {
-      await writeFile(generationPaths(root).manifest, '{"manifestVersion":2}\n');
+      await writeFile(generationPaths(root).manifest, '{"manifestVersion":3}\n');
     },
     expectedHealth: unsupportedNewerHealth,
   },
@@ -506,32 +507,6 @@ const manifestHealthCases = [
   failRead?: true;
   expectedHealth: ProjectDatabaseHealth;
 }>[];
-
-function seedContradictoryActiveLocation(root: ApplicationRootPath): string {
-  const contradictoryLocationId = "00000000-0000-4000-8000-000000000098";
-  const contradictoryPath = path.resolve(root, "contradictory-location");
-  const database = new DatabaseSync(generationPaths(root).application);
-  try {
-    database
-      .prepare(
-        `INSERT INTO storage_locations
-          (storage_id, location_id, normalized_path, location_state, observed_at)
-          VALUES (?, ?, ?, 'staging', ?)`,
-      )
-      .run(
-        fixedCreationIds.storageId,
-        contradictoryLocationId,
-        contradictoryPath,
-        "2026-08-31T12:00:00.000Z",
-      );
-    database
-      .prepare("UPDATE storage_registrations SET active_location_id = ? WHERE project_id = ?")
-      .run(contradictoryLocationId, openRequest.projectId);
-  } finally {
-    database.close();
-  }
-  return contradictoryPath;
-}
 
 function seedActiveRegistrationTargetingStaging(root: ApplicationRootPath): void {
   const database = new DatabaseSync(generationPaths(root).application);
@@ -801,7 +776,7 @@ it(
     }
 
     expect(readApplicationHead(root)).toEqual({
-      last_migration_id: "0006_registration_list_visibility",
+      last_migration_id: "0007_storage_upgrades",
     });
     expect(readPreviousRegistrations(root)).toEqual(
       expect.arrayContaining(before.map((row) => expect.objectContaining(row))),
@@ -855,7 +830,7 @@ it(
       runtimeHealth: recoveryRequiredHealth,
     });
     expect(readApplicationHead(root)).toEqual({
-      last_migration_id: "0006_registration_list_visibility",
+      last_migration_id: "0007_storage_upgrades",
     });
     expect(readPreviousRegistrations(root)).toEqual(before);
     expect(await readFile(projectFile)).toEqual(projectBytes);

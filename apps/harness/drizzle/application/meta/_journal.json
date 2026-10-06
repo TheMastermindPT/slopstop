@@ -50,6 +50,13 @@
       "when": 1791169164864,
       "tag": "0006_registration_list_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791235923843,
+      "tag": "0007_storage_upgrades",
+      "breakpoints": true
     }
   ]
 }

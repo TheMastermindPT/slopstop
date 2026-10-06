@@ -50,7 +50,7 @@ it("extends the exact 0005 registry with list visibility without replacing old r
       expect((await database.execute("SELECT * FROM storage_registrations")).rows).toEqual(before);
       expect(
         (await database.execute("SELECT last_migration_id FROM schema_metadata")).rows,
-      ).toEqual([["0006_registration_list_visibility"]]);
+      ).toEqual([["0007_storage_upgrades"]]);
       expect(
         (await database.execute("SELECT count(*) FROM registration_list_visibility")).rows,
       ).toEqual([[0]]);

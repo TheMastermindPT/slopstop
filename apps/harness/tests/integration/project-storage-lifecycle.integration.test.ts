@@ -290,6 +290,9 @@ function createCreateBoundaryTransportFixture(
       generationId: () => fixedCreationIds.generationId,
       canonicalLineageId: () => fixedCreationIds.canonicalDatabaseLineageId,
       runtimeLineageId: () => fixedCreationIds.runtimeDatabaseLineageId,
+      upgradeId: () => {
+        throw new Error("Unexpected upgrade allocation.");
+      },
     },
     clock: { now: () => "2026-09-03T18:00:00.000Z" },
   });

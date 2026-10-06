@@ -45,6 +45,18 @@ export function isUnavailableStorageError(input: { error: unknown }): boolean {
   return unavailableSqliteCodeFamilies.some((family) => belongsToErrorCodeFamily(code, family));
 }
 
+/** Busy-class storage errors, directly or as the cause another error wraps them in. */
+export function isBusyStorageError(input: { error: unknown }): boolean {
+  if (input.error instanceof ProjectStorageUnavailableError) return true;
+  if (isUnavailableStorageError(input)) return true;
+  const { error } = input;
+  return (
+    error instanceof Error &&
+    error.cause !== undefined &&
+    isBusyStorageError({ error: error.cause })
+  );
+}
+
 export function normalizeStorageError(input: { error: unknown; message: string }): never {
   rethrowKnownStorageError(input.error);
   if (isUnavailableStorageError({ error: input.error })) {

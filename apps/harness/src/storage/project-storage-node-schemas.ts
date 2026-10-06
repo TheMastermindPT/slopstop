@@ -25,6 +25,27 @@ export function integerScalar(result: LocalLibsqlResultSet): number | undefined 
   const parsed = decodeStrictResult(sqlIntegerSchema, row[0]);
   return Result.isSuccess(parsed) ? parsed.success : undefined;
 }
+export function resultObjects(result: LocalLibsqlResultSet): unknown[] {
+  const objects: Record<string, unknown>[] = [];
+  for (const row of result.rows) {
+    const object: Record<string, unknown> = {};
+    for (const [index, column] of result.columns.entries()) object[column] = row[index];
+    objects.push(object);
+  }
+  return objects;
+}
+
+/** The `storage_generations` select list that decodes with `generationRowSchema`. */
+export const generationRowColumns = `storage_id AS storageId, generation_id AS generationId,
+      project_id AS projectId, location_id AS locationId,
+      canonical_lineage_id AS canonicalDatabaseLineageId,
+      runtime_lineage_id AS runtimeDatabaseLineageId,
+      create_request_id AS createRequestId,
+      create_request_fingerprint AS createRequestFingerprint,
+      generation_directory_name AS generationDirectoryName,
+      creation_state AS creationState, created_at AS createdAt,
+      activated_at AS activatedAt`;
+
 export const utcInstantSchema = dateTimeTextSchema({ offset: true }).check(
   Schema.makeFilter((value: string) => value.endsWith("Z") || "UTC instant must end in Z."),
 );

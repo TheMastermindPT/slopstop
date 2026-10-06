@@ -12,6 +12,7 @@ import {
   decodeStrict,
   type ProjectStorageCloseRequest,
   type ProjectStorageCreateRequest,
+  ProjectStorageCreateRequestIdSchema,
   ProjectStorageCreateRequestSchema,
   type ProjectStorageOpenRequest,
   RuntimeDatabaseLineageIdSchema,
@@ -30,10 +31,7 @@ import {
   createNodeProjectStorageDependencies,
   type NodeProjectStorageOptions,
 } from "../../src/storage/project-storage-node-adapters.js";
-import {
-  type CreationCheckpoint,
-  createProjectStorageOwner,
-} from "../../src/storage/project-storage-store.js";
+import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
 
 export const checkedInMigrationRoot = path.resolve(import.meta.dirname, "../../drizzle");
 export const projectStorageIntegrationTimeout = 15_000;
@@ -100,9 +98,12 @@ function nextMessage(port: MessagePort): Promise<unknown> {
   return new Promise((resolve) => port.once("message", resolve));
 }
 
+type StorageCheckpoint = Parameters<
+  NonNullable<NodeProjectStorageOptions["failures"]>["checkpoint"]
+>[0];
 type StorageRuntimeOptions = Readonly<{
-  failAt?: CreationCheckpoint;
-  onCheckpoint?: (checkpoint: CreationCheckpoint) => Promise<void> | void;
+  failAt?: StorageCheckpoint;
+  onCheckpoint?: (checkpoint: StorageCheckpoint) => Promise<void> | void;
   migrationResourcesRoot?: string;
   onIdentityAllocation?: () => void;
   clockNow?: () => string;
@@ -134,6 +135,9 @@ async function projectStorageApplicationForRoot(
         allocated(fixedCreationIds.canonicalDatabaseLineageId, options.onIdentityAllocation),
       runtimeLineageId: () =>
         allocated(fixedCreationIds.runtimeDatabaseLineageId, options.onIdentityAllocation),
+      upgradeId: () => {
+        throw new Error("Unexpected upgrade allocation.");
+      },
     },
     clock: { now: options.clockNow ?? (() => "2026-08-31T12:00:00.000Z") },
     failures: {
@@ -261,4 +265,74 @@ export async function pathExists(targetPath: string): Promise<boolean> {
     if (Reflect.get(error, "code") === "ENOENT") return false;
     throw error;
   }
+}
+
+export const upgradeIds = {
+  sourceGenerationId: fixedCreationIds.generationId,
+  targetGenerationId: decodeStrict(
+    StorageGenerationIdSchema,
+    "00000000-0000-4000-8000-000000000024",
+  ),
+  upgradeId: decodeStrict(
+    ProjectStorageCreateRequestIdSchema,
+    "00000000-0000-4000-8000-0000000000a1",
+  ),
+} as const;
+export const upgradeTimes = {
+  created: "2026-08-31T12:00:00.000Z",
+  started: "2026-10-05T10:00:00.000Z",
+  activated: "2026-10-05T10:00:01.000Z",
+} as const;
+
+export type UpgradeOwnerOptions = Readonly<{
+  failAt?: StorageCheckpoint;
+  onCheckpoint?: (checkpoint: StorageCheckpoint) => Promise<void> | void;
+}>;
+
+/**
+ * The raw Storage owner with fixed ids (the creation generation outside an upgrade, the target
+ * generation inside one), and a clock that answers the creation time except while `upgrade`
+ * runs, where it answers exactly the two upgrade instants and refuses any further read.
+ */
+export function createUpgradeStorageOwner(root: string, options: UpgradeOwnerOptions = {}) {
+  let upgradeClock: string[] | undefined;
+  const now = (): string => {
+    if (upgradeClock === undefined) return upgradeTimes.created;
+    const next = upgradeClock.shift();
+    if (next === undefined) throw new Error("Unexpected Storage clock read during the upgrade.");
+    return next;
+  };
+  const dependencies = createNodeProjectStorageDependencies({
+    applicationStorageRoot: root,
+    migrationResourcesRoot: checkedInMigrationRoot,
+    applicationVersion: "0.0.0",
+    ids: {
+      storageId: () => fixedCreationIds.storageId,
+      locationId: () => fixedCreationIds.locationId,
+      generationId: () =>
+        upgradeClock === undefined ? upgradeIds.sourceGenerationId : upgradeIds.targetGenerationId,
+      canonicalLineageId: () => fixedCreationIds.canonicalDatabaseLineageId,
+      runtimeLineageId: () => fixedCreationIds.runtimeDatabaseLineageId,
+      upgradeId: () => upgradeIds.upgradeId,
+    },
+    clock: { now },
+    failures: {
+      checkpoint: async (checkpoint) => {
+        await options.onCheckpoint?.(checkpoint);
+        if (checkpoint === options.failAt) throw new Error(`Injected failure at ${checkpoint}.`);
+      },
+    },
+  });
+  const owner = createProjectStorageOwner(dependencies);
+  return {
+    owner,
+    upgrade: async (request: Parameters<typeof owner.upgrade>[0]) => {
+      upgradeClock = [upgradeTimes.started, upgradeTimes.activated];
+      try {
+        return await owner.upgrade(request);
+      } finally {
+        upgradeClock = undefined;
+      }
+    },
+  };
 }

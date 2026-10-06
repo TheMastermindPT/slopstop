@@ -2,25 +2,25 @@ import { readFile } from "node:fs/promises";
 import { Result, Schema } from "effect";
 import { lstatIfPresent } from "./project-storage-filesystem-authority.js";
 import {
-  type ProjectStorageManifestV1,
+  type ProjectStorageManifest,
   parseProjectStorageManifest,
 } from "./project-storage-manifest.js";
 import { isUnavailableStorageError, storageErrorCode } from "./project-storage-node-errors.js";
 import type { ManifestBlockingStatus } from "./project-storage-opening.js";
 
 export type ManifestIdentityAuthority = Readonly<{
-  projectId: ProjectStorageManifestV1["projectId"];
-  storageId: ProjectStorageManifestV1["storageId"];
-  generationId: ProjectStorageManifestV1["generationId"];
-  createRequestId: ProjectStorageManifestV1["provenance"]["createRequestId"];
-  canonicalDatabaseLineageId: ProjectStorageManifestV1["canonical"]["databaseLineageId"];
-  runtimeDatabaseLineageId: ProjectStorageManifestV1["runtime"]["databaseLineageId"];
-  createdAt: ProjectStorageManifestV1["createdAt"];
+  projectId: ProjectStorageManifest["projectId"];
+  storageId: ProjectStorageManifest["storageId"];
+  generationId: ProjectStorageManifest["generationId"];
+  createRequestId: ProjectStorageManifest["provenance"]["createRequestId"];
+  canonicalDatabaseLineageId: ProjectStorageManifest["canonical"]["databaseLineageId"];
+  runtimeDatabaseLineageId: ProjectStorageManifest["runtime"]["databaseLineageId"];
+  createdAt: ProjectStorageManifest["createdAt"];
 }>;
 
 type OpeningManifestInspection =
   | Readonly<{ status: "blocked"; manifestStatus: ManifestBlockingStatus }>
-  | Readonly<{ status: "current"; manifest: ProjectStorageManifestV1 }>;
+  | Readonly<{ status: "current"; manifest: ProjectStorageManifest }>;
 type ManifestEntryInspection =
   | Extract<OpeningManifestInspection, { status: "blocked" }>
   | Readonly<{ status: "present" }>;
@@ -39,7 +39,7 @@ const blocked = (manifestStatus: ManifestBlockingStatus) => ({
 });
 
 export function manifestIdentityMatches(input: {
-  manifest: ProjectStorageManifestV1;
+  manifest: ProjectStorageManifest;
   authority: ManifestIdentityAuthority;
 }): boolean {
   return [
@@ -82,8 +82,8 @@ function parseOpeningManifest(source: string): OpeningManifestInspection {
   }
   const version = Schema.decodeUnknownResult(manifestVersionSchema)(json);
   if (Result.isFailure(version)) return blocked("corrupt");
-  if (version.success.manifestVersion > 1) return blocked("unsupported-newer");
-  if (version.success.manifestVersion !== 1) return blocked("corrupt");
+  if (version.success.manifestVersion > 2) return blocked("unsupported-newer");
+  if (version.success.manifestVersion < 1) return blocked("corrupt");
   try {
     return { status: "current", manifest: parseProjectStorageManifest(source) };
   } catch {
@@ -91,9 +91,37 @@ function parseOpeningManifest(source: string): OpeningManifestInspection {
   }
 }
 
+/** The upgrade the registry records for the active generation, as opening compares it. */
+export type UpgradeProvenanceAuthority = Readonly<{
+  upgradeId: string;
+  sourceGenerationId: string;
+  targetGenerationId: string;
+}>;
+
+/**
+ * A manifest is version 2 exactly when a completed upgrade targets its generation, and then
+ * names that upgrade's source and operation (ADR 0006 manifest/registry agreement).
+ */
+function provenanceMatches(input: {
+  manifest: ProjectStorageManifest;
+  generationId: string;
+  completedUpgrade: UpgradeProvenanceAuthority | undefined;
+}): boolean {
+  const upgrade =
+    input.completedUpgrade?.targetGenerationId === input.generationId
+      ? input.completedUpgrade
+      : undefined;
+  if (input.manifest.manifestVersion === 1) return upgrade === undefined;
+  return [
+    upgrade?.sourceGenerationId === input.manifest.provenance.sourceGenerationId,
+    upgrade?.upgradeId === input.manifest.provenance.storageOperationId,
+  ].every(Boolean);
+}
+
 export async function inspectOpeningManifest(input: {
   manifestPath: string;
   authority: ManifestIdentityAuthority;
+  completedUpgrade: UpgradeProvenanceAuthority | undefined;
 }): Promise<OpeningManifestInspection> {
   const entry = await inspectManifestEntry(input.manifestPath);
   if (entry.status === "blocked") return entry;
@@ -101,8 +129,14 @@ export async function inspectOpeningManifest(input: {
   if (source.status === "blocked") return source;
   const parsed = parseOpeningManifest(source.source);
   if (parsed.status === "blocked") return parsed;
-  if (!manifestIdentityMatches({ manifest: parsed.manifest, authority: input.authority })) {
-    return blocked("identity-conflict");
-  }
+  const agrees = [
+    manifestIdentityMatches({ manifest: parsed.manifest, authority: input.authority }),
+    provenanceMatches({
+      manifest: parsed.manifest,
+      generationId: input.authority.generationId,
+      completedUpgrade: input.completedUpgrade,
+    }),
+  ].every(Boolean);
+  if (!agrees) return blocked("identity-conflict");
   return parsed;
 }

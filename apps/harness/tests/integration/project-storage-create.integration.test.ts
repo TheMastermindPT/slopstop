@@ -1048,6 +1048,9 @@ function createCountingStorageOwner(input: { root: string }) {
           allocate(
             decodeStrict(RuntimeDatabaseLineageIdSchema, "00000000-0000-4000-8000-000000000075"),
           ),
+        upgradeId: () => {
+          throw new Error("Unexpected upgrade allocation.");
+        },
       },
     }),
   );

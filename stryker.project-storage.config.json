@@ -5,7 +5,10 @@
     "apps/harness/src/process-fatal-diagnostics.ts",
     "apps/harness/src/storage/sqlite-schema-expression.ts",
     "apps/harness/src/storage/project-storage-database-specs.ts",
-    "apps/harness/src/storage/database-schema-verifier.ts"
+    "apps/harness/src/storage/database-schema-verifier.ts",
+    "apps/harness/src/storage/project-storage-upgrade-eligibility.ts",
+    "apps/harness/src/storage/generated-migrations.ts",
+    "apps/harness/src/storage/project-storage-manifest.ts"
   ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],

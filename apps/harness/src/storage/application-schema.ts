@@ -410,6 +410,40 @@ export const registrationListVisibility = sqliteTable("registration_list_visibil
   hiddenAt: text("hidden_at").notNull(),
 });
 
+/** One staged upgrade of a Project's Storage; a completed row records the superseded generation. */
+export const storageUpgrades = sqliteTable(
+  "storage_upgrades",
+  {
+    upgradeId: text("upgrade_id").primaryKey().notNull(),
+    storageId: text("storage_id").notNull(),
+    projectId: text("project_id").notNull(),
+    locationId: text("location_id").notNull(),
+    sourceGenerationId: text("source_generation_id").notNull(),
+    targetGenerationId: text("target_generation_id").notNull(),
+    sourceCanonicalLineageId: text("source_canonical_lineage_id").notNull(),
+    sourceRuntimeLineageId: text("source_runtime_lineage_id").notNull(),
+    sourceCreateRequestId: text("source_create_request_id").notNull(),
+    sourceCreateRequestFingerprint: text("source_create_request_fingerprint").notNull(),
+    sourceCreatedAt: text("source_created_at").notNull(),
+    sourceActivatedAt: text("source_activated_at").notNull(),
+    state: text("state", { enum: ["in-progress", "completed"] }).notNull(),
+    startedAt: text("started_at").notNull(),
+    completedAt: text("completed_at"),
+  },
+  (table) => [
+    uniqueIndex("storage_upgrades_one_in_progress_uq")
+      .on(table.storageId)
+      .where(sql`${table.state} = 'in-progress'`),
+    uniqueIndex("storage_upgrades_source_generation_uq").on(table.sourceGenerationId),
+    uniqueIndex("storage_upgrades_source_create_request_uq").on(table.sourceCreateRequestId),
+    check("storage_upgrades_state", sql`${table.state} in ('in-progress', 'completed')`),
+    check(
+      "storage_upgrades_completion",
+      sql`(${table.state} = 'in-progress') = (${table.completedAt} is null)`,
+    ),
+  ],
+);
+
 export const registrationProposals = sqliteTable(
   "registration_proposals",
   {

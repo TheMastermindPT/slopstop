@@ -7,6 +7,7 @@ import {
   type ProjectId,
   ProjectIdSchema,
   type ProjectStorageCreateRequest,
+  ProjectStorageCreateRequestIdSchema,
   RuntimeDatabaseLineageIdSchema,
   StorageGenerationIdSchema,
   StorageIdSchema,
@@ -54,7 +55,7 @@ import {
 import {
   canonicalDatabaseFilename,
   canonicalWriterLeaseFilename,
-  type ProjectStorageManifestV1,
+  type ProjectStorageManifest,
   parseProjectStorageManifest,
   projectStorageManifestFilename,
   runtimeDatabaseFilename,
@@ -69,6 +70,7 @@ import {
   activationSchema,
   canonicalIdentityRowSchema,
   type GenerationRow,
+  generationRowColumns,
   generationRowSchema,
   integerScalar,
   type LocationRow,
@@ -78,6 +80,7 @@ import {
   privateLocationIdSchema,
   type RegistrationRow,
   registrationRowSchema,
+  resultObjects,
   runtimeIdentityRowSchema,
   type StagingDeclaration,
   stagingDeclarationSchema,
@@ -134,6 +137,7 @@ type OpeningSelection = Readonly<{
   identity: Extract<ProjectStorageOpenEvidence, { status: "selected-current" }>["identity"];
   generation: GenerationRow;
   paths: ProjectStorageGenerationPaths;
+  completedUpgrade: CompletedUpgrade | undefined;
 }>;
 type HealthyOpeningSelectionInput = Readonly<{
   client: LocalClient;
@@ -188,16 +192,6 @@ async function requirePlainDirectory(directoryPath: string, message: string): Pr
 
 async function requirePlainFile(filePath: string, message: string): Promise<void> {
   await requirePlainEntry({ entryPath: filePath, message, kind: "file" });
-}
-
-function resultObjects(result: LocalLibsqlResultSet): unknown[] {
-  const objects: Record<string, unknown>[] = [];
-  for (const row of result.rows) {
-    const object: Record<string, unknown> = {};
-    for (const [index, column] of result.columns.entries()) object[column] = row[index];
-    objects.push(object);
-  }
-  return objects;
 }
 
 function exactlyOne<Output>(rows: readonly Output[], message: string): Output {
@@ -547,7 +541,7 @@ async function verifyOwnedDatabase(
   databasePath: string,
   spec: typeof databaseSpecs.canonical | typeof databaseSpecs.runtime,
   creation: AllocatedCreation,
-  manifest: ProjectStorageManifestV1,
+  manifest: ProjectStorageManifest,
   loadMigrations: (spec: DatabaseSpec) => Promise<readonly GeneratedMigration[]>,
 ): Promise<void> {
   await requirePlainFile(databasePath, "Sealed database is unavailable.");
@@ -594,7 +588,7 @@ async function sha256File(filePath: string): Promise<string> {
 }
 
 function requireManifestIdentity(input: {
-  manifest: ProjectStorageManifestV1;
+  manifest: ProjectStorageManifest;
   creation: ManifestIdentityAuthority;
 }): void {
   if (!manifestIdentityMatches({ manifest: input.manifest, authority: input.creation })) {
@@ -604,7 +598,7 @@ function requireManifestIdentity(input: {
 
 async function requireActivationBaseline(input: {
   paths: ProjectStorageGenerationPaths;
-  manifest: ProjectStorageManifestV1;
+  manifest: ProjectStorageManifest;
 }): Promise<void> {
   const [canonicalEntry, runtimeEntry, canonicalHash, runtimeHash] = await Promise.all([
     lstat(input.paths.canonicalDatabase),
@@ -665,15 +659,7 @@ async function generationRowsByRequest(
   createRequestId: ProjectStorageCreateRequest["createRequestId"],
 ): Promise<readonly GenerationRow[]> {
   const result = await client.execute({
-    sql: `SELECT storage_id AS storageId, generation_id AS generationId,
-      project_id AS projectId, location_id AS locationId,
-      canonical_lineage_id AS canonicalDatabaseLineageId,
-      runtime_lineage_id AS runtimeDatabaseLineageId,
-      create_request_id AS createRequestId,
-      create_request_fingerprint AS createRequestFingerprint,
-      generation_directory_name AS generationDirectoryName,
-      creation_state AS creationState, created_at AS createdAt,
-      activated_at AS activatedAt
+    sql: `SELECT ${generationRowColumns}
       FROM storage_generations WHERE create_request_id = ?`,
     args: [createRequestId],
   });
@@ -700,15 +686,7 @@ async function generationRowsByProject(
   projectId: ProjectId,
 ): Promise<readonly GenerationRow[]> {
   const result = await client.execute({
-    sql: `SELECT storage_id AS storageId, generation_id AS generationId,
-      project_id AS projectId, location_id AS locationId,
-      canonical_lineage_id AS canonicalDatabaseLineageId,
-      runtime_lineage_id AS runtimeDatabaseLineageId,
-      create_request_id AS createRequestId,
-      create_request_fingerprint AS createRequestFingerprint,
-      generation_directory_name AS generationDirectoryName,
-      creation_state AS creationState, created_at AS createdAt,
-      activated_at AS activatedAt FROM storage_generations
+    sql: `SELECT ${generationRowColumns} FROM storage_generations
       WHERE project_id = ? LIMIT ?`,
     args: [projectId, maximumRegistryGenerationsPerProject + 1],
   });
@@ -836,11 +814,12 @@ async function requireActiveCreateAuthority(input: {
       input.generation.locationId,
     ).then((rows) => exactlyOne(rows, input.message)),
   ]);
+  const completed = await completedUpgradeFor(input.client, input.generation.storageId);
   const rowsAgree = [
     registration.storageId === input.generation.storageId,
     registration.activeGenerationId === input.generation.generationId,
     registration.activeLocationId === input.generation.locationId,
-    registration.createdAt === input.generation.createdAt,
+    registration.createdAt === (completed?.sourceCreatedAt ?? input.generation.createdAt),
     registration.activatedAt === input.generation.activatedAt,
     location.locationState === "committed",
     location.normalizedPath === input.expectedProjectRoot,
@@ -938,13 +917,17 @@ async function inspectExistingCreateGeneration(input: {
     generation: input.generation,
     message: "Active create request authority is inconsistent.",
   });
+  return activeReplay(input.generation);
+}
+
+function activeReplay(generation: GenerationRow): CreateInspection {
   return {
     status: "active-replay",
     identity: {
-      storageId: input.generation.storageId,
-      generationId: input.generation.generationId,
-      canonicalDatabaseLineageId: input.generation.canonicalDatabaseLineageId,
-      runtimeDatabaseLineageId: input.generation.runtimeDatabaseLineageId,
+      storageId: generation.storageId,
+      generationId: generation.generationId,
+      canonicalDatabaseLineageId: generation.canonicalDatabaseLineageId,
+      runtimeDatabaseLineageId: generation.runtimeDatabaseLineageId,
     },
   };
 }
@@ -969,7 +952,46 @@ async function inspectCreateRows(
       generation,
     });
   }
+  const upgraded = await upgradedCreateRequest(client, request.createRequestId);
+  if (upgraded !== undefined) {
+    return inspectUpgradedCreate({
+      client,
+      request,
+      createRequestFingerprint,
+      expectedProjectRoot,
+      upgraded,
+    });
+  }
   return inspectProjectRegistration({ client, request, expectedProjectRoot });
+}
+
+/** A create request whose generation an upgrade superseded replays the current generation. */
+async function inspectUpgradedCreate(input: {
+  client: LocalClient | LocalTransaction;
+  request: ProjectStorageCreateRequest;
+  createRequestFingerprint: string;
+  expectedProjectRoot: string;
+  upgraded: UpgradedCreateRequest;
+}): Promise<CreateInspection> {
+  const { projectId } = input.upgraded;
+  const message = "Active create request authority is inconsistent.";
+  const generation = exactlyOne(
+    (await generationRowsByProject(input.client, projectId)).filter(
+      (row) => row.creationState === "active",
+    ),
+    message,
+  );
+  await requireActiveCreateAuthority({
+    client: input.client,
+    expectedProjectRoot: path.resolve(path.dirname(input.expectedProjectRoot), projectId),
+    generation,
+    message,
+  });
+  if (projectId !== input.request.projectId) return { status: "idempotency-conflict" };
+  if (input.upgraded.createRequestFingerprint !== input.createRequestFingerprint) {
+    throw new ProjectStorageBrokenError("Create request fingerprint does not agree.");
+  }
+  return activeReplay(generation);
 }
 
 function activeGenerationFor(
@@ -1004,6 +1026,16 @@ function requireActiveRegistrationAgreement(
   }
 }
 
+/** The ordinary generation directories are exactly the expected (defined) generation ids. */
+function sameDirectories(
+  actual: readonly string[],
+  expected: readonly (string | null | undefined)[],
+): boolean {
+  const wanted = expected.filter((id): id is string => typeof id === "string").sort();
+  const present = [...actual].sort();
+  return present.length === wanted.length && present.every((id, index) => id === wanted[index]);
+}
+
 async function selectHealthyOpening(
   input: HealthyOpeningSelectionInput,
 ): Promise<OpeningInspection<OpeningSelection>> {
@@ -1033,10 +1065,13 @@ async function selectHealthyOpening(
     registration,
   });
   const generation = exactlyOne(generations, "Active generation authority is not unique.");
+  const completed = await completedUpgradeFor(input.client, registration.storageId);
   const filesystemAgrees = [
     !input.filesystem.hasRootDatabaseWitness,
-    input.filesystem.ordinaryGenerationIds.length === 1,
-    input.filesystem.ordinaryGenerationIds[0] === registration.activeGenerationId,
+    sameDirectories(input.filesystem.ordinaryGenerationIds, [
+      registration.activeGenerationId,
+      completed?.sourceGenerationId,
+    ]),
   ].every(Boolean);
   if (!filesystemAgrees) {
     return {
@@ -1058,6 +1093,7 @@ async function selectHealthyOpening(
       },
       generation,
       paths: input.paths.forCreation(input.projectId, generation.generationId).active,
+      completedUpgrade: completed,
     },
   };
 }
@@ -1080,7 +1116,7 @@ async function inspectHealthyOpeningDatabase(input: {
   databasePath: string;
   spec: typeof databaseSpecs.canonical | typeof databaseSpecs.runtime;
   selection: OpeningSelection;
-  manifest: ProjectStorageManifestV1;
+  manifest: ProjectStorageManifest;
   loadMigrations(spec: DatabaseSpec): Promise<readonly GeneratedMigration[]>;
   openProjectDatabaseClient?: NodeProjectStorageOptions["openProjectDatabaseClient"];
   clientSlot: "canonical" | "runtime";
@@ -1144,7 +1180,7 @@ async function completeOpeningDatabaseProbe(input: {
 
 async function settledOpeningProbes(input: {
   selection: OpeningSelection;
-  manifest: ProjectStorageManifestV1;
+  manifest: ProjectStorageManifest;
   loadMigrations(spec: DatabaseSpec): Promise<readonly GeneratedMigration[]>;
   openProjectDatabaseClient?: NodeProjectStorageOptions["openProjectDatabaseClient"];
   openedClients: MutableOpeningClients;
@@ -1329,6 +1365,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
       generationId: () => decodeStrict(StorageGenerationIdSchema, randomUUID()),
       canonicalLineageId: () => decodeStrict(CanonicalDatabaseLineageIdSchema, randomUUID()),
       runtimeLineageId: () => decodeStrict(RuntimeDatabaseLineageIdSchema, randomUUID()),
+      upgradeId: () => decodeStrict(ProjectStorageCreateRequestIdSchema, randomUUID()),
     } satisfies ProjectStorageStoreDependencies["ids"]);
   const clock =
     options.clock ??
@@ -1454,6 +1491,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
       const manifestInspection = await inspectOpeningManifest({
         manifestPath: selection.paths.manifest,
         authority: selection.generation,
+        completedUpgrade: selection.completedUpgrade,
       });
       if (manifestInspection.status === "blocked") {
         return {
@@ -1669,6 +1707,28 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     },
   };
 
+  const files = createProjectStorageFileAdapter({ applicationStorageRoot });
+  const upgrades = createProjectStorageUpgradeSteps({
+    applicationClient: async () => {
+      const client = await existingApplicationClient();
+      if (client === undefined) {
+        throw new ProjectStorageBrokenError("Project Storage application authority is missing.");
+      }
+      await requireApplicationAuthority(client, "current");
+      return client;
+    },
+    loadMigrations,
+    readMetadata: async (client, spec) =>
+      exactlyOne(
+        await metadataRows(client, spec),
+        "Database metadata authority must contain exactly one row.",
+      ),
+    paths,
+    files,
+    sha256File,
+    failures,
+  });
+
   return {
     applicationVersion: options.applicationVersion,
     ids,
@@ -1695,8 +1755,9 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
         }
       },
     },
-    files: createProjectStorageFileAdapter({ applicationStorageRoot }),
+    files,
     databases,
+    upgrades,
     failures,
     locks: {
       forCreate: (operation) => withPermit(createLock, operation),
@@ -1733,3 +1794,10 @@ import type { InitialRepositoryBinding } from "@slopstop/protocol";
 import { Schema } from "effect";
 import { seedInitialRepositoryBinding } from "./initial-repository-binding.js";
 import { createPermitLock, type PermitLock, withPermit } from "./permit-lock.js";
+import {
+  type CompletedUpgrade,
+  completedUpgradeFor,
+  createProjectStorageUpgradeSteps,
+  type UpgradedCreateRequest,
+  upgradedCreateRequest,
+} from "./project-storage-upgrade-node-adapter.js";

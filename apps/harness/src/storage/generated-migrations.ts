@@ -100,3 +100,46 @@ export async function applyGeneratedMigrations(input: GeneratedMigrationPlan): P
   }
   await applyMigrationBatch(input, pending);
 }
+
+export type GeneratedMigrationUpgradeInput = Readonly<{
+  expectedKind: StorageDatabaseKind;
+  expectedFormatVersion: number;
+  expectedSchemaVersion: number;
+  migrations: readonly GeneratedMigration[];
+  authority: Extract<MigrationAuthority, { status: "existing" }>;
+}>;
+
+function requireUpgradeCompatibleAuthority(input: GeneratedMigrationUpgradeInput): void {
+  const compatible = [
+    input.authority.databaseKind === input.expectedKind,
+    input.authority.formatVersion === input.expectedFormatVersion,
+    input.authority.schemaVersion <= input.expectedSchemaVersion,
+  ].every(Boolean);
+  if (!compatible) {
+    throw new ProjectStorageBrokenError("Database migration authority is incompatible.");
+  }
+}
+
+/**
+ * Plans the packaged migrations that move an existing database to the packaged schema version.
+ */
+export function planUpgradeMigrations(
+  input: GeneratedMigrationUpgradeInput,
+): readonly GeneratedMigration[] {
+  requireUpgradeCompatibleAuthority(input);
+  const { authority } = input;
+  const currentIndex = input.migrations.findIndex(
+    (migration) => migration.migrationId === authority.lastMigrationId,
+  );
+  if (currentIndex < 0) {
+    throw new ProjectStorageBrokenError("Database migration authority is unknown.");
+  }
+  const consistent = [
+    authority.schemaVersion === currentIndex + 1,
+    input.migrations.length === input.expectedSchemaVersion,
+  ].every(Boolean);
+  if (!consistent) {
+    throw new ProjectStorageBrokenError("Current migration authority has inconsistent versions.");
+  }
+  return input.migrations.slice(currentIndex + 1);
+}

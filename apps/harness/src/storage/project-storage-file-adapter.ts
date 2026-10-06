@@ -7,6 +7,7 @@ import {
   assertStagingPath,
   lstatIfPresent,
   requirePlainEntry,
+  upgradeDirectoryProjectRoot,
 } from "./project-storage-filesystem-authority.js";
 import { normalizeStorageError } from "./project-storage-node-errors.js";
 import type { ProjectStorageStoreDependencies } from "./project-storage-store.js";
@@ -162,12 +163,58 @@ async function renameAtomic(input: { source: string; destination: string }): Pro
   }
 }
 
+const invalidUpgradeDirectory = "Project Storage upgrade directory is invalid.";
+
+async function isPlainDirectory(directoryPath: string): Promise<boolean> {
+  const entry = await lstatIfPresent({ targetPath: directoryPath });
+  return entry !== undefined && !entry.isSymbolicLink() && entry.isDirectory();
+}
+
+/** Creates `snapshots/` once, beneath an existing Project root only. */
+async function requireSnapshotsParent(parent: string, projectRoot: string): Promise<void> {
+  if (parent === projectRoot || (await isPlainDirectory(parent))) return;
+  if ((await lstatIfPresent({ targetPath: parent })) !== undefined) {
+    throw new ProjectStorageBrokenError(invalidUpgradeDirectory);
+  }
+  await mkdir(parent);
+}
+
+async function createDirectoryInProject(input: {
+  directoryPath: string;
+  applicationStorageRoot: string;
+}): Promise<void> {
+  try {
+    const target = path.resolve(input.directoryPath);
+    const projectRoot = upgradeDirectoryProjectRoot({
+      directoryPath: target,
+      applicationStorageRoot: input.applicationStorageRoot,
+    });
+    const refused = [
+      projectRoot === undefined,
+      projectRoot !== undefined && !(await isPlainDirectory(projectRoot)),
+      (await lstatIfPresent({ targetPath: target })) !== undefined,
+    ].some(Boolean);
+    if (refused || projectRoot === undefined) {
+      throw new ProjectStorageBrokenError(invalidUpgradeDirectory);
+    }
+    await requireSnapshotsParent(path.dirname(target), projectRoot);
+    await mkdir(target);
+  } catch (error) {
+    normalizeStorageError({ error, message: invalidUpgradeDirectory });
+  }
+}
+
 export function createProjectStorageFileAdapter(input: {
   applicationStorageRoot: string;
 }): ProjectStorageStoreDependencies["files"] {
   return {
     createDirectoryExclusive: (directoryPath) =>
       createDirectoryExclusive({
+        directoryPath,
+        applicationStorageRoot: input.applicationStorageRoot,
+      }),
+    createDirectoryInProject: (directoryPath) =>
+      createDirectoryInProject({
         directoryPath,
         applicationStorageRoot: input.applicationStorageRoot,
       }),

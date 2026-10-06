@@ -4,7 +4,7 @@ import type {
   ProjectStorageOpenRequest,
   ProjectStorageOpenResult,
 } from "@slopstop/protocol";
-import type { ProjectStorageManifestV1 } from "./project-storage-manifest.js";
+import type { ProjectStorageManifest } from "./project-storage-manifest.js";
 
 export type DatabaseCompatibility = "current" | "known-older" | "newer" | "unknown";
 type NullableStorageIdentity = Readonly<{
@@ -247,7 +247,7 @@ export function inspectOpeningMetadata(input: {
 
 export function expectedOpeningMetadata(
   databaseKind: "canonical" | "runtime-adapter",
-  manifest: ProjectStorageManifestV1,
+  manifest: ProjectStorageManifest,
 ): OpeningDatabaseMetadata {
   return databaseKind === "canonical"
     ? {

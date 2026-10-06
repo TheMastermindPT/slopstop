@@ -3,7 +3,9 @@ import {
   applyGeneratedMigrations,
   type GeneratedMigration,
   type GeneratedMigrationTarget,
+  type GeneratedMigrationUpgradeInput,
   type MigrationAuthority,
+  planUpgradeMigrations,
   type StorageDatabaseKind,
 } from "./generated-migrations.js";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
@@ -107,5 +109,63 @@ describe("generated migration authority", () => {
       ProjectStorageBrokenError,
     );
     expect(empty.appliedBatches()).toEqual([]);
+  });
+});
+
+describe("version-moving upgrade plan", () => {
+  const upgradeMigrations = migrationFixture("m0", "m1", "m2");
+
+  function plan(
+    authority: Omit<GeneratedMigrationUpgradeInput["authority"], "status">,
+  ): readonly string[] {
+    return planUpgradeMigrations({
+      expectedKind: "canonical",
+      expectedFormatVersion: 1,
+      expectedSchemaVersion: 3,
+      migrations: upgradeMigrations,
+      authority: { status: "existing", ...authority },
+    }).map((migration) => migration.migrationId);
+  }
+
+  function stored(
+    databaseKind: StorageDatabaseKind,
+    formatVersion: number,
+    schemaVersion: number,
+    lastMigrationId: string,
+  ) {
+    return { databaseKind, formatVersion, schemaVersion, lastMigrationId };
+  }
+
+  it("plans a version-moving upgrade and refuses incompatible authority", () => {
+    expect(plan(stored("canonical", 1, 2, "m1"))).toEqual(["m2"]);
+    expect(plan(stored("canonical", 1, 3, "m2"))).toEqual([]);
+
+    const refusals = [
+      [stored("canonical", 1, 4, "m2"), "Database migration authority is incompatible."],
+      [stored("application", 1, 2, "m1"), "Database migration authority is incompatible."],
+      [stored("canonical", 2, 2, "m1"), "Database migration authority is incompatible."],
+      [stored("canonical", 0, 2, "m1"), "Database migration authority is incompatible."],
+      [stored("canonical", 1, 2, "unknown"), "Database migration authority is unknown."],
+      [stored("canonical", 1, 3, "m1"), "Current migration authority has inconsistent versions."],
+      [stored("canonical", 1, 1, "m2"), "Current migration authority has inconsistent versions."],
+    ] as const;
+    expect
+      .soft(() =>
+        planUpgradeMigrations({
+          expectedKind: "canonical",
+          expectedFormatVersion: 1,
+          expectedSchemaVersion: 3,
+          migrations: migrationFixture("m0", "m1"),
+          authority: { status: "existing", ...stored("canonical", 1, 2, "m1") },
+        }),
+      )
+      .toThrow(
+        new ProjectStorageBrokenError("Current migration authority has inconsistent versions."),
+      );
+    for (const [authority, message] of refusals) {
+      expect
+        .soft(() => plan(authority), JSON.stringify(authority))
+        .toThrow(new ProjectStorageBrokenError(message));
+    }
   });
 });

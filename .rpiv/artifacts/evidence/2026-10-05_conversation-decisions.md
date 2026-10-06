@@ -57,3 +57,11 @@ Baseline: the decisions recorded in `PRODUCT.md`, `discover/2026-08-22_19-18-10_
 - **Adjustment 1: ADR 0005 amendment moves into S1.** The temporary single-marker form (`storage_upgrades`), manifest version 2 and the snapshots backup layout are recorded in ADR 0005/0006 in the same branch as the S1 code, not deferred to S4.
 - **Adjustment 2: typed Effect errors.** Each pipeline step's failure is a typed Effect error (tagged); conversion to the existing owner outcome shape (`ready` / `unavailable` / `broken`, `refused`, `failed`) happens once, at the owner boundary.
 - **Mitigation for the unreviewed final revision:** candidate-mode independent review of the real S1 source before S1 is accepted.
+
+## 6. C1-0 S1 candidate review decisions (2026-10-06)
+
+Asked by the coordinator after candidate-mode review round 1 of `cf56a87`; answered by the user in the coordinator session.
+
+- **CodeScene waiver for `apps/harness/src/storage/project-storage-node-adapters.ts`.** S1 is accepted with this file at 8.41 (pre-existing; S1 grew it from 1098 to 1149 lines). The waiver is recorded here and a follow-up task splits the file after Conversation C1. Every other touched file keeps the score-10 rule.
+- **Squash merge.** S1 lands on `main` as one commit, so no point of `main` carries a registry head of 0007 without 0006 in the known previous heads. The per-behaviour red/green history stays in `.rpiv/artifacts/evidence/2026-10-05_c1-0-s1-tdd-evidence.md` and on the feature branch.
+- **Review round 2 outcome (user decision, same day).** Round 2 on `40b3a2a` confirmed F1-F5 and S1-S10 resolved and found two new concerns: a raw busy error from plan/backup/stage/migrate/seal is rethrown instead of answering `unavailable` (introduced by the F5 fix), and a backup without its identity or metadata table crashes instead of answering `PROJECT_UPGRADE_BACKUP_INVALID`. The user chose to fix both now with red-first tests, without a third review round; the coordinator verifies source and tests before the squash merge.

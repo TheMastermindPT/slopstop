@@ -176,9 +176,7 @@ it("admits a fresh Project create behind the registry's initial migration on one
   expect(readApplicationDatabase(path.join(base.applicationStorageRoot, "application.db"))).toEqual(
     {
       journalMode: { journal_mode: "delete" },
-      metadata: [
-        { metadata_key: "application", last_migration_id: "0006_registration_list_visibility" },
-      ],
+      metadata: [{ metadata_key: "application", last_migration_id: "0007_storage_upgrades" }],
     },
   );
 

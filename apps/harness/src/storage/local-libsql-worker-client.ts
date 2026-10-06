@@ -96,7 +96,7 @@ type ClientWorkerRequest =
     }>;
 
 type WorkerRequest =
-  | Readonly<{ operation: "open-client"; url: string }>
+  | Readonly<{ operation: "open-client"; url: string; readOnly: boolean }>
   | (ClientWorkerRequest & Readonly<{ clientId: number }>)
   | Readonly<{ operation: "close-client"; clientId: number }>;
 
@@ -207,23 +207,24 @@ const runStatement = (db, statement) => {
     throw mapSqliteError(error);
   }
 };
-const openDatabase = (path) => {
+const openDatabase = (path, readOnly) => {
   let db;
   try {
-    db = new DatabaseSync(path, { timeout: 0 });
+    db = new DatabaseSync(path, { timeout: 0, readOnly });
   } catch (error) {
     throw mapSqliteError(error);
   }
   return db;
 };
 class SqliteClient {
-  constructor(path) {
+  constructor(path, readOnly) {
     this.path = path;
+    this.readOnly = readOnly;
     // libsql's open check never reads the header; SQLite errors surface on the first query.
-    this.db = openDatabase(path);
+    this.db = openDatabase(path, readOnly);
   }
   current() {
-    if (this.db === null) this.db = openDatabase(this.path);
+    if (this.db === null) this.db = openDatabase(this.path, this.readOnly);
     return this.db;
   }
   execute(statement) {
@@ -317,6 +318,7 @@ void (async () => {
       operation: Schema.Literal("open-client"),
       requestId: requestIdSchema,
       url: urlSchema,
+      readOnly: Schema.Boolean,
     }),
     Schema.Struct({
       operation: Schema.Literal("execute"),
@@ -419,7 +421,7 @@ void (async () => {
   const handle = async (request) => {
     if (request.operation === "open-client") {
       const clientId = nextClientId++;
-      clients.set(clientId, new SqliteClient(fileURLToPath(request.url)));
+      clients.set(clientId, new SqliteClient(fileURLToPath(request.url), request.readOnly));
       return clientId;
     }
     if (request.operation === "close-client") return closeClient(request.clientId);
@@ -625,10 +627,10 @@ class WorkerLocalLibsqlClient implements LocalLibsqlClient {
   #closing = false;
   #closePromise: Promise<void> | undefined;
 
-  constructor(databasePath: string, pool: LocalLibsqlWorkerPool) {
+  constructor(databasePath: string, pool: LocalLibsqlWorkerPool, readOnly: boolean) {
     this.#broker = getSharedBroker(pool);
     this.#clientId = this.#broker.request(
-      { operation: "open-client", url: pathToFileURL(databasePath).href },
+      { operation: "open-client", url: pathToFileURL(databasePath).href, readOnly },
       clientIdSchema,
     );
   }
@@ -682,9 +684,25 @@ class WorkerLocalLibsqlClient implements LocalLibsqlClient {
   }
 }
 
+/** Opens a worker-backed client; `readOnly` opens the database file without write access. */
 export function createWorkerLocalLibsqlClient(
   databasePath: string,
   pool: LocalLibsqlWorkerPool,
+  options: Readonly<{ readOnly?: boolean }> = {},
 ): LocalLibsqlClient {
-  return new WorkerLocalLibsqlClient(databasePath, pool);
+  return new WorkerLocalLibsqlClient(databasePath, pool, options.readOnly ?? false);
+}
+
+/** Runs `run` on a generation-pool client for one database file, then closes the client. */
+export async function withDatabase<Value>(
+  databasePath: string,
+  options: Readonly<{ readOnly: boolean }>,
+  run: (client: LocalLibsqlClient) => Promise<Value>,
+): Promise<Value> {
+  const client = createWorkerLocalLibsqlClient(databasePath, "generation", options);
+  try {
+    return await run(client);
+  } finally {
+    await client.close();
+  }
 }

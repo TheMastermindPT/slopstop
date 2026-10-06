@@ -107,7 +107,7 @@ it.each(["0001_project_registration", "0003_registration_proposals"])(
         );
         expect(
           (await database.execute("SELECT last_migration_id FROM schema_metadata")).rows,
-        ).toEqual([["0006_registration_list_visibility"]]);
+        ).toEqual([["0007_storage_upgrades"]]);
         expect(await queryRows(root)).toEqual([]);
       } finally {
         await registry.stop();

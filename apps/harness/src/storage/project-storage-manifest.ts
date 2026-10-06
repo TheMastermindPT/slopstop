@@ -29,11 +29,19 @@ const activationBaselineSchema = Schema.Struct({
   sha256: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u)),
 });
 
-const ProjectStorageManifestV1Schema = Schema.Struct({
-  manifestVersion: Schema.Literal(1),
+const manifestIdentityFields = {
   projectId: ProjectIdSchema,
   storageId: StorageIdSchema,
   generationId: StorageGenerationIdSchema,
+};
+const manifestTrailerFields = {
+  producingApplicationVersion: TrimmedNonEmptyTextSchema,
+  createdAt: utcInstantSchema,
+};
+
+const ProjectStorageManifestV1Schema = Schema.Struct({
+  manifestVersion: Schema.Literal(1),
+  ...manifestIdentityFields,
   provenance: Schema.Struct({
     kind: Schema.Literal("initial-create"),
     createRequestId: ProjectStorageCreateRequestIdSchema,
@@ -61,17 +69,71 @@ const ProjectStorageManifestV1Schema = Schema.Struct({
   }),
   projectSequence: Schema.Literal(0),
   runtimeWaterline: Schema.Literal(0),
-  producingApplicationVersion: TrimmedNonEmptyTextSchema,
-  createdAt: utcInstantSchema,
+  ...manifestTrailerFields,
 });
-export type ProjectStorageManifestV1 = typeof ProjectStorageManifestV1Schema.Type;
 
-export function parseProjectStorageManifest(source: string): ProjectStorageManifestV1 {
+const stagedUpgradeProvenanceSchema = Schema.Struct({
+  kind: Schema.Literal("staged-upgrade"),
+  createRequestId: ProjectStorageCreateRequestIdSchema,
+  sourceGenerationId: StorageGenerationIdSchema,
+  storageOperationId: ProjectStorageCreateRequestIdSchema,
+}).check(
+  Schema.makeFilter(
+    (provenance) =>
+      provenance.storageOperationId === provenance.createRequestId ||
+      "Upgrade storage operation must equal its create request.",
+  ),
+);
+
+const ProjectStorageManifestV2Schema = Schema.Struct({
+  manifestVersion: Schema.Literal(2),
+  ...manifestIdentityFields,
+  provenance: stagedUpgradeProvenanceSchema,
+  canonical: ProjectStorageManifestV1Schema.fields.canonical,
+  runtime: ProjectStorageManifestV1Schema.fields.runtime,
+  projectSequence: safeNonnegativeIntegerSchema,
+  runtimeWaterline: safeNonnegativeIntegerSchema,
+  ...manifestTrailerFields,
+});
+
+const ProjectStorageManifestSchema = Schema.Union([
+  ProjectStorageManifestV1Schema,
+  ProjectStorageManifestV2Schema,
+]);
+export type ProjectStorageManifest = typeof ProjectStorageManifestSchema.Type;
+
+export function parseProjectStorageManifest(source: string): ProjectStorageManifest {
   const json: unknown = JSON.parse(source);
-  return decodeStrict(ProjectStorageManifestV1Schema, json);
+  return decodeStrict(ProjectStorageManifestSchema, json);
 }
 
 export function serializeProjectStorageManifest(input: unknown): string {
-  const manifest = decodeStrict(ProjectStorageManifestV1Schema, input);
+  const manifest = decodeStrict(ProjectStorageManifestSchema, input);
+  return `${JSON.stringify(manifest, null, 2)}\n`;
+}
+
+const ProjectStorageBackupManifestV1Schema = Schema.Struct({
+  manifestVersion: Schema.Literal(1),
+  kind: Schema.Literal("pre-upgrade-backup"),
+  backupId: ProjectStorageCreateRequestIdSchema,
+  projectId: ProjectIdSchema,
+  storageId: StorageIdSchema,
+  sourceGenerationId: StorageGenerationIdSchema,
+  canonical: ProjectStorageManifestV1Schema.fields.canonical,
+  runtime: ProjectStorageManifestV1Schema.fields.runtime,
+  projectSequence: safeNonnegativeIntegerSchema,
+  runtimeWaterline: safeNonnegativeIntegerSchema,
+  ...manifestTrailerFields,
+});
+export type ProjectStorageBackupManifest = typeof ProjectStorageBackupManifestV1Schema.Type;
+
+/** Decodes a pre-upgrade backup manifest strictly; it holds no paths or credentials. */
+export function parseProjectStorageBackupManifest(source: string): ProjectStorageBackupManifest {
+  const json: unknown = JSON.parse(source);
+  return decodeStrict(ProjectStorageBackupManifestV1Schema, json);
+}
+
+export function serializeProjectStorageBackupManifest(input: unknown): string {
+  const manifest = decodeStrict(ProjectStorageBackupManifestV1Schema, input);
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }

@@ -10,6 +10,9 @@ export default defineConfig({
       "apps/harness/src/storage/sqlite-schema-expression.test.ts",
       "apps/harness/src/storage/project-storage-node-adapters.test.ts",
       "apps/harness/tests/integration/project-storage-create.integration.test.ts",
+      "apps/harness/src/storage/project-storage-upgrade-eligibility.test.ts",
+      "apps/harness/src/storage/generated-migrations.test.ts",
+      "apps/harness/src/storage/project-storage-manifest.test.ts",
     ],
   },
 });

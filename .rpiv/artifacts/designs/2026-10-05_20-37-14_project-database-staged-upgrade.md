@@ -11,7 +11,7 @@ parent: .rpiv/artifacts/research/2026-10-05_20-24-35_project-database-staged-upg
 last_updated: 2026-10-06T00:50:00+0100
 last_updated_by: Pedro Mesquita
 last_updated_note: "Round-4 findings applied (.rpiv/artifacts/evidence/2026-10-05_c1-0-s1-intent-review-4.md). No further review round by the user rule of at most two rounds per slice; this revision is unreviewed."
-content_hash: 12dfee1e3a6a1e65d1c6bf604fefd0239a47fcd8571e79da5d2fc13c54403a1b
+content_hash: ed78b8c649415c006fbf1e7516be26e62eafcb6add04d599ae67d85699c1aa6d
 ---
 
 # Design: Automatic staged upgrade of an existing Project database (C1-0)
@@ -305,3 +305,7 @@ Intent accepted by the user with recorded residual risk (see Review gate status)
 - `.rpiv/artifacts/designs/2026-08-31_16-37-32_project-storage-opening.md`
 - `docs/adr/0005-storage-lifecycle-and-recovery.md`, `docs/adr/0006-physical-persistence-layout.md`
 - `.rpiv/decisions/degrade-distinguishes-broken.md`
+
+## TDD Evidence (implement)
+
+- Slice `c1-0-s1-staged-upgrade-engine`, branch `feat/c1-0-s1-staged-upgrade-engine` from `a5e19a6`: per-behaviour red/green, gates, deviations and review-round fixes in `.rpiv/artifacts/evidence/2026-10-05_c1-0-s1-tdd-evidence.md` (append-only). Prior content hash of this design: `12dfee1e3a6a1e65d1c6bf604fefd0239a47fcd8571e79da5d2fc13c54403a1b`.

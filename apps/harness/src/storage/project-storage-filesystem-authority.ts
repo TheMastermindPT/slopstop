@@ -5,6 +5,7 @@ import {
   acceptsStrict,
   decodeStrictResult,
   ProjectIdSchema,
+  ProjectStorageCreateRequestIdSchema,
   StorageGenerationIdSchema,
 } from "@slopstop/protocol";
 import { Result } from "effect";
@@ -349,6 +350,35 @@ export function assertStagingPath(input: {
     acceptsStrict(StorageGenerationIdSchema, stagingGenerationText(input.directoryPath)),
   ].every(Boolean);
   if (!valid) throw new ProjectStorageBrokenError("Project Storage staging path is invalid.");
+}
+
+function upgradeDirectoryParent(directoryPath: string): string | undefined {
+  const parent = path.dirname(directoryPath);
+  if (acceptsStrict(StorageGenerationIdSchema, stagingGenerationText(directoryPath))) return parent;
+  const snapshot = [
+    path.basename(parent) === "snapshots",
+    acceptsStrict(ProjectStorageCreateRequestIdSchema, path.basename(directoryPath)),
+  ].every(Boolean);
+  return snapshot ? path.dirname(parent) : undefined;
+}
+
+/**
+ * The Project root an upgrade directory belongs to: exactly `.staging-<uuid>` or
+ * `snapshots/<uuid>` beneath `<applicationStorageRoot>/projects/<ProjectId>/`.
+ */
+export function upgradeDirectoryProjectRoot(input: {
+  directoryPath: string;
+  applicationStorageRoot: string;
+}): string | undefined {
+  const projectRoot = upgradeDirectoryParent(path.resolve(input.directoryPath));
+  if (projectRoot === undefined) return undefined;
+  const projectsRoot = path.dirname(projectRoot);
+  const valid = [
+    path.dirname(projectsRoot) === path.resolve(input.applicationStorageRoot),
+    path.basename(projectsRoot) === "projects",
+    acceptsStrict(ProjectIdSchema, path.basename(projectRoot)),
+  ].every(Boolean);
+  return valid ? projectRoot : undefined;
 }
 
 function requirePlainApplicationDatabase(entry: Awaited<ReturnType<typeof lstat>>): void {

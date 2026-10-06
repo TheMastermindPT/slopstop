@@ -1,0 +1,110 @@
+import type {
+  ProjectId,
+  ProjectStorageCreateRequest,
+  StorageGenerationId,
+} from "@slopstop/protocol";
+import type { GeneratedMigration } from "./generated-migrations.js";
+import type { GenerationRow } from "./project-storage-node-schemas.js";
+
+/** The `unavailable` message of an upgrade that met busy storage; it can be retried. */
+export const projectStorageUpgradeBusyMessage =
+  "Project Storage is busy; the upgrade can be retried.";
+
+export type ProjectStorageUpgradeRequest = Readonly<{ projectId: ProjectId }>;
+export type ProjectStorageUpgradeId = ProjectStorageCreateRequest["createRequestId"];
+
+type UpgradeDiagnostic<Code extends string> = Readonly<{ code: Code; message: string }>;
+
+export type ProjectStorageUpgradeResult =
+  | Readonly<{
+      status: "upgraded";
+      request: ProjectStorageUpgradeRequest;
+      sourceGenerationId: StorageGenerationId;
+      generationId: StorageGenerationId;
+      upgradeId: ProjectStorageUpgradeId;
+    }>
+  | Readonly<{ status: "not-required" | "not-registered"; request: ProjectStorageUpgradeRequest }>
+  | Readonly<{
+      status: "refused";
+      request: ProjectStorageUpgradeRequest;
+      diagnostic: UpgradeDiagnostic<"PROJECT_UPGRADE_UNSUPPORTED" | "PROJECT_UPGRADE_NOT_ELIGIBLE">;
+    }>
+  | Readonly<{
+      status: "failed";
+      request: ProjectStorageUpgradeRequest;
+      diagnostic: UpgradeDiagnostic<
+        "PROJECT_UPGRADE_BACKUP_INVALID" | "PROJECT_UPGRADE_VERIFICATION_FAILED"
+      >;
+    }>;
+
+export type ProjectStorageUpgradeOutcome =
+  | Readonly<{ status: "ready"; result: ProjectStorageUpgradeResult }>
+  | Readonly<{ status: "unavailable" | "broken"; message: string }>;
+
+export interface ProjectStorageUpgradePort {
+  upgrade(request: ProjectStorageUpgradeRequest): Promise<ProjectStorageUpgradeOutcome>;
+}
+
+export type ProjectStorageUpgradeCheckpoint =
+  | "during-upgrade-declare"
+  | "after-upgrade-declared"
+  | "after-backup-copied"
+  | "after-backup-verified"
+  | "after-staged-copy"
+  | "after-staged-migration"
+  | "after-staged-verified"
+  | "after-generation-rename"
+  | "before-upgrade-switch"
+  | "during-upgrade-switch"
+  | "after-upgrade-switch";
+
+/** Format, schema and migration head of one closed database. */
+export type DatabaseHead = Readonly<{
+  formatVersion: number;
+  schemaVersion: number;
+  lastMigrationId: string;
+}>;
+
+type UpgradePlan =
+  | Readonly<{ status: "unsupported" }>
+  | Readonly<{
+      status: "eligible";
+      source: GenerationRow;
+      canonicalMigrations: readonly GeneratedMigration[];
+    }>;
+
+/** One declared upgrade of `source` into the target generation. */
+export type StagedUpgrade = Readonly<{
+  projectId: ProjectId;
+  source: GenerationRow;
+  targetGenerationId: StorageGenerationId;
+  upgradeId: ProjectStorageUpgradeId;
+  createRequestFingerprint: string;
+  startedAt: string;
+}>;
+
+export type MigratedUpgrade = Readonly<{
+  canonical: DatabaseHead;
+  runtime: DatabaseHead;
+  projectSequence: number;
+  runtimeWaterline: number;
+}>;
+
+/** The Storage-adapter steps of a staged upgrade; each step is all-or-nothing on its own. */
+export interface ProjectStorageUpgradeSteps {
+  plan(projectId: ProjectId, sourceGenerationId: StorageGenerationId): Promise<UpgradePlan>;
+  declare(upgrade: StagedUpgrade): Promise<void>;
+  copyBackup(upgrade: StagedUpgrade): Promise<void>;
+  verifyBackup(upgrade: StagedUpgrade): Promise<"verified" | "invalid">;
+  sealBackup(upgrade: StagedUpgrade, applicationVersion: string): Promise<void>;
+  stage(upgrade: StagedUpgrade): Promise<void>;
+  migrate(
+    upgrade: StagedUpgrade,
+    canonicalMigrations: readonly GeneratedMigration[],
+  ): Promise<MigratedUpgrade>;
+  verifyStaged(
+    upgrade: StagedUpgrade,
+    canonicalMigrations: readonly GeneratedMigration[],
+  ): Promise<"verified" | "mismatch">;
+  switchActive(upgrade: StagedUpgrade, activatedAt: string): Promise<void>;
+}

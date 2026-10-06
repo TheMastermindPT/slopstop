@@ -365,3 +365,29 @@ export async function inspectApplicationStorageRoot(root: ApplicationRootPath) {
     targetExists,
   };
 }
+
+export function seedContradictoryActiveLocation(root: ApplicationRootPath): string {
+  const contradictoryLocationId = "00000000-0000-4000-8000-000000000098";
+  const contradictoryPath = path.resolve(root, "contradictory-location");
+  const database = new DatabaseSync(generationPaths(root).application);
+  try {
+    database
+      .prepare(
+        `INSERT INTO storage_locations
+          (storage_id, location_id, normalized_path, location_state, observed_at)
+          VALUES (?, ?, ?, 'staging', ?)`,
+      )
+      .run(
+        fixedCreationIds.storageId,
+        contradictoryLocationId,
+        contradictoryPath,
+        "2026-08-31T12:00:00.000Z",
+      );
+    database
+      .prepare("UPDATE storage_registrations SET active_location_id = ? WHERE project_id = ?")
+      .run(contradictoryLocationId, openRequest.projectId);
+  } finally {
+    database.close();
+  }
+  return contradictoryPath;
+}

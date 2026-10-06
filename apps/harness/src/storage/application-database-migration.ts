@@ -17,6 +17,7 @@ import {
   previousPublicationDatabaseSpec,
   previousRegistrationDatabaseSpec,
   previousReservationDatabaseSpec,
+  previousVisibilityDatabaseSpec,
 } from "./project-storage-database-specs.js";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
 import {
@@ -56,7 +57,7 @@ export type ApplicationDatabaseMigrationFailures = Readonly<{
 }>;
 
 const PREVIOUS_APPLICATION_DATABASE_HEAD = "0000_gray_eddie_brock";
-const CURRENT_APPLICATION_DATABASE_HEAD = "0006_registration_list_visibility";
+const CURRENT_APPLICATION_DATABASE_HEAD = "0007_storage_upgrades";
 
 const noMigrationFailures: ApplicationDatabaseMigrationFailures = {
   checkpoint: async () => undefined,
@@ -128,6 +129,35 @@ async function requireApplicationRelationships(transaction: LocalLibsqlTransacti
       WHERE g.creation_state = 'active' AND r.active_generation_id IS NOT g.generation_id
       LIMIT 1`);
   if (activeConflicts.rows.length !== 0) throw corrupt();
+  await requireUpgradeRelationships(transaction);
+}
+
+/**
+ * Registry heads that include `storage_upgrades`: an in-progress upgrade's source is the active
+ * generation and its target is staging; a completed upgrade's target is active and its source is
+ * gone; at most one completed upgrade per Storage (chained upgrades are a later gate).
+ */
+async function requireUpgradeRelationships(transaction: LocalLibsqlTransaction): Promise<void> {
+  const table = await transaction.execute(
+    "SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'storage_upgrades'",
+  );
+  if (table.rows.length === 0) return;
+  const conflicts = await transaction.execute(`
+      SELECT 1 FROM storage_upgrades AS u
+      LEFT JOIN storage_registrations AS r ON r.storage_id = u.storage_id
+      LEFT JOIN storage_generations AS s
+        ON s.storage_id = u.storage_id AND s.generation_id = u.source_generation_id
+      LEFT JOIN storage_generations AS t
+        ON t.storage_id = u.storage_id AND t.generation_id = u.target_generation_id
+      WHERE (u.state = 'in-progress' AND (r.active_generation_id IS NOT u.source_generation_id
+          OR s.generation_id IS NULL OR t.creation_state IS NOT 'staging'))
+        OR (u.state = 'completed' AND (r.active_generation_id IS NOT u.target_generation_id
+          OR s.generation_id IS NOT NULL))
+      UNION ALL
+      SELECT 1 FROM storage_upgrades WHERE state = 'completed'
+      GROUP BY storage_id HAVING COUNT(*) > 1
+      LIMIT 1`);
+  if (conflicts.rows.length !== 0) throw corrupt();
 }
 
 function isDefiniteSchemaMismatch(error: unknown): error is ProjectStorageBrokenError {
@@ -217,6 +247,10 @@ const knownPreviousHeads = new Map<
   [
     "0005_registration_publications",
     { spec: previousPublicationDatabaseSpec, firstRequiredMigration: 6 },
+  ],
+  [
+    "0006_registration_list_visibility",
+    { spec: previousVisibilityDatabaseSpec, firstRequiredMigration: 7 },
   ],
 ]);
 

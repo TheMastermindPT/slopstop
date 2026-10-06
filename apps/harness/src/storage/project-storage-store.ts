@@ -26,15 +26,21 @@ import {
   ProjectStorageUnavailableError,
 } from "./project-storage-errors.js";
 import {
-  canonicalDatabaseFilename,
-  runtimeDatabaseFilename,
-  serializeProjectStorageManifest,
-} from "./project-storage-manifest.js";
+  readGenerationBaselines,
+  serializeGenerationManifest,
+} from "./project-storage-generation-manifest.js";
 import {
   classifyProjectStorageOpening,
   type ProjectStorageOpenEvidence,
   type RetainedProjectStorageSession,
 } from "./project-storage-opening.js";
+import type {
+  ProjectStorageUpgradeCheckpoint,
+  ProjectStorageUpgradeId,
+  ProjectStorageUpgradePort,
+  ProjectStorageUpgradeSteps,
+} from "./project-storage-upgrade.js";
+import { runProjectStorageUpgrade } from "./project-storage-upgrade-pipeline.js";
 
 export type PriorStateWitnessKind =
   | "registration-record"
@@ -186,6 +192,7 @@ export interface ProjectStorageStoreDependencies {
     generationId(): StorageGenerationId;
     canonicalLineageId(): CanonicalDatabaseLineageId;
     runtimeLineageId(): RuntimeDatabaseLineageId;
+    upgradeId(): ProjectStorageUpgradeId;
   }>;
   readonly clock: Readonly<{ now(): string }>;
   readonly hashes: Readonly<{
@@ -213,6 +220,7 @@ export interface ProjectStorageStoreDependencies {
   }>;
   readonly files: Readonly<{
     createDirectoryExclusive(path: string): Promise<void>;
+    createDirectoryInProject(path: string): Promise<void>;
     writeFileExclusive(path: string, contents: string): Promise<void>;
     readFile(path: string): Promise<string>;
     size(path: string): Promise<number>;
@@ -226,8 +234,9 @@ export interface ProjectStorageStoreDependencies {
   readonly opening: Readonly<{
     inspect(projectId: ProjectId): Promise<ProjectStorageOpenEvidence>;
   }>;
+  readonly upgrades: ProjectStorageUpgradeSteps;
   readonly failures: Readonly<{
-    checkpoint(point: CreationCheckpoint): Promise<void>;
+    checkpoint(point: CreationCheckpoint | ProjectStorageUpgradeCheckpoint): Promise<void>;
   }>;
   readonly locks: Readonly<{
     forCreate<Result>(operation: () => Promise<Result>): Promise<Result>;
@@ -305,42 +314,15 @@ function inspectionResult(
   }
 }
 
-async function createFreshGeneration(
-  request: ProjectStorageCreateRequest,
-  fingerprint: string,
-  dependencies: ProjectStorageStoreDependencies,
-  lifecycle: ProjectStorageLifecycle,
-): Promise<ProjectStorageCreateResult> {
-  lifecycle.assertRunning();
-  const creation: AllocatedCreation = {
-    projectId: request.projectId,
-    storageId: dependencies.ids.storageId(),
-    locationId: dependencies.ids.locationId(),
-    generationId: dependencies.ids.generationId(),
-    canonicalDatabaseLineageId: dependencies.ids.canonicalLineageId(),
-    runtimeDatabaseLineageId: dependencies.ids.runtimeLineageId(),
-    createRequestId: request.createRequestId,
-    createRequestFingerprint: fingerprint,
-    createdAt: dependencies.clock.now(),
-  };
-  const identity: OpenedStorageIdentity = {
-    storageId: creation.storageId,
-    generationId: creation.generationId,
-    canonicalDatabaseLineageId: creation.canonicalDatabaseLineageId,
-    runtimeDatabaseLineageId: creation.runtimeDatabaseLineageId,
-  };
-  const paths = dependencies.paths.forCreation(request.projectId, creation.generationId);
+type FreshGeneration = Readonly<{
+  creation: AllocatedCreation;
+  paths: ProjectStoragePaths;
+  dependencies: ProjectStorageStoreDependencies;
+  lifecycle: ProjectStorageLifecycle;
+}>;
 
-  const declaration = await runWhileRunning(lifecycle, () =>
-    dependencies.registry.declareStaging(creation, paths),
-  );
-  if (declaration.status !== "fresh") {
-    return inspectionResult(request, declaration);
-  }
-  await runWhileRunning(lifecycle, () =>
-    dependencies.failures.checkpoint("after-staging-transaction"),
-  );
-
+async function buildStagedDatabases(input: FreshGeneration) {
+  const { creation, paths, dependencies, lifecycle } = input;
   await runWhileRunning(lifecycle, () =>
     dependencies.files.createDirectoryExclusive(paths.staging.root),
   );
@@ -363,61 +345,28 @@ async function createFreshGeneration(
     dependencies.failures.checkpoint("after-databases-closed"),
   );
 
-  const [canonicalSize, canonicalHash, runtimeSize, runtimeHash] = await runWhileRunning(
-    lifecycle,
-    () =>
-      Promise.all([
-        dependencies.files.size(paths.staging.canonicalDatabase),
-        dependencies.hashes.sha256File(paths.staging.canonicalDatabase),
-        dependencies.files.size(paths.staging.runtimeDatabase),
-        dependencies.hashes.sha256File(paths.staging.runtimeDatabase),
-      ]),
+  return { canonical, runtime };
+}
+
+async function sealAndActivateGeneration(
+  input: FreshGeneration,
+  databases: Readonly<{ canonical: ClosedDatabaseBuild; runtime: ClosedDatabaseBuild }>,
+): Promise<void> {
+  const { creation, paths, dependencies, lifecycle } = input;
+  const { canonical, runtime } = databases;
+  const baselines = await runWhileRunning(lifecycle, () =>
+    readGenerationBaselines(dependencies, paths.staging),
   );
   await runWhileRunning(lifecycle, () =>
     dependencies.failures.checkpoint("after-baselines-computed"),
   );
-  const manifest = serializeProjectStorageManifest({
-    manifestVersion: 1,
-    projectId: request.projectId,
-    storageId: creation.storageId,
-    generationId: creation.generationId,
-    provenance: {
-      kind: "initial-create",
-      createRequestId: request.createRequestId,
-      sourceGenerationId: null,
-      storageOperationId: null,
-    },
-    canonical: {
-      kind: "canonical",
-      databaseLineageId: creation.canonicalDatabaseLineageId,
-      filename: canonicalDatabaseFilename,
-      formatVersion: canonical.formatVersion,
-      schemaVersion: canonical.schemaVersion,
-      lastMigrationId: canonical.lastMigrationId,
-      activationBaseline: {
-        algorithm: "sha256",
-        sizeBytes: canonicalSize,
-        sha256: canonicalHash,
-      },
-    },
-    runtime: {
-      kind: "runtime",
-      databaseLineageId: creation.runtimeDatabaseLineageId,
-      filename: runtimeDatabaseFilename,
-      adapterFormatVersion: runtime.formatVersion,
-      adapterSchemaVersion: runtime.schemaVersion,
-      adapterLastMigrationId: runtime.lastMigrationId,
-      mastraMigrationHead: null,
-      activationBaseline: {
-        algorithm: "sha256",
-        sizeBytes: runtimeSize,
-        sha256: runtimeHash,
-      },
-    },
-    projectSequence: 0,
-    runtimeWaterline: 0,
-    producingApplicationVersion: dependencies.applicationVersion,
-    createdAt: creation.createdAt,
+  const manifest = serializeGenerationManifest({
+    creation,
+    provenance: { kind: "initial-create" },
+    canonical,
+    runtime,
+    baselines,
+    applicationVersion: dependencies.applicationVersion,
   });
   await runWhileRunning(lifecycle, () =>
     dependencies.files.writeFileExclusive(paths.staging.manifest, manifest),
@@ -454,6 +403,46 @@ async function createFreshGeneration(
     dependencies.failures.checkpoint("after-activation-transaction"),
   );
   await runWhileRunning(lifecycle, () => dependencies.failures.checkpoint("before-created-result"));
+}
+
+async function createFreshGeneration(
+  request: ProjectStorageCreateRequest,
+  fingerprint: string,
+  dependencies: ProjectStorageStoreDependencies,
+  lifecycle: ProjectStorageLifecycle,
+): Promise<ProjectStorageCreateResult> {
+  lifecycle.assertRunning();
+  const creation: AllocatedCreation = {
+    projectId: request.projectId,
+    storageId: dependencies.ids.storageId(),
+    locationId: dependencies.ids.locationId(),
+    generationId: dependencies.ids.generationId(),
+    canonicalDatabaseLineageId: dependencies.ids.canonicalLineageId(),
+    runtimeDatabaseLineageId: dependencies.ids.runtimeLineageId(),
+    createRequestId: request.createRequestId,
+    createRequestFingerprint: fingerprint,
+    createdAt: dependencies.clock.now(),
+  };
+  const identity: OpenedStorageIdentity = {
+    storageId: creation.storageId,
+    generationId: creation.generationId,
+    canonicalDatabaseLineageId: creation.canonicalDatabaseLineageId,
+    runtimeDatabaseLineageId: creation.runtimeDatabaseLineageId,
+  };
+  const paths = dependencies.paths.forCreation(request.projectId, creation.generationId);
+
+  const declaration = await runWhileRunning(lifecycle, () =>
+    dependencies.registry.declareStaging(creation, paths),
+  );
+  if (declaration.status !== "fresh") {
+    return inspectionResult(request, declaration);
+  }
+  await runWhileRunning(lifecycle, () =>
+    dependencies.failures.checkpoint("after-staging-transaction"),
+  );
+  const input = { creation, paths, dependencies, lifecycle };
+  const { canonical, runtime } = await buildStagedDatabases(input);
+  await sealAndActivateGeneration(input, { canonical, runtime });
 
   return { status: "created", request, mode: "read-write", identity };
 }
@@ -499,7 +488,7 @@ function activationFailure(error: unknown): ProjectStorageActivationOutcome {
 
 export function createProjectStorageOwner(
   dependencies: ProjectStorageStoreDependencies,
-): ProjectStorageOwner {
+): ProjectStorageOwner & ProjectStorageUpgradePort {
   let stopped = false;
   let stopPromise: Promise<void> | undefined;
   let registryClosed = false;
@@ -650,6 +639,14 @@ export function createProjectStorageOwner(
 
   return {
     acquireActivation,
+    upgrade: async (request) => {
+      if (stopped) return stoppedOutcome();
+      return trackAdmittedOperation(() =>
+        dependencies.locks.forProject(request.projectId, () =>
+          runProjectStorageUpgrade(request, dependencies, lifecycle),
+        ),
+      );
+    },
     create: async (request) => {
       if (stopped) {
         return stoppedOutcome();

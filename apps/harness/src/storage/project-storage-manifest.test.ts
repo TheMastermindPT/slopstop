@@ -1,8 +1,11 @@
+import { SchemaError } from "effect/Schema";
 import { describe, expect, it } from "vitest";
 import {
   canonicalDatabaseFilename,
+  parseProjectStorageBackupManifest,
   parseProjectStorageManifest,
   runtimeDatabaseFilename,
+  serializeProjectStorageBackupManifest,
   serializeProjectStorageManifest,
 } from "./project-storage-manifest.js";
 
@@ -161,7 +164,7 @@ function invalidInitialManifests(): readonly unknown[] {
 }
 
 describe("Project Storage manifest", () => {
-  it("serializes the exact initial manifest and rejects non-v1 shapes", () => {
+  it("serializes the exact initial manifest and rejects invalid version-1 shapes", () => {
     const serialized = serializeProjectStorageManifest(validInitialManifest);
     const parsed = parseProjectStorageManifest(serialized);
 
@@ -178,6 +181,99 @@ describe("Project Storage manifest", () => {
 
     for (const invalid of invalidInitialManifests()) {
       expect(() => serializeProjectStorageManifest(invalid)).toThrow();
+    }
+  });
+});
+
+const upgradeId = "00000000-0000-4000-8000-0000000000a1";
+const validUpgradeManifest = {
+  ...validInitialManifest,
+  manifestVersion: 2,
+  generationId: "00000000-0000-4000-8000-000000000024",
+  provenance: {
+    kind: "staged-upgrade",
+    createRequestId: upgradeId,
+    sourceGenerationId: validInitialManifest.generationId,
+    storageOperationId: upgradeId,
+  },
+  projectSequence: 3,
+  runtimeWaterline: 0,
+  createdAt: "2026-10-05T10:00:00.000Z",
+};
+
+function invalidVersionedManifests(): readonly unknown[] {
+  const { sourceGenerationId: _omitted, ...withoutSource } = validUpgradeManifest.provenance;
+  return [
+    { ...validUpgradeManifest, provenance: validInitialManifest.provenance },
+    {
+      ...validUpgradeManifest,
+      provenance: {
+        ...validUpgradeManifest.provenance,
+        storageOperationId: "00000000-0000-4000-8000-0000000000a2",
+      },
+    },
+    { ...validUpgradeManifest, provenance: withoutSource },
+    { ...validUpgradeManifest, projectSequence: -1 },
+    { ...validInitialManifest, projectSequence: 3 },
+    { ...validUpgradeManifest, manifestVersion: 3 },
+  ];
+}
+
+describe("Project Storage upgrade manifest", () => {
+  it("parses and serializes version-2 upgrade manifests strictly", () => {
+    const serialized = serializeProjectStorageManifest(validUpgradeManifest);
+
+    expect(serialized).toBe(`${JSON.stringify(validUpgradeManifest, null, 2)}\n`);
+    expect(serializeProjectStorageManifest(parseProjectStorageManifest(serialized))).toBe(
+      serialized,
+    );
+    for (const invalid of invalidVersionedManifests()) {
+      expect.soft(() => serializeProjectStorageManifest(invalid)).toThrow();
+    }
+  });
+});
+
+const validBackupManifest = {
+  manifestVersion: 1,
+  kind: "pre-upgrade-backup",
+  backupId: upgradeId,
+  projectId: validInitialManifest.projectId,
+  storageId: validInitialManifest.storageId,
+  sourceGenerationId: validInitialManifest.generationId,
+  canonical: validInitialManifest.canonical,
+  runtime: validInitialManifest.runtime,
+  projectSequence: 3,
+  runtimeWaterline: 0,
+  producingApplicationVersion: "0.0.0",
+  createdAt: "2026-10-05T10:00:00.000Z",
+};
+
+function invalidBackupManifests(): readonly unknown[] {
+  const { sourceGenerationId: _omitted, ...withoutSource } = validBackupManifest;
+  return [
+    { ...validBackupManifest, manifestVersion: 2 },
+    { ...validBackupManifest, kind: "initial-create" },
+    { ...validBackupManifest, backupId: "not-a-uuid" },
+    { ...validBackupManifest, projectSequence: -1 },
+    { ...validBackupManifest, runtimeWaterline: 1.5 },
+    { ...validBackupManifest, createdAt: "2026-10-05T10:00:00+01:00" },
+    { ...validBackupManifest, applicationStorageRoot },
+    withoutSource,
+  ];
+}
+
+describe("Project Storage backup manifest", () => {
+  it("parses and serializes pre-upgrade backup manifests strictly", () => {
+    const serialized = serializeProjectStorageBackupManifest(validBackupManifest);
+
+    expect(serialized).toBe(`${JSON.stringify(validBackupManifest, null, 2)}
+`);
+    expect(parseProjectStorageBackupManifest(serialized)).toEqual(validBackupManifest);
+    for (const invalid of invalidBackupManifests()) {
+      expect.soft(() => serializeProjectStorageBackupManifest(invalid)).toThrow(SchemaError);
+      expect
+        .soft(() => parseProjectStorageBackupManifest(JSON.stringify(invalid)))
+        .toThrow(SchemaError);
     }
   });
 });

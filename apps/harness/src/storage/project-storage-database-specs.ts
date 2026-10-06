@@ -1509,8 +1509,80 @@ function withVisibilitySpec(previous: DatabaseSpec): DatabaseSpec {
   };
 }
 
+export const previousVisibilityDatabaseSpec = withVisibilitySpec(previousPublicationDatabaseSpec);
+
+function withUpgradeSpec(previous: DatabaseSpec): DatabaseSpec {
+  const table = "storage_upgrades";
+  const state = `"${table}"."state"`;
+  const textColumns = requiredTextColumns(table, [
+    "upgrade_id",
+    "storage_id",
+    "project_id",
+    "location_id",
+    "source_generation_id",
+    "target_generation_id",
+    "source_canonical_lineage_id",
+    "source_runtime_lineage_id",
+    "source_create_request_id",
+    "source_create_request_fingerprint",
+    "source_created_at",
+    "source_activated_at",
+    "state",
+    "started_at",
+  ]);
+  const uniqueIndex = (name: string, columns: readonly string[], predicate: string | null) => ({
+    table,
+    name,
+    unique: true,
+    partial: predicate !== null,
+    columns,
+    predicate,
+  });
+  return {
+    ...previous,
+    tables: [...previous.tables, table],
+    columns: [
+      ...previous.columns,
+      ...textColumns,
+      {
+        table,
+        cid: textColumns.length,
+        name: "completed_at",
+        type: "TEXT",
+        notNull: 0,
+        defaultValue: null,
+        primaryKey: 0,
+        hidden: 0,
+      },
+    ],
+    checks: [
+      ...previous.checks,
+      {
+        table,
+        name: "storage_upgrades_state",
+        expression: `${state} in ('in-progress', 'completed')`,
+      },
+      {
+        table,
+        name: "storage_upgrades_completion",
+        expression: `(${state} = 'in-progress') = ("${table}"."completed_at" is null)`,
+      },
+    ],
+    indexes: [
+      ...previous.indexes,
+      uniqueIndex(
+        "storage_upgrades_one_in_progress_uq",
+        ["storage_id"],
+        `${state} = 'in-progress'`,
+      ),
+      uniqueIndex("storage_upgrades_source_generation_uq", ["source_generation_id"], null),
+      uniqueIndex("storage_upgrades_source_create_request_uq", ["source_create_request_id"], null),
+    ],
+  };
+}
+
 export const databaseSpecs = {
-  application: withVisibilitySpec(previousPublicationDatabaseSpec),
+  application: withUpgradeSpec(previousVisibilityDatabaseSpec),
   canonical: {
     resourceKind: "canonical",
     databaseKind: "canonical",

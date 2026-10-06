@@ -125,6 +125,34 @@ function unopenedProjectDependencies(): ProjectStorageStoreDependencies["opening
   };
 }
 
+function fileDependencies() {
+  return {
+    createDirectoryExclusive: vi.fn(async () => undefined),
+    createDirectoryInProject: vi.fn(async () => undefined),
+    writeFileExclusive: vi.fn(async () => undefined),
+    readFile: vi.fn(async () => ""),
+    size: vi.fn(async () => 1),
+    renameAtomic: vi.fn(async () => undefined),
+  };
+}
+
+function unexpectedUpgradeSteps(): ProjectStorageStoreDependencies["upgrades"] {
+  const unexpected = async (): Promise<never> => {
+    throw new Error("Unexpected upgrade step.");
+  };
+  return {
+    plan: unexpected,
+    declare: unexpected,
+    copyBackup: unexpected,
+    verifyBackup: unexpected,
+    sealBackup: unexpected,
+    stage: unexpected,
+    migrate: unexpected,
+    verifyStaged: unexpected,
+    switchActive: unexpected,
+  };
+}
+
 function lifecycleDependencies() {
   const registryStop = vi.fn(async () => undefined);
   const afterCreateDrain = vi.fn(async (operation: () => Promise<void>) => {
@@ -138,6 +166,9 @@ function lifecycleDependencies() {
       generationId: vi.fn(() => expectedGenerationId),
       canonicalLineageId: vi.fn(() => expectedCanonicalLineageId),
       runtimeLineageId: vi.fn(() => expectedRuntimeLineageId),
+      upgradeId: vi.fn(() => {
+        throw new Error("Unexpected upgrade allocation.");
+      }),
     },
     clock: { now: vi.fn(() => "2026-08-31T12:00:00.000Z") },
     hashes: {
@@ -172,15 +203,10 @@ function lifecycleDependencies() {
         async (_projectId: ProjectId): Promise<readonly PriorStateWitnessKind[]> => [],
       ),
     },
-    files: {
-      createDirectoryExclusive: vi.fn(async () => undefined),
-      writeFileExclusive: vi.fn(async () => undefined),
-      readFile: vi.fn(async () => ""),
-      size: vi.fn(async () => 1),
-      renameAtomic: vi.fn(async () => undefined),
-    },
+    files: fileDependencies(),
     databases: databaseDependencies(),
     opening: unopenedProjectDependencies(),
+    upgrades: unexpectedUpgradeSteps(),
     failures: { checkpoint: vi.fn(async () => undefined) },
     locks: {
       forCreate: async <Result>(operation: () => Promise<Result>) => operation(),

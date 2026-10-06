@@ -651,7 +651,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         try {
           expect(
             (await check.execute("SELECT last_migration_id FROM schema_metadata")).rows,
-          ).toEqual([["0006_registration_list_visibility"]]);
+          ).toEqual([["0007_storage_upgrades"]]);
         } finally {
           await check.close();
         }
