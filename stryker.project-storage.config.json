@@ -8,7 +8,8 @@
     "apps/harness/src/storage/database-schema-verifier.ts",
     "apps/harness/src/storage/project-storage-upgrade-eligibility.ts",
     "apps/harness/src/storage/generated-migrations.ts",
-    "apps/harness/src/storage/project-storage-manifest.ts"
+    "apps/harness/src/storage/project-storage-manifest.ts",
+    "apps/harness/src/storage/project-storage-upgrade-recovery.ts"
   ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],

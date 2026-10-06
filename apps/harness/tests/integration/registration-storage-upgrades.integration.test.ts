@@ -15,34 +15,27 @@ import {
   projectStorageIntegrationTimeout,
   upgradeIds,
 } from "./project-storage-runtime-fixture.js";
-import { restartApplicationAuthority, stagedCopyFaults } from "./project-storage-upgrade-faults.js";
+import { restartApplicationAuthority } from "./project-storage-upgrade-faults.js";
 import {
   createGenerationTwoProject,
   createUpgradedProject,
 } from "./project-storage-upgrade-fixture.js";
+import { stopDuringUpgrade } from "./project-storage-upgrade-recovery-fixture.js";
 
 type ProjectRoot = Readonly<{ root: string }>;
 
 const unknownId = "00000000-0000-4000-8000-0000000000e3";
 const registryCorrupt = { status: "broken", code: "REGISTRY_CORRUPT" } as const;
 
-/** Leaves the state of a staged copy that failed verification: the marker stays in progress. */
+/** Leaves an unfinished upgrade (marker in progress) through an owner stop during it. */
 async function createFailedUpgradeProject({ root }: ProjectRoot): Promise<void> {
   await createGenerationTwoProject(root);
-  const [fault] = stagedCopyFaults;
-  const upgrader = createUpgradeStorageOwner(root, {
-    onCheckpoint: (checkpoint) => {
-      if (checkpoint === "after-staged-migration") fault.apply(root);
-    },
+  const stopped = await stopDuringUpgrade({ root });
+  expect(stopped.outcome).toEqual({
+    status: "unavailable",
+    message: "Project Storage owner is stopped.",
   });
-  try {
-    expect(await upgrader.upgrade(openRequest)).toMatchObject({
-      status: "ready",
-      result: { status: "failed" },
-    });
-  } finally {
-    await upgrader.owner.stop();
-  }
+  await stopped.stopping;
 }
 
 function writeRegistry({ root }: ProjectRoot, sql: string): void {

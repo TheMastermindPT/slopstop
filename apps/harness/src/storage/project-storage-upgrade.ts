@@ -2,6 +2,7 @@ import type {
   ProjectId,
   ProjectStorageCreateRequest,
   StorageGenerationId,
+  StorageId,
 } from "@slopstop/protocol";
 import type { GeneratedMigration } from "./generated-migrations.js";
 import type { GenerationRow } from "./project-storage-node-schemas.js";
@@ -90,8 +91,47 @@ export type MigratedUpgrade = Readonly<{
   runtimeWaterline: number;
 }>;
 
+export type UpgradeAbandonedEvent = Readonly<{
+  projectId: ProjectId;
+  upgradeId: ProjectStorageUpgradeId;
+  reason: "failed" | "interrupted";
+}>;
+type UpgradeDiscardFailedEvent = Readonly<{
+  projectId: ProjectId;
+  upgradeId: ProjectStorageUpgradeId;
+  cause: "busy" | "broken" | "unproven";
+}>;
+
+/** The in-progress marker of an upgrade that did not finish. */
+export type UnfinishedUpgrade = Readonly<{
+  projectId: ProjectId;
+  storageId: StorageId;
+  upgradeId: ProjectStorageUpgradeId;
+  sourceGenerationId: StorageGenerationId;
+  targetGenerationId: StorageGenerationId;
+}>;
+
+export type UnfinishedProof =
+  | Readonly<{ status: "proven"; retainedGenerationIds: readonly StorageGenerationId[] }>
+  | Readonly<{ status: "unproven" }>;
+
+/** Diagnostics of discarded and undiscardable upgrades; ids and a class only. */
+export type ProjectStorageUpgradeDiagnostics = Readonly<{
+  abandoned(event: UpgradeAbandonedEvent): void;
+  discardFailed(event: UpgradeDiscardFailedEvent): void;
+}>;
+
 /** The Storage-adapter steps of a staged upgrade; each step is all-or-nothing on its own. */
-export interface ProjectStorageUpgradeSteps {
+export interface ProjectStorageUpgradeSteps extends ProjectStorageUpgradeDiagnostics {
+  /**
+   * The Project's in-progress marker. A registry that cannot be queried answers none; marker
+   * rows that were read but do not decode, or more than one, reject with
+   * `ProjectStorageBrokenError("Project Storage upgrade marker is invalid.")`.
+   */
+  findUnfinished(projectId: ProjectId): Promise<UnfinishedUpgrade | undefined>;
+  /** Proven leftovers answer the generations the Project keeps; anything else is unproven. */
+  proveUnfinished(upgrade: UnfinishedUpgrade): Promise<UnfinishedProof>;
+  releaseUnfinished(upgrade: UnfinishedUpgrade): Promise<void>;
   plan(projectId: ProjectId, sourceGenerationId: StorageGenerationId): Promise<UpgradePlan>;
   declare(upgrade: StagedUpgrade): Promise<void>;
   copyBackup(upgrade: StagedUpgrade): Promise<void>;

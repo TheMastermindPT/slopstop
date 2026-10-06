@@ -337,6 +337,58 @@ function stagingGenerationText(directoryPath: string): string {
   return directoryName.startsWith(".staging-") ? directoryName.slice(".staging-".length) : "";
 }
 
+const generationFileNames = new Set([
+  projectStorageManifestFilename,
+  canonicalDatabaseFilename,
+  `${canonicalDatabaseFilename}-wal`,
+  `${canonicalDatabaseFilename}-shm`,
+  `${canonicalDatabaseFilename}-journal`,
+  runtimeDatabaseFilename,
+  `${runtimeDatabaseFilename}-wal`,
+  `${runtimeDatabaseFilename}-shm`,
+  `${runtimeDatabaseFilename}-journal`,
+]);
+
+function isGenerationShaped(name: string): boolean {
+  return [
+    acceptsStrict(StorageGenerationIdSchema, name),
+    acceptsStrict(StorageGenerationIdSchema, stagingGenerationText(name)),
+  ].some(Boolean);
+}
+
+/** A plain directory holding only known generation files, each a plain file. */
+async function holdsOnlyGenerationFiles(entry: Dirent, directory: string): Promise<boolean> {
+  if (entry.isSymbolicLink() || !entry.isDirectory()) return false;
+  const files = await readdir(directory, { withFileTypes: true });
+  return files.every(
+    (file) => generationFileNames.has(file.name) && !file.isSymbolicLink() && file.isFile(),
+  );
+}
+
+/**
+ * Proves an unfinished upgrade's output: the target is no retained generation, every entry of the
+ * Project root shaped like a generation in any letter case, other than the retained generations,
+ * is exactly `.staging-<target>/` or `<target>/`, and each of those is a plain directory holding
+ * only known generation files.
+ */
+export async function upgradeOutputIsProven(input: {
+  projectRoot: string;
+  targetGenerationId: string;
+  retainedGenerationIds: readonly string[];
+}): Promise<boolean> {
+  if (input.retainedGenerationIds.includes(input.targetGenerationId)) return false;
+  const output = new Set([`.staging-${input.targetGenerationId}`, input.targetGenerationId]);
+  for (const entry of await readdir(input.projectRoot, { withFileTypes: true })) {
+    // Windows names are case-insensitive: a case variant would resolve to the output's path.
+    if (!isGenerationShaped(entry.name.toLowerCase())) continue;
+    if (input.retainedGenerationIds.includes(entry.name)) continue;
+    if (!output.has(entry.name)) return false;
+    const proven = await holdsOnlyGenerationFiles(entry, path.join(input.projectRoot, entry.name));
+    if (!proven) return false;
+  }
+  return true;
+}
+
 export function assertStagingPath(input: {
   directoryPath: string;
   applicationStorageRoot: string;

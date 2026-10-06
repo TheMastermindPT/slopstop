@@ -21,6 +21,10 @@ import {
   projectStorageUpgradeBusyMessage,
   type StagedUpgrade,
 } from "./project-storage-upgrade.js";
+import {
+  discardKnownUpgrade,
+  discardUnfinishedUpgrade,
+} from "./project-storage-upgrade-recovery.js";
 
 type StorageGenerationId = StagedUpgrade["targetGenerationId"];
 type AllocatedCreation = Parameters<
@@ -33,6 +37,10 @@ type Pipeline = Readonly<{
   lifecycle: Lifecycle;
 }>;
 
+/** Discarding an earlier unfinished upgrade failed. */
+class UpgradeRecoveryFailed extends Data.TaggedError("UpgradeRecoveryFailed")<{
+  readonly cause: unknown;
+}> {}
 /** Opening inspection for the upgrade failed. */
 class UpgradeInspectionFailed extends Data.TaggedError("UpgradeInspectionFailed")<{
   readonly cause: unknown;
@@ -76,6 +84,7 @@ class UpgradeCheckpointFailed extends Data.TaggedError("UpgradeCheckpointFailed"
 }> {}
 
 type UpgradeStepError =
+  | UpgradeRecoveryFailed
   | UpgradeInspectionFailed
   | UpgradePlanFailed
   | UpgradeDeclarationFailed
@@ -310,6 +319,11 @@ function upgradeProgram(
 ): Effect.Effect<ProjectStorageUpgradeResult, UpgradeStepError> {
   const { dependencies, request } = pipeline;
   return Effect.gen(function* () {
+    yield* step(
+      pipeline,
+      () => discardUnfinishedUpgrade(request.projectId, "interrupted", dependencies),
+      (cause) => new UpgradeRecoveryFailed({ cause }),
+    );
     const eligibility = yield* step(
       pipeline,
       () => inspectEligibility(pipeline),
@@ -331,10 +345,29 @@ function upgradeProgram(
       },
       (cause) => new UpgradeDeclarationFailed({ cause }),
     );
+    const settled = yield* Effect.result(
+      runDeclaredUpgrade(pipeline, upgrade, plan.canonicalMigrations),
+    );
+    const switched = Result.isSuccess(settled) && settled.success.status === "upgraded";
+    if (!switched) yield* discardAfterFailure(pipeline, upgrade);
+    if (Result.isFailure(settled)) return yield* Effect.fail(settled.failure);
+    if (switched) yield* checkpoint(pipeline, "after-upgrade-switch");
+    return settled.success;
+  });
+}
+
+/** Every step from the declaration up to and including the committed switch. */
+function runDeclaredUpgrade(
+  pipeline: Pipeline,
+  upgrade: StagedUpgrade,
+  canonicalMigrations: Parameters<ProjectStorageStoreDependencies["upgrades"]["migrate"]>[1],
+): Effect.Effect<ProjectStorageUpgradeResult, UpgradeStepError> {
+  const { dependencies, request } = pipeline;
+  return Effect.gen(function* () {
     yield* checkpoint(pipeline, "after-upgrade-declared");
     const backup = yield* backupSource(pipeline, upgrade);
     if (backup === "invalid") return failed(request, "PROJECT_UPGRADE_BACKUP_INVALID");
-    const built = yield* buildTarget(pipeline, upgrade, plan.canonicalMigrations);
+    const built = yield* buildTarget(pipeline, upgrade, canonicalMigrations);
     if (built === "mismatch") return failed(request, "PROJECT_UPGRADE_VERIFICATION_FAILED");
     yield* checkpoint(pipeline, "before-upgrade-switch");
     yield* step(
@@ -342,7 +375,6 @@ function upgradeProgram(
       () => dependencies.upgrades.switchActive(upgrade, dependencies.clock.now()),
       (cause) => new UpgradeSwitchFailed({ cause }),
     );
-    yield* checkpoint(pipeline, "after-upgrade-switch");
     return {
       status: "upgraded",
       request,
@@ -350,6 +382,39 @@ function upgradeProgram(
       generationId: upgrade.targetGenerationId,
       upgradeId: upgrade.upgradeId,
     } as const;
+  });
+}
+
+function isRunning(lifecycle: Lifecycle): boolean {
+  try {
+    lifecycle.assertRunning();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Discards the declared upgrade after any failure before its switch commits, unless the owner
+ * is stopping. The original outcome stays the answer: a discard that does not complete has
+ * already reported itself, and the next opening handles what remains.
+ */
+function discardAfterFailure(pipeline: Pipeline, upgrade: StagedUpgrade): Effect.Effect<void> {
+  return Effect.promise(async () => {
+    if (!isRunning(pipeline.lifecycle)) return;
+    // The declared marker is known: a registry that cannot be read is then a reported failure.
+    const unfinished = {
+      projectId: upgrade.projectId,
+      storageId: upgrade.source.storageId,
+      upgradeId: upgrade.upgradeId,
+      sourceGenerationId: upgrade.source.generationId,
+      targetGenerationId: upgrade.targetGenerationId,
+    };
+    try {
+      await discardKnownUpgrade(unfinished, "failed", pipeline.dependencies);
+    } catch {
+      // Reported through the diagnostics port by the discard itself.
+    }
   });
 }
 

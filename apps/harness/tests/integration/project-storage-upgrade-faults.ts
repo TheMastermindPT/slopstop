@@ -1,7 +1,6 @@
 import { open, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { expect } from "vitest";
 import { createApplicationDatabaseAuthority } from "../../src/storage/application-database-authority.js";
 import { generationPaths } from "./project-storage-open-fixture.js";
 import { checkedInMigrationRoot, upgradeIds } from "./project-storage-runtime-fixture.js";
@@ -136,10 +135,6 @@ export async function restartApplicationAuthority({ root }: Readonly<{ root: str
   } finally {
     await authority.stop();
   }
-}
-
-export function expectNoCorruptRegistry(outcome: unknown): void {
-  expect(outcome).toBe("current");
 }
 
 export async function zeroFile({ databasePath }: DatabaseFile): Promise<void> {

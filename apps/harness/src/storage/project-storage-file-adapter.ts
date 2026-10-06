@@ -1,16 +1,33 @@
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile as readNodeFile, rename, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  readdir,
+  readFile as readNodeFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
-import { decodeStrict, StorageGenerationIdSchema } from "@slopstop/protocol";
-import { ProjectStorageBrokenError } from "./project-storage-errors.js";
+import {
+  acceptsStrict,
+  decodeStrict,
+  ProjectIdSchema,
+  StorageGenerationIdSchema,
+} from "@slopstop/protocol";
+import {
+  ProjectStorageBrokenError,
+  ProjectStorageUnavailableError,
+} from "./project-storage-errors.js";
 import {
   assertStagingPath,
   lstatIfPresent,
   requirePlainEntry,
   upgradeDirectoryProjectRoot,
 } from "./project-storage-filesystem-authority.js";
-import { normalizeStorageError } from "./project-storage-node-errors.js";
-import type { ProjectStorageStoreDependencies } from "./project-storage-store.js";
+import { isUnavailableStorageError, normalizeStorageError } from "./project-storage-node-errors.js";
+import type { ProjectStorageStoreDependencies, UpgradeOutput } from "./project-storage-store.js";
+import { projectStorageUpgradeBusyMessage } from "./project-storage-upgrade.js";
 
 export async function readPlainFile(input: { filePath: string; message: string }): Promise<Buffer> {
   await requirePlainEntry({
@@ -204,6 +221,57 @@ async function createDirectoryInProject(input: {
   }
 }
 
+const invalidUpgradeOutput = "Project Storage upgrade output is invalid.";
+
+/** The present output directories of T, each a plain directory, or a refusal. */
+async function requireUpgradeOutputDirectories(projectRoot: string, output: UpgradeOutput) {
+  const valid = [
+    output.targetGenerationId !== output.activeGenerationId,
+    !output.retainedGenerationIds.includes(output.targetGenerationId),
+    acceptsStrict(StorageGenerationIdSchema, output.targetGenerationId),
+    await isPlainDirectory(projectRoot),
+  ].every(Boolean);
+  if (!valid) throw new ProjectStorageBrokenError(invalidUpgradeOutput);
+  const spelled = new Set(await readdir(projectRoot));
+  const present: string[] = [];
+  for (const name of [`.staging-${output.targetGenerationId}`, output.targetGenerationId]) {
+    const directory = path.join(projectRoot, name);
+    if ((await lstatIfPresent({ targetPath: directory })) === undefined) continue;
+    // A case-insensitive file system resolves a case variant to this path; never remove it.
+    if (!spelled.has(name) || !(await isPlainDirectory(directory))) {
+      throw new ProjectStorageBrokenError(invalidUpgradeOutput);
+    }
+    present.push(directory);
+  }
+  return present;
+}
+
+/**
+ * Removes `.staging-<target>/` then `<target>/` of one Project, and nothing else: every other
+ * name, a link or junction, a non-directory or the active generation is refused untouched.
+ */
+async function removeUpgradeOutput(input: {
+  output: UpgradeOutput;
+  applicationStorageRoot: string;
+}): Promise<void> {
+  try {
+    const projectRoot = path.join(
+      path.resolve(input.applicationStorageRoot),
+      "projects",
+      decodeStrict(ProjectIdSchema, input.output.projectId),
+    );
+    for (const directory of await requireUpgradeOutputDirectories(projectRoot, input.output)) {
+      await rm(directory, { recursive: true });
+    }
+  } catch (error) {
+    if (error instanceof ProjectStorageBrokenError) throw error;
+    if (isUnavailableStorageError({ error })) {
+      throw new ProjectStorageUnavailableError(projectStorageUpgradeBusyMessage, { cause: error });
+    }
+    normalizeStorageError({ error, message: invalidUpgradeOutput });
+  }
+}
+
 export function createProjectStorageFileAdapter(input: {
   applicationStorageRoot: string;
 }): ProjectStorageStoreDependencies["files"] {
@@ -213,6 +281,8 @@ export function createProjectStorageFileAdapter(input: {
         directoryPath,
         applicationStorageRoot: input.applicationStorageRoot,
       }),
+    removeUpgradeOutput: (output) =>
+      removeUpgradeOutput({ output, applicationStorageRoot: input.applicationStorageRoot }),
     createDirectoryInProject: (directoryPath) =>
       createDirectoryInProject({
         directoryPath,

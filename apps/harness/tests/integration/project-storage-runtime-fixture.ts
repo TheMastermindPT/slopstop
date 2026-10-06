@@ -284,18 +284,55 @@ export const upgradeTimes = {
   activated: "2026-10-05T10:00:01.000Z",
 } as const;
 
+/** The ids of the second upgrade attempt (after an abandoned first one). */
+export const retryUpgradeIds = {
+  targetGenerationId: decodeStrict(
+    StorageGenerationIdSchema,
+    "00000000-0000-4000-8000-000000000034",
+  ),
+  upgradeId: decodeStrict(
+    ProjectStorageCreateRequestIdSchema,
+    "00000000-0000-4000-8000-0000000000a2",
+  ),
+} as const;
+
+const attemptIds = { 1: upgradeIds, 2: retryUpgradeIds } as const;
+
+type UpgradeDiagnostics = NonNullable<NodeProjectStorageOptions["upgradeDiagnostics"]>;
+type UpgradeDiagnosticEvent =
+  | Readonly<{ kind: "abandoned"; event: Parameters<UpgradeDiagnostics["abandoned"]>[0] }>
+  | Readonly<{ kind: "discardFailed"; event: Parameters<UpgradeDiagnostics["discardFailed"]>[0] }>;
+
 export type UpgradeOwnerOptions = Readonly<{
+  /** The attempt the first `upgrade` call makes (default 1); each call advances it. */
+  attempt?: 1 | 2;
+  /** Applies to attempt 1 only (a one-time failure). */
   failAt?: StorageCheckpoint;
+  /** Applies to attempt 1 only. */
   onCheckpoint?: (checkpoint: StorageCheckpoint) => Promise<void> | void;
+  /** Attempt 1's target generation instead of `upgradeIds.targetGenerationId`. */
+  targetGenerationId?: typeof upgradeIds.targetGenerationId;
 }>;
 
 /**
- * The raw Storage owner with fixed ids (the creation generation outside an upgrade, the target
- * generation inside one), and a clock that answers the creation time except while `upgrade`
- * runs, where it answers exactly the two upgrade instants and refuses any further read.
+ * The raw Storage owner with fixed ids (the creation generation outside an upgrade, the
+ * attempt's target generation and upgrade id inside one), a clock that answers the creation
+ * time except while `upgrade` runs, where it answers exactly the two upgrade instants and
+ * refuses any further read, and recorded upgrade diagnostics.
  */
 export function createUpgradeStorageOwner(root: string, options: UpgradeOwnerOptions = {}) {
   let upgradeClock: string[] | undefined;
+  let nextAttempt: 1 | 2 = options.attempt ?? 1;
+  let running: 1 | 2 | undefined;
+  const diagnostics: UpgradeDiagnosticEvent[] = [];
+  const ids = {
+    ...attemptIds,
+    1: {
+      ...upgradeIds,
+      targetGenerationId: options.targetGenerationId ?? upgradeIds.targetGenerationId,
+    },
+  };
+  const current = () => ids[running ?? nextAttempt];
   const now = (): string => {
     if (upgradeClock === undefined) return upgradeTimes.created;
     const next = upgradeClock.shift();
@@ -310,28 +347,41 @@ export function createUpgradeStorageOwner(root: string, options: UpgradeOwnerOpt
       storageId: () => fixedCreationIds.storageId,
       locationId: () => fixedCreationIds.locationId,
       generationId: () =>
-        upgradeClock === undefined ? upgradeIds.sourceGenerationId : upgradeIds.targetGenerationId,
+        upgradeClock === undefined ? upgradeIds.sourceGenerationId : current().targetGenerationId,
       canonicalLineageId: () => fixedCreationIds.canonicalDatabaseLineageId,
       runtimeLineageId: () => fixedCreationIds.runtimeDatabaseLineageId,
-      upgradeId: () => upgradeIds.upgradeId,
+      upgradeId: () => current().upgradeId,
     },
     clock: { now },
     failures: {
       checkpoint: async (checkpoint) => {
+        if (running !== 1) return;
         await options.onCheckpoint?.(checkpoint);
         if (checkpoint === options.failAt) throw new Error(`Injected failure at ${checkpoint}.`);
+      },
+    },
+    upgradeDiagnostics: {
+      abandoned: (event) => {
+        diagnostics.push({ kind: "abandoned", event });
+      },
+      discardFailed: (event) => {
+        diagnostics.push({ kind: "discardFailed", event });
       },
     },
   });
   const owner = createProjectStorageOwner(dependencies);
   return {
     owner,
+    diagnostics,
     upgrade: async (request: Parameters<typeof owner.upgrade>[0]) => {
+      running = nextAttempt;
+      nextAttempt = 2;
       upgradeClock = [upgradeTimes.started, upgradeTimes.activated];
       try {
         return await owner.upgrade(request);
       } finally {
         upgradeClock = undefined;
+        running = undefined;
       }
     },
   };

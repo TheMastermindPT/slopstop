@@ -11,7 +11,7 @@ parent: .rpiv/artifacts/designs/2026-10-05_20-37-14_project-database-staged-upgr
 last_updated: 2026-10-06T04:10:00+0100
 last_updated_by: Pedro Mesquita
 last_updated_note: "Round-2 (last) findings applied without a further round (user rule). See Review gate status."
-content_hash: e33924cffd1a1830d140030cb9df2d6f4f572cb5fe81f1820298f6d52cc252e5
+content_hash: 2d565ae2bfea3556773d4fdb87e9881596c65f1aed5c270d778885a362896485
 ---
 
 # Design: C1-0 S2 — upgrade failure cleanup and interrupted-upgrade recovery
@@ -200,3 +200,7 @@ Intent accepted by the user with recorded residual risk. Build authorization, br
 - `.rpiv/artifacts/evidence/2026-10-06_c1-0-s2-intent-review-1.md`
 - `docs/adr/0005-storage-lifecycle-and-recovery.md`
 - `.rpiv/decisions/degrade-distinguishes-broken.md`
+
+## TDD Evidence (implement)
+
+- Slice `c1-0-s2-upgrade-failure-and-recovery`, branch `feat/c1-0-s2-upgrade-recovery` from `a2af495`: per-behaviour red/green with working-tree digests, gates and deviations in `.rpiv/artifacts/evidence/2026-10-06_c1-0-s2-tdd-evidence.md` (append-only). Prior content hash of this design: `e33924cffd1a1830d140030cb9df2d6f4f572cb5fe81f1820298f6d52cc252e5`.

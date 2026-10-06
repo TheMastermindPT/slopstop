@@ -161,6 +161,7 @@ export type NodeProjectStorageOptions = Readonly<{
   ids?: ProjectStorageStoreDependencies["ids"];
   clock?: ProjectStorageStoreDependencies["clock"];
   failures?: ProjectStorageStoreDependencies["failures"];
+  upgradeDiagnostics?: ProjectStorageUpgradeDiagnostics;
   initializeApplicationClient?: (client: LocalClient) => Promise<void>;
   // The harness's shared application database authority; a standalone owner gets its own.
   applicationDatabase?: ApplicationDatabaseAuthority;
@@ -1717,6 +1718,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
       await requireApplicationAuthority(client, "current");
       return client;
     },
+    existingApplicationClient,
     loadMigrations,
     readMetadata: async (client, spec) =>
       exactlyOne(
@@ -1727,6 +1729,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     files,
     sha256File,
     failures,
+    diagnostics: options.upgradeDiagnostics,
   });
 
   return {
@@ -1794,6 +1797,7 @@ import type { InitialRepositoryBinding } from "@slopstop/protocol";
 import { Schema } from "effect";
 import { seedInitialRepositoryBinding } from "./initial-repository-binding.js";
 import { createPermitLock, type PermitLock, withPermit } from "./permit-lock.js";
+import type { ProjectStorageUpgradeDiagnostics } from "./project-storage-upgrade.js";
 import {
   type CompletedUpgrade,
   completedUpgradeFor,

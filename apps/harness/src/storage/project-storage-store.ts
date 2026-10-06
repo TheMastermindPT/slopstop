@@ -41,6 +41,7 @@ import type {
   ProjectStorageUpgradeSteps,
 } from "./project-storage-upgrade.js";
 import { runProjectStorageUpgrade } from "./project-storage-upgrade-pipeline.js";
+import { discardUnfinishedUpgrade } from "./project-storage-upgrade-recovery.js";
 
 export type PriorStateWitnessKind =
   | "registration-record"
@@ -184,6 +185,15 @@ function closeSessionsInAdmissionOrder(
   );
 }
 
+/** The output of one unfinished upgrade: `.staging-<target>/` and `<target>/` of a Project. */
+export type UpgradeOutput = Readonly<{
+  projectId: ProjectId;
+  targetGenerationId: StorageGenerationId;
+  activeGenerationId: StorageGenerationId;
+  /** Generations the Project keeps (the active one and completed upgrades' sources). */
+  retainedGenerationIds: readonly StorageGenerationId[];
+}>;
+
 export interface ProjectStorageStoreDependencies {
   readonly applicationVersion: string;
   readonly ids: Readonly<{
@@ -221,6 +231,7 @@ export interface ProjectStorageStoreDependencies {
   readonly files: Readonly<{
     createDirectoryExclusive(path: string): Promise<void>;
     createDirectoryInProject(path: string): Promise<void>;
+    removeUpgradeOutput(input: UpgradeOutput): Promise<void>;
     writeFileExclusive(path: string, contents: string): Promise<void>;
     readFile(path: string): Promise<string>;
     size(path: string): Promise<number>;
@@ -479,6 +490,7 @@ async function createProjectStorage(
 }
 
 function activationFailure(error: unknown): ProjectStorageActivationOutcome {
+  if (error instanceof ProjectStorageApplicationClientInitializationError) throw error;
   if (error instanceof ProjectStorageUnavailableError)
     return { status: "unavailable", message: error.message };
   if (error instanceof ProjectStorageBrokenError)
@@ -589,6 +601,8 @@ export function createProjectStorageOwner(
     try {
       return await trackAdmittedOperation(() =>
         dependencies.locks.forProject(request.projectId, async () => {
+          lifecycle.assertRunning();
+          await discardUnfinishedUpgrade(request.projectId, "interrupted", dependencies);
           lifecycle.assertRunning();
           const classified = classifyProjectStorageOpening(
             request,

@@ -1,6 +1,11 @@
 import path from "node:path";
-import { decodeStrict, type ProjectId, type StorageGenerationId } from "@slopstop/protocol";
-import { Schema } from "effect";
+import {
+  decodeStrict,
+  decodeStrictResult,
+  type ProjectId,
+  type StorageGenerationId,
+} from "@slopstop/protocol";
+import { Result, Schema } from "effect";
 import { type GeneratedMigration, planUpgradeMigrations } from "./generated-migrations.js";
 import {
   type LocalLibsqlClient,
@@ -8,7 +13,11 @@ import {
   withDatabase,
 } from "./local-libsql-worker-client.js";
 import { type DatabaseSpec, databaseSpecs } from "./project-storage-database-specs.js";
-import { ProjectStorageBrokenError } from "./project-storage-errors.js";
+import {
+  ProjectStorageApplicationClientInitializationError,
+  ProjectStorageBrokenError,
+} from "./project-storage-errors.js";
+import { upgradeOutputIsProven } from "./project-storage-filesystem-authority.js";
 import {
   canonicalDatabaseFilename,
   parseProjectStorageManifest,
@@ -30,8 +39,11 @@ import { withWriteTransaction } from "./project-storage-transaction.js";
 import type {
   DatabaseHead,
   MigratedUpgrade,
+  ProjectStorageUpgradeDiagnostics,
   ProjectStorageUpgradeSteps,
   StagedUpgrade,
+  UnfinishedProof,
+  UnfinishedUpgrade,
 } from "./project-storage-upgrade.js";
 import { classifyUpgradeStatements } from "./project-storage-upgrade-eligibility.js";
 import { verifyBackupCopies, verifyStagedCopies } from "./project-storage-upgrade-verification.js";
@@ -41,13 +53,21 @@ type OwnedDatabaseSpec = typeof databaseSpecs.canonical | typeof databaseSpecs.r
 export type UpgradeAdapterContext = Readonly<{
   /** The existing application database client, checked current before it is answered. */
   applicationClient(): Promise<LocalLibsqlClient>;
+  /** The application database client when the file exists, without any authority check. */
+  existingApplicationClient(): Promise<LocalLibsqlClient | undefined>;
   loadMigrations(spec: DatabaseSpec): Promise<readonly GeneratedMigration[]>;
   readMetadata(client: LocalLibsqlClient, spec: DatabaseSpec): Promise<MetadataRow>;
   paths: ProjectStorageStoreDependencies["paths"];
   files: ProjectStorageStoreDependencies["files"];
   sha256File(filePath: string): Promise<string>;
   failures: ProjectStorageStoreDependencies["failures"];
+  diagnostics?: ProjectStorageUpgradeDiagnostics | undefined;
 }>;
+
+const noDiagnostics: ProjectStorageUpgradeDiagnostics = {
+  abandoned: () => undefined,
+  discardFailed: () => undefined,
+};
 
 type BackupPaths = Readonly<{
   root: string;
@@ -270,12 +290,12 @@ async function migrateStagedDatabase(
   });
 }
 
-/** The source generation row still equals the copy the upgrade declared. */
-async function requireUnchangedSource(
-  transaction: LocalLibsqlTransaction,
-  upgrade: StagedUpgrade,
-): Promise<void> {
-  const unchanged = await transaction.execute({
+/** The source generation row still equals the copy the in-progress upgrade declared. */
+async function sourceMatchesMarker(
+  client: Pick<LocalLibsqlClient, "execute">,
+  upgradeId: StagedUpgrade["upgradeId"],
+): Promise<boolean> {
+  const unchanged = await client.execute({
     sql: `SELECT 1 FROM storage_generations AS g JOIN storage_upgrades AS u
       ON u.source_generation_id = g.generation_id AND u.storage_id = g.storage_id
       WHERE u.upgrade_id = ? AND u.state = 'in-progress' AND g.creation_state = 'active'
@@ -286,9 +306,16 @@ async function requireUnchangedSource(
         AND g.create_request_fingerprint = u.source_create_request_fingerprint
         AND g.created_at = u.source_created_at
         AND g.activated_at IS u.source_activated_at`,
-    args: [upgrade.upgradeId],
+    args: [upgradeId],
   });
-  if (unchanged.rows.length !== 1) {
+  return unchanged.rows.length === 1;
+}
+
+async function requireUnchangedSource(
+  transaction: LocalLibsqlTransaction,
+  upgrade: StagedUpgrade,
+): Promise<void> {
+  if (!(await sourceMatchesMarker(transaction, upgrade.upgradeId))) {
     throw new ProjectStorageBrokenError(
       "Project Storage upgrade source changed before the switch.",
     );
@@ -366,7 +393,13 @@ export function createProjectStorageUpgradeSteps(
 ): ProjectStorageUpgradeSteps {
   const generationPaths = (projectId: ProjectId, generationId: StorageGenerationId) =>
     context.paths.forCreation(projectId, generationId);
+  const diagnostics = context.diagnostics ?? noDiagnostics;
   return {
+    abandoned: (event) => diagnostics.abandoned(event),
+    discardFailed: (event) => diagnostics.discardFailed(event),
+    findUnfinished: (projectId) => findUnfinishedUpgrade(context, projectId),
+    proveUnfinished: (upgrade) => proveUnfinishedUpgrade(context, upgrade),
+    releaseUnfinished: (upgrade) => releaseUnfinishedUpgrade(context, upgrade),
     plan: (projectId, sourceGenerationId) =>
       (async () => {
         const source = await readSourceGeneration(
@@ -471,6 +504,122 @@ export function createProjectStorageUpgradeSteps(
         });
       }),
   };
+}
+
+const unfinishedUpgradeSchema = Schema.Struct({
+  projectId: generationRowSchema.fields.projectId,
+  storageId: generationRowSchema.fields.storageId,
+  upgradeId: generationRowSchema.fields.createRequestId,
+  sourceGenerationId: generationRowSchema.fields.generationId,
+  targetGenerationId: generationRowSchema.fields.generationId,
+});
+
+async function hasUpgradeTable(client: Pick<LocalLibsqlClient, "execute">): Promise<boolean> {
+  const table = await client.execute(
+    "SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'storage_upgrades'",
+  );
+  return table.rows.length > 0;
+}
+
+/** The Project's in-progress marker rows; a registry that cannot be queried answers none. */
+async function unfinishedUpgradeRows(
+  context: UpgradeAdapterContext,
+  projectId: ProjectId,
+): Promise<readonly unknown[] | undefined> {
+  try {
+    const client = await context.existingApplicationClient();
+    if (client === undefined || !(await hasUpgradeTable(client))) return undefined;
+    const result = await client.execute({
+      sql: `SELECT project_id AS projectId, storage_id AS storageId, upgrade_id AS upgradeId,
+        source_generation_id AS sourceGenerationId, target_generation_id AS targetGenerationId
+        FROM storage_upgrades WHERE project_id = ? AND state = 'in-progress'`,
+      args: [projectId],
+    });
+    return resultObjects(result);
+  } catch (error) {
+    if (error instanceof ProjectStorageApplicationClientInitializationError) throw error;
+    // Opening classifies an unreadable registry itself, with its own diagnostic.
+    return undefined;
+  }
+}
+
+/** The Project's in-progress marker; marker rows that were read but do not decode are broken. */
+async function findUnfinishedUpgrade(
+  context: UpgradeAdapterContext,
+  projectId: ProjectId,
+): Promise<UnfinishedUpgrade | undefined> {
+  const rows = await unfinishedUpgradeRows(context, projectId);
+  if (rows === undefined) return undefined;
+  const decoded = decodeStrictResult(Schema.Array(unfinishedUpgradeSchema), rows);
+  if (Result.isFailure(decoded) || decoded.success.length > 1) {
+    throw new ProjectStorageBrokenError("Project Storage upgrade marker is invalid.");
+  }
+  return decoded.success[0];
+}
+
+/** The registry agrees: registration on S, S equal to the marker copy, T staging at S's place. */
+async function registryProvesUnfinished(
+  client: LocalLibsqlClient,
+  upgrade: UnfinishedUpgrade,
+): Promise<boolean> {
+  const agreeing = await client.execute({
+    sql: `SELECT 1 FROM storage_upgrades AS u
+      JOIN storage_registrations AS r
+        ON r.storage_id = u.storage_id AND r.active_generation_id = u.source_generation_id
+      JOIN storage_generations AS t
+        ON t.storage_id = u.storage_id AND t.generation_id = u.target_generation_id
+      WHERE u.upgrade_id = ? AND u.state = 'in-progress' AND t.creation_state = 'staging'
+        AND t.location_id = u.location_id AND t.create_request_id = u.upgrade_id
+        AND u.target_generation_id = ? AND u.source_generation_id = ?`,
+    args: [upgrade.upgradeId, upgrade.targetGenerationId, upgrade.sourceGenerationId],
+  });
+  if (agreeing.rows.length !== 1) return false;
+  return sourceMatchesMarker(client, upgrade.upgradeId);
+}
+
+async function proveUnfinishedUpgrade(
+  context: UpgradeAdapterContext,
+  upgrade: UnfinishedUpgrade,
+): Promise<UnfinishedProof> {
+  const client = await context.applicationClient();
+  if (!(await registryProvesUnfinished(client, upgrade))) return { status: "unproven" };
+  const completed = await completedUpgradeFor(client, upgrade.storageId);
+  const retainedGenerationIds = [
+    upgrade.sourceGenerationId,
+    ...(completed === undefined ? [] : [completed.sourceGenerationId]),
+  ];
+  const proven = await upgradeOutputIsProven({
+    projectRoot: context.paths.forCreation(upgrade.projectId, upgrade.targetGenerationId)
+      .projectRoot,
+    targetGenerationId: upgrade.targetGenerationId,
+    retainedGenerationIds,
+  });
+  return proven ? { status: "proven", retainedGenerationIds } : { status: "unproven" };
+}
+
+/** Deletes T's staging row and the in-progress marker, guarded, in one transaction. */
+async function releaseUnfinishedUpgrade(
+  context: UpgradeAdapterContext,
+  upgrade: UnfinishedUpgrade,
+): Promise<void> {
+  const client = await context.applicationClient();
+  await withWriteTransaction(client, async (transaction) => {
+    const target = await transaction.execute({
+      sql: `DELETE FROM storage_generations WHERE generation_id = ? AND creation_state = 'staging'
+        AND create_request_id = ? AND EXISTS (SELECT 1 FROM storage_registrations AS r
+          JOIN storage_upgrades AS u ON u.storage_id = r.storage_id
+          WHERE u.upgrade_id = ? AND u.state = 'in-progress'
+            AND r.active_generation_id = u.source_generation_id)`,
+      args: [upgrade.targetGenerationId, upgrade.upgradeId, upgrade.upgradeId],
+    });
+    const marker = await transaction.execute({
+      sql: "DELETE FROM storage_upgrades WHERE upgrade_id = ? AND state = 'in-progress'",
+      args: [upgrade.upgradeId],
+    });
+    if (target.rowsAffected !== 1 || marker.rowsAffected !== 1) {
+      throw new ProjectStorageBrokenError("Project Storage upgrade release does not agree.");
+    }
+  });
 }
 
 const completedUpgradeSchema = Schema.Struct({

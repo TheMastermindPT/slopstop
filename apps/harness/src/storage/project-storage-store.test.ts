@@ -3,6 +3,7 @@ import {
   decodeStrict,
   type ProjectId,
   type ProjectStorageCreateRequest,
+  ProjectStorageCreateRequestIdSchema,
   ProjectStorageCreateRequestSchema,
   type ProjectStorageCreateResult,
   RuntimeDatabaseLineageIdSchema,
@@ -12,6 +13,7 @@ import {
 import { expect, it, vi } from "vitest";
 import { createPermitLock, withPermit } from "./permit-lock.js";
 import {
+  ProjectStorageApplicationClientInitializationError,
   ProjectStorageBrokenError,
   ProjectStorageUnavailableError,
 } from "./project-storage-errors.js";
@@ -21,6 +23,7 @@ import {
   type PriorStateWitnessKind,
   type ProjectStorageStoreDependencies,
 } from "./project-storage-store.js";
+import type { UnfinishedUpgrade } from "./project-storage-upgrade.js";
 
 const request = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000010",
@@ -129,6 +132,7 @@ function fileDependencies() {
   return {
     createDirectoryExclusive: vi.fn(async () => undefined),
     createDirectoryInProject: vi.fn(async () => undefined),
+    removeUpgradeOutput: vi.fn(async () => undefined),
     writeFileExclusive: vi.fn(async () => undefined),
     readFile: vi.fn(async () => ""),
     size: vi.fn(async () => 1),
@@ -141,6 +145,11 @@ function unexpectedUpgradeSteps(): ProjectStorageStoreDependencies["upgrades"] {
     throw new Error("Unexpected upgrade step.");
   };
   return {
+    abandoned: () => undefined,
+    discardFailed: () => undefined,
+    findUnfinished: async () => undefined,
+    proveUnfinished: unexpected,
+    releaseUnfinished: unexpected,
     plan: unexpected,
     declare: unexpected,
     copyBackup: unexpected,
@@ -794,4 +803,214 @@ it("retains delayed asynchronous registry failure in the shared stop promise", a
   }
   expect(result.error.message).toBe("Project Storage shutdown failed.");
   expect(result.error.errors).toEqual([registryFailure]);
+});
+
+const recoveryUpgradeId = decodeStrict(
+  ProjectStorageCreateRequestIdSchema,
+  "00000000-0000-4000-8000-0000000000a1",
+);
+const recoveryTargetId = decodeStrict(
+  StorageGenerationIdSchema,
+  "00000000-0000-4000-8000-000000000024",
+);
+const invalidOutput = new ProjectStorageBrokenError("Project Storage upgrade output is invalid.");
+
+function unfinishedMarker(): UnfinishedUpgrade {
+  return {
+    projectId: request.projectId,
+    storageId: expectedStorageId,
+    upgradeId: recoveryUpgradeId,
+    sourceGenerationId: expectedGenerationId,
+    targetGenerationId: recoveryTargetId,
+  };
+}
+
+/** Opening evidence of a Project whose canonical database needs a migration. */
+function migrationRequiredEvidence(): ProjectStorageOpenEvidence {
+  const probe = {
+    status: "present",
+    identityMatches: true,
+    foreignKeysEnabled: true,
+    foreignKeyViolationCount: 0,
+    integrityRows: ["ok"],
+    domainInvariantsValid: true,
+  } as const;
+  return {
+    status: "selected-current",
+    identity: {
+      storageId: expectedStorageId,
+      generationId: expectedGenerationId,
+      canonicalDatabaseLineageId: expectedCanonicalLineageId,
+      runtimeDatabaseLineageId: expectedRuntimeLineageId,
+    },
+    canonical: { ...probe, format: "known-older", migration: "known-older" },
+    runtime: { ...probe, format: "current", migration: "current" },
+    release: async () => undefined,
+  };
+}
+
+/** Typed fakes around one unfinished upgrade whose output removal is refused as broken. */
+function upgradeRecoveryFixture(
+  initial: UnfinishedUpgrade | undefined,
+  removeUpgradeOutput: ProjectStorageStoreDependencies["files"]["removeUpgradeOutput"] = async () => {
+    throw invalidOutput;
+  },
+) {
+  const { dependencies } = lifecycleDependencies();
+  const events: unknown[] = [];
+  const sink = { failing: false };
+  const record = (event: unknown) => {
+    if (sink.failing) throw new Error("Diagnostics sink failed.");
+    events.push(event);
+  };
+  let marker = initial;
+  const steps = dependencies.upgrades;
+  const upgrades: ProjectStorageStoreDependencies["upgrades"] = {
+    ...steps,
+    abandoned: (event) => record(["abandoned", event]),
+    discardFailed: (event) => record(["discardFailed", event]),
+    findUnfinished: async () => marker,
+    proveUnfinished: async () => ({
+      status: "proven",
+      retainedGenerationIds: [expectedGenerationId],
+    }),
+    releaseUnfinished: async () => {
+      marker = undefined;
+    },
+    plan: async () => ({ status: "eligible", source: storedSource(), canonicalMigrations: [] }),
+    declare: async () => {
+      marker = unfinishedMarker();
+    },
+    copyBackup: async () => undefined,
+    verifyBackup: async () => "verified",
+    sealBackup: async () => undefined,
+    stage: async () => undefined,
+  };
+  const owner = createProjectStorageOwner({
+    ...dependencies,
+    ids: { ...dependencies.ids, upgradeId: () => recoveryUpgradeId },
+    files: {
+      ...dependencies.files,
+      removeUpgradeOutput,
+    },
+    opening: { inspect: async () => migrationRequiredEvidence() },
+    upgrades,
+    failures: {
+      checkpoint: async (point) => {
+        if (point === "after-staged-copy")
+          throw new Error("Injected failure at after-staged-copy.");
+      },
+    },
+  });
+  return { owner, events, upgrades, sink };
+}
+
+function storedSource() {
+  return {
+    storageId: expectedStorageId,
+    generationId: expectedGenerationId,
+    projectId: request.projectId,
+    locationId: "00000000-0000-4000-8000-000000000013",
+    canonicalDatabaseLineageId: expectedCanonicalLineageId,
+    runtimeDatabaseLineageId: expectedRuntimeLineageId,
+    createRequestId: request.createRequestId,
+    createRequestFingerprint: expectedCreateRequestFingerprint,
+    generationDirectoryName: expectedGenerationId,
+    creationState: "active",
+    createdAt: "2026-08-31T12:00:00.000Z",
+    activatedAt: "2026-08-31T12:00:00.000Z",
+  } as const;
+}
+
+const brokenDiscard = [
+  "discardFailed",
+  { projectId: request.projectId, upgradeId: recoveryUpgradeId, cause: "broken" },
+];
+
+it("removes only proven upgrade output: owner, broken discard", async () => {
+  const opening = upgradeRecoveryFixture(unfinishedMarker());
+  const brokenOutcome = { status: "broken", message: invalidOutput.message };
+  expect(await opening.owner.acquireActivation({ projectId: request.projectId })).toEqual(
+    brokenOutcome,
+  );
+  expect(await opening.owner.upgrade({ projectId: request.projectId })).toEqual(brokenOutcome);
+  expect(opening.events).toEqual([brokenDiscard, brokenDiscard]);
+  await opening.owner.stop();
+
+  const failing = upgradeRecoveryFixture(undefined);
+  await expect(failing.owner.upgrade({ projectId: request.projectId })).rejects.toThrow(
+    "Injected failure at after-staged-copy.",
+  );
+  expect(failing.events).toEqual([brokenDiscard]);
+  await failing.owner.stop();
+});
+
+it("removes only proven upgrade output: owner, client initialization failure", async () => {
+  const initialization = new ProjectStorageApplicationClientInitializationError(
+    "Project Storage application client initialization failed.",
+  );
+  const fixture = upgradeRecoveryFixture(unfinishedMarker());
+  fixture.upgrades.findUnfinished = async () => {
+    throw initialization;
+  };
+  await expect(fixture.owner.acquireActivation({ projectId: request.projectId })).rejects.toBe(
+    initialization,
+  );
+  await expect(fixture.owner.upgrade({ projectId: request.projectId })).rejects.toBe(
+    initialization,
+  );
+  await fixture.owner.stop().catch(() => undefined);
+});
+
+it("reports a discard after a failed upgrade: owner, unreadable registry", async () => {
+  const unreadable = new ProjectStorageBrokenError("Project Storage registry is unreadable.");
+  const fixture = upgradeRecoveryFixture(undefined);
+  // Only the upgrade entry reads the marker; the failure-time discard uses the declared one.
+  const findUnfinished = vi.fn(async () => undefined);
+  fixture.upgrades.findUnfinished = findUnfinished;
+  fixture.upgrades.proveUnfinished = async () => {
+    throw unreadable;
+  };
+  await expect(fixture.owner.upgrade({ projectId: request.projectId })).rejects.toThrow(
+    "Injected failure at after-staged-copy.",
+  );
+  expect(fixture.events).toEqual([brokenDiscard]);
+  expect(findUnfinished).toHaveBeenCalledTimes(1);
+  await fixture.owner.stop();
+});
+
+it("reports a discard after a failed upgrade: owner, client initialization failure", async () => {
+  const fixture = upgradeRecoveryFixture(undefined);
+  fixture.upgrades.proveUnfinished = async () => {
+    throw new ProjectStorageApplicationClientInitializationError(
+      "Project Storage application client initialization failed.",
+    );
+  };
+  await expect(fixture.owner.upgrade({ projectId: request.projectId })).rejects.toThrow(
+    "Injected failure at after-staged-copy.",
+  );
+  expect(fixture.events).toEqual([brokenDiscard]);
+  await fixture.owner.stop().catch(() => undefined);
+});
+
+it("keeps the discard outcome when its diagnostics port throws: owner", async () => {
+  const outcomes = [];
+  for (const failing of [false, true]) {
+    const discarded = upgradeRecoveryFixture(unfinishedMarker(), async () => undefined);
+    const refused = upgradeRecoveryFixture(unfinishedMarker());
+    discarded.sink.failing = failing;
+    refused.sink.failing = failing;
+    const activation = await discarded.owner.acquireActivation({ projectId: request.projectId });
+    if (activation.status === "ready") await activation.session.close();
+    outcomes.push({
+      // Sessions hold closures; their data is what the two runs must share.
+      discarded: JSON.parse(JSON.stringify(activation)),
+      refused: await refused.owner.acquireActivation({ projectId: request.projectId }),
+    });
+    await discarded.owner.stop();
+    await refused.owner.stop();
+  }
+  expect(outcomes[0]?.discarded).toMatchObject({ status: "ready" });
+  expect(outcomes[0]?.refused).toEqual({ status: "broken", message: invalidOutput.message });
+  expect(outcomes[1]).toEqual(outcomes[0]);
 });

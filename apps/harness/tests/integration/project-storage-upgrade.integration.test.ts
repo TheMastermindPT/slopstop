@@ -15,7 +15,6 @@ import {
   identityConflictHealth,
   migrationRequiredHealth,
   openRequest,
-  recoveryRequiredHealth,
   seedContradictoryActiveLocation,
 } from "./project-storage-open-fixture.js";
 import {
@@ -29,15 +28,7 @@ import {
   upgradeIds,
   upgradeTimes,
 } from "./project-storage-runtime-fixture.js";
-import {
-  backupFaults,
-  expectNoCorruptRegistry,
-  holdExclusiveLock,
-  restartApplicationAuthority,
-  stagedCopyFaults,
-  upgradePaths,
-  zeroFile,
-} from "./project-storage-upgrade-faults.js";
+import { holdExclusiveLock, upgradePaths } from "./project-storage-upgrade-faults.js";
 import {
   comparableCanonicalTables,
   createGenerationTwoProject,
@@ -49,11 +40,19 @@ import {
   tableNames,
   withFixtureWriter,
 } from "./project-storage-upgrade-fixture.js";
+import {
+  abandonedEvent,
+  createCurrentProject,
+  entriesOf,
+  expectDiscardedUpgrade,
+  expectMigrationRequiredOnSource,
+  expectReadWriteOn,
+  stopDuringUpgrade,
+} from "./project-storage-upgrade-recovery-fixture.js";
 
 type DatabaseRows = Readonly<Record<string, unknown[]>>;
 type SourceSnapshot = Readonly<{ canonical: DatabaseRows; runtime: DatabaseRows }>;
 type TargetPaths = ReturnType<typeof targetPaths>;
-type UpgradeOwner = ReturnType<typeof createUpgradeStorageOwner>;
 
 type SourcePaths = ReturnType<typeof generationPaths>;
 type ProjectRoot = Readonly<{ root: string }>;
@@ -136,15 +135,7 @@ it(
           upgradeId: upgradeIds.upgradeId,
         },
       });
-      const activation = await fixture.owner.acquireActivation(openRequest);
-      expect(activation).toMatchObject({
-        status: "ready",
-        session: {
-          mode: "read-write",
-          result: { identity: { generationId: upgradeIds.targetGenerationId } },
-        },
-      });
-      if (activation.status === "ready") await activation.session.close();
+      await expectReadWriteOn(fixture.owner, upgradeIds.targetGenerationId);
 
       const target = targetPaths(generationPaths(root));
       expectUpgradedCanonical(before, target);
@@ -214,18 +205,6 @@ it(
   },
   projectStorageIntegrationTimeout,
 );
-
-async function createCurrentProject({ root }: ProjectRoot): Promise<void> {
-  const creator = createUpgradeStorageOwner(root);
-  try {
-    expect(await creator.owner.create(createRequest)).toMatchObject({
-      status: "ready",
-      result: { status: "created" },
-    });
-  } finally {
-    await creator.owner.stop();
-  }
-}
 
 const refusedUnsupported = {
   status: "ready",
@@ -716,236 +695,6 @@ it(
   projectStorageIntegrationTimeout,
 );
 
-const verificationFailed = {
-  status: "ready",
-  result: {
-    status: "failed",
-    request: openRequest,
-    diagnostic: {
-      code: "PROJECT_UPGRADE_VERIFICATION_FAILED",
-      message: "The upgraded copy did not match the original data.",
-    },
-  },
-} as const;
-
-/** The state an upgrade that failed after its declaration leaves: S active, marker in progress. */
-async function expectFailedUpgradeState(
-  { root }: ProjectRoot,
-  expected: Readonly<{ sourceHashes: readonly string[]; stagingExists: boolean }>,
-): Promise<void> {
-  const source = generationPaths(root);
-  const paths = upgradePaths({ root });
-  expect(registryRows(root, "storage_registrations")).toEqual([
-    expect.objectContaining({ active_generation_id: upgradeIds.sourceGenerationId }),
-  ]);
-  await expect(sourceFileHashes(source)).resolves.toEqual(expected.sourceHashes);
-  expect(registryRows(root, "storage_upgrades")).toEqual([
-    expect.objectContaining({
-      source_generation_id: upgradeIds.sourceGenerationId,
-      target_generation_id: upgradeIds.targetGenerationId,
-      state: "in-progress",
-      completed_at: null,
-    }),
-  ]);
-  expect(registryRows(root, "storage_generations")).toContainEqual(
-    expect.objectContaining({
-      generation_id: upgradeIds.targetGenerationId,
-      creation_state: "staging",
-    }),
-  );
-  await expect(pathExists(paths.staging)).resolves.toBe(expected.stagingExists);
-  if (expected.stagingExists) await expectReleased({ directory: paths.staging });
-  await expectReleased({ directory: paths.backup });
-  expectNoCorruptRegistry(await restartApplicationAuthority({ root }));
-}
-
-async function expectRecoveryRequiredOnSource(fixture: UpgradeOwner): Promise<void> {
-  const activation = await fixture.owner.acquireActivation(openRequest);
-  expect(activation).toMatchObject({
-    status: "ready",
-    session: {
-      mode: "safe-mode",
-      result: {
-        identity: { generationId: upgradeIds.sourceGenerationId },
-        canonicalHealth: recoveryRequiredHealth,
-        runtimeHealth: recoveryRequiredHealth,
-      },
-    },
-  });
-  if (activation.status === "ready") await activation.session.close();
-}
-
-it.for(stagedCopyFaults)(
-  "fails verification without switching when the staged copy differs: $name",
-  { timeout: projectStorageIntegrationTimeout },
-  async (fault) => {
-    const root = await createTemporaryApplicationRoot();
-    await createGenerationTwoProject(root);
-    const sourceHashes = await sourceFileHashes(generationPaths(root));
-    const fixture = createUpgradeStorageOwner(root, {
-      onCheckpoint: async (checkpoint) => {
-        if (checkpoint === "after-staged-migration") await fault.apply(root);
-      },
-    });
-    try {
-      expect(await fixture.upgrade(openRequest)).toEqual(verificationFailed);
-      await expectRecoveryRequiredOnSource(fixture);
-      expect(await fixture.upgrade(openRequest)).toEqual(refusedNotEligible);
-    } finally {
-      await fixture.owner.stop();
-    }
-    await expectFailedUpgradeState({ root }, { sourceHashes, stagingExists: true });
-  },
-);
-
-const backupInvalid = {
-  status: "ready",
-  result: {
-    status: "failed",
-    request: openRequest,
-    diagnostic: {
-      code: "PROJECT_UPGRADE_BACKUP_INVALID",
-      message: "The pre-upgrade backup failed its integrity check.",
-    },
-  },
-} as const;
-
-async function expectNoStagingOutput({ root }: ProjectRoot): Promise<void> {
-  const entries = await readdir(generationPaths(root).project);
-  expect(entries.filter((entry) => entry.startsWith(".staging-"))).toEqual([]);
-}
-
-it.for(backupFaults)(
-  "fails before staging when the backup does not verify: $name",
-  { timeout: projectStorageIntegrationTimeout },
-  async (fault) => {
-    const root = await createTemporaryApplicationRoot();
-    await createGenerationTwoProject(root);
-    const sourceHashes = await sourceFileHashes(generationPaths(root));
-    const fixture = createUpgradeStorageOwner(root, {
-      onCheckpoint: async (checkpoint) => {
-        if (checkpoint === "after-backup-copied") await fault.apply(root);
-      },
-    });
-    try {
-      expect(await fixture.upgrade(openRequest)).toEqual(backupInvalid);
-      await expectRecoveryRequiredOnSource(fixture);
-    } finally {
-      await fixture.owner.stop();
-    }
-    await expectNoStagingOutput({ root });
-    await expectFailedUpgradeState({ root }, { sourceHashes, stagingExists: false });
-  },
-);
-
-/** Upgrades while another connection holds an exclusive lock on one closed upgrade file. */
-async function upgradeUnderLock(
-  { root }: ProjectRoot,
-  lockAt: Readonly<{ checkpoint: string; databasePath: string }>,
-) {
-  let lock: ReturnType<typeof holdExclusiveLock> | undefined;
-  const fixture = createUpgradeStorageOwner(root, {
-    onCheckpoint: (checkpoint) => {
-      if (checkpoint === lockAt.checkpoint) {
-        lock = holdExclusiveLock({ databasePath: lockAt.databasePath });
-      }
-    },
-  });
-  try {
-    return await fixture.upgrade(openRequest);
-  } finally {
-    lock?.release();
-    await fixture.owner.stop();
-  }
-}
-
-it(
-  "fails before staging when the backup does not verify: a busy backup",
-  async () => {
-    const root = await createTemporaryApplicationRoot();
-    await createGenerationTwoProject(root);
-    const sourceHashes = await sourceFileHashes(generationPaths(root));
-    const outcome = await upgradeUnderLock(
-      { root },
-      {
-        checkpoint: "after-backup-copied",
-        databasePath: upgradePaths({ root }).backupCanonical,
-      },
-    );
-    expect(outcome).toEqual(busyOutcome);
-    await expectNoStagingOutput({ root });
-    await expectFailedUpgradeState({ root }, { sourceHashes, stagingExists: false });
-  },
-  projectStorageIntegrationTimeout,
-);
-
-it(
-  "keeps unavailable and broken outcomes for upgrade: a busy staged copy",
-  async () => {
-    const root = await createTemporaryApplicationRoot();
-    await createGenerationTwoProject(root);
-    const sourceHashes = await sourceFileHashes(generationPaths(root));
-    const outcome = await upgradeUnderLock(
-      { root },
-      {
-        checkpoint: "after-staged-migration",
-        databasePath: upgradePaths({ root }).stagedCanonical,
-      },
-    );
-    expect(outcome).toEqual(busyOutcome);
-    await expectFailedUpgradeState({ root }, { sourceHashes, stagingExists: true });
-  },
-  projectStorageIntegrationTimeout,
-);
-
-const brokenSourceCases = [
-  { name: "while verifying the backup", checkpoint: "after-backup-copied", staged: false },
-  { name: "while verifying the staged copy", checkpoint: "after-staged-migration", staged: true },
-] as const;
-
-it.for(brokenSourceCases)(
-  "keeps unavailable and broken outcomes for upgrade: a broken source $name",
-  { timeout: projectStorageIntegrationTimeout },
-  async (brokenCase) => {
-    const root = await createTemporaryApplicationRoot();
-    await createGenerationTwoProject(root);
-    const fixture = createUpgradeStorageOwner(root, {
-      onCheckpoint: async (checkpoint) => {
-        if (checkpoint === brokenCase.checkpoint) {
-          await zeroFile({ databasePath: generationPaths(root).canonical });
-        }
-      },
-    });
-    try {
-      expect(await fixture.upgrade(openRequest)).toEqual({
-        status: "broken",
-        message: "Project Storage upgrade source verification failed.",
-      });
-    } finally {
-      await fixture.owner.stop();
-    }
-    const sourceHashes = await sourceFileHashes(generationPaths(root));
-    await expectFailedUpgradeState({ root }, { sourceHashes, stagingExists: brokenCase.staged });
-  },
-);
-
-it(
-  "keeps unavailable and broken outcomes for upgrade: a busy source while copying",
-  async () => {
-    const root = await createTemporaryApplicationRoot();
-    await createGenerationTwoProject(root);
-    const sourceHashes = await sourceFileHashes(generationPaths(root));
-    const outcome = await upgradeUnderLock(
-      { root },
-      { checkpoint: "after-upgrade-declared", databasePath: generationPaths(root).canonical },
-    );
-    expect(outcome).toEqual(busyOutcome);
-    await expectNoStagingOutput({ root });
-    await expectFailedUpgradeState({ root }, { sourceHashes, stagingExists: false });
-  },
-  projectStorageIntegrationTimeout,
-);
-
 it(
   "keeps unavailable and broken outcomes for upgrade: an unexpected step error is rethrown",
   async () => {
@@ -971,24 +720,12 @@ it(
   projectStorageIntegrationTimeout,
 );
 
-/** Changes the source generation row behind the upgrade's back. */
-function changeSourceCreatedAt({ root }: ProjectRoot): void {
-  const database = new DatabaseSync(path.join(root, "application.db"));
-  try {
-    database
-      .prepare("UPDATE storage_generations SET created_at = ? WHERE generation_id = ?")
-      .run("2026-08-31T12:00:09.000Z", upgradeIds.sourceGenerationId);
-  } finally {
-    database.close();
-  }
-}
-
 async function registrySnapshot({ root }: ProjectRoot) {
   return (await storageSnapshot(root)).registry;
 }
 
 it(
-  "rolls back declare and switch transactions on failure",
+  "rolls back declare and switch transactions on failure: declaration",
   async () => {
     const declareRoot = await createTemporaryApplicationRoot();
     await createGenerationTwoProject(declareRoot);
@@ -1006,54 +743,43 @@ it(
     await expect
       .soft(pathExists(path.join(generationPaths(declareRoot).project, "snapshots")))
       .resolves.toBe(false);
+  },
+  projectStorageIntegrationTimeout,
+);
 
-    const switchRoot = await createTemporaryApplicationRoot();
-    await createGenerationTwoProject(switchRoot);
-    let beforeSwitch: unknown;
-    const switching = createUpgradeStorageOwner(switchRoot, {
-      failAt: "during-upgrade-switch",
-      onCheckpoint: async (checkpoint) => {
-        if (checkpoint === "before-upgrade-switch") {
-          beforeSwitch = await registrySnapshot({ root: switchRoot });
-        }
-      },
+it(
+  "settles on owner stop and recovers at the next opening",
+  async () => {
+    const root = await createTemporaryApplicationRoot();
+    await createGenerationTwoProject(root);
+    const sourceHashes = await sourceFileHashes(generationPaths(root));
+    const stopped = await stopDuringUpgrade({ root });
+    expect(stopped.outcome).toEqual({
+      status: "unavailable",
+      message: "Project Storage owner is stopped.",
     });
-    try {
-      expect.soft(await switching.upgrade(openRequest)).toEqual({
-        status: "broken",
-        message: "Project Storage upgrade switch failed.",
-      });
-    } finally {
-      await switching.owner.stop();
-    }
-    expect.soft(await registrySnapshot({ root: switchRoot })).toEqual(beforeSwitch);
-    await expect
-      .soft(
-        pathExists(path.join(generationPaths(switchRoot).project, upgradeIds.targetGenerationId)),
-      )
-      .resolves.toBe(true);
+    await expect(stopped.stopping).resolves.toBeUndefined();
+    expect(stopped.diagnostics).toEqual([]);
+    expect(registryRows(root, "storage_upgrades")).toEqual([
+      expect.objectContaining({ state: "in-progress" }),
+    ]);
+    expect(registryRows(root, "storage_generations")).toContainEqual(
+      expect.objectContaining({
+        generation_id: upgradeIds.targetGenerationId,
+        creation_state: "staging",
+      }),
+    );
+    await expect(pathExists(upgradePaths({ root }).staging)).resolves.toBe(true);
+    const backup = await entriesOf({ directory: upgradePaths({ root }).backup });
 
-    const guardRoot = await createTemporaryApplicationRoot();
-    await createGenerationTwoProject(guardRoot);
-    const guarded = createUpgradeStorageOwner(guardRoot, {
-      onCheckpoint: (checkpoint) => {
-        if (checkpoint === "before-upgrade-switch") changeSourceCreatedAt({ root: guardRoot });
-      },
-    });
+    const next = createUpgradeStorageOwner(root, { attempt: 2 });
     try {
-      expect.soft(await guarded.upgrade(openRequest)).toEqual({
-        status: "broken",
-        message: "Project Storage upgrade source changed before the switch.",
-      });
+      await expectMigrationRequiredOnSource(next.owner);
+      expect(next.diagnostics).toEqual([abandonedEvent("interrupted")]);
     } finally {
-      await guarded.owner.stop();
+      await next.owner.stop();
     }
-    expect
-      .soft(registryRows(guardRoot, "storage_registrations"))
-      .toEqual([expect.objectContaining({ active_generation_id: upgradeIds.sourceGenerationId })]);
-    expect
-      .soft(registryRows(guardRoot, "storage_upgrades"))
-      .toEqual([expect.objectContaining({ state: "in-progress" })]);
+    await expectDiscardedUpgrade({ root }, { sourceHashes, backup });
   },
   projectStorageIntegrationTimeout,
 );
