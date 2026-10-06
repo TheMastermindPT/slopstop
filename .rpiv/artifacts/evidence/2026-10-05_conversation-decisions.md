@@ -82,3 +82,13 @@ Asked by the coordinator after candidate-mode review round 1 of `cf56a87`; answe
 - **S3a review round 2 outcome (user decision, 2026-10-06).** Round 2 on `4d8cabd` confirmed R1-R9 resolved and found one coverage blocker (the remainder buffer bound is untested), one `degrade-distinguishes-broken` violation introduced by the R9 fix (a package-smoke launch refused the lock exits 0), and smaller test gaps (T1-T8 in the coordinator's round-2 note). The user chose to fix them now, without a third review round; the coordinator verifies before the squash merge.
 - **R1 table placement confirmed by the user (2026-10-06).** Only the protocol test keeps the literal design table; the runtime tests read `projectUpgradeDiagnostics`, which that test pins.
 - **S3a accepted (user decision, 2026-10-06).** The coordinator verified `bcb102b` (T1-T8 red/green, final gates bound to the commit: check, integration, e2e, package smoke, mutation `--force` 87.89, jscpd 0, knip, db:generate:check, CodeScene). The user's manual packaged double-launch check passed. Squash merge to `main`.
+
+## 9. Product decisions from the Figma exploration (2026-10-06)
+
+Relayed by the ui-ux agent and confirmed by the user in the coordinator session. The Figma screens (`https://www.figma.com/design/zHeTrqwSFK7XMHMMhgzZeL`) are exploration, not a contract; visual identity stays undecided.
+
+- **Waypoint-parent conversation has its own place.** The user's dialogue with a Run's Waypoint parent lives in its own surface, not inside the Waypoint conversation.
+- **Feature is the only grouping.** There are no other grouping types (Research, Review and Frame are Actions or statuses, not groups).
+- **The name "Feature" may change.** The user has not chosen a term; keep "Feature" until then.
+- **The Waypoint parent proposes; the user approves.** It never forwards or applies information to a Waypoint on its own (consistent with PRODUCT.md: model output never changes canonical state directly).
+- Naming note: "Wayfinder" already names the GitHub-issues decision map (`docs/agents/issue-tracker.md`); it is not adopted as a product term.
