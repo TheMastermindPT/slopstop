@@ -72,3 +72,9 @@ Asked by the coordinator after candidate-mode review round 1 of `cf56a87`; answe
 - **Automatic deletion confirmed.** The FRD's "nothing deleted" now admits one exception: the proven output of an unfinished upgrade (`.staging-<target>/`, `<target>/`) and its marker and target registry rows are discarded automatically. The source generation, the prior generation and every pre-upgrade backup are always kept.
 - Branch `feat/c1-0-s2-upgrade-recovery` from `main`; squash merge after acceptance.
 - **S2 review round 2 outcome (user decision, 2026-10-06).** Round 2 on `0ac994e` confirmed the data-safety fixes in source with no blocker and found two test-contract gaps: the upper-case target test uses a digit-only id, so it does not exercise letter case; one busy staged-copy case still reads the backup after the discard. The user chose to fix the tests now (with the upper-case test shown red against `4293b2c`), without a third review round; the coordinator verifies before the squash merge.
+- **S2 accepted and squash-merged (user decision, 2026-10-06)** as `17cc797` on `main` (tree identical to branch head `5c5fa44`).
+
+## 8. C1-0 S3a build authorization (2026-10-06)
+
+- **Build authorized** for slice `c1-0-s3a-upgrade-request` of `.rpiv/artifacts/designs/2026-10-06_13-20-24_upgrade-request-and-window.md`, with the design's recorded residual risk (intent rounds 1-2 failed; round-2 fixes unreviewed; timing proven on a minimal fixture; listing concurrency F9 accepted). Mitigation: candidate-mode review of the real source, at most two rounds. Confirmed by the user in the coordinator session.
+- Branch `feat/c1-0-s3a-upgrade-request` from `main`; squash merge after acceptance. S3b stays outline only.
