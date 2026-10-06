@@ -5,8 +5,8 @@ import { _electron as electron } from "@playwright/test";
 
 const require = createRequire(import.meta.url);
 
-/** Launches the built desktop main bundle with `userData` redirected through a one-line shim. */
-export async function launchBuiltDesktop(proof: string, userData: string) {
+/** The Electron executable and arguments that start the built desktop with `userData` redirected. */
+export async function builtDesktopCommand(proof: string, userData: string) {
   const shim = path.join(proof, "launch.cjs");
   await writeFile(
     shim,
@@ -17,5 +17,10 @@ export async function launchBuiltDesktop(proof: string, userData: string) {
     "dist",
     "electron.exe",
   );
-  return electron.launch({ executablePath, args: [shim] });
+  return { executablePath, args: [shim] };
+}
+
+/** Launches the built desktop main bundle with `userData` redirected through a one-line shim. */
+export async function launchBuiltDesktop(proof: string, userData: string) {
+  return electron.launch(await builtDesktopCommand(proof, userData));
 }

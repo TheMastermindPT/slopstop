@@ -30,6 +30,7 @@ import {
   createProjectStorageOwner,
   type ProjectStorageStoreDependencies,
 } from "../../src/storage/project-storage-store.js";
+import { unusedCanonicalApplication as unusedFixtureApplication } from "./canonical-runtime-application-fixture.js";
 import {
   checkedInMigrationRoot,
   createRequest,
@@ -111,18 +112,9 @@ afterEach(async () => {
 });
 
 function unusedCanonicalApplication() {
-  return {
-    activate: async () => {
-      throw new Error("Canonical activation is unused by this fixture.");
-    },
-    switchProject: async () => {
-      throw new Error("Unexpected canonical Project switch in this fixture.");
-    },
-    execute: async () => {
-      throw new Error("Canonical command is unused by this fixture.");
-    },
-    stop: async () => undefined,
-  };
+  return unusedFixtureApplication(async () => {
+    throw new Error("Unexpected canonical Project switch in this fixture.");
+  });
 }
 
 function nextMessage(port: MessagePort, causationId: string): Promise<unknown> {

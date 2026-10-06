@@ -3,11 +3,13 @@
   "mutate": [
     "packages/kernel/src/workspace-identifiers.ts",
     "packages/protocol/src/protocol.ts",
+    "packages/protocol/src/project-upgrade-protocol.ts",
     "packages/protocol/src/workspace-protocol.ts",
     "apps/harness/src/workspace-application.ts",
     "apps/harness/src/harness-runtime.ts",
     "apps/desktop/src/main/harness-session.ts",
     "apps/desktop/src/main/harness-supervisor.ts",
+    "apps/desktop/src/main/harness-log-lines.ts",
     "apps/desktop/src/main/workspace-bridge.ts",
     "apps/desktop/src/main/package-smoke-verifier.ts",
     "apps/desktop/src/preload/preload.ts"

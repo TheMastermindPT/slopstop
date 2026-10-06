@@ -11,6 +11,7 @@ import {
   decodeStrict,
 } from "@slopstop/protocol";
 import { describe, expect, it, vi } from "vitest";
+import { unusedProjectUpgrade } from "../tests/integration/canonical-runtime-application-fixture.js";
 import {
   switchApplicationFailures as switchFailures,
   switchResultBoundaries,
@@ -84,6 +85,7 @@ function commandApplication(value: CanonicalProjectCommandResult) {
     activate: async () => activation,
     switchProject: unexpectedSwitch,
     execute: vi.fn<ActiveProjectCoordinator["execute"]>(async () => value),
+    upgrade: unusedProjectUpgrade,
     stop: vi.fn(async () => undefined),
   } satisfies ActiveProjectCoordinator;
   return { owner, app: applications.createCanonicalProjectApplication(owner) };
@@ -375,6 +377,7 @@ it("validates canonical owner results without swallowing owner failures", async 
     activate: vi.fn(async () => activation),
     switchProject: unexpectedSwitch,
     execute: vi.fn(async () => result),
+    upgrade: unusedProjectUpgrade,
     stop: vi.fn(async () => undefined),
   };
   const app = create(owner);
@@ -426,6 +429,7 @@ function switchApplication(value: CanonicalProjectSwitchResult) {
     activate: async () => activation,
     switchProject: vi.fn(async () => value),
     execute: async () => result,
+    upgrade: unusedProjectUpgrade,
     stop: async () => undefined,
   };
   const app = applications.createCanonicalProjectApplication(owner);
@@ -542,4 +546,30 @@ it("preserves the identical unexpected switch owner exception", async () => {
   await expect(app.switchProject(switchRequest)).rejects.toBe(sentinel);
   owner.switchProject.mockRejectedValue(sentinel);
   await expect(app.switchProject(switchRequest)).rejects.toBe(sentinel);
+});
+
+it("rejects an invalid or foreign upgrade result", async () => {
+  const upgradeRequest = { projectId: request.projectId };
+  const valid = { status: "not-required", request: upgradeRequest } as const;
+  const owner = {
+    activate: async () => activation,
+    switchProject: unexpectedSwitch,
+    execute: async () => result,
+    upgrade: vi.fn<ActiveProjectCoordinator["upgrade"]>(async () => valid),
+    stop: async () => undefined,
+  } satisfies ActiveProjectCoordinator;
+  const app = applications.createCanonicalProjectApplication(owner);
+  expect(await app.upgrade(upgradeRequest)).toEqual(valid);
+  for (const value of [
+    {
+      status: "refused",
+      request: upgradeRequest,
+      diagnostic: { code: "PROJECT_UPGRADE_UNSUPPORTED" },
+    },
+    { ...valid, extra: "secret" },
+    { ...valid, request: { projectId: otherId } },
+  ]) {
+    Reflect.set(owner, "upgrade", async () => value);
+    await invalidResult(() => app.upgrade(upgradeRequest));
+  }
 });

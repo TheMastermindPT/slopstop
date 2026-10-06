@@ -1,3 +1,4 @@
+import { projectUpgradeDiagnostics } from "@slopstop/protocol";
 import { Data, Effect, Result } from "effect";
 import { projectStorageCreateRequestFingerprintInput } from "./project-storage-create-request.js";
 import {
@@ -124,29 +125,32 @@ type Eligibility =
   | Readonly<{ status: "answered"; result: ProjectStorageUpgradeResult }>
   | Readonly<{ status: "eligible"; sourceGenerationId: StorageGenerationId }>;
 
-const refusalMessages = {
-  PROJECT_UPGRADE_UNSUPPORTED:
-    "This Project needs a database change that cannot run automatically.",
-  PROJECT_UPGRADE_NOT_ELIGIBLE: "This Project's storage cannot be upgraded in its current state.",
-} as const;
+const upgradeRows = projectUpgradeDiagnostics;
+type RefusalCode = typeof upgradeRows.unsupported.code | typeof upgradeRows.notEligible.code;
+type FailureCode =
+  | typeof upgradeRows.backupInvalid.code
+  | typeof upgradeRows.verificationFailed.code;
+const refusalRows = {
+  PROJECT_UPGRADE_UNSUPPORTED: upgradeRows.unsupported,
+  PROJECT_UPGRADE_NOT_ELIGIBLE: upgradeRows.notEligible,
+} as const satisfies Record<RefusalCode, unknown>;
+const failureRows = {
+  PROJECT_UPGRADE_BACKUP_INVALID: upgradeRows.backupInvalid,
+  PROJECT_UPGRADE_VERIFICATION_FAILED: upgradeRows.verificationFailed,
+} as const satisfies Record<FailureCode, unknown>;
 
 function refused(
   request: ProjectStorageUpgradeRequest,
-  code: keyof typeof refusalMessages,
+  code: RefusalCode,
 ): ProjectStorageUpgradeResult {
-  return { status: "refused", request, diagnostic: { code, message: refusalMessages[code] } };
+  return { status: "refused", request, diagnostic: { code, message: refusalRows[code].message } };
 }
-
-const failureMessages = {
-  PROJECT_UPGRADE_BACKUP_INVALID: "The pre-upgrade backup failed its integrity check.",
-  PROJECT_UPGRADE_VERIFICATION_FAILED: "The upgraded copy did not match the original data.",
-} as const;
 
 function failed(
   request: ProjectStorageUpgradeRequest,
-  code: keyof typeof failureMessages,
+  code: FailureCode,
 ): ProjectStorageUpgradeResult {
-  return { status: "failed", request, diagnostic: { code, message: failureMessages[code] } };
+  return { status: "failed", request, diagnostic: { code, message: failureRows[code].message } };
 }
 
 async function inspectEligibility(pipeline: Pipeline): Promise<Eligibility> {

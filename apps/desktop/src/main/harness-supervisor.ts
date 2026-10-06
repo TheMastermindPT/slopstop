@@ -14,6 +14,7 @@ import { Deferred, Duration, Effect, type Fiber } from "effect";
 import { MessageChannelMain, type UtilityProcess, utilityProcess } from "electron";
 import type { Logger } from "pino";
 import { reportHarnessCrash } from "./crash-reporting.js";
+import { createHarnessLogLineForwarder } from "./harness-log-lines.js";
 import {
   HarnessSession,
   type HarnessSessionClient,
@@ -347,7 +348,11 @@ export class HarnessSupervisor {
         this.#logger.error(metadata, "Harness process output observed.");
       }
     };
-    const onStdout = (chunk: Buffer) => observeOutput("stdout", chunk);
+    const lines = createHarnessLogLineForwarder(this.#logger, attempt);
+    const onStdout = (chunk: Buffer) => {
+      observeOutput("stdout", chunk);
+      lines.push(chunk);
+    };
     const onStderr = (chunk: Buffer) => observeOutput("stderr", chunk);
     const onError = () => {
       this.#logger.error(
@@ -359,6 +364,7 @@ export class HarnessSupervisor {
     child.stderr?.on("data", onStderr);
     child.once("error", onError);
     this.#observationCleanup.set(child, () => {
+      lines.end();
       child.stdout?.off("data", onStdout);
       child.stderr?.off("data", onStderr);
       child.off("error", onError);

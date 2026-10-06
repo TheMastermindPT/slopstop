@@ -37,6 +37,7 @@ import {
   settlementT0,
   settlementT1,
 } from "./canonical-command-fixture.js";
+import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js";
 import {
   expectedUnresolvedRecoveryRow,
   type RecoveryFixture,
@@ -90,7 +91,7 @@ export function recoveryEnvelope(
   payload: unknown,
 ) {
   return {
-    protocolVersion: 5,
+    protocolVersion: 6,
     messageType: "event",
     messageId: `99999999-9999-4999-8999-999999999${600 + sequence}`,
     sentAt: recoveryRuntimeTime,
@@ -174,7 +175,7 @@ function recoveryWireClient(
       if (pending.has(messageId)) throw new Error("Duplicate pending transport identity.");
       const response = new Promise<unknown>((resolve) => pending.set(messageId, resolve));
       port2.postMessage({
-        protocolVersion: 5,
+        protocolVersion: 6,
         messageType: "command",
         messageId,
         sentAt: recoveryRuntimeTime,
@@ -267,7 +268,7 @@ export async function createRecoveryRuntime(
       decodeStrict(WriterCapabilityTokenSchema, (options.next ? "2" : "1").repeat(64)),
     );
   const coordinator = createActiveProjectCoordinator({
-    storage: { acquireActivation: acquire },
+    storage: { acquireActivation: acquire, upgrade: unusedProjectUpgrade },
     repositories: { activate },
     leases: { acquire: lease },
     now: clock,

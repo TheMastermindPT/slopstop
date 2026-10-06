@@ -6,6 +6,11 @@ import {
 } from "@slopstop/protocol";
 import { vi } from "vitest";
 
+/** An `upgrade` for fakes that never upgrade. */
+export async function unusedProjectUpgrade(): Promise<never> {
+  throw new Error("Project upgrade is unused by this fixture.");
+}
+
 export function unusedCanonicalApplication(switchProject: () => Promise<never>) {
   return {
     activate: async () => {
@@ -15,6 +20,7 @@ export function unusedCanonicalApplication(switchProject: () => Promise<never>) 
     execute: async () => {
       throw new Error("Canonical command is unused by this fixture.");
     },
+    upgrade: unusedProjectUpgrade,
     stop: async () => undefined,
   };
 }
@@ -73,6 +79,7 @@ export function createCanonicalRuntimeApplicationFixture<Stop extends () => Prom
       hooks.beforeExecute?.();
       return inputs.commandResult;
     }),
+    upgrade: unusedProjectUpgrade,
     stop: hooks.stop,
   };
   return { ...inputs, application };

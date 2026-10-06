@@ -11,7 +11,7 @@ parent: .rpiv/artifacts/designs/2026-10-05_20-37-14_project-database-staged-upgr
 last_updated: 2026-10-06T17:30:00+0100
 last_updated_by: Pedro Mesquita
 last_updated_note: "Round-2 (last) findings applied without a further round (user rule). See Review gate status."
-content_hash: 257d4fe6eb3a842f39c8b75d2f5db2ec4a00a9cb8eedf070a9f6ce877f8c9c7d
+content_hash: b031715c8a7a53ffdde910be0cfb8019dc8885af3645cbc69519145c6827486f
 ---
 
 # Design: C1-0 S3 — upgrade request through the harness (S3a) and the window flow (S3b)
@@ -197,6 +197,10 @@ Two intent rounds ran with all three reviewers (evidence `-1.md`, `-2.md`), both
 **User gate decision (2026-10-06):** accept S3a intent with recorded residual risk, as an explicit override of the intent-review gate (rounds 1–2 failed; final revision unreviewed). Residual risks: unreviewed round-2 fixes; listing concurrency (F9); timing proven on a minimal fixture only; Expected red predictions may differ and are then recorded as observed. Mitigation: candidate-mode independent review of the real S3a source. This decision does not authorize a build, workspace or branch. S3b remains outline only.
 
 Intent accepted by the user with recorded residual risk. Build authorization, branch and worktree remain separate decisions.
+
+## TDD Evidence (implement)
+
+- Slice `c1-0-s3a-upgrade-request`, branch `feat/c1-0-s3a-upgrade-request` from `a9b347c`: per-behaviour red/green with working-tree digests, gates and deviations in `.rpiv/artifacts/evidence/2026-10-06_c1-0-s3a-tdd-evidence.md` (append-only). Prior content hash of this design: `257d4fe6eb3a842f39c8b75d2f5db2ec4a00a9cb8eedf070a9f6ce877f8c9c7d`.
 
 ## References
 

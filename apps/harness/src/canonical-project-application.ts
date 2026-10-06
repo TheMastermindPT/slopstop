@@ -5,12 +5,15 @@ import type {
   CanonicalProjectCommandResult,
   CanonicalProjectSwitchRequest,
   CanonicalProjectSwitchResult,
+  ProjectUpgradeRequest,
+  ProjectUpgradeResult,
 } from "@slopstop/protocol";
 import {
   CanonicalProjectActivationResultSchema,
   CanonicalProjectCommandResultSchema,
   CanonicalProjectSwitchResultSchema,
   decodeStrictResult,
+  ProjectUpgradeResultSchema,
 } from "@slopstop/protocol";
 import { Result, type Schema } from "effect";
 import type { ActiveProjectCoordinator } from "./active-project-coordinator.js";
@@ -18,6 +21,7 @@ export interface CanonicalProjectApplication {
   activate(request: CanonicalProjectActivationRequest): Promise<CanonicalProjectActivationResult>;
   switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
   execute(request: CanonicalProjectCommandRequest): Promise<CanonicalProjectCommandResult>;
+  upgrade(request: ProjectUpgradeRequest): Promise<ProjectUpgradeResult>;
   stop(): Promise<void>;
 }
 export class CanonicalProjectApplicationError extends Error {
@@ -86,6 +90,12 @@ export function createCanonicalProjectApplication(
         (result) => commandMatches(result, expected),
       );
     },
+    upgrade: async (request) =>
+      validatedResult(
+        ProjectUpgradeResultSchema,
+        await coordinator.upgrade(request),
+        (result) => result.request.projectId === request.projectId,
+      ),
     stop: () => coordinator.stop(),
   };
 }

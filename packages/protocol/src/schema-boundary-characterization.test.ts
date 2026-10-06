@@ -47,7 +47,7 @@ describe("schema boundary characterization", () => {
 
   it("accepts message timestamps with offsets and without seconds", () => {
     const handshake = (sentAt: string) => ({
-      protocolVersion: 5,
+      protocolVersion: 6,
       messageType: "command",
       messageId: "00000000-0000-4000-8000-000000000001",
       sentAt,

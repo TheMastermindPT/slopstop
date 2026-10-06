@@ -1,5 +1,9 @@
 import { setImmediate as nextTurn } from "node:timers/promises";
-import { decodeStrict, ProjectStorageOpenResultSchema } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  ProjectStorageOpenResultSchema,
+  projectUpgradeDiagnostics,
+} from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
 import {
   activationId,
@@ -414,4 +418,24 @@ it("contains unexpected target exceptions without restoring the source: cleanup 
       "B.storage.close",
     ]);
   }
+});
+
+it("refuses an upgrade while a Project is held or after stop", async () => {
+  const upgradeRequest = { projectId: request.projectId };
+  const f = fixture();
+  expect(await f.owner.activate(request)).toEqual(writable);
+  f.faults.set("storage", new Error("close failed"));
+  await expect(f.owner.stop()).rejects.toThrow("Canonical Project activation release failed.");
+  expect(await f.owner.upgrade(upgradeRequest)).toEqual({
+    status: "rejected",
+    request: upgradeRequest,
+    diagnostic: projectUpgradeDiagnostics.alreadyActive,
+  });
+  await f.owner.stop();
+  expect(await f.owner.upgrade(upgradeRequest)).toEqual({
+    status: "unavailable",
+    request: upgradeRequest,
+    diagnostic: projectUpgradeDiagnostics.coordinatorStopped,
+  });
+  expect(f.dependencies.storage.upgrade).not.toHaveBeenCalled();
 });

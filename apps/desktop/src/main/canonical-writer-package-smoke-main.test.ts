@@ -7,6 +7,8 @@ const ports = vi.hoisted(() => ({
   app: {
     isPackaged: true,
     whenReady: vi.fn(),
+    // This process holds the single-instance lock.
+    requestSingleInstanceLock: vi.fn(() => true),
     on: vi.fn(),
     exit: vi.fn(),
     quit: vi.fn(),
@@ -357,6 +359,33 @@ describe("ordinary main characterization", () => {
     expect(quit.preventDefault).toHaveBeenCalledOnce();
     expect(ports.app.quit).toHaveBeenCalledOnce();
     expect(ports.app.exit).not.toHaveBeenCalled();
+  });
+});
+
+describe("single-instance lock", () => {
+  it("fails a package smoke that does not hold the lock, without arming its proof", async () => {
+    ports.app.requestSingleInstanceLock.mockReturnValueOnce(false);
+    await load();
+    // The authorization moves userData first: the lock is taken for the smoke's own root.
+    expect(ports.authorize.mock.invocationCallOrder[0]).toBeLessThan(
+      ports.app.requestSingleInstanceLock.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(writes).toEqual(["Package smoke single-instance lock is held by another instance.\n"]);
+    expect(ports.app.exit).toHaveBeenCalledWith(1);
+    expect(ports.app.quit).not.toHaveBeenCalled();
+    expect(ports.app.whenReady).not.toHaveBeenCalled();
+    expect(ports.runner).not.toHaveBeenCalled();
+  });
+
+  it("quits an ordinary launch that does not hold the lock", async () => {
+    vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE", "0");
+    ports.app.requestSingleInstanceLock.mockReturnValueOnce(false);
+    await load();
+    expect(ports.authorize).not.toHaveBeenCalled();
+    expect(ports.app.quit).toHaveBeenCalledOnce();
+    expect(ports.app.exit).not.toHaveBeenCalled();
+    expect(ports.app.whenReady).not.toHaveBeenCalled();
+    expect(writes).toEqual([]);
   });
 });
 

@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { decodeStrict, ProjectStorageOpenRequestSchema } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import {
@@ -28,7 +27,11 @@ import {
   upgradeIds,
   upgradeTimes,
 } from "./project-storage-runtime-fixture.js";
-import { holdExclusiveLock, upgradePaths } from "./project-storage-upgrade-faults.js";
+import {
+  conflictingStagedTable,
+  holdExclusiveLock,
+  upgradePaths,
+} from "./project-storage-upgrade-faults.js";
 import {
   comparableCanonicalTables,
   createGenerationTwoProject,
@@ -700,17 +703,7 @@ it(
   async () => {
     const root = await createTemporaryApplicationRoot();
     await createGenerationTwoProject(root);
-    const fixture = createUpgradeStorageOwner(root, {
-      onCheckpoint: (checkpoint) => {
-        if (checkpoint !== "after-staged-copy") return;
-        const database = new DatabaseSync(upgradePaths({ root }).stagedCanonical);
-        try {
-          database.exec("CREATE TABLE repository_bindings (x)");
-        } finally {
-          database.close();
-        }
-      },
-    });
+    const fixture = createUpgradeStorageOwner(root, { onCheckpoint: conflictingStagedTable(root) });
     try {
       await expect(fixture.upgrade(openRequest)).rejects.toThrow(/already exists/u);
     } finally {

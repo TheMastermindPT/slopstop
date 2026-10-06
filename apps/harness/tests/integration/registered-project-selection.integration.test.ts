@@ -26,7 +26,7 @@ import {
   parseProjectStorageManifest,
   serializeProjectStorageManifest,
 } from "../../src/storage/project-storage-manifest.js";
-import { transportFor } from "./project-storage-runtime-fixture.js";
+import { silentHarnessLogger, transportFor } from "./project-storage-runtime-fixture.js";
 import {
   consentRegistryOptions,
   createControlledIdentityConsent,
@@ -41,6 +41,7 @@ afterEach(async () => {
 function runtime(options: ReturnType<typeof consentRegistryOptions>) {
   const { port1, port2 } = new MessageChannel();
   const stop = startHarnessProcessRuntime({
+    logger: silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",
       applicationStorageRootUrl: pathToFileURL(options.applicationStorageRoot).href,

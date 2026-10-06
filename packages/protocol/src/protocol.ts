@@ -14,6 +14,11 @@ import {
   CanonicalProjectSwitchResultSchema,
 } from "./canonical-project-protocol.js";
 import {
+  type HarnessFailureCode,
+  HarnessFailureCodeSchema,
+  harnessFailureMessages,
+} from "./harness-failure-protocol.js";
+import {
   ProjectListRequestSchema,
   type ProjectListResult,
   ProjectListResultSchema,
@@ -41,6 +46,12 @@ import {
   ProjectStorageOpenResultSchema,
 } from "./project-storage-protocol.js";
 import {
+  type ProjectUpgradeRequest,
+  ProjectUpgradeRequestSchema,
+  type ProjectUpgradeResult,
+  ProjectUpgradeResultSchema,
+} from "./project-upgrade-protocol.js";
+import {
   dateTimeTextSchema,
   decodeStrict,
   decodeStrictResult,
@@ -63,7 +74,7 @@ import {
   WorkspaceQuerySchema,
 } from "./workspace-protocol.js";
 
-export const protocolVersion = 5 as const;
+export const protocolVersion = 6 as const;
 
 export const MessageIdSchema = UuidTextSchema.pipe(Schema.brand("MessageId"));
 export type MessageId = typeof MessageIdSchema.Type;
@@ -168,12 +179,7 @@ const ReadyEventSchema = Schema.Struct({
   payload: Schema.Struct({ harnessVersion: NonEmptyTextSchema }),
 });
 
-export const HarnessFailureCodeSchema = Schema.Literals([
-  "PROTOCOL_MESSAGE_INVALID",
-  "PROTOCOL_VERSION_UNSUPPORTED",
-  "HARNESS_INTERNAL_FAILURE",
-]);
-export type HarnessFailureCode = typeof HarnessFailureCodeSchema.Type;
+export { type HarnessFailureCode, HarnessFailureCodeSchema, harnessFailureMessages };
 
 const HarnessFailurePayloadSchema = Schema.Struct({
   code: HarnessFailureCodeSchema,
@@ -254,6 +260,11 @@ export const DesktopMessageSchema = Schema.Union([
     command: Schema.Literal("project.command"),
     payload: CanonicalProjectCommandRequestSchema,
   }),
+  Schema.Struct({
+    ...DesktopCommandMetadataSchema,
+    command: Schema.Literal("project.upgrade"),
+    payload: ProjectUpgradeRequestSchema,
+  }),
   HandshakeCommandSchema,
   ProjectOpenCommandSchema,
   ProjectCreateCommandSchema,
@@ -284,6 +295,11 @@ export const HarnessMessageSchema = Schema.Union([
     ...HarnessEventMetadataSchema,
     event: Schema.Literal("project.command.result"),
     payload: CanonicalProjectCommandResultSchema,
+  }),
+  Schema.Struct({
+    ...HarnessEventMetadataSchema,
+    event: Schema.Literal("project.upgrade.result"),
+    payload: ProjectUpgradeResultSchema,
   }),
   ReadyEventSchema,
   RequestFailureEventSchema,
@@ -498,6 +514,20 @@ export function createProjectCommandResultEvent(
   result: CanonicalProjectCommandResult,
 ): HarnessMessage {
   return createEvent(metadata, "project.command.result", result);
+}
+
+export function createProjectUpgradeCommand(
+  metadata: CommandMetadata,
+  request: ProjectUpgradeRequest,
+): DesktopMessage {
+  return createCommand(metadata, "project.upgrade", request);
+}
+
+export function createProjectUpgradeResultEvent(
+  metadata: EventMetadata,
+  result: ProjectUpgradeResult,
+): HarnessMessage {
+  return createEvent(metadata, "project.upgrade.result", result);
 }
 
 export function createProjectSwitchCommand(

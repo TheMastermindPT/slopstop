@@ -1,18 +1,10 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { lstatSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  decodeStrict,
-  HarnessBootstrapSchema,
-  ProjectActivationIdSchema,
-} from "@slopstop/protocol";
+import { decodeStrict, HarnessBootstrapSchema } from "@slopstop/protocol";
 import { Context, Effect, Layer, ManagedRuntime } from "effect";
-import {
-  type ActiveProjectCoordinatorWithHeld,
-  createActiveProjectCoordinator,
-} from "./active-project-coordinator.js";
-import { createCanonicalCommandRegistry } from "./canonical-command-registry.js";
+import type { ActiveProjectCoordinatorWithHeld } from "./active-project-coordinator.js";
 import {
   type CanonicalProjectApplication,
   createCanonicalProjectApplication,
@@ -22,6 +14,7 @@ import {
   type StopHarnessRuntime,
   startHarnessRuntime,
 } from "./harness-runtime.js";
+import { createNodeActiveProjectCoordinator } from "./node-active-project-coordinator.js";
 import {
   createProjectStorageApplication,
   type ProjectStorageOwner,
@@ -31,14 +24,13 @@ import {
   type ApplicationDatabaseAuthority,
   createApplicationDatabaseAuthority,
 } from "./storage/application-database-authority.js";
-import {
-  createCanonicalCommandRepositoryFactory,
-  WriterCapabilityTokenSchema,
-} from "./storage/canonical-command-repository.js";
-import { createNodeCanonicalWriterLeaseFactory } from "./storage/canonical-writer-lease.js";
-import { createWorkerLocalLibsqlClient } from "./storage/local-libsql-worker-client.js";
 import { createNodeProjectStorageDependencies } from "./storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "./storage/project-storage-store.js";
+import type { ProjectStorageUpgradePort } from "./storage/project-storage-upgrade.js";
+import {
+  createUpgradeDiagnosticsLogger,
+  type UpgradeEventLogger,
+} from "./upgrade-diagnostics-logger.js";
 import { createUnavailableWorkspaceApplication } from "./workspace-application.js";
 
 function isMissingPathError(error: unknown): boolean {
@@ -89,6 +81,8 @@ export function startHarnessProcessRuntime(
   input: Readonly<{
     bootstrap: unknown;
     transport: HarnessTransport;
+    /** The process log; upgrade diagnostics of the coordinator's Storage owner go here. */
+    logger: UpgradeEventLogger;
   }>,
 ): StopHarnessRuntime {
   const bootstrap = decodeStrict(HarnessBootstrapSchema, input.bootstrap);
@@ -103,7 +97,7 @@ export function startHarnessProcessRuntime(
   // One runtime per harness process builds the owners once, sharing one application
   // database authority. Their shutdown order stays explicit in the harness runtime.
   const runtime = ManagedRuntime.make(
-    harnessServicesLayer({ applicationStorageRoot, migrationResourcesRoot }),
+    harnessServicesLayer({ applicationStorageRoot, migrationResourcesRoot }, input.logger),
   );
   try {
     const services = runtime.runSync(
@@ -170,6 +164,10 @@ type HarnessRootPaths = Readonly<{
   migrationResourcesRoot: string;
 }>;
 
+/** Where the coordinator's Storage owner reports its upgrade diagnostics. */
+class UpgradeLog extends Context.Service<UpgradeLog, UpgradeEventLogger>()(
+  "slopstop/harness/UpgradeLog",
+) {}
 class HarnessRoots extends Context.Service<HarnessRoots, HarnessRootPaths>()(
   "slopstop/harness/HarnessRoots",
 ) {}
@@ -177,9 +175,10 @@ class ApplicationDatabase extends Context.Service<
   ApplicationDatabase,
   ApplicationDatabaseAuthority
 >()("slopstop/harness/ApplicationDatabase") {}
-class ProjectStorage extends Context.Service<ProjectStorage, ProjectStorageOwner>()(
-  "slopstop/harness/ProjectStorage",
-) {}
+class ProjectStorage extends Context.Service<
+  ProjectStorage,
+  ProjectStorageOwner & ProjectStorageUpgradePort
+>()("slopstop/harness/ProjectStorage") {}
 class ProjectRegistration extends Context.Service<
   ProjectRegistration,
   Readonly<{
@@ -211,6 +210,7 @@ const projectStorageLayer = Layer.effect(
         ...roots,
         applicationVersion: "0.0.0",
         applicationDatabase: yield* ApplicationDatabase,
+        upgradeDiagnostics: createUpgradeDiagnosticsLogger(yield* UpgradeLog),
       }),
     );
   }),
@@ -263,25 +263,10 @@ const canonicalProjectsLayer = Layer.effect(
     const roots = yield* HarnessRoots;
     const applicationDatabase = yield* ApplicationDatabase;
     const registryOptions = { ...roots, applicationDatabase };
-    const coordinator = createActiveProjectCoordinator({
+    const coordinator = createNodeActiveProjectCoordinator({
       validateTarget: createRegisteredProjectTargetValidation(registryOptions),
       validateSession: createRegisteredProjectSessionValidation(registryOptions),
       storage: yield* ProjectStorage,
-      leases: createNodeCanonicalWriterLeaseFactory(),
-      repositories: createCanonicalCommandRepositoryFactory({
-        registry: createCanonicalCommandRegistry([]),
-        createReceiptId: randomUUID,
-        createEventId: randomUUID,
-        now: currentTime,
-        openClient: (databasePath) => createWorkerLocalLibsqlClient(databasePath, "generation"),
-        sha256Text: async (text) => createHash("sha256").update(text).digest("hex"),
-        createHandoffId: randomUUID,
-        createRecoveryRecordId: randomUUID,
-      }),
-      createActivationId: () => decodeStrict(ProjectActivationIdSchema, randomUUID()),
-      createWriterToken: () =>
-        decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
-      now: currentTime,
     });
     return {
       ...createCanonicalProjectApplication(coordinator),
@@ -290,11 +275,12 @@ const canonicalProjectsLayer = Layer.effect(
   }),
 );
 
-function harnessServicesLayer(roots: HarnessRootPaths) {
+function harnessServicesLayer(roots: HarnessRootPaths, upgradeLog: UpgradeEventLogger) {
   return canonicalProjectsLayer.pipe(
     Layer.provideMerge(Layer.mergeAll(projectStorageLayer, projectRegistrationLayer)),
     Layer.provideMerge(applicationDatabaseLayer),
     Layer.provideMerge(Layer.succeed(HarnessRoots, roots)),
+    Layer.provideMerge(Layer.succeed(UpgradeLog, upgradeLog)),
   );
 }
 

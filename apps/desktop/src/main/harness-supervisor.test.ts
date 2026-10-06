@@ -12,6 +12,7 @@ import {
   decodeStrict,
   HarnessBootstrapSchema,
   type HarnessStatus,
+  HarnessUpgradeLogLineSchema,
   MessageIdSchema,
   ProjectStorageCloseRequestSchema,
   ProjectStorageCreateRequestSchema,
@@ -74,6 +75,7 @@ type FakeChannel = Readonly<{
 const logger = {
   error: vi.fn(),
   info: vi.fn(),
+  warn: vi.fn(),
 } as unknown as Logger;
 
 const eventMetadata = {
@@ -179,6 +181,7 @@ beforeEach(() => {
   crashReportingMocks.reportHarnessCrash.mockReset();
   vi.mocked(logger.error).mockReset();
   vi.mocked(logger.info).mockReset();
+  vi.mocked(logger.warn).mockReset();
 });
 
 afterEach(() => {
@@ -897,5 +900,136 @@ describe("HarnessSupervisor", () => {
 
   it("resolves the colocated harness bundle", () => {
     expect(harnessEntryPath("C:/app/build")).toBe(path.join("C:/app/build", "harness.cjs"));
+  });
+});
+
+describe("harness upgrade log lines", () => {
+  const time = Date.UTC(2026, 9, 6, 12, 0, 0);
+  const harnessTime = new Date(time).toISOString();
+  const ids = {
+    projectId: "00000000-0000-4000-8000-000000000010",
+    upgradeId: "00000000-0000-4000-8000-0000000000a1",
+  };
+  const abandoned = (reason: string) => ({
+    level: 30,
+    time,
+    service: "harness",
+    event: "project-storage.upgrade.abandoned",
+    ...ids,
+    reason,
+  });
+  const discardFailed = (cause: string) => ({
+    level: 40,
+    time,
+    service: "harness",
+    event: "project-storage.upgrade.discard-failed",
+    ...ids,
+    cause,
+  });
+  const valid = [
+    abandoned("failed"),
+    abandoned("interrupted"),
+    discardFailed("busy"),
+    discardFailed("broken"),
+    discardFailed("unproven"),
+  ].map((line) => decodeStrict(HarnessUpgradeLogLineSchema, line));
+  const json = (value: unknown) => JSON.stringify(value);
+  const exactly16KiB = "x".repeat(16 * 1024);
+  const overlong = "y".repeat(20 * 1024);
+  const lines = [
+    ...valid.map(json),
+    json({ ...abandoned("failed"), extra: true }),
+    json({ ...abandoned("failed"), projectId: "not-a-uuid" }),
+    json(abandoned("restarted")),
+    json({ level: 30, time, service: "harness", event: "other.event" }),
+    "not json",
+    exactly16KiB,
+    overlong,
+    json(abandoned("failed")),
+  ];
+  const text = `${lines.join("\n")}\n{"partial":`;
+
+  const observation = "Harness process output observed.";
+  /** The stream cut into 1000-byte chunks, none ending on a newline. */
+  function chunksOf(value: string): Buffer[] {
+    const bytes = Buffer.from(value);
+    return Array.from({ length: Math.ceil(bytes.byteLength / 1000) }, (_, index) =>
+      bytes.subarray(index * 1000, (index + 1) * 1000),
+    );
+  }
+  /** Every desktop log call, in order, as `[level, object, message]`. */
+  function recordLogCalls(): unknown[][] {
+    const recorded: unknown[][] = [];
+    for (const level of ["info", "warn", "error"] as const) {
+      vi.mocked(logger[level]).mockImplementation((object: unknown, message?: unknown) => {
+        recorded.push([level, object, message]);
+      });
+    }
+    return recorded;
+  }
+  const forwarded = (line: Readonly<Record<string, unknown>>) => [
+    line["level"] === 30 ? "info" : "warn",
+    {
+      source: "harness",
+      event: line["event"],
+      ...ids,
+      ...("reason" in line ? { reason: line["reason"] } : { cause: line["cause"] }),
+      harnessTime,
+    },
+    "Harness upgrade event.",
+  ];
+  const invalid = (event: string) => [
+    "warn",
+    { code: "HARNESS_LOG_LINE_INVALID", attempt: 1, event },
+    "Harness upgrade log line rejected.",
+  ];
+
+  it("forwards only harness upgrade log lines", () => {
+    const recorded = recordLogCalls();
+    const child = new FakeChild();
+    supervisorWith([child]).start();
+    const chunks = chunksOf(text);
+    expect(chunks.every((chunk) => !chunk.toString().endsWith("\n"))).toBe(true);
+    for (const chunk of chunks) child.stdout?.emit("data", chunk);
+    child.emit("exit", 0);
+
+    expect(recorded.filter((entry) => entry[2] === observation)).toEqual(
+      chunks.map((chunk) => [
+        "info",
+        { attempt: 1, stream: "stdout", bytes: chunk.byteLength },
+        observation,
+      ]),
+    );
+    expect(recorded.filter((entry) => entry[2] !== observation)).toEqual([
+      ...valid.map(forwarded),
+      invalid("project-storage.upgrade.abandoned"),
+      invalid("project-storage.upgrade.abandoned"),
+      invalid("project-storage.upgrade.abandoned"),
+      ["warn", { code: "HARNESS_LOG_LINE_TOO_LONG", attempt: 1 }, "Harness output line dropped."],
+      forwarded(abandoned("failed")),
+      [
+        "warn",
+        { code: "HARNESS_LOG_LINE_INCOMPLETE", attempt: 1 },
+        "Harness output line incomplete.",
+      ],
+      ["error", { exitCode: 0, attempt: 1 }, "Harness process exited."],
+    ]);
+  });
+
+  it("rejects an upgrade line whose time is no date", () => {
+    const recorded = recordLogCalls();
+    const child = new FakeChild();
+    supervisorWith([child]).start();
+    const line = json({ ...abandoned("failed"), time: 9_000_000_000_000_000 });
+    expect(() =>
+      child.stdout?.emit(
+        "data",
+        Buffer.from(`${line}
+`),
+      ),
+    ).not.toThrow();
+    expect(recorded.filter((entry) => entry[2] !== observation)).toEqual([
+      invalid("project-storage.upgrade.abandoned"),
+    ]);
   });
 });

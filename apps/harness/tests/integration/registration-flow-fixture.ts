@@ -17,7 +17,11 @@ import {
 } from "@slopstop/protocol";
 import { afterEach } from "vitest";
 import { startHarnessProcessRuntime } from "../../src/process-bootstrap.js";
-import { checkedInMigrationRoot, transportFor } from "./project-storage-runtime-fixture.js";
+import {
+  checkedInMigrationRoot,
+  silentHarnessLogger,
+  transportFor,
+} from "./project-storage-runtime-fixture.js";
 import { installedGit } from "./registration-git-fixture.js";
 
 const roots: string[] = [];
@@ -45,6 +49,7 @@ export async function registrationSession() {
   execFileSync(installedGit, ["init", "--quiet", directory]);
   const { port1, port2 } = new MessageChannel();
   const stop = startHarnessProcessRuntime({
+    logger: silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",
       applicationStorageRootUrl: pathToFileURL(path.join(root, "installation")).href,

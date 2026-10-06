@@ -174,6 +174,22 @@ export const backupFaults = [
   },
 ] as const;
 
+/**
+ * At `after-staged-copy`, pre-creates a table the staged migration then creates again: an
+ * unexpected step error, not a classified failure.
+ */
+export function conflictingStagedTable(root: string) {
+  return (checkpoint: string): void => {
+    if (checkpoint !== "after-staged-copy") return;
+    const database = new DatabaseSync(upgradePaths({ root }).stagedCanonical);
+    try {
+      database.exec("CREATE TABLE repository_bindings (x)");
+    } finally {
+      database.close();
+    }
+  };
+}
+
 /** Holds an exclusive SQLite lock on a database from another connection until released. */
 export function holdExclusiveLock({ databasePath }: DatabaseFile) {
   const database = new DatabaseSync(databasePath);

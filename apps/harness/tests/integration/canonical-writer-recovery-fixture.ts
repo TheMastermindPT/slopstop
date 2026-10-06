@@ -32,6 +32,7 @@ import {
   settlementText,
   statementText,
 } from "./canonical-command-fixture.js";
+import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js";
 import { openedCanonicalStorageResult } from "./canonical-storage-selection-fixture.js";
 import { createConformanceCounterCommand } from "./conformance-counter-command.js";
 
@@ -424,7 +425,7 @@ export async function createRecoveryComposition() {
   const native = createNodeCanonicalWriterLeaseFactory();
   const coordinator = createActiveProjectCoordinator({
     repositories,
-    storage: recoveryStoragePort(file, storageClose),
+    storage: { ...recoveryStoragePort(file, storageClose), upgrade: unusedProjectUpgrade },
     leases: {
       acquire: async (leasePath) => {
         const acquired = await native.acquire(leasePath);

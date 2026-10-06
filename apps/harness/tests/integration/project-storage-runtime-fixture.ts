@@ -32,9 +32,12 @@ import {
   type NodeProjectStorageOptions,
 } from "../../src/storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
+import { unusedCanonicalApplication } from "./canonical-runtime-application-fixture.js";
 
 export const checkedInMigrationRoot = path.resolve(import.meta.dirname, "../../drizzle");
 export const projectStorageIntegrationTimeout = 15_000;
+/** A process logger for runtimes whose log lines no test reads. */
+export const silentHarnessLogger = { info: () => undefined, warn: () => undefined } as const;
 const temporaryRoots: string[] = [];
 export const createRequest = decodeStrict(ProjectStorageCreateRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000010",
@@ -160,18 +163,9 @@ export async function createStorageRuntimeForRoot(
   const { port1, port2 } = new MessageChannel();
   let generatedId = 100;
   const stopRuntime = startHarnessRuntime({
-    canonicalProjectApplication: {
-      activate: async () => {
-        throw new Error("Canonical activation is unused by this fixture.");
-      },
-      switchProject: async () => {
-        throw new Error("Unexpected canonical Project switch in this fixture.");
-      },
-      execute: async () => {
-        throw new Error("Canonical command is unused by this fixture.");
-      },
-      stop: async () => undefined,
-    },
+    canonicalProjectApplication: unusedCanonicalApplication(async () => {
+      throw new Error("Unexpected canonical Project switch in this fixture.");
+    }),
     transport: transportFor(port1),
     workspaceApplication: createUnavailableWorkspaceApplication(),
     projectStorageApplication: await projectStorageApplicationForRoot(root, options),
@@ -310,6 +304,8 @@ export type UpgradeOwnerOptions = Readonly<{
   failAt?: StorageCheckpoint;
   /** Applies to attempt 1 only. */
   onCheckpoint?: (checkpoint: StorageCheckpoint) => Promise<void> | void;
+  /** Also receives every upgrade diagnostic the fixture records. */
+  upgradeDiagnostics?: UpgradeDiagnostics;
   /** Attempt 1's target generation instead of `upgradeIds.targetGenerationId`. */
   targetGenerationId?: typeof upgradeIds.targetGenerationId;
 }>;
@@ -363,9 +359,11 @@ export function createUpgradeStorageOwner(root: string, options: UpgradeOwnerOpt
     upgradeDiagnostics: {
       abandoned: (event) => {
         diagnostics.push({ kind: "abandoned", event });
+        options.upgradeDiagnostics?.abandoned(event);
       },
       discardFailed: (event) => {
         diagnostics.push({ kind: "discardFailed", event });
+        options.upgradeDiagnostics?.discardFailed(event);
       },
     },
   });

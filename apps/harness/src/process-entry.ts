@@ -1,4 +1,4 @@
-import pino from "pino";
+import { createHarnessLogger } from "./harness-logger.js";
 import type { HarnessTransport, StopHarnessRuntime } from "./harness-runtime.js";
 import { startHarnessProcessRuntime } from "./process-bootstrap.js";
 import { createHarnessFatalHandlers } from "./process-fatal-diagnostics.js";
@@ -27,14 +27,7 @@ type UtilityProcess = NodeJS.Process & {
   readonly parentPort?: UtilityParentPort;
 };
 
-const logger = pino({
-  base: { service: "harness" },
-  level: process.env["SLOPSTOP_LOG_LEVEL"] ?? "info",
-  redact: {
-    paths: ["*.apiKey", "*.authorization", "*.password", "*.secret", "*.token"],
-    censor: "[redacted]",
-  },
-});
+const logger = createHarnessLogger();
 
 function failStartup(message: string): never {
   logger.fatal({ code: "HARNESS_START_FAILED" }, message);
@@ -88,6 +81,7 @@ parentPort.once("message", (event) => {
     stopRuntime = startHarnessProcessRuntime({
       bootstrap: event.data,
       transport: createTransport(port),
+      logger,
     });
   } catch {
     failStartup("Harness received an invalid bootstrap message.");

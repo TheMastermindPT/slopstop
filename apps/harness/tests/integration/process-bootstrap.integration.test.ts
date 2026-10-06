@@ -32,6 +32,7 @@ import {
   projectStorageIntegrationTimeout,
   transportFor,
 } from "./project-storage-create-fixture.js";
+import { silentHarnessLogger } from "./project-storage-runtime-fixture.js";
 
 const sentAt = "2026-08-31T12:00:00.000Z";
 const openRequest = decodeStrict(ProjectStorageOpenRequestSchema, {
@@ -212,6 +213,7 @@ function startTrustedBootstrap(
   session: ReturnType<typeof createProcessTransportFixture>,
 ) {
   return startHarnessProcessRuntime({
+    logger: silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",
       applicationStorageRootUrl: pathToFileURL(applicationStorageRoot).href,
@@ -331,6 +333,7 @@ it("rejects overlapping bootstrap roots before starting the runtime", async () =
     try {
       expect(() =>
         startHarnessProcessRuntime({
+          logger: silentHarnessLogger,
           bootstrap: {
             kind: "harness.connect",
             applicationStorageRootUrl: pathToFileURL(applicationRoot).href,
@@ -358,6 +361,7 @@ it("rejects a filesystem alias before persistence mutation", async () => {
   try {
     expect(() =>
       startHarnessProcessRuntime({
+        logger: silentHarnessLogger,
         bootstrap: {
           kind: "harness.connect",
           applicationStorageRootUrl: pathToFileURL(applicationRoot).href,

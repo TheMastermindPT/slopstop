@@ -17,6 +17,7 @@ import {
   type WriterFenceCheck,
 } from "../../src/storage/canonical-command-repository.js";
 import type { CanonicalWriterLeaseAcquisition } from "../../src/storage/canonical-writer-lease.js";
+import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js";
 import { createMigratedSettlement } from "./conformance-counter-command.js";
 
 const projectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000010");
@@ -145,6 +146,7 @@ export function fixture(realCommands = false, id: ProjectId = projectId) {
       acquireActivation: vi.fn(
         async (): Promise<ProjectStorageActivationOutcome> => ({ status: "ready", session }),
       ),
+      upgrade: vi.fn(unusedProjectUpgrade),
     },
     leases: {
       acquire: vi.fn(

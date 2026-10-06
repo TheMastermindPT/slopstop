@@ -78,6 +78,8 @@ let smokeWindow: BrowserWindow | undefined;
 let writerProofAbort: AbortController | undefined;
 const writerProofTerminalMessage = "Package smoke writer processes terminal.";
 const writerProofUnconfirmedMessage = "Package smoke writer process exit unconfirmed.";
+const packageSmokeLockHeldMessage =
+  "Package smoke single-instance lock is held by another instance.";
 
 function writeWriterProofReport(text: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -314,20 +316,55 @@ function createActiveWindow(): Promise<BrowserWindow> {
   return createApplicationWindow(options);
 }
 
-async function bootstrap(): Promise<void> {
-  if (packageSmoke) {
-    const authorization = applyPackageSmokeAuthorization(
-      {
-        root: process.env["SLOPSTOP_PACKAGE_SMOKE_USER_DATA"],
-        token: process.env["SLOPSTOP_PACKAGE_SMOKE_TOKEN"],
-        scenario: process.env["SLOPSTOP_PACKAGE_SMOKE_SCENARIO"],
-      },
-      (root) => app.setPath("userData", root),
-    );
-    packageSmokeAuthorization = authorization;
-    packageSmokeState = "pending";
-    if (authorization.scenario === "writer-proof") writerProofAbort = new AbortController();
+/** In package-smoke mode, checks its authorization and moves `userData` to its root. */
+function authorizePackageSmoke() {
+  if (!packageSmoke) return undefined;
+  return applyPackageSmokeAuthorization(
+    {
+      root: process.env["SLOPSTOP_PACKAGE_SMOKE_USER_DATA"],
+      token: process.env["SLOPSTOP_PACKAGE_SMOKE_TOKEN"],
+      scenario: process.env["SLOPSTOP_PACKAGE_SMOKE_SCENARIO"],
+    },
+    (root) => app.setPath("userData", root),
+  );
+}
+
+/** Records an authorized package smoke as pending; a writer proof also gets its abort. */
+function armPackageSmoke(authorization: NonNullable<ReturnType<typeof authorizePackageSmoke>>) {
+  packageSmokeAuthorization = authorization;
+  packageSmokeState = "pending";
+  if (authorization.scenario === "writer-proof") writerProofAbort = new AbortController();
+}
+
+/** A package smoke that finds its root locked fails visibly instead of passing as quit. */
+function refuseSecondPackageSmoke(): void {
+  try {
+    process.stderr.write(`${packageSmokeLockHeldMessage}\n`, () => app.exit(1));
+  } catch {
+    app.exit(1);
   }
+}
+
+/** Restores and focuses this instance's window when a second launch hands over to it. */
+function focusExistingWindow(): void {
+  const window = BrowserWindow.getAllWindows()[0];
+  if (window === undefined) return;
+  if (window.isMinimized()) window.restore();
+  window.focus();
+}
+
+async function bootstrap(): Promise<void> {
+  // The package-smoke userData is set first: the single-instance lock belongs to it.
+  const authorization = authorizePackageSmoke();
+  // One instance per userData: a second launch quits before any window, logger, harness or
+  // package-smoke state, so nothing holds its quit back.
+  if (!app.requestSingleInstanceLock()) {
+    if (authorization === undefined) app.quit();
+    else refuseSecondPackageSmoke();
+    return;
+  }
+  if (authorization !== undefined) armPackageSmoke(authorization);
+  app.on("second-instance", focusExistingWindow);
   await app.whenReady();
   if (packageSmokeAuthorization?.scenario === "writer-proof" && writerProofAbort !== undefined) {
     packageSmokeTask = runPrivateWriterProof(packageSmokeAuthorization, writerProofAbort);

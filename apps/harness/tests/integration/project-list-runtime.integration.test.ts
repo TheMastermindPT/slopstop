@@ -7,12 +7,13 @@ import { MessageChannel } from "node:worker_threads";
 import { protocolVersion } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { startHarnessProcessRuntime } from "../../src/process-bootstrap.js";
-import { transportFor } from "./project-storage-runtime-fixture.js";
+import { silentHarnessLogger, transportFor } from "./project-storage-runtime-fixture.js";
 
 it("dispatches a real saved Project list through the process protocol", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-list-transport-"));
   const { port1, port2 } = new MessageChannel();
   const stop = startHarnessProcessRuntime({
+    logger: silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",
       applicationStorageRootUrl: pathToFileURL(root).href,

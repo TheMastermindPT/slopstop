@@ -1,6 +1,9 @@
 import type {
   ProjectId,
   ProjectStorageCreateRequest,
+  ProjectUpgradeAbandonReason,
+  ProjectUpgradeDiscardCause,
+  projectUpgradeDiagnostics,
   StorageGenerationId,
   StorageId,
 } from "@slopstop/protocol";
@@ -14,6 +17,7 @@ export const projectStorageUpgradeBusyMessage =
 export type ProjectStorageUpgradeRequest = Readonly<{ projectId: ProjectId }>;
 export type ProjectStorageUpgradeId = ProjectStorageCreateRequest["createRequestId"];
 
+type UpgradeRows = typeof projectUpgradeDiagnostics;
 type UpgradeDiagnostic<Code extends string> = Readonly<{ code: Code; message: string }>;
 
 export type ProjectStorageUpgradeResult =
@@ -28,13 +32,15 @@ export type ProjectStorageUpgradeResult =
   | Readonly<{
       status: "refused";
       request: ProjectStorageUpgradeRequest;
-      diagnostic: UpgradeDiagnostic<"PROJECT_UPGRADE_UNSUPPORTED" | "PROJECT_UPGRADE_NOT_ELIGIBLE">;
+      diagnostic: UpgradeDiagnostic<
+        UpgradeRows["unsupported"]["code"] | UpgradeRows["notEligible"]["code"]
+      >;
     }>
   | Readonly<{
       status: "failed";
       request: ProjectStorageUpgradeRequest;
       diagnostic: UpgradeDiagnostic<
-        "PROJECT_UPGRADE_BACKUP_INVALID" | "PROJECT_UPGRADE_VERIFICATION_FAILED"
+        UpgradeRows["backupInvalid"]["code"] | UpgradeRows["verificationFailed"]["code"]
       >;
     }>;
 
@@ -94,12 +100,12 @@ export type MigratedUpgrade = Readonly<{
 export type UpgradeAbandonedEvent = Readonly<{
   projectId: ProjectId;
   upgradeId: ProjectStorageUpgradeId;
-  reason: "failed" | "interrupted";
+  reason: ProjectUpgradeAbandonReason;
 }>;
 type UpgradeDiscardFailedEvent = Readonly<{
   projectId: ProjectId;
   upgradeId: ProjectStorageUpgradeId;
-  cause: "busy" | "broken" | "unproven";
+  cause: ProjectUpgradeDiscardCause;
 }>;
 
 /** The in-progress marker of an upgrade that did not finish. */

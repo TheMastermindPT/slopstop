@@ -137,6 +137,23 @@ export {
   StorageIdSchema,
 } from "./project-storage-protocol.js";
 export type {
+  HarnessUpgradeLogLine,
+  ProjectUpgradeAbandonReason,
+  ProjectUpgradeDiagnostic,
+  ProjectUpgradeDiscardCause,
+  ProjectUpgradeRequest,
+  ProjectUpgradeResult,
+} from "./project-upgrade-protocol.js";
+export {
+  HarnessUpgradeLogLineSchema,
+  harnessUpgradeLogEvents,
+  ProjectUpgradeAbandonReasonSchema,
+  ProjectUpgradeDiscardCauseSchema,
+  ProjectUpgradeRequestSchema,
+  ProjectUpgradeResultSchema,
+  projectUpgradeDiagnostics,
+} from "./project-upgrade-protocol.js";
+export type {
   DesktopMessage,
   HarnessBootstrap,
   HarnessFailureCode,
@@ -164,6 +181,8 @@ export {
   createProjectRegistrationResultEvent,
   createProjectSwitchCommand,
   createProjectSwitchResultEvent,
+  createProjectUpgradeCommand,
+  createProjectUpgradeResultEvent,
   createReadyEvent,
   createRequestFailureEvent,
   createSystemFailureEvent,
@@ -178,6 +197,7 @@ export {
   HarnessFailureCodeSchema,
   HarnessMessageSchema,
   HarnessStatusSchema,
+  harnessFailureMessages,
   MessageIdSchema,
   parseDesktopMessage,
   parseHarnessMessage,

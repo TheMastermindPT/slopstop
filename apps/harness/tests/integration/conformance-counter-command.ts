@@ -46,6 +46,7 @@ import { createProjectStorageOwner } from "../../src/storage/project-storage-sto
 import { createUnavailableWorkspaceApplication } from "../../src/workspace-application.js";
 import type { SettlementObservation } from "./canonical-command-database-fixture.js";
 import { settlementT1 } from "./canonical-command-database-fixture.js";
+import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js";
 import { openedCanonicalStorageResult } from "./canonical-storage-selection-fixture.js";
 import {
   checkedInMigrationRoot,
@@ -94,7 +95,7 @@ export function settlementEvent(
   payload: unknown,
 ) {
   return {
-    protocolVersion: 5,
+    protocolVersion: 6,
     messageType: "event",
     messageId: `99999999-9999-4999-8999-999999999${500 + sequence}`,
     sentAt: "2026-09-05T12:00:06.000Z",
@@ -615,7 +616,7 @@ export async function createSettlementComposition(extended = true) {
   const clock = vi.fn(() => "2026-09-05T12:00:05.000Z");
   clock.mockReturnValueOnce(settlementT0).mockReturnValueOnce("2026-09-05T12:00:04.000Z");
   const coordinator = createActiveProjectCoordinator({
-    storage: activationStorage,
+    storage: { ...activationStorage, upgrade: unusedProjectUpgrade },
     repositories,
     leases: {
       acquire: async () => ({

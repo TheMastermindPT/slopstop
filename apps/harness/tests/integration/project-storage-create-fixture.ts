@@ -44,6 +44,7 @@ import {
   presentProjectDatabaseProbe,
 } from "../../src/storage/project-storage-opening.js";
 import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
+import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js";
 import { createMigratedSettlement } from "./conformance-counter-command.js";
 import { checkedInMigrationRoot, switchDeferred } from "./project-storage-runtime-fixture.js";
 
@@ -491,7 +492,10 @@ export function switchFixture(realCommands = false) {
     projects,
     dependencies,
     clock,
-    owner: createActiveProjectCoordinator(dependencies),
+    owner: createActiveProjectCoordinator({
+      ...dependencies,
+      storage: { ...dependencies.storage, upgrade: unusedProjectUpgrade },
+    }),
     times: (...values: string[]) => {
       for (const time of values) clock.mockReturnValueOnce(time);
     },
@@ -585,7 +589,7 @@ export const switchMessages = {
 };
 export function switchEvent(sequence: number, causation: number, event: string, payload: unknown) {
   return {
-    protocolVersion: 5,
+    protocolVersion: 6,
     messageType: "event",
     messageId: `99999999-9999-4999-8999-${String(999999999400 + sequence)}`,
     sentAt: switchTimes.T4,

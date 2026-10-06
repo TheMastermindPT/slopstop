@@ -7,6 +7,7 @@ import {
   createProjectOpenResultEvent,
   createProjectRegistrationResultEvent,
   createProjectSwitchResultEvent,
+  createProjectUpgradeResultEvent,
   createReadyEvent,
   createRequestFailureEvent,
   createSystemFailureEvent,
@@ -16,6 +17,7 @@ import {
   type DesktopMessage,
   decodeStrict,
   type HarnessFailureCode,
+  harnessFailureMessages,
   type MessageId,
   type ProjectListResult,
   parseDesktopMessage,
@@ -55,8 +57,8 @@ const failureMessages: Readonly<
     string
   >
 > = {
-  PROTOCOL_MESSAGE_INVALID: "Harness received an invalid protocol message.",
-  PROTOCOL_VERSION_UNSUPPORTED: "Desktop and harness protocol versions are incompatible.",
+  PROTOCOL_MESSAGE_INVALID: harnessFailureMessages.PROTOCOL_MESSAGE_INVALID,
+  PROTOCOL_VERSION_UNSUPPORTED: harnessFailureMessages.PROTOCOL_VERSION_UNSUPPORTED,
 };
 
 function runtimeShutdownFailure(failures: readonly unknown[]): unknown {
@@ -123,7 +125,7 @@ function shutdownAfterIntake(
 
 type CanonicalProjectMessage = Extract<
   DesktopMessage,
-  { command: "project.activate" | "project.switch" | "project.command" }
+  { command: "project.activate" | "project.switch" | "project.command" | "project.upgrade" }
 >;
 type ProjectStorageMessage = Extract<
   DesktopMessage,
@@ -144,7 +146,8 @@ function isCanonicalProjectMessage(message: DesktopMessage): message is Canonica
   return (
     message.command === "project.activate" ||
     message.command === "project.switch" ||
-    message.command === "project.command"
+    message.command === "project.command" ||
+    message.command === "project.upgrade"
   );
 }
 function isProjectStorageMessage(message: DesktopMessage): message is ProjectStorageMessage {
@@ -178,7 +181,7 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
   const sendInternalFailure = (causationId: MessageId | null): void => {
     sendFailure(causationId, {
       code: "HARNESS_INTERNAL_FAILURE",
-      message: "Harness failed while handling a message.",
+      message: harnessFailureMessages.HARNESS_INTERNAL_FAILURE,
       retryable: false,
     });
   };
@@ -188,6 +191,11 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
       const result = await options.canonicalProjectApplication.activate(message.payload);
       options.transport.send(
         createProjectActivateResultEvent(nextMetadata(message.messageId), result),
+      );
+    } else if (message.command === "project.upgrade") {
+      const result = await options.canonicalProjectApplication.upgrade(message.payload);
+      options.transport.send(
+        createProjectUpgradeResultEvent(nextMetadata(message.messageId), result),
       );
     } else if (message.command === "project.switch") {
       const result = await options.canonicalProjectApplication.switchProject(message.payload);

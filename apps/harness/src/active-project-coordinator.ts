@@ -6,6 +6,8 @@ import type {
   CanonicalProjectSwitchRequest,
   CanonicalProjectSwitchResult,
   ProjectActivationId,
+  ProjectUpgradeRequest,
+  ProjectUpgradeResult,
 } from "@slopstop/protocol";
 import {
   type CanonicalProjectActivationDiagnosticCode,
@@ -26,6 +28,7 @@ import type {
   ProjectStorageActivationPort,
   ProjectStorageActivationSession,
 } from "./project-storage-application.js";
+import { coordinatorUpgradeRefusal, projectUpgradeResult } from "./project-upgrade-outcome.js";
 import type {
   CanonicalCommandRepositoryActivationResult,
   CanonicalCommandRepositoryFactory,
@@ -39,11 +42,13 @@ import {
   type CanonicalWriterLeaseFactory,
 } from "./storage/canonical-writer-lease.js";
 import { createPermitLock, withPermit } from "./storage/permit-lock.js";
+import type { ProjectStorageUpgradePort } from "./storage/project-storage-upgrade.js";
 import { retryableAttempt } from "./storage/retryable-attempt.js";
 export interface ActiveProjectCoordinator {
   activate(request: CanonicalProjectActivationRequest): Promise<CanonicalProjectActivationResult>;
   switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
   execute(request: CanonicalProjectCommandRequest): Promise<CanonicalProjectCommandResult>;
+  upgrade(request: ProjectUpgradeRequest): Promise<ProjectUpgradeResult>;
   stop(): Promise<void>;
 }
 /** The coordinator plus a queued view of the Project it holds, for owners outside its queue. */
@@ -65,7 +70,7 @@ export type ActiveProjectCoordinatorDependencies = Readonly<{
     request: CanonicalProjectActivationRequest,
     session: Extract<ProjectStorageActivationSession, { mode: "read-write" }>,
   ): Promise<CanonicalProjectActivationResult | undefined>;
-  storage: ProjectStorageActivationPort;
+  storage: ProjectStorageActivationPort & ProjectStorageUpgradePort;
   leases: CanonicalWriterLeaseFactory;
   repositories: CanonicalCommandRepositoryFactory;
   createActivationId(): ProjectActivationId;
@@ -657,6 +662,13 @@ export function createActiveProjectCoordinator(
         admitted.delete(completion);
       }
     },
+    // Upgrades run in the lifecycle queue and only while no Project is held.
+    upgrade: (request) =>
+      enqueue(async () => {
+        if (state.status === "stopped") return coordinatorUpgradeRefusal(request, "stopped");
+        if (state.status !== "inactive") return coordinatorUpgradeRefusal(request, "holding");
+        return projectUpgradeResult(request, await dependencies.storage.upgrade(request));
+      }),
     stop: stopOnce,
   };
 }

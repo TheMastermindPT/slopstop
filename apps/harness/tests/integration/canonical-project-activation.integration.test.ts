@@ -28,6 +28,7 @@ import {
 import { createNodeProjectStorageDependencies } from "../../src/storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
 import { createUnavailableWorkspaceApplication } from "../../src/workspace-application.js";
+import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js";
 import { productionSettlementRows } from "./conformance-counter-command.js";
 import {
   checkedInMigrationRoot,
@@ -37,6 +38,7 @@ import {
   fixedCreationIds,
   transportFor,
 } from "./project-storage-create-fixture.js";
+import { silentHarnessLogger } from "./project-storage-runtime-fixture.js";
 
 const unexpectedSettlementValue = (): never => {
   throw new Error("Unexpected activation-only settlement dependency.");
@@ -227,6 +229,7 @@ function activationTransport(
       if (fail) throw new Error("secret command payload");
       return app.execute(request);
     },
+    upgrade: unusedProjectUpgrade,
     stop: () => app.stop(),
   };
   let id = 900;
@@ -289,7 +292,7 @@ function activationTransport(
       fail = true;
     },
     envelope: (event: string, sequence: number, causationId: string, payload: unknown) => ({
-      protocolVersion: 5,
+      protocolVersion: 6,
       messageType: "event",
       messageId: `00000000-0000-4000-8000-${String(900 + sequence).padStart(12, "0")}`,
       sentAt,
@@ -316,6 +319,7 @@ async function productionTransport() {
   let delivered = (): void => undefined;
   const base = transportFor(port1);
   const stop = startHarnessProcessRuntime({
+    logger: silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",
       applicationStorageRootUrl: pathToFileURL(root).href,
