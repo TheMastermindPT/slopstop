@@ -278,6 +278,13 @@ describe("updates a migration-required Project and opens it", () => {
       "Safe mode · Canonical recovery required",
     ],
     [
+      // The harness always refuses this upgrade (runtime not healthy), so the window never asks.
+      "a migration-required canonical database with a runtime needing recovery",
+      migrationRequired,
+      recoveryRequired,
+      "Safe mode · Canonical migration required · Runtime recovery required",
+    ],
+    [
       "a healthy canonical database with a runtime migration",
       healthy,
       migrationRequired,
@@ -357,14 +364,14 @@ async function retry(user: ReturnType<typeof userEvent.setup>) {
 }
 
 /** The panel for this result: its three lines, the safe-mode view, and an idle window. */
-function expectPanel(result: ProjectUpgradeResult) {
+function expectPanel(result: ProjectUpgradeResult, label: string = safeModeMigration) {
   if (!("diagnostic" in result)) throw new Error("A failure result carries a diagnostic");
   expect(alertLines()).toEqual([
     sentence,
     result.diagnostic.message,
     `Reference: ${result.diagnostic.code}`,
   ]);
-  expect(within(workspace()).getByText(safeModeMigration)).toBeTruthy();
+  expect(within(workspace()).getByText(label)).toBeTruthy();
   expect(progress().textContent).toBe("");
   expect(openButton().hasAttribute("disabled")).toBe(false);
 }
@@ -389,7 +396,8 @@ describe("explains a failed update and retries it", () => {
     await within(workspace()).findByText(sentence);
     expectPanel(result);
     const button = tryAgain();
-    if (result.status === "refused") {
+    // "Try again" only when the same request can succeed unchanged.
+    if (!row.retryable) {
       expect(button).toBeNull();
       expect(document.activeElement?.textContent).toBe(sentence);
     } else {
@@ -458,7 +466,27 @@ describe("explains a failed update and retries it", () => {
     await renderAndOpenOlder();
     await within(workspace()).findByText(sentence);
     expectPanel(upgradeResultForRow(olderRequest, rows.storageBroken));
-    expect(tryAgain()).not.toBeNull();
+    // A broken row is not retryable, so the panel offers no "Try again".
+    expect(tryAgain()).toBeNull();
+    expect(upgradeCalls(api.projectCalls())).toHaveLength(1);
+  });
+
+  it("shows a false success as a broken update whatever the runtime health", async () => {
+    // U7: the post-upgrade check is canonical-only, so an unhealthy runtime keeps the panel.
+    const api = scripted({
+      list: listed("migration-required", "healthy"),
+      activate: [
+        safeMode(olderId, migrationRequired),
+        safeMode(olderId, migrationRequired, recoveryRequired),
+      ],
+      upgrade: [upgraded],
+    });
+    await renderAndOpenOlder();
+    await within(workspace()).findByText(sentence);
+    expectPanel(
+      upgradeResultForRow(olderRequest, rows.storageBroken),
+      "Safe mode · Canonical migration required · Runtime recovery required",
+    );
     expect(upgradeCalls(api.projectCalls())).toHaveLength(1);
   });
 

@@ -5,7 +5,6 @@ import {
   CanonicalDatabaseLineageIdSchema,
   decodeStrict,
   type ProjectId,
-  ProjectIdSchema,
   type ProjectStorageCreateRequest,
   ProjectStorageCreateRequestIdSchema,
   RuntimeDatabaseLineageIdSchema,
@@ -49,7 +48,9 @@ import {
   inspectFilesystemWitnesses,
   lstatIfPresent as inspectPathIfPresent,
   openingDatabaseIsPresent,
+  projectRootPath,
   requirePlainEntry,
+  upgradeOutputNames,
   witnessOrder,
 } from "./project-storage-filesystem-authority.js";
 import {
@@ -1344,7 +1345,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
   const migrationResourcesRoot = path.resolve(options.migrationResourcesRoot);
   const applicationDatabasePath = path.join(applicationStorageRoot, "application.db");
   const projectRootFor = (projectId: ProjectId): string =>
-    path.join(applicationStorageRoot, "projects", decodeStrict(ProjectIdSchema, projectId));
+    projectRootPath(applicationStorageRoot, projectId);
   const migrationCache = new Map<string, Promise<readonly GeneratedMigration[]>>();
   const loadMigrations = (spec: DatabaseSpec): Promise<readonly GeneratedMigration[]> => {
     const existing = migrationCache.get(spec.resourceKind);
@@ -1384,11 +1385,12 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
         runtimeDatabase: path.join(root, runtimeDatabaseFilename),
         manifest: path.join(root, projectStorageManifestFilename),
       });
+      const [stagingName, activeName] = upgradeOutputNames(generationId);
       return {
         projectRoot,
         writerLease: path.join(projectRoot, canonicalWriterLeaseFilename),
-        staging: generationPaths(path.join(projectRoot, `.staging-${generationId}`)),
-        active: generationPaths(path.join(projectRoot, generationId)),
+        staging: generationPaths(path.join(projectRoot, stagingName)),
+        active: generationPaths(path.join(projectRoot, activeName)),
       };
     },
   };

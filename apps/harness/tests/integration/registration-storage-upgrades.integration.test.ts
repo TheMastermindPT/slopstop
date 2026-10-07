@@ -33,6 +33,7 @@ async function createFailedUpgradeProject({ root }: ProjectRoot): Promise<void> 
   const stopped = await stopDuringUpgrade({ root });
   expect(stopped.outcome).toEqual({
     status: "unavailable",
+    reason: "unavailable",
     message: "Project Storage owner is stopped.",
   });
   await stopped.stopping;
@@ -85,6 +86,16 @@ const corruptRegistryCases = [
     name: "in-progress source not active",
     seed: createFailedUpgradeProject,
     sql: `UPDATE storage_upgrades SET source_generation_id = '${unknownId}'`,
+  },
+  {
+    name: "in-progress marker of another Project",
+    seed: createFailedUpgradeProject,
+    sql: `UPDATE storage_upgrades SET project_id = '${unknownId}'`,
+  },
+  {
+    name: "completed marker of another Project",
+    seed: createUpgradedProject,
+    sql: `UPDATE storage_upgrades SET project_id = '${unknownId}'`,
   },
 ] as const;
 

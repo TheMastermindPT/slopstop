@@ -8,10 +8,10 @@ topic: "C1-0 S2: upgrade failure cleanup and interrupted-upgrade recovery"
 tags: [design, storage, migration, recovery, c1-0, s2, adr-0005]
 status: ready
 parent: .rpiv/artifacts/designs/2026-10-05_20-37-14_project-database-staged-upgrade.md
-last_updated: 2026-10-07T15:38:00+0100
+last_updated: 2026-10-07T20:12:32+0100
 last_updated_by: Pedro Mesquita
-last_updated_note: "Follow-up appended: S4 upgrade documentation done; full journal tracked in #92."
-content_hash: d64078a6a719ba1f03577728e591bd5849119375d69dd1ae4fd11c2e8d7d73f0
+last_updated_note: "Follow-ups appended: C1-0 S5 deep-review fixes and review round 2 (U6)."
+content_hash: eef852da83fe39d7a0412a4a3103d94ae284076db21e65d377476b5eaac5a5f1
 ---
 
 # Design: C1-0 S2 — upgrade failure cleanup and interrupted-upgrade recovery
@@ -208,3 +208,5 @@ Intent accepted by the user with recorded residual risk. Build authorization, br
 ## Follow-up
 
 - **S4 done (2026-10-07).** The ADR 0005 amendment (temporary single-marker form) and ADR 0006 manifest version 2 and `storage_upgrades` were already delivered in S1 (`.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` §5, Adjustment 1). The remaining upgrade documentation (ADR 0005 amendment precision: eligibility, who starts an upgrade, runtime copy not migrated, internal-failure mapping, discard at the next activation or upgrade, single-instance lock, discard diagnostics; ADR 0006 backup manifest; `CONTEXT.md` terms) is in the S4 docs commit on branch `feat/c1-0-s4-upgrade-docs`. The full Storage-operation journal stays a follow-up: [Replace the temporary storage_upgrades marker with the full Storage-operation journal and its Effect records (#92)](https://github.com/TheMastermindPT/slopstop/issues/92).
+- **S5 deep-review fixes (2026-10-07)**, branch `feat/c1-0-s5-deep-review-fixes`, from `.rpiv/artifacts/reviews/2026-10-07_16-47-49_2a19d40-e1c0a99-c1-0-staged-upgrade.md`: UPG-B23's owner stop is now reachable from a harness quit. While no Project is held, the runtime stops Storage together with the canonical application, and a running upgrade then answers `unavailable` and leaves its output for the next activation or upgrade. An owner stop after the switch commits answers `upgraded`. A busy registry during the unfinished-marker lookup answers busy instead of "no unfinished upgrade" (degrade-distinguishes-broken). A marker of another Project is a corrupt registry.
+- **S5 review round 2 (2026-10-07, user decision U6):** a busy unfinished-marker lookup answers retryable `unavailable` with no discard-failed line (no upgrade id is known yet); any other failed marker query answers `broken` ("Project Storage upgrade marker could not be read."). Busy upgrade outcomes carry a `busy` discriminant instead of being recognized by their text. An owner stop at the post-switch checkpoint also answers `upgraded`.

@@ -232,7 +232,7 @@ describe("desktop protocol parsing", () => {
     const activation = { ...validHandshake, command: "project.activate", payload: request };
     expect(parseDesktopMessage(activation)).toEqual({ ok: true, value: activation });
     const result = {
-      protocolVersion: 6,
+      protocolVersion: 7,
       messageType: "event",
       messageId: "00000000-0000-4000-8000-000000000002",
       sentAt: validHandshake.sentAt,
@@ -263,9 +263,9 @@ describe("desktop protocol parsing", () => {
       },
     });
   });
-  it("parses only correctly scoped failure events at protocol version 6", () => {
+  it("parses only correctly scoped failure events at protocol version 7", () => {
     const requestFailure = {
-      protocolVersion: 6,
+      protocolVersion: 7,
       messageType: "event",
       messageId: "00000000-0000-4000-8000-000000000101",
       sentAt: "2026-09-04T12:00:00.000Z",
@@ -309,26 +309,26 @@ describe("desktop protocol parsing", () => {
     });
   });
 
-  it("parses workspace commands and correlated result events under protocol version 6", () => {
+  it("parses workspace commands and correlated result events under protocol version 7", () => {
     const { command, event, query, result } = workspaceExchange();
 
-    expect(protocolVersion).toBe(6);
+    expect(protocolVersion).toBe(7);
     expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
     expect(command).toMatchObject({
-      protocolVersion: 6,
+      protocolVersion: 7,
       messageId: "00000000-0000-4000-8000-000000000001",
       payload: query,
     });
     expect(parseHarnessMessage(event)).toEqual({ ok: true, value: event });
     expect(event).toMatchObject({
-      protocolVersion: 6,
+      protocolVersion: 7,
       causationId: command.messageId,
       payload: result,
     });
   });
 
-  it("round-trips Project Storage envelopes under protocol version 6", () => {
-    expect(protocolVersion).toBe(6);
+  it("round-trips Project Storage envelopes under protocol version 7", () => {
+    expect(protocolVersion).toBe(7);
     for (const { command, commandName, event, eventName } of projectStorageExchanges()) {
       expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
       expect(parseHarnessMessage(event)).toEqual({ ok: true, value: event });
@@ -591,7 +591,7 @@ describe("S5 G2 receipt envelopes", () => {
     receipt,
   };
   const envelope = {
-    protocolVersion: 6,
+    protocolVersion: 7,
     messageType: "event",
     messageId: "99999999-9999-4999-8999-999999999501",
     sentAt: "2026-09-05T12:00:06.000Z",
@@ -645,7 +645,7 @@ const switchRequest = {
   to: { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
 };
 const switchCommandEnvelope = {
-  protocolVersion: 6,
+  protocolVersion: 7,
   messageType: "command",
   messageId: "11111111-1111-4111-8111-111111111402",
   sentAt: "2026-09-05T12:00:00.000Z",
@@ -664,7 +664,7 @@ const switchResult = {
   },
 };
 const switchEventEnvelope = {
-  protocolVersion: 6,
+  protocolVersion: 7,
   messageType: "event",
   messageId: "99999999-9999-4999-8999-999999999402",
   sentAt: "2026-09-05T12:00:04.000Z",
@@ -876,6 +876,14 @@ describe("project.upgrade", () => {
       "Desktop and harness protocol versions are incompatible.",
       false,
     ],
+    // Added in C1-0 S5 (deep review I3): the busy text that a retry can clear.
+    [
+      "storageBusy",
+      "unavailable",
+      "PROJECT_STORAGE_UNAVAILABLE",
+      "Project Storage is busy; the upgrade can be retried.",
+      true,
+    ],
   ] as const;
   const designEntries = designTable.map(
     ([key, , code, message, retryable]) => [key, { code, message, retryable }] as const,
@@ -932,14 +940,14 @@ describe("project.upgrade", () => {
       decodeStrict(protocol.ProjectUpgradeRequestSchema, request),
     );
     expect(command).toEqual({
-      protocolVersion: 6,
+      protocolVersion: 7,
       messageType: "command",
       ...commandMetadata,
       command: "project.upgrade",
       payload: request,
     });
     expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
-    expect(results).toHaveLength(15);
+    expect(results).toHaveLength(16);
     for (const result of results) {
       const event = protocol.createProjectUpgradeResultEvent(
         eventMetadata,
@@ -971,7 +979,7 @@ describe("project.upgrade", () => {
       ok: false,
       error: { code: "PROTOCOL_MESSAGE_INVALID" },
     });
-    expect(protocolVersion).toBe(6);
+    expect(protocolVersion).toBe(7);
     expect(parseDesktopMessage({ ...command, protocolVersion: 5 })).toEqual({
       ok: false,
       error: {

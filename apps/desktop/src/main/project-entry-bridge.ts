@@ -18,6 +18,7 @@ import {
   ProjectRegistrationResultSchema,
   ProjectUpgradeRequestSchema,
   ProjectUpgradeResultSchema,
+  projectAvailabilityMessages,
 } from "@slopstop/protocol";
 import type { Schema } from "effect";
 import { dispatchPendingHarnessEvent, requestHarness } from "./harness-pending-request.js";
@@ -101,7 +102,7 @@ export function createProjectEntryBridge(options: {
         request,
         diagnostic: {
           code: "PROJECT_COORDINATOR_UNAVAILABLE",
-          message: "The Project connection is unavailable.",
+          message: projectAvailabilityMessages.connectionLost,
           retryable,
         },
       });

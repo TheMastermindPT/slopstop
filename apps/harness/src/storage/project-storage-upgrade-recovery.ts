@@ -3,12 +3,11 @@ import { Data, Effect, Result } from "effect";
 import {
   ProjectStorageApplicationClientInitializationError,
   ProjectStorageBrokenError,
-  ProjectStorageUnavailableError,
 } from "./project-storage-errors.js";
 import { isBusyStorageError } from "./project-storage-node-errors.js";
 import type { ProjectStorageStoreDependencies } from "./project-storage-store.js";
 import {
-  projectStorageUpgradeBusyMessage,
+  ProjectStorageUpgradeBusyError,
   type UnfinishedUpgrade,
   type UpgradeAbandonedEvent,
 } from "./project-storage-upgrade.js";
@@ -64,7 +63,7 @@ function discardProgram(
 function failureError(cause: unknown, kind: "busy" | "broken"): Error {
   if (cause instanceof ProjectStorageApplicationClientInitializationError) return cause;
   if (kind === "busy") {
-    return new ProjectStorageUnavailableError(projectStorageUpgradeBusyMessage, { cause });
+    return new ProjectStorageUpgradeBusyError({ cause });
   }
   return cause instanceof ProjectStorageBrokenError
     ? cause
@@ -83,7 +82,7 @@ function reportSafely(report: () => void): void {
 /**
  * Discards a known unfinished upgrade: proves its leftovers, removes its output directories,
  * then releases its marker and target row. Unproven leftovers stay untouched; a busy discard
- * throws `ProjectStorageUnavailableError`, a client initialization failure is rethrown as is,
+ * throws `ProjectStorageUpgradeBusyError`, a client initialization failure is rethrown as is,
  * and any other failure throws `ProjectStorageBrokenError`, each reported through the
  * diagnostics port first.
  */

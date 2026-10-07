@@ -14,8 +14,8 @@ import {
 } from "./local-libsql-worker-client.js";
 import { type DatabaseSpec, databaseSpecs } from "./project-storage-database-specs.js";
 import {
-  ProjectStorageApplicationClientInitializationError,
   ProjectStorageBrokenError,
+  ProjectStorageUnavailableError,
 } from "./project-storage-errors.js";
 import { upgradeOutputIsProven } from "./project-storage-filesystem-authority.js";
 import {
@@ -25,7 +25,7 @@ import {
   runtimeDatabaseFilename,
   serializeProjectStorageBackupManifest,
 } from "./project-storage-manifest.js";
-import { normalizeStorageError } from "./project-storage-node-errors.js";
+import { isBusyStorageError, normalizeStorageError } from "./project-storage-node-errors.js";
 import {
   type GenerationRow,
   generationRowColumns,
@@ -36,14 +36,15 @@ import {
 } from "./project-storage-node-schemas.js";
 import type { ProjectStorageStoreDependencies } from "./project-storage-store.js";
 import { withWriteTransaction } from "./project-storage-transaction.js";
-import type {
-  DatabaseHead,
-  MigratedUpgrade,
-  ProjectStorageUpgradeDiagnostics,
-  ProjectStorageUpgradeSteps,
-  StagedUpgrade,
-  UnfinishedProof,
-  UnfinishedUpgrade,
+import {
+  type DatabaseHead,
+  type MigratedUpgrade,
+  ProjectStorageUpgradeBusyError,
+  type ProjectStorageUpgradeDiagnostics,
+  type ProjectStorageUpgradeSteps,
+  type StagedUpgrade,
+  type UnfinishedProof,
+  type UnfinishedUpgrade,
 } from "./project-storage-upgrade.js";
 import { classifyUpgradeStatements } from "./project-storage-upgrade-eligibility.js";
 import { verifyBackupCopies, verifyStagedCopies } from "./project-storage-upgrade-verification.js";
@@ -521,7 +522,10 @@ async function hasUpgradeTable(client: Pick<LocalLibsqlClient, "execute">): Prom
   return table.rows.length > 0;
 }
 
-/** The Project's in-progress marker rows; a registry that cannot be queried answers none. */
+/**
+ * The Project's in-progress marker rows; none when the registry or its marker table does not
+ * exist yet. A busy registry answers busy; any other failed query is broken, never none.
+ */
 async function unfinishedUpgradeRows(
   context: UpgradeAdapterContext,
   projectId: ProjectId,
@@ -537,10 +541,21 @@ async function unfinishedUpgradeRows(
     });
     return resultObjects(result);
   } catch (error) {
-    if (error instanceof ProjectStorageApplicationClientInitializationError) throw error;
-    // Opening classifies an unreadable registry itself, with its own diagnostic.
-    return undefined;
+    throw markerQueryFailure(error);
   }
+}
+
+/**
+ * A failed marker query: a typed Storage failure as is, a raw busy error as busy, anything else
+ * broken; never "none".
+ */
+function markerQueryFailure(error: unknown): Error {
+  if (error instanceof ProjectStorageBrokenError) return error;
+  if (error instanceof ProjectStorageUnavailableError) return error;
+  if (isBusyStorageError({ error })) return new ProjectStorageUpgradeBusyError({ cause: error });
+  return new ProjectStorageBrokenError("Project Storage upgrade marker could not be read.", {
+    cause: error,
+  });
 }
 
 /** The Project's in-progress marker; marker rows that were read but do not decode are broken. */

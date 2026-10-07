@@ -2,6 +2,7 @@ import { projectUpgradeDiagnostics } from "@slopstop/protocol";
 import { Data, Effect, Result } from "effect";
 import { projectStorageCreateRequestFingerprintInput } from "./project-storage-create-request.js";
 import {
+  openingReleaseFailedMessage,
   ProjectStorageApplicationClientInitializationError,
   ProjectStorageBrokenError,
   ProjectStorageUnavailableError,
@@ -15,6 +16,7 @@ import { classifyProjectStorageOpening } from "./project-storage-opening.js";
 import type { ProjectStorageStoreDependencies } from "./project-storage-store.js";
 import {
   type MigratedUpgrade,
+  ProjectStorageUpgradeBusyError,
   type ProjectStorageUpgradeCheckpoint,
   type ProjectStorageUpgradeOutcome,
   type ProjectStorageUpgradeRequest,
@@ -113,6 +115,21 @@ function step<Value, Failure>(
   });
 }
 
+/** A step whose success is durable: once it commits, an owner stop no longer changes the answer. */
+function committingStep<Failure>(
+  pipeline: Pipeline,
+  run: () => Promise<void>,
+  fail: (cause: unknown) => Failure,
+): Effect.Effect<void, Failure> {
+  return Effect.tryPromise({
+    try: async () => {
+      pipeline.lifecycle.assertRunning();
+      await run();
+    },
+    catch: fail,
+  });
+}
+
 function checkpoint(pipeline: Pipeline, point: ProjectStorageUpgradeCheckpoint) {
   return step(
     pipeline,
@@ -153,6 +170,17 @@ function failed(
   return { status: "failed", request, diagnostic: { code, message: failureRows[code].message } };
 }
 
+/** Releases the eligibility opening; a failed release answers broken, as a plain opening does. */
+async function releaseOpening(session: Readonly<{ close(): Promise<void> }>): Promise<void> {
+  try {
+    await session.close();
+  } catch (error) {
+    throw new ProjectStorageBrokenError(openingReleaseFailedMessage, {
+      cause: error,
+    });
+  }
+}
+
 async function inspectEligibility(pipeline: Pipeline): Promise<Eligibility> {
   const { request, dependencies } = pipeline;
   const classified = classifyProjectStorageOpening(
@@ -163,12 +191,12 @@ async function inspectEligibility(pipeline: Pipeline): Promise<Eligibility> {
   if (!("session" in classified)) {
     return { status: "answered", result: { status: "not-registered", request } };
   }
-  await classified.session.close();
+  await releaseOpening(classified.session);
   const opening = classified.result;
   if (opening.status !== "safe-mode") return notRequired;
   const healths = [opening.canonicalHealth.status, opening.runtimeHealth.status];
   if (healths.includes("unavailable")) {
-    throw new ProjectStorageUnavailableError(projectStorageUpgradeBusyMessage);
+    throw new ProjectStorageUpgradeBusyError();
   }
   const sourceGenerationId = opening.identity.generationId;
   const eligible = [
@@ -355,7 +383,15 @@ function upgradeProgram(
     const switched = Result.isSuccess(settled) && settled.success.status === "upgraded";
     if (!switched) yield* discardAfterFailure(pipeline, upgrade);
     if (Result.isFailure(settled)) return yield* Effect.fail(settled.failure);
-    if (switched) yield* checkpoint(pipeline, "after-upgrade-switch");
+    // After the committed switch, an owner stop leaves the answer upgraded: this checkpoint
+    // runs only while the owner runs and never asserts it afterwards.
+    if (switched && isRunning(pipeline.lifecycle)) {
+      yield* committingStep(
+        pipeline,
+        () => pipeline.dependencies.failures.checkpoint("after-upgrade-switch"),
+        (cause) => new UpgradeCheckpointFailed({ checkpoint: "after-upgrade-switch", cause }),
+      );
+    }
     return settled.success;
   });
 }
@@ -374,7 +410,7 @@ function runDeclaredUpgrade(
     const built = yield* buildTarget(pipeline, upgrade, canonicalMigrations);
     if (built === "mismatch") return failed(request, "PROJECT_UPGRADE_VERIFICATION_FAILED");
     yield* checkpoint(pipeline, "before-upgrade-switch");
-    yield* step(
+    yield* committingStep(
       pipeline,
       () => dependencies.upgrades.switchActive(upgrade, dependencies.clock.now()),
       (cause) => new UpgradeSwitchFailed({ cause }),
@@ -426,13 +462,17 @@ function discardAfterFailure(pipeline: Pipeline, upgrade: StagedUpgrade): Effect
 function stepFailureOutcome(failure: UpgradeStepError): ProjectStorageUpgradeOutcome {
   const { cause } = failure;
   if (cause instanceof ProjectStorageApplicationClientInitializationError) throw cause;
+  const busy = {
+    status: "unavailable",
+    reason: "busy",
+    message: projectStorageUpgradeBusyMessage,
+  } as const;
+  if (cause instanceof ProjectStorageUpgradeBusyError) return busy;
   if (cause instanceof ProjectStorageUnavailableError) {
-    return { status: "unavailable", message: cause.message };
+    return { status: "unavailable", reason: "unavailable", message: cause.message };
   }
   // A raw busy-class error from any step is busy too (D12); other unknown errors are rethrown.
-  if (isBusyStorageError({ error: cause })) {
-    return { status: "unavailable", message: projectStorageUpgradeBusyMessage };
-  }
+  if (isBusyStorageError({ error: cause })) return busy;
   if (cause instanceof ProjectStorageBrokenError)
     return { status: "broken", message: cause.message };
   throw cause;

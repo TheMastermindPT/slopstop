@@ -74,7 +74,7 @@ import {
   WorkspaceQuerySchema,
 } from "./workspace-protocol.js";
 
-export const protocolVersion = 6 as const;
+export const protocolVersion = 7 as const;
 
 export const MessageIdSchema = UuidTextSchema.pipe(Schema.brand("MessageId"));
 export type MessageId = typeof MessageIdSchema.Type;

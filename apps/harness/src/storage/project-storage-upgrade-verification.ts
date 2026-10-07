@@ -4,13 +4,13 @@ import { type LocalLibsqlClient, withDatabase } from "./local-libsql-worker-clie
 import { databaseSpecs } from "./project-storage-database-specs.js";
 import {
   ProjectStorageBrokenError,
-  ProjectStorageUnavailableError,
+  type ProjectStorageUnavailableError,
 } from "./project-storage-errors.js";
 import { isBusyStorageError, isCorruptStorageError } from "./project-storage-node-errors.js";
 import { resultObjects } from "./project-storage-node-schemas.js";
 import {
   type DatabaseHead,
-  projectStorageUpgradeBusyMessage,
+  ProjectStorageUpgradeBusyError,
   type StagedUpgrade,
 } from "./project-storage-upgrade.js";
 
@@ -108,7 +108,7 @@ function isBusy(error: unknown): boolean {
 }
 
 function busy(cause: unknown): ProjectStorageUnavailableError {
-  return new ProjectStorageUnavailableError(projectStorageUpgradeBusyMessage, { cause });
+  return new ProjectStorageUpgradeBusyError({ cause });
 }
 
 /** The source must be readable: a busy source is busy, any other failure is broken. */

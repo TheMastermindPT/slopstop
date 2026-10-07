@@ -14,6 +14,7 @@ import {
   identityConflictHealth,
   migrationRequiredHealth,
   openRequest,
+  recoveryRequiredHealth,
   seedContradictoryActiveLocation,
 } from "./project-storage-open-fixture.js";
 import {
@@ -44,11 +45,9 @@ import {
   withFixtureWriter,
 } from "./project-storage-upgrade-fixture.js";
 import {
-  abandonedEvent,
   createCurrentProject,
   entriesOf,
-  expectDiscardedUpgrade,
-  expectMigrationRequiredOnSource,
+  expectInterruptedThenRecovered,
   expectReadWriteOn,
   stopDuringUpgrade,
 } from "./project-storage-upgrade-recovery-fixture.js";
@@ -444,9 +443,13 @@ it(
     const hashes = await sourceFileHashes(source);
     const [sourceRow] = registryRows(root, "storage_generations") as Record<string, unknown>[];
     let declared: DeclaredObservation | undefined;
+    const staging: [string, boolean][] = [];
     const fixture = createUpgradeStorageOwner(root, {
       onCheckpoint: async (checkpoint) => {
         if (checkpoint === "after-upgrade-declared") declared = await observeDeclared(root);
+        if (checkpoint === "after-staged-copy" || checkpoint.startsWith("after-backup-")) {
+          staging.push([checkpoint, await pathExists(upgradePaths({ root }).staging)]);
+        }
       },
     });
     try {
@@ -458,6 +461,12 @@ it(
       await fixture.owner.stop();
     }
     expectDeclaredFirst(declared);
+    // The backup is read back before any staging output exists.
+    expect(staging).toEqual([
+      ["after-backup-copied", false],
+      ["after-backup-verified", false],
+      ["after-staged-copy", true],
+    ]);
     await expect(sourceFileHashes(source)).resolves.toEqual(hashes);
     await expectReleased({ directory: source.generation });
     await expectVerifiedBackup(root, before);
@@ -651,6 +660,7 @@ it(
 
 const busyOutcome = {
   status: "unavailable",
+  reason: "busy",
   message: "Project Storage is busy; the upgrade can be retried.",
 } as const;
 
@@ -664,6 +674,7 @@ it(
     await stopped.owner.stop();
     expect.soft(await stopped.upgrade(openRequest)).toEqual({
       status: "unavailable",
+      reason: "unavailable",
       message: "Project Storage owner is stopped.",
     });
     expect.soft(await storageSnapshot(stoppedRoot)).toEqual(stoppedBefore);
@@ -755,6 +766,65 @@ it(
   projectStorageIntegrationTimeout,
 );
 
+it.for(["during-upgrade-switch", "after-upgrade-switch"] as const)(
+  "answers upgraded when the owner stops at %s, once the switch commits",
+  { timeout: projectStorageIntegrationTimeout },
+  async (point) => {
+    const root = await createTemporaryApplicationRoot();
+    await createGenerationTwoProject(root);
+    let stopping: Promise<void> | undefined;
+    const fixture: ReturnType<typeof createUpgradeStorageOwner> = createUpgradeStorageOwner(root, {
+      onCheckpoint: (checkpoint) => {
+        // Inside the switch transaction, or right after it: the switch still commits.
+        if (checkpoint === point) stopping = fixture.owner.stop();
+      },
+    });
+    expect(await fixture.upgrade(openRequest)).toMatchObject({
+      status: "ready",
+      result: { status: "upgraded", generationId: upgradeIds.targetGenerationId },
+    });
+    await expect(stopping).resolves.toBeUndefined();
+    expect(registryRows(root, "storage_upgrades")).toEqual([
+      expect.objectContaining({ state: "completed" }),
+    ]);
+    expect(fixture.diagnostics).toEqual([]);
+  },
+);
+
+it(
+  "keeps an unfinished upgrade on a plain opening, which answers recovery-required",
+  async () => {
+    const root = await createTemporaryApplicationRoot();
+    await createGenerationTwoProject(root);
+    const stopped = await stopDuringUpgrade({ root });
+    await stopped.stopping;
+    const project = generationPaths(root).project;
+    const registry = () =>
+      ["storage_upgrades", "storage_generations", "storage_registrations"].map((table) =>
+        registryRows(root, table),
+      );
+    const before = { registry: registry(), project: await entriesOf({ directory: project }) };
+
+    const next = createUpgradeStorageOwner(root);
+    try {
+      expect(await next.owner.open(openRequest)).toMatchObject({
+        status: "ready",
+        result: {
+          status: "safe-mode",
+          canonicalHealth: recoveryRequiredHealth,
+          runtimeHealth: recoveryRequiredHealth,
+        },
+      });
+      expect(next.diagnostics).toEqual([]);
+    } finally {
+      await next.owner.stop();
+    }
+    expect(registry()).toEqual(before.registry);
+    expect(await entriesOf({ directory: project })).toEqual(before.project);
+  },
+  projectStorageIntegrationTimeout,
+);
+
 it(
   "settles on owner stop and recovers at the next opening",
   async () => {
@@ -764,6 +834,7 @@ it(
     const stopped = await stopDuringUpgrade({ root });
     expect(stopped.outcome).toEqual({
       status: "unavailable",
+      reason: "unavailable",
       message: "Project Storage owner is stopped.",
     });
     await expect(stopped.stopping).resolves.toBeUndefined();
@@ -777,17 +848,7 @@ it(
         creation_state: "staging",
       }),
     );
-    await expect(pathExists(upgradePaths({ root }).staging)).resolves.toBe(true);
-    const backup = await entriesOf({ directory: upgradePaths({ root }).backup });
-
-    const next = createUpgradeStorageOwner(root, { attempt: 2 });
-    try {
-      await expectMigrationRequiredOnSource(next.owner);
-      expect(next.diagnostics).toEqual([abandonedEvent("interrupted")]);
-    } finally {
-      await next.owner.stop();
-    }
-    await expectDiscardedUpgrade({ root }, { sourceHashes, backup });
+    await expectInterruptedThenRecovered({ root }, sourceHashes);
   },
   projectStorageIntegrationTimeout,
 );

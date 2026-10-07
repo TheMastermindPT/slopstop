@@ -1,12 +1,15 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rename, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rename, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { Worker } from "node:worker_threads";
 import { expect, it, vi } from "vitest";
-import { createWorkerLocalLibsqlClient } from "../../src/storage/local-libsql-worker-client.js";
+import {
+  createWorkerLocalLibsqlClient,
+  withDatabase,
+} from "../../src/storage/local-libsql-worker-client.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -195,5 +198,28 @@ it("terminates a fatally invalid worker before replacing its native client", asy
     terminate.mockRestore();
     await replacement?.close();
     await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+  }
+});
+
+it("opens a read-only database that refuses writes and is never created", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-read-only-"));
+  try {
+    const existing = path.join(root, "existing.db");
+    await withDatabase(existing, { readOnly: false }, async (client) => {
+      await client.execute("CREATE TABLE kept (value TEXT)");
+    });
+    await withDatabase(existing, { readOnly: true }, async (client) => {
+      await expect(client.execute("INSERT INTO kept VALUES ('written')")).rejects.toThrow(
+        /readonly/i,
+      );
+      expect((await client.execute("SELECT value FROM kept")).rows).toEqual([]);
+    });
+    const missing = path.join(root, "missing.db");
+    await expect(
+      withDatabase(missing, { readOnly: true }, (client) => client.execute("SELECT 1")),
+    ).rejects.toThrow(/unable to open/i);
+    await expect(access(missing)).rejects.toThrow();
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });

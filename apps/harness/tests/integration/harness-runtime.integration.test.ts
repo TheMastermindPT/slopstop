@@ -188,7 +188,7 @@ describe("harness message channel integration", () => {
       );
       const result = await response;
       expect(result).toEqual({
-        protocolVersion: 6,
+        protocolVersion: 7,
         messageType: "event",
         messageId: "00000000-0000-4000-8000-000000000002",
         sentAt: "2026-08-14T12:00:01.000Z",
@@ -354,7 +354,7 @@ describe("harness message channel integration", () => {
       const response = nextMessage(port2);
       port2.postMessage(command);
       await expect(response).resolves.toEqual({
-        protocolVersion: 6,
+        protocolVersion: 7,
         messageType: "event",
         messageId: `00000000-0000-4000-8000-${String(index + 2).padStart(12, "0")}`,
         sentAt: "2026-08-14T12:00:01.000Z",
@@ -452,7 +452,7 @@ function canonicalChannelFixture() {
       await nextTurn();
       number += 1;
       const expected = {
-        protocolVersion: 6,
+        protocolVersion: 7,
         messageType: "event",
         messageId: `00000000-0000-4000-8000-${String(900 + number).padStart(12, "0")}`,
         sentAt,

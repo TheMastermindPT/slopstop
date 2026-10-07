@@ -37,13 +37,20 @@ const statusNeutralEvents: ReadonlySet<HarnessMessage["event"]> = new Set([
 
 type StatusListener = (status: HarnessStatus) => void;
 
+type ChildObservation = Readonly<{ quiet(): void; drain(): void; remove(): void }>;
+
 export class HarnessSupervisor {
   readonly #bootstrap: HarnessBootstrap;
   readonly #entryPath: string;
   readonly #errorGuards = new Map<UtilityProcess, () => void>();
   readonly #logger: Logger;
   readonly #listeners = new Set<StatusListener>();
-  readonly #observationCleanup = new Map<UtilityProcess, () => void>();
+  /**
+   * How each child's output is watched: `quiet` stops output logging but keeps forwarding upgrade
+   * lines, `drain` keeps forwarding until stdout ends (immediately when there is none), and
+   * `remove` stops everything.
+   */
+  readonly #observations = new Map<UtilityProcess, ChildObservation>();
   #attempt = 0;
   #child: UtilityProcess | undefined;
   #handshakeTimer: Fiber.Fiber<void> | undefined;
@@ -113,7 +120,7 @@ export class HarnessSupervisor {
       this.#stopPromise = Promise.resolve();
       return this.#stopPromise;
     }
-    this.#removeChildObservation(child);
+    this.#observations.get(child)?.quiet();
     this.#guardChildErrors(child);
     this.#stopPromise = this.#stopChild(child);
     return this.#stopPromise;
@@ -152,6 +159,7 @@ export class HarnessSupervisor {
     });
     const timedOut = Effect.suspend(() => {
       terminalTimedOut = true;
+      this.#removeChildObservation(child);
       this.#setStatus({
         state: "degraded",
         attempt: this.#attempt,
@@ -339,38 +347,9 @@ export class HarnessSupervisor {
   }
 
   #observeChild(child: UtilityProcess): void {
-    const attempt = this.#attempt;
-    const observeOutput = (stream: "stdout" | "stderr", chunk: Buffer): void => {
-      const metadata = { attempt, stream, bytes: chunk.byteLength };
-      if (stream === "stdout") {
-        this.#logger.info(metadata, "Harness process output observed.");
-      } else {
-        this.#logger.error(metadata, "Harness process output observed.");
-      }
-    };
-    const lines = createHarnessLogLineForwarder(this.#logger, attempt);
-    const onStdout = (chunk: Buffer) => {
-      observeOutput("stdout", chunk);
-      lines.push(chunk);
-    };
-    const onStderr = (chunk: Buffer) => observeOutput("stderr", chunk);
-    const onError = () => {
-      this.#logger.error(
-        { attempt, code: "HARNESS_PROCESS_ERROR" },
-        "Harness process reported a fatal error.",
-      );
-    };
-    child.stdout?.on("data", onStdout);
-    child.stderr?.on("data", onStderr);
-    child.once("error", onError);
-    this.#observationCleanup.set(child, () => {
-      lines.end();
-      child.stdout?.off("data", onStdout);
-      child.stderr?.off("data", onStderr);
-      child.off("error", onError);
-    });
+    this.#watchOutput(child, this.#attempt);
     child.once("exit", (exitCode) => {
-      this.#removeChildObservation(child);
+      this.#observations.get(child)?.drain();
       this.#removeChildErrorGuard(child);
       this.#handleProcessExit(child, exitCode);
     });
@@ -380,11 +359,70 @@ export class HarnessSupervisor {
     });
   }
 
+  /** Logs the child's output and errors, and registers how to quiet and remove that logging. */
+  #watchOutput(child: UtilityProcess, attempt: number): void {
+    const logging = this.#watchLogging(child, attempt);
+    const lines = createHarnessLogLineForwarder(this.#logger, attempt);
+    const stdout = child.stdout ?? undefined;
+    const onStdout = (chunk: Buffer) => {
+      logging.stdout(chunk);
+      lines.push(chunk);
+    };
+    // Stdout ending only ends the line forwarder; stderr and error logging stay until exit.
+    const finish = () => {
+      stdout?.off("data", onStdout).off("end", finish).off("close", finish);
+      lines.end();
+    };
+    const forget = () => {
+      logging.silence();
+      if (this.#observations.get(child) === observation) this.#observations.delete(child);
+    };
+    const observation: ChildObservation = {
+      quiet: logging.silence,
+      drain: () => {
+        forget();
+        if (stdout === undefined) finish();
+      },
+      remove: () => {
+        forget();
+        finish();
+      },
+    };
+    stdout?.on("data", onStdout).once("end", finish).once("close", finish);
+    this.#observations.set(child, observation);
+  }
+
+  /** Logs a child's output sizes and fatal errors until silenced; stdout is fed by the caller. */
+  #watchLogging(child: UtilityProcess, attempt: number) {
+    let quiet = false;
+    const observe = (stream: "stdout" | "stderr", chunk: Buffer): void => {
+      const metadata = { attempt, stream, bytes: chunk.byteLength };
+      if (stream === "stdout") this.#logger.info(metadata, "Harness process output observed.");
+      else this.#logger.error(metadata, "Harness process output observed.");
+    };
+    const onStderr = (chunk: Buffer) => observe("stderr", chunk);
+    const onError = () => {
+      this.#logger.error(
+        { attempt, code: "HARNESS_PROCESS_ERROR" },
+        "Harness process reported a fatal error.",
+      );
+    };
+    child.stderr?.on("data", onStderr);
+    child.once("error", onError);
+    return {
+      stdout: (chunk: Buffer) => {
+        if (!quiet) observe("stdout", chunk);
+      },
+      silence: () => {
+        quiet = true;
+        child.stderr?.off("data", onStderr);
+        child.off("error", onError);
+      },
+    };
+  }
+
   #removeChildObservation(child: UtilityProcess): void {
-    const cleanup = this.#observationCleanup.get(child);
-    if (cleanup === undefined) return;
-    this.#observationCleanup.delete(child);
-    cleanup();
+    this.#observations.get(child)?.remove();
   }
 
   #guardChildErrors(child: UtilityProcess): void {

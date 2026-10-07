@@ -9,25 +9,19 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
-import {
-  acceptsStrict,
-  decodeStrict,
-  ProjectIdSchema,
-  StorageGenerationIdSchema,
-} from "@slopstop/protocol";
-import {
-  ProjectStorageBrokenError,
-  ProjectStorageUnavailableError,
-} from "./project-storage-errors.js";
+import { acceptsStrict, decodeStrict, StorageGenerationIdSchema } from "@slopstop/protocol";
+import { ProjectStorageBrokenError } from "./project-storage-errors.js";
 import {
   assertStagingPath,
   lstatIfPresent,
+  projectRootPath,
   requirePlainEntry,
   upgradeDirectoryProjectRoot,
+  upgradeOutputNames,
 } from "./project-storage-filesystem-authority.js";
 import { isUnavailableStorageError, normalizeStorageError } from "./project-storage-node-errors.js";
 import type { ProjectStorageStoreDependencies, UpgradeOutput } from "./project-storage-store.js";
-import { projectStorageUpgradeBusyMessage } from "./project-storage-upgrade.js";
+import { ProjectStorageUpgradeBusyError } from "./project-storage-upgrade.js";
 
 export async function readPlainFile(input: { filePath: string; message: string }): Promise<Buffer> {
   await requirePlainEntry({
@@ -234,7 +228,7 @@ async function requireUpgradeOutputDirectories(projectRoot: string, output: Upgr
   if (!valid) throw new ProjectStorageBrokenError(invalidUpgradeOutput);
   const spelled = new Set(await readdir(projectRoot));
   const present: string[] = [];
-  for (const name of [`.staging-${output.targetGenerationId}`, output.targetGenerationId]) {
+  for (const name of upgradeOutputNames(output.targetGenerationId)) {
     const directory = path.join(projectRoot, name);
     if ((await lstatIfPresent({ targetPath: directory })) === undefined) continue;
     // A case-insensitive file system resolves a case variant to this path; never remove it.
@@ -255,10 +249,9 @@ async function removeUpgradeOutput(input: {
   applicationStorageRoot: string;
 }): Promise<void> {
   try {
-    const projectRoot = path.join(
+    const projectRoot = projectRootPath(
       path.resolve(input.applicationStorageRoot),
-      "projects",
-      decodeStrict(ProjectIdSchema, input.output.projectId),
+      input.output.projectId,
     );
     for (const directory of await requireUpgradeOutputDirectories(projectRoot, input.output)) {
       await rm(directory, { recursive: true });
@@ -266,7 +259,7 @@ async function removeUpgradeOutput(input: {
   } catch (error) {
     if (error instanceof ProjectStorageBrokenError) throw error;
     if (isUnavailableStorageError({ error })) {
-      throw new ProjectStorageUnavailableError(projectStorageUpgradeBusyMessage, { cause: error });
+      throw new ProjectStorageUpgradeBusyError({ cause: error });
     }
     normalizeStorageError({ error, message: invalidUpgradeOutput });
   }

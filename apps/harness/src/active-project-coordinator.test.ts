@@ -439,3 +439,32 @@ it("refuses an upgrade while a Project is held or after stop", async () => {
   });
   expect(f.dependencies.storage.upgrade).not.toHaveBeenCalled();
 });
+
+it("reports whether it holds a Project, including one whose release failed", async () => {
+  const f = fixture();
+  expect(f.owner.holdsProject?.()).toBe(false);
+  expect(await f.owner.activate(request)).toEqual(writable);
+  expect(f.owner.holdsProject?.()).toBe(true);
+  f.faults.set("storage", new Error("close failed"));
+  await expect(f.owner.stop()).rejects.toThrow("Canonical Project activation release failed.");
+  expect(f.owner.holdsProject?.()).toBe(true);
+  await f.owner.stop();
+  expect(f.owner.holdsProject?.()).toBe(false);
+});
+
+it("reports a Project held while it is still activating or releasing", async () => {
+  const f = fixture();
+  const observed: Array<boolean | undefined> = [];
+  const { session } = f;
+  f.dependencies.storage.acquireActivation.mockImplementationOnce(async () => {
+    observed.push(f.owner.holdsProject?.());
+    return { status: "ready", session };
+  });
+  session.close.mockImplementationOnce(async () => {
+    observed.push(f.owner.holdsProject?.());
+  });
+  expect(await f.owner.activate(request)).toEqual(writable);
+  await f.owner.stop();
+  expect(observed).toEqual([true, true]);
+  expect(f.owner.holdsProject?.()).toBe(false);
+});

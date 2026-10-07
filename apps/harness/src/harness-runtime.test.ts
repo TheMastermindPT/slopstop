@@ -94,7 +94,7 @@ const memoryNotification = decodeStrict(WorkspaceNotificationSchema, {
   revision: 1,
 });
 
-function canonicalRuntimeFixture() {
+function canonicalRuntimeFixture(holdsProject?: () => boolean) {
   const transport = new TestTransport();
   const calls: string[] = [];
   const { request, activationResult, commandResult, application } =
@@ -110,10 +110,17 @@ function canonicalRuntimeFixture() {
       calls.push("storage");
     }),
   };
+  const applicationDatabase = {
+    stop: vi.fn(async () => {
+      calls.push("application-database");
+    }),
+  };
   let sequence = 900;
   const options = {
     transport,
-    canonicalProjectApplication: application,
+    applicationDatabase,
+    canonicalProjectApplication:
+      holdsProject === undefined ? application : { ...application, holdsProject },
     projectStorageApplication: storage,
     workspaceApplication: createUnavailableWorkspaceApplication(),
     harnessVersion: "0.0.0",
@@ -130,7 +137,7 @@ function canonicalRuntimeFixture() {
     request,
   );
   const expected = (event: string, payload: unknown, number: number, causationId: string) => ({
-    protocolVersion: 6,
+    protocolVersion: 7,
     messageType: "event",
     messageId: `00000000-0000-4000-8000-${String(900 + number).padStart(12, "0")}`,
     sentAt: options.now(),
@@ -143,6 +150,7 @@ function canonicalRuntimeFixture() {
     transport,
     application,
     storage,
+    applicationDatabase,
     calls,
     stop,
     activate,
@@ -187,7 +195,7 @@ it("round-trips canonical activation and contains canonical request failures", a
   } finally {
     await f.stop();
   }
-  expect(f.calls).toEqual(["canonical", "storage"]);
+  expect(f.calls).toEqual(["canonical", "storage", "application-database"]);
 });
 
 it("awaits canonical release and withholds Storage shutdown after rejection", async () => {
@@ -213,6 +221,81 @@ it("awaits canonical release and withholds Storage shutdown after rejection", as
   expect(immediateStorageCalls).toBe(0);
   expect(error).toBe(failure);
   expect(f.storage.stop).not.toHaveBeenCalled();
+});
+
+it("stops Storage only after canonical release while a Project is held", async () => {
+  const f = canonicalRuntimeFixture(() => true);
+  const released = deferred<void>();
+  f.application.stop.mockImplementationOnce(async () => {
+    f.calls.push("canonical");
+    await released.promise;
+  });
+  const stop = f.stop();
+  await nextTurn();
+  expect(f.storage.stop).not.toHaveBeenCalled();
+  released.resolve();
+  await stop;
+  expect(f.calls).toEqual(["canonical", "storage", "application-database"]);
+});
+
+it("stops Storage together with the canonical application while no Project is held", async () => {
+  const f = canonicalRuntimeFixture(() => false);
+  const released = deferred<void>();
+  f.application.stop.mockImplementationOnce(async () => {
+    f.calls.push("canonical");
+    await released.promise;
+  });
+  const stop = f.stop();
+  expect(f.calls).toEqual(["canonical", "storage"]);
+  released.resolve();
+  await stop;
+});
+
+describe("shutdown failures while no Project is held", () => {
+  const canonicalFailure = new Error("canonical stop failed");
+  const storageFailure = new Error("storage stop failed");
+
+  // Rule: the shared application database stops whenever Storage stopped; a canonical failure
+  // is reported but, with no Project held, does not keep it alive.
+  it.for([
+    { name: "canonical fails", canonical: true, storage: false, databaseStops: true },
+    { name: "Storage fails", canonical: false, storage: true, databaseStops: false },
+    { name: "both fail", canonical: true, storage: true, databaseStops: false },
+  ])("$name", async (row) => {
+    const f = canonicalRuntimeFixture(() => false);
+    if (row.canonical) f.application.stop.mockRejectedValueOnce(canonicalFailure);
+    if (row.storage) f.storage.stop.mockRejectedValueOnce(storageFailure);
+    const failures = [
+      ...(row.canonical ? [canonicalFailure] : []),
+      ...(row.storage ? [storageFailure] : []),
+    ];
+    const error = await f.stop().catch((caught: unknown) => caught);
+    if (failures.length === 1) expect(error).toBe(failures[0]);
+    else {
+      expect(error).toBeInstanceOf(AggregateError);
+      expect((error as AggregateError).errors).toEqual(failures);
+    }
+    expect(f.storage.stop).toHaveBeenCalledOnce();
+    expect(f.applicationDatabase.stop).toHaveBeenCalledTimes(row.databaseStops ? 1 : 0);
+  });
+});
+
+it("treats a throwing held-Project query as held and reports it", async () => {
+  const failure = new Error("held query failed");
+  const f = canonicalRuntimeFixture(() => {
+    throw failure;
+  });
+  const released = deferred<void>();
+  f.application.stop.mockImplementationOnce(async () => {
+    f.calls.push("canonical");
+    await released.promise;
+  });
+  const stop = f.stop().catch((caught: unknown) => caught);
+  await nextTurn();
+  expect(f.storage.stop).not.toHaveBeenCalled();
+  released.resolve();
+  expect(await stop).toBe(failure);
+  expect(f.calls).toEqual(["canonical", "storage", "application-database"]);
 });
 
 function deferred<T>() {
@@ -293,7 +376,7 @@ const failureScopeCases = [
   {
     kind: "message",
     input: {
-      protocolVersion: 6,
+      protocolVersion: 7,
       messageType: "command",
       messageId: "00000000-0000-4000-8000-000000000202",
       sentAt: "2026-08-14T12:00:00.000Z",
@@ -359,7 +442,7 @@ describe("harness runtime transport", () => {
         }
         expect(transport.sent).toEqual([
           {
-            protocolVersion: 6,
+            protocolVersion: 7,
             messageType: "event",
             messageId: "00000000-0000-4000-8000-000000000002",
             sentAt: "2026-08-14T12:00:01.000Z",
@@ -606,7 +689,7 @@ describe("harness runtime transport", () => {
 
     expect(transport.sent).toMatchObject([
       {
-        protocolVersion: 6,
+        protocolVersion: 7,
         sequence: 1,
         causationId: open.messageId,
         event: "project.open.result",
@@ -617,7 +700,7 @@ describe("harness runtime transport", () => {
         },
       },
       {
-        protocolVersion: 6,
+        protocolVersion: 7,
         sequence: 2,
         causationId: create.messageId,
         event: "project.create.result",
@@ -628,7 +711,7 @@ describe("harness runtime transport", () => {
         },
       },
       {
-        protocolVersion: 6,
+        protocolVersion: 7,
         sequence: 3,
         causationId: close.messageId,
         event: "project.close.result",
@@ -656,7 +739,7 @@ describe("harness runtime transport", () => {
 
     expect(transport.sent).toMatchObject([
       {
-        protocolVersion: 6,
+        protocolVersion: 7,
         causationId: command.messageId,
         event: "project.registration.result",
         payload: { status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" },
@@ -696,7 +779,7 @@ describe("harness runtime transport", () => {
 
     expect(transport.sent).toEqual([
       {
-        protocolVersion: 6,
+        protocolVersion: 7,
         messageType: "event",
         messageId: "00000000-0000-4000-8000-000000000002",
         sentAt: "2026-08-14T12:00:01.000Z",
@@ -990,7 +1073,7 @@ it("routes an upgrade to the canonical application and answers its result", asyn
     expect(upgrade).toHaveBeenCalledWith(result.request);
     expect(transport.sent).toEqual([
       {
-        protocolVersion: 6,
+        protocolVersion: 7,
         messageType: "event",
         messageId: "00000000-0000-4000-8000-000000000901",
         sentAt: "2026-10-06T12:00:00.000Z",

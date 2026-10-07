@@ -22,8 +22,19 @@ export type UpgradeFlowHost = Readonly<{
   notRegistered(): void;
 }>;
 
-/** An opened Project whose canonical database must be updated before it can be used. */
+/**
+ * An opened Project whose canonical database must be updated before it can be used, and that
+ * the harness can update: a runtime database that is not healthy refuses the upgrade, so the
+ * window shows the safe-mode reason instead of asking.
+ */
 export function needsUpgrade(result: CanonicalProjectActivationResult): boolean {
+  return canonicalNeedsMigration(result) && result.runtimeHealth.status === "healthy";
+}
+
+/** A safe-mode Project whose canonical database still needs migration, whatever its runtime. */
+function canonicalNeedsMigration(
+  result: CanonicalProjectActivationResult,
+): result is Extract<CanonicalProjectActivationResult, { status: "safe-mode" }> {
   return result.status === "safe-mode" && result.canonicalHealth.status === "migration-required";
 }
 
@@ -39,8 +50,8 @@ export function useProjectUpgrade(host: UpgradeFlowHost) {
     const activation = await window.slopstop.activateProject({ projectId });
     if (!host.isCurrent(generation)) return;
     host.present(activation);
-    if (needsUpgrade(activation)) {
-      // The harness said the upgrade succeeded, but the Project still needs it (G5).
+    if (canonicalNeedsMigration(activation)) {
+      // The harness said the upgrade succeeded, but the Project still needs it (G5, U7).
       const diagnostic = projectUpgradeDiagnostics.storageBroken;
       setProblem({ projectId, result: { status: "broken", request: { projectId }, diagnostic } });
     } else if (activation.status === "active") {

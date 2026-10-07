@@ -184,3 +184,23 @@ export async function createCurrentProject({ root }: ProjectRoot): Promise<void>
     await creator.owner.stop();
   }
 }
+
+/**
+ * An upgrade interrupted after its staged copy left its output and backup; the next activation
+ * discards that output as interrupted, keeping the source and the backup.
+ */
+export async function expectInterruptedThenRecovered(
+  { root }: ProjectRoot,
+  sourceHashes: readonly string[],
+): Promise<void> {
+  await expect(pathExists(upgradePaths({ root }).staging)).resolves.toBe(true);
+  const backup = await entriesOf({ directory: upgradePaths({ root }).backup });
+  const next = createUpgradeStorageOwner(root, { attempt: 2 });
+  try {
+    await expectMigrationRequiredOnSource(next.owner);
+    expect(next.diagnostics).toEqual([abandonedEvent("interrupted")]);
+  } finally {
+    await next.owner.stop();
+  }
+  await expectDiscardedUpgrade({ root }, { sourceHashes: [...sourceHashes], backup });
+}

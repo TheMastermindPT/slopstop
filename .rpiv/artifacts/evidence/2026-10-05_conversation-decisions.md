@@ -2,6 +2,8 @@
 date: 2026-10-05
 author: coordenador-claude (Claude Code), for Pedro Mesquita
 repository: slopstop
+branch: feat/c1-0-s5-deep-review-fixes
+commit: bde79ff
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
 ---
@@ -114,3 +116,30 @@ Relayed by the ui-ux agent and confirmed by the user in the coordinator session.
 - **Scope approved:** all 11 documentation items of the S4 brief (docs only; no behaviour change, so no red-green). Branch `feat/c1-0-s4-upgrade-docs` from `main` `8138ed9` approved; S4 ran in the main working tree, not a linked worktree.
 - **Follow-up issues:** creating issue #92 ("Replace the temporary storage_upgrades marker with the full Storage-operation journal and its Effect records") was authorized; it is edited to say that chained upgrades (more than one completed upgrade per Storage) belong to the C1 gate. Issue #93 ("Decide whether the generation manifest records the Mastra migration head (ADR 0006 vs always-null mastraMigrationHead)") tracks the gap between ADR 0006 and the always-null `mastraMigrationHead`.
 - **S4 review round 1 outcome:** three reviewers on `2fc32a8`, no blocker. The user approved one docs fix commit with no third review, applying the wording and record suggestions (plain-opening safe-mode wording, failed-result wording, `HARNESS_INTERNAL_FAILURE`, discard-failure behaviour, eligibility precedence, activation wording, protocol statuses standing in for `blocked`, Context citations, design Follow-up and frontmatter, and this entry). `CONTEXT.md` "Storage operation" stays unchanged: its `storage-operation` partition is the nested arm of the ADR 0013 `project-operation` Effect.
+
+## 13. C1-0 S5 deep-review fixes (user decisions, 2026-10-07)
+
+Relayed by the coordinator from the user. Source: `.rpiv/artifacts/reviews/2026-10-07_16-47-49_2a19d40-e1c0a99-c1-0-staged-upgrade.md`.
+
+- **Scope:** fix the 9 important deep-review findings (I1/Q4/Q7, I2/Q11, I3, Q8, Q9, Q14, Q18, Q38, Q39) and correct Q49 and Q50. The 41 suggestions are out of scope. The work ran on branch `feat/c1-0-s5-deep-review-fixes` from `main` `3b833e1`, in the main working tree.
+- **I1, option B:** when the harness stops while it holds no Project, Storage stops together with the canonical application, so a running upgrade ends as an owner stop. It answers `unavailable` and leaves its output for the next activation or upgrade. While a Project is held, Storage still stops only after its release.
+- **Q13:** once the switch commits, an owner stop leaves the answer `upgraded`. This applies to a stop inside the switch transaction and to one at the post-switch checkpoint.
+- **Q49 (supersedes design F3 and the "Try again" on the G5 panel):** the window offers "Try again" only when the diagnostic row is retryable. The FRD FR7/FR8 Follow-up records the narrowing.
+- **Q50:** the window sends the automatic upgrade only when the runtime database is healthy. Otherwise it shows the safe-mode reason.
+- **I3:** a `storageBusy` row (retryable) carries the busy text. Protocol version 6 becomes 7. The availability texts have one owner.
+- **U5 (review round 1, 2026-10-07):** round 2 fixes everything: the blocker (a non-busy marker-query failure read as clean), the concerns and the small suggestions. This is the last review round.
+- **U6:** a busy unfinished-marker lookup answers retryable `unavailable` with no discard-failed line, because no upgrade id is known yet. That answer is the distinct diagnostic, an exception to ADR 0005's discard-failed(busy) rule, and it is recorded in the ADR 0005 refinement lines.
+- **U7:** the post-upgrade (G5) check is canonical-only. A false success always shows the `storageBroken` panel, whatever the runtime health. The healthy-runtime rule applies only to sending the upgrade.
+- **Oracle changes accepted with these decisions:**
+  - Q4 test: stdout keeps the upgrade-line forwarder after stop until stdout ends.
+  - G5 panel: no "Try again", because `storageBroken` is not retryable.
+  - "Try again" per row now follows `retryable`.
+  - Busy-source runtime test: it now expects the `storageBusy` row.
+  - Protocol design table: the `storageBusy` row is appended, and every protocol version pin is 7.
+  - Owner-level busy outcome constants: they now carry `busy: true`.
+  - Runtime: a canonical stop failure while no Project is held no longer keeps the application database alive.
+- **U8 (review round 2, 2026-10-07):** the user accepted the not-held stop rule: with no Project held, a canonical stop failure is reported, but it does not keep the shared application database alive once Storage has stopped.
+- **Round-2 outcome:** the user chose one fix commit and no further review round. The residuals are tracked as GitHub issues:
+  - #95 "Prove a real-process quit during a running upgrade and assert its wire reply" (5g/5f);
+  - #96 "Keep harness upgrade log lines that arrive after the child exits on quit" (W1);
+  - #97 "Add mutation scope for the C1-0 S5 upgrade and shutdown branches".

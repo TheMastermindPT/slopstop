@@ -8,6 +8,10 @@ import {
   ProjectStorageBrokenError,
 } from "../../src/storage/project-storage-errors.js";
 import { createNodeProjectStorageDependencies } from "../../src/storage/project-storage-node-adapters.js";
+import {
+  ProjectStorageUpgradeBusyError,
+  projectStorageUpgradeBusyMessage,
+} from "../../src/storage/project-storage-upgrade.js";
 import { generationPaths, openRequest } from "./project-storage-open-fixture.js";
 import {
   checkedInMigrationRoot,
@@ -15,6 +19,7 @@ import {
   projectStorageIntegrationTimeout,
   upgradeIds,
 } from "./project-storage-runtime-fixture.js";
+import { holdExclusiveLock } from "./project-storage-upgrade-faults.js";
 import { createGenerationTwoProject } from "./project-storage-upgrade-fixture.js";
 import { registryRows, stopDuringUpgrade } from "./project-storage-upgrade-recovery-fixture.js";
 
@@ -108,6 +113,44 @@ it(
         throw new Error("Injected initialization failure.");
       },
     );
+  },
+);
+
+it(
+  "finds an unfinished upgrade only from a readable marker: a busy registry answers busy",
+  timeout,
+  async () => {
+    const root = await createTemporaryApplicationRoot();
+    await createInterruptedUpgrade({ root });
+    await withUpgradeSteps({ root }, async (upgrades) => {
+      // The client opens before the lock, so the marker query is what meets the busy registry.
+      await upgrades.findUnfinished(openRequest.projectId);
+      const lock = holdExclusiveLock({ databasePath: path.join(root, "application.db") });
+      try {
+        const lookup = upgrades.findUnfinished(openRequest.projectId);
+        await expect(lookup).rejects.toBeInstanceOf(ProjectStorageUpgradeBusyError);
+        await expect(lookup).rejects.toThrow(projectStorageUpgradeBusyMessage);
+      } finally {
+        lock.release();
+      }
+    });
+  },
+);
+
+it(
+  "finds an unfinished upgrade only from a readable marker: an unreadable marker query is broken",
+  timeout,
+  async () => {
+    const root = await createTemporaryApplicationRoot();
+    await createInterruptedUpgrade({ root });
+    await withUpgradeSteps({ root }, async (upgrades) => {
+      // The client opens first; the marker query then meets a table it cannot read.
+      await upgrades.findUnfinished(openRequest.projectId);
+      damageRegistry({ root }, "ALTER TABLE storage_upgrades RENAME COLUMN upgrade_id TO lost_id");
+      await expect(upgrades.findUnfinished(openRequest.projectId)).rejects.toThrow(
+        new ProjectStorageBrokenError("Project Storage upgrade marker could not be read."),
+      );
+    });
   },
 );
 

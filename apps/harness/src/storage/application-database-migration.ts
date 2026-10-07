@@ -133,9 +133,10 @@ async function requireApplicationRelationships(transaction: LocalLibsqlTransacti
 }
 
 /**
- * Registry heads that include `storage_upgrades`: an in-progress upgrade's source is the active
- * generation and its target is staging; a completed upgrade's target is active and its source is
- * gone; at most one completed upgrade per Storage (chained upgrades are a later gate).
+ * Registry heads that include `storage_upgrades`: every upgrade belongs to its Storage's registered
+ * Project; an in-progress upgrade's source is the active generation and its target is staging; a
+ * completed upgrade's target is active and its source is gone; at most one completed upgrade per
+ * Storage (chained upgrades are a later gate).
  */
 async function requireUpgradeRelationships(transaction: LocalLibsqlTransaction): Promise<void> {
   const table = await transaction.execute(
@@ -149,7 +150,8 @@ async function requireUpgradeRelationships(transaction: LocalLibsqlTransaction):
         ON s.storage_id = u.storage_id AND s.generation_id = u.source_generation_id
       LEFT JOIN storage_generations AS t
         ON t.storage_id = u.storage_id AND t.generation_id = u.target_generation_id
-      WHERE (u.state = 'in-progress' AND (r.active_generation_id IS NOT u.source_generation_id
+      WHERE r.project_id IS NOT u.project_id
+        OR (u.state = 'in-progress' AND (r.active_generation_id IS NOT u.source_generation_id
           OR s.generation_id IS NULL OR t.creation_state IS NOT 'staging'))
         OR (u.state = 'completed' AND (r.active_generation_id IS NOT u.target_generation_id
           OR s.generation_id IS NOT NULL))

@@ -4,10 +4,11 @@ import type { UpgradeProblem as Problem } from "./use-project-upgrade.js";
 
 /**
  * Why the update failed, under the safe-mode view: the sentence, the reason and the reference
- * in one alert, then "Try again" unless the update was refused. Focus moves into the panel.
+ * in one alert, then "Try again" only when the diagnostic says the same request can succeed
+ * unchanged. Focus moves into the panel.
  */
 export function UpgradeProblem(props: Readonly<{ problem: Problem; onRetry(): void }>) {
-  const { diagnostic, status } = props.problem.result;
+  const { diagnostic } = props.problem.result;
   const first = useRef<HTMLParagraphElement>(null);
   const retry = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -22,11 +23,11 @@ export function UpgradeProblem(props: Readonly<{ problem: Problem; onRetry(): vo
         <p>{diagnostic.message}</p>
         <p className={styles["codeLine"]}>Reference: {diagnostic.code}</p>
       </div>
-      {status === "refused" ? null : (
+      {diagnostic.retryable ? (
         <button ref={retry} type="button" onClick={props.onRetry}>
           Try again
         </button>
-      )}
+      ) : null}
     </div>
   );
 }

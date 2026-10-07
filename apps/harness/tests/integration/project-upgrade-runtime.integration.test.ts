@@ -38,7 +38,9 @@ import {
 } from "./project-storage-upgrade-fixture.js";
 import {
   createCurrentProject,
+  expectInterruptedThenRecovered,
   registryRows,
+  sourceFileHashes,
   stopDuringUpgrade,
 } from "./project-storage-upgrade-recovery-fixture.js";
 import {
@@ -206,7 +208,12 @@ it(`${outcomeTitle}: a busy source`, timeout, async () => {
     expect((await runtime.upgrade(request.projectId)).payload).toEqual({
       status: "unavailable",
       request,
-      diagnostic: rows.storageUnavailable,
+      // The busy text crosses the boundary, so the window can say the upgrade can be retried.
+      diagnostic: {
+        code: "PROJECT_STORAGE_UNAVAILABLE",
+        message: "Project Storage is busy; the upgrade can be retried.",
+        retryable: true,
+      },
     });
   } finally {
     lock.release();
@@ -337,6 +344,53 @@ it(`${outcomeTitle}: activations and commands wait for a running upgrade`, timeo
     await runtime.stop();
   }
 });
+
+it.for([
+  { name: "alone", queuedActivation: false },
+  { name: "with an activation queued behind it", queuedActivation: true },
+])(
+  `${outcomeTitle}: a quit during a running upgrade stops it cooperatively, $name`,
+  timeout,
+  async (row) => {
+    const root = await createTemporaryApplicationRoot();
+    await createGenerationTwoProject(root);
+    const sourceHashes = await sourceFileHashes({ root });
+    const hold = heldAtStagedCopy();
+    const runtime = startTestUpgradeRuntime(root, hold.options);
+    try {
+      void runtime.upgrade(request.projectId);
+      await hold.arrived;
+      if (row.queuedActivation) {
+        void runtime.activate(request.projectId);
+        await runtime.firstActivationAdmitted;
+      }
+      const stopping = runtime.stop();
+      // The quit reaches the held step before it resumes: the owner stops instead of finishing.
+      await new Promise((resolve) => setImmediate(resolve));
+      hold.release();
+      await stopping;
+    } finally {
+      hold.release();
+      await runtime.stop();
+    }
+    // The intake is closed by then, so the answers are read where Storage gives them: the
+    // upgrade meets the owner stop, and a queued activation meets the stopped owner, so no
+    // Project is held at the end.
+    const stopped = { status: "unavailable", message: "Project Storage owner is stopped." };
+    const upgradeStopped = { ...stopped, reason: "unavailable" };
+    expect(runtime.storageAnswers).toEqual(
+      row.queuedActivation ? [upgradeStopped, stopped] : [upgradeStopped],
+    );
+    expect(runtime.fixture.diagnostics).toEqual([]);
+    expect(registryRows({ root }, "storage_upgrades")).toEqual([
+      expect.objectContaining({ state: "in-progress" }),
+    ]);
+    expect(registryRows({ root }, "storage_registrations")).toEqual([
+      expect.objectContaining({ active_generation_id: upgradeIds.sourceGenerationId }),
+    ]);
+    await expectInterruptedThenRecovered({ root }, sourceHashes);
+  },
+);
 
 it(
   `${outcomeTitle}: a lone command and another Project wait for a running upgrade`,

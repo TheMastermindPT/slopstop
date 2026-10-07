@@ -17,7 +17,7 @@ import { createCanonicalProjectApplication } from "../../src/canonical-project-a
 import { startHarnessRuntime } from "../../src/harness-runtime.js";
 import { createNodeActiveProjectCoordinator } from "../../src/node-active-project-coordinator.js";
 import { startHarnessProcessRuntime } from "../../src/process-bootstrap.js";
-import { createUnavailableProjectStorageApplication } from "../../src/project-storage-application.js";
+import { createProjectStorageApplication } from "../../src/project-storage-application.js";
 import { listRegisteredProjects } from "../../src/registration/project-listing.js";
 import {
   createUpgradeDiagnosticsLogger,
@@ -147,15 +147,36 @@ export function startTestUpgradeRuntime(
   });
   const other = options.other;
   const otherOwner = other === undefined ? undefined : createUpgradeStorageOwner(other.root);
+  // What Storage answered the coordinator, observable even after the transport has closed.
+  const storageAnswers: unknown[] = [];
+  const recorded = async <Answer>(answer: Promise<Answer>): Promise<Answer> => {
+    const settled = await answer;
+    storageAnswers.push(settled);
+    return settled;
+  };
   const coordinator = createNodeActiveProjectCoordinator({
     storage: {
       acquireActivation: (request) =>
-        otherOwner !== undefined && request.projectId === other?.projectId
-          ? otherOwner.owner.acquireActivation(request)
-          : fixture.owner.acquireActivation(request),
-      upgrade: fixture.upgrade,
+        recorded(
+          otherOwner !== undefined && request.projectId === other?.projectId
+            ? otherOwner.owner.acquireActivation(request)
+            : fixture.owner.acquireActivation(request),
+        ),
+      upgrade: (request) => recorded(fixture.upgrade(request)),
     },
   });
+  // Resolves once the coordinator has taken in an activation (queued behind a running upgrade).
+  let activationAdmitted = (): void => undefined;
+  const firstActivationAdmitted = new Promise<void>((resolve) => {
+    activationAdmitted = resolve;
+  });
+  const admitting: typeof coordinator = {
+    ...coordinator,
+    activate: (request) => {
+      activationAdmitted();
+      return coordinator.activate(request);
+    },
+  };
   const transport = causationTransport();
   const listingOptions = {
     applicationStorageRoot: root,
@@ -164,8 +185,9 @@ export function startTestUpgradeRuntime(
   };
   const stopRuntime = startHarnessRuntime({
     transport: transport.harnessSide,
-    canonicalProjectApplication: createCanonicalProjectApplication(coordinator),
-    projectStorageApplication: createUnavailableProjectStorageApplication(),
+    canonicalProjectApplication: createCanonicalProjectApplication(admitting),
+    // The upgrade fixture's owner, so the runtime stops it as the process runtime does.
+    projectStorageApplication: createProjectStorageApplication(fixture.owner),
     workspaceApplication: createUnavailableWorkspaceApplication(),
     projectListing: {
       list: async () =>
@@ -182,6 +204,8 @@ export function startTestUpgradeRuntime(
   return {
     ...projectCommands(transport.send),
     fixture,
+    storageAnswers,
+    firstActivationAdmitted,
     received: transport.received,
     stop: async () => {
       try {

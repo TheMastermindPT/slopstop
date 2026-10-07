@@ -589,7 +589,7 @@ export const switchMessages = {
 };
 export function switchEvent(sequence: number, causation: number, event: string, payload: unknown) {
   return {
-    protocolVersion: 6,
+    protocolVersion: 7,
     messageType: "event",
     messageId: `99999999-9999-4999-8999-${String(999999999400 + sequence)}`,
     sentAt: switchTimes.T4,

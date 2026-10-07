@@ -1,3 +1,4 @@
+export { projectAvailabilityMessages } from "./availability-messages.js";
 export type {
   CanonicalCommandReceipt,
   CanonicalEventId,

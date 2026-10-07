@@ -15,16 +15,27 @@ const failures = {
   [rows.verificationFailed.code]: rows.verificationFailed,
 } as const;
 
+/** A storage outcome that never reached a result: busy, otherwise unavailable, or broken. */
+function storageFailureResult(
+  request: ProjectUpgradeRequest,
+  outcome: Exclude<ProjectStorageUpgradeOutcome, { status: "ready" }>,
+): ProjectUpgradeResult {
+  if (outcome.status === "broken") {
+    return { status: "broken", request, diagnostic: rows.storageBroken };
+  }
+  return {
+    status: "unavailable",
+    request,
+    diagnostic: outcome.reason === "busy" ? rows.storageBusy : rows.storageUnavailable,
+  };
+}
+
 /** The protocol result of a storage upgrade outcome, with each diagnostic's exact row. */
 export function projectUpgradeResult(
   request: ProjectUpgradeRequest,
   outcome: ProjectStorageUpgradeOutcome,
 ): ProjectUpgradeResult {
-  if (outcome.status !== "ready") {
-    return outcome.status === "unavailable"
-      ? { status: "unavailable", request, diagnostic: rows.storageUnavailable }
-      : { status: "broken", request, diagnostic: rows.storageBroken };
-  }
+  if (outcome.status !== "ready") return storageFailureResult(request, outcome);
   const result = outcome.result;
   switch (result.status) {
     case "upgraded":

@@ -1,18 +1,25 @@
-import type {
-  ProjectId,
-  ProjectStorageCreateRequest,
-  ProjectUpgradeAbandonReason,
-  ProjectUpgradeDiscardCause,
+import {
+  type ProjectId,
+  type ProjectStorageCreateRequest,
+  type ProjectUpgradeAbandonReason,
+  type ProjectUpgradeDiscardCause,
   projectUpgradeDiagnostics,
-  StorageGenerationId,
-  StorageId,
+  type StorageGenerationId,
+  type StorageId,
 } from "@slopstop/protocol";
 import type { GeneratedMigration } from "./generated-migrations.js";
+import { ProjectStorageUnavailableError } from "./project-storage-errors.js";
 import type { GenerationRow } from "./project-storage-node-schemas.js";
 
 /** The `unavailable` message of an upgrade that met busy storage; it can be retried. */
-export const projectStorageUpgradeBusyMessage =
-  "Project Storage is busy; the upgrade can be retried.";
+export const projectStorageUpgradeBusyMessage = projectUpgradeDiagnostics.storageBusy.message;
+
+/** Busy storage met by an upgrade step; the upgrade answers `unavailable` marked busy. */
+export class ProjectStorageUpgradeBusyError extends ProjectStorageUnavailableError {
+  constructor(options?: ErrorOptions) {
+    super(projectStorageUpgradeBusyMessage, options);
+  }
+}
 
 export type ProjectStorageUpgradeRequest = Readonly<{ projectId: ProjectId }>;
 export type ProjectStorageUpgradeId = ProjectStorageCreateRequest["createRequestId"];
@@ -46,7 +53,8 @@ export type ProjectStorageUpgradeResult =
 
 export type ProjectStorageUpgradeOutcome =
   | Readonly<{ status: "ready"; result: ProjectStorageUpgradeResult }>
-  | Readonly<{ status: "unavailable" | "broken"; message: string }>;
+  | Readonly<{ status: "unavailable"; reason: "busy" | "unavailable"; message: string }>
+  | Readonly<{ status: "broken"; message: string }>;
 
 export interface ProjectStorageUpgradePort {
   upgrade(request: ProjectStorageUpgradeRequest): Promise<ProjectStorageUpgradeOutcome>;
@@ -130,8 +138,11 @@ export type ProjectStorageUpgradeDiagnostics = Readonly<{
 /** The Storage-adapter steps of a staged upgrade; each step is all-or-nothing on its own. */
 export interface ProjectStorageUpgradeSteps extends ProjectStorageUpgradeDiagnostics {
   /**
-   * The Project's in-progress marker. A registry that cannot be queried answers none; marker
-   * rows that were read but do not decode, or more than one, reject with
+   * The Project's in-progress marker; none when the registry or its marker table does not exist
+   * yet. A typed Storage failure from the registry rejects unchanged, a raw busy error rejects with
+   * `ProjectStorageUpgradeBusyError`, any other failed query with
+   * `ProjectStorageBrokenError("Project Storage upgrade marker could not be read.")`, and marker
+   * rows that were read but do not decode, or more than one, with
    * `ProjectStorageBrokenError("Project Storage upgrade marker is invalid.")`.
    */
   findUnfinished(projectId: ProjectId): Promise<UnfinishedUpgrade | undefined>;

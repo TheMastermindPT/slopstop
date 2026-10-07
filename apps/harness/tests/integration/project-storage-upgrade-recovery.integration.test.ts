@@ -14,7 +14,7 @@ import {
   projectStorageIntegrationTimeout,
   upgradeIds,
 } from "./project-storage-runtime-fixture.js";
-import { upgradePaths } from "./project-storage-upgrade-faults.js";
+import { holdExclusiveLock, upgradePaths } from "./project-storage-upgrade-faults.js";
 import {
   createGenerationTwoProject,
   createUpgradedProject,
@@ -55,6 +55,32 @@ it(
     } finally {
       await fixture.owner.stop();
     }
+  },
+  projectStorageIntegrationTimeout,
+);
+
+it(
+  "answers retryable unavailable, changing nothing, when the registry is locked at activation",
+  async () => {
+    const root = await createTemporaryApplicationRoot();
+    await createGenerationTwoProject(root);
+    await (await stopDuringUpgrade({ root })).stopping;
+    const before = await unprovenSnapshot({ root });
+    const fixture = createUpgradeStorageOwner(root);
+    const lock = holdExclusiveLock({ databasePath: path.join(root, "application.db") });
+    try {
+      // The registry authority meets the lock first and answers its own typed unavailable,
+      // which the marker lookup passes through unchanged.
+      expect(await fixture.owner.acquireActivation(openRequest)).toEqual({
+        status: "unavailable",
+        message: "Project Storage authority is unavailable.",
+      });
+      expect(fixture.diagnostics).toEqual([]);
+    } finally {
+      lock.release();
+      await fixture.owner.stop();
+    }
+    expect(await unprovenSnapshot({ root })).toEqual(before);
   },
   projectStorageIntegrationTimeout,
 );

@@ -1014,3 +1014,23 @@ it("keeps the discard outcome when its diagnostics port throws: owner", async ()
   expect(outcomes[0]?.refused).toEqual({ status: "broken", message: invalidOutput.message });
   expect(outcomes[1]).toEqual(outcomes[0]);
 });
+
+it("answers broken when the eligibility opening cannot be released: owner", async () => {
+  const { dependencies } = lifecycleDependencies();
+  const owner = createProjectStorageOwner({
+    ...dependencies,
+    opening: {
+      inspect: async () => ({
+        ...migrationRequiredEvidence(),
+        release: async () => {
+          throw new Error("Injected opening release failure.");
+        },
+      }),
+    },
+  });
+  expect(await owner.upgrade({ projectId: request.projectId })).toEqual({
+    status: "broken",
+    message: "Project Storage opening release failed.",
+  });
+  await owner.stop();
+});

@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { projectAvailabilityMessages as messages } from "./availability-messages.js";
 import { ProjectIdSchema } from "./domain-identity-schema.js";
 import { type HarnessFailureCode, harnessFailureMessages } from "./harness-failure-protocol.js";
 import {
@@ -13,7 +14,8 @@ function harnessFailureRow<const Code extends HarnessFailureCode>(code: Code) {
 
 /**
  * Every (code, message, retryable) row a `project.upgrade` result can carry. Each producer —
- * the storage pipeline, the coordinator, the desktop bridge — answers with one of these rows.
+ * the harness mapping of the storage outcome, the coordinator, the desktop bridge — answers
+ * with one of these rows.
  * `retryable` says whether the same request can succeed unchanged.
  */
 export const projectUpgradeDiagnostics = {
@@ -44,17 +46,17 @@ export const projectUpgradeDiagnostics = {
   },
   storageUnavailable: {
     code: "PROJECT_STORAGE_UNAVAILABLE",
-    message: "Project Storage is unavailable.",
+    message: messages.storageUnavailable,
     retryable: true,
   },
   coordinatorStopped: {
     code: "PROJECT_COORDINATOR_UNAVAILABLE",
-    message: "Canonical Project coordination is unavailable.",
+    message: messages.coordinatorUnavailable,
     retryable: false,
   },
   connectionLost: {
     code: "PROJECT_COORDINATOR_UNAVAILABLE",
-    message: "The Project connection is unavailable.",
+    message: messages.connectionLost,
     retryable: true,
   },
   storageBroken: {
@@ -65,6 +67,11 @@ export const projectUpgradeDiagnostics = {
   harnessInternalFailure: harnessFailureRow("HARNESS_INTERNAL_FAILURE"),
   protocolMessageInvalid: harnessFailureRow("PROTOCOL_MESSAGE_INVALID"),
   protocolVersionUnsupported: harnessFailureRow("PROTOCOL_VERSION_UNSUPPORTED"),
+  storageBusy: {
+    code: "PROJECT_STORAGE_UNAVAILABLE",
+    message: "Project Storage is busy; the upgrade can be retried.",
+    retryable: true,
+  },
 } as const;
 
 type UpgradeDiagnosticRow =
@@ -116,6 +123,7 @@ export const ProjectUpgradeResultSchema = Schema.Union([
     ...base,
     diagnostic: Schema.Union([
       rowSchema(rows.storageUnavailable),
+      rowSchema(rows.storageBusy),
       rowSchema(rows.coordinatorStopped),
       rowSchema(rows.connectionLost),
     ]),

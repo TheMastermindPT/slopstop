@@ -1,12 +1,6 @@
 import type {
-  CanonicalProjectActivationRequest,
-  CanonicalProjectActivationResult,
   CanonicalProjectCommandRequest,
   CanonicalProjectCommandResult,
-  CanonicalProjectSwitchRequest,
-  CanonicalProjectSwitchResult,
-  ProjectUpgradeRequest,
-  ProjectUpgradeResult,
 } from "@slopstop/protocol";
 import {
   CanonicalProjectActivationResultSchema,
@@ -17,13 +11,8 @@ import {
 } from "@slopstop/protocol";
 import { Result, type Schema } from "effect";
 import type { ActiveProjectCoordinator } from "./active-project-coordinator.js";
-export interface CanonicalProjectApplication {
-  activate(request: CanonicalProjectActivationRequest): Promise<CanonicalProjectActivationResult>;
-  switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
-  execute(request: CanonicalProjectCommandRequest): Promise<CanonicalProjectCommandResult>;
-  upgrade(request: ProjectUpgradeRequest): Promise<ProjectUpgradeResult>;
-  stop(): Promise<void>;
-}
+/** The coordinator's surface, with every result validated before it leaves the harness. */
+export type CanonicalProjectApplication = ActiveProjectCoordinator;
 export class CanonicalProjectApplicationError extends Error {
   override readonly name = "CanonicalProjectApplicationError";
   constructor() {
@@ -96,6 +85,7 @@ export function createCanonicalProjectApplication(
         await coordinator.upgrade(request),
         (result) => result.request.projectId === request.projectId,
       ),
+    holdsProject: () => coordinator.holdsProject?.() ?? true,
     stop: () => coordinator.stop(),
   };
 }

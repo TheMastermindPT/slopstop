@@ -46,6 +46,7 @@ const title = "discards a failed upgrade before answering and upgrades on retry"
 const timeout = { timeout: projectStorageIntegrationTimeout };
 const busy = {
   status: "unavailable",
+  reason: "busy",
   message: "Project Storage is busy; the upgrade can be retried.",
 } as const;
 

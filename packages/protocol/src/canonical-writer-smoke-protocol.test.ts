@@ -221,7 +221,7 @@ describe.each(envelopes)("$name closed envelope", ({ schema, value }) => {
     expect(acceptsStrict(DesktopMessageSchema, value)).toBe(false);
     expect(acceptsStrict(HarnessMessageSchema, value)).toBe(false);
     const metadata = {
-      protocolVersion: 6,
+      protocolVersion: 7,
       messageId: correlation.requestId,
       sentAt: "2026-09-05T12:00:00.000Z",
       payload: value,

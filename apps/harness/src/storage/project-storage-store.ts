@@ -21,6 +21,7 @@ import type {
 } from "../project-storage-application.js";
 import { projectStorageCreateRequestFingerprintInput } from "./project-storage-create-request.js";
 import {
+  openingReleaseFailedMessage,
   ProjectStorageApplicationClientInitializationError,
   ProjectStorageBrokenError,
   ProjectStorageUnavailableError,
@@ -142,7 +143,7 @@ type ProjectStorageOperationResult =
 
 function shutdownOperationFailure(error: unknown): unknown {
   return error instanceof ProjectStorageBrokenError &&
-    error.message === "Project Storage opening release failed." &&
+    error.message === openingReleaseFailedMessage &&
     error.cause !== undefined
     ? error.cause
     : error;
@@ -654,7 +655,7 @@ export function createProjectStorageOwner(
   return {
     acquireActivation,
     upgrade: async (request) => {
-      if (stopped) return stoppedOutcome();
+      if (stopped) return { ...stoppedOutcome(), reason: "unavailable" };
       return trackAdmittedOperation(() =>
         dependencies.locks.forProject(request.projectId, () =>
           runProjectStorageUpgrade(request, dependencies, lifecycle),
@@ -697,7 +698,7 @@ export function createProjectStorageOwner(
               try {
                 await classified.session.close();
               } catch (error) {
-                throw new ProjectStorageBrokenError("Project Storage opening release failed.", {
+                throw new ProjectStorageBrokenError(openingReleaseFailedMessage, {
                   cause: error,
                 });
               }

@@ -16,6 +16,7 @@ import {
   CanonicalProjectSwitchResultSchema,
   decodeStrict,
   type ProjectId,
+  projectAvailabilityMessages,
 } from "@slopstop/protocol";
 import { Deferred, Effect } from "effect";
 import {
@@ -49,6 +50,11 @@ export interface ActiveProjectCoordinator {
   switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
   execute(request: CanonicalProjectCommandRequest): Promise<CanonicalProjectCommandResult>;
   upgrade(request: ProjectUpgradeRequest): Promise<ProjectUpgradeResult>;
+  /**
+   * Whether a Project is held or being activated or released; false while inactive or stopped.
+   * A coordinator without it is treated as holding one.
+   */
+  holdsProject?(): boolean;
   stop(): Promise<void>;
 }
 /** The coordinator plus a queued view of the Project it holds, for owners outside its queue. */
@@ -173,7 +179,7 @@ const commandDiagnostics = {
   },
   "coordinator-unavailable": {
     code: "PROJECT_COORDINATOR_UNAVAILABLE",
-    message: "Canonical Project coordination is unavailable.",
+    message: projectAvailabilityMessages.coordinatorUnavailable,
     retryable: false,
   },
 } as const;
@@ -286,7 +292,7 @@ function nonReadyResult(
         request,
         "unavailable",
         "PROJECT_STORAGE_UNAVAILABLE",
-        "Project Storage is unavailable.",
+        projectAvailabilityMessages.storageUnavailable,
         true,
       );
     case "broken":
@@ -326,7 +332,7 @@ function activationRejection(
       request,
       "unavailable",
       "PROJECT_COORDINATOR_UNAVAILABLE",
-      "Canonical Project coordination is unavailable.",
+      projectAvailabilityMessages.coordinatorUnavailable,
     );
   if (state.status !== "inactive")
     return activationFailure(
@@ -669,6 +675,7 @@ export function createActiveProjectCoordinator(
         if (state.status !== "inactive") return coordinatorUpgradeRefusal(request, "holding");
         return projectUpgradeResult(request, await dependencies.storage.upgrade(request));
       }),
+    holdsProject: () => state.status !== "inactive" && state.status !== "stopped",
     stop: stopOnce,
   };
 }

@@ -287,14 +287,15 @@ describe("HarnessSupervisor", () => {
     expect(serializedLogs).not.toContain("secret-token");
   });
 
-  it("removes child process observers on stop and exit", () => {
+  it("removes child process observers on stop, the forwarder once stdout ends", () => {
     vi.useFakeTimers();
     const stoppedChild = new FakeChild();
     const stoppedSupervisor = supervisorWith([stoppedChild]);
     stoppedSupervisor.start();
 
     void stoppedSupervisor.stop();
-    expect(stoppedChild.stdout?.listenerCount("data")).toBe(0);
+    // Only the upgrade-line forwarder stays on stdout until its stdout ends.
+    expect(stoppedChild.stdout?.listenerCount("data")).toBe(1);
     expect(stoppedChild.stderr?.listenerCount("data")).toBe(0);
     expect(stoppedChild.listenerCount("error")).toBe(1);
     vi.mocked(logger.info).mockClear();
@@ -303,12 +304,19 @@ describe("HarnessSupervisor", () => {
     stoppedChild.stderr?.emit("data", Buffer.from("secret-token"));
     expect(logger.info).not.toHaveBeenCalled();
     expect(logger.error).not.toHaveBeenCalled();
+    stoppedChild.emit("exit", 0);
+    stoppedChild.stdout?.emit("end");
+    expect(stoppedChild.stdout?.listenerCount("data")).toBe(0);
+  });
 
+  it("removes child process observers on exit, the forwarder once stdout ends", () => {
     const exitedChild = new FakeChild();
     const exitedSupervisor = supervisorWith([exitedChild]);
     exitedSupervisor.start();
     expect(exitedChild.listenerCount("error")).toBe(1);
     exitedChild.emit("exit", 0);
+    expect(exitedChild.stdout?.listenerCount("data")).toBe(1);
+    exitedChild.stdout?.emit("end");
     expect(exitedChild.stdout?.listenerCount("data")).toBe(0);
     expect(exitedChild.stderr?.listenerCount("data")).toBe(0);
     expect(exitedChild.listenerCount("error")).toBe(0);
@@ -991,6 +999,7 @@ describe("harness upgrade log lines", () => {
     const chunks = chunksOf(text);
     expect(chunks.every((chunk) => !chunk.toString().endsWith("\n"))).toBe(true);
     for (const chunk of chunks) child.stdout?.emit("data", chunk);
+    child.stdout?.emit("end");
     child.emit("exit", 0);
 
     expect(recorded.filter((entry) => entry[2] === observation)).toEqual(
@@ -1015,6 +1024,94 @@ describe("harness upgrade log lines", () => {
       ["error", { exitCode: 0, attempt: 1 }, "Harness process exited."],
     ]);
   });
+
+  it("forwards upgrade lines written during shutdown until stdout ends", () => {
+    vi.useFakeTimers();
+    const recorded = recordLogCalls();
+    const child = new FakeChild();
+    const supervisor = supervisorWith([child]);
+    supervisor.start();
+    void supervisor.stop();
+    child.stdout?.emit(
+      "data",
+      Buffer.from(`${json(abandoned("interrupted"))}
+`),
+    );
+    child.stderr?.emit("data", Buffer.from("secret-token"));
+    child.emit("exit", 0);
+    child.stdout?.emit("end");
+    child.stdout?.emit(
+      "data",
+      Buffer.from(`${json(abandoned("failed"))}
+`),
+    );
+
+    expect(recorded.filter((entry) => entry[2] !== "Harness process exited.")).toEqual([
+      forwarded(abandoned("interrupted")),
+    ]);
+    expect(child.stdout?.listenerCount("data")).toBe(0);
+  });
+
+  it("forwards an upgrade line that arrives after exit until stdout ends", () => {
+    const recorded = recordLogCalls();
+    const child = new FakeChild();
+    supervisorWith([child]).start();
+    child.emit("exit", 0);
+    child.stdout?.emit(
+      "data",
+      Buffer.from(`${json(abandoned("interrupted"))}
+`),
+    );
+    child.stdout?.emit("end");
+    child.stdout?.emit(
+      "data",
+      Buffer.from(`${json(abandoned("failed"))}
+`),
+    );
+
+    expect(recorded.filter((entry) => entry[2] === "Harness upgrade event.")).toEqual([
+      forwarded(abandoned("interrupted")),
+    ]);
+    expect(child.stdout?.listenerCount("data")).toBe(0);
+  });
+
+  it("stops forwarding when a stopping child never exits", async () => {
+    vi.useFakeTimers();
+    const child = new FakeChild();
+    const supervisor = supervisorWith([child]);
+    supervisor.start();
+    const stopped = supervisor.stop().catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(await stopped).toEqual(new Error("Harness shutdown timed out."));
+    expect(child.stdout?.listenerCount("data")).toBe(0);
+  });
+
+  it.for(["end", "close"] as const)(
+    "keeps stderr logging and the error listener when stdout %s arrives before exit",
+    (event) => {
+      const recorded = recordLogCalls();
+      const child = new FakeChild();
+      supervisorWith([child]).start();
+      child.stdout?.emit(event);
+      expect(child.stdout?.listenerCount("data")).toBe(0);
+      expect(child.listenerCount("error")).toBe(1);
+      child.stderr?.emit("data", Buffer.from("err"));
+      expect(() => child.emit("error", new Error("late failure"))).not.toThrow();
+      child.stdout?.emit(
+        "data",
+        Buffer.from(`${json(abandoned("failed"))}
+`),
+      );
+      expect(recorded.filter((entry) => entry[2] !== "Harness process exited.")).toEqual([
+        ["error", { attempt: 1, stream: "stderr", bytes: 3 }, observation],
+        [
+          "error",
+          { attempt: 1, code: "HARNESS_PROCESS_ERROR" },
+          "Harness process reported a fatal error.",
+        ],
+      ]);
+    },
+  );
 
   it("rejects an upgrade line whose time is no date", () => {
     const recorded = recordLogCalls();

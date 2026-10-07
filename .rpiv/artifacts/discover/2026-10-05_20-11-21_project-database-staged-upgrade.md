@@ -9,9 +9,10 @@ tags: [intent, frd, storage, migration, conversation, c1-0, adr-0005]
 status: complete
 register: plain
 consensus: confirmed
-last_updated: 2026-10-05T20:11:21+0100
+last_updated: 2026-10-07T20:12:32+0100
 last_updated_by: Pedro Mesquita
-content_hash: d45f5d9c6f63fdfd7cca2e00d6197299522aa2568bae31e3a1c0155165b21105
+last_updated_note: "Follow-up appended: Q49 limits Try again to retryable rows."
+content_hash: 7ed5090f8706fdbb9d30c50a576bb11285589658bc903eb7ec53eef5277d15fb
 ---
 
 # FRD: Automatic staged upgrade of an existing Project database (Conversation C1-0)
@@ -178,3 +179,7 @@ A harness-side upgrade step inside Project activation (`storage.acquireActivatio
 - `.rpiv/artifacts/handoffs/2026-10-05_conversation-c1-local-save-brief.md`
 - `docs/adr/0005-storage-lifecycle-and-recovery.md`, `docs/adr/0006-physical-persistence-layout.md`, `docs/adr/0013-effect-reconciliation-and-recovery-journal.md`
 - `.rpiv/artifacts/designs/2026-08-31_16-37-32_project-storage-opening.md`
+
+## Follow-up
+
+- **2026-10-07, C1-0 S5 (user decision Q49, from `.rpiv/artifacts/reviews/2026-10-07_16-47-49_2a19d40-e1c0a99-c1-0-staged-upgrade.md`):** FR7/FR8's "Tentar outra vez" after every failure before the switch is narrowed: the window offers "Try again" only when the failure's diagnostic row is retryable (the same request can succeed unchanged). A non-retryable failure shows its reason and reference code without it.

@@ -86,26 +86,64 @@ function startStop(stop: () => Promise<void> | undefined): Effect.Effect<StopFai
   );
 }
 
-// Storage stops only after canonical release succeeds (a failed release may still hold
-// it); the shared application database stops only after Storage stopped and the listing
-// drained, so a withheld Storage keeps it alive.
+// While a Project is held, Storage stops only after canonical release succeeds (a failed
+// release may still hold it). While none is held, Storage stops together with the canonical
+// application, so a running upgrade meets the owner stop instead of finishing first. The
+// shared application database stops only after Storage stopped and the listing drained, so a
+// withheld Storage keeps it alive.
+type StorageStopOutcome = Readonly<{ withheld: boolean; failures: StopFailures }>;
+
+/** Whether a Project is held; a query that throws counts as held and is reported. */
+function heldProject(
+  options: HarnessRuntimeOptions,
+): Readonly<{ held: boolean; failures: StopFailures }> {
+  try {
+    return { held: options.canonicalProjectApplication.holdsProject?.() ?? true, failures: [] };
+  } catch (error) {
+    return { held: true, failures: [error] };
+  }
+}
+
+/**
+ * Stops the canonical application and Storage in the order the held Project allows. With no
+ * Project held, Storage stops at once and its own result alone decides whether the shared
+ * application database may stop; a canonical failure is still reported.
+ */
+function stopCanonicalThenStorage(
+  options: HarnessRuntimeOptions,
+): Effect.Effect<StorageStopOutcome> {
+  const query = heldProject(options);
+  const canonicalStop = startStop(() => options.canonicalProjectApplication.stop());
+  const canonical = Effect.map(canonicalStop, (failures) => [...query.failures, ...failures]);
+  const storage = Effect.map(
+    Effect.suspend(() => startStop(() => options.projectStorageApplication.stop())),
+    (failures) => ({ withheld: failures.length > 0, failures }),
+  );
+  if (query.held) {
+    return Effect.flatMap(canonicalStop, (failures) =>
+      failures.length > 0
+        ? Effect.succeed({ withheld: true, failures: [...query.failures, ...failures] })
+        : Effect.map(storage, (stopped) => ({
+            withheld: stopped.withheld,
+            failures: [...query.failures, ...stopped.failures],
+          })),
+    );
+  }
+  return Effect.map(
+    Effect.all([canonical, storage], { concurrency: "unbounded" }),
+    ([canonicalFailures, stopped]) => ({
+      withheld: stopped.withheld,
+      failures: [...canonicalFailures, ...stopped.failures],
+    }),
+  );
+}
+
 function shutdownAfterIntake(
   options: HarnessRuntimeOptions,
   intakeFailures: StopFailures,
 ): Effect.Effect<void, unknown> {
-  const canonical = startStop(() => options.canonicalProjectApplication.stop());
+  const storage = stopCanonicalThenStorage(options);
   const listing = startStop(() => options.projectListing?.stop());
-  const storage = Effect.flatMap(canonical, (failures) =>
-    failures.length > 0
-      ? Effect.succeed({ withheld: true, failures })
-      : Effect.map(
-          Effect.suspend(() => startStop(() => options.projectStorageApplication.stop())),
-          (storageFailures) => ({
-            withheld: storageFailures.length > 0,
-            failures: storageFailures,
-          }),
-        ),
-  );
   return Effect.gen(function* () {
     const [storageOutcome, listingFailures] = yield* Effect.all([storage, listing], {
       concurrency: "unbounded",

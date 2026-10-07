@@ -3,7 +3,9 @@ import { lstat, mkdir, readdir } from "node:fs/promises";
 import path from "node:path";
 import {
   acceptsStrict,
+  decodeStrict,
   decodeStrictResult,
+  type ProjectId,
   ProjectIdSchema,
   ProjectStorageCreateRequestIdSchema,
   StorageGenerationIdSchema,
@@ -365,6 +367,19 @@ async function holdsOnlyGenerationFiles(entry: Dirent, directory: string): Promi
   );
 }
 
+/** A Project's root directory under the (resolved) application storage root. */
+export function projectRootPath(applicationStorageRoot: string, projectId: ProjectId): string {
+  return path.join(applicationStorageRoot, "projects", decodeStrict(ProjectIdSchema, projectId));
+}
+
+/**
+ * The only directory names an unfinished upgrade may leave in its Project root, in removal order;
+ * its discard proves and removes exactly these.
+ */
+export function upgradeOutputNames(targetGenerationId: string): readonly [string, string] {
+  return [`.staging-${targetGenerationId}`, targetGenerationId];
+}
+
 /**
  * Proves an unfinished upgrade's output: the target is no retained generation, every entry of the
  * Project root shaped like a generation in any letter case, other than the retained generations,
@@ -377,7 +392,7 @@ export async function upgradeOutputIsProven(input: {
   retainedGenerationIds: readonly string[];
 }): Promise<boolean> {
   if (input.retainedGenerationIds.includes(input.targetGenerationId)) return false;
-  const output = new Set([`.staging-${input.targetGenerationId}`, input.targetGenerationId]);
+  const output = new Set(upgradeOutputNames(input.targetGenerationId));
   for (const entry of await readdir(input.projectRoot, { withFileTypes: true })) {
     // Windows names are case-insensitive: a case variant would resolve to the output's path.
     if (!isGenerationShaped(entry.name.toLowerCase())) continue;
