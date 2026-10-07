@@ -1,0 +1,1220 @@
+{
+  "schema": 1,
+  "artifact": "2026-10-07_16-47-49_2a19d40-e1c0a99-c1-0-staged-upgrade.md",
+  "target": "2a19d40..e1c0a99",
+  "createdAt": "2026-10-07T17:44:22.651Z",
+  "review": {
+    "date": "2026-10-07T16:47:49+0100",
+    "author": "Pedro Mesquita",
+    "repository": "slopstop",
+    "branch": "main",
+    "commit": "e1c0a99",
+    "review_type": "commit",
+    "scope": "2a19d40..e1c0a99 — C1-0 staged Project database upgrade (S1 ad823a0, S2 17cc797, S3a 110ea90, S3b 089bd90, S4 e1c0a99 + design/docs commits)",
+    "scope_strategy": "explicit-range",
+    "in_scope_files_count": 139,
+    "status": "ready",
+    "review_status": "complete",
+    "sections": [
+      "## Reconciliation Notes\n\n- **Depth:** rigorous (lane `rigorous`; reasons from lane.mjs: 7142 changed lines, 139 files, sensitive words ipc/preload/migration/schema). No `lane=` token passed.\n- **Scope:** explicit range `59f5de0..e1c0a99` (OLDEST^ of `2a19d40`), 16 commits; InScopeFiles = ChangedFiles (139 reviewable, 25 generated/media excluded), so the InScopeFiles pre-filter dropped 0 findings.\n- **Deterministic gates:** typecheck, Biome lint, dependency-cruiser (`dependency-cruiser.config.cjs`; preflight reported it unconfigured because of the non-default file name), Knip, jscpd + golden-SQL check all clean. CodeScene `analyze_change_set` quality gate passed (129 files; `project-storage-node-adapters.ts` stable 1098→1150 LOC under the recorded waiver; `sqlite-schema-scanner.ts` improved). SonarQube skipped: declared unused (AGENTS.md:35). Opengrep stock rules not run; an rg sink sweep over changed files stood in (hits only in test fixtures).\n- **Deviations from the skill contract (orchestrator choices):** the Discovery Map and the verbatim lens prompts were handed to Wave-2 agents as files to read (not pasted) to avoid 12× duplication; the two oversized shards (shard-7 453 KB, shard-11 411 KB) were split across 3 and 2 Quality agents by file subset; Security ran as 3 agents covering every shard (rigorous lane) instead of one per shard; small config/migration/css/test shards shared one Quality agent.\n- **Predicate-Trace (4a)** ran; its two rows not visible in Quality's table were added as Q49 and Q50.\n- **Cascade check:** the contradictory-predicate triple (window `needsUpgrade` accepts runtime-not-healthy, harness eligibility rejects it, the open flow depends on both) was evaluated and not promoted: the refusal is terminal, visible and prescribed by ADR 0005:44 (verifier: Q50 Weakened). No stranded-state or duplicate-processing triple fired.\n- **Precedent weighting:** Q19 bumped 🔵→🟡 (project-storage-store.ts has two precedent commits with 30-day follow-ups: 97b4767, daee118), then Weakened back to 🔵 by verification. No other file reached the ≥2 threshold.\n- **Peer-mirror:** most stem pairs were noise (harness storage files vs desktop project-storage bootstrap/bridge, snapshots, an e2e build script). The meaningful Diverged row (harness logger redaction narrower than the desktop logger) became Q10; no bump applied (not a dispatched invariant).\n- **Known and tracked, not re-reported:** #92, #93, #94 and the accepted residual risks in conversation-decisions.md §10 and §12. Q46 (2000 ms wall-clock assertion) is a different failure mode from the #94 timeouts.\n- **Verification:** 58 findings, 50 Verified, 8 Weakened (Q10, Q13, Q19, Q20, Q34, Q35 demoted one tier; Q49, Q50 already at 💭), 0 Falsified. Q12's second citation corrected to `apps/harness/src/storage/application-database-migration.ts:141`.\n- **Not run (by instruction):** e2e, launch-smoke, mutation and the full integration suite.",
+      "## Pattern Analysis\n\n| new file | peer | status | note |\n| --- | --- | --- | --- |\n| `apps/harness/src/harness-logger.ts` | `apps/desktop/src/main/logger.ts` | Diverged | 5 nested redact paths vs 12 top-level + nested fields; no bounded destination (Q10) |\n| `apps/desktop/src/main/project-entry-ipc.ts` | `apps/desktop/src/main/project-entry-bridge.ts` | Diverged | IPC decodes strictly and rejects the invoke on malformed input; bridge decodes per operation (intended double decode) |\n| `packages/protocol/src/harness-failure-protocol.ts` | `packages/protocol/src/protocol.ts` | Diverged | one message per failure code, but `HarnessFailurePayloadSchema` still accepts any message outside upgrade results (I3 context) |\n| `apps/harness/src/project-upgrade-outcome.ts` | `apps/desktop/src/renderer/add-repository/outcomes.ts` | Diverged | typed code-keyed rows, no generic fallback (intended) |\n| `apps/harness/src/node-active-project-coordinator.ts` | `apps/harness/src/active-project-coordinator.ts` | Diverged | binds real Node collaborators (expected) |",
+      "## Impact\n\nRequest path: `apps/desktop/src/renderer/use-project-upgrade.ts:53` → `apps/desktop/src/preload/preload.ts:47` → `apps/desktop/src/main/project-entry-ipc.ts:26` → `apps/desktop/src/main/project-entry-bridge.ts:172` → protocol `project.upgrade` → `apps/harness/src/harness-runtime.ts:195` → `apps/harness/src/active-project-coordinator.ts:670` → `apps/harness/src/storage/project-storage-store.ts:656` → `apps/harness/src/storage/project-storage-upgrade-pipeline.ts` → `apps/harness/src/storage/project-storage-upgrade-node-adapter.ts` → database worker.\n\nHigh fan-in files touched: `apps/harness/src/storage/local-libsql-worker-client.ts` (`withDatabase`, ~25 source + ~35 test consumers; new `readOnly` open — Q9), `apps/desktop/src/main/harness-pending-request.ts` (3 bridges), `packages/protocol/src/protocol.ts` / `packages/protocol/src/index.ts`, `apps/desktop/src/renderer/projects-workspace.module.css` (11 renderer files). The 0007 migration ships as a packaged resource; its head is pinned at `apps/harness/src/storage/application-database-migration.ts:60`. The preload key list including `upgradeProject` is pinned in `apps/desktop/src/main/package-smoke-verifier.ts:42` and `apps/desktop/tests/e2e/shell.test.ts:112` (precedent c417342 respected).",
+      "## Precedents\n\n| hash | subject | 30d-follow-ups | note |\n| --- | --- | --- | --- |\n| 52b5bc2 / 808c99a | remove a Project from the saved list (migration 0006, coordinator, preload) | 7058508, c417342 | guard outside the coordinator queue raced activation; preload list in the package smoke |\n| 37e3f83 | canonical generation two | 8a0658d, f7e02dd | pinned schema heads/table lists broke fixtures |\n| 97b4767 | project storage opening | 02fe5ed, 8a0658d | correlated request failure isolation across supervisor/runtime |\n| daee118 | application.db authority and Effect migration | 18d9761, 32c52fa, f4e83c8, 689f3b9, c1ea344 | \"observed before it exists\" ordering, verification outside the transaction, owner-stop hang |\n| 9be86e4 | database worker on node:sqlite | — | Windows file locks; long native suites in the native-long project |\n\nComposite lessons applied: ordering between declare/exists and stop/start (I1, Q38); degrade never hides broken (I2/Q11, standing decision); recovery tests must compare with a pre-crash baseline (Q31–Q34); preload list in package smoke (respected); long native suites registered (respected).",
+      "## Spec Conformance\n\nno linked issue found (searched: commit messages in range — only follow-up issues #92/#93 are referenced, not implemented specs; no PR, branch is main). rpiv contract conformance: run /rpiv:validate <design> 2a19d40..e1c0a99 for the four C1-0 designs.",
+      "## Recommendation\n\nNo 🔴. The data-safety core holds: every ADR 0005/0006 amendment claim matches the code, and the security lenses found no reachable sink. The 🟡 items are of three kinds:\n\n1. **Shutdown and diagnostics (I1, Q4, Q7):** decide what a quit during an upgrade should do; today it is always a kill and the ADR's \"owner stop\" branch is dead in production.\n2. **Degrade hides busy (I2, Q11):** a direct violation of the standing decision degrade-distinguishes-broken; small, red-first fix.\n3. **Missing proof of ADR rules (Q9, Q38, Q39) and small authority gaps (Q8, Q14, Q18, I3):** add the tests and checks so a future change cannot silently break ordering, read-only opens or the plain-open rule.\n\nThe 🔵 items are test-helper duplication, weak assertions and minor hygiene; the 💭 items (Q49 Try again vs retryable flag, Q50 repeated refused upgrade) ask whether design F3 still fits now the rows exist."
+    ]
+  },
+  "findings": [
+    {
+      "id": "I1",
+      "kind": "dr",
+      "lens": "I",
+      "title": "A quit during an upgrade can never stop it cooperatively; the desktop stops forwarding its diagnostics first [cascade: masking]",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/active-project-coordinator.ts",
+          "startLine": 670,
+          "quoted": [
+            "        return projectUpgradeResult(request, await dependencies.storage.upgrade(request));"
+          ]
+        },
+        {
+          "path": "apps/harness/src/harness-runtime.ts",
+          "startLine": 96,
+          "quoted": [
+            "  const canonical = startStop(() => options.canonicalProjectApplication.stop());"
+          ]
+        },
+        {
+          "path": "apps/harness/src/harness-runtime.ts",
+          "startLine": 102,
+          "quoted": [
+            "          Effect.suspend(() => startStop(() => options.projectStorageApplication.stop())),"
+          ]
+        },
+        {
+          "path": "apps/harness/src/active-project-coordinator.ts",
+          "startLine": 608,
+          "quoted": ["  const stopOnce = retryableAttempt(() => enqueue(stop));"]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-pipeline.ts",
+          "startLine": 408,
+          "quoted": ["    if (!isRunning(pipeline.lifecycle)) return;"]
+        },
+        {
+          "path": "apps/desktop/src/main/harness-supervisor.ts",
+          "startLine": 367,
+          "quoted": ["      lines.end();"]
+        }
+      ],
+      "why": "Constituents Q7+Q13+Q4. The runtime stops the coordinator first (harness-runtime.ts:96), whose stop is queued behind the running upgrade's lifecycle permit (active-project-coordinator.ts:608, :670); the Storage owner, the only source of the cooperative stop signal, stops only afterwards (harness-runtime.ts:102). So the pipeline's assertRunning guards and the skip-discard-when-stopping branch (project-storage-upgrade-pipeline.ts:109, :408) are dead in production, the ADR 0005:47 'owner stop' interruption cannot happen, and the desktop ends the log forwarder (harness-supervisor.ts:116 -> :367) and kills the child after 5 s, so an upgrade still running at quit becomes 'interrupted' and its abandoned/discard-failed lines are lost. Data stays safe (declare-before-disk, discard at next activation).",
+      "fix": "Decide the intended quit behaviour: either signal cancellation to the Storage owner before awaiting the coordinator permit (and prove the post-switch answer, see Q13), or document that quit-during-upgrade is always an interruption and amend ADR 0005:47; keep the stdout forwarder open until the child exits (Q4).",
+      "fp": "9125961e3fbff252"
+    },
+    {
+      "id": "I2",
+      "kind": "dr",
+      "lens": "I",
+      "title": "A busy registry during the unfinished-upgrade lookup is silently read as 'no unfinished upgrade' [cascade: contradictory-design]",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-node-adapter.ts",
+          "startLine": 542,
+          "quoted": ["    return undefined;"]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-recovery.ts",
+          "startLine": 117,
+          "quoted": ["  if (upgrade === undefined) return \"none\";"]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-recovery.ts",
+          "startLine": 105,
+          "quoted": ["  const kind = isBusyStorageError({ error: cause }) ? \"busy\" : \"broken\";"]
+        }
+      ],
+      "why": "Constituents Q11+Q19. The catch in unfinishedUpgradeRows (project-storage-upgrade-node-adapter.ts:539-542) rethrows only client-initialization errors, so a transient SQLITE_BUSY becomes undefined -> 'none' (project-storage-upgrade-recovery.ts:117) with no discard-failed(busy) diagnostic; the following opening sees the target staging row and answers safe mode recovery-required (project-storage-opening.ts:65-71). The same busy one statement later is classified busy (recovery.ts:105), answers retryable unavailable and is diagnosed. Violates the standing decision degrade-distinguishes-broken and the ADR 0005:48 diagnostic rule; one-shot because the next activation retries.",
+      "fix": "Classify the marker-lookup failure like the discard steps: busy -> ProjectStorageUnavailableError plus discard-failed(busy), anything else -> broken; add a red-first test with a held registry write lock during findUnfinished.",
+      "fp": "756dfa358751a768"
+    },
+    {
+      "id": "I3",
+      "kind": "dr",
+      "lens": "I",
+      "title": "Upgrade diagnostic rows are protocol-owned, but activation and the bridge hand-copy the same texts, and the pin drops the busy text",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/project-upgrade-protocol.ts",
+          "startLine": 78,
+          "quoted": ["    message: Schema.Literal(row.message),"]
+        },
+        {
+          "path": "apps/harness/src/project-upgrade-outcome.ts",
+          "startLine": 25,
+          "quoted": [
+            "      ? { status: \"unavailable\", request, diagnostic: rows.storageUnavailable }"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/main/project-entry-bridge.ts",
+          "startLine": 104,
+          "quoted": ["          message: \"The Project connection is unavailable.\","]
+        }
+      ],
+      "why": "Constituents Q26+Q27+Q28. The upgrade schema pins each message as a literal (project-upgrade-protocol.ts:78) while the activation schema keeps free text (canonical-project-protocol.ts:130). The coordinator (active-project-coordinator.ts:176, :289) and the bridge (project-entry-bridge.ts:104) hand-copy the same texts (shared-vocab-union, AGENTS.md:96), and the pin forces project-upgrade-outcome.ts:25 to drop the pipeline's busy text (project-storage-upgrade-pipeline.ts:434). Texts match today; the risk is drift and the lost busy nuance.",
+      "fix": "Make the protocol rows the single owner: activation/switch producers and the bridge read projectUpgradeDiagnostics (or a shared vocabulary module) instead of literals; decide whether the busy 'can be retried' text is a row of its own.",
+      "fp": "e3a7ec05111421dd"
+    },
+    {
+      "id": "Q1",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "storage_upgrades identity columns have no UUID / sha256 CHECKs, unlike storage_generations",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/drizzle/application/0007_storage_upgrades.sql",
+          "startLine": 6,
+          "quoted": ["\t`source_generation_id` text NOT NULL,"]
+        }
+      ],
+      "fix": "Add the same lowercase-UUID and sha256 CHECK constraints the sibling table uses (0000_gray_eddie_brock.sql:29-134) so a malformed marker is rejected on write, not only on the strict read decode.",
+      "fp": "d79071c8b56cbb95"
+    },
+    {
+      "id": "Q2",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "No index serves the completed-by-storage_id and in-progress-by-project_id marker lookups",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/drizzle/application/0007_storage_upgrades.sql",
+          "startLine": 21,
+          "quoted": [
+            "CREATE UNIQUE INDEX `storage_upgrades_one_in_progress_uq` ON `storage_upgrades` (`storage_id`) WHERE \"storage_upgrades\".\"state\" = 'in-progress';--> statement-breakpoint"
+          ]
+        }
+      ],
+      "fix": "Add an index on (project_id, state) or make the in-progress lookup use storage_id; low priority while the table holds a handful of rows.",
+      "fp": "e80f8f14fb8829d2"
+    },
+    {
+      "id": "Q3",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Recovery module is a Stryker target but its unproven/busy branches have no test in the mutation set",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "stryker.project-storage.config.json",
+          "startLine": 12,
+          "quoted": ["    \"apps/harness/src/storage/project-storage-upgrade-recovery.ts\""]
+        }
+      ],
+      "fix": "Add unit cases for the unproven and busy discard branches to a test the mutation config includes, or drop the module from stryker.project-storage.config.json until it has one.",
+      "fp": "57a998a969a8a48d"
+    },
+    {
+      "id": "Q4",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Harness log-line forwarder is closed before the child is stopped [subsumed-by I1]",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/harness-supervisor.ts",
+          "startLine": 367,
+          "quoted": ["      lines.end();"]
+        },
+        {
+          "path": "apps/desktop/src/main/harness-supervisor.ts",
+          "startLine": 116,
+          "quoted": ["    this.#removeChildObservation(child);"]
+        }
+      ],
+      "why": "stop() removes the child observation (harness-supervisor.ts:116), which ends the forwarder (:367), before #stopChild (:118); every upgrade line the harness writes during the 5 s shutdown grace is dropped without a HARNESS_LOG_LINE_* diagnostic, and a buffered partial line is reported INCOMPLETE although the process has not exited.",
+      "fix": "End the forwarder when the child exits (or after #stopChild settles), and add a supervisor test that a line written during the grace period is forwarded.",
+      "fp": "b2dbc22bceac90a9"
+    },
+    {
+      "id": "Q5",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Forwarded harness upgrade log entries omit the process attempt",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/harness-log-lines.ts",
+          "startLine": 43,
+          "quoted": [
+            "  const entry = { source: \"harness\", ...fields, harnessTime: new Date(time).toISOString() };"
+          ]
+        }
+      ],
+      "fix": "Include attempt in the forwarded entry like the forwarder's other entries.",
+      "fp": "a3e5722ff4cda7f1"
+    },
+    {
+      "id": "Q6",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Remove and Add buttons give busy/blocked announcements opposite priority",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/remove-from-list/remove-button.tsx",
+          "startLine": 38,
+          "quoted": ["          if (block !== undefined) props.announce(block.announcement);"]
+        }
+      ],
+      "fix": "Use the same order (busy first) in both buttons and give the busy-only Remove state an aria-describedby reason.",
+      "fp": "1d64e3f9bf640fac"
+    },
+    {
+      "id": "Q7",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "The whole staged upgrade runs under the coordinator lifecycle permit, so shutdown queues behind it [subsumed-by I1]",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/active-project-coordinator.ts",
+          "startLine": 670,
+          "quoted": [
+            "        return projectUpgradeResult(request, await dependencies.storage.upgrade(request));"
+          ]
+        }
+      ],
+      "why": "Coordinator stop (active-project-coordinator.ts:608) is enqueued behind the upgrade at :670, and the Storage owner stop runs only after that (harness-runtime.ts:96-102), so the cooperative stop path of the pipeline is unreachable in production; see I1.",
+      "fix": "See I1.",
+      "fp": "4b424cf419f354d9"
+    },
+    {
+      "id": "Q8",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Registry integrity rule binds the in-progress marker to its Storage by storage_id only, not project_id",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/application-database-migration.ts",
+          "startLine": 152,
+          "quoted": [
+            "      WHERE (u.state = 'in-progress' AND (r.active_generation_id IS NOT u.source_generation_id"
+          ]
+        }
+      ],
+      "why": "application-database-migration.ts:146-153 checks the marker against the registration and generations by storage_id, but the unfinished-upgrade lookup reads markers by project_id (project-storage-upgrade-node-adapter.ts:535). An in-progress marker whose project_id disagrees passes the authority check as healthy, is never found or discarded, and keeps the Project's opening recovery-required with no discard-failed diagnostic (requires an externally altered registry).",
+      "fix": "Add u.project_id = r.project_id (and location) to the relationship rule so a mismatched marker answers REGISTRY_CORRUPT, with a red-first registry test.",
+      "fp": "dc2b942f74a0631c"
+    },
+    {
+      "id": "Q9",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "The new read-only database open has no test that it refuses writes",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/local-libsql-worker-client.ts",
+          "startLine": 213,
+          "quoted": ["    db = new DatabaseSync(path, { timeout: 0, readOnly });"]
+        }
+      ],
+      "why": "The readOnly flag (local-libsql-worker-client.ts:213) carries the ADR 0005 guarantee that backup, source and staged reads cannot modify files; the only readOnly test (project-storage-upgrade-verification.integration.test.ts:29) only reads, so opening read-write would pass every test.",
+      "fix": "Add an integration test that a withDatabase(..., { readOnly: true }) client rejects a write and does not create a missing file.",
+      "fp": "5fd70ffb4ec7f19a"
+    },
+    {
+      "id": "Q10",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Harness logger redacts 5 nested fields only, versus 12 top-level and nested fields on the desktop",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/harness/src/harness-logger.ts",
+          "startLine": 9,
+          "quoted": [
+            "      paths: [\"*.apiKey\", \"*.authorization\", \"*.password\", \"*.secret\", \"*.token\"],"
+          ]
+        }
+      ],
+      "verifyNote": "Harness stdout reaches the persisted desktop log only as strictly decoded upgrade lines cut at 16 KiB (harness-log-lines.ts:34, :11); other output is logged only as a byte count (harness-supervisor.ts:344), so today no unredacted field can reach a log file.",
+      "fix": "Share the desktop's sensitive-field list (top-level and nested) with the harness logger and add a redaction test (Q44), so the logger is safe once it carries more than upgrade events.",
+      "fp": "7efa2ed07668f0f5"
+    },
+    {
+      "id": "Q11",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "unfinishedUpgradeRows swallows every registry read error except client initialization [subsumed-by I2]",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-node-adapter.ts",
+          "startLine": 542,
+          "quoted": ["    return undefined;"]
+        }
+      ],
+      "why": "Violates degrade-distinguishes-broken (.rpiv/decisions/degrade-distinguishes-broken.md:5): a busy or broken read becomes 'no unfinished upgrade' with no diagnostic, and the busy-registry case has no test (project-storage-upgrade-steps.integration.test.ts covers undecodable, duplicate and client-init only).",
+      "fix": "See I2.",
+      "fp": "57896b65beb01cbc"
+    },
+    {
+      "id": "Q12",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "The storage_upgrades table-existence probe is inlined in three places despite the hasUpgradeTable helper",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-node-adapter.ts",
+          "startLine": 642,
+          "quoted": [
+            "    \"SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'storage_upgrades'\","
+          ]
+        },
+        {
+          "path": "apps/harness/src/storage/application-database-migration.ts",
+          "startLine": 141,
+          "quoted": ["  const table = await transaction.execute("]
+        }
+      ],
+      "fix": "Call hasUpgradeTable at :642 and :670 and export one owner that application-database-migration.ts also uses (shared-vocab-union).",
+      "fp": "5bd777f2852946fa"
+    },
+    {
+      "id": "Q13",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "An owner stop right after the switch commits would answer 'unavailable' although the registration already moved [subsumed-by I1]",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-pipeline.ts",
+          "startLine": 379,
+          "quoted": [
+            "      () => dependencies.upgrades.switchActive(upgrade, dependencies.clock.now()),"
+          ]
+        }
+      ],
+      "verifyNote": "In production the owner cannot stop mid-upgrade (harness-runtime.ts:98-102 stops storage only after the coordinator permit is released); only tests that stop the owner directly reach this path.",
+      "why": "If I1 is fixed by stopping Storage first, the post-run assertRunning (project-storage-upgrade-pipeline.ts:109) would turn a committed switch into UpgradeSwitchFailed -> 'unavailable', and no test covers it.",
+      "fp": "1f2611f983c08d80"
+    },
+    {
+      "id": "Q14",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "An opening-release failure during eligibility becomes HARNESS_INTERNAL_FAILURE instead of broken",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-pipeline.ts",
+          "startLine": 166,
+          "quoted": ["  await classified.session.close();"]
+        }
+      ],
+      "why": "session.close() throws an AggregateError (project-storage-opening.ts:409) that is neither busy nor ProjectStorageBrokenError, so stepFailureOutcome rethrows it (project-storage-upgrade-pipeline.ts:438) and the runtime sends HARNESS_INTERNAL_FAILURE; the peer open path wraps the same failure as ProjectStorageBrokenError('Project Storage opening release failed.') (project-storage-store.ts:697-703). No upgrade test injects this failure.",
+      "fix": "Wrap the eligibility release failure the same way as the open path and add a fault test.",
+      "fp": "0d713af10d9f4b98"
+    },
+    {
+      "id": "Q15",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "sealTarget writes, verifies and renames in one step, without the create path's per-step checkpoints",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-pipeline.ts",
+          "startLine": 244,
+          "quoted": [
+            "  await dependencies.files.writeFileExclusive(paths.staging.manifest, manifest);"
+          ]
+        }
+      ],
+      "fix": "Split into runWhileRunning steps with after-manifest-written / after-staging-verified / before-generation-rename checkpoints so those crash windows can be fault-injected.",
+      "fp": "8e0d2574ac02b0b7"
+    },
+    {
+      "id": "Q16",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Upgrade-output proof reads the Project root with no entry bound",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-filesystem-authority.ts",
+          "startLine": 381,
+          "quoted": [
+            "  for (const entry of await readdir(input.projectRoot, { withFileTypes: true })) {"
+          ]
+        }
+      ],
+      "fix": "Apply the same entry limits as the opening witness scan and answer unproven past them.",
+      "fp": "6ad648aa6d51ed36"
+    },
+    {
+      "id": "Q17",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "generationFileNames re-lists the names already held by reservedFileWitnesses",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-filesystem-authority.ts",
+          "startLine": 340,
+          "quoted": ["const generationFileNames = new Set(["]
+        }
+      ],
+      "fix": "Derive one list from the other so discard proof and opening cannot disagree on generation file names.",
+      "fp": "4cfcb4e374238196"
+    },
+    {
+      "id": "Q18",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Discard proof and removal build the upgrade-output names and Project root independently",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-filesystem-authority.ts",
+          "startLine": 380,
+          "quoted": [
+            "  const output = new Set([`.staging-${input.targetGenerationId}`, input.targetGenerationId]);"
+          ]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-file-adapter.ts",
+          "startLine": 237,
+          "quoted": [
+            "  for (const name of [`.staging-${output.targetGenerationId}`, output.targetGenerationId]) {"
+          ]
+        }
+      ],
+      "why": "Proof uses `.staging-<target>` / `<target>` under paths.forCreation(...).projectRoot (project-storage-filesystem-authority.ts:380, project-storage-upgrade-node-adapter.ts:592-593) while removal rebuilds both names (project-storage-file-adapter.ts:237) and the root (:258-262). Proof and delete must agree on exactly what is deleted; today they agree only by copy (shared-vocab-union, AGENTS.md:96).",
+      "fix": "Have one function produce the output paths and pass its result from the proof to the removal.",
+      "fp": "235360edbf03c7cc"
+    },
+    {
+      "id": "Q19",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Activation answers broken/unavailable when the unfinished-upgrade discard fails, while a plain open answers safe mode [precedent-weighted] [subsumed-by I2]",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-store.ts",
+          "startLine": 605,
+          "quoted": [
+            "          await discardUnfinishedUpgrade(request.projectId, \"interrupted\", dependencies);"
+          ]
+        }
+      ],
+      "verifyNote": "ADR 0005:47 says a plain opening does not discard and :50 says busy answers unavailable and authority faults answer broken, so the activation/opening split is the documented design.",
+      "fix": "Optional: add a test pinning both answers for the same Storage so the documented split cannot drift.",
+      "fp": "2b176471dc79db4e"
+    },
+    {
+      "id": "Q20",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "filesUnder records links as directories",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-fixture.ts",
+          "startLine": 324,
+          "quoted": ["    files[relative] = entry.isFile()"]
+        }
+      ],
+      "verifyNote": "Recursive readdir does not descend into a link, so replacing a non-empty directory with a junction still changes the snapshot; only an empty directory replaced by a link goes undetected.",
+      "why": "The storageSnapshot 'nothing changed' checks cannot detect an empty directory replaced by a junction; the sibling walker entriesOf uses lstat.",
+      "fp": "d2b590aa9414abea"
+    },
+    {
+      "id": "Q21",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Private expectReleased duplicates the exported fixture helper",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-recovery-fixture.ts",
+          "startLine": 66,
+          "quoted": ["async function expectReleased(directory: string): Promise<void> {"]
+        }
+      ],
+      "fix": "Import expectReleased from project-storage-upgrade-fixture.ts.",
+      "fp": "e0c989ee7e89f57a"
+    },
+    {
+      "id": "Q22",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Three directory walkers in the upgrade test cluster disagree on how links are recorded",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-recovery-fixture.ts",
+          "startLine": 25,
+          "quoted": ["export async function entriesOf({"]
+        }
+      ],
+      "fix": "Keep one exported walker (entriesOf) and use it in project-storage-upgrade-directories.integration.test.ts and storageSnapshot.",
+      "fp": "1f48932c7194a93f"
+    },
+    {
+      "id": "Q23",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "restartApplicationAuthority masks non-failure errors as undefined or a TypeError",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-faults.ts",
+          "startLine": 134,
+          "quoted": ["    return Reflect.get(error as object, \"failure\");"]
+        }
+      ],
+      "fix": "Rethrow errors that carry no failure field so the test shows the real cause.",
+      "fp": "d957eb6ae06a7b12"
+    },
+    {
+      "id": "Q24",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Runtime fixture cleanup skips the second owner and transport when the first stop rejects",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-upgrade-runtime-fixture.ts",
+          "startLine": 190,
+          "quoted": ["        await fixture.owner.stop();"]
+        }
+      ],
+      "fix": "Use Promise.allSettled or nested finally blocks for cleanup.",
+      "fp": "78264f635e4afb66"
+    },
+    {
+      "id": "Q25",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Kill peer hard-codes the attempt-1 ids owned by upgradeIds",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-peer.mjs",
+          "startLine": 32,
+          "quoted": [
+            "      generationId: () => decodeStrict(StorageGenerationIdSchema, id(\"000000000024\")),"
+          ]
+        }
+      ],
+      "fix": "Pass the ids to the peer via argv from upgradeIds.",
+      "fp": "378c1cee0d91c763"
+    },
+    {
+      "id": "Q26",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "The pipeline's busy 'can be retried' text never crosses the boundary [subsumed-by I3]",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/project-upgrade-protocol.ts",
+          "startLine": 47,
+          "quoted": ["    message: \"Project Storage is unavailable.\","]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-pipeline.ts",
+          "startLine": 434,
+          "quoted": [
+            "    return { status: \"unavailable\", message: projectStorageUpgradeBusyMessage };"
+          ]
+        }
+      ],
+      "fix": "See I3; also correct the doc comment that says the pipeline answers with these rows.",
+      "fp": "dae0f09733ee3234"
+    },
+    {
+      "id": "Q27",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Coordinator texts hand-copied beside the protocol rows [subsumed-by I3]",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/project-upgrade-protocol.ts",
+          "startLine": 52,
+          "quoted": ["    message: \"Canonical Project coordination is unavailable.\","]
+        },
+        {
+          "path": "apps/harness/src/active-project-coordinator.ts",
+          "startLine": 176,
+          "quoted": ["    message: \"Canonical Project coordination is unavailable.\","]
+        }
+      ],
+      "fix": "See I3.",
+      "fp": "c35b6b055b775bac"
+    },
+    {
+      "id": "Q28",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Bridge connection-lost text hand-copied beside rows.connectionLost [subsumed-by I3]",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/project-upgrade-protocol.ts",
+          "startLine": 57,
+          "quoted": ["    message: \"The Project connection is unavailable.\","]
+        },
+        {
+          "path": "apps/desktop/src/main/project-entry-bridge.ts",
+          "startLine": 104,
+          "quoted": ["          message: \"The Project connection is unavailable.\","]
+        }
+      ],
+      "fix": "See I3.",
+      "fp": "a5936f097fc7c851"
+    },
+    {
+      "id": "Q29",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "harnessFailureMessages is exported through a two-hop barrel",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/index.ts",
+          "startLine": 200,
+          "quoted": ["  harnessFailureMessages,"]
+        }
+      ],
+      "fix": "Export it from harness-failure-protocol.ts directly in packages/protocol/src/index.ts like the other submodules.",
+      "fp": "fcf6a33f67c11372"
+    },
+    {
+      "id": "Q30",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Throwing-diagnostics-port test never checks the successful-discard report reached the port",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-store.test.ts",
+          "startLine": 1001,
+          "quoted": ["    discarded.sink.failing = failing;"]
+        }
+      ],
+      "fix": "Assert discarded.events (or the throw count) in the non-failing run.",
+      "fp": "443d7691865e1af9"
+    },
+    {
+      "id": "Q31",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Busy-source-copy row compares the backup with itself",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-failure.integration.test.ts",
+          "startLine": 242,
+          "quoted": ["        ? await backupEntries({ root })"]
+        }
+      ],
+      "fix": "Capture backupEntries at the checkpoint, before the failed upgrade's discard, as capturingBackup does for discardedRows.",
+      "fp": "8764aba205989074"
+    },
+    {
+      "id": "Q32",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Source-changed-before-switch quarantine test checks only that the target directory exists",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-failure.integration.test.ts",
+          "startLine": 301,
+          "quoted": [
+            "      pathExists(path.join(generationPaths(root).project, upgradeIds.targetGenerationId)),"
+          ]
+        }
+      ],
+      "fix": "Snapshot target, staging and backup entries before and after and compare exactly.",
+      "fp": "3af4bf924be03e9b"
+    },
+    {
+      "id": "Q33",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Broken-source rows check only that the backup directory can be renamed",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-failure.integration.test.ts",
+          "startLine": 346,
+          "quoted": ["    await expectReleased({ directory: upgradePaths({ root }).backup });"]
+        }
+      ],
+      "fix": "Compare backup entries with a baseline captured at the checkpoint.",
+      "fp": "1e33a93aba14469f"
+    },
+    {
+      "id": "Q34",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Kill test's recovered-by-upgrade row does not check source and backup against the pre-kill baseline",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/registration-storage-upgrade-kill.integration.test.ts",
+          "startLine": 86,
+          "quoted": ["      if (point.firstCall === \"open\") {"]
+        }
+      ],
+      "verifyNote": "Release of the marker and target is implied by the retry: a second declare would hit the one-in-progress unique index and expectRetryUpgrades needs a read-write open on the new target; only the source bytes and the backup are unchecked against the pre-kill baseline.",
+      "fix": "Run expectDiscardedUpgrade (source hashes, backup entries) in the upgrade-first row too.",
+      "fp": "da12d1d163fc736b"
+    },
+    {
+      "id": "Q35",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Unproven-recovery refusal is matched with toMatchObject and an as-object cast",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-recovery.integration.test.ts",
+          "startLine": 198,
+          "quoted": ["        .toMatchObject(unproven.upgrade as object);"]
+        }
+      ],
+      "verifyNote": "The broken cases in the same file pin status and message; only the two notEligible cases are loose.",
+      "why": "Pins only the diagnostic code for the notEligible cases while the sibling test uses toEqual.",
+      "fp": "a9ed2b8df721ead5"
+    },
+    {
+      "id": "Q36",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Letter-case quarantine rows never assert the activation answer or exercise upgrade",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-recovery.integration.test.ts",
+          "startLine": 279,
+          "quoted": ["      const activation = await fixture.owner.acquireActivation(openRequest);"]
+        }
+      ],
+      "fix": "Assert the safe-mode recovery-required answer and add the same rows through fixture.upgrade.",
+      "fp": "fa2e512018587407"
+    },
+    {
+      "id": "Q37",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Retained-target case does not compare the rogue registry rows or the activation answer",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-recovery.integration.test.ts",
+          "startLine": 316,
+          "quoted": [
+            "      expect(await entriesOf({ directory: generationPaths(root).generation })).toEqual(retained);"
+          ]
+        }
+      ],
+      "fix": "Compare storage_upgrades and storage_generations rows before and after and assert the answer.",
+      "fp": "4b82bb2dad1aaa3f"
+    },
+    {
+      "id": "Q38",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "No test fails if staging starts before the backup is verified (ADR 0005:45 order)",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade.integration.test.ts",
+          "startLine": 449,
+          "quoted": [
+            "        if (checkpoint === \"after-upgrade-declared\") declared = await observeDeclared(root);"
+          ]
+        }
+      ],
+      "why": "Staging absence is observed only at after-upgrade-declared (project-storage-upgrade.integration.test.ts:449); nothing observes it at after-backup-copied/after-backup-verified and no test records step order, so moving stage ahead of verifyBackup in project-storage-upgrade-pipeline.ts would pass every test. 'Read back before any staging output exists' is a data-safety ordering rule of the ADR amendment.",
+      "fix": "Observe `.staging-<target>` absence at the backup checkpoints (or record checkpoint order) with a red-first reorder check.",
+      "fp": "e500e9e774b63e6f"
+    },
+    {
+      "id": "Q39",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "No test proves a plain open over an unfinished upgrade leaves it in place and answers recovery-required",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade.integration.test.ts",
+          "startLine": 785,
+          "quoted": ["      await expectMigrationRequiredOnSource(next.owner);"]
+        }
+      ],
+      "why": "ADR 0005:47 says a plain opening does not discard and answers safe mode with both databases recovery-required; project-storage-store.ts:679-707 implements it, but every unfinished-upgrade test reopens through acquireActivation or upgrade, so a change making open discard would pass.",
+      "fix": "Add an integration case: stopDuringUpgrade/killUpgradeAt, then owner.open, assert recovery-required for both databases and unchanged output, marker and rows.",
+      "fp": "15de17bc7344cc4f"
+    },
+    {
+      "id": "Q40",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "registryRows and sourceFileHashes redefined beside exported helpers",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade.integration.test.ts",
+          "startLine": 292,
+          "quoted": ["function registryRows(root: string, table: string) {"]
+        }
+      ],
+      "fix": "Import them from project-storage-upgrade-recovery-fixture.ts.",
+      "fp": "30954c4e1758142b"
+    },
+    {
+      "id": "Q41",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "entriesOf copied line for line into the directories test",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-directories.integration.test.ts",
+          "startLine": 100,
+          "quoted": ["async function entriesOf({ directory }: Readonly<{ directory: string }>) {"]
+        }
+      ],
+      "fix": "Import the exported entriesOf.",
+      "fp": "0cd1ba93332cb33a"
+    },
+    {
+      "id": "Q42",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Changed-source-createdAt check accepts any broken answer",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/registration-storage-upgrades.integration.test.ts",
+          "startLine": 140,
+          "quoted": [
+            "  expect.soft(await activationOf({ root }), \"changed source createdAt\").toMatchObject({"
+          ]
+        }
+      ],
+      "fix": "Pin the exact message with toEqual.",
+      "fp": "f7a65318211fecff"
+    },
+    {
+      "id": "Q43",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Second-completed-upgrade check accepts any broken answer",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/registration-storage-upgrades.integration.test.ts",
+          "startLine": 193,
+          "quoted": [
+            "  expect.soft(await activationOf({ root: secondRoot }), \"second completed\").toMatchObject({"
+          ]
+        }
+      ],
+      "fix": "Pin the exact message with toEqual.",
+      "fp": "ba9f1fa8c2e98778"
+    },
+    {
+      "id": "Q44",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Harness logger redaction has no test [subsumed-by Q10]",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/harness-logger.integration.test.ts",
+          "startLine": 37,
+          "quoted": [
+            "  const diagnostics = createUpgradeDiagnosticsLogger(createHarnessLogger(destination.stream));"
+          ]
+        }
+      ],
+      "fix": "Log a sensitive field and assert it is redacted.",
+      "fp": "9dd502b9d1055c52"
+    },
+    {
+      "id": "Q45",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Logger test depends on ambient SLOPSTOP_LOG_LEVEL",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/harness-logger.integration.test.ts",
+          "startLine": 40,
+          "quoted": ["  expect(destination.lines).toHaveLength(2);"]
+        }
+      ],
+      "fix": "Stub the env value in the test.",
+      "fp": "86d90a84076213bc"
+    },
+    {
+      "id": "Q46",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "Hard 2000 ms wall-clock assertion in the shared integration lane",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/registration-project-upgrade-timing.integration.test.ts",
+          "startLine": 22,
+          "quoted": ["    expect(elapsed).toBeLessThan(2000);"]
+        }
+      ],
+      "fix": "Move it to the native-long project or measure with a margin documented in the test; it is a failure mode distinct from the #94 timeouts.",
+      "fp": "1c40d650229db06b"
+    },
+    {
+      "id": "Q47",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "toHaveBeenCalled after awaiting the spy's own promise cannot fail (also :937, :975)",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/canonical-writer-package-smoke.integration.test.ts",
+          "startLine": 727,
+          "quoted": ["  expect(reached).toHaveBeenCalled();"]
+        }
+      ],
+      "fix": "Remove the redundant assertions or assert the call arguments.",
+      "fp": "9f71b0ff648cd5a5"
+    },
+    {
+      "id": "Q48",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "toHaveLength(15) checks an array the test built itself",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/protocol.test.ts",
+          "startLine": 942,
+          "quoted": ["    expect(results).toHaveLength(15);"]
+        }
+      ],
+      "fix": "Remove it; the toEqual at :929 already pins the table.",
+      "fp": "e7bb8bcc2938f57c"
+    },
+    {
+      "id": "Q49",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "'Try again' is shown for rows the protocol marks retryable:false",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/upgrade-problem.tsx",
+          "startLine": 25,
+          "quoted": ["      {status === \"refused\" ? null : ("]
+        }
+      ],
+      "verifyNote": "This is the explicit user decision F3 (.rpiv/artifacts/designs/2026-10-06_13-20-24_upgrade-request-and-window.md:100), restated in ADR 0005:46.",
+      "why": "upgrade-problem.tsx:25 is status-driven, so alreadyActive, coordinatorStopped (terminal: nothing resets 'stopped'), storageBroken and the harness-failure rows show 'Try again' although the protocol says the same request cannot succeed unchanged. Worth confirming F3 still holds now the rows exist.",
+      "fp": "b9baa38429df9850"
+    },
+    {
+      "id": "Q50",
+      "kind": "dr",
+      "lens": "Q",
+      "title": "The window sends an upgrade on every open even when the harness will always refuse it",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/use-project-upgrade.ts",
+          "startLine": 27,
+          "quoted": [
+            "  return result.status === \"safe-mode\" && result.canonicalHealth.status === \"migration-required\";"
+          ]
+        }
+      ],
+      "verifyNote": "The refusal is what ADR 0005:44 prescribes and the Project stays in its designed safe mode, so it is not a stranded state.",
+      "why": "needsUpgrade (use-project-upgrade.ts:27) ignores runtime health and a null source generation, so a Project with canonical migration-required and an unhealthy runtime is sent an upgrade on every open, refused NOT_ELIGIBLE each time, with no Try again and no repair path in the window.",
+      "fp": "6124363e1b274142"
+    },
+    {
+      "id": "G1",
+      "kind": "dr",
+      "lens": "G",
+      "title": "Gap: new bridge upgrade operation had no quality-lens row (security traced it clean)",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-entry-bridge.ts",
+          "startLine": 172,
+          "quoted": ["    upgrade: echoing({"]
+        }
+      ],
+      "fix": "No change required; listed for coverage accounting.",
+      "fp": "b637c2b8ecdca504"
+    },
+    {
+      "id": "G2",
+      "kind": "dr",
+      "lens": "G",
+      "title": "Gap: new upgrade IPC handler had no quality-lens row (security traced it clean)",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-entry-ipc.ts",
+          "startLine": 26,
+          "quoted": [
+            "  ipcMain.handle(desktopIpcChannels.upgradeProject, (_event, value: unknown) =>"
+          ]
+        }
+      ],
+      "fix": "No change required; listed for coverage accounting.",
+      "fp": "786dc2fced0608ab"
+    },
+    {
+      "id": "G3",
+      "kind": "dr",
+      "lens": "G",
+      "title": "Gap: project.upgrade runtime dispatch branch had no lens row",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/harness-runtime.ts",
+          "startLine": 195,
+          "quoted": ["    } else if (message.command === \"project.upgrade\") {"]
+        }
+      ],
+      "fix": "No change required; listed for coverage accounting.",
+      "fp": "24d46bbe02ca187f"
+    },
+    {
+      "id": "G4",
+      "kind": "dr",
+      "lens": "G",
+      "title": "Gap: staged-copy table fingerprinting had no quality-lens row",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-verification.ts",
+          "startLine": 55,
+          "quoted": ["export async function tableFingerprints("]
+        }
+      ],
+      "fix": "Consider a focused review of project-storage-upgrade-verification.ts (row digests, excluded tables) since it is the 'every source row unchanged' proof.",
+      "fp": "09f9236e3ae4f715"
+    },
+    {
+      "id": "G5",
+      "kind": "dr",
+      "lens": "G",
+      "title": "Gap: discardUnfinishedUpgrade entry had no direct quality-lens row",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-recovery.ts",
+          "startLine": 111,
+          "quoted": ["export async function discardUnfinishedUpgrade("]
+        }
+      ],
+      "fix": "Covered indirectly by I2/Q11/Q19; no separate change.",
+      "fp": "51a9b402dd053630"
+    }
+  ]
+}
