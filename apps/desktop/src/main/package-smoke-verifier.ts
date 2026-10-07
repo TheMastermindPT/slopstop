@@ -39,6 +39,7 @@ const expectedMethods = [
   "subscribeHarnessStatus",
   "subscribeWorkspaceNotifications",
   "switchProject",
+  "upgradeProject",
 ] as const;
 const expectedResultKeys = [
   "intentResult",

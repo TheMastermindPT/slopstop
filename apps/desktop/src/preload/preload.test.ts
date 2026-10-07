@@ -1,6 +1,8 @@
 import {
   decodeStrict,
   HarnessStatusSchema,
+  ProjectUpgradeResultSchema,
+  projectUpgradeDiagnostics,
   RetryHarnessResultSchema,
   WorkspaceIntentResultSchema,
   WorkspaceIntentSchema,
@@ -30,6 +32,7 @@ vi.mock("electron", () => ({
 await import("./preload.js");
 
 type ExposedApi = Readonly<{
+  upgradeProject(request: unknown): Promise<unknown>;
   getHarnessStatus(): Promise<unknown>;
   queryWorkspace(query: unknown): Promise<unknown>;
   retryHarness(): Promise<unknown>;
@@ -189,5 +192,35 @@ describe("preload workspace API", () => {
     );
     api.subscribeWorkspaceNotifications(vi.fn());
     expect(electronMocks.on.mock.calls[1]?.[1]).not.toBe(firstReceive);
+  });
+});
+
+describe("preload Project API", () => {
+  it("upgrades through a strict preload method", async () => {
+    const request = { projectId: "00000000-0000-4000-8000-000000000010" };
+    const result = decodeStrict(ProjectUpgradeResultSchema, {
+      status: "failed",
+      request,
+      diagnostic: projectUpgradeDiagnostics.verificationFailed,
+    });
+    electronMocks.invoke.mockResolvedValueOnce(result);
+    const api = exposedApi();
+
+    await expect(api.upgradeProject(request)).resolves.toEqual(result);
+    expect(electronMocks.invoke).toHaveBeenCalledExactlyOnceWith(
+      desktopIpcChannels.upgradeProject,
+      request,
+    );
+
+    await expect(api.upgradeProject({ ...request, extra: true })).rejects.toThrow();
+    expect(electronMocks.invoke).toHaveBeenCalledTimes(1);
+
+    electronMocks.invoke.mockResolvedValueOnce({ ...result, extra: true });
+    await expect(api.upgradeProject(request)).rejects.toThrow();
+    electronMocks.invoke.mockResolvedValueOnce({
+      ...result,
+      diagnostic: projectUpgradeDiagnostics.storageUnavailable,
+    });
+    await expect(api.upgradeProject(request)).rejects.toThrow();
   });
 });

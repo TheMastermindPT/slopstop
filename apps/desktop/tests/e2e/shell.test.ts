@@ -109,6 +109,7 @@ test.describe("built desktop shell", () => {
         "subscribeHarnessStatus",
         "subscribeWorkspaceNotifications",
         "switchProject",
+        "upgradeProject",
       ],
     });
   });

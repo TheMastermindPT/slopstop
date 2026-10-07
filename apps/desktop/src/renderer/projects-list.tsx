@@ -53,6 +53,8 @@ export type RowProps = Readonly<{
   newProjectId?: ProjectId | undefined;
   activeLabel: string | undefined;
   disabled: boolean;
+  /** A Project is being opened or updated: Remove stays focusable but does not start. */
+  busy: boolean;
   onOpen(project: Entry): void;
   onRemove(project: Entry): void;
   announce(message: string): void;

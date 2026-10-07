@@ -1,3 +1,4 @@
+import { busyAnnouncement } from "../busy-announcement.js";
 import type { Entry, RowProps } from "../projects-list.js";
 import styles from "../projects-workspace.module.css";
 
@@ -31,11 +32,13 @@ export function RemoveButton({
         type="button"
         data-remove={project.projectId}
         aria-label={`Remove ${project.name} from list`}
-        aria-disabled={block === undefined ? undefined : "true"}
+        aria-disabled={block === undefined && !props.busy ? undefined : "true"}
         aria-describedby={block === undefined ? undefined : reasonId}
-        onClick={() =>
-          block === undefined ? props.onRemove(project) : props.announce(block.announcement)
-        }
+        onClick={() => {
+          if (block !== undefined) props.announce(block.announcement);
+          else if (props.busy) props.announce(busyAnnouncement);
+          else props.onRemove(project);
+        }}
       >
         Remove
       </button>

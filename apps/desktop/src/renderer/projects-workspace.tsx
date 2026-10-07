@@ -10,6 +10,7 @@ import { AddRepositoryButton } from "./add-repository-button.js";
 import { type ListState, ProjectRows, safeModeLabel } from "./projects-list.js";
 import styles from "./projects-workspace.module.css";
 import { useRemoveFromList } from "./remove-from-list/use-remove-from-list.js";
+import { type Busy, needsUpgrade, useProjectUpgrade } from "./use-project-upgrade.js";
 import {
   rememberNames,
   useRegistrationCapability,
@@ -20,6 +21,7 @@ import { type View, WorkspaceSection } from "./workspace-view.js";
 import "./prototype/prototype-global.css";
 
 type Active = Extract<CanonicalProjectActivationResult, { status: "active" }>;
+const progressText = { opening: "Opening Project…", updating: "Updating Project…", idle: "" };
 type Session =
   | { kind: "none" }
   | { kind: "active"; activation: Active }
@@ -38,7 +40,7 @@ export function ProjectsWorkspace({
   const [session, setSession] = useState<Session>({ kind: "none" });
   const [view, setView] = useState<View>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<Busy>(undefined);
   const capability = useRegistrationCapability(ready, attempt);
   const [announcement, setAnnouncement] = useState("");
   const names = useRef(new Map<ProjectId, string>());
@@ -46,8 +48,17 @@ export function ProjectsWorkspace({
   const epoch = useRef(0);
   const request = useRef(0);
   const selecting = useRef(false);
+  const upgrade = useProjectUpgrade({
+    isCurrent: (generation) => generation === epoch.current,
+    setBusy,
+    present,
+    refresh: () => void refresh(),
+    notRegistered: () => setError("This Project is not registered."),
+  });
+  const clearProblem = upgrade.clear;
   const refresh = useCallback(async () => {
     if (!ready) return;
+    clearProblem();
     const current = ++request.current;
     const generation = epoch.current;
     setList({ status: "loading" });
@@ -59,21 +70,22 @@ export function ProjectsWorkspace({
       if (generation === epoch.current && current === request.current)
         setList({ status: "broken", code: "PROJECT_LIST_TRANSPORT_FAILED" });
     }
-  }, [ready]);
+  }, [ready, clearProblem]);
   useEffect(() => {
     epoch.current += 1;
     selecting.current = false;
-    setBusy(false);
+    setBusy(undefined);
     setSession({ kind: "none" });
     setView(null);
     setError(null);
+    clearProblem();
     if (ready) void refresh();
     else setList({ status: "idle" });
     return () => {
       epoch.current += 1;
       request.current += 1;
     };
-  }, [ready, attempt, refresh]);
+  }, [ready, attempt, refresh, clearProblem]);
 
   const nameOf = (projectId: ProjectId) => names.current.get(projectId) ?? projectId.slice(0, 8);
 
@@ -103,7 +115,12 @@ export function ProjectsWorkspace({
     }
   }
 
-  async function switchTo(projectId: ProjectId, activation: Active, generation: number) {
+  /** Switches to a Project and answers the target's activation result when one was presented. */
+  async function switchTo(
+    projectId: ProjectId,
+    activation: Active,
+    generation: number,
+  ): Promise<CanonicalProjectActivationResult | undefined> {
     const result = await window.slopstop.switchProject({
       from: {
         projectId: activation.request.projectId,
@@ -111,14 +128,16 @@ export function ProjectsWorkspace({
       },
       to: { projectId },
     });
-    if (generation !== epoch.current) return;
+    if (generation !== epoch.current) return undefined;
     if (result.status === "target-result") {
       if (result.sourceReleased !== false) {
         setSession({ kind: "none" });
         setView(null);
       }
       present(result.target);
-    } else if (result.status === "release-failed") {
+      return result.target;
+    }
+    if (result.status === "release-failed") {
       setSession({ kind: "release-failed", activation });
       setView({
         projectId: activation.request.projectId,
@@ -132,21 +151,22 @@ export function ProjectsWorkspace({
       setView(null);
       setError(result.diagnostic.message);
     }
+    return undefined;
   }
 
-  async function open(projectId: ProjectId) {
+  /**
+   * Holds the open guard around one selection step: one at a time, and only the current epoch
+   * may present its result, report a rejected call, or release the guard.
+   */
+  async function select(kind: Busy, step: (generation: number) => Promise<void>) {
     if (!ready || selecting.current) return;
     selecting.current = true;
-    setBusy(true);
+    setBusy(kind);
     setError(null);
+    upgrade.clear();
     const generation = epoch.current;
     try {
-      if (session.kind === "none") {
-        const result = await window.slopstop.activateProject({ projectId });
-        if (generation === epoch.current) present(result);
-      } else {
-        await switchTo(projectId, session.activation, generation);
-      }
+      await step(generation);
     } catch {
       if (generation === epoch.current) {
         setSession({ kind: "none" });
@@ -158,9 +178,26 @@ export function ProjectsWorkspace({
     } finally {
       if (generation === epoch.current) {
         selecting.current = false;
-        setBusy(false);
+        setBusy(undefined);
       }
     }
+  }
+
+  const open = (projectId: ProjectId) =>
+    select("opening", async (generation) => {
+      const opened =
+        session.kind === "none"
+          ? await window.slopstop.activateProject({ projectId })
+          : await switchTo(projectId, session.activation, generation);
+      if (generation !== epoch.current || opened === undefined) return;
+      if (session.kind === "none") present(opened);
+      if (needsUpgrade(opened)) await upgrade.update(projectId, generation);
+    });
+
+  /** "Try again": the whole upgrade again, without a new first activation. */
+  function retryUpgrade(projectId: ProjectId) {
+    document.getElementById("ws-heading")?.focus();
+    void select("updating", (generation) => upgrade.update(projectId, generation));
   }
 
   const flow = useAddRepository(
@@ -211,7 +248,7 @@ export function ProjectsWorkspace({
           <button
             type="button"
             onClick={() => void refresh()}
-            disabled={!ready || busy || list.status === "loading"}
+            disabled={!ready || busy !== undefined || list.status === "loading"}
           >
             Refresh
           </button>
@@ -219,7 +256,11 @@ export function ProjectsWorkspace({
         <AddRepositoryButton
           capability={capability}
           list={list}
-          onAdd={flow.start}
+          busy={busy !== undefined}
+          onAdd={() => {
+            upgrade.clear();
+            flow.start();
+          }}
           announce={setAnnouncement}
         />
         <div aria-busy={list.status === "loading"}>
@@ -234,12 +275,14 @@ export function ProjectsWorkspace({
                 : "Read-write"
             }
             newProjectId={newProjectId}
-            disabled={!ready || busy}
+            disabled={!ready || busy !== undefined}
+            busy={busy !== undefined}
             onOpen={(project) => void open(project.projectId)}
-            onRemove={(project) =>
-              project.registration !== "unbound" &&
-              removal.ask({ projectId: project.projectId, name: project.name })
-            }
+            onRemove={(project) => {
+              if (project.registration === "unbound") return;
+              upgrade.clear();
+              removal.ask({ projectId: project.projectId, name: project.name });
+            }}
             announce={setAnnouncement}
           />
         </div>
@@ -250,7 +293,18 @@ export function ProjectsWorkspace({
       <p className={styles["srOnly"]} aria-live="polite">
         {announcement}
       </p>
-      <WorkspaceSection flow={flow} removal={removal} view={view} error={error} busy={busy} />
+      <p id="ws-progress" className={styles["progress"]} aria-live="polite">
+        {progressText[busy ?? "idle"]}
+      </p>
+      <WorkspaceSection
+        flow={flow}
+        removal={removal}
+        view={view}
+        error={error}
+        busy={busy !== undefined}
+        problem={upgrade.problem}
+        onRetry={retryUpgrade}
+      />
     </main>
   );
 }

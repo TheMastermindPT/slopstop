@@ -112,3 +112,36 @@ tags: [testing, gate, vitest, coverage, pre-existing]
   - assertions stay unchanged;
   - no test is lost (the case count and name multiset are proven);
   - each move is recorded here.
+
+## Pre-push stalls: rows, a long native project and promise waits — authorized (2026-10-07)
+
+Authorized options A, B and C of the 2026-10-06 diagnosis (`2026-10-05_conversation-decisions.md` §10). Option D (timeouts) was not authorized: every timeout is unchanged.
+
+- **A. Rows.** In `project-storage-upgrade.integration.test.ts`, "bounds manifest versions and provenance at opening" became 7 rows (one per provenance case, plus "version-2 on a never-upgraded Project"), and "keeps unavailable and broken outcomes for upgrade" became 4 rows (a stopped owner, a busy canonical database, a busy runtime database, a contradictory active location). Each row has its own 15 s budget, and an orphaned loop can no longer race the fixture's `afterEach` cleanup. "upgrades once when two calls race" has no loop and is unchanged.
+- **B. Long native project.** `canonical-writer-reconciliation`, `canonical-command-repository`, `canonical-command-repository-faults` and `canonical-writer-package-smoke` run in `harness-native-long` (`apps/harness/vitest.native-long.config.ts`): `maxWorkers` 2, `groupOrder` 2, after the unit, integration and registration projects, in both the integration and the coverage configs.
+- **C. Promise waits.** Five default-deadline (1 s) `vi.waitFor` waits, four in `canonical-writer-package-smoke` and one in `local-database-worker-client`, now await a promise settled by the first call. The original `expect` follows each wait.
+- **No test lost; assertions unchanged.** The `expect` counts per edited file are equal (60, 72, 24). `vitest list`: integration 2017 → 2025 (the two split tests replaced by 11 rows); every listed test ran, except the 3 symlink cases skipped on this host before and after. The env-gated UI seed is skipped as before. Coverage lists 4369, and 4370 tests ran (4366 passed and 4 skipped, as before). Two listed names did not match a run name only because they embed a run-time value (a PID and a date).
+
+Full runs on the same machine, before (2026-10-06, `0bc2f4f`) and after (this change), per-test maximum:
+
+| Test | Coverage before | Coverage after | Integration before | Integration after |
+|---|---|---|---|---|
+| `canonical-command-repository-faults` S5 G4 'retry-false-success'/'commit'/'release' | 24.4 s failed | 0.3 s | 0.5 s | 0.6 s |
+| `canonical-command-repository` G6 child event version 0.5 | 24.1 s failed | 0.4 s | 0.7 s | 0.3 s |
+| `canonical-writer-reconciliation` S6 G4 B11 ledger 'requested' (45 rows) | 23.7 s failed | 0.6 s | 0.8 s | 0.5 s |
+| `project-upgrade-runtime` 'a current Project' | 17.1 s failed | 0.6 s | 0.6 s | 0.5 s |
+| `registration-flow-outcomes` "proposes, registers and lists…" | 6.0 s | 5.2 s | 15.0 s failed | 5.2 s |
+| `project-storage-create` 'CHECK expression' | 23.5 s | 0.7 s | 0.9 s | 0.7 s |
+| "bounds manifest versions…" (1 test → 7 rows) | 13.2 s | 2.0 s | 12.2 s | 1.3 s |
+| package-smoke SELECT checkpoint (77 rows) | 14.2 s | 0.9 s | 1.1 s | 0.5 s |
+
+| Run | Failed | > 7.5 s | > 10 s | Wall |
+|---|---|---|---|---|
+| Coverage before / after | 4 / 0 | 11 / 1 | 9 / 1 | 591 s / 559 s |
+| Integration before / after | 1 / 0 | 5 / 2 | 2 / 1 | 521 s / 508 s |
+
+Long-file wall time, coverage (integration): reconciliation 351 → 259 s (316 → 196), command-repository 271 → 153 s (241 → 133), faults 70 → 19 s (34 → 22), package-smoke 176 → 101 s (143 → 62). The slowest remaining test is "validates and advances generation-2 Writer state", at 10.1 s under coverage (9.8 → 11.3 s in integration). It is one single-case test, and it is not changed here.
+
+One run on each side cannot prove that the stalls are gone. The next pre-push runs are the check.
+
+**Correction (2026-10-07, S3b review round 1).** The "2017 → 2025" above compares a run total with a `vitest list` count. On the same basis, the integration run total went from 2017 to 2026 (2017 − 2 split tests + 11 rows), and `vitest list` shows 2025, because it omits the env-gated UI seed. The name comparison output is saved in `C:/Users/pedro/AppData/Local/Temp/claude/C--Users-pedro-Documents-GitHub-slopstop/338a4bae-a42a-40dc-9e1f-30ad2d4bf69d/scratchpad/s1/name-comparison.txt`.

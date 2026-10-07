@@ -12,7 +12,10 @@
     "apps/desktop/src/main/harness-log-lines.ts",
     "apps/desktop/src/main/workspace-bridge.ts",
     "apps/desktop/src/main/package-smoke-verifier.ts",
-    "apps/desktop/src/preload/preload.ts"
+    "apps/desktop/src/main/project-upgrade-failure.ts",
+    "apps/desktop/src/main/harness-pending-request.ts",
+    "apps/desktop/src/preload/preload.ts",
+    "apps/desktop/src/renderer/use-project-upgrade.ts"
   ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],

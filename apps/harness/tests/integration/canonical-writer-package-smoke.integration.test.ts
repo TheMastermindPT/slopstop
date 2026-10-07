@@ -51,6 +51,18 @@ const native = {
   fallbackLoaded: false,
 } as const;
 
+/**
+ * A spy whose first call settles `called`. Awaiting it is bounded by the test's own timeout,
+ * not by the load-sensitive default deadline of `vi.waitFor`.
+ */
+function calledSpy() {
+  const spy = vi.fn();
+  const called = new Promise<void>((resolve) => {
+    spy.mockImplementation(() => resolve());
+  });
+  return { spy, called };
+}
+
 function id(n: number) {
   return `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 }
@@ -671,7 +683,7 @@ it("rejects a repeated start instead of attaching another proof", async () => {
   const f = await seed();
   const run = await launch(f.root);
   const { port1, port2 } = new MessageChannel();
-  const closed = vi.fn();
+  const { spy: closed, called: closedCall } = calledSpy();
   port2.on("close", closed);
   cleanup.push(async () => {
     port1.close();
@@ -680,7 +692,8 @@ it("rejects a repeated start instead of attaching another proof", async () => {
   run.controller.start(run.start, [portAdapter(port1)]);
   await run.transport.terminated;
   expect(run.exits).toEqual([1]);
-  await vi.waitFor(() => expect(closed).toHaveBeenCalledTimes(1));
+  await closedCall;
+  expect(closed).toHaveBeenCalledTimes(1);
   expect(run.results).toEqual([]);
 });
 
@@ -699,7 +712,7 @@ it("rejects pipelined controls while an owned SQL read is held", async () => {
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const reached = vi.fn();
+  const { spy: reached, called: reachedCall } = calledSpy();
   const run = await launch(f.root, (client) => ({
     close: () => client.close(),
     transaction: (mode) => client.transaction(mode),
@@ -710,7 +723,8 @@ it("rejects pipelined controls while an owned SQL read is held", async () => {
     },
   }));
   run.port.postMessage(control());
-  await vi.waitFor(() => expect(reached).toHaveBeenCalled());
+  await reachedCall;
+  expect(reached).toHaveBeenCalled();
   run.port.postMessage(
     decodeStrict(WriterProofControlSchema, { ...control(), requestId: id(176) }),
   );
@@ -852,7 +866,7 @@ it.each(["stale.initialize", "stale.release", "stale.attempt", "stale.finish"])(
       release = resolve;
     });
     let holding = false;
-    const reached = vi.fn();
+    const { spy: reached, called: reachedCall } = calledSpy();
     const hold = async () => {
       if (holding) {
         reached();
@@ -919,7 +933,8 @@ it.each(["stale.initialize", "stale.release", "stale.attempt", "stale.finish"])(
     messages.push(control("stale.finish", 4, 174));
     holding = true;
     run.port.postMessage(messages[index]);
-    await vi.waitFor(() => expect(reached).toHaveBeenCalled());
+    await reachedCall;
+    expect(reached).toHaveBeenCalled();
     run.port.close();
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
     expect(run.exits).toEqual([]);
@@ -933,7 +948,7 @@ it.each(["stale.initialize", "stale.release", "stale.attempt", "stale.finish"])(
 it("rejects a valid but misbound public Storage creation result before initialization success", async () => {
   const f = await seed();
   await f.client.close();
-  const reached = vi.fn();
+  const { spy: reached, called: reachedCall } = calledSpy();
   const run = await launch(f.root, undefined, {
     decorateOwner: (owner) => ({
       open: (request) => owner.open(request),
@@ -956,7 +971,8 @@ it("rejects a valid but misbound public Storage creation result before initializ
     }),
   });
   run.port.postMessage(control("stale.initialize", 1, 171));
-  await vi.waitFor(() => expect(reached).toHaveBeenCalled());
+  await reachedCall;
+  expect(reached).toHaveBeenCalled();
   try {
     await run.transport.terminated;
     expect(run.exits).toEqual([1]);

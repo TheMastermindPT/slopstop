@@ -2,12 +2,9 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
-  CanonicalProjectActivationRequestSchema,
-  CanonicalProjectSwitchRequestSchema,
   decodeStrict,
   type HarnessStatus,
   HarnessStatusSchema,
-  ProjectListRequestSchema,
   RetryHarnessResultSchema,
   type WorkspaceIntent,
   WorkspaceIntentSchema,
@@ -35,6 +32,7 @@ import {
   validatePackageSmokeResult,
 } from "./package-smoke-verifier.js";
 import { createProjectEntryBridge, type ProjectEntryBridge } from "./project-entry-bridge.js";
+import { registerProjectEntryIpc } from "./project-entry-ipc.js";
 import { registerProjectRegistrationIpc } from "./project-registration-ipc.js";
 import {
   createProjectStorageHarnessBootstrap,
@@ -397,16 +395,7 @@ async function bootstrap(): Promise<void> {
       now: () => new Date().toISOString(),
     });
     const projects = projectEntryBridge;
-    ipcMain.handle(desktopIpcChannels.listProjects, (_event, value: unknown) => {
-      decodeStrict(ProjectListRequestSchema, value);
-      return projects.list();
-    });
-    ipcMain.handle(desktopIpcChannels.activateProject, (_event, value: unknown) =>
-      projects.activate(decodeStrict(CanonicalProjectActivationRequestSchema, value)),
-    );
-    ipcMain.handle(desktopIpcChannels.switchProject, (_event, value: unknown) =>
-      projects.switchProject(decodeStrict(CanonicalProjectSwitchRequestSchema, value)),
-    );
+    registerProjectEntryIpc(projects);
     projectStorageBridge = createProjectStorageBridge({
       session: harnessSession,
       createId: randomUUID,

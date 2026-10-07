@@ -86,6 +86,7 @@ vi.mock("./project-entry-bridge.js", () => ({
     list: vi.fn(),
     activate: vi.fn(),
     switchProject: vi.fn(),
+    upgrade: vi.fn(),
     stop: vi.fn(),
   }),
 }));

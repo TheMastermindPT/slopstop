@@ -1,24 +1,33 @@
-import type { DesktopMessage } from "@slopstop/protocol";
+import type { DesktopMessage, HarnessFailureCode } from "@slopstop/protocol";
 import type { HarnessSessionEvent } from "./harness-session.js";
+
+/** Why a pending request failed: a lost connection, an invalid message, or a harness code. */
+export type PendingFailure =
+  | Readonly<{ kind: "transport" }>
+  | Readonly<{ kind: "protocol" }>
+  | Readonly<{ kind: "harness"; code: HarnessFailureCode }>;
 
 export function dispatchPendingHarnessEvent(
   event: HarnessSessionEvent,
   handlers: Readonly<{
-    failAll(message: string): void;
-    failRequest(causationId: string, message: string): void;
+    failAll(message: string, failure: PendingFailure): void;
+    failRequest(causationId: string, message: string, failure: PendingFailure): void;
     message(message: Extract<HarnessSessionEvent, { type: "message" }>["message"]): void;
   }>,
 ): void {
   switch (event.type) {
     case "disconnected":
-      handlers.failAll("Harness session disconnected.");
+      handlers.failAll("Harness session disconnected.", { kind: "transport" });
       return;
     case "protocol-error":
-      handlers.failAll("Harness session received an invalid protocol message.");
+      handlers.failAll("Harness session received an invalid protocol message.", {
+        kind: "protocol",
+      });
       return;
     case "message":
       if (event.message.event === "request.failure") {
-        handlers.failRequest(event.message.causationId, event.message.payload.message);
+        const { code, message } = event.message.payload;
+        handlers.failRequest(event.message.causationId, message, { kind: "harness", code });
         return;
       }
       handlers.message(event.message);

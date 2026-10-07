@@ -8,6 +8,7 @@ import {
   createProjectListCommand,
   createProjectRegistrationCommand,
   createProjectSwitchCommand,
+  createProjectUpgradeCommand,
   type DesktopMessage,
   decodeStrict,
   type HarnessMessage,
@@ -15,12 +16,21 @@ import {
   type ProjectRegistrationRequest,
   ProjectRegistrationRequestSchema,
   ProjectRegistrationResultSchema,
+  ProjectUpgradeRequestSchema,
+  ProjectUpgradeResultSchema,
 } from "@slopstop/protocol";
 import type { Schema } from "effect";
 import { dispatchPendingHarnessEvent, requestHarness } from "./harness-pending-request.js";
 import type { HarnessSessionClient } from "./harness-session.js";
+import { type ProjectRequestFault, projectUpgradeFailure } from "./project-upgrade-failure.js";
 
-type Pending = { event: HarnessMessage["event"]; settle(value: unknown): void; fail(): void };
+type Pending = {
+  event: HarnessMessage["event"];
+  settle(value: unknown): void;
+  fail(fault: ProjectRequestFault): void;
+};
+const transport = { kind: "transport" } as const;
+const desktop = { kind: "desktop" } as const;
 export function createProjectEntryBridge(options: {
   session: HarnessSessionClient;
   createId(): string;
@@ -28,24 +38,24 @@ export function createProjectEntryBridge(options: {
 }) {
   const pending = new Map<string, Pending>();
   let stopped = false;
-  const fail = (id: string) => {
+  const fail = (id: string, fault: ProjectRequestFault) => {
     const item = pending.get(id);
     pending.delete(id);
-    item?.fail();
+    item?.fail(fault);
   };
-  const failAll = () => {
-    for (const id of [...pending.keys()]) fail(id);
+  const failAll = (fault: ProjectRequestFault) => {
+    for (const id of [...pending.keys()]) fail(id, fault);
   };
   const unsubscribe = options.session.subscribe((event) =>
     dispatchPendingHarnessEvent(event, {
-      failAll,
-      failRequest: fail,
+      failAll: (_message, failure) => failAll(failure),
+      failRequest: (causationId, _message, failure) => fail(causationId, failure),
       message: (message) => {
         if (message.causationId === null) return;
         const item = pending.get(message.causationId);
         if (item === undefined) return;
         pending.delete(message.causationId);
-        if (message.event !== item.event) item.fail();
+        if (message.event !== item.event) item.fail(desktop);
         else item.settle(message.payload);
       },
     }),
@@ -55,31 +65,48 @@ export function createProjectEntryBridge(options: {
     createCommand: () => DesktopMessage,
     event: HarnessMessage["event"],
     parse: (value: unknown) => Result,
-    broken: () => Result,
+    broken: (fault: ProjectRequestFault) => Result,
   ): Promise<Result> {
-    if (stopped) return Promise.resolve(broken());
+    if (stopped) return Promise.resolve(broken(transport));
     return requestHarness({
       pending,
       createCommand,
-      broken,
+      broken: () => broken(desktop),
       createPending: (resolve) => ({
         event,
         settle: (value) => {
           try {
             resolve(parse(value));
           } catch {
-            resolve(broken());
+            resolve(broken(desktop));
           }
         },
-        fail: () => resolve(broken()),
+        fail: (fault) => resolve(broken(fault)),
       }),
       send: (command) => {
-        if (!options.session.send(command).ok) fail(command.messageId);
+        const sent = options.session.send(command);
+        if (!sent.ok) fail(command.messageId, { kind: "send", code: sent.error.code });
       },
     });
   }
-  // Activation and switch results echo their request; a mismatched echo or a lost connection
-  // answers the coordinator-unavailable result for that request.
+  // Activation and switch answer their coordinator-unavailable result for every fault.
+  function unavailable<Request, Result>(
+    resultSchema: Schema.Decoder<Result>,
+    status: string,
+    retryable: boolean,
+  ) {
+    return (request: Request): Result =>
+      decodeStrict(resultSchema, {
+        status,
+        request,
+        diagnostic: {
+          code: "PROJECT_COORDINATOR_UNAVAILABLE",
+          message: "The Project connection is unavailable.",
+          retryable,
+        },
+      });
+  }
+  // These results echo their request: a mismatched echo is a fault, answered by `broken`.
   function echoing<Request, Result extends Readonly<{ request: Request }>>(
     operation: Readonly<{
       requestSchema: Schema.Decoder<Request>;
@@ -89,21 +116,12 @@ export function createProjectEntryBridge(options: {
         request: Request,
       ): DesktopMessage;
       event: HarnessMessage["event"];
-      unavailable: Readonly<{ status: string; retryable: boolean }>;
+      broken(request: Request, fault: ProjectRequestFault): Result;
     }>,
   ) {
     return (input: Request): Promise<Result> => {
       const inputRequest = decodeStrict(operation.requestSchema, input);
-      const broken = () =>
-        decodeStrict(operation.resultSchema, {
-          status: operation.unavailable.status,
-          request: inputRequest,
-          diagnostic: {
-            code: "PROJECT_COORDINATOR_UNAVAILABLE",
-            message: "The Project connection is unavailable.",
-            retryable: operation.unavailable.retryable,
-          },
-        });
+      const broken = (fault: ProjectRequestFault) => operation.broken(inputRequest, fault);
       return request(
         () => operation.command(metadata(), inputRequest),
         operation.event,
@@ -142,20 +160,27 @@ export function createProjectEntryBridge(options: {
       resultSchema: CanonicalProjectActivationResultSchema,
       command: createProjectActivateCommand,
       event: "project.activate.result",
-      unavailable: { status: "unavailable", retryable: true },
+      broken: unavailable(CanonicalProjectActivationResultSchema, "unavailable", true),
     }),
     switchProject: echoing({
       requestSchema: CanonicalProjectSwitchRequestSchema,
       resultSchema: CanonicalProjectSwitchResultSchema,
       command: createProjectSwitchCommand,
       event: "project.switch.result",
-      unavailable: { status: "coordinator-unavailable", retryable: false },
+      broken: unavailable(CanonicalProjectSwitchResultSchema, "coordinator-unavailable", false),
+    }),
+    upgrade: echoing({
+      requestSchema: ProjectUpgradeRequestSchema,
+      resultSchema: ProjectUpgradeResultSchema,
+      command: createProjectUpgradeCommand,
+      event: "project.upgrade.result",
+      broken: projectUpgradeFailure,
     }),
     stop: () => {
       if (stopped) return;
       stopped = true;
       unsubscribe();
-      failAll();
+      failAll(transport);
     },
   };
 }

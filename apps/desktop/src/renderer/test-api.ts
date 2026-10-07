@@ -31,6 +31,9 @@ export const unusedWorkspaceApi = {
   switchProject: async () => {
     throw new Error("Switch unused");
   },
+  upgradeProject: async () => {
+    throw new Error("upgradeProject is not used by this test.");
+  },
   queryWorkspace: async () => {
     throw new Error("queryWorkspace is not used by this test.");
   },
@@ -46,6 +49,7 @@ export const unusedWorkspaceApi = {
   | "listProjects"
   | "activateProject"
   | "switchProject"
+  | "upgradeProject"
   | "getRegistrationCapability"
   | "chooseRepository"
   | "registerProject"

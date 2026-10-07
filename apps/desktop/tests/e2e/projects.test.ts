@@ -1,34 +1,15 @@
-import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, rename, writeFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { decodeStrict, RegisteredProjectSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
 import { launchBuiltDesktop } from "./electron-launch.js";
+import { runHarnessSeed } from "./harness-seed.js";
 
 /** Registers the two seed repositories (repository-a, repository-b) through the harness. */
 async function seedTwoProjects(userData: string) {
-  const require = createRequire(import.meta.url);
-  const repo = path.resolve(import.meta.dirname, "../../../..");
-  const vitest = path.join(path.dirname(require.resolve("vitest/package.json")), "vitest.mjs");
-  execFileSync(
-    process.execPath,
-    [
-      vitest,
-      "run",
-      "--config",
-      "apps/harness/vitest.integration.config.ts",
-      "project-entry-ui-seed.integration.test.ts",
-    ],
-    {
-      cwd: repo,
-      env: { ...process.env, PC_UI_USER_DATA: userData },
-      timeout: 120000,
-      stdio: "pipe",
-    },
-  );
+  runHarnessSeed("project-entry-ui-seed.integration.test.ts", "PC_UI_USER_DATA", userData);
   const projects = decodeStrict(
     Schema.Array(RegisteredProjectSchema),
     JSON.parse(await readFile(path.join(userData, "fixture-projects.json"), "utf8")),

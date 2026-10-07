@@ -616,15 +616,20 @@ async function expectSafeModeHealth(root: string, expected: object, name: string
   }
 }
 
+it.for(provenanceCases.map((provenanceCase) => [provenanceCase.name, provenanceCase] as const))(
+  "bounds manifest versions and provenance at opening: %s",
+  { timeout: projectStorageIntegrationTimeout },
+  async ([, provenanceCase]) => {
+    const root = await createTemporaryApplicationRoot();
+    await createUpgradedProject({ root });
+    await provenanceCase.seed({ root });
+    await expectSafeModeHealth(root, provenanceCase.expected, provenanceCase.name);
+  },
+);
+
 it(
-  "bounds manifest versions and provenance at opening",
+  "bounds manifest versions and provenance at opening: version-2 on a never-upgraded Project",
   async () => {
-    for (const provenanceCase of provenanceCases) {
-      const root = await createTemporaryApplicationRoot();
-      await createUpgradedProject({ root });
-      await provenanceCase.seed({ root });
-      await expectSafeModeHealth(root, provenanceCase.expected, provenanceCase.name);
-    }
     const root = await createTemporaryApplicationRoot();
     await createCurrentProject({ root });
     await rewriteManifest(generationPaths(root).manifest, (manifest) => ({
@@ -650,7 +655,7 @@ const busyOutcome = {
 } as const;
 
 it(
-  "keeps unavailable and broken outcomes for upgrade",
+  "keeps unavailable and broken outcomes for upgrade: a stopped owner",
   async () => {
     const stoppedRoot = await createTemporaryApplicationRoot();
     await createGenerationTwoProject(stoppedRoot);
@@ -662,23 +667,33 @@ it(
       message: "Project Storage owner is stopped.",
     });
     expect.soft(await storageSnapshot(stoppedRoot)).toEqual(stoppedBefore);
+  },
+  projectStorageIntegrationTimeout,
+);
 
-    for (const database of ["canonical", "runtime"] as const) {
-      const root = await createTemporaryApplicationRoot();
-      await createGenerationTwoProject(root);
-      const before = await storageSnapshot(root);
-      const lock = holdExclusiveLock({ databasePath: generationPaths(root)[database] });
-      const fixture = createUpgradeStorageOwner(root);
-      try {
-        expect.soft(await fixture.upgrade(openRequest), database).toEqual(busyOutcome);
-      } finally {
-        lock.release();
-        await fixture.owner.stop();
-      }
-      expect.soft(await storageSnapshot(root), database).toEqual(before);
-      await expectReleased({ directory: generationPaths(root).generation });
+it.for(["canonical", "runtime"] as const)(
+  "keeps unavailable and broken outcomes for upgrade: a busy %s database",
+  { timeout: projectStorageIntegrationTimeout },
+  async (database) => {
+    const root = await createTemporaryApplicationRoot();
+    await createGenerationTwoProject(root);
+    const before = await storageSnapshot(root);
+    const lock = holdExclusiveLock({ databasePath: generationPaths(root)[database] });
+    const fixture = createUpgradeStorageOwner(root);
+    try {
+      expect.soft(await fixture.upgrade(openRequest), database).toEqual(busyOutcome);
+    } finally {
+      lock.release();
+      await fixture.owner.stop();
     }
+    expect.soft(await storageSnapshot(root), database).toEqual(before);
+    await expectReleased({ directory: generationPaths(root).generation });
+  },
+);
 
+it(
+  "keeps unavailable and broken outcomes for upgrade: a contradictory active location",
+  async () => {
     const brokenRoot = await createTemporaryApplicationRoot();
     await createGenerationTwoProject(brokenRoot);
     seedContradictoryActiveLocation(brokenRoot);

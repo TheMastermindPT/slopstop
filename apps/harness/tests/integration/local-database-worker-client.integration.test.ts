@@ -167,11 +167,16 @@ it("terminates a fatally invalid worker before replacing its native client", asy
   const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-libsql-fatal-"));
   const actualTerminate = Worker.prototype.terminate;
   const terminations: Promise<number>[] = [];
+  let terminated = () => {};
+  const firstTermination = new Promise<void>((resolve) => {
+    terminated = resolve;
+  });
   const terminate = vi.spyOn(Worker.prototype, "terminate").mockImplementation(function (
     this: Worker,
   ) {
     const termination = Reflect.apply(actualTerminate, this, []);
     terminations.push(termination);
+    terminated();
     return termination;
   });
   let replacement: ReturnType<typeof createWorkerLocalLibsqlClient> | undefined;
@@ -180,7 +185,8 @@ it("terminates a fatally invalid worker before replacing its native client", asy
     await expect(failed.execute("SELECT 1")).resolves.toMatchObject({ rows: [[1]] });
 
     await expect(failed.execute("")).rejects.toThrow();
-    await vi.waitFor(() => expect(terminate).toHaveBeenCalledOnce());
+    await firstTermination;
+    expect(terminate).toHaveBeenCalledOnce();
     await expect(terminations[0]).resolves.toBeTypeOf("number");
 
     replacement = createWorkerLocalLibsqlClient(path.join(root, "fatal.db"), "application");

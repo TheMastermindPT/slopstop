@@ -5,6 +5,8 @@ import type { FlowScreen, useAddRepository } from "./add-repository/use-add-repo
 import styles from "./projects-workspace.module.css";
 import { RemovalView } from "./remove-from-list/removal-view.js";
 import type { RemovalScreen, useRemoveFromList } from "./remove-from-list/use-remove-from-list.js";
+import { UpgradeProblem } from "./upgrade-problem.js";
+import type { UpgradeProblem as Problem } from "./use-project-upgrade.js";
 
 export type View = {
   projectId: ProjectId;
@@ -29,6 +31,8 @@ export function WorkspaceSection(
     view: View;
     error: string | null;
     busy: boolean;
+    problem: Problem | null;
+    onRetry(projectId: ProjectId): void;
   }>,
 ) {
   const { flow, removal } = props;
@@ -45,8 +49,9 @@ export function WorkspaceSection(
         <WorkspaceView
           view={props.view}
           error={props.error}
-          busy={props.busy}
           note={idleNote(flow.screen, removal.screen)}
+          problem={props.problem}
+          onRetry={props.onRetry}
         />
       ) : null}
     </section>
@@ -55,9 +60,15 @@ export function WorkspaceSection(
 
 /** The workspace outside the add flow: the opened Project, or a prompt to choose one. */
 function WorkspaceView(
-  props: Readonly<{ view: View; error: string | null; busy: boolean; note: string | undefined }>,
+  props: Readonly<{
+    view: View;
+    error: string | null;
+    note: string | undefined;
+    problem: Problem | null;
+    onRetry(projectId: ProjectId): void;
+  }>,
 ) {
-  const { view } = props;
+  const { view, problem } = props;
   return (
     <>
       {props.note === undefined ? null : (
@@ -71,7 +82,6 @@ function WorkspaceView(
           {props.error}
         </p>
       ) : null}
-      {props.busy ? <p aria-live="polite">Opening Project…</p> : null}
       <h2 id="ws-heading" tabIndex={-1}>
         {view === null ? "No Project selected" : `Project ${view.name}`}
       </h2>
@@ -89,6 +99,13 @@ function WorkspaceView(
               ? "Project identity and local Storage are connected. Conversation and repository registration controls are not available in this view yet."
               : "Writes unavailable. Storage needs attention before this Project can be used."}
           </p>
+          {problem === null ? null : (
+            <UpgradeProblem
+              key={problem.result.diagnostic.code}
+              problem={problem}
+              onRetry={() => props.onRetry(problem.projectId)}
+            />
+          )}
         </>
       )}
     </>

@@ -7,6 +7,8 @@ import {
   HarnessStatusSchema,
   ProjectListResultSchema,
   ProjectRegistrationResultSchema,
+  ProjectUpgradeRequestSchema,
+  ProjectUpgradeResultSchema,
   RegistrationCapabilitySchema,
   RendererRegistrationRequestSchema,
   RepositoryChoiceResultSchema,
@@ -40,6 +42,14 @@ const api: SlopStopApi = {
       await ipcRenderer.invoke(
         desktopIpcChannels.switchProject,
         decodeStrict(CanonicalProjectSwitchRequestSchema, request),
+      ),
+    ),
+  upgradeProject: async (request) =>
+    decodeStrict(
+      ProjectUpgradeResultSchema,
+      await ipcRenderer.invoke(
+        desktopIpcChannels.upgradeProject,
+        decodeStrict(ProjectUpgradeRequestSchema, request),
       ),
     ),
   getRegistrationCapability: async () =>

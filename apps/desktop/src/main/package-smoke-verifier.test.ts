@@ -391,6 +391,7 @@ const exactResult = {
     "subscribeHarnessStatus",
     "subscribeWorkspaceNotifications",
     "switchProject",
+    "upgradeProject",
   ],
   queryResult: {
     status: "unavailable",
