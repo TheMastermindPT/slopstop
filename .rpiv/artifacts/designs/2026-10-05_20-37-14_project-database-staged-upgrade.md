@@ -8,10 +8,10 @@ topic: "Automatic staged upgrade of an existing Project database (Conversation C
 tags: [design, storage, migration, registry, manifest, opening, c1-0, adr-0005]
 status: ready
 parent: .rpiv/artifacts/research/2026-10-05_20-24-35_project-database-staged-upgrade.md
-last_updated: 2026-10-06T00:50:00+0100
+last_updated: 2026-10-07T15:38:00+0100
 last_updated_by: Pedro Mesquita
-last_updated_note: "Round-4 findings applied (.rpiv/artifacts/evidence/2026-10-05_c1-0-s1-intent-review-4.md). No further review round by the user rule of at most two rounds per slice; this revision is unreviewed."
-content_hash: ed78b8c649415c006fbf1e7516be26e62eafcb6add04d599ae67d85699c1aa6d
+last_updated_note: "Follow-up appended: S4 upgrade documentation done; full journal tracked in #92."
+content_hash: 54199af204c751adbc17ab0c67f92ee02b619563b03670aa510cbb9d83e38095
 ---
 
 # Design: Automatic staged upgrade of an existing Project database (C1-0)
@@ -309,3 +309,7 @@ Intent accepted by the user with recorded residual risk (see Review gate status)
 ## TDD Evidence (implement)
 
 - Slice `c1-0-s1-staged-upgrade-engine`, branch `feat/c1-0-s1-staged-upgrade-engine` from `a5e19a6`: per-behaviour red/green, gates, deviations and review-round fixes in `.rpiv/artifacts/evidence/2026-10-05_c1-0-s1-tdd-evidence.md` (append-only). Prior content hash of this design: `12dfee1e3a6a1e65d1c6bf604fefd0239a47fcd8571e79da5d2fc13c54403a1b`.
+
+## Follow-up
+
+- **S4 done (2026-10-07).** The ADR 0005 amendment (temporary single-marker form) and ADR 0006 manifest version 2 and `storage_upgrades` were already delivered in S1 (`.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` §5, Adjustment 1). The remaining upgrade documentation (ADR 0005 amendment precision: eligibility, who starts an upgrade, runtime copy not migrated, internal-failure mapping, discard at the next activation or upgrade, single-instance lock, discard diagnostics; ADR 0006 backup manifest; `CONTEXT.md` terms) is in the S4 docs commit on branch `feat/c1-0-s4-upgrade-docs`. The full Storage-operation journal stays a follow-up: [Replace the temporary storage_upgrades marker with the full Storage-operation journal and its Effect records (#92)](https://github.com/TheMastermindPT/slopstop/issues/92).

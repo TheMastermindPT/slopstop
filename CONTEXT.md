@@ -20,6 +20,8 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Persistence health | The independent healthy, migration-required, recovery-required, missing, corrupt, identity-conflict, unsupported-newer, unavailable, or broken state of one canonical or runtime database. |
 | Storage generation | One activated physical pairing of canonical and runtime Project persistence; restore, import, or runtime reset creates a new generation without redefining Project identity. |
 | Storage operation | One durable backup, export, migration, restore, import, runtime-reset, or delete attempt whose journal and ADR 0013 `storage-operation` Effect partition remain together in `application.db`, outside every Storage generation it may alter. |
+| Staged upgrade | The temporary single-marker form of the migration Storage operation (ADR 0005 amendment of 2026-10-06): one `storage_upgrades` row per upgrade until the full Storage-operation journal replaces it. |
+| Pre-upgrade backup | The pre-migration backup that ADR 0005 requires, taken by a staged upgrade under `snapshots/<upgradeId>/`; both names denote the same backup. |
 | Storage safe mode | The read-only Project mode entered when either database is not healthy; only diagnosis and explicit storage-recovery operations remain available. |
 | Prior-state witness | Any registry record, marker, manifest, generation, database sidecar, local snapshot, or unfinished-operation journal proving that missing files must enter recovery instead of fresh initialization. |
 | Deletion tombstone | The external operation witness retained while destructive Project-data deletion is incomplete; it blocks fresh initialization until deletion either completes or is recovered. |

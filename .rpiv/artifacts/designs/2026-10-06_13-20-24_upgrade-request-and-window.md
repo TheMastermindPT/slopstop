@@ -8,10 +8,10 @@ topic: "C1-0 S3: upgrade request through the harness (S3a) and the window flow (
 tags: [design, protocol, coordinator, desktop, renderer, c1-0, s3]
 status: ready
 parent: .rpiv/artifacts/designs/2026-10-05_20-37-14_project-database-staged-upgrade.md
-last_updated: 2026-10-06T17:30:00+0100
+last_updated: 2026-10-07T15:38:00+0100
 last_updated_by: Pedro Mesquita
-last_updated_note: "Round-2 (last) findings applied without a further round (user rule). See Review gate status."
-content_hash: b031715c8a7a53ffdde910be0cfb8019dc8885af3645cbc69519145c6827486f
+last_updated_note: "Follow-up appended: S4 upgrade documentation done; full journal tracked in #92."
+content_hash: 85b37dcdbc4920c2c73f36c6e789da75948d2ac446c8034a03e6ec6a2abd3abe
 ---
 
 # Design: C1-0 S3 — upgrade request through the harness (S3a) and the window flow (S3b)
@@ -210,3 +210,7 @@ Intent accepted by the user with recorded residual risk. Build authorization, br
 - `.rpiv/artifacts/evidence/2026-10-06_c1-0-s2-tdd-evidence.md`
 - `.rpiv/artifacts/evidence/2026-10-06_c1-0-s3a-intent-review-1.md`
 - `.rpiv/decisions/degrade-distinguishes-broken.md`, `.rpiv/decisions/shared-vocab-union.md`
+
+## Follow-up
+
+- **S4 done (2026-10-07).** The ADR 0005 amendment (temporary single-marker form) and ADR 0006 manifest version 2 and `storage_upgrades` were already delivered in S1 (`.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` §5, Adjustment 1). The remaining upgrade documentation (ADR 0005 amendment precision: eligibility, who starts an upgrade, runtime copy not migrated, internal-failure mapping, discard at the next activation or upgrade, single-instance lock, discard diagnostics; ADR 0006 backup manifest; `CONTEXT.md` terms) is in the S4 docs commit on branch `feat/c1-0-s4-upgrade-docs`. The full Storage-operation journal stays a follow-up: [Replace the temporary storage_upgrades marker with the full Storage-operation journal and its Effect records (#92)](https://github.com/TheMastermindPT/slopstop/issues/92).
