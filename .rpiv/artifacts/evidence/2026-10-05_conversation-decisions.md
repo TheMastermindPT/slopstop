@@ -2,8 +2,8 @@
 date: 2026-10-05
 author: coordenador-claude (Claude Code), for Pedro Mesquita
 repository: slopstop
-branch: feat/c1-0-s5-deep-review-fixes
-commit: bde79ff
+branch: main
+commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
 ---
@@ -143,3 +143,37 @@ Relayed by the coordinator from the user. Source: `.rpiv/artifacts/reviews/2026-
   - #95 "Prove a real-process quit during a running upgrade and assert its wire reply" (5g/5f);
   - #96 "Keep harness upgrade log lines that arrive after the child exits on quit" (W1);
   - #97 "Add mutation scope for the C1-0 S5 upgrade and shutdown branches".
+
+## 14. Harness visual structure, first pass (user decisions, 2026-10-08)
+
+Recommended by the coordinator and the ui-ux agent, approved by the user in the coordinator session. **Provisional:** the user keeps these open; the coordinator and the opencode design agent refine them together and present the final options to the user again before any Figma or Rive work. Saga and Chapter are view labels only; the domain keeps Project → Feature → Waypoint.
+
+- **Shell:** keep the PRODUCT.md shell (activity rail and one replaceable sidebar; center Map/Conversation plus temporary surfaces; right contextual panel; collapsible lower panel). Work starts with the Conversation zone.
+- **Conversation:**
+  - D1: the right panel stays collapsed and opens on demand. Its pages are Decisions, Context and Details, and a header toggle shows a count such as "Decisions · 3/5".
+  - D2: the scope navigator is a temporary drawer over the sidebar that closes after selection.
+  - D3: a breadcrumb plus a compact Waypoint scope header (objective, status, "Open on map"); the composer placeholder names the scope.
+  - D4: a model suggestion appears as a removable chip in the composer before sending, with Mention (default) or Send to; `#` is the manual trigger.
+  - D9: a per-message model pill in the composer, equivalent to `/model`; the choice sticks within the conversation.
+  - D10: a failure shows on the affected response (reason, Retry, Change model), and goes to Attention only when it blocks work.
+- **Frame, Review and Runs:**
+  - D5: the Waypoint-parent dialogue is a pane in the Run overview, with amendment cards to approve.
+  - D6: the Decision Canvas preview is the right panel's Decisions page, labelled provisional and not styled like the map.
+  - D7: Decision checkpoints are inline cards in the conversation.
+  - D8: Review is a temporary center destination.
+  - B1: the Waypoint-parent dialogue has no branches; read-only side questions cover the "what if" need (PRODUCT.md Workspace Interaction clarification).
+- **Map views:**
+  - M0: Chapter shows the Feature's Waypoints, ordered by `blocks`, with parallel Waypoints stacked. A Run's task DAG reuses the sequence layout in the Run overview.
+  - M0b: steps and rows are derived, never stored.
+  - M1: in the Saga, the same row means parallel, with at most 3 per row and labelled cross-row needs.
+  - M2: every chapter opens; a click selects and "Open chapter" zooms.
+  - M3: counts only, no percentages.
+  - M4: a zoom of 300 ms or less, instant under reduced motion; the carved effect is kept only for map creation.
+  - M5: the right panel shows Feature Details or Waypoint Details.
+  - M6: a Project opens on the Saga with Attention framing.
+- **Menus:**
+  - N1: the Project menu opens from the Project name.
+  - N2: Settings fills the sidebar with Application, Project and Models.
+  - N3: the Waypoint menu opens from ⋯, right-click and the keyboard.
+  - N4: a message toolbar with Branch and Copy, plus ⋯.
+  - N5: rail labels show at 1280 px and wider.
