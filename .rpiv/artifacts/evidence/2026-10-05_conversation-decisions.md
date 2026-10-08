@@ -6,6 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
+content_hash: 376424ddbc4f89cce24a63bca52d09ec2b25f7fcfec83b782fdd372c76a5d32d
 ---
 
 # Conversation — Human Decisions
@@ -177,3 +178,22 @@ Recommended by the coordinator and the ui-ux agent, approved by the user in the 
   - N3: the Waypoint menu opens from ⋯, right-click and the keyboard.
   - N4: a message toolbar with Branch and Copy, plus ⋯.
   - N5: rail labels show at 1280 px and wider.
+
+## 15. Harness visual structure, refined pass (user decisions, 2026-10-08)
+
+The coordinator and the opencode design agent worked as peers and converged; the user approved each topic in the coordinator session. This section refines §14 and supersedes it where they differ. The design is still under review in Figma (task-guided journeys); DESIGN.md is updated only after the design is approved.
+
+- **Conversation (topic 1):** a send starts from the Project conversation with a clickable `To:` selector, never typed text, and a Send button that names the destination. A routed send leaves a linked receipt in the Project. After a successful send, `To:` returns to the Project; on failure the draft and destination are kept. The model override sticks within the conversation, with "Reset to Project default". `#` references a Waypoint and has a visible button; `@` attaches files.
+- **Right panel (topic 2):** one contextual inspector without permanent tabs, whose decisions follow the displayed conversation. A named link opens its page directly (PRODUCT.md clarification). A checkpoint can be accepted in the panel as well as in the conversation; correction and final Frame acceptance stay outside the panel. Nothing becomes out-of-scope automatically.
+- **Saga and Chapter (topic 3):** the M0-M6 baseline with an interleaved band, a "Linked work · A + B" combined drill-down and named cross-Feature stubs (derived view only). Overflow wraps visibly inside the group. Motion is 200-300 ms in both directions and instant under reduced motion.
+- **Menus and rail (topic 4):** N1-N5 kept. Labels: "Use as recipient" (sets `To:`, sends nothing), "Begin…" (opens preparation and approval), Remove from list, Close, Archive, Delete SlopStop data. There is no Pin action.
+- **Visual baseline (topic 5):** Cinzel for the RAGNAROK wordmark only, Inter for the UI and Cascadia Code for code. Matte carbon and graphite, with frost light only for focus or active work and amber only for genuine human attention. Medium density, no ambient glow or ornamental animation.
+- **Comprehension journeys:** the first draft was judged appealing but confusing to use, so the design is reviewed through clickable, task-guided journeys in the order J3 → J2 → J1 → J4. After accept, J1 must say that the changes are not yet applied to the repository and show that next step.
+- **Attention (J3 feedback, option c):** the Attention sidebar opens on Project or Map entry. Explicitly entering Conversation collapses it, but typing, sending or reading does not. The rail bell with its actionable-only count reopens it, and it stays open until closed. A new Project that goes straight to Frame starts with the list closed. Blockers stay as a persistent plain cue beside the affected action, there is one item per exact action, and a load failure never looks like zero. Opening or closing the list never resolves an item. A popover-only Attention (option b) was considered and superseded.
+- **Decisions page:** a central Decisions page, reached from the Project menu and from "See all" in the right panel. It holds only product and plan decisions; operational approvals stay with their owners and are linked when relevant. It is not part of the Memory library.
+  - Search, add, edit and remove are easy. Edit happens in place and is confirmed; the new version becomes current and the old one stays in history (append-only). Remove retires the decision and keeps its history. Add is authored and accepted directly by the user; no AI review gate is required.
+  - Provenance of a direct add or edit says it was added or edited by the user there. An original conversation remains historical provenance only.
+  - A possible contradiction with another decision or the plan shows an advisory, non-blocking note with the related wording and links; saving stays available beside "Review related decisions". A save never silently rewrites other decisions, the plan, running work or code. "Checking" and "Not checked" never look like "No conflicts". Real save failures and concurrent versions must be resolved, never overwritten.
+  - An optional "Group by Project → Feature → Waypoint" view; a decision spanning several Waypoints stays one record with several links.
+- **Decisions on the map:** Feature and Waypoint cards show a count of current linked decisions, and a named entry covers Project-wide decisions. The count opens that Decisions view in the right panel, while a normal card selection still opens Details. "Show on map" on a selected decision highlights the Waypoints that implement it without changing the layout, under a visible "Showing decision: … / Clear focus" control. There is no default decisions lens and no decision nodes on the map.
+- **Decision links (domain):** a decision stores two separate links: its scope (the Project, one Feature or one Waypoint) and the Waypoints that implement it (zero or more). The current Frame protocol (`workspace-protocol.ts:289-307`, `:412-423`) has neither link and no direct add, edit or retire. Both need an ADR update before implementation, and the UI never infers them from a conversation's location or from a `blocks` relationship.

@@ -143,6 +143,8 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Command receipt | The durable applied, unchanged, or rejected settlement of the first distinct Typed-command fingerprint under one Project and command identity. |
 | Canonical event | An append-only fact emitted only by an applied command for audit and integration; current Project state never depends on replaying it. |
 | Accepted revision | An immutable, explicitly accepted version of canonical aggregate content to which directly queryable current state may point. |
+| Decision scope | Where one accepted product or plan decision applies: the Project, one Feature, or one Waypoint; recorded separately from the Waypoints that implement it and never inferred from conversation location or `blocks`. |
+| Implementing Waypoint | A Waypoint explicitly linked as planned work that realizes an accepted decision; one decision may have zero or more. |
 | Writer generation | A durable fencing identity acquired under the operating-system writer lease and checked by every canonical command settlement. |
 | Runtime handoff | A versioned immutable request crossing from canonical outbox to the runtime inbox through at-least-once delivery, stable reservation, and evidence-backed reconciliation. |
 | Workspace protocol | The application-facing identity and transport boundary for Conversation, Frame, and Memory projections; it owns no Execution checkout, lease, process, or effect state. |
