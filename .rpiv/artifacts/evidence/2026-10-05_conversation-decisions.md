@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 8cd5a5ca04b21fdc37b286d40af6ee041cf38bcd88e43f6752ff087c4431b059
+content_hash: 45030110edd4f709be13770aa8d5b1760640cc4fdcddd2a81db3e37114db8e07
 ---
 
 # Conversation — Human Decisions
@@ -318,3 +318,12 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
     - agents pause at 100%;
     - when the provider does not report usage, an explicit "not reported, this is not 0%" state is shown, never an invented number.
   - "Agents pause at 100%" must go through the Run pause rules (ADR 0007/0009 safe checkpoints) and budget policy; it is a design input for the Runs work, not yet a contract.
+- **Sign-in options (user, same day):** "está detalhado que eu utilizo a API, ok? Isso é para manter porque eu gostaria de ter essa opção de conectar através da API. Agora eu também quero a opção de me poder fazer login através da página dos settings ou de outra forma, para utilizar a subscrição ao invés da API." This matches ADR 0009 Amendment 1, which provides two billing modes, `subscription` (sign in to the unmodified official CLI) and `api`. Constraints that stay in force:
+  - a Run pins its mode, and the mode never switches automatically, so the prototype's "the other method stays as a fallback" can only be a manual choice, never an automatic fallback;
+  - Anthropic does not allow third-party apps to route subscription credentials, so subscription sign-in happens in the official CLI;
+  - public release with subscription mode needs Anthropic's written confirmation (a release gate).
+- **Bundled quality tools (user, same day; the final position supersedes the first):** "Então talvez a melhor opção não seja dar o controle dos usuários para desativar essas ferramentas. No entanto eu quero que vocês estejam cientes de que essas ferramentas já vêm pré-instaladas no Arnis. Depois também, outra coisa em que teremos que prestar atenção é que essas ferramentas terão que ser atualizadas, não é? Portanto a Arda deveria ter lá um botão, se calhar, para eles fazerem o update da última versão." In practice:
+  - the quality tools (jscpd, ast-grep and the others from the rpiv-claude workflows) ship preinstalled with the harness and cannot be disabled;
+  - the app shows clearly that they are bundled;
+  - an update control is wanted.
+  The ui-ux agent's advice: pin tool versions per harness release; an update installs only versions tested with that harness, shows what changed, re-runs a self-check and allows rollback. Each tool's licence must allow redistribution. This needs its own interview and ADR; the user wants to discuss it further.
