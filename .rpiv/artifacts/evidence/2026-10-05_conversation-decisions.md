@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: b365f8017aea234b1a7cb7e887e6e84ae9ec888e29ade77f9d32c44622591832
+content_hash: 88b1ccdf330159fcf3d8f4aa7f889b314cfa0a2d0c4ca697d1d198e12ee25429
 ---
 
 # Conversation — Human Decisions
@@ -337,3 +337,4 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **Billing:** both the subscription sign-in and an API key may be stored, with exactly one mode active at a time and manual switching (ADR 0009 note).
 - **Map markers:** Waypoints on the map are diamonds (Runa geometry), not circles.
 - **Coherence pass (user request: "atualiza todos esses lugares"):** PRODUCT.md, CONTEXT.md (galaxy/planet metaphors removed; Supervisor, Worker family, agent dialogue and Decision checkpoint added), DESIGN.md, design.json, the artifacts README (Current Authority), the old coordination record and the C1 brief (marked historical or superseded), and ADR 0009 are aligned with §14-25. The ADR 0005/0006 chained-upgrade amendments ship with the C1 S1+S2 merge (they exist on the C1 branch).
+- **Runtime choice still open (user, same day):** the earlier leaning was the AI SDK instead of Mastra, because subscription mode was chosen for cost and gives less control over the conversation. Ragnarok now supports both API and subscription modes, so the runtime choice is not closed. It is tracked in GitHub #101, and PRODUCT.md and AGENTS.md stay unchanged until it is decided.
