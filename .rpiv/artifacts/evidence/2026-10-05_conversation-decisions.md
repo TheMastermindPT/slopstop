@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: c58cc4a92788fa3fd4ba046475df90e5dab247ffa059bf3d50ada57015237cb5
+content_hash: c5e9cbd9406ef64e1a6a46b255351b18b504d4cb02d1cde54aef217805bd649e
 ---
 
 # Conversation — Human Decisions
@@ -262,3 +262,4 @@ Prompted by the coordinator ↔ design-agent peer dialogue used in this session,
 
 - **Component kit V3 "Seixo" chosen for every set** (relayed verbatim by the ui-ux agent): "botoes v3. campos de escrita v3. estados e avisos v3. cartoes e contentores v3. navegacao v3.listas e linhas v3. marcadores e contagens v3. marca v3. movimento v3." This replaces component feel A (quiet and machined) recorded in DESIGN.md. Seixo means: pill buttons and chips, 12-14px corners on cards, containers and rows, borderless tonal fills for fields and secondary controls, soft real shadows on raised items, and focus shown as a soft frost halo.
 - **UI typeface reopened:** "nao gosto da letra inter. aprensata me 7 variantes para eu decidir a tipografia". The ui-ux agent is preparing seven OFL options. Cinzel and Cascadia stay unless the user says otherwise. DESIGN.md is updated once, after the typeface choice.
+- **Material wording (user, same day):** the user chose to update the text. PRODUCT.md now says "soft rounded forms like polished stone" instead of "machined edges", while keeping matte carbon and graphite, restrained light and scarce state colour.
