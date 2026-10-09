@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 8ec9217e1e999fe13f6301dba2c7155eb9831433403807848ec7bae6f8b04e3e
+content_hash: b97e139645e338df61900002397404942e49ed7661280f3ab47fde6a5504dd42
 ---
 
 # Conversation — Human Decisions
@@ -299,3 +299,9 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **Open:** how tool calls are displayed (HTML examples coming); error, failure and success states; first use; chart ideas for Runs and Diagnostics; the command list; Windows accessibility; notifications outside the app beyond sounds; the app icon ("aquele striker que eu te falei"), whose meaning is still to be confirmed with the user.
 - **Tool-call display (user, same day):** "gosto da opcao A , em linhas." Tool use shows as one quiet line per tool. The live diff opens inline under the file being written and folds when the next step starts, and Expand opens the full view of all changes (prototype `ragnarok-hero/work.html?v=a`). Open: whether runs of four or more similar steps fold into one expandable line (the ui-ux agent's proposal).
 - **Folding long tool runs (user, same day):** "gostei!". Runs of four or more similar read or search steps fold into one expandable line, for example "Read 6 files". Edits and commands never fold.
+- **States, toasts and sounds (user, same day):** "Os toast ficam no canto inferior direito. Os sons ficam ligados por defeito. No entanto numa primeira instalação, é lançada uma espécie de pop-up que pergunta se você quer desligar ou não. E, claro, através dos settings também se vai poder desligar ou não. eu gosto do contorno no broken .No ecrã que bloqueia a runa, fica com o eclipse. No entanto já te disse que o símbolo está demasiado grosso." In practice:
+  - toasts appear bottom-right;
+  - sounds are on by default; a first-install prompt offers to turn them off, and Settings has the toggle;
+  - a broken state is shown with a blood outline, with no new colour;
+  - the blocking screen shows the eclipse with the Raidho rune;
+  - the rune stroke is thin everywhere, in the ratio of the approved frame 109:49.
