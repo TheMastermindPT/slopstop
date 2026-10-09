@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: a1dba3253b210d46d086acbc5abae9baa933b7329e90d7494196a70b77a9b813
+content_hash: aff2a8cb84c124d1b4787b793cd2960bef2722f68a45c39fb58e57b1bf7fb893
 ---
 
 # Conversation — Human Decisions
@@ -266,3 +266,8 @@ Prompted by the coordinator ↔ design-agent peer dialogue used in this session,
 - **UI typeface (user, same day):** "gosto da red hat text". Red Hat Text (SIL OFL 1.1, variable 300-700; weights 400 body and meta, 500 labels and buttons, 600 titles) replaces Inter for UI and prose. It is bundled locally because of the app's CSP. Cinzel and Cascadia Code are unchanged.
 - **Anvil brand exception (user, same day):** "aprovo a excepcao da bigorna". A custom anvil-and-hammer icon is the single exception to "Lucide only" and is used only on Send buttons, whose label still names the destination. On each send the hammer strikes once (about 420 ms) with sparks; under reduced motion nothing moves.
 - **Prototype port timing (user, same day):** "Depois da C1". The React port of the coded prototypes (the ui-ux agent's PORT-PLAN.md in ragnarok-hero) is scheduled after Conversation C1, with the designer and the implementer under AGENTS.md (slices, red-green, reviews).
+- **Port scope (user, same day, relayed verbatim by the ui-ux agent):** "apagad a medidade que cada fatia nova fica pronta. depende eu vou querer aquelas animcoes de abertura do rive e as animacoes do mapa (atencao, que as animacoes do mapa estao desatualizadas e sao as antigas, no entanto se essas animacoes podemn ser feitas em css ficam em css e nao em rive)". Meaning:
+  - the old renderer UI is deleted slice by slice as each replacement lands;
+  - the Rive startup moment ships;
+  - the map motion is redesigned for the V3 graph, in CSS wherever possible and in Rive only where CSS cannot do it.
+  Consequences the user still has to decide on before the port: a local Rive runtime (about 2.6 MB); `wasm-unsafe-eval` in the renderer CSP, which loosens a security default in AGENTS.md and needs an explicit decision and an ADR note; a paid Rive plan before release, to remove the watermark; and lucide-react versus inline SVG.
