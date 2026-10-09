@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: a67789367d7d0e2865e71ac503301dd654b826a6b1d36e309148e0a5558f92ef
+content_hash: 8cd5a5ca04b21fdc37b286d40af6ee041cf38bcd88e43f6752ff087c4431b059
 ---
 
 # Conversation — Human Decisions
@@ -310,3 +310,11 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
   - The Ctrl K palette and the Ctrl / shortcut sheet (`keys.html`) are approved: "Está muito bem feito". The actual shortcut list is to be defined later.
   - Charts: "gostei de todos os gráficos das runs" and "Em relação ao número 2, ficara em dólares e tokens. Sinceramente gostei de tudo o que implementaste nos gráficos." All Runs charts are in: timeline, budget, cost per Waypoint, last 30 Runs, and tests. Costs show both dollars and tokens. The Diagnostics charts are liked too, and their order is left to the plan. Open: whether the timeline shows every agent of a Run or only the selected Waypoint's.
   - New request: show how much of a subscription plan is used and how much remains, in Settings or elsewhere. Not designed yet; it depends on whether the provider exposes usage (the ADR 0009 Amendment 1 subscription/CLI mode).
+- **Run timeline and plan usage (user, same day):** "Todos com o filtro. Penso que seria poderoso ter a visão geral e outra mais específica. Em relação às [definições] sim, gostei da maneira como tu as imaginaste." In practice:
+  - The Run timeline shows every agent, with a filter down to one Waypoint.
+  - Plan usage, approved as the ui-ux agent proposed:
+    - in Settings, a meter per account showing percent used and left, the refill time, and a weekly limit where the provider reports one;
+    - a top-bar chip and an Attention item appear only above a warning level (default 80%);
+    - agents pause at 100%;
+    - when the provider does not report usage, an explicit "not reported, this is not 0%" state is shown, never an invented number.
+  - "Agents pause at 100%" must go through the Run pause rules (ADR 0007/0009 safe checkpoints) and budget policy; it is a design input for the Runs work, not yet a contract.
