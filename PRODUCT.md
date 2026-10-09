@@ -132,11 +132,19 @@ SlopStop treats project intent, execution attempts, and model conversations as s
 
 ## Brand Commitments
 
-The official product name is Ragnarok. The name is an input to future UI/UX and brand exploration, including visual language, imagery, tone, and interaction concepts. No particular mythology, palette, typography, iconography, or motion treatment is selected by the name alone. Variants require explicit review and must preserve clear domain meaning, accessibility, and operational readability.
+The official product name is Ragnarok. Brand variants require explicit review and must preserve clear domain meaning, accessibility, and operational readability.
 
-The final visual identity is deliberately open. Existing layouts and the foundation shell are provisional and may change substantially through use and review; they must remain cheap to replace.
+The user approved the Ragnarok brand identity on 2026-10-09 (decisions log §17). The approved startup screen is the brand reference: Figma file `zHeTrqwSFK7XMHMMhgzZeL`, node `109:49`. It is binding for:
+- the ᚱ (Raidho) rune as the product mark, shown on the activity rail;
+- the RAGNAROK wordmark in Cinzel, regular weight;
+- the rune inscription and the rune rule as brand ornaments;
+- the eclipse, reserved for big moments: startup, empty states, and loading or recovery.
 
-The current prototype direction is carbon and graphite, centered on a live graph, direct model conversation, explicit commands, contextual supervision, and full diagnostic state. Effects are reserved for focus, attention, active work, and transitions so code and operational reading remain stable. This direction remains a prototype until explicit review selects a Stable Product Identity.
+Daily working screens carry no background glow. Cinzel appears only in the wordmark and in short, fixed section names, never in user content. Exact visual values belong in DESIGN.md, which is recorded once the working-screen design is approved.
+
+Ragnarok never imitates another product's look. Established tools such as Linear set only the quality bar for craft. A screen fails review if it could be mistaken for the reference product, or described as that product in other colours.
+
+The working-screen direction is matte carbon and graphite. It is centred on a live graph, direct model conversation, explicit commands, contextual supervision, and full diagnostic state. Effects are reserved for focus, attention, active work, and transitions, so code and operational reading remain stable. Layouts and the foundation shell stay provisional until the working-screen design is approved; until then they must remain cheap to replace.
 
 ## Evidence on Hand
 
