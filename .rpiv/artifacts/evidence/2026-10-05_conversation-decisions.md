@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 433a89feced660d2de1bc2cd50ec8e0d5cddae8447006b107f9bb095f9e69b91
+content_hash: 689f04bd8b9bc7fde44ba822410e01e0742d8b91e979c028c7ab154577a32ffd
 ---
 
 # Conversation — Human Decisions
@@ -360,3 +360,9 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **Foundation by role (user, same day):** Foundation decisions are split into a Common section plus one section per Worker role (front-end, back-end/data, tests, design, security, docs, migration and so on), on the Decisions page and not in the Memory library. A Worker receives Common plus its role's section; a reviewer receives Common plus the section of the work it reviews; the Forger and the Supervisor receive every section. Existing Projects have each section inferred by a read-only Worker and confirmed by the user. This is added to Proposed ADR 0022 and to #104.
 - **Agent marks updated (user, same day):** there are three kinds: Supervisor (Algiz), Forger and Worker (Uruz). The Conversation mark (Ansuz) is retired, because the Supervisor is the conversation agent. For the Forger mark the user chose "B": Thurisaz ᚦ, the shaping hammer, replacing Othala (options compared in prototype `forger.html`; Kenaz, Raidho and the state diamond were excluded because they are already taken). Applied in the prototypes and Figma 141:30. Worker roles: doers are design, front-end, back-end, tests, docs, migration and resolver; readers are research, review and security.
 - **ADR 0021 and ADR 0022 accepted (user, same day):** "Aprovo os ADRs que escreveste porque eu já li." Both move from Proposed to Accepted.
+
+## 28. C1 S2 deviations and final heavy runs (user decisions, 2026-10-09)
+
+- **Deviation 6a accepted:** a failed force-close of an abandoned writer client reports `WRITER_REPOSITORY_CLOSE_FAILED` with cause `WRITER_CLIENT_ABANDON_FAILED`. The dedicated release code waits for the S3 protocol v8 change.
+- **Deviation 6b accepted:** the S2 "second run" uses `coordinator.stop()`, because `project.close` is a storage-level command that does not go through the coordinator.
+- **Final heavy runs authorised:** on S2 head de254e8, run sequentially and once each: full integration, e2e, launch-smoke, mutation project-storage and mutation conversation. Any failure or timeout stops the sequence and is reported before a rerun. A stray disk-wide `find` process was stopped first, with the user's approval.
