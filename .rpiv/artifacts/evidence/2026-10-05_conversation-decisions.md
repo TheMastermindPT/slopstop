@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 63d414d5c38faad6079c6bdeeac3866877d1a0501b7f55e0b8381bbf617d447d
+content_hash: 6c3be589edfe22fc464af75191783fd5ca15e4e57a2654faa22f3cf3f77c8dd5
 ---
 
 # Conversation — Human Decisions
@@ -255,3 +255,4 @@ Prompted by the coordinator ↔ design-agent peer dialogue used in this session,
 - Needs a PRODUCT.md change (the coordination rule at the "Parallel Workers keep independent turn sequences" bullet) and an ADR (agent dialogue ownership and the new Invocation context source kind).
 - **PRODUCT.md text approved (user, same day):** "sim, faz isso". The mediated agent dialogue rule is appended to the parallel-Workers bullet.
 - **User's target scenario:** "ao fazer um pedido a um agente (neste caso seria o supervisor, não sei se seria esse o nome), eu imagino que aí a tarefa vai ser repartida por vários waypoints dentro da saga e do chapter. Se estes agentes tiverem uma tarefa nas quais podem colaborar, então eles aí falam." Examples: a reviewer and a builder; and a front-end request where one agent owns the design and another owns the front-end implementation, talking to each other. Open points: the name and authority of the agent that splits a request across Waypoints (today the plan comes from Frame, and the Application coordinator is deterministic software, not an agent); whether collaboration happens inside one Run or across Waypoints and Runs; and role-specialised agents (design, implementation, review) in Run profiles.
+- **Plan changes discussed by agents (user, same day; PROVISIONAL, "Temos que pensar bem nisto"):** when implementation shows the plan must change, the affected agents first discuss it through the mediated dialogue. They then bring one Run amendment proposal (ADR 0011) with the change, the reason, the effect on prior work and their dialogue attached; the user approves, corrects or rejects it. If they disagree at the round limit, they bring the conflicting positions, each side's arguments and a recommendation. While they discuss, only the affected tasks stop at a safe point and the rest continues. The user wants this thought through properly before it is fixed; it goes into the #99 discovery and design.
