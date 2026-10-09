@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: dfd2549d912346b911a3ab78f97739745a73306548eb8ea82f7fab037e6c54b7
+content_hash: a569706184644be776f3f59cc7fdc1b8988139f659afb62bf75f109736acc409
 ---
 
 # Conversation — Human Decisions
@@ -239,3 +239,9 @@ Decided by the user directly with the ui-ux agent and relayed verbatim; the acti
 - **V3 map built in code (user, same day):** the user chose "Construir a V3 em código". On the coded V3 graph (derived layers, orthogonal edges, Saga↔Chapter semantic zoom) the user said: "esta ok, vai precisar de ser refinada mas gosto da ideia." It needs refinement later.
 - **Waypoint panel actions (user, same day):** "adiciona essas três ações ao painel do waypoint." The Waypoint panel offers: open its scoped conversation; "Use as recipient" (sets To:, sends nothing); and talk to the agent running its active Run (the Waypoint parent, in the Run overview), shown only while a Run is active, otherwise "No agent is working on it".
 - **C1 design approved (user, same day):** the coordinator checked revision 3 (raw SHA-256 e4d02922…, before finalizing) against every round-2 item; the user approved it ("Aprovo, pode começar"). The implementer builds in a linked worktree on branch `feat/c1-conversation-local-save`, starting with S1 then S2 (merged together).
+
+## 20. Decisions in Run context (user decisions, 2026-10-09)
+
+- **Which decisions a Waypoint agent receives (option "only the relevant ones"):** the Invocation context for a Waypoint parent or Worker includes current Project-wide decisions, decisions scoped to its Feature or Waypoint, and decisions that Waypoint implements. All other decisions are excluded, with the reason recorded in the Invocation context record, and stay reachable only through read-only typed retrieval. This depends on the decision scope and implemented-by links (§15), which are not yet stored.
+- **Editing a decision while a dependent Run is active (option "continue + warning"):** the Run keeps its pinned accepted revision, and nothing pauses or changes on its own. Attention shows one item ("Decision changed: Run X uses the earlier version") with an action that asks the Waypoint parent for a Run amendment proposal (ADR 0011), which the user approves or not.
+- Both need an ADR amendment (ADR 0009 context sources; ADR 0011 amendment trigger) before Runs are built; tracked in GitHub.
