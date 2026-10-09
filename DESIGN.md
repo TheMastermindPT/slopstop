@@ -195,7 +195,7 @@ The world is carbon and graphite. Four state colours each carry exactly one mean
 
 **The Ember Means You Rule.** Ember marks only things that wait for a human. A screen with nothing for you to do contains no ember.
 
-**The Three Voices Rule.** Text uses exactly three tones: ink, ink-muted and ink-dim. A fourth body tone needs the user's approval.
+**The Three Voices Rule.** Text uses exactly three tones: ink, ink-muted and ink-dim. A fourth body tone needs the user's approval. On tinted surfaces (the frost, ember, moss and blood tints), secondary text uses ink-muted instead of ink-dim, to keep WCAG AA contrast (4.5:1).
 
 ## Typography
 
