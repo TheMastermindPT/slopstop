@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: aff2a8cb84c124d1b4787b793cd2960bef2722f68a45c39fb58e57b1bf7fb893
+content_hash: bfc1c578eddb5277e4a72adca443ada86ac4b340db51f7f3e6bb2ae8bb646156
 ---
 
 # Conversation — Human Decisions
@@ -271,3 +271,5 @@ Prompted by the coordinator ↔ design-agent peer dialogue used in this session,
   - the Rive startup moment ships;
   - the map motion is redesigned for the V3 graph, in CSS wherever possible and in Rive only where CSS cannot do it.
   Consequences the user still has to decide on before the port: a local Rive runtime (about 2.6 MB); `wasm-unsafe-eval` in the renderer CSP, which loosens a security default in AGENTS.md and needs an explicit decision and an ADR note; a paid Rive plan before release, to remove the watermark; and lucide-react versus inline SVG.
+- **Rive and the CSP (user, same day):** "ok faremos com uma janela so para abertura." The Rive startup animation runs in a separate splash window, which alone allows `wasm-unsafe-eval` and never shows model or repository content. The main window keeps the strict CSP, and map motion uses CSS only. This needs an ADR note when the port is built.
+- **Ragnarok-owned icons (user, same day):** the user asked for three variants of a fully Ragnarok-owned icon set, which would replace "Lucide only" once chosen. The coordinator drew them on Figma page 125:30: V1 Runa (126:30), V2 Seixo (127:30) and V3 Forja (128:30). The choice is pending.
