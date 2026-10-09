@@ -17,108 +17,104 @@ last_updated_by: coordenador-claude
 
 - **Purpose.** The user asked (2026-10-10) for one reference point of everything still to do. It consolidates three read-only sweeps: GitHub issues (open, and deferrals in closed issues), the ADRs with PRODUCT.md, CONTEXT.md and DESIGN.md, and the rpiv artifacts (FRDs, designs, plans, evidence, the decisions log).
 - **Not a plan.** This is an inventory. Implementation still starts only from an accepted design converted into a phased plan (`docs/agents/issue-tracker.md`, Implementation Roadmap Operations). Order below is the user's agreed order where one exists, otherwise #85's delivery order.
-- **Keep it current.** Update this file when items close or appear. Items marked "(no issue)" at sweep time received GitHub issues on 2026-10-10; see the "Issues created" section.
+- **Keep it current.** Update this file when items close or appear. Untracked items get GitHub issues on 2026-10-10; see the "Issues created" section.
 - Abbreviations: DL = `.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md`; C1D = `.rpiv/artifacts/designs/2026-10-09_13-54-08_conversation-c1-local-save.md`.
 
 ## Naming (2026-10-10)
 
-"Feature" is now **Strand** and the map's whole-Project view "Saga" is now **Weave**; the one-Strand view is called Strand (DL §30). "Waypoint parent" is now **Forger** (ADR 0021). Code identifiers and accepted ADR text keep the former names until the rename slice (phase 2).
+"Feature" is now **Strand** and the map's whole-Project view "Saga" is now **Weave**; the one-Strand view is called Strand (DL §30). "Waypoint parent" is now **Forger** (ADR 0021). Accepted ADR text keeps the former names with a note (`CONTEXT.md` Former Names). **Naming rule:** new code uses Strand, Weave and Forger. There is no separate code rename slice: code has no `Feature` or `WAYPOINT_PARENT_*` identifiers, only about 16 mentions in `apps/desktop/src/renderer/prototype/*` that leave with the React port, and schema renames are not possible with the current upgrade engine (C1D:77).
 
 ## Ordered roadmap
 
-Each phase starts only when the previous one is done, unless marked "in parallel". The reason for each position is given in brackets. Sections 3-7 below hold the detail and sources.
+Revision 2 (2026-10-10), after an adversarial completeness and ordering review. Each phase starts when the previous one is done unless marked "in parallel"; reasons are in brackets. Sections 3-7 hold the detail and sources. ADR line numbers refer to the files after commits d601e5b and e44236d.
 
 ### Phase 0 — now (in progress)
-1. **C1 S2 round-1 fixes** (DL §29) → heavy runs → candidate review round 2 (the last) → user merge decision → **S1 + S2 squash merge** to main (G15).
-2. **Documentation consistency** (in parallel): section-7 text corrections; the Strand/Weave/Forger sweep over every current document, the prototypes and Figma; former-names notes in the ADRs.
-3. **GitHub issues** for untracked items (in parallel; see "Issues created").
+1. **C1 S2 round-1 fixes** (DL §29) → heavy runs → candidate review round 2 (the last) → user merge decision → **S1 + S2 squash merge** (G15). **Before the merge:** back up the real `userData`, because merged main auto-upgrades the user's real Projects (C1D:711).
+2. **Documentation consistency:** done on 2026-10-10 (d601e5b section-7 corrections, e44236d Strand/Weave sweep; prototypes and Figma by the ui-ux agent). Remaining: the #1 map paragraph.
+3. **GitHub issues** for untracked items (see "Issues created").
 4. **Push main** after the merge, once its gates pass (the last push failed at launch-smoke).
+5. **In parallel with phases 0-1: #94** timeouts under load [S2-S5 all need e2e and launch-smoke runs].
 
 ### Phase 1 — finish Conversation C1
-1. **S3** `c1-s3-conversation-protocol`: protocol v8, coordinator admission, runtime; also the dedicated `WRITER_CLIENT_ABANDON_FAILED` code (deviation 6a) and the read-after-abandonment routing (U2, a new CNV-B13 row).
-2. **S4** `c1-s4-conversation-window`: bridge, IPC, preload, renderer. Coordinator proposal, user decides at S4: build the window in React from the prototypes, so the Conversation React port is not done twice.
-3. **S5** `c1-s5-conversation-journey`: the real-app journey.
-4. **Split `project-storage-node-adapters.ts`** (CodeScene 8.41 waiver, due after C1; DL:68, C1D:666).
+1. **S3** protocol v8, coordinator admission, runtime; the dedicated `WRITER_CLIENT_ABANDON_FAILED` code (6a); read-after-abandonment routing (U2, CNV-B13). **Fix #102 inside S3** [S3 rewrites the runtime routing in `process-bootstrap.ts`, the file behind #102].
+2. **S4** bridge, IPC, preload, renderer. Proposal, user decides at S4: build it in React from the prototypes. This is the user's "Conversation to React right after C1" (DL:348) without doing the screen twice.
+3. **S5** the real-app journey.
+4. **Close-out:** split `project-storage-node-adapters.ts` (CodeScene waiver, DL:68); review the carried C1-gate items with triggers (C1D:691-697: `project.upgrade` admission checks, F9 listing concurrency, G2 IPC failure proof, desktop diagnostics, `process-entry` log link, generation-cap semantics).
 
-### Phase 2 — tooling and hygiene before more product code
-[Done before the React port and C2 so all new code is written once, with the final compiler, rules and names.]
-1. **#105 TypeScript 7 and the Effect language service** (about 2-4 hours of investigation, mostly machine time):
-   - toolchain compatibility (Vite, Vitest, Electron Forge, Biome, knip, dependency-cruiser, Stryker, drizzle-kit, typecheck scripts), compiler option and behaviour changes, build speed, and the Forge/Drizzle lib-check warnings (#35);
-   - whether `effect-tsgo diagnostics` can run in the gates;
-   - the **Effect tsgo LSP server configuration**: a curated `diagnosticSeverity` rule set (candidates: newPromise, runEffectInsideEffect, globalErrorInEffectFailure, unknownInEffectCatch, tryCatchInEffectGen, multipleEffectProvide, leakingRequirements, scopeInLayerEffect, schemaNumber), the plugin options, and a count of existing violations; today `tsconfig.base.json` has only the minimal plugin entry with default severities;
-   - a go/no-go report with a migration and rollback plan; if go, the migration is a normal slice. Until then `pnpm typecheck` (TypeScript 6.0.2) stays authoritative and LSP findings are advisory (AGENTS.md).
-2. **Rename slice** (code identifiers): Feature → Strand, Waypoint parent → Forger (ADR 0021:71), in code, schema names where safe, tests and protocol vocabulary.
-3. **Stabilisation batch:** #94 timeouts under load (every heavy run depends on it), #102 listing cleanup masking the real failure, #95/#96/#97 C1-0 residuals.
+### Phase 2 — right after C1
+[The user decided the #99 interview starts when C1 is done; the foundations below come before C2 because C2's streaming and cancellation are heavy Effect code.]
+1. **#99 interview** continuation (Supervisor and dialogue details; agent-coordination FRD:187-189).
+2. **#105 TypeScript 7 and the Effect language service** (about 2-4 hours, mostly machine time): toolchain compatibility (Vite, Vitest, Electron Forge, Biome, knip, dependency-cruiser, Stryker, drizzle-kit, typecheck scripts), option and behaviour changes, build speed, Forge/Drizzle lib-check warnings (#35); `effect-tsgo diagnostics` in the gates; the **Effect tsgo LSP server configuration**: a curated `diagnosticSeverity` set (candidates newPromise, runEffectInsideEffect, globalErrorInEffectFailure, unknownInEffectCatch, tryCatchInEffectGen, multipleEffectProvide, leakingRequirements, scopeInLayerEffect, schemaNumber), plugin options and a count of current violations (today `tsconfig.base.json` has only the minimal plugin entry). Go/no-go report with migration and rollback; a go becomes a normal slice. Until then `pnpm typecheck` (TS 6.0.2) is authoritative.
+3. **Effect unit 2b runtime and lifecycle** (`evidence/2026-10-03_effect-unit2-lifecycle-plan.md`; ADR 0001:126): one `ManagedRuntime` per process, services and Layers, shutdown sequencing; with **#96** (late harness log lines on quit).
+4. **SQL-to-Effect pass** for existing storage code [its prerequisites, the `claude -p` prototype and the cost analysis, were done on 2026-10-04].
+5. **#95, #97** C1-0 residuals.
 
 ### Phase 3 — the new interface
-1. Decisions first: Rive paid plan; ADR note for the splash-window CSP; open visual items (error/failure/success states, first use, command list, Windows accessibility, notifications, app icon meaning, role-agent icons, Waypoint diffs).
-2. **React port** of the remaining prototype screens (`ragnarok-hero/PORT-PLAN.md`), deleting the old UI slice by slice; Rive startup in a splash window; map motion in CSS (DL:268-274).
+1. Decisions: local Rive runtime; ADR note for the splash-window CSP; custom frameless title bar (Electron security review); Settings shell with the sounds toggle and first-install sound prompt (DL:292, :304). The Rive paid plan is a release gate (#103), not a prerequisite.
+2. **React port** of the remaining prototype screens (`ragnarok-hero/PORT-PLAN.md`), deleting the old UI slice by slice; map motion in CSS.
+3. From here on, **accessibility is an acceptance criterion of every slice** (PRODUCT.md:75, :173), not an end pass.
 
-### Phase 4 — decisions before the model arrives
-[C2 cannot be designed without them.]
-1. **#101 agent runtime** (AI SDK vs Mastra); then the Mastra/Zod text cleanup in PRODUCT.md and ADRs 0005/0006/0009, and #93.
-2. **#99 interview** continuation (Supervisor, dialogue closing state, phase 2 across Runs).
-3. **v1 scope:** dialogue phase 2 and the Supervisor coordination budget; the Sentry consent path.
-4. Discover interviews on the other deferred decisions in section 3.
+### Phase 4 — decisions before the model
+1. **#101 agent runtime.** ADR 0009 Amendment 1 already withdrew Mastra as the planned first adapter; the open choice and the document cleanup remain: `mastra.db` in ADRs 0001:56, 0002:15, 0006, the storage manifest and `docs/architecture/model.c4`; PRODUCT.md:84 and AGENTS.md. Then **#93**. (Zod in ADR 0006:26 does not depend on #101.)
+2. **How C2 runs in subscription mode:** a governed CLI session (ADR 0009 role table), which pulls part of the process-job and CLI-seal machinery forward, or C2 starts API-only.
+3. **Models:** first-install default model, per-task model and effort overrides (rpiv-method FRD), and the cheap-model paired evaluation (memory: Luna, DeepSeek, Haiku).
+4. **v1 scope:** dialogue phase 2 and the Supervisor coordination budget.
 
 ### Phase 5 — C2 real-model Conversation
-Model replies, Context proposals and records, per-message model choice, streaming, the contract for credentials, attribution, failure and interruption (#85, C1D:701); the **Models and credentials part of Settings** (safeStorage, both billing modes, one active); branching, Waypoint conversations, `#`/`@`, `To:`. Then the **SQL-to-Effect pass** for existing storage code (planned after the model prototype and cost analysis).
+The Project conversation with the Supervisor as its agent (ADR 0021): model replies, Context proposals and records, per-message model choice, streaming, the contract for credentials, attribution, failure and interruption (#85, C1D:701); the Models and credentials part of Settings (safeStorage, both billing modes, one active); the plan-usage meter if subscription mode is used; branching.
 
 ### Phase 6 — Frame and the real map
-Frame acceptance; real Strand and Waypoint owners; `supersedes`; ADR 0022 decision scope and implementing-Waypoint links, Decisions page, "Show on map", decisions in Run context; #104 Foundation by role and the opt-in quiz; Waypoint chips and the `@` file picker.
+1. **#92 Storage-operation journal first**, with a minimal ADR 0013 storage-operation partition [mandatory follow-up of ADR 0005; every later schema upgrade otherwise ships on the temporary marker and the S1 chain rule].
+2. Frame acceptance; real Strand and Waypoint owners; `supersedes`; ADR 0022 store relations, Decisions page commands, map counts and "Show on map"; Waypoint conversations, Waypoint chips, `#`, `@` and `To:` (DL:39; real Waypoints need accepted Strand membership, ADR 0006:78); #104 opt-in Foundation quiz for new Projects; Files sidebar and previews (PRODUCT.md:50-51).
 
 ### Phase 7 — Board
-Board admission and durable read positions from real Waypoint sources; Project activity feed.
+Board admission and durable read positions from real Waypoint sources.
 
-### Phase 8 — security before agents run code
-ISOL-1 (hostile Git config, OS-network confinement); named-pipe isolation (#43); PC-S1 reduced-scope items (worktree association, recovery flow, Linux, choosing another Git program).
+### Phase 8 — Runs and Workers
+Supervised Runs (ADRs 0007-0009), the Forger and Workers, the governed CLI Worker path and its open checks (ADR 0009:327-331), agent dialogue phase 1 (ADR 0021), the Run approval view; Project-profile surfaces needed by Run preparation (discipline override, rpiv lanes, Foundation sections); decisions in Run context and the "Decision changed" Attention item (ADR 0022); #104 inference for existing Projects (a read-only Worker); the lower log panel for process output (PRODUCT.md:53); the Project activity feed (a projection of Execution events, PRODUCT.md:57). **Security:** ISOL-1 before any untrusted repository; named-pipe isolation (#43) only if a named pipe is productized (production uses anonymous pipes today). Whether ISOL-1 gates Workers on trusted personal repositories is a user decision.
 
-### Phase 9 — Runs and Workers
-Supervised Runs (ADRs 0007-0009), the Forger and Workers, the governed CLI Worker path and its open checks (ADR 0009:322-326), agent dialogue phase 1 (ADR 0021), the Run approval view, the plan-usage meter, user-approved commits with trailers; #100 rpiv method inside Ragnarok.
+### Phase 9 — Evidence, Findings, Candidate and Integration
+ADRs 0010-0020 with artifact retention and result limits; user-approved commits with decision and Run trailers (PRODUCT.md:123); #100 rpiv method inside Ragnarok [its review rounds need Findings].
 
-### Phase 10 — Evidence, Findings, Candidate and Integration
-ADRs 0010-0020, including artifact retention and result limits.
+### Phase 10 — Memory and language intelligence
+Verified Memory (ADR 0017); TypeScript language intelligence (ADRs 0003, 0016) and the Debug Adapter Safety Boundary.
 
-### Phase 11 — Memory and language intelligence
-Verified Memory (#13, ADR 0017); TypeScript language intelligence (#24, ADRs 0003, 0016) and the Debug Adapter Safety Boundary.
+### Phase 11 — storage lifecycle and the rest of Settings
+Backup, encrypted export, migration, restore, import, reset, Close/Archive/Delete (PRODUCT.md:92-95; ADR 0002:32); Application and Project Settings pages; the Diagnostics destination and its charts (DL:311); Supervisor budget surfaces if phase 2 is in v1.
 
-### Phase 12 — storage lifecycle and the rest of Settings
-#92 full Storage-operation journal; backup, encrypted export, migration, restore, import, reset, Close/Archive/Delete; Application and Project Settings pages; Supervisor budget surfaces if phase 2 is in v1.
+### Phase 12 — packaging, diagnostics and identity
+Consent-gated diagnostics (PRODUCT.md:25; open: live Sentry upload with a DSN or local-only, ADR 0001:72-73); Stable Product Identity and final visual identity acceptance; the **technical rename SlopStop → Ragnarok** (app identifier, `userData` paths, `slopstop.db`; needs a storage migration; user decides v1 or later).
 
-### Phase 13 — packaging, diagnostics and identity
-Consent-gated Sentry and DSN (#27); lower log panel; Stable Product Identity and final visual identity acceptance (#26, #44, #45); an accessibility pass across the product.
-
-### Phase 14 — v1 acceptance (#23)
+### Phase 13 — v1 acceptance
 Recalibrate provisional numbers from real use (ADRs 0004/0005/0009/0018/0019/0020); triage leftover mutation survivors and review suggestions; technical acceptance, multi-week personal acceptance, final freeze; the evaluation protocol against the baseline.
 
-### After v1
-#103 monetization and licensing, Anthropic's written confirmation, the licence audit and trademark check, installers, signing and auto-update, live DAP, dialogue phase 2 if left out of v1.
+### After v1 or unscheduled
+#103 monetization and licensing (Anthropic's written confirmation, ADR 0009:318; licence audit; trademark; #103 also suggests a licence check in the gates now), installers, signing and auto-update, live DAP, dialogue phase 2 if left out of v1. Research with pending human decisions: Jev evaluation and JEV-F01/F02, skill-procedures adoption, inspiration-project candidates, Effect/Alchemy/Bun questions (README:24-34). Ideas: #100 professional delivery flow, #104 advisor panel. Tooling: the planned PreToolUse hook for ask-before-branch/PR.
 
 ## 3. Decisions the user still owns
 
 - **#101 agent runtime** (AI SDK vs Mastra, maybe per billing mode). Blocks C2 and #93. PRODUCT.md:84 and AGENTS.md stay unchanged until decided (DL:340).
-- **v1 scope:** is dialogue phase 2 with the Supervisor coordination budget in v1 (ADR 0021:36, :41)? Is the Sentry consent path required in v1 (PRODUCT.md:25; ADR 0001:72-73)?
+- **v1 scope:** is dialogue phase 2 with the Supervisor coordination budget in v1 (ADR 0021)? Consent-gated diagnostics are already v1 (PRODUCT.md:25); open is live Sentry upload with a DSN versus local-only (ADR 0001:72-73). Does ISOL-1 gate Workers on trusted personal repositories? Is the technical rename SlopStop → Ragnarok in v1?
 - **Bundled quality tools inside Ragnarok:** update control, pinning, rollback, licence redistribution (DL:325-329; rpiv-method FRD:177). Needs an interview and an ADR.
 - **Before the React port:** Rive paid plan (watermark); ADR note for the splash-window CSP (DL:273-274).
-- **Open visual items** (DL:295-311): error/failure/success states; first use; command and shortcut list; Windows accessibility; notifications outside the app; app icon meaning; role-agent icons; Waypoint panel diffs.
-- **Naming:** Mention vs "Send to" (DL:38). (Feature → Strand was settled on 2026-10-10, DL §30.)
+- **Open visual items** (states, the palette, charts and the Run timeline were decided later in DL §24): first use; Windows accessibility; notifications outside the app; app icon meaning; drawing the role-agent icons (marks partly approved, DL:330, :361); Waypoint panel diffs.
 - **FRD open questions:** #99 closing-state production/validation and phase 2 across Runs (agent-coordination FRD:187-189); #100 adjustable Project-profile options and the periodic architecture-review trigger (rpiv-method FRD:175-176).
-- **Plan changes discussed by agents:** remaining details (DL:257, :320).
+- **Agents at 100% of budget:** the Run-pause rule is design input only, not a contract (DL:320).
 - **Evaluation protocol:** candidate tasks and success criterion; alternative evaluation project (`research/2026-10-04_ragnarok-vs-baseline-evaluation-protocol.md:86-97`).
 - **Product thesis** roadmap consequences (`research/2026-10-03_product-thesis.md:61`).
 - **Kept product ideas** (`research/2026-10-07_developer-value-ideas.md`), raised when their area is designed; deliberately inventory-only, no issue.
 - **#103 monetization and licensing** (deferred until after personal v1), including Anthropic's written confirmation (release gate, ADR 0009:318), the licence audit and the "Ragnarok" trademark check.
 - **#104 Foundation** discovery (quiz, inference for existing Projects, later changes, instructions file).
 
-## 4. v1 roadmap after C1 (#85 order, then chartered v1 programs)
+## 4. v1 programme contents (detail; the order is in "Ordered roadmap")
 
 1. **C2 real-model Conversation:** model replies, Context proposals and records, per-message model choice, streaming attempts (C1D:701); separately approved contract for credentials, context, call attribution, failure and interruption (#85). Branching, Waypoint conversations, `#`/`@`, `To:` (C1D:702). Level-2 Waypoint conversation summaries (DL:20).
 2. **Frame acceptance and real Strand/Waypoint/map owners;** `supersedes` relationship (DL:112); decision scope and implementing-Waypoint links, Decisions page commands, map counts, "Show on map", decision selection in Run context, Foundation by role, "Decision changed" Attention item (ADR 0022:30-56); Waypoint reference chips and the `@` file picker (DL:39, :48).
 3. **Board admission and durable read positions** from real Waypoint sources; Project activity feed (PRODUCT.md:56-57).
-4. **Supervised Runs and Workers** (ADRs 0007-0009): Forger and Workers, governed CLI Worker path (ADR 0009 Am.1; unverified points 0009:322-326), agent-dialogue records and the agent-authored context source (ADR 0021:68-69), Run approval view with dialogue pairs, Forger rename in code identifiers (ADR 0021:20, :71), plan-usage meter (DL:312-319), user-approved commits with decision and Run trailers (PRODUCT.md:123).
+4. **Supervised Runs and Workers** (ADRs 0007-0009): Forger and Workers, governed CLI Worker path (ADR 0009 Am.1; unverified points 0009:327-331), agent-dialogue records and the agent-authored context source (ADR 0021:68-69), Run approval view with dialogue pairs, Forger rename in code identifiers (ADR 0021:20, :71), plan-usage meter (DL:312-319), user-approved commits with decision and Run trailers (PRODUCT.md:123).
 5. **Evidence, Findings, Candidate and Integration** (ADRs 0010-0020), including artifact retention and result limits.
 6. **Verified Memory** (#13; ADR 0017 open parts) and **TypeScript language intelligence** (#24; ADRs 0003, 0016), including the versioned Debug Adapter Safety Boundary (live DAP is post-v1).
-7. **Settings:** Application, Project and Models pages, credentials in `safeStorage`, both billing modes with one active (PRODUCT.md:72; ADR 0009:330); Supervisor coordination budget surfaces if phase 2 is in v1.
+7. **Settings:** Application, Project and Models pages, credentials in `safeStorage`, both billing modes with one active (PRODUCT.md:72; ADR 0009:333-335); Supervisor coordination budget surfaces if phase 2 is in v1.
 8. **Storage lifecycle:** backup, encrypted export, migration, restore, import, reset, Close/Archive/Delete (PRODUCT.md:92-95; ADR 0002:32); #92 full Storage-operation journal.
 9. **Packaging and Diagnostics** (#27): consent-gated Sentry and DSN provisioning (ADR 0001:72-73), lower log panel, Stable Product Identity and final visual identity acceptance with independent review (#26, #44, #45).
 10. **Accessibility across the product:** keyboard-only operation, plain-text equivalents, reduced motion (PRODUCT.md:75, :173).
@@ -148,9 +144,9 @@ Corrected the same day unless stated otherwise; see the git log for the commit.
 - ADR 0016 called ADR 0003 a local draft.
 - PRODUCT.md placed Diagnostics on the rail; DESIGN.md did not list it.
 - ADRs 0009, 0011 and 0014 carried no note that ADRs 0021 and 0022 amend them.
-- GitHub #1 still named #90 as the next front.
+- GitHub #1 still named #90 as the next front (updated with the issues on 2026-10-10).
 - Stale artifact status fields (`designs/2026-09-04_18-05-05_canonical-project-writer.md`, `designs/2026-09-12_22-45-37_persistent-project-conversation.md`, `handoffs/2026-10-05_list-removal-race-and-s6b-brief.md`).
-- **Not corrected, waiting for #101:** Mastra as the first runtime in PRODUCT.md:84, and `mastra.db` and Zod in ADRs 0005/0006/0009 (DL:340 keeps PRODUCT.md unchanged until #101 is decided).
+- **Not corrected, waiting for #101:** Mastra as the first runtime in PRODUCT.md:84 and AGENTS.md, and `mastra.db` in ADRs 0001:56, 0002:15, 0006, the manifest and `docs/architecture/model.c4` (DL:340). Zod in ADR 0006:26 can be removed independently.
 
 ## Issues created (2026-10-10)
 
