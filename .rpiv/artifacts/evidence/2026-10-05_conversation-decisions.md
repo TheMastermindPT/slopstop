@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: bceafed85b9fd06dd7fd98ddd2ea28bbe027426e452fe4194fb9c1bb3a6fcef5
+content_hash: dfd2549d912346b911a3ab78f97739745a73306548eb8ea82f7fab037e6c54b7
 ---
 
 # Conversation — Human Decisions
@@ -236,3 +236,6 @@ Decided by the user directly with the ui-ux agent and relayed verbatim; the acti
 - **C1 merge order (user, same day):** S1 (the schema and chained upgrades) is not split. It merges to main only together with S2 (the Conversation store), so the permanent table shape reaches real Projects only after the store that writes it has been reviewed.
 - **Map direction (user, same day):** on the coded Saga (spine) the user said "Ok eu gosto deste design do mapa" and asked for three Figma variants for Saga and Chapter (page 117:30). Of those, the user said "gosto da direcao da v3": the Graph variant (Saga 122:30, Chapter 122:235) is the chosen direction. Whether to build it in code is pending the user's answer to the ui-ux agent.
 - **C1 design review outcome (user, same day):** after intent review round 2 failed with fixable findings, the user chose "Corrigir e eu confiro": the designer revises the design (revision 3), the coordinator checks every finding without a third reviewer round, and the user then approves. Candidate reviews of each slice keep the three reviewers.
+- **V3 map built in code (user, same day):** the user chose "Construir a V3 em código". On the coded V3 graph (derived layers, orthogonal edges, Saga↔Chapter semantic zoom) the user said: "esta ok, vai precisar de ser refinada mas gosto da ideia." It needs refinement later.
+- **Waypoint panel actions (user, same day):** "adiciona essas três ações ao painel do waypoint." The Waypoint panel offers: open its scoped conversation; "Use as recipient" (sets To:, sends nothing); and talk to the agent running its active Run (the Waypoint parent, in the Run overview), shown only while a Run is active, otherwise "No agent is working on it".
+- **C1 design approved (user, same day):** the coordinator checked revision 3 (raw SHA-256 e4d02922…, before finalizing) against every round-2 item; the user approved it ("Aprovo, pode começar"). The implementer builds in a linked worktree on branch `feat/c1-conversation-local-save`, starting with S1 then S2 (merged together).
