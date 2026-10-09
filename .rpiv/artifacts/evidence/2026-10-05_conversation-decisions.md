@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 76be5476ba5ceb87d609773dc8f6299b1a325dea349809fa54045b4b4639849e
+content_hash: fdcd1c7e79ad8826188c414354d9b0f844e026be140d28d142f37b28b5826466
 ---
 
 # Conversation — Human Decisions
@@ -346,3 +346,13 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **Accepted:** the re-stamped C1 design (content_hash 493058d6…, the links-only amendment) is approved; the residual risk that the original S1 reds were not bound to patch digests is accepted; the S1 and S2 commits are squashed when merged to main.
 - **Follow-up:** GitHub #102 tracks "Project listing cleanup is unconfirmed" masking real failures.
 - **After C1 (user, same day):** "depois do C1 passamos a Conversa para React". The first post-C1 step is porting the Conversation screen to React (the walking-skeleton approach), ahead of the remaining prototype screens.
+
+## 27. Open-points interview: Supervisor, links, dialogue, defaults (user decisions, 2026-10-09)
+
+- **The Supervisor is the agent the user talks to in the Project conversation.** In a Waypoint conversation it is the same agent, scoped to that Waypoint. The user reaches the Forger through "Talk to the agent running Run N".
+- **The Supervisor proposes a split, and the user confirms:** when it recognises work, it asks whether to split it, and goes ahead only on a yes.
+- **Decision links:** the Supervisor proposes scope and implementing Waypoints; the user confirms them in the checkpoint or the map proposal, and can change them later on the Decisions page.
+- **Dialogue closing:** agents declare the closing state; the app ends a dialogue at the limit or when it detects circling, and surfaces its state to the user.
+- **Cross-Waypoint dialogue (phase 2):** it is paid from a Supervisor coordination budget that the user approves.
+- **Defaults:** the user first chose "measure first", then, at the user's suggestion, provisional defaults from the coordinator's own multi-agent experience: 6 messages per agent per dialogue, then needs-human; 1 subject per dialogue; 2 review rounds; budget warning at 80%. They are visible, editable and recalibrated from use.
+- **ADRs written as Proposed:** ADR 0021 (Supervisor, Forger and mediated agent dialogue; amends 0007/0009/0011/0014) and ADR 0022 (decision scope, implementing Waypoints and decisions in Run context; amends 0009/0011). Both await the user's acceptance.
