@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 502803408005dcb613cf3c15b3b3f0395dd4b3461adc661b7191a9ddfb46a927
+content_hash: 38465a1a0066c5017e66efe2cf6b8e79f2b054828070bcd73cda540bd1e67948
 ---
 
 # Conversation — Human Decisions
@@ -358,3 +358,4 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **ADRs written as Proposed:** ADR 0021 (Supervisor, Forger and mediated agent dialogue; amends 0007/0009/0011/0014) and ADR 0022 (decision scope, implementing Waypoints and decisions in Run context; amends 0009/0011). Both await the user's acceptance.
 - **Runa V2 approved (user, same day):** "aprovo a v2, aplica nos protótipos". The icon set is Runa V2 (Figma 139:30 on page 125:30; SVG source `ragnarok-hero/icons-runa-v2`, 77 icons), which supersedes V1 (126:30). It keeps a 1.5 px stroke, square caps and mitred joins, Kenaz for Attention, and the anvil Send exception. A notable V2 change: Settings is two diamond controls on tracks instead of the V1 hexagon.
 - **Foundation by role (user, same day):** Foundation decisions are split into a Common section plus one section per Worker role (front-end, back-end/data, tests, design, security, docs, migration and so on), on the Decisions page and not in the Memory library. A Worker receives Common plus its role's section; a reviewer receives Common plus the section of the work it reviews; the Forger and the Supervisor receive every section. Existing Projects have each section inferred by a read-only Worker and confirmed by the user. This is added to Proposed ADR 0022 and to #104.
+- **Agent marks updated (user, same day):** there are three kinds: Supervisor (Algiz), Forger and Worker (Uruz). The Conversation mark (Ansuz) is retired, because the Supervisor is the conversation agent. For the Forger mark the user chose "B": Thurisaz ᚦ, the shaping hammer, replacing Othala (options compared in prototype `forger.html`; Kenaz, Raidho and the state diamond were excluded because they are already taken). Applied in the prototypes and Figma 141:30. Worker roles: doers are design, front-end, back-end, tests, docs, migration and resolver; readers are research, review and security.
