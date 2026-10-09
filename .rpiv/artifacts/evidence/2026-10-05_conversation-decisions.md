@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 97acccbc1e7df891306c1667a563842a036e0088462af29f8096f6d2ed99c7db
+content_hash: 8678ea2636a1f49287d8eac2126db2cbe183d1146ce064b006fb98908fe41d71
 ---
 
 # Conversation — Human Decisions
@@ -374,3 +374,9 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **U2:** routing reads to the per-request read-only client after writer abandonment (R2-C3) moves to the S3 contract (CNV-B13); S2 proves only the read-only function.
 - **U3:** abandonment covers only unknown client state from Conversation work; a settlement whose transaction close fails keeps the S1 retry-at-release. Recorded as a design-vs-result gap.
 - **U4:** missing red-run logs are reproduced at their recorded parent and patch, with the digest checked; any red that cannot be reproduced is marked unverified.
+
+## 30. Feature renamed to Strand (user decision, 2026-10-10)
+
+- **The domain term "Feature" is renamed "Strand"** (user: "O nome feature vai ser mudado"; chose the Norns direction, then "Strand"). A Strand is one thread of fate, and its Waypoints are the knots along it. The hierarchy is Project → Strand → Waypoint. Rejected candidates: Voyage, Chapter, Route, Raid/Expedition, Saga at the Feature level, Skein, Weave, Wyrd.
+- **How it lands:** product documents (CONTEXT.md, PRODUCT.md, DESIGN.md) use Strand with "formerly Feature". ADRs and existing code identifiers keep "Feature" as the former name until a dedicated rename slice migrates them, the same rule as the Forger rename (ADR 0021).
+- **Open:** whether the map's Chapter view label (one Feature) becomes the Strand view or keeps a separate label.
