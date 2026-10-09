@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-09T14:28:31.283Z",
+  "generatedAt": "2026-10-09T14:50:47.874Z",
   "title": "Design System: Ragnarok",
   "extensions": {
     "colorMeta": {
@@ -319,14 +319,29 @@
     },
     "shadows": [
       {
-        "name": "menu",
-        "value": "0 18px 40px -8px rgb(0 0 0 / 0.75)",
-        "purpose": "Floating menus."
+        "name": "soft-lift",
+        "value": "0 10px 28px -14px rgb(0 0 0 / 0.9), inset 0 1px 0 rgb(236 239 241 / 0.04)",
+        "purpose": "Cards, checkpoints, map nodes, quotes, notices, menus."
+      },
+      {
+        "name": "row-lift",
+        "value": "0 8px 20px -12px rgb(0 0 0 / 0.9)",
+        "purpose": "Current Attention item and active rail item."
+      },
+      {
+        "name": "button-lift",
+        "value": "0 4px 12px -6px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(236 239 241 / 0.05)",
+        "purpose": "Secondary buttons."
+      },
+      {
+        "name": "frost-lift",
+        "value": "0 6px 16px -8px rgb(156 201 224 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.35)",
+        "purpose": "Primary and Send buttons."
       },
       {
         "name": "composer-lift",
-        "value": "0 12px 32px -12px rgb(0 0 0 / 0.7)",
-        "purpose": "The composer above the stream."
+        "value": "0 10px 28px -14px rgb(0 0 0 / 0.9)",
+        "purpose": "The message field above the stream."
       },
       {
         "name": "overlay-panel",
@@ -334,9 +349,9 @@
         "purpose": "Right panel as an overlay on narrow windows."
       },
       {
-        "name": "machined-edge",
-        "value": "inset 0 1px 0 rgb(236 239 241 / 0.06)",
-        "purpose": "Top-edge highlight on raised surfaces."
+        "name": "focus-halo",
+        "value": "0 0 0 4px rgb(156 201 224 / 0.28)",
+        "purpose": "Focus on every control (fields use 0.22)."
       }
     ],
     "motion": [
@@ -378,7 +393,7 @@
       "refersTo": "button-primary",
       "description": "The one frost action per region (Accept all, Send to …).",
       "html": "<button class=\"ds-btn-primary\">Accept all 2</button>",
-      "css": ".ds-btn-primary { font: 500 13px/18px Inter, system-ui, sans-serif; letter-spacing: -0.006em; height: 30px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms; background: #9CC9E0; color: #08131A; border: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); } .ds-btn-primary:hover { background: #B2D6E8; } .ds-btn-primary:active { background: #8BBCD5; transform: translateY(0.5px); } .ds-btn-primary:focus-visible { outline: 2px solid #9CC9E0; outline-offset: 2px; }"
+      "css": ".ds-btn-primary { font: 500 13px/18px Red Hat Text, system-ui, sans-serif; letter-spacing: -0.006em; height: 34px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms; background: #9CC9E0; color: #08131A; border: 0; box-shadow: 0 6px 16px -8px rgba(156,201,224,0.55), inset 0 1px 0 rgba(255,255,255,0.35); } .ds-btn-primary:hover { background: #B2D6E8; } .ds-btn-primary:active { background: #8BBCD5; transform: translateY(0.5px); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(156,201,224,0.28); }"
     },
     {
       "name": "Secondary Button",
@@ -386,7 +401,7 @@
       "refersTo": "button-secondary",
       "description": "Machined plate for per-item actions (Accept one decision, Edit).",
       "html": "<button class=\"ds-btn-secondary\">Accept</button>",
-      "css": ".ds-btn-secondary { font: 500 13px/18px Inter, system-ui, sans-serif; letter-spacing: -0.006em; height: 30px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms; background: #101214; color: #ECEFF1; border: 1px solid #3A4148; box-shadow: inset 0 1px 0 rgba(236,239,241,0.06); } .ds-btn-secondary:hover { border-color: #4A535B; background: #14171A; } .ds-btn-secondary:focus-visible { outline: 2px solid #9CC9E0; outline-offset: 2px; }"
+      "css": ".ds-btn-secondary { font: 500 13px/18px Red Hat Text, system-ui, sans-serif; letter-spacing: -0.006em; height: 34px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms; background: #16191C; color: #ECEFF1; border: 0; box-shadow: inset 0 1px 0 rgba(236,239,241,0.05), 0 4px 12px -6px rgba(0,0,0,0.8); } .ds-btn-secondary:hover { background: #1B1F23; } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(156,201,224,0.28); }"
     },
     {
       "name": "Ghost Button",
@@ -394,7 +409,7 @@
       "refersTo": "button-ghost",
       "description": "Text-only secondary actions (Correct…, Retire, Cancel).",
       "html": "<button class=\"ds-btn-ghost\">Correct…</button>",
-      "css": ".ds-btn-ghost { font: 500 13px/18px Inter, system-ui, sans-serif; letter-spacing: -0.006em; height: 30px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms; background: transparent; color: #79828A; border: 0; } .ds-btn-ghost:hover { color: #ECEFF1; background: rgba(236,239,241,0.045); } .ds-btn-ghost:focus-visible { outline: 2px solid #9CC9E0; outline-offset: 2px; }"
+      "css": ".ds-btn-ghost { font: 500 13px/18px Red Hat Text, system-ui, sans-serif; letter-spacing: -0.006em; height: 34px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms; background: transparent; color: #79828A; border: 0; } .ds-btn-ghost:hover { color: #ECEFF1; background: #101214; } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(156,201,224,0.28); }"
     },
     {
       "name": "Needs-you Chip",
@@ -402,7 +417,7 @@
       "refersTo": "chip-needs-you",
       "description": "Ember status for genuine human attention; always diamond + words.",
       "html": "<span class=\"ds-chip-ember\"><i></i>Needs you</span>",
-      "css": ".ds-chip-ember { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; background: #2A1D10; color: #E09A4A; font: 500 12px/16px Inter, system-ui, sans-serif; } .ds-chip-ember i { width: 6px; height: 6px; background: #E09A4A; transform: rotate(45deg); }"
+      "css": ".ds-chip-ember { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; background: #2A1D10; color: #E09A4A; font: 500 12px/16px Red Hat Text, system-ui, sans-serif; } .ds-chip-ember i { width: 6px; height: 6px; background: #E09A4A; transform: rotate(45deg); }"
     },
     {
       "name": "Decision Checkpoint",
@@ -410,7 +425,7 @@
       "refersTo": "card",
       "description": "Grouped proposed decisions: Accept each, Accept all, Correct.",
       "html": "<section class=\"ds-checkpoint\"><p class=\"ds-cp-title\">Offline logging</p><p class=\"ds-cp-meta\">Decision checkpoint · revision 4</p><p class=\"ds-cp-text\">Sets are saved on this device, even with no connection.</p></section>",
-      "css": ".ds-checkpoint { border: 1px solid rgba(224,154,74,0.5); border-radius: 8px; padding: 16px 20px; background: linear-gradient(180deg, #2A1D10, #101214 64px); box-shadow: inset 0 1px 0 rgba(236,239,241,0.06); color: #ECEFF1; font-family: Inter, system-ui, sans-serif; } .ds-cp-title { margin: 0; font: 600 14px/20px Inter, sans-serif; } .ds-cp-meta { margin: 2px 0 12px; font-size: 12px; color: #79828A; } .ds-cp-text { margin: 0; padding-top: 12px; border-top: 1px solid #202429; font-size: 14px; line-height: 22px; }"
+      "css": ".ds-checkpoint { border: 1px solid rgba(224,154,74,0.35); border-radius: 14px; padding: 18px 22px; background: linear-gradient(180deg, #2A1D10, #101214 64px); box-shadow: 0 10px 28px -14px rgba(0,0,0,0.9), inset 0 1px 0 rgba(236,239,241,0.04); color: #ECEFF1; font-family: Red Hat Text, system-ui, sans-serif; } .ds-cp-title { margin: 0; font: 600 14px/20px Red Hat Text, sans-serif; } .ds-cp-meta { margin: 2px 0 12px; font-size: 12px; color: #79828A; } .ds-cp-text { margin: 0; padding-top: 12px; border-top: 1px solid #202429; font-size: 14px; line-height: 22px; }"
     },
     {
       "name": "Composer Field",
@@ -418,7 +433,7 @@
       "refersTo": "composer-field",
       "description": "The message field; frost border and halo on focus.",
       "html": "<textarea class=\"ds-composer\" rows=\"2\" placeholder=\"Message the Project conversation…\"></textarea>",
-      "css": ".ds-composer { width: 280px; resize: none; padding: 12px 16px; border: 1px solid #3A4148; border-radius: 10px; background: #101214; color: #ECEFF1; font: 400 14px/22px Inter, system-ui, sans-serif; caret-color: #9CC9E0; outline: 0; box-shadow: inset 0 1px 0 rgba(236,239,241,0.06); } .ds-composer::placeholder { color: #79828A; } .ds-composer:focus { border-color: #9CC9E0; box-shadow: 0 0 0 3px rgba(156,201,224,0.14); }"
+      "css": ".ds-composer { width: 280px; resize: none; padding: 12px 16px; border: 0; border-radius: 14px; background: #16191C; color: #ECEFF1; font: 400 14px/22px Red Hat Text, system-ui, sans-serif; caret-color: #9CC9E0; outline: 0; box-shadow: 0 10px 28px -14px rgba(0,0,0,0.9); } .ds-composer::placeholder { color: #79828A; } .ds-composer:focus { box-shadow: 0 0 0 4px rgba(156,201,224,0.22); }"
     },
     {
       "name": "Rail Item",
@@ -426,7 +441,15 @@
       "refersTo": "rail-item-active",
       "description": "Labelled activity rail destination; active = forged plate; Attention is a flame.",
       "html": "<a class=\"ds-rail\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\"/></svg><span>Attention</span></a>",
-      "css": ".ds-rail { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; width: 56px; padding: 8px 0 6px; border-radius: 8px; background: #101214; color: #ECEFF1; text-decoration: none; font: 400 11px/14px Inter, system-ui, sans-serif; box-shadow: inset 0 1px 0 rgba(236,239,241,0.06); } .ds-rail:hover { background: rgba(236,239,241,0.045); }"
+      "css": ".ds-rail { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; width: 56px; padding: 8px 0 6px; border-radius: 12px; background: #101214; color: #ECEFF1; text-decoration: none; font: 400 11px/14px Red Hat Text, system-ui, sans-serif; box-shadow: 0 8px 20px -12px rgba(0,0,0,0.9), inset 0 1px 0 rgba(236,239,241,0.04); } .ds-rail:hover { background: rgba(236,239,241,0.045); }"
+    },
+    {
+      "name": "Send with Anvil",
+      "kind": "button",
+      "refersTo": "button-send",
+      "description": "Brand exception: anvil-and-hammer mark on Send only; one strike per send, none under reduced motion.",
+      "html": "<button class=\"ds-send\">Send to Project <svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"><path fill=\"currentColor\" stroke=\"none\" d=\"M2 10.6h11.6c2.5 0 4.5-.8 6-2v3.3c-1.4.6-2.6 1-3.6 1.1l-2 2.2v1.6h1.8v2.5H6.2v-2.5H8v-1.6l-2-2.2C4.4 12.8 3 12.1 2 10.6z\"/><path d=\"M13.9 8.2l7.3-3.7\"/><path fill=\"currentColor\" stroke=\"none\" d=\"M8.4 6.4h5.6v3.6H8.4z\"/></svg></button>",
+      "css": ".ds-send { font: 500 13px/18px Red Hat Text, system-ui, sans-serif; letter-spacing: -0.006em; height: 34px; padding: 0 16px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms; padding: 0 12px 0 16px; background: #9CC9E0; color: #08131A; border: 0; box-shadow: 0 6px 16px -8px rgba(156,201,224,0.55), inset 0 1px 0 rgba(255,255,255,0.35); } .ds-send:hover { background: #B2D6E8; } .ds-send:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(156,201,224,0.28); }"
     },
     {
       "name": "Rune Rule",
@@ -438,13 +461,14 @@
   ],
   "narrative": {
     "northStar": "The Runesmith's Instrument",
-    "overview": "Ragnarok is a precision instrument first. You supervise agents, read conversations and accept decisions in it for hours. Every working surface is matte carbon and graphite: three tonal steps separated by hairlines, with light only where something is live. The identity is a signature, not a costume. It shows as the Raidho rune (ᚱ) on the rail and the Cinzel wordmark. The rune rule sits under surface titles. The full brand world appears only at the big moments: the eclipse, the fire-and-ice glow and the ash at startup, plus the loading and recovery mark.\n\nDensity is medium. Text is set in Inter and is never decorative. Colour is scarce, and when it appears it always means something: frost for live work, focus and the primary action; ember for a decision only a human can make; moss for accepted; blood for failure. Components are quiet and machined. They stay recessive at rest and become exact under the cursor or keyboard focus. The user chose this feel over a heavier \"forged\" alternative on 2026-10-09.\n\nLinear sets the quality bar for craft, never the look. A screen fails review if it could be mistaken for Linear, or described as \"Linear in other colours\".",
+    "overview": "Ragnarok is a precision instrument first. You supervise agents, read conversations and accept decisions in it for hours. The material is matte carbon and graphite, with soft rounded forms like polished stone. Surfaces sit in calm tonal steps and are lifted by soft shadows instead of outlines; light appears only where something is live. The identity is a signature, not a costume. It shows as the Raidho rune (ᚱ) on the rail and the Cinzel wordmark, with the rune rule under surface titles. On every Send button it also appears as the forge: an anvil the hammer strikes once.\n\nThe full brand world appears only at the big moments. The fire-and-ice glow and the ash belong to the startup screen; the eclipse belongs to startup, empty states, loading and recovery.\n\nDensity is medium. Text is set in Red Hat Text: open, humanist and clear at small sizes, never decorative. Colour is scarce, and when it appears it always means something: frost for live work, focus and the primary action; ember for a decision only a human can make; moss for accepted; blood for failure. Components follow the \"Seixo\" (polished stone) family the user chose on 2026-10-09: pill-shaped controls, generously rounded cards, borderless tonal fills, soft real shadows, and focus shown as a soft frost halo.\n\nLinear sets the quality bar for craft, never the look. A screen fails review if it could be mistaken for Linear, or described as \"Linear in other colours\".",
     "keyCharacteristics": [
       "Matte carbon fields in tonal steps: canvas, iron, forged and plate.",
-      "Hairline structure, plus a 1px \"machined\" top-edge highlight on raised surfaces.",
+      "Soft rounded forms: pill controls, 12–14px cards and rows, 16px bands.",
+      "Borderless tonal fills and soft shadows instead of hairline boxes; hairlines remain only as separators.",
       "One primary action per region, filled with frost.",
       "Status is always shown as an icon or diamond plus words; never colour alone.",
-      "The Raidho rune and Cinzel carry the brand; Inter carries all the work.",
+      "The Raidho rune and Cinzel carry the brand; Red Hat Text carries all the work.",
       "The glow and the ash appear only on the startup screen; the eclipse only at big moments; none of them on working screens."
     ],
     "rules": [
@@ -460,7 +484,7 @@
       },
       {
         "name": "The Three Voices Rule",
-        "body": "Text uses exactly three tones: ink, ink-muted and ink-dim. A fourth body tone needs the user's approval.",
+        "body": "Text uses exactly three tones: ink, ink-muted and ink-dim. A fourth body tone needs the user's approval. On tinted surfaces (the frost, ember, moss and blood tints), secondary text uses ink-muted instead of ink-dim, to keep WCAG AA contrast (4.5:1).",
         "section": "colors"
       },
       {
@@ -479,26 +503,26 @@
         "section": "elevation"
       },
       {
-        "name": "The Structural Depth Rule",
-        "body": "If tone, spacing or a hairline can separate two regions, no shadow is used.",
+        "name": "The Soft Stone Rule",
+        "body": "Separate regions with tone and soft lift, not with boxes inside boxes. An outline appears only to carry meaning: an ember frame for \"needs you\", a frost border for selection, a dashed line for another Feature or something not yet specified.",
         "section": "elevation"
       }
     ],
     "dos": [
       "**Do** keep one frost-filled primary button per region.",
       "**Do** pair every state colour with words or a diamond (Accepted · r4, Needs you).",
-      "**Do** use Lucide icons only, at one stroke width (1.5).",
-      "**Do** keep conversation and decision text in Inter at 14/22, at about 720px measure.",
-      "**Do** give every control a hover, focus (2px frost ring), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion.",
+      "**Do** use Lucide icons at one stroke width (1.5) everywhere; the anvil on Send buttons is the only exception.",
+      "**Do** keep conversation and decision text in Red Hat Text at 14/22, at about 720px measure, and bundle the fonts with the app.",
+      "**Do** give every control a hover, focus (the soft frost halo), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion.",
       "**Do** keep broken, stale, provisional and unknown states visible, each with its own words. Never show them as clean or absent."
     ],
     "donts": [
       "**Don't** imitate another product's look. Linear is the quality bar, not the reference.",
-      "**Don't** use background glow, the eclipse or ash on daily working screens.",
+      "**Don't** use background glow or ash outside the startup screen, or the eclipse on daily working screens.",
       "**Don't** set user content, sentences or buttons in Cinzel.",
       "**Don't** use ember for anything that does not wait for a human, or blood for non-failures such as Retire.",
-      "**Don't** nest bordered boxes more than two deep, or use coloured side stripes thicker than 1px.",
-      "**Don't** use chamfered corners, Phosphor icons, or Unicode glyphs or emoji as icons.",
+      "**Don't** wrap regions in hairline boxes inside boxes, or use coloured side stripes thicker than 1px.",
+      "**Don't** use chamfered corners, Phosphor icons, Unicode glyphs or emoji as icons, or custom icons other than the Send anvil.",
       "**Don't** add a fourth text tone or new palette roles without the user's approval."
     ]
   }

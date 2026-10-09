@@ -1,6 +1,6 @@
 ---
 name: Ragnarok
-description: A quiet, machined supervision instrument in carbon and graphite, signed with the Raidho rune.
+description: A calm supervision instrument in matte carbon and graphite, with soft rounded forms like polished stone, signed with the Raidho rune.
 colors:
   canvas: "#050606"
   iron: "#0A0B0C"
@@ -38,34 +38,34 @@ typography:
     fontWeight: 400
     letterSpacing: "0.16em"
   headline:
-    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontFamily: "'Red Hat Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif"
     fontSize: "22px"
     fontWeight: 600
     lineHeight: "28px"
     letterSpacing: "-0.018em"
   title:
-    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontFamily: "'Red Hat Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif"
     fontSize: "16px"
     fontWeight: 600
     lineHeight: "24px"
   card-title:
-    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontFamily: "'Red Hat Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif"
     fontSize: "14px"
     fontWeight: 600
     lineHeight: "20px"
   body:
-    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontFamily: "'Red Hat Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: "22px"
   label:
-    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontFamily: "'Red Hat Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif"
     fontSize: "13px"
     fontWeight: 500
     lineHeight: "18px"
     letterSpacing: "-0.006em"
   meta:
-    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontFamily: "'Red Hat Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif"
     fontSize: "12px"
     fontWeight: 400
     lineHeight: "16px"
@@ -75,11 +75,10 @@ typography:
     fontWeight: 400
     lineHeight: "20px"
 rounded:
-  control: "6px"
-  surface: "8px"
-  field: "10px"
-  band: "10px"
-  pill: "11px"
+  row: "12px"
+  card: "14px"
+  band: "16px"
+  pill: "999px"
 spacing:
   "1": "4px"
   "2": "8px"
@@ -93,60 +92,86 @@ components:
   button-primary:
     backgroundColor: "{colors.frost}"
     textColor: "{colors.frost-on}"
-    rounded: "{rounded.control}"
-    padding: "0 12px"
-    height: "30px"
+    rounded: "{rounded.pill}"
+    padding: "0 16px"
+    height: "34px"
   button-primary-hover:
     backgroundColor: "#B2D6E8"
     textColor: "{colors.frost-on}"
   button-secondary:
-    backgroundColor: "{colors.forged}"
+    backgroundColor: "{colors.plate}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.control}"
-    padding: "0 12px"
-    height: "30px"
+    rounded: "{rounded.pill}"
+    padding: "0 16px"
+    height: "34px"
+  button-secondary-hover:
+    backgroundColor: "#1B1F23"
+    textColor: "{colors.ink}"
   button-ghost:
     backgroundColor: "transparent"
     textColor: "{colors.ink-dim}"
-    rounded: "{rounded.control}"
-    padding: "0 12px"
-    height: "30px"
+    rounded: "{rounded.pill}"
+    padding: "0 16px"
+    height: "34px"
+  button-ghost-hover:
+    backgroundColor: "{colors.forged}"
+    textColor: "{colors.ink}"
   button-icon:
     backgroundColor: "transparent"
     textColor: "{colors.ink-muted}"
-    rounded: "{rounded.control}"
-    size: "28px"
+    rounded: "{rounded.pill}"
+    size: "34px"
+  button-send:
+    backgroundColor: "{colors.frost}"
+    textColor: "{colors.frost-on}"
+    rounded: "{rounded.pill}"
+    padding: "0 12px 0 16px"
+    height: "34px"
   chip-needs-you:
     backgroundColor: "{colors.ember-tint}"
     textColor: "{colors.ember}"
-    rounded: "{rounded.control}"
-    height: "22px"
-    padding: "0 8px"
+    rounded: "{rounded.pill}"
+    height: "24px"
+    padding: "0 10px"
   chip-accepted:
     backgroundColor: "{colors.moss-tint}"
     textColor: "{colors.moss}"
-    rounded: "{rounded.control}"
-    height: "22px"
-    padding: "0 8px"
+    rounded: "{rounded.pill}"
+    height: "24px"
+    padding: "0 10px"
   chip-in-force:
     backgroundColor: "{colors.frost-tint}"
     textColor: "{colors.frost}"
-    rounded: "{rounded.control}"
-    height: "22px"
-    padding: "0 8px"
+    rounded: "{rounded.pill}"
+    height: "24px"
+    padding: "0 10px"
   card:
     backgroundColor: "{colors.forged}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.surface}"
-    padding: "16px 20px"
-  composer-field:
-    backgroundColor: "{colors.forged}"
+    rounded: "{rounded.card}"
+    padding: "18px 22px"
+  row:
+    backgroundColor: "transparent"
     textColor: "{colors.ink}"
-    rounded: "{rounded.field}"
+    rounded: "{rounded.row}"
+    padding: "11px 12px"
+  composer-field:
+    backgroundColor: "{colors.plate}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.card}"
+  search-field:
+    backgroundColor: "{colors.plate}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+  to-selector:
+    backgroundColor: "{colors.plate}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+    height: "30px"
   rail-item-active:
     backgroundColor: "{colors.forged}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.surface}"
+    rounded: "{rounded.row}"
 ---
 
 # Design System: Ragnarok
@@ -155,18 +180,21 @@ components:
 
 **Creative North Star: "The Runesmith's Instrument"**
 
-Ragnarok is a precision instrument first. You supervise agents, read conversations and accept decisions in it for hours. Every working surface is matte carbon and graphite: three tonal steps separated by hairlines, with light only where something is live. The identity is a signature, not a costume. It shows as the Raidho rune (ᚱ) on the rail and the Cinzel wordmark. The rune rule sits under surface titles. The full brand world appears only at the big moments: the eclipse, the fire-and-ice glow and the ash at startup, plus the loading and recovery mark.
+Ragnarok is a precision instrument first. You supervise agents, read conversations and accept decisions in it for hours. The material is matte carbon and graphite, with soft rounded forms like polished stone. Surfaces sit in calm tonal steps and are lifted by soft shadows instead of outlines; light appears only where something is live. The identity is a signature, not a costume. It shows as the Raidho rune (ᚱ) on the rail and the Cinzel wordmark, with the rune rule under surface titles. On every Send button it also appears as the forge: an anvil the hammer strikes once.
 
-Density is medium. Text is set in Inter and is never decorative. Colour is scarce, and when it appears it always means something: frost for live work, focus and the primary action; ember for a decision only a human can make; moss for accepted; blood for failure. Components are quiet and machined. They stay recessive at rest and become exact under the cursor or keyboard focus. The user chose this feel over a heavier "forged" alternative on 2026-10-09.
+The full brand world appears only at the big moments. The fire-and-ice glow and the ash belong to the startup screen; the eclipse belongs to startup, empty states, loading and recovery.
+
+Density is medium. Text is set in Red Hat Text: open, humanist and clear at small sizes, never decorative. Colour is scarce, and when it appears it always means something: frost for live work, focus and the primary action; ember for a decision only a human can make; moss for accepted; blood for failure. Components follow the "Seixo" (polished stone) family the user chose on 2026-10-09: pill-shaped controls, generously rounded cards, borderless tonal fills, soft real shadows, and focus shown as a soft frost halo.
 
 Linear sets the quality bar for craft, never the look. A screen fails review if it could be mistaken for Linear, or described as "Linear in other colours".
 
 **Key Characteristics:**
 - Matte carbon fields in tonal steps: canvas, iron, forged and plate.
-- Hairline structure, plus a 1px "machined" top-edge highlight on raised surfaces.
+- Soft rounded forms: pill controls, 12–14px cards and rows, 16px bands.
+- Borderless tonal fills and soft shadows instead of hairline boxes; hairlines remain only as separators.
 - One primary action per region, filled with frost.
 - Status is always shown as an icon or diamond plus words; never colour alone.
-- The Raidho rune and Cinzel carry the brand; Inter carries all the work.
+- The Raidho rune and Cinzel carry the brand; Red Hat Text carries all the work.
 - The glow and the ash appear only on the startup screen; the eclipse only at big moments; none of them on working screens.
 
 ## Colors
@@ -174,7 +202,7 @@ Linear sets the quality bar for craft, never the look. A screen fails review if 
 The world is carbon and graphite. Four state colours each carry exactly one meaning, and each has a dark tint for backgrounds.
 
 ### Primary
-- **Frost** (frost): focus rings, selection, active work ("agent working", the "now" layer), the primary button and links. When frost fills a button, its text uses Frost-On (frost-on).
+- **Frost** (frost): the focus halo, selection, active work ("agent working", the "now" layer), the primary and Send buttons, and links. When frost fills a button, its text uses Frost-On (frost-on).
 
 ### Secondary
 - **Ember** (ember): only for genuine human attention: "Needs you" chips, the Attention count on the rail, the frame around a map item or card that waits for a human decision. It is also the destination's colour on the map.
@@ -184,9 +212,9 @@ The world is carbon and graphite. Four state colours each carry exactly one mean
 ### Neutral
 - **Canvas** (canvas): the app background, the rail, the Attention sidebar and the right panel.
 - **Iron** (iron): the central work area: Conversation, Map, Decisions.
-- **Forged** (forged): cards, the composer, the active rail item, selected list rows.
-- **Plate** (plate): quotes ("Came from"), stub surfaces and secondary emphasis.
-- **Line Subtle** (line-subtle) and **Line Strong** (line-strong): separators and outlines; strong lines are for fields, map edges and selected authority.
+- **Forged** (forged): cards, selected rows, the active rail item, the hover fill of ghost buttons.
+- **Plate** (plate): borderless fills for fields, secondary buttons, chips and counts, plus quotes ("Came from").
+- **Line Subtle** (line-subtle) and **Line Strong** (line-strong): separators inside cards and lists, map edges, and dashed outlines for stubs and "not specified" items.
 - **Ink** (ink), **Ink Muted** (ink-muted) and **Ink Dim** (ink-dim): three text roles only: what you read, resting icons, and secondary text (times, provenance, meta).
 - **Tints** (frost-tint, ember-tint, moss-tint, blood-tint): backgrounds for chips, the "now" band (frost-tint at 55% opacity), confirmations and failures.
 
@@ -200,21 +228,23 @@ The world is carbon and graphite. Four state colours each carry exactly one mean
 ## Typography
 
 **Brand font:** Cinzel, regular weight only.
-**UI font:** Inter, falling back to Segoe UI Variable and the system UI font.
+**UI font:** Red Hat Text (weights 400, 500 and 600), falling back to Segoe UI Variable, Segoe UI and the system UI font. Chosen by the user on 2026-10-09, replacing Inter.
 **Code and identity font:** Cascadia Code, falling back to Cascadia Mono and Consolas.
 
-**Character:** Cinzel is the carved inscription: the wordmark and a few fixed section names. Inter is the instrument panel: compact, neutral and readable for long sessions. Cascadia marks anything a machine identifies (D-04, r4, Run 14, code).
+All three faces are under the SIL Open Font License 1.1. The desktop app must bundle them locally: its Content Security Policy forbids Google Fonts. Red Hat Text's source is github.com/RedHatOfficial/RedHatFont.
+
+**Character:** Cinzel is the carved inscription: the wordmark and a few fixed section names. Red Hat Text is the worker's hand: open, humanist and unambiguous at small sizes, readable for long sessions. Cascadia marks anything a machine identifies (D-04, r4, Run 14, code).
 
 ### Hierarchy
 - **Wordmark display** (Cinzel 400, 44px, 0.14em): the startup screen only.
 - **Wordmark** (Cinzel 400, 16px, 0.16em, uppercase): the top bar.
 - **Section label** (Cinzel 400, 11–15px, 0.14–0.18em, uppercase): short fixed names such as ATTENTION, DECISIONS, PROPOSED, IN FORCE, WHY, CHAPTER and DESTINATION.
-- **Headline** (Inter 600, 22/28, −0.018em): surface and decision titles. These are user content, so they stay in Inter.
-- **Title** (Inter 600, 16/24): sections inside surfaces.
-- **Card title** (Inter 600, 14/20): checkpoint, chapter and theme titles.
-- **Body** (Inter 400, 14/22): conversation prose and decision text, with a measure of about 720px.
-- **Label** (Inter 500, 13/18): buttons, lists and navigation.
-- **Meta** (Inter 400, 12/16): provenance, times and counts, with tabular figures.
+- **Headline** (Red Hat Text 600, 22/28, −0.018em): surface and decision titles. These are user content, so they never use Cinzel.
+- **Title** (Red Hat Text 600, 16/24): sections inside surfaces.
+- **Card title** (Red Hat Text 600, 14/20): checkpoint, chapter and theme titles.
+- **Body** (Red Hat Text 400, 14/22): conversation prose and decision text, with a measure of about 720px.
+- **Label** (Red Hat Text 500, 13/18): buttons, lists and navigation.
+- **Meta** (Red Hat Text 400, 12/16): provenance, times and counts, with tabular figures.
 - **Code** (Cascadia 12.5/20): code blocks, revision ids and Waypoint ids.
 
 ### Named Rules
@@ -231,7 +261,7 @@ The desktop shell has five parts:
 - a flexible centre with Map and Conversation tabs, plus temporary tabs such as Decisions and Review;
 - a 360px right panel that opens on demand.
 
-Conversation content sits in one centred column with a measure of 720px; the header, stream and composer share it. Spacing follows a 4px grid. Groups are tight (4–8px); sections are separated by 24–32px.
+Conversation content sits in one centred column with a measure of 720px; the header, stream and composer share it. Spacing follows a 4px grid. Groups are tight (4–8px); sections are separated by 24–32px. Seixo padding is generous inside components: buttons 16px across, cards 18 by 22px, rows 11 by 12px.
 
 Breakpoints:
 - **Below 1280px:** the rail loses its labels; the sidebar narrows to 248px and the panel to 320px.
@@ -242,80 +272,88 @@ The map is a derived layered graph. Rows come from dependencies, with at most 3 
 
 ## Elevation & Depth
 
-The system is flat by default. Depth comes from tonal steps (canvas, then iron, then forged, then plate), from hairlines, and from one machined detail: a 1px top-edge highlight in ink at 6% on raised surfaces (cards, the composer, the active rail item).
+Depth comes from tonal steps (canvas, then iron, then forged, then plate) and from soft real shadows. Raised items carry the soft lift instead of an outline; floating layers carry stronger shadows.
 
-Real shadows exist only for things that float above content:
-- menus: `0 18px 40px -8px rgb(0 0 0 / 0.75)`;
-- the composer's lift: `0 12px 32px -12px rgb(0 0 0 / 0.7)`;
-- the narrow-window panel overlay: `-24px 0 48px -12px rgb(0 0 0 / 0.8)`.
+### Shadow Vocabulary
+- **Soft lift** (`box-shadow: 0 10px 28px -14px rgb(0 0 0 / 0.9), inset 0 1px 0 rgb(236 239 241 / 0.04)`): cards, checkpoints, map nodes, theme groups, quotes, notices, the user's message, code blocks, menus.
+- **Row lift** (`box-shadow: 0 8px 20px -12px rgb(0 0 0 / 0.9)`): the current Attention item and the active rail item.
+- **Button lift** (`box-shadow: 0 4px 12px -6px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(236 239 241 / 0.05)`): secondary buttons.
+- **Frost lift** (`box-shadow: 0 6px 16px -8px rgb(156 201 224 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.35)`): the primary and Send buttons.
+- **Composer lift** (`box-shadow: 0 10px 28px -14px rgb(0 0 0 / 0.9)`): the message field above the stream.
+- **Overlay** (`box-shadow: -24px 0 48px -12px rgb(0 0 0 / 0.8)`): the right panel as an overlay on narrow windows.
+- **Focus halo** (`box-shadow: 0 0 0 4px rgb(156 201 224 / 0.28)`; fields use 0.22): every focusable control.
 
 ### Named Rules
 **The Brand Moment Rule.** The fire-and-ice glow (ember top-left, frost bottom-right) and the ash belong to the startup screen only. The eclipse is reserved for big moments: startup, empty states, loading and recovery. Daily working screens carry no background glow. The eclipse is an ornament, never a domain object.
 
-**The Structural Depth Rule.** If tone, spacing or a hairline can separate two regions, no shadow is used.
+**The Soft Stone Rule.** Separate regions with tone and soft lift, not with boxes inside boxes. An outline appears only to carry meaning: an ember frame for "needs you", a frost border for selection, a dashed line for another Feature or something not yet specified.
 
 ## Shapes
 
-Corners are modest and machined:
-- 6px on controls and chips;
-- 8px on cards, rows and surfaces;
-- 10px on the composer and the "now" band;
-- 11px on pill-shaped counts.
+The form language is soft and rounded, like polished stone:
+- pill shapes (fully rounded) for buttons, chips, counts, the search field, the To: selector, the model pill, the scope breadcrumb and segmented controls;
+- 12px corners on rows, list items, the rail items and menu items;
+- 14px corners on cards, checkpoints, map nodes, theme groups, quotes, notices, menus and the composer;
+- 16px corners on bands such as the map's "now" band.
 
 State markers are diamonds: 6–8px squares rotated 45°, filled for active states, outlined for waiting. Map Waypoints are 10px circles: filled for accepted, working or your move; outlined for ready or waiting. Same step side by side means parallel work; a short link means the next step.
 
-Borders are 1px. Coloured side stripes thicker than 1px are not part of the system. Chamfered (cut) corners were tried and rejected (2026-10-09).
+Coloured side stripes thicker than 1px are not part of the system. Chamfered (cut) corners were tried and rejected (2026-10-09).
 
 ## Components
 
 ### Buttons
-Quiet and machined: recessive at rest, exact on interaction.
-- **Shape:** gently rounded (6px), 30px tall; the small variant is 26px and the icon variant 28px square.
-- **Primary:** frost fill with frost-on text and a soft inner top light. Use at most one per region; hover lightens it, press darkens it.
-- **Secondary:** forged plate with a strong 1px outline and the machined top edge.
-- **Ghost:** text only, in ink-dim; on hover it brightens to ink over a faint wash.
-- **Focus:** a 2px frost ring, offset 2px, on every control.
+Soft and calm: pill-shaped, recessive at rest, clear on interaction.
+- **Shape:** fully rounded pill, 34px tall; the small variant is 28px and the icon variant 34px round.
+- **Primary:** frost fill with frost-on text and the frost lift. Use at most one per region; hover lightens it, press darkens it.
+- **Secondary:** borderless plate fill with the button lift; hover deepens the plate.
+- **Ghost:** text only, in ink-dim; on hover it brightens to ink over a forged fill.
+- **Send (brand exception):** the primary style, with its label naming the destination ("Send to Project") followed by the anvil-and-hammer mark instead of an arrow. See Signature components.
+- **Focus:** the soft frost halo on every control.
 - **Motion:** 120ms. Press nudges the button down by 0.5px.
 
 ### Chips
-- **Style:** 22px tall, 6px corners, tint background with matching text, and an icon or diamond followed by words. Variants: Needs you (ember), Accepted (moss), In force (frost), and a neutral plate.
+- **Style:** pill-shaped, 24px tall, tint background with matching text, and an icon or diamond followed by words. Variants: Needs you (ember), Accepted (moss), In force (frost), and a neutral plate. Counts are plate-filled pills.
 
 ### Cards / Containers
-- **Corner style:** 8px.
-- **Background:** forged, with a subtle 1px outline and the machined top edge.
-- **Attention framing:** an ember outline at 50–60% plus an ember-tint wash at the top. Only cards that wait for a human get this.
-- **Internal padding:** 16 by 20px for cards; 12 by 16px for list rows.
+- **Corner style:** 14px.
+- **Background:** forged, with no outline and the soft lift.
+- **Attention framing:** an ember outline at 35% plus an ember-tint wash at the top. Only cards that wait for a human get this.
+- **Selection:** a frost border at 60%.
+- **Internal padding:** 18 by 22px for checkpoints, 16 by 18px for map nodes, 11 by 12px for rows.
 
 ### Inputs / Fields
-- **Composer:** forged, 10px corners, strong outline. On focus it shows a frost border and a 3px frost halo at 14%.
-- **To: selector:** a bordered, clickable button, never typed text. Choosing a recipient sends nothing.
-- **Search:** iron background with a subtle outline; on focus it uses the same frost treatment as the composer.
+- **Composer:** borderless plate fill, 14px corners, composer lift. On focus it shows the frost halo (no border change).
+- **To: selector:** a plate-filled pill, never typed text. Choosing a recipient sends nothing.
+- **Search:** a plate-filled pill; on focus, the frost halo.
+- **Edit field (decision wording):** plate fill, 14px corners, frost halo while editing.
 
 ### Navigation
-- **Rail:** Lucide icons at one stroke width (1.5), with labels at 1280px and wider. The active item is a forged plate with the top edge; Attention is a flame with an ember count of actionable items.
-- **Centre tabs:** dim text that turns ink when active, with a 1px frost underline. Temporary tabs carry a close button.
-- **Scope breadcrumb:** Project › scope, plus a branch pill in Cascadia.
+- **Rail:** Lucide icons at one stroke width (1.5), with labels at 1280px and wider. The active item is a forged fill with 12px corners and the row lift; Attention is a flame with an ember count of actionable items.
+- **Centre tabs:** dim text that turns ink when active, with a 1px frost underline. Temporary tabs carry a close button and mark the current page.
+- **Scope breadcrumb:** a pill with Project › scope, plus a branch pill in Cascadia.
 
 ### Signature components
 - **Raidho mark and rune rule:** ᚱ in frost (stroke 2, square caps) at the top of the rail. Under surface titles, the rune rule: a hairline, a 6px frost diamond, then a hairline.
+- **Send anvil (approved brand exception, 2026-10-09):** on Send buttons only, a custom anvil-and-hammer mark replaces the arrow. Its parts stay separable (anvil body, hammer, sparks) so a Rive version can replace them later. On each send the hammer strikes once and a few sparks fly (about 420ms, once per send, never looping). Nothing plays under reduced motion. The label always names the destination.
 - **Decision checkpoint:** a card with Accept on each decision, Accept all for the ones still pending, and Correct. Proposed checkpoints wear the ember frame; accepted ones turn moss.
-- **Map graph node:** a forged card showing its chapter label in Cinzel, the name, Waypoint dots, a status line (diamond plus words), and a decision count pill ("2 in force"). The selected node gets a frost border; while "Show on map" is active, unrelated nodes dim to 38%.
+- **Map graph node:** a forged card with the soft lift, showing its chapter label in Cinzel, the name, Waypoint dots, a status line (diamond plus words), and a decision count pill ("2 in force"). The selected node gets a frost border; while "Show on map" is active, unrelated nodes dim to 38%.
 
 ## Do's and Don'ts
 
 ### Do:
 - **Do** keep one frost-filled primary button per region.
 - **Do** pair every state colour with words or a diamond (Accepted · r4, Needs you).
-- **Do** use Lucide icons only, at one stroke width (1.5).
-- **Do** keep conversation and decision text in Inter at 14/22, at about 720px measure.
-- **Do** give every control a hover, focus (2px frost ring), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion.
+- **Do** use Lucide icons at one stroke width (1.5) everywhere; the anvil on Send buttons is the only exception.
+- **Do** keep conversation and decision text in Red Hat Text at 14/22, at about 720px measure, and bundle the fonts with the app.
+- **Do** give every control a hover, focus (the soft frost halo), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion.
 - **Do** keep broken, stale, provisional and unknown states visible, each with its own words. Never show them as clean or absent.
 
 ### Don't:
 - **Don't** imitate another product's look. Linear is the quality bar, not the reference.
-- **Don't** use background glow, the eclipse or ash on daily working screens.
+- **Don't** use background glow or ash outside the startup screen, or the eclipse on daily working screens.
 - **Don't** set user content, sentences or buttons in Cinzel.
 - **Don't** use ember for anything that does not wait for a human, or blood for non-failures such as Retire.
-- **Don't** nest bordered boxes more than two deep, or use coloured side stripes thicker than 1px.
-- **Don't** use chamfered corners, Phosphor icons, or Unicode glyphs or emoji as icons.
+- **Don't** wrap regions in hairline boxes inside boxes, or use coloured side stripes thicker than 1px.
+- **Don't** use chamfered corners, Phosphor icons, Unicode glyphs or emoji as icons, or custom icons other than the Send anvil.
 - **Don't** add a fourth text tone or new palette roles without the user's approval.
