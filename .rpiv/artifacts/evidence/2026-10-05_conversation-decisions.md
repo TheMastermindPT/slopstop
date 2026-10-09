@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 689f04bd8b9bc7fde44ba822410e01e0742d8b91e979c028c7ab154577a32ffd
+content_hash: 97acccbc1e7df891306c1667a563842a036e0088462af29f8096f6d2ed99c7db
 ---
 
 # Conversation — Human Decisions
@@ -366,3 +366,11 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **Deviation 6a accepted:** a failed force-close of an abandoned writer client reports `WRITER_REPOSITORY_CLOSE_FAILED` with cause `WRITER_CLIENT_ABANDON_FAILED`. The dedicated release code waits for the S3 protocol v8 change.
 - **Deviation 6b accepted:** the S2 "second run" uses `coordinator.stop()`, because `project.close` is a storage-level command that does not go through the coordinator.
 - **Final heavy runs authorised:** on S2 head de254e8, run sequentially and once each: full integration, e2e, launch-smoke, mutation project-storage and mutation conversation. Any failure or timeout stops the sequence and is reported before a rerun. A stray disk-wide `find` process was stopped first, with the user's approval.
+
+## 29. C1 S2 candidate review round 1 (user decisions, 2026-10-10)
+
+- **Heavy runs on 5a85033 all passed:** integration 2105, e2e 11/11, launch-smoke, mutation project-storage 87.52, conversation 84.12. The three reviewers failed the candidate (ba2b381), with overlapping findings: a queued save behind a failed settlement is not refused, defects are reported as storage broken, the read-only client close becomes a defect, and several required branches are untested (force-close, deviation 6a, read close failure, conversation-side owner busy).
+- **U1:** add a truly broken client case (an unfinished transaction holding a lock) to CNV-B10(b), beyond the one injection R2-C9 allowed.
+- **U2:** routing reads to the per-request read-only client after writer abandonment (R2-C3) moves to the S3 contract (CNV-B13); S2 proves only the read-only function.
+- **U3:** abandonment covers only unknown client state from Conversation work; a settlement whose transaction close fails keeps the S1 retry-at-release. Recorded as a design-vs-result gap.
+- **U4:** missing red-run logs are reproduced at their recorded parent and patch, with the digest checked; any red that cannot be reproduced is marked unverified.
