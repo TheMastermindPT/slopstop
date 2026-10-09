@@ -31,7 +31,14 @@ export type ApplicationDatabaseFailure =
       status: "broken";
       code: "REGISTRY_SCHEMA_UNKNOWN" | "REGISTRY_SCHEMA_NEWER" | "REGISTRY_CORRUPT";
     }>
-  | Readonly<{ status: "pending-recovery"; code: "REGISTRY_MISSING_WITH_WITNESS" }>;
+  | typeof missingWithWitnessFailure;
+
+// A missing application database where prior state proves it existed; the one owner of this
+// failure for the authority and the registry.
+export const missingWithWitnessFailure = {
+  status: "pending-recovery",
+  code: "REGISTRY_MISSING_WITH_WITNESS",
+} as const;
 
 // Typed refusal of the installation application database; owners map it to their own codes.
 export class ApplicationDatabaseFault extends Error {

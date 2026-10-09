@@ -1,4 +1,3 @@
-import { readdir } from "node:fs/promises";
 import path from "node:path";
 import {
   type ApplicationDatabaseAuthority,
@@ -7,6 +6,7 @@ import {
 import {
   type ApplicationDatabaseMigrationFailures,
   applicationDatabaseRows,
+  missingWithWitnessFailure,
 } from "../storage/application-database-migration.js";
 import type {
   LocalLibsqlClient,
@@ -69,53 +69,25 @@ export function applicationDatabaseFor(
 
 type RegistryOpenMode = "initialize-or-open" | "existing-only";
 
-async function prepareFile(options: RegistrationDatabaseOptions, mode: RegistryOpenMode) {
+// Plain-entry checks only: whether a missing database is created, refused as a witness, or
+// waited for while another caller creates it is the application database authority's call.
+async function requirePlainEntries(options: RegistrationDatabaseOptions): Promise<void> {
   const root = path.resolve(options.applicationStorageRoot);
   const databasePath = path.join(root, "application.db");
-  if (mode === "existing-only") {
-    await requireExistingRegistryFile(options, databasePath);
-    return databasePath;
-  }
-  const existing = await lstatIfPresent({ targetPath: databasePath });
-  const rootEntry = await lstatIfPresent({ targetPath: root });
-  if (rootEntry !== undefined) {
+  if ((await lstatIfPresent({ targetPath: root })) !== undefined) {
     await requirePlainEntry({
       entryPath: root,
       kind: "directory",
       message: "Registration root is invalid.",
     });
   }
-  if (existing !== undefined) {
+  if ((await lstatIfPresent({ targetPath: databasePath })) !== undefined) {
     await requirePlainEntry({
       entryPath: databasePath,
       kind: "file",
       message: "Registration registry is invalid.",
     });
-    return databasePath;
   }
-  if (rootEntry !== undefined && (await readdir(root)).length > 0) {
-    throw new RegistryFault({ status: "pending-recovery", code: "REGISTRY_MISSING_WITH_WITNESS" });
-  }
-  return databasePath;
-}
-
-async function requireExistingRegistryFile(
-  options: RegistrationDatabaseOptions,
-  databasePath: string,
-): Promise<void> {
-  if ((await lstatIfPresent({ targetPath: databasePath })) === undefined) {
-    throw new RegistryFault({ status: "pending-recovery", code: "REGISTRY_MISSING_WITH_WITNESS" });
-  }
-  await requirePlainEntry({
-    entryPath: options.applicationStorageRoot,
-    kind: "directory",
-    message: "Registration root is invalid.",
-  });
-  await requirePlainEntry({
-    entryPath: databasePath,
-    kind: "file",
-    message: "Registration registry is invalid.",
-  });
 }
 
 export async function withRegistrationDatabase<Result>(
@@ -124,10 +96,10 @@ export async function withRegistrationDatabase<Result>(
   mode: RegistryOpenMode = "initialize-or-open",
 ): Promise<Result> {
   const authority = applicationDatabaseFor(options);
-  await prepareFile(options, mode);
+  await requirePlainEntries(options);
   const client = await authority.openCurrent({ createIfMissing: mode === "initialize-or-open" });
   if (client === undefined) {
-    throw new RegistryFault({ status: "pending-recovery", code: "REGISTRY_MISSING_WITH_WITNESS" });
+    throw new RegistryFault(missingWithWitnessFailure);
   }
   try {
     return await operation(client);

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -6,8 +6,10 @@ import { expect, it } from "vitest";
 import { createApplicationDatabaseAuthority } from "../../src/storage/application-database-authority.js";
 import { ApplicationDatabaseFault } from "../../src/storage/application-database-migration.js";
 import { createWorkerLocalLibsqlClient } from "../../src/storage/local-libsql-worker-client.js";
-
-const migrationResourcesRoot = path.resolve(import.meta.dirname, "../../drizzle");
+import {
+  createGatedFirstClientAuthority,
+  migrationResourcesRoot,
+} from "./application-database-gated-fixture.js";
 
 async function withAuthority(
   run: (
@@ -171,34 +173,10 @@ it("drains an accepted initialization waiting before BEGIN before stop completes
   });
 });
 
-it("lets a second initializer proceed while the first is still creating a fresh database", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-application-authority-fresh-"));
-  let release: () => void = () => undefined;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let reachOpen: () => void = () => undefined;
-  const firstOpen = new Promise<void>((resolve) => {
-    reachOpen = resolve;
-  });
-  let opens = 0;
-  // The first client the authority opens is created only after the gate opens, holding the
-  // first initializer between its missing-file policy and the file's creation.
-  const authority = createApplicationDatabaseAuthority({
-    applicationStorageRoot: root,
-    migrationResourcesRoot,
-    openClient: (databasePath) => {
-      opens += 1;
-      if (opens !== 1) return createWorkerLocalLibsqlClient(databasePath, "application");
-      reachOpen();
-      const real = gate.then(() => createWorkerLocalLibsqlClient(databasePath, "application"));
-      return {
-        execute: async (statement, args) => (await real).execute(statement, args),
-        transaction: async (mode) => (await real).transaction(mode),
-        close: async () => (await real).close(),
-      };
-    },
-  });
+it("lets a later initializer join a fresh database still being created instead of failing", async () => {
+  const { root, authority, firstOpen, release } = await createGatedFirstClientAuthority(
+    "slopstop-application-authority-fresh-",
+  );
   try {
     const registry = authority.openCurrent({ createIfMissing: true });
     await firstOpen;
@@ -226,5 +204,161 @@ it("refuses to recreate an application database it already observed", async () =
     await expect(refusal).rejects.toMatchObject({
       failure: { status: "pending-recovery", code: "REGISTRY_MISSING_WITH_WITNESS" },
     });
+  });
+});
+
+it("lets openCurrent join an initialization already in flight", async () => {
+  const { root, authority, firstOpen, release, opens } = await createGatedFirstClientAuthority(
+    "slopstop-application-authority-join-",
+  );
+  try {
+    const first = authority.ensureCurrent({ createIfMissing: true });
+    await firstOpen;
+    const joined = authority.openCurrent({ createIfMissing: true });
+    expect(await settledWithin(joined, 200)).toBe("pending");
+    expect(opens()).toBe(1);
+    release();
+    expect(await first).toBe("current");
+    const client = await joined;
+    await client?.close();
+    expect({ client: client !== undefined, opens: opens() }).toEqual({ client: true, opens: 2 });
+  } finally {
+    release();
+    await authority.stop();
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+  }
+});
+
+it("refuses a missing database under a witnessed root on the registry path only", async () => {
+  await withAuthority(async (authority, root) => {
+    const marker = path.join(root, "prior-state-witness");
+    await writeFile(marker, "preserved bytes");
+    const refusal = authority.openCurrent({ createIfMissing: true });
+    await expect(refusal).rejects.toBeInstanceOf(ApplicationDatabaseFault);
+    await expect(refusal).rejects.toMatchObject({
+      failure: { status: "pending-recovery", code: "REGISTRY_MISSING_WITH_WITNESS" },
+    });
+    await expect(lstat(authority.applicationDatabasePath)).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    // Storage keeps its own prior-state witness checks, so its path still initializes.
+    await expect(authority.ensureCurrent({ createIfMissing: true })).resolves.toBe("current");
+    expect(await readFile(marker, "utf8")).toBe("preserved bytes");
+  });
+});
+
+type GatedAuthority = Awaited<ReturnType<typeof createGatedFirstClientAuthority>>;
+
+async function withGatedAuthority(
+  prefix: string,
+  run: (gated: GatedAuthority) => Promise<void>,
+  firstFailure?: Error,
+) {
+  const gated = await createGatedFirstClientAuthority(prefix, firstFailure);
+  try {
+    await run(gated);
+  } finally {
+    gated.release();
+    await gated.authority.stop();
+    await rm(gated.root, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+  }
+}
+
+it("lets Storage's ensureCurrent join the registry's fresh creation instead of racing it", async () => {
+  await withGatedAuthority("slopstop-application-authority-storage-join-", async (gated) => {
+    const registry = gated.authority.openCurrent({ createIfMissing: true });
+    await gated.firstOpen;
+    const storage = gated.authority.ensureCurrent({ createIfMissing: true });
+    expect(await settledWithin(storage, 200)).toBe("pending");
+    gated.release();
+    const client = await registry;
+    await client?.close();
+    expect({ storage: await storage, opens: gated.opens() }).toEqual({
+      storage: "current",
+      opens: 1,
+    });
+  });
+});
+
+it("lets two Storage initializers started in the same tick share one fresh creation", async () => {
+  await withGatedAuthority("slopstop-application-authority-same-tick-", async (gated) => {
+    const first = gated.authority.ensureCurrent({ createIfMissing: true });
+    const second = gated.authority.ensureCurrent({ createIfMissing: true });
+    await gated.firstOpen;
+    gated.release();
+    expect({ states: await Promise.all([first, second]), opens: gated.opens() }).toEqual({
+      states: ["current", "current"],
+      opens: 1,
+    });
+  });
+});
+
+const joiners = [
+  {
+    name: "Storage's ensureCurrent",
+    join: (authority: GatedAuthority["authority"]) =>
+      authority.ensureCurrent({ createIfMissing: true }),
+  },
+  {
+    name: "the registry's openCurrent",
+    join: (authority: GatedAuthority["authority"]) =>
+      authority.openCurrent({ createIfMissing: true }),
+  },
+] as const;
+
+it.for(joiners)(
+  "passes the registry's failed fresh creation on to $name and removes its empty file",
+  async (joiner) => {
+    const failure = new Error("Injected fresh creation failure.");
+    await withGatedAuthority(
+      "slopstop-application-authority-failed-join-",
+      async (gated) => {
+        const creator = gated.authority.openCurrent({ createIfMissing: true });
+        await gated.firstOpen;
+        const joined = joiner.join(gated.authority);
+        gated.release();
+        const [created, joinedResult] = await Promise.allSettled([creator, joined]);
+        expect(created).toEqual({ status: "rejected", reason: failure });
+        expect(joinedResult).toEqual({ status: "rejected", reason: failure });
+        expect(gated.opens()).toBe(1);
+        await expect(lstat(gated.authority.applicationDatabasePath)).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+      },
+      failure,
+    );
+  },
+);
+
+it("ends the fresh-creation exemption when that creation fails", async () => {
+  const failure = new Error("Injected fresh creation failure.");
+  await withGatedAuthority(
+    "slopstop-application-authority-failed-exemption-",
+    async (gated) => {
+      gated.release();
+      await expect(gated.authority.openCurrent({ createIfMissing: true })).rejects.toBe(failure);
+      await writeFile(path.join(gated.root, "prior-state-witness"), "preserved bytes");
+      const refusal = gated.authority.openCurrent({ createIfMissing: true });
+      await expect(refusal).rejects.toMatchObject({
+        failure: { status: "pending-recovery", code: "REGISTRY_MISSING_WITH_WITNESS" },
+      });
+      await expect(lstat(gated.authority.applicationDatabasePath)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    },
+    failure,
+  );
+});
+
+it("lets an open-only openCurrent wait for a fresh creation in flight, then open it", async () => {
+  await withGatedAuthority("slopstop-application-authority-open-only-", async (gated) => {
+    const creator = gated.authority.openCurrent({ createIfMissing: true });
+    await gated.firstOpen;
+    const openOnly = gated.authority.openCurrent({ createIfMissing: false });
+    expect(await settledWithin(openOnly, 200)).toBe("pending");
+    gated.release();
+    const clients = await Promise.all([creator, openOnly]);
+    for (const client of clients) await client?.close();
+    expect(clients.map((client) => client !== undefined)).toEqual([true, true]);
   });
 });

@@ -1,4 +1,4 @@
-import { mkdir, unlink } from "node:fs/promises";
+import { mkdir, readdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { Deferred, Effect, Semaphore } from "effect";
 import {
@@ -6,6 +6,7 @@ import {
   type ApplicationDatabaseMigrationFailures,
   firstRequiredApplicationMigration,
   migrateApplicationDatabase,
+  missingWithWitnessFailure,
   requireForeignKeys,
 } from "./application-database-migration.js";
 import {
@@ -15,6 +16,7 @@ import {
 } from "./local-libsql-worker-client.js";
 import { ProjectStorageUnavailableError } from "./project-storage-errors.js";
 import { lstatIfPresent, requirePlainEntry } from "./project-storage-filesystem-authority.js";
+import { storageErrorCode } from "./project-storage-node-errors.js";
 import { withWriteTransaction } from "./project-storage-transaction.js";
 
 // One per installation application database and harness. It owns schema initialization and
@@ -43,6 +45,29 @@ export type ApplicationDatabaseAuthority = Readonly<{
   ): Promise<LocalLibsqlClient | undefined>;
   stop(): Promise<void>;
 }>;
+
+// Whether a missing database under a root that already holds entries is refused as a
+// witness of lost state (the registry's path) or left to the caller's own checks (Storage's).
+type RootWitnessPolicy = "refuse" | "ignore";
+
+// The registry's path refuses a witnessed root and shares a fresh creation it starts, so
+// later callers wait for it; Storage's path registers its own initialization beforehand.
+type DecisionPolicy = Readonly<{
+  createIfMissing: boolean;
+  rootWitness: RootWitnessPolicy;
+  share: boolean;
+}>;
+
+// An initialization in flight, completed with its exact outcome for every caller that joins.
+// A fresh creation on the registry's path is registered while its decision holds the permit.
+type Initialization = Deferred.Deferred<"absent" | "current", unknown>;
+
+function publish(slot: Initialization, run: Promise<"absent" | "current">): void {
+  void run.then(
+    (state) => Deferred.doneUnsafe(slot, Effect.succeed(state)),
+    (error: unknown) => Deferred.doneUnsafe(slot, Effect.fail(error)),
+  );
+}
 
 function isEmptyPlainFile(entry: Awaited<ReturnType<typeof lstatIfPresent>>): boolean {
   if (entry === undefined || entry.isSymbolicLink()) return false;
@@ -100,6 +125,7 @@ export function createApplicationDatabaseAuthority(
   const applicationStorageRoot = path.resolve(input.applicationStorageRoot);
   const applicationDatabasePath = path.join(applicationStorageRoot, "application.db");
   const permits = Semaphore.makeUnsafe(1);
+  const deciding = Semaphore.makeUnsafe(1);
   // Completed once, after stop, when no accepted work remains; every stop awaits it.
   const closed = Deferred.makeUnsafe<void>();
   let stopped = false;
@@ -107,7 +133,7 @@ export function createApplicationDatabaseAuthority(
   let createdEmpty = false;
   let observed = false;
   let initializing = 0;
-  let initialization: Promise<"absent" | "current"> | undefined;
+  let initialization: Initialization | undefined;
 
   // Accepted work: queued or held admissions and initializations. Each ends exactly once.
   const accept = (): (() => void) => {
@@ -176,12 +202,11 @@ export function createApplicationDatabaseAuthority(
     ((databasePath: string) => createWorkerLocalLibsqlClient(databasePath, "application"));
   const openClient = () => admitClient(openRawClient(applicationDatabasePath));
 
+  const missingWithWitness = () => new ApplicationDatabaseFault(missingWithWitnessFailure);
+
   const requireExistingFile = async (): Promise<void> => {
     if ((await lstatIfPresent({ targetPath: applicationDatabasePath })) === undefined) {
-      throw new ApplicationDatabaseFault({
-        status: "pending-recovery",
-        code: "REGISTRY_MISSING_WITH_WITNESS",
-      });
+      throw missingWithWitness();
     }
     await requirePlainEntry({
       entryPath: applicationStorageRoot,
@@ -239,33 +264,69 @@ export function createApplicationDatabaseAuthority(
     }
   };
 
-  // Applies the caller's missing-file policy before any client can create the file.
-  const prepare = async (createIfMissing: boolean): Promise<"absent" | "present"> => {
+  // A missing database under a root that already holds entries is a witness of lost state,
+  // unless those entries are this authority's own fresh creation still in flight.
+  const refuseWitnessedRoot = async (): Promise<void> => {
+    if (createdEmpty) return;
+    const entries = await readdir(applicationStorageRoot).catch((error: unknown) => {
+      if (storageErrorCode({ error }) === "ENOENT") return [];
+      throw error;
+    });
+    if (entries.length > 0) throw missingWithWitness();
+  };
+
+  const createMissing = async (
+    policy: DecisionPolicy,
+  ): Promise<"present" | "created" | Initialization> => {
+    if (policy.rootWitness === "refuse") await refuseWitnessedRoot();
+    if (createdEmpty) return "present";
+    await mkdir(applicationStorageRoot, { recursive: true });
+    // Its client creates the file lazily: a fresh database still being created by this
+    // authority is not yet observed, so concurrent initializers must not see a witness.
+    createdEmpty = true;
+    if (!policy.share) return "created";
+    const creation = Deferred.makeUnsafe<"absent" | "current", unknown>();
+    initialization = creation;
+    return creation;
+  };
+
+  // An open-only registry caller that decides while a registered creation is still in
+  // flight waits for it instead of answering absent.
+  const missingWithoutCreating = (policy: DecisionPolicy): "absent" | "join" =>
+    policy.share && createdEmpty && initialization !== undefined ? "join" : "absent";
+
+  // Applies the caller's missing-file policy before any client can create the file. One
+  // decision at a time, so a concurrent caller sees either no creation or a registered one.
+  const decideMissingFile = async (
+    policy: DecisionPolicy,
+  ): Promise<"absent" | "join" | "present" | "created" | Initialization> => {
     if (stopped) throw stoppedError();
-    if ((await lstatIfPresent({ targetPath: applicationDatabasePath })) === undefined) {
-      // A database this authority already observed must never be recreated silently.
-      if (observed) {
-        throw new ApplicationDatabaseFault({
-          status: "pending-recovery",
-          code: "REGISTRY_MISSING_WITH_WITNESS",
-        });
-      }
-      if (!createIfMissing) return "absent";
-      await mkdir(applicationStorageRoot, { recursive: true });
-      // Its client creates the file lazily: a fresh database still being created by this
-      // authority is not yet observed, so concurrent initializers must not see a witness.
-      createdEmpty = true;
+    if ((await lstatIfPresent({ targetPath: applicationDatabasePath })) !== undefined) {
+      observed = true;
       return "present";
     }
-    observed = true;
-    return "present";
+    // A database this authority already observed must never be recreated silently.
+    if (observed) throw missingWithWitness();
+    if (!policy.createIfMissing) return missingWithoutCreating(policy);
+    return createMissing(policy);
+  };
+  const prepare = async (policy: DecisionPolicy) => {
+    await Effect.runPromise(Semaphore.take(deciding, 1));
+    try {
+      return await decideMissingFile(policy);
+    } finally {
+      Effect.runSync(Semaphore.release(deciding, 1));
+    }
   };
 
   // A fresh initialization that fails rolls back, leaving the empty file its client created.
   // The sole initializer removes that file (never one with content) so the next start
-  // initializes again; a failed removal is reported as its own failure.
+  // initializes again; a failed removal is reported as its own failure. With another
+  // initializer still in flight, the creation (and its exemption) stays with that one.
   const discardFailedCreation = async (error: unknown): Promise<unknown> => {
     if (!createdEmpty || initializing !== 1) return error;
+    // The creation is no longer in flight, so its witness exemption ends with it.
+    createdEmpty = false;
     try {
       if (isEmptyPlainFile(await lstatIfPresent({ targetPath: applicationDatabasePath }))) {
         await unlink(applicationDatabasePath);
@@ -291,10 +352,60 @@ export function createApplicationDatabaseAuthority(
   };
 
   const initialize = async (createIfMissing: boolean): Promise<"absent" | "current"> => {
-    if ((await prepare(createIfMissing)) === "absent") return "absent";
+    const decision = await prepare({ createIfMissing, rootWitness: "ignore", share: false });
+    if (decision === "absent") return "absent";
     const client = await initializeOnNewClient();
     await client.close();
     return "current";
+  };
+
+  // A caller that finds an initialization in flight awaits it; it then proceeds on its own
+  // only when that one found no database and this caller may create it. With nothing in
+  // flight it answers at once, so the caller registers its own with no pause in between.
+  const joinInFlight = (
+    createIfMissing: boolean,
+  ): Promise<"absent" | "current" | undefined> | undefined => {
+    const inFlight = initialization;
+    if (inFlight === undefined) return undefined;
+    return Effect.runPromise(Deferred.await(inFlight)).then((joined) =>
+      joined === "current" || !createIfMissing ? joined : undefined,
+    );
+  };
+
+  // Opens the creation this caller registered and completes it for its joiners.
+  const openShared = async (creation: Initialization): Promise<LocalLibsqlClient> => {
+    const opening = initializeOnNewClient();
+    publish(
+      creation,
+      opening.then(() => "current" as const),
+    );
+    try {
+      return await opening;
+    } finally {
+      if (initialization === creation) initialization = undefined;
+    }
+  };
+
+  const openOnRegistryPath = async (
+    createIfMissing: boolean,
+  ): Promise<LocalLibsqlClient | undefined> => {
+    if ((await joinInFlight(createIfMissing)) === "absent") return undefined;
+    const decision = await prepare({ createIfMissing, rootWitness: "refuse", share: true });
+    if (decision === "join") return openOnRegistryPath(createIfMissing);
+    if (decision === "absent") return undefined;
+    if (typeof decision === "object") return openShared(decision);
+    return initializeOnNewClient();
+  };
+
+  const sharing = async (run: Promise<"absent" | "current">): Promise<"absent" | "current"> => {
+    const slot = Deferred.makeUnsafe<"absent" | "current", unknown>();
+    initialization = slot;
+    publish(slot, run);
+    try {
+      return await run;
+    } finally {
+      if (initialization === slot) initialization = undefined;
+    }
   };
 
   return {
@@ -303,27 +414,19 @@ export function createApplicationDatabaseAuthority(
     ensureCurrent: async ({ createIfMissing }) => {
       const end = accept();
       try {
-        const inFlight = initialization;
-        if (inFlight !== undefined) {
-          const joined = await inFlight;
-          if (joined === "current" || !createIfMissing) return joined;
-        }
-        const run = initialize(createIfMissing);
-        initialization = run;
-        try {
-          return await run;
-        } finally {
-          if (initialization === run) initialization = undefined;
-        }
+        const joining = joinInFlight(createIfMissing);
+        const joined = joining === undefined ? undefined : await joining;
+        if (joined !== undefined) return joined;
+        return await sharing(initialize(createIfMissing));
       } finally {
         end();
       }
     },
+    // The registry's path: a missing database under a root that holds entries is refused.
     openCurrent: async ({ createIfMissing }) => {
       const end = accept();
       try {
-        if ((await prepare(createIfMissing)) === "absent") return undefined;
-        return await initializeOnNewClient();
+        return await openOnRegistryPath(createIfMissing);
       } finally {
         end();
       }
