@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: a569706184644be776f3f59cc7fdc1b8988139f659afb62bf75f109736acc409
+content_hash: 49a8cee3a56d22a816f0998d0ee6e007481a756ab7b608573775f45b2b21f5a6
 ---
 
 # Conversation — Human Decisions
@@ -245,3 +245,11 @@ Decided by the user directly with the ui-ux agent and relayed verbatim; the acti
 - **Which decisions a Waypoint agent receives (option "only the relevant ones"):** the Invocation context for a Waypoint parent or Worker includes current Project-wide decisions, decisions scoped to its Feature or Waypoint, and decisions that Waypoint implements. All other decisions are excluded, with the reason recorded in the Invocation context record, and stay reachable only through read-only typed retrieval. This depends on the decision scope and implemented-by links (§15), which are not yet stored.
 - **Editing a decision while a dependent Run is active (option "continue + warning"):** the Run keeps its pinned accepted revision, and nothing pauses or changes on its own. Attention shows one item ("Decision changed: Run X uses the earlier version") with an action that asks the Waypoint parent for a Run amendment proposal (ADR 0011), which the user approves or not.
 - Both need an ADR amendment (ADR 0009 context sources; ADR 0011 amendment trigger) before Runs are built; tracked in GitHub.
+
+## 21. Agent-to-agent communication in Ragnarok (user decisions, 2026-10-09)
+
+Prompted by the coordinator ↔ design-agent peer dialogue used in this session, which the user judged a success.
+
+- **Shape: mediated by the application.** Agents never message each other directly. Every message goes through the application, is durable and attributed, and is visible to the user in an agent dialogue inside its Run. It reaches the recipient only as an Invocation context source marked "agent-authored, no authority". It is bounded by a round limit, budget and loop-health detection. A converged outcome is a typed proposal (options, plan amendment, decision) that the user approves through Attention. Agent messages never carry or relay human approval. Isolation rules stay: no shared checkouts, turn sequences or hidden memory. Rejected: free direct chat between agents (it breaks isolation, attribution and replay); fixed peer moments only (too rigid).
+- **First use: reviewer ↔ builder.** The user's words: "1 para comecar mais nao limitado a apenas revisor, construtor." The first use is an independent reviewer returning findings to the builder, with at most two rounds before the user decides. The mechanism must be general, not specific to that pair. Later uses include linked Waypoints agreeing on an interface, questions between agents, and peers preparing options for the user.
+- Needs a PRODUCT.md change (the coordination rule at the "Parallel Workers keep independent turn sequences" bullet) and an ADR (agent dialogue ownership and the new Invocation context source kind).
