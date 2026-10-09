@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e05e8fc1ccc26c7e31ffae6fd6dd019549d014fe16c43c72f611ad9a2900b349
+content_hash: 0fecef34caf65e7f106475635a7dcaf0227ea2a09959ea35e8fdcd7e380a87c0
 ---
 
 # Conversation — Human Decisions
@@ -339,3 +339,9 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **Coherence pass (user request: "atualiza todos esses lugares"):** PRODUCT.md, CONTEXT.md (galaxy/planet metaphors removed; Supervisor, Worker family, agent dialogue and Decision checkpoint added), DESIGN.md, design.json, the artifacts README (Current Authority), the old coordination record and the C1 brief (marked historical or superseded), and ADR 0009 are aligned with §14-25. The ADR 0005/0006 chained-upgrade amendments ship with the C1 S1+S2 merge (they exist on the C1 branch).
 - **Runtime choice still open (user, same day):** the earlier leaning was the AI SDK instead of Mastra, because subscription mode was chosen for cost and gives less control over the conversation. Ragnarok now supports both API and subscription modes, so the runtime choice is not closed. It is tracked in GitHub #101, and PRODUCT.md and AGENTS.md stay unchanged until it is decided.
 - **Effect usage rules (user, same day):** after an Exa and Context7 review of the Effect 4 documentation and of incremental-adoption guidance, the user asked for the rules in the repository instructions ("deixa as instrucoes sobre effect presentes no claude.md do repositorio" and "e agents.md tambem"). AGENTS.md gains the section "Effect Usage (effect 4)", and CLAUDE.md points to it. The rules cover incremental migration of new and touched code; Effect programs for I/O; typed errors; acquireRelease; Semaphore, Deferred and Queue; services with Layers; plain functions for pure logic; one ManagedRuntime per process with runPromise only at the edges; no runtime in the renderer; Effect-native test fakes. Measured baseline on main: 52 of 103 harness files import effect, 20 of them with Effect programs; 287 `throw new`, 6 `new Promise`, 24 `run*` calls in 14 files, and 1 ManagedRuntime.
+
+## 26. C1 S1 acceptance (user decisions, 2026-10-09)
+
+- **S1 closing (review round 2 had no code or decision defects):** "Corrigir e aceitar". The implementer adds three tests: the target-uniqueness loop guard, two upgraded Projects in one registry, and filesystem-agreement refusal on a chain of two. It also records the heavy runs for 75ce0d1 in evidence. The coordinator checks this with no third reviewer round. The heavy runs and mutation run again once on the final S1+S2 candidate.
+- **Accepted:** the re-stamped C1 design (content_hash 493058d6…, the links-only amendment) is approved; the residual risk that the original S1 reds were not bound to patch digests is accepted; the S1 and S2 commits are squashed when merged to main.
+- **Follow-up:** GitHub #102 tracks "Project listing cleanup is unconfirmed" masking real failures.
