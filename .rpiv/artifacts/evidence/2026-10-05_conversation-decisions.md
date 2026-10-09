@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 78f0de8825ef8578512ba76026f1299a0149395baf9cf7855c371ed438a3328d
+content_hash: 8ec9217e1e999fe13f6301dba2c7155eb9831433403807848ec7bae6f8b04e3e
 ---
 
 # Conversation — Human Decisions
@@ -298,3 +298,4 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
   - a shortcut opens a cheat sheet listing every command.
 - **Open:** how tool calls are displayed (HTML examples coming); error, failure and success states; first use; chart ideas for Runs and Diagnostics; the command list; Windows accessibility; notifications outside the app beyond sounds; the app icon ("aquele striker que eu te falei"), whose meaning is still to be confirmed with the user.
 - **Tool-call display (user, same day):** "gosto da opcao A , em linhas." Tool use shows as one quiet line per tool. The live diff opens inline under the file being written and folds when the next step starts, and Expand opens the full view of all changes (prototype `ragnarok-hero/work.html?v=a`). Open: whether runs of four or more similar steps fold into one expandable line (the ui-ux agent's proposal).
+- **Folding long tool runs (user, same day):** "gostei!". Runs of four or more similar read or search steps fold into one expandable line, for example "Read 6 files". Edits and commands never fold.
