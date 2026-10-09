@@ -31,6 +31,14 @@ Accepted product and plan decisions are immutable Accepted revisions with a curr
 - All other decisions are excluded, each with a recorded exclusion reason, and remain reachable only through read-only typed retrieval.
 - A Run pins the decision revisions current when its policy epoch was approved (ADR 0011).
 
+### Foundation sections by role
+
+- Project-scope Foundation decisions (stack, repository structure, conventions) are organised in sections: **Common** plus one section per Worker role in use (for example Front-end, Back-end/data, Tests, Design, Security, Docs, Migration). A Project shows only the sections it uses.
+- A Worker receives the Common section plus the section for its role, in addition to its Feature, Waypoint and implemented decisions. It does not receive other roles' sections; it may read them through read-only typed retrieval, which is recorded.
+- A reviewer receives Common plus the section of the work it reviews. The Forger and the Supervisor receive every section.
+- New Project: the opt-in foundation quiz asks per section, only for sections the Project uses. Existing Project: a read-only Worker infers each section from the code, and the user confirms section by section.
+- Foundation sections live on the Decisions page (a Foundation section), never in the Memory library (PRODUCT.md: accepted decisions are not duplicated as Verified Memory).
+
 ### A decision edited during an active Run (amends ADR 0011 triggers)
 
 - The Run keeps its pinned revisions; nothing pauses or changes automatically.

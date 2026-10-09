@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 6f12b24fc8f1b5aec8b35ad32541a7101f107719be33866206ac824ea6d2301b
+content_hash: 502803408005dcb613cf3c15b3b3f0395dd4b3461adc661b7191a9ddfb46a927
 ---
 
 # Conversation — Human Decisions
@@ -357,3 +357,4 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **Defaults:** the user first chose "measure first", then, at the user's suggestion, provisional defaults from the coordinator's own multi-agent experience: 6 messages per agent per dialogue, then needs-human; 1 subject per dialogue; 2 review rounds; budget warning at 80%. They are visible, editable and recalibrated from use.
 - **ADRs written as Proposed:** ADR 0021 (Supervisor, Forger and mediated agent dialogue; amends 0007/0009/0011/0014) and ADR 0022 (decision scope, implementing Waypoints and decisions in Run context; amends 0009/0011). Both await the user's acceptance.
 - **Runa V2 approved (user, same day):** "aprovo a v2, aplica nos protótipos". The icon set is Runa V2 (Figma 139:30 on page 125:30; SVG source `ragnarok-hero/icons-runa-v2`, 77 icons), which supersedes V1 (126:30). It keeps a 1.5 px stroke, square caps and mitred joins, Kenaz for Attention, and the anvil Send exception. A notable V2 change: Settings is two diamond controls on tracks instead of the V1 hexagon.
+- **Foundation by role (user, same day):** Foundation decisions are split into a Common section plus one section per Worker role (front-end, back-end/data, tests, design, security, docs, migration and so on), on the Decisions page and not in the Memory library. A Worker receives Common plus its role's section; a reviewer receives Common plus the section of the work it reviews; the Forger and the Supervisor receive every section. Existing Projects have each section inferred by a read-only Worker and confirmed by the user. This is added to Proposed ADR 0022 and to #104.
