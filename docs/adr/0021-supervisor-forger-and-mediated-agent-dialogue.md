@@ -7,6 +7,10 @@
 - FRD: [Agent coordination and dialogue](../../.rpiv/artifacts/discover/2026-10-09_18-03-55_agent-coordination-and-dialogue.md)
 - Decisions log: `.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` §21, §25, §27
 
+## Note (2026-10-10): former names
+
+This ADR uses "Feature", the former name of **Strand** (decisions log §30; see `CONTEXT.md` Former Names). The two names denote the same concept; this note changes no decision.
+
 ## Context
 
 ADR 0007 makes one logical Waypoint parent the supervisor of each Run and Workers the executors of single Delegation tasks. ADR 0009 forbids Workers from creating, joining or coordinating one another, and gives each agent its own Turn Machine and Invocation context record. No construct lets one agent send content to another except fan-in results, Finding remediation handoffs (ADR 0014) and Task-input snapshots (ADR 0015).

@@ -6,6 +6,10 @@
 - Issue: [#98](https://github.com/TheMastermindPT/slopstop/issues/98)
 - Decisions log: `.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` §15, §18, §20, §27
 
+## Note (2026-10-10): former names
+
+This ADR uses "Feature", the former name of **Strand** (decisions log §30; see `CONTEXT.md` Former Names). The two names denote the same concept; this note changes no decision.
+
 ## Context
 
 Accepted product and plan decisions are immutable Accepted revisions with a current pointer (CONTEXT.md, ADR 0006). The user decided that the central Decisions page lets them add, edit in place and retire decisions, and that the map shows decisions in relation to Waypoints. The current Frame protocol has no persisted relation between a decision and the map. ADR 0009 requires every agent's input to be an explicit, recorded Invocation context record, so which decisions an agent receives must be a rule, not an inference.

@@ -4,6 +4,10 @@
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
+## Note (2026-10-10): former names
+
+This ADR uses "Feature", the former name of **Strand** (decisions log §30; see `CONTEXT.md` Former Names). The two names denote the same concept; this note changes no decision.
+
 ## Context
 
 The accepted Project identity, command settlement, profile, onboarding, status, Board, writer, runtime-handoff, and Storage-lifecycle contracts need one physical layout before implementation can be designed. The canonical database must remain directly queryable without event replay, Mastra must retain private ownership of runtime persistence, and the installation registry must locate and operate Storage without becoming Project truth. SQLite cannot provide a transaction across the canonical and runtime databases, so identities, manifests, migration metadata, handoffs, and recovery evidence must make every cross-database outcome explicit.

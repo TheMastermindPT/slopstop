@@ -286,7 +286,7 @@ Depth comes from tonal steps (canvas, then iron, then forged, then plate) and fr
 ### Named Rules
 **The Brand Moment Rule.** The fire-and-ice glow (ember top-left, frost bottom-right) and the ash belong to the startup screen only. The eclipse is reserved for big moments: startup, empty states, loading and recovery. Daily working screens carry no background glow. The eclipse is an ornament, never a domain object.
 
-**The Soft Stone Rule.** Separate regions with tone and soft lift, not with boxes inside boxes. An outline appears only to carry meaning: an ember frame for "needs you", a blood outline for broken, a frost border for selection, a dashed line for another Feature or something not yet specified.
+**The Soft Stone Rule.** Separate regions with tone and soft lift, not with boxes inside boxes. An outline appears only to carry meaning: an ember frame for "needs you", a blood outline for broken, a frost border for selection, a dashed line for another Strand or something not yet specified.
 
 ## Shapes
 

@@ -25,7 +25,7 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Storage safe mode | The read-only Project mode entered when either database is not healthy; only diagnosis and explicit storage-recovery operations remain available. |
 | Prior-state witness | Any registry record, marker, manifest, generation, database sidecar, local snapshot, or unfinished-operation journal proving that missing files must enter recovery instead of fresh initialization. |
 | Deletion tombstone | The external operation witness retained while destructive Project-data deletion is incomplete; it blocks fresh initialization until deletion either completes or is recovered. |
-| Feature | A durable objective container with its own Frame record, goals, constraints, revisions, and Waypoints. |
+| Strand | (Formerly Feature.) A durable objective container with its own Frame record, goals, constraints, revisions, and Waypoints. |
 | Waypoint | A durable project objective; never an agent session or temporary worker task. |
 | Application coordinator | Deterministic software that owns canonical project state, scheduling, policy, budgets, and recovery. |
 | Forger | The single logical AI lead of one Run (formerly "Waypoint parent"; ADRs 0007-0020 and existing code identifiers keep the former name until migrated), preserving identity across safe restart, resume, compaction, runtime session replacement, and model changes. |
@@ -147,7 +147,7 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Command receipt | The durable applied, unchanged, or rejected settlement of the first distinct Typed-command fingerprint under one Project and command identity. |
 | Canonical event | An append-only fact emitted only by an applied command for audit and integration; current Project state never depends on replaying it. |
 | Accepted revision | An immutable, explicitly accepted version of canonical aggregate content to which directly queryable current state may point. |
-| Decision scope | Where one accepted product or plan decision applies: the Project, one Feature, or one Waypoint; recorded separately from the Waypoints that implement it and never inferred from conversation location or `blocks`. |
+| Decision scope | Where one accepted product or plan decision applies: the Project, one Strand, or one Waypoint; recorded separately from the Waypoints that implement it and never inferred from conversation location or `blocks`. |
 | Implementing Waypoint | A Waypoint explicitly linked as planned work that realizes an accepted decision; one decision may have zero or more. |
 | Writer generation | A durable fencing identity acquired under the operating-system writer lease and checked by every canonical command settlement. |
 | Runtime handoff | A versioned immutable request crossing from canonical outbox to the runtime inbox through at-least-once delivery, stable reservation, and evidence-backed reconciliation. |
@@ -195,6 +195,18 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Language mutation callback observation | One immutable Language-Intelligence-owned fact that an admitted Language operation received an exact mutation callback before adapter response; it preserves the callback even when no terminal Language observation follows. |
 | Language mutation proposal | One immutable attributed ordered edit set with an exact callback observation, preimage or destination-absence proof, result Artifacts where applicable, scope, and fingerprints; it grants no Tool, Effect, Candidate, lease, approval, or write authority. |
 | Debug observation | Registered and redacted runtime evidence from a future DAP session; supporting evidence, never red-green proof. |
+
+## Former Names
+
+Older documents, accepted ADR text and code identifiers may still use a former name; it denotes the same concept. Code identifiers move in a dedicated rename slice.
+
+| Former name | Current name | Since |
+| --- | --- | --- |
+| Feature | Strand | 2026-10-10 (decisions log §30) |
+| Saga (map view label) | Weave | 2026-10-10 (decisions log §30) |
+| Chapter (map view label) | Strand view | 2026-10-10 (decisions log §30) |
+| Waypoint parent | Forger | 2026-10-09 (ADR 0021) |
+| SlopStop | Ragnarok | product name; technical rename deferred |
 
 ## Status Families
 
