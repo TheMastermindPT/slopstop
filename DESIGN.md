@@ -205,7 +205,7 @@ The world is carbon and graphite. Four state colours each carry exactly one mean
 - **Frost** (frost): the focus halo, selection, active work ("agent working", the "now" layer), the primary and Send buttons, and links. When frost fills a button, its text uses Frost-On (frost-on).
 
 ### Secondary
-- **Ember** (ember): only for genuine human attention: "Needs you" chips, the Attention count on the rail, the frame around a map item or card that waits for a human decision. It is also the destination's colour on the map.
+- **Ember** (ember): only for genuine human attention: "Needs you" chips, the Attention count on the rail, the frame around a map item or card that waits for a human decision.
 - **Moss** (moss): accepted, healthy, done. Always paired with a word ("Accepted · r4").
 - **Blood** (blood): failures (a failed response, a crash line). Never used for merely destructive-looking actions such as Retire. Retire keeps history, so it stays neutral.
 
@@ -286,7 +286,7 @@ Depth comes from tonal steps (canvas, then iron, then forged, then plate) and fr
 ### Named Rules
 **The Brand Moment Rule.** The fire-and-ice glow (ember top-left, frost bottom-right) and the ash belong to the startup screen only. The eclipse is reserved for big moments: startup, empty states, loading and recovery. Daily working screens carry no background glow. The eclipse is an ornament, never a domain object.
 
-**The Soft Stone Rule.** Separate regions with tone and soft lift, not with boxes inside boxes. An outline appears only to carry meaning: an ember frame for "needs you", a frost border for selection, a dashed line for another Feature or something not yet specified.
+**The Soft Stone Rule.** Separate regions with tone and soft lift, not with boxes inside boxes. An outline appears only to carry meaning: an ember frame for "needs you", a blood outline for broken, a frost border for selection, a dashed line for another Feature or something not yet specified.
 
 ## Shapes
 
@@ -296,7 +296,7 @@ The form language is soft and rounded, like polished stone:
 - 14px corners on cards, checkpoints, map nodes, theme groups, quotes, notices, menus and the composer;
 - 16px corners on bands such as the map's "now" band.
 
-State markers are diamonds: 6–8px squares rotated 45°, filled for active states, outlined for waiting. Map Waypoints are 10px circles: filled for accepted, working or your move; outlined for ready or waiting. Same step side by side means parallel work; a short link means the next step.
+State markers are diamonds: 6–8px squares rotated 45°, filled for active states, outlined for waiting. Map Waypoints are 10px diamonds (Runa geometry): filled for accepted, working or your move; outlined for ready or waiting. Same step side by side means parallel work; a short link means the next step.
 
 Coloured side stripes thicker than 1px are not part of the system. Chamfered (cut) corners were tried and rejected (2026-10-09).
 
@@ -334,7 +334,7 @@ Soft and calm: pill-shaped, recessive at rest, clear on interaction.
 - **Scope breadcrumb:** a pill with Project › scope, plus a branch pill in Cascadia.
 
 ### Signature components
-- **Raidho mark and rune rule:** ᚱ in frost (stroke 2, square caps) at the top of the rail. Under surface titles, the rune rule: a hairline, a 6px frost diamond, then a hairline.
+- **Raidho mark and rune rule:** ᚱ in frost (a thin stroke in the ratio of the approved startup frame 109:49, about 1.25px non-scaling; square caps) at the top of the rail. Under surface titles, the rune rule: a hairline, a 6px frost diamond, then a hairline.
 - **Send anvil (approved brand exception, 2026-10-09):** on Send buttons only, a custom anvil-and-hammer mark replaces the arrow. Its parts stay separable (anvil body, hammer, sparks) so a Rive version can replace them later. On each send the hammer strikes once and a few sparks fly (about 420ms, once per send, never looping). Nothing plays under reduced motion. The label always names the destination.
 - **Decision checkpoint:** a card with Accept on each decision, Accept all for the ones still pending, and Correct. Proposed checkpoints wear the ember frame; accepted ones turn moss.
 - **Map graph node:** a forged card with the soft lift, showing its chapter label in Cinzel, the name, Waypoint dots, a status line (diamond plus words), and a decision count pill ("2 in force"). The selected node gets a frost border; while "Show on map" is active, unrelated nodes dim to 38%.

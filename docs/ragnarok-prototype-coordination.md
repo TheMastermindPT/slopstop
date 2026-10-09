@@ -1,6 +1,6 @@
 # Ragnarok Prototype Coordination
 
-Started: 2026-09-12. Status: Conversation-first sequencing approved; next-slice RPIV design in progress.
+Started: 2026-09-12. Status: HISTORICAL (last updated 2026-09-26). Superseded for current state by `.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` and `.rpiv/artifacts/README.md` (Current Authority). PC-S1 and C1-0 are implemented; Conversation C1 is in progress.
 
 ## Outcome
 

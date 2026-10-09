@@ -2,7 +2,8 @@
 date: 2026-10-05
 author: coordenador-claude (Claude Code), for the implementer agent
 repository: slopstop
-status: approved-to-plan
+status: superseded
+superseded_by: .rpiv/artifacts/designs/2026-10-09_13-54-08_conversation-c1-local-save.md
 tags: [conversation, c1, local-save, persistence]
 ---
 

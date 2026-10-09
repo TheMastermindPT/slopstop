@@ -324,3 +324,7 @@ The shared contract suite adds these governed-CLI-session cases:
   - Whether the CLI's automatic context compaction can be disabled; until then it counts as unrecorded lossy compaction.
   - Weekly plan consumption with parallel Workers.
   - Other providers' official CLIs.
+
+### Note (2026-10-09): both credentials may be stored, one mode active
+
+User decision (decisions log, 2026-10-09): a user may keep both the subscription CLI sign-in and an API key configured, but exactly one billing mode is active at a time. Switching is manual and applies only to Runs prepared afterwards; a Run keeps its pinned mode, and SlopStop never switches modes automatically. This refines the "Each user selects exactly one billing mode" rule without changing it.

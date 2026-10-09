@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 1c0eed5a9555efa8c5b7d5af5ab407c09a1ef81d693fb66782144ea1e6817115
+content_hash: b365f8017aea234b1a7cb7e887e6e84ae9ec888e29ade77f9d32c44622591832
 ---
 
 # Conversation — Human Decisions
@@ -328,3 +328,12 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
   - an update control is wanted.
   The ui-ux agent's advice: pin tool versions per harness release; an update installs only versions tested with that harness, shows what changed, re-runs a self-check and allows rollback. Each tool's licence must allow redistribution. This needs its own interview and ADR; the user wants to discuss it further.
 - **Agent marks (user, same day):** "Gosto dos ícones. As marcas convencem, sim. Está tudo OK." The agent marks in prototype `agents.html` are approved: Conversation (Ansuz), Waypoint parent (Othala), Worker (Uruz), Supervisor (Algiz, provisional pending #99), plus marks for common Worker roles. Identity marks stay neutral; state colours stay on separate marks.
+
+## 25. Agent coordination FRD and coherence decisions (user, 2026-10-09)
+
+- **Agent-coordination FRD (consensus confirmed):** `.rpiv/artifacts/discover/2026-10-09_18-03-55_agent-coordination-and-dialogue.md`. It covers the Supervisor (plans and coordinates; never executes, approves or starts Runs), the Forger per Run, the doer and reader Worker families, and an application-mediated agent dialogue in free text with an envelope. Dialogue is declared in the plan, budgeted from the Run, shown in its own thread, open to the user to write into or stop, and arrives in phases (inside a Run first, then across Waypoints through the Supervisor). Plan changes go through two phases: during discussion only the affected tasks stop; once a proposal is submitted, ADR 0011 applies. This resolves the §21 provisional conflict with ADR 0011.
+- **Rename:** "Waypoint parent" becomes **Forger** ("alias fica so forger"). PRODUCT.md and CONTEXT.md are updated. ADRs 0007-0020 and existing code identifiers keep the former name until migrated.
+- **Commits:** Ragnarok prepares the commit message (a "why" summary plus decision and Run trailers) and creates the commit only on the user's explicit approval (PRODUCT.md integration rule updated).
+- **Billing:** both the subscription sign-in and an API key may be stored, with exactly one mode active at a time and manual switching (ADR 0009 note).
+- **Map markers:** Waypoints on the map are diamonds (Runa geometry), not circles.
+- **Coherence pass (user request: "atualiza todos esses lugares"):** PRODUCT.md, CONTEXT.md (galaxy/planet metaphors removed; Supervisor, Worker family, agent dialogue and Decision checkpoint added), DESIGN.md, design.json, the artifacts README (Current Authority), the old coordination record and the C1 brief (marked historical or superseded), and ADR 0009 are aligned with §14-25. The ADR 0005/0006 chained-upgrade amendments ship with the C1 S1+S2 merge (they exist on the C1 branch).

@@ -51,6 +51,16 @@ The 2026-08-14 discover and research artifacts were copied byte-for-byte from th
 
 ## Current Authority
 
+Read these first (2026-10-09); they supersede older coordination records below where they differ:
+
+- `evidence/2026-10-05_conversation-decisions.md`: the running log of user decisions (sections 1-24 and later), covering the C1-0 cycle, the harness visual design, the brand identity, the Decisions page, the C1 design answers, agent dialogue, and the rpiv-method and agent-coordination direction. Later sections and "Correction" bullets supersede earlier ones.
+- `designs/2026-10-09_13-54-08_conversation-c1-local-save.md`: the approved Conversation C1 design (local save, no model), built in the linked worktree branch `feat/c1-conversation-local-save`; the branch carries its later amendments (links-only chain order).
+- `discover/2026-10-05_20-11-21_project-database-staged-upgrade.md`: the C1-0 staged-upgrade FRD (implemented, on main).
+- `discover/2026-10-09_18-03-55_rpiv-method-in-ragnarok.md` (GitHub #100) and `discover/2026-10-09_18-03-55_agent-coordination-and-dialogue.md` (GitHub #99): the FRDs for rebuilding the rpiv method and for Supervisor, Forger and agent dialogue.
+- Product truth stays in `PRODUCT.md`, `CONTEXT.md`, `DESIGN.md` and `docs/adr/`. The 2026-08-14 FRDs' galaxy/planet wording is superseded by PRODUCT.md (no space imagery replacing relationship semantics).
+
+Older records:
+
 - Coordination handoff: `handoffs/2026-10-03_21-16-54_claude-project-coordinator.md` transfers coordination from OpenCode to the separate Herdr agent `coordenador-claude`, after a completed read-and-teach-back exchange. The existing `claude` session remains the implementation author; the handoff distinguishes current approvals, unfinished migration/feature work and deferred strategy.
 - `evidence/2026-10-04_vitest-coverage-worker-crash-and-gate-baseline.md` records the pre-existing Vitest worker crash and the coverage gate comparison (187 failures before Effect vs 4 timeouts after), plus the user's choice to reduce coverage parallelism without weakening the gate.
 - `prototypes/pc-s1-add-repository/` is the user-approved throwaway prototype of the PC-S1 add-repository flow (trust, two-stage Git consent, confirmation, every outcome state, Remove from list); reference for the real React UI, not production code.
