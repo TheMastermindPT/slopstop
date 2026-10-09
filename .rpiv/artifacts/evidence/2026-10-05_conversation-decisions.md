@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 0fecef34caf65e7f106475635a7dcaf0227ea2a09959ea35e8fdcd7e380a87c0
+content_hash: 76be5476ba5ceb87d609773dc8f6299b1a325dea349809fa54045b4b4639849e
 ---
 
 # Conversation — Human Decisions
@@ -345,3 +345,4 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **S1 closing (review round 2 had no code or decision defects):** "Corrigir e aceitar". The implementer adds three tests: the target-uniqueness loop guard, two upgraded Projects in one registry, and filesystem-agreement refusal on a chain of two. It also records the heavy runs for 75ce0d1 in evidence. The coordinator checks this with no third reviewer round. The heavy runs and mutation run again once on the final S1+S2 candidate.
 - **Accepted:** the re-stamped C1 design (content_hash 493058d6…, the links-only amendment) is approved; the residual risk that the original S1 reds were not bound to patch digests is accepted; the S1 and S2 commits are squashed when merged to main.
 - **Follow-up:** GitHub #102 tracks "Project listing cleanup is unconfirmed" masking real failures.
+- **After C1 (user, same day):** "depois do C1 passamos a Conversa para React". The first post-C1 step is porting the Conversation screen to React (the walking-skeleton approach), ahead of the remaining prototype screens.
