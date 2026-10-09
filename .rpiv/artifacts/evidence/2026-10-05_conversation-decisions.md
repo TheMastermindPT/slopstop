@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 49a8cee3a56d22a816f0998d0ee6e007481a756ab7b608573775f45b2b21f5a6
+content_hash: 63d414d5c38faad6079c6bdeeac3866877d1a0501b7f55e0b8381bbf617d447d
 ---
 
 # Conversation — Human Decisions
@@ -253,3 +253,5 @@ Prompted by the coordinator ↔ design-agent peer dialogue used in this session,
 - **Shape: mediated by the application.** Agents never message each other directly. Every message goes through the application, is durable and attributed, and is visible to the user in an agent dialogue inside its Run. It reaches the recipient only as an Invocation context source marked "agent-authored, no authority". It is bounded by a round limit, budget and loop-health detection. A converged outcome is a typed proposal (options, plan amendment, decision) that the user approves through Attention. Agent messages never carry or relay human approval. Isolation rules stay: no shared checkouts, turn sequences or hidden memory. Rejected: free direct chat between agents (it breaks isolation, attribution and replay); fixed peer moments only (too rigid).
 - **First use: reviewer ↔ builder.** The user's words: "1 para comecar mais nao limitado a apenas revisor, construtor." The first use is an independent reviewer returning findings to the builder, with at most two rounds before the user decides. The mechanism must be general, not specific to that pair. Later uses include linked Waypoints agreeing on an interface, questions between agents, and peers preparing options for the user.
 - Needs a PRODUCT.md change (the coordination rule at the "Parallel Workers keep independent turn sequences" bullet) and an ADR (agent dialogue ownership and the new Invocation context source kind).
+- **PRODUCT.md text approved (user, same day):** "sim, faz isso". The mediated agent dialogue rule is appended to the parallel-Workers bullet.
+- **User's target scenario:** "ao fazer um pedido a um agente (neste caso seria o supervisor, não sei se seria esse o nome), eu imagino que aí a tarefa vai ser repartida por vários waypoints dentro da saga e do chapter. Se estes agentes tiverem uma tarefa nas quais podem colaborar, então eles aí falam." Examples: a reviewer and a builder; and a front-end request where one agent owns the design and another owns the front-end implementation, talking to each other. Open points: the name and authority of the agent that splits a request across Waypoints (today the plan comes from Frame, and the Application coordinator is deterministic software, not an agent); whether collaboration happens inside one Run or across Waypoints and Runs; and role-specialised agents (design, implementation, review) in Run profiles.
