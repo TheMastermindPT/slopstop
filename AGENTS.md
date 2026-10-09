@@ -57,6 +57,25 @@ Explanations and status updates must be in plain Portuguese (Portugal). The user
 - Use named exports and explicit type-only imports. Avoid `any`, double casts, non-null assertions, and default exports except where a tool requires one.
 - Keep filenames kebab-case. React component and type names use PascalCase; values and functions use camelCase.
 
+## Effect Usage (effect 4)
+
+The project migrates fully to Effect, incrementally: new code and every code path a slice touches follow these rules, and untouched stable code migrates only when a slice changes it. Use the current documentation (Context7 `/websites/effect_website_v4`) before writing Effect code.
+
+- `packages/kernel` uses only pure data modules (`Schema`, `Brand`, `Data`). `packages/protocol` adds the strict decode policy. Neither starts a runtime.
+- In `apps/harness` and the Electron main process, choose by what the code does:
+  - I/O (disk, database, processes, network, IPC), waiting, timeouts, retries or cancellation: an Effect program (`Effect.gen` / `Effect.fn`). Wrap side effects in `Effect.sync`, `Effect.try` or `Effect.tryPromise`, and pass the provided `AbortSignal` to the underlying API so interruption really cancels it.
+  - Expected failures that a caller handles: typed errors on the error channel (`Schema.TaggedErrorClass` or `Data.TaggedError`), never a bare `throw`. Defects (bugs) stay defects. Do not turn an interruption into a domain error.
+  - Opening and closing anything (clients, files, processes, workers): `Effect.acquireRelease` inside a `Scope` or a Layer; never manual close bookkeeping.
+  - Coordination (one at a time, waiting for a result, queues, fan-out): `Semaphore`, `Deferred`, `Queue`, and `Effect.all` / `Effect.forEach` with explicit `concurrency`. Do not hand-roll Promise resolvers, `new Promise` coordination or `Promise.all` in new code.
+  - An owner with state or a lifecycle: a service (`Context.Service`) built by a Layer (`Layer.succeed` for a ready value, `Layer.effect` / scoped for everything else). Service operations have no requirements (`R = never`); dependencies are wired in the Layer.
+  - Pure logic (rules, calculations, mappings, validation of in-memory values): a plain function that returns a value or a `Result`. Do not wrap pure code in Effect.
+  - Untrusted input: `Schema` with `decodeStrict` / `decodeStrictResult`, never `as` casts.
+- Run effects only at the edge: one `ManagedRuntime` per process, built once from the application Layer and disposed on shutdown. `runPromise` / `runFork` appear only in entrypoints, IPC and host adapters, temporary Promise facades for not-yet-migrated callers, and tests. Never call `Effect.provide` per request; never build a runtime per call.
+- During migration, a Promise facade may keep an old caller working; delete it once its callers are Effects.
+- The renderer (React) does not run an Effect runtime. It may use protocol schemas and types.
+- Tests provide fakes through `Effect.provideService` or test Layers. Fakes fail with `Effect.fail`, never `throw`, and time-based tests use `TestClock`, not real sleeps.
+- Reviewers check these rules on new and touched code.
+
 ## Test Discipline
 
 - This section governs development of SlopStop itself. Every SlopStop behavior change follows the strict red-green and review/refactor sequence below; a product-domain discipline exception for work supervised in an external Project never waives these repository rules.
