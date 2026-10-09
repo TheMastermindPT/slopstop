@@ -439,7 +439,7 @@
       "name": "Rail Item",
       "kind": "nav",
       "refersTo": "rail-item-active",
-      "description": "Labelled activity rail destination; active = forged plate; Attention is a flame.",
+      "description": "Labelled activity rail destination; active = forged plate; Attention is the Kenaz (torch) rune mark.",
       "html": "<a class=\"ds-rail\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\"/></svg><span>Attention</span></a>",
       "css": ".ds-rail { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; width: 56px; padding: 8px 0 6px; border-radius: 12px; background: #101214; color: #ECEFF1; text-decoration: none; font: 400 11px/14px Red Hat Text, system-ui, sans-serif; box-shadow: 0 8px 20px -12px rgba(0,0,0,0.9), inset 0 1px 0 rgba(236,239,241,0.04); } .ds-rail:hover { background: rgba(236,239,241,0.045); }"
     },
@@ -511,7 +511,7 @@
     "dos": [
       "**Do** keep one frost-filled primary button per region.",
       "**Do** pair every state colour with words or a diamond (Accepted · r4, Needs you).",
-      "**Do** use Lucide icons at one stroke width (1.5) everywhere; the anvil on Send buttons is the only exception.",
+      "**Do** use the Ragnarok-owned Runa icon set (Figma 126:30: straight rune-stave strokes, no curves, diamonds instead of circles, 1.5px, square caps, mitred joins) everywhere; the anvil on Send buttons is the only exception. A missing icon is drawn in the Runa style, never borrowed from another set.",
       "**Do** keep conversation and decision text in Red Hat Text at 14/22, at about 720px measure, and bundle the fonts with the app.",
       "**Do** give every control a hover, focus (the soft frost halo), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion.",
       "**Do** keep broken, stale, provisional and unknown states visible, each with its own words. Never show them as clean or absent."
@@ -522,7 +522,7 @@
       "**Don't** set user content, sentences or buttons in Cinzel.",
       "**Don't** use ember for anything that does not wait for a human, or blood for non-failures such as Retire.",
       "**Don't** wrap regions in hairline boxes inside boxes, or use coloured side stripes thicker than 1px.",
-      "**Don't** use chamfered corners, Phosphor icons, Unicode glyphs or emoji as icons, or custom icons other than the Send anvil.",
+      "**Don't** use chamfered corners, third-party icon sets (Lucide, Phosphor), Unicode glyphs or emoji as icons, or any icon outside the Runa set except the Send anvil.",
       "**Don't** add a fourth text tone or new palette roles without the user's approval."
     ]
   }

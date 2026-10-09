@@ -329,7 +329,7 @@ Soft and calm: pill-shaped, recessive at rest, clear on interaction.
 - **Edit field (decision wording):** plate fill, 14px corners, frost halo while editing.
 
 ### Navigation
-- **Rail:** Lucide icons at one stroke width (1.5), with labels at 1280px and wider. The active item is a forged fill with 12px corners and the row lift; Attention is a flame with an ember count of actionable items.
+- **Rail:** Runa icons at one stroke width (1.5), with labels at 1280px and wider. The active item is a forged fill with 12px corners and the row lift; Attention is the Kenaz (torch) rune mark with an ember count of actionable items.
 - **Centre tabs:** dim text that turns ink when active, with a 1px frost underline. Temporary tabs carry a close button and mark the current page.
 - **Scope breadcrumb:** a pill with Project › scope, plus a branch pill in Cascadia.
 
@@ -344,7 +344,7 @@ Soft and calm: pill-shaped, recessive at rest, clear on interaction.
 ### Do:
 - **Do** keep one frost-filled primary button per region.
 - **Do** pair every state colour with words or a diamond (Accepted · r4, Needs you).
-- **Do** use Lucide icons at one stroke width (1.5) everywhere; the anvil on Send buttons is the only exception.
+- **Do** use the Ragnarok-owned Runa icon set (Figma 126:30: straight rune-stave strokes, no curves, diamonds instead of circles, 1.5px, square caps, mitred joins) everywhere; the anvil on Send buttons is the only exception. A missing icon is drawn in the Runa style, never borrowed from another set.
 - **Do** keep conversation and decision text in Red Hat Text at 14/22, at about 720px measure, and bundle the fonts with the app.
 - **Do** give every control a hover, focus (the soft frost halo), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion.
 - **Do** keep broken, stale, provisional and unknown states visible, each with its own words. Never show them as clean or absent.
@@ -355,5 +355,5 @@ Soft and calm: pill-shaped, recessive at rest, clear on interaction.
 - **Don't** set user content, sentences or buttons in Cinzel.
 - **Don't** use ember for anything that does not wait for a human, or blood for non-failures such as Retire.
 - **Don't** wrap regions in hairline boxes inside boxes, or use coloured side stripes thicker than 1px.
-- **Don't** use chamfered corners, Phosphor icons, Unicode glyphs or emoji as icons, or custom icons other than the Send anvil.
+- **Don't** use chamfered corners, third-party icon sets (Lucide, Phosphor), Unicode glyphs or emoji as icons, or any icon outside the Runa set except the Send anvil.
 - **Don't** add a fourth text tone or new palette roles without the user's approval.
