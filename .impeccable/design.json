@@ -1,386 +1,505 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-25T03:18:18Z",
-  "title": "Design System: SlopStop Workspace Prototype",
+  "generatedAt": "2026-10-09T14:28:31.283Z",
+  "title": "Design System: Ragnarok",
   "extensions": {
     "colorMeta": {
-      "night": {
+      "canvas": {
         "role": "neutral",
-        "displayName": "Night Carbon",
-        "canonical": "#090b0a",
+        "displayName": "Canvas",
+        "canonical": "#050606",
         "tonalRamp": [
-          "#090b0a",
-          "#151817",
-          "#252a27",
-          "#3a413d",
-          "#59615c",
-          "#7e8882",
-          "#b4bcb7",
-          "#f0f2ef"
+          "#262626",
+          "#3F4040",
+          "#595959",
+          "#7F8080",
+          "#A5A6A6",
+          "#C7C7C7",
+          "#E0E0E0",
+          "#F2F2F2"
         ]
       },
-      "deep": {
+      "iron": {
         "role": "neutral",
-        "displayName": "Deep Graphite",
-        "canonical": "#0e1110",
+        "displayName": "Iron",
+        "canonical": "#0A0B0C",
         "tonalRamp": [
-          "#0e1110",
-          "#1a1d1c",
-          "#292e2b",
-          "#404743",
-          "#5d6661",
-          "#818b85",
-          "#b8c0bb",
-          "#f1f3f1"
+          "#252627",
+          "#3F4041",
+          "#59595A",
+          "#7F8080",
+          "#A5A6A6",
+          "#C7C7C7",
+          "#E0E0E1",
+          "#F2F2F2"
         ]
       },
-      "raised": {
+      "forged": {
         "role": "neutral",
-        "displayName": "Raised Graphite",
-        "canonical": "#151817",
+        "displayName": "Forged",
+        "canonical": "#101214",
         "tonalRamp": [
-          "#111312",
-          "#1c211e",
-          "#2e3531",
-          "#444d48",
-          "#626d67",
-          "#87918b",
-          "#bcc4bf",
-          "#f2f4f2"
+          "#252728",
+          "#3E4042",
+          "#58595B",
+          "#7F8081",
+          "#A5A6A7",
+          "#C6C7C7",
+          "#E0E0E1",
+          "#F2F2F2"
         ]
       },
-      "panel": {
+      "plate": {
         "role": "neutral",
-        "displayName": "Panel Graphite",
-        "canonical": "#1a1d1c",
+        "displayName": "Plate",
+        "canonical": "#16191C",
         "tonalRamp": [
-          "#121514",
-          "#202522",
-          "#323a35",
-          "#49534d",
-          "#68746d",
-          "#8d9892",
-          "#c0c8c3",
-          "#f3f5f3"
+          "#242729",
+          "#3E4043",
+          "#575A5C",
+          "#7E8081",
+          "#A5A6A7",
+          "#C6C7C8",
+          "#E0E0E1",
+          "#F2F2F2"
         ]
       },
-      "ink": {
+      "line-subtle": {
         "role": "neutral",
-        "displayName": "Instrument Ink",
-        "canonical": "#f0f2ef",
+        "displayName": "Line Subtle",
+        "canonical": "#202429",
         "tonalRamp": [
-          "#151817",
-          "#2b302d",
-          "#454c48",
-          "#626b66",
-          "#858e88",
-          "#aab1ad",
-          "#d0d5d1",
-          "#f0f2ef"
-        ]
-      },
-      "ink-muted": {
-        "role": "neutral",
-        "displayName": "Muted Reading",
-        "canonical": "#a3aaa6",
-        "tonalRamp": [
-          "#141716",
-          "#29302c",
-          "#414944",
-          "#5d6761",
-          "#7d8781",
-          "#a3aaa6",
-          "#cbd0cd",
-          "#f1f3f2"
-        ]
-      },
-      "ink-dim": {
-        "role": "neutral",
-        "displayName": "Dim Reading",
-        "canonical": "#69716d",
-        "tonalRamp": [
-          "#101311",
-          "#232824",
-          "#39403c",
-          "#515a55",
-          "#69716d",
-          "#8f9892",
-          "#bdc4c0",
-          "#edf0ee"
-        ]
-      },
-      "line": {
-        "role": "neutral",
-        "displayName": "Measured Line",
-        "canonical": "rgb(205 214 209 / 0.14)",
-        "tonalRamp": [
-          "#111412",
-          "#202522",
-          "#343b37",
-          "#4b554f",
-          "#6b7770",
-          "#929d97",
-          "#c3cbc6",
-          "#f1f4f2"
+          "#23272C",
+          "#3D4045",
+          "#575A5D",
+          "#7D8083",
+          "#A4A6A8",
+          "#C6C7C8",
+          "#E0E0E1",
+          "#F2F2F3"
         ]
       },
       "line-strong": {
         "role": "neutral",
-        "displayName": "Strong Measured Line",
-        "canonical": "rgb(205 214 209 / 0.29)",
+        "displayName": "Line Strong",
+        "canonical": "#3A4148",
         "tonalRamp": [
-          "#111412",
-          "#202522",
-          "#343b37",
-          "#4b554f",
-          "#6b7770",
-          "#929d97",
-          "#c3cbc6",
-          "#f1f4f2"
+          "#23272B",
+          "#3A4148",
+          "#545A60",
+          "#7B8085",
+          "#A3A6A9",
+          "#C5C7C9",
+          "#DFE1E2",
+          "#F2F2F3"
         ]
       },
-      "work-signal": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#ECEFF1",
+        "tonalRamp": [
+          "#262627",
+          "#3F4040",
+          "#58595A",
+          "#7E8081",
+          "#A4A6A7",
+          "#C5C7C9",
+          "#DEE1E3",
+          "#F0F3F4"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "#9AA3AB",
+        "tonalRamp": [
+          "#242728",
+          "#3D4043",
+          "#555A5E",
+          "#798187",
+          "#9EA7AF",
+          "#C2C8CD",
+          "#DEE1E3",
+          "#F1F2F4"
+        ]
+      },
+      "ink-dim": {
+        "role": "neutral",
+        "displayName": "Ink Dim",
+        "canonical": "#79828A",
+        "tonalRamp": [
+          "#242729",
+          "#3C4044",
+          "#545A60",
+          "#788189",
+          "#A0A7AC",
+          "#C3C7CB",
+          "#DFE1E3",
+          "#F1F2F3"
+        ]
+      },
+      "frost": {
         "role": "primary",
-        "displayName": "Work Signal",
-        "canonical": "#d6ddd9",
+        "displayName": "Frost",
+        "canonical": "#9CC9E0",
         "tonalRamp": [
-          "#101412",
-          "#202823",
-          "#354239",
-          "#506052",
-          "#708176",
-          "#98a69e",
-          "#c2cbc6",
-          "#f1f4f2"
+          "#1F282C",
+          "#34424A",
+          "#485D68",
+          "#678594",
+          "#86ADC0",
+          "#A5CEE3",
+          "#CEE4F0",
+          "#EBF4F9"
         ]
       },
-      "work-secondary": {
-        "role": "secondary",
-        "displayName": "Secondary Work Light",
-        "canonical": "#8d9892",
-        "tonalRamp": [
-          "#111613",
-          "#243029",
-          "#394b40",
-          "#52685a",
-          "#708477",
-          "#8d9892",
-          "#bec7c1",
-          "#eef2ef"
-        ]
-      },
-      "attention": {
-        "role": "secondary",
-        "displayName": "Attention Amber",
-        "canonical": "#d8a85f",
-        "tonalRamp": [
-          "#291d0e",
-          "#493217",
-          "#69491f",
-          "#8b632e",
-          "#ad7f3f",
-          "#d8a85f",
-          "#efd19b",
-          "#fbefda"
-        ]
-      },
-      "danger": {
-        "role": "secondary",
-        "displayName": "Fault Terracotta",
-        "canonical": "#d97863",
-        "tonalRamp": [
-          "#2b120e",
-          "#4d1e18",
-          "#742d23",
-          "#9d4133",
-          "#bf5948",
-          "#d97863",
-          "#efa997",
-          "#f8ddd6"
-        ]
-      },
-      "success": {
+      "frost-on": {
         "role": "primary",
-        "displayName": "Verified State",
-        "canonical": "#83ad90",
+        "displayName": "Frost-On",
+        "canonical": "#08131A",
         "tonalRamp": [
-          "#102019",
-          "#1d3829",
-          "#2d513b",
-          "#416e50",
-          "#5c8d6b",
-          "#83ad90",
-          "#b3d0bc",
-          "#e4efe7"
+          "#1E282E",
+          "#384147",
+          "#535B5F",
+          "#7B8084",
+          "#A2A6A9",
+          "#C5C7C9",
+          "#DFE1E2",
+          "#F2F2F3"
+        ]
+      },
+      "frost-tint": {
+        "role": "primary",
+        "displayName": "Frost Tint",
+        "canonical": "#14232B",
+        "tonalRamp": [
+          "#1A2931",
+          "#354249",
+          "#505B61",
+          "#788186",
+          "#A1A7AA",
+          "#C4C8CA",
+          "#DFE1E2",
+          "#F2F2F3"
+        ]
+      },
+      "ember": {
+        "role": "secondary",
+        "displayName": "Ember",
+        "canonical": "#E09A4A",
+        "tonalRamp": [
+          "#352411",
+          "#583C1D",
+          "#7B5428",
+          "#AF783A",
+          "#E19D4F",
+          "#ECC191",
+          "#F5DDC3",
+          "#FBF1E6"
+        ]
+      },
+      "ember-tint": {
+        "role": "secondary",
+        "displayName": "Ember Tint",
+        "canonical": "#2A1D10",
+        "tonalRamp": [
+          "#312418",
+          "#493E33",
+          "#62584E",
+          "#867E77",
+          "#AAA5A0",
+          "#CAC6C3",
+          "#E2E0DE",
+          "#F3F2F1"
+        ]
+      },
+      "moss": {
+        "role": "secondary",
+        "displayName": "Moss",
+        "canonical": "#8DB892",
+        "tonalRamp": [
+          "#1F2920",
+          "#344436",
+          "#495F4C",
+          "#68886C",
+          "#88B18D",
+          "#B2CFB5",
+          "#D5E5D7",
+          "#EDF4EE"
+        ]
+      },
+      "moss-tint": {
+        "role": "secondary",
+        "displayName": "Moss Tint",
+        "canonical": "#132019",
+        "tonalRamp": [
+          "#1D2923",
+          "#38433D",
+          "#525C57",
+          "#7A817D",
+          "#A2A7A4",
+          "#C4C8C6",
+          "#DFE1E0",
+          "#F2F2F2"
+        ]
+      },
+      "blood": {
+        "role": "secondary",
+        "displayName": "Blood",
+        "canonical": "#E5766A",
+        "tonalRamp": [
+          "#3E201D",
+          "#683530",
+          "#914B43",
+          "#CF6B60",
+          "#EB948B",
+          "#F2BCB6",
+          "#F8DAD7",
+          "#FCF0EE"
+        ]
+      },
+      "blood-tint": {
+        "role": "secondary",
+        "displayName": "Blood Tint",
+        "canonical": "#2A1513",
+        "tonalRamp": [
+          "#362220",
+          "#4E3C3A",
+          "#655655",
+          "#897D7C",
+          "#ACA4A3",
+          "#CBC6C5",
+          "#E3E0E0",
+          "#F3F2F2"
         ]
       }
     },
     "typographyMeta": {
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "RAGNAROK in the top bar."
+      },
+      "wordmark-display": {
+        "displayName": "Wordmark display",
+        "purpose": "Startup only."
+      },
+      "section-label": {
+        "displayName": "Section label",
+        "purpose": "Short fixed section names in Cinzel capitals."
+      },
       "headline": {
-        "displayName": "Review Headline",
-        "purpose": "Consequential end-state summaries and revision statements."
+        "displayName": "Headline",
+        "purpose": "Surface and decision titles."
       },
       "title": {
-        "displayName": "Surface Title",
-        "purpose": "Conversation, Map, Memory, Run, and Review identity."
+        "displayName": "Title",
+        "purpose": "Sections inside surfaces."
+      },
+      "card-title": {
+        "displayName": "Card title",
+        "purpose": "Checkpoint, chapter and theme titles."
       },
       "body": {
-        "displayName": "Operational Reading",
-        "purpose": "Compact direct dialogue, descriptions, decisions, and evidence."
+        "displayName": "Body",
+        "purpose": "Conversation and decision text."
       },
-      "measure": {
-        "displayName": "Machine Measure",
-        "purpose": "Scope paths, revisions, timestamps, branches, and technical provenance."
+      "label": {
+        "displayName": "Label",
+        "purpose": "Buttons, lists, navigation."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Provenance, times, counts."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Code and machine identities."
       }
     },
     "shadows": [
       {
-        "name": "floating-menu",
-        "value": "0 20px 50px rgb(0 0 0 / 0.44)",
-        "purpose": "Only for menus, navigators, and dialogs that physically float above the workspace."
+        "name": "menu",
+        "value": "0 18px 40px -8px rgb(0 0 0 / 0.75)",
+        "purpose": "Floating menus."
       },
       {
-        "name": "context-overlay",
-        "value": "-22px 0 54px rgb(0 0 0 / 0.52)",
-        "purpose": "Separates the contextual right-panel overlay at narrow desktop widths."
+        "name": "composer-lift",
+        "value": "0 12px 32px -12px rgb(0 0 0 / 0.7)",
+        "purpose": "The composer above the stream."
       },
       {
-        "name": "state-signal",
-        "value": "0 0 8px rgb(103 215 166 / 0.48)",
-        "purpose": "Reinforces a live verified state without implying content elevation."
+        "name": "overlay-panel",
+        "value": "-24px 0 48px -12px rgb(0 0 0 / 0.8)",
+        "purpose": "Right panel as an overlay on narrow windows."
+      },
+      {
+        "name": "machined-edge",
+        "value": "inset 0 1px 0 rgb(236 239 241 / 0.06)",
+        "purpose": "Top-edge highlight on raised surfaces."
       }
     ],
     "motion": [
       {
-        "name": "control-response",
-        "value": "150ms ease-out",
-        "purpose": "Short hover and active-state response on controls and navigation."
+        "name": "dur-fast",
+        "value": "120ms",
+        "purpose": "Hover, press, colour changes."
       },
       {
-        "name": "relationship-flow",
-        "value": "2.7s linear infinite",
-        "purpose": "Indicates active map relationships and is disabled under reduced motion."
+        "name": "dur-panel",
+        "value": "200ms",
+        "purpose": "Panels, menus and zoom steps (300ms at most)."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Default easing; instant under prefers-reduced-motion."
       }
     ],
     "breakpoints": [
       {
-        "name": "context-overlay",
-        "value": "68rem"
+        "name": "rail-labels",
+        "value": "1280px"
       },
       {
-        "name": "workspace-stack",
-        "value": "48rem"
+        "name": "panel-overlay",
+        "value": "1100px"
       },
       {
-        "name": "low-window",
-        "value": "38rem height"
+        "name": "sidebar-hidden",
+        "value": "860px"
       }
     ]
   },
   "components": [
     {
-      "name": "Activity Rail and Sidebar",
-      "kind": "nav",
-      "description": "Persistent destination control beside one replaceable Project sidebar.",
-      "html": "<button class=\"rail-button\" type=\"button\" data-active=\"true\" aria-label=\"Projects\" aria-pressed=\"true\"><!-- Phosphor icon --></button>",
-      "css": ".rail-button { position: relative; display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: 0.55rem; background: transparent; color: var(--prototype-dim); } .rail-button:hover, .rail-button[data-active=\"true\"] { background: rgb(215 223 218 / 0.07); color: var(--prototype-ink); }"
-    },
-    {
-      "name": "Surface Tabs",
-      "kind": "nav",
-      "description": "Flat tab with measured boundaries and a neutral active underline.",
-      "html": "<div class=\"center-tabs\" role=\"tablist\" aria-label=\"Open workspace surfaces\"><button type=\"button\" role=\"tab\" aria-selected=\"true\" data-active=\"true\">Conversation</button></div>",
-      "css": ".center-tabs button { position: relative; display: flex; min-width: max-content; align-items: center; gap: 0.4rem; border-right: 1px solid var(--prototype-line); background: transparent; padding: 0 0.85rem; color: var(--prototype-dim); font-size: 0.7rem; } .center-tabs button[data-active=\"true\"]::after { background: var(--prototype-blue); box-shadow: 0 0 9px rgb(220 227 223 / 0.48); }"
-    },
-    {
-      "name": "Buttons and Inputs",
+      "name": "Primary Button",
       "kind": "button",
-      "description": "Compact graphite primary action paired with a transparent quiet action.",
-      "html": "<button class=\"primary-button\" type=\"button\">Review Frame</button><button class=\"quiet-button\" type=\"button\">Return to Conversation</button>",
-      "css": ".primary-button { border: 1px solid rgb(221 228 224 / 0.34); background: linear-gradient(145deg, #343936, #202421); box-shadow: 0 8px 20px rgb(0 0 0 / 0.34), inset 0 1px rgb(255 255 255 / 0.06); color: var(--prototype-ink); } .quiet-button { background: transparent; color: var(--prototype-muted); }"
+      "refersTo": "button-primary",
+      "description": "The one frost action per region (Accept all, Send to …).",
+      "html": "<button class=\"ds-btn-primary\">Accept all 2</button>",
+      "css": ".ds-btn-primary { font: 500 13px/18px Inter, system-ui, sans-serif; letter-spacing: -0.006em; height: 30px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms; background: #9CC9E0; color: #08131A; border: 0; box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); } .ds-btn-primary:hover { background: #B2D6E8; } .ds-btn-primary:active { background: #8BBCD5; transform: translateY(0.5px); } .ds-btn-primary:focus-visible { outline: 2px solid #9CC9E0; outline-offset: 2px; }"
     },
     {
-      "name": "Context Proposal and Context Record",
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Machined plate for per-item actions (Accept one decision, Edit).",
+      "html": "<button class=\"ds-btn-secondary\">Accept</button>",
+      "css": ".ds-btn-secondary { font: 500 13px/18px Inter, system-ui, sans-serif; letter-spacing: -0.006em; height: 30px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms; background: #101214; color: #ECEFF1; border: 1px solid #3A4148; box-shadow: inset 0 1px 0 rgba(236,239,241,0.06); } .ds-btn-secondary:hover { border-color: #4A535B; background: #14171A; } .ds-btn-secondary:focus-visible { outline: 2px solid #9CC9E0; outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Text-only secondary actions (Correct…, Retire, Cancel).",
+      "html": "<button class=\"ds-btn-ghost\">Correct…</button>",
+      "css": ".ds-btn-ghost { font: 500 13px/18px Inter, system-ui, sans-serif; letter-spacing: -0.006em; height: 30px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms; background: transparent; color: #79828A; border: 0; } .ds-btn-ghost:hover { color: #ECEFF1; background: rgba(236,239,241,0.045); } .ds-btn-ghost:focus-visible { outline: 2px solid #9CC9E0; outline-offset: 2px; }"
+    },
+    {
+      "name": "Needs-you Chip",
       "kind": "chip",
-      "description": "Inspectable bounded context item; Memory-backed items receive verified-state emphasis.",
-      "html": "<div class=\"context-strips\"><span data-source=\"memory\">Rest-session recovery contract</span></div>",
-      "css": ".context-strips > span { display: inline-flex; align-items: center; gap: 0.28rem; border: 1px solid rgb(205 214 209 / 0.18); background: rgb(205 214 209 / 0.055); padding: 0.25rem 0.4rem; color: #c6cdc9; font-size: 0.56rem; } .context-strips > span[data-source=\"memory\"] { border-color: rgb(103 215 166 / 0.26); color: #a7d9bd; }"
+      "refersTo": "chip-needs-you",
+      "description": "Ember status for genuine human attention; always diamond + words.",
+      "html": "<span class=\"ds-chip-ember\"><i></i>Needs you</span>",
+      "css": ".ds-chip-ember { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; background: #2A1D10; color: #E09A4A; font: 500 12px/16px Inter, system-ui, sans-serif; } .ds-chip-ember i { width: 6px; height: 6px; background: #E09A4A; transform: rotate(45deg); }"
     },
     {
-      "name": "Decision Canvas",
-      "kind": "custom",
-      "description": "Provisional decision surface that keeps accepted and proposed groups separate.",
-      "html": "<aside class=\"decision-canvas\" aria-label=\"Decision Canvas\"><section data-state=\"proposed\"><span>Proposed</span><p>Restore the exact active interval.</p></section></aside>",
-      "css": ".decision-canvas { display: grid; min-height: 0; overflow-y: auto; border-right: 1px solid var(--prototype-line-strong); background: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.012) 0 1px, transparent 1px 5px), #0c0f0d; } .decision-canvas > section[data-state=\"proposed\"] > span { color: var(--prototype-amber); }"
+      "name": "Decision Checkpoint",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Grouped proposed decisions: Accept each, Accept all, Correct.",
+      "html": "<section class=\"ds-checkpoint\"><p class=\"ds-cp-title\">Offline logging</p><p class=\"ds-cp-meta\">Decision checkpoint · revision 4</p><p class=\"ds-cp-text\">Sets are saved on this device, even with no connection.</p></section>",
+      "css": ".ds-checkpoint { border: 1px solid rgba(224,154,74,0.5); border-radius: 8px; padding: 16px 20px; background: linear-gradient(180deg, #2A1D10, #101214 64px); box-shadow: inset 0 1px 0 rgba(236,239,241,0.06); color: #ECEFF1; font-family: Inter, system-ui, sans-serif; } .ds-cp-title { margin: 0; font: 600 14px/20px Inter, sans-serif; } .ds-cp-meta { margin: 2px 0 12px; font-size: 12px; color: #79828A; } .ds-cp-text { margin: 0; padding-top: 12px; border-top: 1px solid #202429; font-size: 14px; line-height: 22px; }"
     },
     {
-      "name": "Review and Traceable Mirror",
-      "kind": "custom",
-      "description": "Narrow relationship surface connecting an expectation, decision, and planned Waypoint.",
-      "html": "<aside class=\"traceable-mirror\"><div><span>Restore the same interval</span><strong>Wall time is authoritative</strong></div></aside>",
-      "css": ".traceable-mirror { min-width: 0; overflow-y: auto; border-left: 1px solid var(--prototype-line-strong); background: #111512; padding: 1rem; } .traceable-mirror > div { position: relative; display: grid; gap: 0.22rem; border-bottom: 1px solid var(--prototype-line); padding: 0.8rem 0 0.8rem 0.85rem; }"
+      "name": "Composer Field",
+      "kind": "input",
+      "refersTo": "composer-field",
+      "description": "The message field; frost border and halo on focus.",
+      "html": "<textarea class=\"ds-composer\" rows=\"2\" placeholder=\"Message the Project conversation…\"></textarea>",
+      "css": ".ds-composer { width: 280px; resize: none; padding: 12px 16px; border: 1px solid #3A4148; border-radius: 10px; background: #101214; color: #ECEFF1; font: 400 14px/22px Inter, system-ui, sans-serif; caret-color: #9CC9E0; outline: 0; box-shadow: inset 0 1px 0 rgba(236,239,241,0.06); } .ds-composer::placeholder { color: #79828A; } .ds-composer:focus { border-color: #9CC9E0; box-shadow: 0 0 0 3px rgba(156,201,224,0.14); }"
     },
     {
-      "name": "Project Memory",
+      "name": "Rail Item",
+      "kind": "nav",
+      "refersTo": "rail-item-active",
+      "description": "Labelled activity rail destination; active = forged plate; Attention is a flame.",
+      "html": "<a class=\"ds-rail\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z\"/></svg><span>Attention</span></a>",
+      "css": ".ds-rail { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; width: 56px; padding: 8px 0 6px; border-radius: 8px; background: #101214; color: #ECEFF1; text-decoration: none; font: 400 11px/14px Inter, system-ui, sans-serif; box-shadow: inset 0 1px 0 rgba(236,239,241,0.06); } .ds-rail:hover { background: rgba(236,239,241,0.045); }"
+    },
+    {
+      "name": "Rune Rule",
       "kind": "custom",
-      "description": "Flat Memory entry with explicit trust state and revision provenance.",
-      "html": "<div class=\"memory-list\"><article data-status=\"stale\"><header><span>Stale</span><small>Revision 625137c</small></header></article></div>",
-      "css": ".memory-list article { position: relative; display: grid; max-width: 54rem; gap: 0.35rem; border-bottom: 1px solid var(--prototype-line); padding: 0.9rem 0.25rem 1rem 0.8rem; } .memory-list article[data-status=\"stale\"]::before { background: var(--prototype-amber); }"
+      "description": "Brand divider under surface titles: hairline, frost diamond, hairline.",
+      "html": "<div class=\"ds-rune-rule\"></div>",
+      "css": ".ds-rune-rule { position: relative; width: 320px; height: 8px; background: linear-gradient(#3A4148,#3A4148) left center / calc(50% - 12px) 1px no-repeat, linear-gradient(#3A4148,#3A4148) right center / calc(50% - 12px) 1px no-repeat; } .ds-rune-rule::after { content: \"\"; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; background: #9CC9E0; transform: translate(-50%, -50%) rotate(45deg); }"
     }
   ],
   "narrative": {
-    "northStar": "The Carbon Supervision Instrument",
-    "overview": "SlopStop extends the foundation shell's Local Survey Instrument into a dense desktop control surface. Matte carbon fields, graphite planes, measured hairlines, and restrained neutral light keep concurrent work readable without making the product resemble a game, a constellation, or a generic dashboard. The workspace leads with human attention, then gives direct Conversation, evidence, and relationships enough room to remain understandable over long sessions.\n\nThe built React workspace is the richest current expression of this direction. It is still an isolated fixture-backed prototype, not the final product identity or a production component library. On 25 August 2026, the user accepted the structural and visual revision as provisional prototype Evidence, with the explicit expectation that the final identity may still change. Wide and narrow Electron journeys passed. The Impeccable detector returned no regex findings but ran in degraded mode because its HTML parser modules were unavailable, so that result is not a clean bill of health. The smaller harness-status shell remains valid as a sparse foundation-state application of the same measured, dark instrument lineage.",
+    "northStar": "The Runesmith's Instrument",
+    "overview": "Ragnarok is a precision instrument first. You supervise agents, read conversations and accept decisions in it for hours. Every working surface is matte carbon and graphite: three tonal steps separated by hairlines, with light only where something is live. The identity is a signature, not a costume. It shows as the Raidho rune (ᚱ) on the rail and the Cinzel wordmark. The rune rule sits under surface titles. The full brand world appears only at the big moments: the eclipse, the fire-and-ice glow and the ash at startup, plus the loading and recovery mark.\n\nDensity is medium. Text is set in Inter and is never decorative. Colour is scarce, and when it appears it always means something: frost for live work, focus and the primary action; ember for a decision only a human can make; moss for accepted; blood for failure. Components are quiet and machined. They stay recessive at rest and become exact under the cursor or keyboard focus. The user chose this feel over a heavier \"forged\" alternative on 2026-10-09.\n\nLinear sets the quality bar for craft, never the look. A screen fails review if it could be mistaken for Linear, or described as \"Linear in other colours\".",
     "keyCharacteristics": [
-      "Matte near-black fields separated by one-pixel graphite structure.",
-      "One persistent activity rail, one replaceable sidebar, and one dominant work surface.",
-      "Dense operational information with clear reading order and generous space around consequential decisions.",
-      "Text, geometry, icon state, and color working together so color never carries status alone.",
-      "Conversation, Review, Memory, Map, Runs, source, and diagnostics remaining visually distinct without becoming separate visual worlds."
+      "Matte carbon fields in tonal steps: canvas, iron, forged and plate.",
+      "Hairline structure, plus a 1px \"machined\" top-edge highlight on raised surfaces.",
+      "One primary action per region, filled with frost.",
+      "Status is always shown as an icon or diamond plus words; never colour alone.",
+      "The Raidho rune and Cinzel carry the brand; Inter carries all the work.",
+      "The glow and the ash appear only on the startup screen; the eclipse only at big moments; none of them on working screens."
     ],
     "rules": [
       {
-        "name": "Signal Scarcity",
-        "body": "State color must identify a real status, selection, or focus condition. Neutral information stays neutral.",
+        "name": "The Signal Scarcity Rule",
+        "body": "State colour appears only where a real state exists. Neutral information stays neutral.",
         "section": "colors"
       },
       {
-        "name": "Failure Stays Visible",
-        "body": "Broken, stale, excluded, truncated, provisional, and unsupported states keep their own text and geometry; they never fade into a clean or absent appearance.",
+        "name": "The Ember Means You Rule",
+        "body": "Ember marks only things that wait for a human. A screen with nothing for you to do contains no ember.",
         "section": "colors"
       },
       {
-        "name": "Measurement",
-        "body": "Monospace communicates machine identity or exact provenance. It is never a generic technical costume for ordinary prose.",
+        "name": "The Three Voices Rule",
+        "body": "Text uses exactly three tones: ink, ink-muted and ink-dim. A fourth body tone needs the user's approval.",
+        "section": "colors"
+      },
+      {
+        "name": "The Cinzel Rule",
+        "body": "Cinzel appears only in the wordmark and in short, fixed section names. Never use it for user content, sentences or buttons.",
         "section": "typography"
       },
       {
-        "name": "One Authority",
-        "body": "Only one surface owns the center at a time. Temporary work replaces the center and always offers an explicit return path.",
-        "section": "layout"
+        "name": "The Measurement Rule",
+        "body": "Monospace means machine identity or code, never a \"technical\" costume for prose.",
+        "section": "typography"
       },
       {
-        "name": "Structural Depth",
-        "body": "If a region can be separated by tone, spacing, or a measured line, it does not receive a shadow.",
+        "name": "The Brand Moment Rule",
+        "body": "The fire-and-ice glow (ember top-left, frost bottom-right) and the ash belong to the startup screen only. The eclipse is reserved for big moments: startup, empty states, loading and recovery. Daily working screens carry no background glow. The eclipse is an ornament, never a domain object.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Structural Depth Rule",
+        "body": "If tone, spacing or a hairline can separate two regions, no shadow is used.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do keep the carbon and graphite field readable during long technical sessions.",
-      "Do reserve green, amber, and terracotta for verified, attention, and failure meaning.",
-      "Do give Conversation, Review, and Map enough central width to perform their real task.",
-      "Do preserve explicit scope, provenance, authority, revision, and return paths.",
-      "Do provide keyboard focus, reduced motion, plain-text equivalents, and non-color state cues.",
-      "Do test both renderer viewport size and outer Electron window size."
+      "**Do** keep one frost-filled primary button per region.",
+      "**Do** pair every state colour with words or a diamond (Accepted · r4, Needs you).",
+      "**Do** use Lucide icons only, at one stroke width (1.5).",
+      "**Do** keep conversation and decision text in Inter at 14/22, at about 720px measure.",
+      "**Do** give every control a hover, focus (2px frost ring), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion.",
+      "**Do** keep broken, stale, provisional and unknown states visible, each with its own words. Never show them as clean or absent."
     ],
     "donts": [
-      "Don't present the accepted workspace prototype as the final SlopStop identity; Stable Product Identity remains a separate selection and review boundary.",
-      "Don't turn Conversation into an activity feed or project operational log.",
-      "Don't use rounded card grids as the default information architecture.",
-      "Don't introduce space, constellation, skill-progression, or game imagery for relationship semantics.",
-      "Don't use ambient glow, decorative gradients, or floating shadows on ordinary content.",
-      "Don't hide broken, stale, excluded, provisional, unsupported, or incomplete states to simplify a narrow layout.",
-      "Don't use monospace for ordinary prose or general product headings."
+      "**Don't** imitate another product's look. Linear is the quality bar, not the reference.",
+      "**Don't** use background glow, the eclipse or ash on daily working screens.",
+      "**Don't** set user content, sentences or buttons in Cinzel.",
+      "**Don't** use ember for anything that does not wait for a human, or blood for non-failures such as Retire.",
+      "**Don't** nest bordered boxes more than two deep, or use coloured side stripes thicker than 1px.",
+      "**Don't** use chamfered corners, Phosphor icons, or Unicode glyphs or emoji as icons.",
+      "**Don't** add a fourth text tone or new palette roles without the user's approval."
     ]
   }
 }

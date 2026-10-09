@@ -1,387 +1,321 @@
 ---
-name: SlopStop Workspace Prototype
-description: Provisional carbon-and-graphite supervision workspace for attention, conversation, and evidence.
+name: Ragnarok
+description: A quiet, machined supervision instrument in carbon and graphite, signed with the Raidho rune.
 colors:
-  night: "#090b0a"
-  deep: "#0e1110"
-  raised: "#151817"
-  panel: "#1a1d1c"
-  ink: "#f0f2ef"
-  ink-muted: "#a3aaa6"
-  ink-dim: "#69716d"
-  line: "rgb(205 214 209 / 0.14)"
-  line-strong: "rgb(205 214 209 / 0.29)"
-  work-signal: "#d6ddd9"
-  work-secondary: "#8d9892"
-  attention: "#d8a85f"
-  danger: "#d97863"
-  success: "#83ad90"
+  canvas: "#050606"
+  iron: "#0A0B0C"
+  forged: "#101214"
+  plate: "#16191C"
+  line-subtle: "#202429"
+  line-strong: "#3A4148"
+  ink: "#ECEFF1"
+  ink-muted: "#9AA3AB"
+  ink-dim: "#79828A"
+  frost: "#9CC9E0"
+  frost-on: "#08131A"
+  frost-tint: "#14232B"
+  ember: "#E09A4A"
+  ember-tint: "#2A1D10"
+  moss: "#8DB892"
+  moss-tint: "#132019"
+  blood: "#E5766A"
+  blood-tint: "#2A1513"
 typography:
+  wordmark:
+    fontFamily: "Cinzel, serif"
+    fontSize: "16px"
+    fontWeight: 400
+    letterSpacing: "0.16em"
+  wordmark-display:
+    fontFamily: "Cinzel, serif"
+    fontSize: "44px"
+    fontWeight: 400
+    lineHeight: 1.1
+    letterSpacing: "0.14em"
+  section-label:
+    fontFamily: "Cinzel, serif"
+    fontSize: "12px"
+    fontWeight: 400
+    letterSpacing: "0.16em"
   headline:
-    fontFamily: '"Segoe UI Variable", Aptos, "Segoe UI", sans-serif'
-    fontSize: "clamp(1.35rem, 2vw, 2rem)"
-    fontWeight: 580
-    lineHeight: 1.08
-    letterSpacing: "-0.035em"
+    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontSize: "22px"
+    fontWeight: 600
+    lineHeight: "28px"
+    letterSpacing: "-0.018em"
   title:
-    fontFamily: '"Segoe UI Variable", Aptos, "Segoe UI", sans-serif'
-    fontSize: "1.18rem"
-    fontWeight: 660
-    lineHeight: 1.2
-    letterSpacing: "-0.025em"
+    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontSize: "16px"
+    fontWeight: 600
+    lineHeight: "24px"
+  card-title:
+    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 600
+    lineHeight: "20px"
   body:
-    fontFamily: '"Segoe UI Variable", Aptos, "Segoe UI", sans-serif'
-    fontSize: "0.7rem"
+    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontSize: "14px"
     fontWeight: 400
-    lineHeight: 1.55
-  measure:
-    fontFamily: '"Cascadia Code", "Cascadia Mono", Consolas, monospace'
-    fontSize: "0.57rem"
+    lineHeight: "22px"
+  label:
+    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontSize: "13px"
+    fontWeight: 500
+    lineHeight: "18px"
+    letterSpacing: "-0.006em"
+  meta:
+    fontFamily: "Inter, 'Segoe UI Variable', system-ui, sans-serif"
+    fontSize: "12px"
     fontWeight: 400
-    lineHeight: 1.4
-    letterSpacing: "0.06em"
+    lineHeight: "16px"
+  code:
+    fontFamily: "'Cascadia Code', 'Cascadia Mono', Consolas, monospace"
+    fontSize: "12.5px"
+    fontWeight: 400
+    lineHeight: "20px"
 rounded:
-  sm: "0.35rem"
-  md: "0.45rem"
-  lg: "0.65rem"
-  pill: "999px"
-  circle: "50%"
+  control: "6px"
+  surface: "8px"
+  field: "10px"
+  band: "10px"
+  pill: "11px"
 spacing:
-  compact: "0.3rem"
-  control: "0.55rem"
-  panel: "0.8rem"
-  surface: "1rem"
-  section: "1.2rem"
+  "1": "4px"
+  "2": "8px"
+  "3": "12px"
+  "4": "16px"
+  "5": "20px"
+  "6": "24px"
+  "8": "32px"
+  "10": "40px"
 components:
-  primary-action:
-    backgroundColor: "#343936"
+  button-primary:
+    backgroundColor: "{colors.frost}"
+    textColor: "{colors.frost-on}"
+    rounded: "{rounded.control}"
+    padding: "0 12px"
+    height: "30px"
+  button-primary-hover:
+    backgroundColor: "#B2D6E8"
+    textColor: "{colors.frost-on}"
+  button-secondary:
+    backgroundColor: "{colors.forged}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.sm}"
-    padding: "0.42rem 0.65rem"
-  quiet-action:
+    rounded: "{rounded.control}"
+    padding: "0 12px"
+    height: "30px"
+  button-ghost:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-dim}"
+    rounded: "{rounded.control}"
+    padding: "0 12px"
+    height: "30px"
+  button-icon:
     backgroundColor: "transparent"
     textColor: "{colors.ink-muted}"
-    rounded: "{rounded.sm}"
-    padding: "0.42rem 0.65rem"
-  context-strip:
-    backgroundColor: "{colors.deep}"
-    textColor: "{colors.ink-muted}"
-    rounded: "{rounded.sm}"
-    padding: "0.25rem 0.4rem"
+    rounded: "{rounded.control}"
+    size: "28px"
+  chip-needs-you:
+    backgroundColor: "{colors.ember-tint}"
+    textColor: "{colors.ember}"
+    rounded: "{rounded.control}"
+    height: "22px"
+    padding: "0 8px"
+  chip-accepted:
+    backgroundColor: "{colors.moss-tint}"
+    textColor: "{colors.moss}"
+    rounded: "{rounded.control}"
+    height: "22px"
+    padding: "0 8px"
+  chip-in-force:
+    backgroundColor: "{colors.frost-tint}"
+    textColor: "{colors.frost}"
+    rounded: "{rounded.control}"
+    height: "22px"
+    padding: "0 8px"
+  card:
+    backgroundColor: "{colors.forged}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.surface}"
+    padding: "16px 20px"
+  composer-field:
+    backgroundColor: "{colors.forged}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.field}"
+  rail-item-active:
+    backgroundColor: "{colors.forged}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.surface}"
 ---
 
-# Design System: SlopStop Workspace Prototype
+# Design System: Ragnarok
 
 ## Overview
 
-**Creative North Star: "The Carbon Supervision Instrument"**
+**Creative North Star: "The Runesmith's Instrument"**
 
-SlopStop extends the foundation shell's Local Survey Instrument into a dense desktop control surface. Matte carbon fields, graphite planes, measured hairlines, and restrained neutral light keep concurrent work readable without making the product resemble a game, a constellation, or a generic dashboard. The workspace leads with human attention, then gives direct Conversation, evidence, and relationships enough room to remain understandable over long sessions.
+Ragnarok is a precision instrument first. You supervise agents, read conversations and accept decisions in it for hours. Every working surface is matte carbon and graphite: three tonal steps separated by hairlines, with light only where something is live. The identity is a signature, not a costume. It shows as the Raidho rune (ᚱ) on the rail and the Cinzel wordmark. The rune rule sits under surface titles. The full brand world appears only at the big moments: the eclipse, the fire-and-ice glow and the ash at startup, plus the loading and recovery mark.
 
-The built React workspace is the richest current expression of this direction. It is still an isolated fixture-backed prototype, not the final product identity or a production component library. On 25 August 2026, the user accepted the structural and visual revision as provisional prototype Evidence, with the explicit expectation that the final identity may still change. Wide and narrow Electron journeys passed. The Impeccable detector returned no regex findings but ran in degraded mode because its HTML parser modules were unavailable, so that result is not a clean bill of health. The smaller harness-status shell remains valid as a sparse foundation-state application of the same measured, dark instrument lineage.
+Density is medium. Text is set in Inter and is never decorative. Colour is scarce, and when it appears it always means something: frost for live work, focus and the primary action; ember for a decision only a human can make; moss for accepted; blood for failure. Components are quiet and machined. They stay recessive at rest and become exact under the cursor or keyboard focus. The user chose this feel over a heavier "forged" alternative on 2026-10-09.
+
+Linear sets the quality bar for craft, never the look. A screen fails review if it could be mistaken for Linear, or described as "Linear in other colours".
 
 **Key Characteristics:**
-
-- Matte near-black fields separated by one-pixel graphite structure.
-- One persistent activity rail, one replaceable sidebar, and one dominant work surface.
-- Dense operational information with clear reading order and generous space around consequential decisions.
-- Text, geometry, icon state, and color working together so color never carries status alone.
-- Conversation, Review, Memory, Map, Runs, source, and diagnostics remaining visually distinct without becoming separate visual worlds.
+- Matte carbon fields in tonal steps: canvas, iron, forged and plate.
+- Hairline structure, plus a 1px "machined" top-edge highlight on raised surfaces.
+- One primary action per region, filled with frost.
+- Status is always shown as an icon or diamond plus words; never colour alone.
+- The Raidho rune and Cinzel carry the brand; Inter carries all the work.
+- The glow and the ash appear only on the startup screen; the eclipse only at big moments; none of them on working screens.
 
 ## Colors
 
-The palette is a restrained neutral field. Work light is nearly white, while green, amber, and terracotta appear only when a real state earns them.
+The world is carbon and graphite. Four state colours each carry exactly one meaning, and each has a dark tint for backgrounds.
 
 ### Primary
-
-- **Work Signal** (`work-signal`): focus outlines, active tabs, selected relationships, and neutral active work. It is not a decorative brand accent.
-- **Verified State** (`success`): accepted decisions, verified evidence, healthy local state, and complete traceability.
+- **Frost** (frost): focus rings, selection, active work ("agent working", the "now" layer), the primary button and links. When frost fills a button, its text uses Frost-On (frost-on).
 
 ### Secondary
-
-- **Attention Amber** (`attention`): decisions, proposed content, and unresolved human attention.
-- **Fault Terracotta** (`danger`): broken recovery, critical failures, destructive states, and unavailable proof.
-- **Secondary Work Light** (`work-secondary`): quiet relationship lines and subordinate technical emphasis.
+- **Ember** (ember): only for genuine human attention: "Needs you" chips, the Attention count on the rail, the frame around a map item or card that waits for a human decision. It is also the destination's colour on the map.
+- **Moss** (moss): accepted, healthy, done. Always paired with a word ("Accepted · r4").
+- **Blood** (blood): failures (a failed response, a crash line). Never used for merely destructive-looking actions such as Retire. Retire keeps history, so it stays neutral.
 
 ### Neutral
+- **Canvas** (canvas): the app background, the rail, the Attention sidebar and the right panel.
+- **Iron** (iron): the central work area: Conversation, Map, Decisions.
+- **Forged** (forged): cards, the composer, the active rail item, selected list rows.
+- **Plate** (plate): quotes ("Came from"), stub surfaces and secondary emphasis.
+- **Line Subtle** (line-subtle) and **Line Strong** (line-strong): separators and outlines; strong lines are for fields, map edges and selected authority.
+- **Ink** (ink), **Ink Muted** (ink-muted) and **Ink Dim** (ink-dim): three text roles only: what you read, resting icons, and secondary text (times, provenance, meta).
+- **Tints** (frost-tint, ember-tint, moss-tint, blood-tint): backgrounds for chips, the "now" band (frost-tint at 55% opacity), confirmations and failures.
 
-- **Night Carbon** (`night`): the deepest application and work-canvas field.
-- **Deep Graphite** (`deep`): sidebars, composers, and contained working regions.
-- **Raised Graphite** (`raised`) and **Panel Graphite** (`panel`): temporary menus, overlays, and contextual surfaces.
-- **Instrument Ink** (`ink`): primary readable content.
-- **Muted Reading** (`ink-muted`) and **Dim Reading** (`ink-dim`): explanatory text, provenance, and secondary labels.
-- **Measured Lines** (`line`, `line-strong`): hierarchy, grouping, and boundaries. Strong lines mark authority or temporary elevation, not decoration.
+### Named Rules
+**The Signal Scarcity Rule.** State colour appears only where a real state exists. Neutral information stays neutral.
 
-**The Signal Scarcity Rule.** State color must identify a real status, selection, or focus condition. Neutral information stays neutral.
+**The Ember Means You Rule.** Ember marks only things that wait for a human. A screen with nothing for you to do contains no ember.
 
-**The Failure Stays Visible Rule.** Broken, stale, excluded, truncated, provisional, and unsupported states keep their own text and geometry; they never fade into a clean or absent appearance.
+**The Three Voices Rule.** Text uses exactly three tones: ink, ink-muted and ink-dim. A fourth body tone needs the user's approval.
 
 ## Typography
 
-**Headline Font:** Segoe UI Variable with Aptos and Segoe UI fallbacks
+**Brand font:** Cinzel, regular weight only.
+**UI font:** Inter, falling back to Segoe UI Variable and the system UI font.
+**Code and identity font:** Cascadia Code, falling back to Cascadia Mono and Consolas.
 
-**Body Font:** Segoe UI Variable with Aptos and Segoe UI fallbacks
-
-**Label/Mono Font:** Cascadia Code with Cascadia Mono and Consolas fallbacks
-
-The interface face is compact, familiar, and optimized for sustained desktop operation. Cascadia belongs only to code, revisions, scope paths, timestamps, branch names, and other machine-measured content.
+**Character:** Cinzel is the carved inscription: the wordmark and a few fixed section names. Inter is the instrument panel: compact, neutral and readable for long sessions. Cascadia marks anything a machine identifies (D-04, r4, Run 14, code).
 
 ### Hierarchy
+- **Wordmark display** (Cinzel 400, 44px, 0.14em): the startup screen only.
+- **Wordmark** (Cinzel 400, 16px, 0.16em, uppercase): the top bar.
+- **Section label** (Cinzel 400, 11–15px, 0.14–0.18em, uppercase): short fixed names such as ATTENTION, DECISIONS, PROPOSED, IN FORCE, WHY, CHAPTER and DESTINATION.
+- **Headline** (Inter 600, 22/28, −0.018em): surface and decision titles. These are user content, so they stay in Inter.
+- **Title** (Inter 600, 16/24): sections inside surfaces.
+- **Card title** (Inter 600, 14/20): checkpoint, chapter and theme titles.
+- **Body** (Inter 400, 14/22): conversation prose and decision text, with a measure of about 720px.
+- **Label** (Inter 500, 13/18): buttons, lists and navigation.
+- **Meta** (Inter 400, 12/16): provenance, times and counts, with tabular figures.
+- **Code** (Cascadia 12.5/20): code blocks, revision ids and Waypoint ids.
 
-- **Headline** (weight 580, 1.35-2rem, line-height 1.08): restrained large statements in Review and end-state summaries; compact enough to coexist with technical evidence.
-- **Surface title** (weight 660, 1.18rem, line-height 1.2): names Conversation, Map, Memory, Runs, and contextual work surfaces.
-- **Body** (weight 400, 0.7rem, line-height 1.55): short operational prose with a readable maximum measure around 65-72 characters.
-- **Measure label** (weight 400, 0.57rem, tracking 0.06em): technical identity, provenance, status counts, and scope paths. Uppercase is reserved for genuinely categorical labels such as Accepted or Proposed.
+### Named Rules
+**The Cinzel Rule.** Cinzel appears only in the wordmark and in short, fixed section names. Never use it for user content, sentences or buttons.
 
-**The Measurement Rule.** Monospace communicates machine identity or exact provenance. It is never a generic technical costume for ordinary prose.
+**The Measurement Rule.** Monospace means machine identity or code, never a "technical" costume for prose.
 
 ## Layout
 
-The workspace uses a bounded desktop instrument grid: a narrow activity rail, one replaceable Project sidebar, a flexible central workspace, and an optional contextual right panel beneath a compact top bar. Map and Conversation are permanent central destinations. Review and Project Memory temporarily occupy the same central authority instead of opening inside the right panel or stacking another permanent column.
+The desktop shell has five parts:
+- a 44px top bar;
+- a labelled activity rail: 72px with labels at 1280px and wider, 56px icons-only below that;
+- one replaceable sidebar, 272px (Attention, Projects, Files, Runs or Settings);
+- a flexible centre with Map and Conversation tabs, plus temporary tabs such as Decisions and Review;
+- a 360px right panel that opens on demand.
 
-Conversation uses the center at full width and collapses the right panel on entry. Its scope breadcrumb sits above a two-part working region: the live Decision Canvas and the direct dialogue. The Context proposal and composer form one lower control zone. Review pairs a readable revision document with a narrower Traceable Mirror. Memory pairs filters with a flat, provenance-led list rather than a grid of cards.
+Conversation content sits in one centred column with a measure of 720px; the header, stream and composer share it. Spacing follows a 4px grid. Groups are tight (4–8px); sections are separated by 24–32px.
 
-At narrower desktop widths, the right panel becomes an overlay. At the smallest supported prototype composition, Decision Canvas, Review, and Memory restack into one readable column while preserving deterministic return. Height pressure shortens explanatory copy and composer depth before hiding controls or state. The foundation shell still requires proof at the 640x480 outer Electron minimum; workspace prototype reviews additionally cover its representative wide window and a 900x700 narrow window.
+Breakpoints:
+- **Below 1280px:** the rail loses its labels; the sidebar narrows to 248px and the panel to 320px.
+- **Below 1100px:** the right panel becomes an overlay and starts closed; the Decisions detail stacks under its board.
+- **Below 860px:** the sidebar hides.
 
-**The One Authority Rule.** Only one surface owns the center at a time. Temporary work replaces the center and always offers an explicit return path.
+The map is a derived layered graph. Rows come from dependencies, with at most 3 nodes per row and visible wrapping; nodes shrink to fit when the panel opens. Edges are routed orthogonally in the gaps between rows and never cross a node or its text.
 
 ## Elevation & Depth
 
-The system is flat by default. Depth comes from tonal steps, one-pixel structure, carbon texture, and controlled density rather than card shadows. Shadows are reserved for genuinely floating layers: searchable navigators, menus, dialogs, and the narrow-window context overlay. Small state glows may reinforce a live signal, but they never imply a raised content card.
+The system is flat by default. Depth comes from tonal steps (canvas, then iron, then forged, then plate), from hairlines, and from one machined detail: a 1px top-edge highlight in ink at 6% on raised surfaces (cards, the composer, the active rail item).
 
-**The Structural Depth Rule.** If a region can be separated by tone, spacing, or a measured line, it does not receive a shadow.
+Real shadows exist only for things that float above content:
+- menus: `0 18px 40px -8px rgb(0 0 0 / 0.75)`;
+- the composer's lift: `0 12px 32px -12px rgb(0 0 0 / 0.7)`;
+- the narrow-window panel overlay: `-24px 0 48px -12px rgb(0 0 0 / 0.8)`.
+
+### Named Rules
+**The Brand Moment Rule.** The fire-and-ice glow (ember top-left, frost bottom-right) and the ash belong to the startup screen only. The eclipse is reserved for big moments: startup, empty states, loading and recovery. Daily working screens carry no background glow. The eclipse is an ornament, never a domain object.
+
+**The Structural Depth Rule.** If tone, spacing or a hairline can separate two regions, no shadow is used.
 
 ## Shapes
 
-The form language is rectilinear with modest machining. Controls and inputs use small corners; temporary menus may use the larger corner. Pills are limited to branch identity, compact badges, and status chips. Exact circles belong to status lights, focus beacons, and the foundation reticle. Map nodes and traceability markers use square geometry to distinguish canonical structure from ambient status.
+Corners are modest and machined:
+- 6px on controls and chips;
+- 8px on cards, rows and surfaces;
+- 10px on the composer and the "now" band;
+- 11px on pill-shaped counts.
 
-Borders are normally one pixel. A thicker colored side stripe is not part of the system; narrow one-pixel state lines may connect content to verified, stale, proposed, or agent-authored provenance.
+State markers are diamonds: 6–8px squares rotated 45°, filled for active states, outlined for waiting. Map Waypoints are 10px circles: filled for accepted, working or your move; outlined for ready or waiting. Same step side by side means parallel work; a short link means the next step.
+
+Borders are 1px. Coloured side stripes thicker than 1px are not part of the system. Chamfered (cut) corners were tried and rejected (2026-10-09).
 
 ## Components
 
-### Activity Rail and Sidebar
+### Buttons
+Quiet and machined: recessive at rest, exact on interaction.
+- **Shape:** gently rounded (6px), 30px tall; the small variant is 26px and the icon variant 28px square.
+- **Primary:** frost fill with frost-on text and a soft inner top light. Use at most one per region; hover lightens it, press darkens it.
+- **Secondary:** forged plate with a strong 1px outline and the machined top edge.
+- **Ghost:** text only, in ink-dim; on hover it brightens to ink over a faint wash.
+- **Focus:** a 2px frost ring, offset 2px, on every control.
+- **Motion:** 120ms. Press nudges the button down by 0.5px.
 
-- The rail uses icons from one Phosphor family, with filled variants reserved for the active destination.
-- The adjacent sidebar is replaced by Projects, Attention, Files, or Runs; destinations never create stacked permanent docks.
-- Counts and state marks pair text or icons with color.
+### Chips
+- **Style:** 22px tall, 6px corners, tint background with matching text, and an icon or diamond followed by words. Variants: Needs you (ember), Accepted (moss), In force (frost), and a neutral plate.
 
-```html
-<button class="rail-button" type="button" data-active="true" aria-label="Projects" aria-pressed="true">
-  <!-- Phosphor icon -->
-</button>
-```
+### Cards / Containers
+- **Corner style:** 8px.
+- **Background:** forged, with a subtle 1px outline and the machined top edge.
+- **Attention framing:** an ember outline at 50–60% plus an ember-tint wash at the top. Only cards that wait for a human get this.
+- **Internal padding:** 16 by 20px for cards; 12 by 16px for list rows.
 
-```css
-.rail-button {
-  position: relative;
-  display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
-  place-items: center;
-  border-radius: 0.55rem;
-  background: transparent;
-  color: var(--prototype-dim);
-}
+### Inputs / Fields
+- **Composer:** forged, 10px corners, strong outline. On focus it shows a frost border and a 3px frost halo at 14%.
+- **To: selector:** a bordered, clickable button, never typed text. Choosing a recipient sends nothing.
+- **Search:** iron background with a subtle outline; on focus it uses the same frost treatment as the composer.
 
-.rail-button:hover,
-.rail-button[data-active="true"] {
-  background: rgb(215 223 218 / 0.07);
-  color: var(--prototype-ink);
-}
-```
+### Navigation
+- **Rail:** Lucide icons at one stroke width (1.5), with labels at 1280px and wider. The active item is a forged plate with the top edge; Attention is a flame with an ember count of actionable items.
+- **Centre tabs:** dim text that turns ink when active, with a 1px frost underline. Temporary tabs carry a close button.
+- **Scope breadcrumb:** Project › scope, plus a branch pill in Cascadia.
 
-### Surface Tabs
-
-- Map and Conversation remain directly recoverable.
-- Temporary tabs identify opened source, Run, Review, Changes, Settings, or Memory surfaces.
-- The active tab uses neutral work light and a one-pixel underline rather than a filled brand-color block.
-
-```html
-<div class="center-tabs" role="tablist" aria-label="Open workspace surfaces">
-  <button type="button" role="tab" aria-selected="true" data-active="true">Conversation</button>
-</div>
-```
-
-```css
-.center-tabs button {
-  position: relative;
-  display: flex;
-  min-width: max-content;
-  align-items: center;
-  gap: 0.4rem;
-  border-right: 1px solid var(--prototype-line);
-  background: transparent;
-  padding: 0 0.85rem;
-  color: var(--prototype-dim);
-  font-size: 0.7rem;
-}
-
-.center-tabs button[data-active="true"]::after {
-  background: var(--prototype-blue);
-  box-shadow: 0 0 9px rgb(220 227 223 / 0.48);
-}
-```
-
-### Buttons and Inputs
-
-- Primary actions use a compact graphite plate, neutral light border, and high-contrast text.
-- Quiet actions remain transparent until hover or focus.
-- Inputs use the deepest carbon field, one measured border, a visible neutral focus outline, and a themed caret and selection.
-- Disabled controls retain their label and lose emphasis; they never disappear.
-
-```html
-<button class="primary-button" type="button">Review Frame</button>
-<button class="quiet-button" type="button">Return to Conversation</button>
-```
-
-```css
-.primary-button {
-  border: 1px solid rgb(221 228 224 / 0.34);
-  background: linear-gradient(145deg, #343936, #202421);
-  box-shadow:
-    0 8px 20px rgb(0 0 0 / 0.34),
-    inset 0 1px rgb(255 255 255 / 0.06);
-  color: var(--prototype-ink);
-}
-
-.quiet-button {
-  background: transparent;
-  color: var(--prototype-muted);
-}
-```
-
-### Context Proposal and Context Record
-
-- The proposal is compact, correctable, and placed immediately above the message composer.
-- Included material appears as bounded strips; exclusions remain readable in text.
-- The post-response record is visually distinct, immutable in language, and separates exact inclusion from exclusion.
-
-```html
-<div class="context-strips">
-  <span data-source="memory">Rest-session recovery contract</span>
-</div>
-```
-
-```css
-.context-strips > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
-  border: 1px solid rgb(205 214 209 / 0.18);
-  background: rgb(205 214 209 / 0.055);
-  padding: 0.25rem 0.4rem;
-  color: #c6cdc9;
-  font-size: 0.56rem;
-}
-
-.context-strips > span[data-source="memory"] {
-  border-color: rgb(103 215 166 / 0.26);
-  color: #a7d9bd;
-}
-```
-
-### Decision Canvas
-
-- Accepted and proposed groups remain separate and use state color sparingly.
-- Natural Decision checkpoints occupy the Canvas edge as explicit review boundaries.
-- The Canvas looks provisional until acceptance and never visually merges with the canonical map.
-
-```html
-<aside class="decision-canvas" aria-label="Decision Canvas">
-  <section data-state="proposed"><span>Proposed</span><p>Restore the exact active interval.</p></section>
-</aside>
-```
-
-```css
-.decision-canvas {
-  display: grid;
-  min-height: 0;
-  overflow-y: auto;
-  border-right: 1px solid var(--prototype-line-strong);
-  background:
-    repeating-linear-gradient(135deg, rgb(255 255 255 / 0.012) 0 1px, transparent 1px 5px),
-    #0c0f0d;
-}
-
-.decision-canvas > section[data-state="proposed"] > span {
-  color: var(--prototype-amber);
-}
-```
-
-### Review and Traceable Mirror
-
-- Review reads as one revision document, not a card dashboard.
-- Summary, user stories, proposed diff, technical plan, and coverage remain separate sections.
-- The Traceable Mirror uses a narrow relationship column to connect expectation, decision, and planned Waypoint.
-
-```html
-<aside class="traceable-mirror">
-  <div><span>Restore the same interval</span><strong>Wall time is authoritative</strong></div>
-</aside>
-```
-
-```css
-.traceable-mirror {
-  min-width: 0;
-  overflow-y: auto;
-  border-left: 1px solid var(--prototype-line-strong);
-  background: #111512;
-  padding: 1rem;
-}
-
-.traceable-mirror > div {
-  position: relative;
-  display: grid;
-  gap: 0.22rem;
-  border-bottom: 1px solid var(--prototype-line);
-  padding: 0.8rem 0 0.8rem 0.85rem;
-}
-```
-
-### Project Memory
-
-- Memory is a central library opened from the Project menu, not an activity-rail destination.
-- Accepted, stale, and proposal rows use a flat list, explicit provenance, and one-pixel state markers.
-- Proposals remain visually non-blocking and never borrow Attention styling.
-
-```html
-<div class="memory-list">
-  <article data-status="stale"><header><span>Stale</span><small>Revision 625137c</small></header></article>
-</div>
-```
-
-```css
-.memory-list article {
-  position: relative;
-  display: grid;
-  max-width: 54rem;
-  gap: 0.35rem;
-  border-bottom: 1px solid var(--prototype-line);
-  padding: 0.9rem 0.25rem 1rem 0.8rem;
-}
-
-.memory-list article[data-status="stale"]::before {
-  background: var(--prototype-amber);
-}
-```
+### Signature components
+- **Raidho mark and rune rule:** ᚱ in frost (stroke 2, square caps) at the top of the rail. Under surface titles, the rune rule: a hairline, a 6px frost diamond, then a hairline.
+- **Decision checkpoint:** a card with Accept on each decision, Accept all for the ones still pending, and Correct. Proposed checkpoints wear the ember frame; accepted ones turn moss.
+- **Map graph node:** a forged card showing its chapter label in Cinzel, the name, Waypoint dots, a status line (diamond plus words), and a decision count pill ("2 in force"). The selected node gets a frost border; while "Show on map" is active, unrelated nodes dim to 38%.
 
 ## Do's and Don'ts
 
 ### Do:
-
-- **Do** keep the carbon and graphite field readable during long technical sessions.
-- **Do** reserve green, amber, and terracotta for verified, attention, and failure meaning.
-- **Do** give Conversation, Review, and Map enough central width to perform their real task.
-- **Do** preserve explicit scope, provenance, authority, revision, and return paths.
-- **Do** provide keyboard focus, reduced motion, plain-text equivalents, and non-color state cues.
-- **Do** test both renderer viewport size and outer Electron window size.
+- **Do** keep one frost-filled primary button per region.
+- **Do** pair every state colour with words or a diamond (Accepted · r4, Needs you).
+- **Do** use Lucide icons only, at one stroke width (1.5).
+- **Do** keep conversation and decision text in Inter at 14/22, at about 720px measure.
+- **Do** give every control a hover, focus (2px frost ring), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion.
+- **Do** keep broken, stale, provisional and unknown states visible, each with its own words. Never show them as clean or absent.
 
 ### Don't:
-
-- **Don't** present the accepted workspace prototype as the final SlopStop identity; Stable Product Identity remains a separate selection and review boundary.
-- **Don't** turn Conversation into an activity feed or project operational log.
-- **Don't** use rounded card grids as the default information architecture.
-- **Don't** introduce space, constellation, skill-progression, or game imagery for relationship semantics.
-- **Don't** use ambient glow, decorative gradients, or floating shadows on ordinary content.
-- **Don't** hide broken, stale, excluded, provisional, unsupported, or incomplete states to simplify a narrow layout.
-- **Don't** use monospace for ordinary prose or general product headings.
+- **Don't** imitate another product's look. Linear is the quality bar, not the reference.
+- **Don't** use background glow, the eclipse or ash on daily working screens.
+- **Don't** set user content, sentences or buttons in Cinzel.
+- **Don't** use ember for anything that does not wait for a human, or blood for non-failures such as Retire.
+- **Don't** nest bordered boxes more than two deep, or use coloured side stripes thicker than 1px.
+- **Don't** use chamfered corners, Phosphor icons, or Unicode glyphs or emoji as icons.
+- **Don't** add a fourth text tone or new palette roles without the user's approval.
