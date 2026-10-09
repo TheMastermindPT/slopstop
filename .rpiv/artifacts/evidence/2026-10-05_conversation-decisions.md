@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: eb5530077ce0abb7f11d7072e9b72eb37a0f6750bebc4750035e49b4a1ddc746
+content_hash: bceafed85b9fd06dd7fd98ddd2ea28bbe027426e452fe4194fb9c1bb3a6fcef5
 ---
 
 # Conversation — Human Decisions
@@ -233,3 +233,6 @@ Decided by the user directly with the ui-ux agent and relayed verbatim; the acti
 - **Design context:** the ui-ux agent runs `/impeccable init` to record the visual decisions (§14-18) as durable design context. The coordinator reviews and commits its files.
 - **Reviewed slice designs are revised by the rpiv designer agent;** the C1 design is in intent review round 1 of 2.
 - **Icons and eclipse (user, same day):** "usa Lucide e faz a clarificação do eclipse". Lucide is the single interface icon family (this replaces Phosphor in the old DESIGN.md). PRODUCT.md now states that the brand eclipse is an ornament for big moments only, and never represents domain objects or their relationships.
+- **C1 merge order (user, same day):** S1 (the schema and chained upgrades) is not split. It merges to main only together with S2 (the Conversation store), so the permanent table shape reaches real Projects only after the store that writes it has been reviewed.
+- **Map direction (user, same day):** on the coded Saga (spine) the user said "Ok eu gosto deste design do mapa" and asked for three Figma variants for Saga and Chapter (page 117:30). Of those, the user said "gosto da direcao da v3": the Graph variant (Saga 122:30, Chapter 122:235) is the chosen direction. Whether to build it in code is pending the user's answer to the ui-ux agent.
+- **C1 design review outcome (user, same day):** after intent review round 2 failed with fixable findings, the user chose "Corrigir e eu confiro": the designer revises the design (revision 3), the coordinator checks every finding without a third reviewer round, and the user then approves. Candidate reviews of each slice keep the three reviewers.
