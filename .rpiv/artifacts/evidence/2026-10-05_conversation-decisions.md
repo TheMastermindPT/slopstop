@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 376424ddbc4f89cce24a63bca52d09ec2b25f7fcfec83b782fdd372c76a5d32d
+content_hash: 1ddf36855b3e2b5191a95d2852feb065282cf7324c9a20627350ca367160b1c3
 ---
 
 # Conversation — Human Decisions
@@ -197,3 +197,38 @@ The coordinator and the opencode design agent worked as peers and converged; the
   - An optional "Group by Project → Feature → Waypoint" view; a decision spanning several Waypoints stays one record with several links.
 - **Decisions on the map:** Feature and Waypoint cards show a count of current linked decisions, and a named entry covers Project-wide decisions. The count opens that Decisions view in the right panel, while a normal card selection still opens Details. "Show on map" on a selected decision highlights the Waypoints that implement it without changing the layout, under a visible "Showing decision: … / Clear focus" control. There is no default decisions lens and no decision nodes on the map.
 - **Decision links (domain):** a decision stores two separate links: its scope (the Project, one Feature or one Waypoint) and the Waypoints that implement it (zero or more). The current Frame protocol (`workspace-protocol.ts:289-307`, `:412-423`) has neither link and no direct add, edit or retire. Both need an ADR update before implementation, and the UI never infers them from a conversation's location or from a `blocks` relationship.
+
+## 16. Conversation C1 design questions (user decisions, 2026-10-09)
+
+- **Q1 — Projects already upgraded once (option A).** The first C1 slice adds chained upgrades: several completed upgrades per Project, with every older generation and backup kept and nothing deleted. This closes the C1-gate part of #92. Rejected: refusing the second upgrade, which would leave those Projects in safe mode without Conversation.
+- **Q2 — Read-only Project (option A).** Conversation shows the saved messages; "Save locally" is disabled with the reason visible.
+- **Q3 — Message text.** Text is saved exactly as typed, with no trimming and line breaks kept. An empty or whitespace-only message cannot be saved. The limit stays 32 KiB, measured in UTF-8 bytes.
+- **Design facts accepted:** C1 adds dedicated read and save messages instead of reusing `conversation.message.submit`. Saving never uses `project.command`, so no canonical sequence number is taken.
+- **Agent roles:** the rpiv designer agent does slice design only; the ui-ux agent owns all visual design, including the identity approved on the Figma startup frame 109:49.
+
+## 17. Visual identity and Decisions page input (user decisions, 2026-10-09)
+
+Decided by the user directly with the ui-ux agent and relayed verbatim; the action set was confirmed in the coordinator session. These supersede the topic-5 rules of §15 where they differ.
+
+- **User's words:** "Segue a tua recomendação em relação ao cinzel nos títulos. Eu gosto do ecra de abertura (o do eclipse com runas) na identity direction como combinada. tal como esta no figma. O lado do brilho está bem no ecrã de abertura. O nome Ragnaro que fica com traço normal, como no ecrã de abertura A barra de icones tem os nomes a partir de 1280 pixels. O ícone da atenção é uma chama. Sim aprovo as duas cores novas que a gente acrescentou. Não gosto dos cantos cortados." On a glow on daily screens: "Não, não quero um brilho de fundo também nos ecrãs do dia a dia."
+- **Startup:** the combined startup frame (Figma 109:49: eclipse, rune inscription, ash, ᚱ) is approved as it is.
+- **Cinzel:** the wordmark, in Regular weight (not Bold) as on the startup screen, plus short fixed section names in capitals (for example ATTENTION, DECISIONS, NEEDS YOU). User content and surface titles stay in Inter.
+- **Glow:** the startup screen only, with frost top-left and ember bottom-right. Daily screens have no background glow. The eclipse is kept for big moments only.
+- **Rail:** labels show at 1280 px and wider (N5 kept).
+- **Attention icon:** a flame with the actionable count, replacing the bell.
+- **Palette:** plate #16191C and the solid state tints (ember #2A1D10, blood #2A1513, moss #132019, frost #14232B) are approved as roles.
+- **Rejected:** chamfered (cut) corners on decision objects.
+- **Decisions page input (not a final layout):** the user likes grouping by Proposed / In force / Superseded (Figma V2 114:221) and a "Why" section that explains where a decision came from (V3 114:353). The user dislikes the list format but likes decisions grouped by theme. Reading: Proposed = pending checkpoint items, In force = current, Superseded = replaced by a newer version or retired.
+- **Proposed decision actions:** only Accept and Correct (user choice). No Reject or Discuss action.
+
+## 18. Accepting proposed decisions (user decision, 2026-10-09)
+
+- **User's words:** "Eu quero vê-las agrupadas. Mas aceito uma a uma."
+- Proposed decisions are shown grouped in their checkpoint, but each decision is accepted on its own. Each has its own Accept, and Correct stays available. There is no bulk "accept all" action. This clarifies D7 (§14) and supersedes group-only acceptance.
+- **Amendment (user, same day):** "Mas também quero uma opção para aceitar todas de uma vez só." Each decision keeps its own Accept, and the checkpoint also offers "Accept all" for the decisions still pending in it. Correct stays. Attention keeps one item per checkpoint: its label updates as decisions are accepted, and the count drops only when the checkpoint closes (J3 rule C).
+
+## 19. Process choices (user decisions, 2026-10-09)
+
+- **C1 workspace:** C1 is built in a linked worktree, as the rigorous lane recommends ("como recomenda o processo rigoroso"), not in the main working tree as in C1-0.
+- **Design context:** the ui-ux agent runs `/impeccable init` to record the visual decisions (§14-18) as durable design context. The coordinator reviews and commits its files.
+- **Reviewed slice designs are revised by the rpiv designer agent;** the C1 design is in intent review round 1 of 2.
