@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 45030110edd4f709be13770aa8d5b1760640cc4fdcddd2a81db3e37114db8e07
+content_hash: 1c0eed5a9555efa8c5b7d5af5ab407c09a1ef81d693fb66782144ea1e6817115
 ---
 
 # Conversation — Human Decisions
@@ -327,3 +327,4 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
   - the app shows clearly that they are bundled;
   - an update control is wanted.
   The ui-ux agent's advice: pin tool versions per harness release; an update installs only versions tested with that harness, shows what changed, re-runs a self-check and allows rollback. Each tool's licence must allow redistribution. This needs its own interview and ADR; the user wants to discuss it further.
+- **Agent marks (user, same day):** "Gosto dos ícones. As marcas convencem, sim. Está tudo OK." The agent marks in prototype `agents.html` are approved: Conversation (Ansuz), Waypoint parent (Othala), Worker (Uruz), Supervisor (Algiz, provisional pending #99), plus marks for common Worker roles. Identity marks stay neutral; state colours stay on separate marks.
