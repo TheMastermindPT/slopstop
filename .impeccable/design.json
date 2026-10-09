@@ -511,7 +511,7 @@
     "dos": [
       "**Do** keep one frost-filled primary button per region.",
       "**Do** pair every state colour with words or a diamond (Accepted · r4, Needs you).",
-      "**Do** use the Ragnarok-owned Runa icon set (Figma 126:30: straight rune-stave strokes, no curves, diamonds instead of circles, 1.5px, square caps, mitred joins) everywhere; the anvil on Send buttons is the only exception. A missing icon is drawn in the Runa style, never borrowed from another set.",
+      "**Do** use the Ragnarok-owned Runa icon set, version 2 (Figma 139:30 on page 125:30; SVG source ragnarok-hero/icons-runa-v2, 77 icons; superseding V1 at 126:30: straight rune-stave strokes, no curves, diamonds instead of circles, 1.5px, square caps, mitred joins) everywhere; the anvil on Send buttons is the only exception. A missing icon is drawn in the Runa style, never borrowed from another set.",
       "**Do** keep conversation and decision text in Red Hat Text at 14/22, at about 720px measure, and bundle the fonts with the app.",
       "**Do** give every control a hover, focus (the soft frost halo), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion.",
       "**Do** keep broken, stale, provisional and unknown states visible, each with its own words. Never show them as clean or absent."

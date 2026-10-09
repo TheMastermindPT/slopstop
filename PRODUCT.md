@@ -136,7 +136,7 @@ The official product name is Ragnarok. Brand variants require explicit review an
 
 The user approved the Ragnarok brand identity on 2026-10-09 (decisions log §17). The approved startup screen is the brand reference: Figma file `zHeTrqwSFK7XMHMMhgzZeL`, node `109:49`. It is binding for:
 - the ᚱ (Raidho) rune as the product mark, shown on the activity rail;
-- the Ragnarok-owned Runa icon set (Figma `126:30`) as the single icon family, with one stroke width, and Attention shown as the Kenaz (torch) rune;
+- the Ragnarok-owned Runa icon set, version 2 (Figma `139:30`, superseding V1 at `126:30`) as the single icon family, with one stroke width, and Attention shown as the Kenaz (torch) rune;
 - the RAGNAROK wordmark in Cinzel, regular weight;
 - the rune inscription and the rune rule as brand ornaments;
 - the eclipse, reserved for big moments: startup, empty states, and loading or recovery.
