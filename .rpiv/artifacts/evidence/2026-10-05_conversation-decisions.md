@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 1ddf36855b3e2b5191a95d2852feb065282cf7324c9a20627350ca367160b1c3
+content_hash: eb5530077ce0abb7f11d7072e9b72eb37a0f6750bebc4750035e49b4a1ddc746
 ---
 
 # Conversation — Human Decisions
@@ -232,3 +232,4 @@ Decided by the user directly with the ui-ux agent and relayed verbatim; the acti
 - **C1 workspace:** C1 is built in a linked worktree, as the rigorous lane recommends ("como recomenda o processo rigoroso"), not in the main working tree as in C1-0.
 - **Design context:** the ui-ux agent runs `/impeccable init` to record the visual decisions (§14-18) as durable design context. The coordinator reviews and commits its files.
 - **Reviewed slice designs are revised by the rpiv designer agent;** the C1 design is in intent review round 1 of 2.
+- **Icons and eclipse (user, same day):** "usa Lucide e faz a clarificação do eclipse". Lucide is the single interface icon family (this replaces Phosphor in the old DESIGN.md). PRODUCT.md now states that the brand eclipse is an ornament for big moments only, and never represents domain objects or their relationships.

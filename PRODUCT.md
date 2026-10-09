@@ -71,7 +71,7 @@ SlopStop treats project intent, execution attempts, and model conversations as s
 - Final Frame acceptance opens the generated canonical Project map immediately, frames newly created or changed Features, Waypoints, and relationships, and exposes the Accepted revision that produced them. Conversation and Review remain directly recoverable, while later correction creates a new revision instead of rewriting accepted history.
 - Settings opens a short menu for Application, Project, and Models pages. Model credentials and catalogue, Project defaults, Run or role overrides, and the model actually used remain separate visible scopes rather than one misleading global selector.
 - Automatic relationship-driven layout remains the v1 contract. Personal position pins are an accepted direction for later rich map control; they are local presentation preferences and can never change canonical relationships or priority.
-- The visual treatment uses a carbon and graphite material language: matte near-black surfaces, machined edges, restrained neutral light, and scarce state color. Space, constellation, and game-progression imagery must not replace the real non-linear relationship semantics.
+- The visual treatment uses a carbon and graphite material language: matte near-black surfaces, machined edges, restrained neutral light, and scarce state color. Space, constellation, and game-progression imagery must not replace the real non-linear relationship semantics. The brand eclipse is the only exception: it is an ornament for big moments (startup, empty states, loading or recovery). It never represents Projects, Features, Waypoints, or their relationships, and it never appears on working maps or lists.
 - The same rail destinations, selection, page content, actions, map relationships, and attention states require keyboard-accessible and plain-text projections. Small windows may temporarily prioritize the right panel as an overlay but must provide deterministic return to the center, `Map`, and `Conversation`.
 
 ## Capabilities and Constraints
@@ -136,6 +136,7 @@ The official product name is Ragnarok. Brand variants require explicit review an
 
 The user approved the Ragnarok brand identity on 2026-10-09 (decisions log §17). The approved startup screen is the brand reference: Figma file `zHeTrqwSFK7XMHMMhgzZeL`, node `109:49`. It is binding for:
 - the ᚱ (Raidho) rune as the product mark, shown on the activity rail;
+- Lucide as the single icon family for the interface, with one stroke width;
 - the RAGNAROK wordmark in Cinzel, regular weight;
 - the rune inscription and the rune rule as brand ornaments;
 - the eclipse, reserved for big moments: startup, empty states, and loading or recovery.
