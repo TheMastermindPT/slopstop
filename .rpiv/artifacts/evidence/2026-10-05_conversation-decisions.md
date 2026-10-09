@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 8678ea2636a1f49287d8eac2126db2cbe183d1146ce064b006fb98908fe41d71
+content_hash: 65ffeb9bb2d4bd0f4e23de40758b3f45569d2af31971ac023170d6c5fe0f6b9d
 ---
 
 # Conversation — Human Decisions
@@ -380,3 +380,5 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **The domain term "Feature" is renamed "Strand"** (user: "O nome feature vai ser mudado"; chose the Norns direction, then "Strand"). A Strand is one thread of fate, and its Waypoints are the knots along it. The hierarchy is Project → Strand → Waypoint. Rejected candidates: Voyage, Chapter, Route, Raid/Expedition, Saga at the Feature level, Skein, Weave, Wyrd.
 - **How it lands:** product documents (CONTEXT.md, PRODUCT.md, DESIGN.md) use Strand with "formerly Feature". ADRs and existing code identifiers keep "Feature" as the former name until a dedicated rename slice migrates them, the same rule as the Forger rename (ADR 0021).
 - **Open:** whether the map's Chapter view label (one Feature) becomes the Strand view or keeps a separate label.
+- **Map view labels renamed (user, same day):** "Saga" (the whole-Project view) becomes **Weave**, the fabric where all Strands cross. "Chapter" (one Feature's view) is dropped: the one-Strand view is simply called **Strand**. Rejected for the Project view: Loom, Tapestry, Web. This closes the open point above.
+- **Consistency requirement (user):** "vamos ter que atualizar documentacao para ficar consistente, caso contrario eu e os agente podem ficar confusos". Every current document, the prototypes and Figma move to Strand and Weave in one sweep. ADRs keep their accepted text plus a former-names note; code identifiers move in a dedicated rename slice after C1.
