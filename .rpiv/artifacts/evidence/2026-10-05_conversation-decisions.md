@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 3a63d0987153e397adbd90252c6178f46074a7bec7aebbbf18902516d5aa1209
+content_hash: 0aa4634e817a7aed8fce6f3d7d51fbadfc7ac81b90ac99e67caca25fbfcd46ac
 ---
 
 # Conversation — Human Decisions
@@ -274,3 +274,8 @@ Prompted by the coordinator ↔ design-agent peer dialogue used in this session,
 - **Rive and the CSP (user, same day):** "ok faremos com uma janela so para abertura." The Rive startup animation runs in a separate splash window, which alone allows `wasm-unsafe-eval` and never shows model or repository content. The main window keeps the strict CSP, and map motion uses CSS only. This needs an ADR note when the port is built.
 - **Ragnarok-owned icons (user, same day):** the user asked for three variants of a fully Ragnarok-owned icon set, which would replace "Lucide only" once chosen. The coordinator drew them on Figma page 125:30: V1 Runa (126:30), V2 Seixo (127:30) and V3 Forja (128:30). The choice is pending.
 - **Icon set chosen (user, same day):** "gosto da v1, incrivel!!". V1 Runa (Figma 126:30) becomes the Ragnarok-owned icon family and replaces "Lucide only": straight rune-stave strokes with no curves, diamonds instead of circles, 1.5 px, square caps and mitred joins. Missing icons are drawn in the same style and never borrowed from another set. The anvil stays as the Send exception. Consequence: the Attention mark becomes the Kenaz (torch) rune, replacing the flame of §17.
+
+## 23. C1 S1 candidate review round 1 (user decisions, 2026-10-09)
+
+- **Chain order, links only:** the order and root of chained upgrades come only from the source→target links, and `started_at` is not checked at all. A clock that moved backwards must never turn a valid chain into `REGISTRY_CORRUPT` (this follows the approved G16 wording). The coordinator had wrongly confirmed a strict-time reading to the implementer; that confirmation is withdrawn.
+- **Approved S1 contract amendments:** (1) a CNV-B5 case that opens in safe mode with recovery required counts as "never opened"; (2) CNV-B5b case 1 is a guard, and case 2's red came from temporarily restoring the one-source retention; (3) CNV-B22 uses three real upgrades instead of an SQL seed, with the gap disclosed; (4) the C1-0 recovery test now expects cause `broken` instead of `unproven`, and the data stays quarantined.
