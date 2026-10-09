@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 68b44dbd34a487c9b7fdc534d0f7183a592d0a5edd381d73d25510e197732448
+content_hash: a1dba3253b210d46d086acbc5abae9baa933b7329e90d7494196a70b77a9b813
 ---
 
 # Conversation — Human Decisions
@@ -265,3 +265,4 @@ Prompted by the coordinator ↔ design-agent peer dialogue used in this session,
 - **Material wording (user, same day):** the user chose to update the text. PRODUCT.md now says "soft rounded forms like polished stone" instead of "machined edges", while keeping matte carbon and graphite, restrained light and scarce state colour.
 - **UI typeface (user, same day):** "gosto da red hat text". Red Hat Text (SIL OFL 1.1, variable 300-700; weights 400 body and meta, 500 labels and buttons, 600 titles) replaces Inter for UI and prose. It is bundled locally because of the app's CSP. Cinzel and Cascadia Code are unchanged.
 - **Anvil brand exception (user, same day):** "aprovo a excepcao da bigorna". A custom anvil-and-hammer icon is the single exception to "Lucide only" and is used only on Send buttons, whose label still names the destination. On each send the hammer strikes once (about 420 ms) with sparks; under reduced motion nothing moves.
+- **Prototype port timing (user, same day):** "Depois da C1". The React port of the coded prototypes (the ui-ux agent's PORT-PLAN.md in ragnarok-hero) is scheduled after Conversation C1, with the designer and the implementer under AGENTS.md (slices, red-green, reviews).
