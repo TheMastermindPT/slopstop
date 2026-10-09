@@ -1,6 +1,6 @@
 # ADR 0021: Supervisor, Forger And Application-Mediated Agent Dialogue
 
-- Status: Proposed
+- Status: Accepted (2026-10-09)
 - Date: 2026-10-09
 - Decision owners: Pedro Mesquita
 - Issue: [#99](https://github.com/TheMastermindPT/slopstop/issues/99)

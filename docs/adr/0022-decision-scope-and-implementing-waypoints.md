@@ -1,6 +1,6 @@
 # ADR 0022: Decision Scope, Implementing Waypoints And Decisions In Run Context
 
-- Status: Proposed
+- Status: Accepted (2026-10-09)
 - Date: 2026-10-09
 - Decision owners: Pedro Mesquita
 - Issue: [#98](https://github.com/TheMastermindPT/slopstop/issues/98)
