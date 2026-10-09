@@ -4,6 +4,11 @@
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
+## Note (2026-10-10): amended by ADR 0021 and ADR 0022
+
+- [ADR 0021](0021-supervisor-forger-and-mediated-agent-dialogue.md) (accepted 2026-10-09), "Plan changes discussed by agents": amends "Initial Preparation And Run Amendments" for the period before a Run amendment proposal exists (only affected tasks stop at a safe checkpoint); once a proposal is submitted this ADR applies unchanged. "Agent dialogue" adds declared dialogue pairs and limits to "Delegation Plan Proposal And Accepted Task DAG".
+- [ADR 0022](0022-decision-scope-and-implementing-waypoints.md) (accepted 2026-10-09), "A decision edited during an active Run": amends the amendment triggers in "Initial Preparation And Run Amendments" (a new current revision of a pinned decision raises one Attention item that can ask the Forger for a Run amendment proposal; nothing pauses automatically). "Decisions in Run context" (which amends ADR 0009) also has a Run pin the decision revisions current at policy-epoch approval.
+
 ## Context
 
 ADR 0007 makes a Run point to exact contract, Delegation-plan, profile, and policy revisions without creating a generic Run revision. ADR 0008 fixes one immutable Run-workspace binding and requires exact fingerprints, leases, and effect recovery. ADR 0009 requires every Sealed Invocation to pin current dispatch authority. ADR 0010 keeps Evidence scope-specific and independently authoritative.

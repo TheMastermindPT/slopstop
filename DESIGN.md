@@ -257,7 +257,7 @@ All three faces are under the SIL Open Font License 1.1. The desktop app must bu
 The desktop shell has five parts:
 - a 44px top bar;
 - a labelled activity rail: 72px with labels at 1280px and wider, 56px icons-only below that;
-- one replaceable sidebar, 272px (Attention, Projects, Files, Runs or Settings);
+- one replaceable sidebar, 272px (Attention, Projects, Files, Runs, Diagnostics or Settings);
 - a flexible centre with Map and Conversation tabs, plus temporary tabs such as Decisions and Review;
 - a 360px right panel that opens on demand.
 

@@ -6,11 +6,11 @@ branch: main
 repository: slopstop
 topic: canonical-project-writer
 tags: [design, project-writer, canonical-storage, typed-command, fencing, protocol]
-status: in-review
+status: complete
 parent: .rpiv/artifacts/research/2026-09-02_19-16-24_harness-capabilities-and-next-step.md
-last_updated: 2026-09-11T19:10:00+0100
-last_updated_by: OpenCode
-last_updated_note: "Appended approved single golden SQL exclusion with two immutable raw pins and mandatory pre-scan guard; preserved all prior bindings and protected documents; parent review pending."
+last_updated: 2026-10-10T12:00:00+0100
+last_updated_by: Claude Code
+last_updated_note: "2026-10-10: status set to complete; the writer was implemented and is on main (commits ending at 97678d2, recorded in GitHub #85 and evidence 2026-09-10_canonical-project-writer-s7.md). Design content unchanged."
 content_hash: a959f34fcf68b7e832c9bb9b41f611e0ef45a105c6d084ced8119cfb33481c6d
 ---
 

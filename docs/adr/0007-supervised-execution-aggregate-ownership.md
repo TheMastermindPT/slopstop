@@ -4,6 +4,14 @@
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
+## Note (2026-10-10): amended by ADR 0021
+
+[ADR 0021](0021-supervisor-forger-and-mediated-agent-dialogue.md) (accepted 2026-10-09) amends this ADR:
+
+- "Roles" renames the Waypoint parent to **Forger** in product language. This affects "Aggregate Boundaries" and "Waypoint Parent And Model Attribution"; the role, its authority and its identifiers here are unchanged until a rename slice migrates them.
+- "Roles" also adds a Supervisor above Runs (distinct from the Run-level Forger) and the doer/reader Worker families; Run, Worker and transition authority here are unchanged.
+- "Agent dialogue" and its Consequences add an Execution-owned agent-dialogue record family alongside the aggregates in "Aggregate Boundaries".
+
 ## Context
 
 Supervised execution needs durable Run, Worker, and steering state without allowing a model, runtime callback, or worker result to become canonical authority. The accepted status families already distinguish Run, Worker, Control request, Waypoint, Action availability, and external Evidence states. The physical persistence layout reserves owner-specific current and transition tables, but it deliberately leaves Execution aggregates to their owner. This decision fixes those aggregate boundaries, exclusivity rules, transition authority, retry identity, model attribution, and the inputs to Action availability before workspace, AgentRuntime, and plan-content designs proceed.

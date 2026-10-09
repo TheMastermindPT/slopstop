@@ -6,11 +6,11 @@ branch: design/ticket-86-project-storage
 repository: slopstop
 topic: "Project Storage Opening And Health Classification"
 tags: [plan, storage, persistence, protocol, harness, electron]
-status: ready
+status: complete
 parent: .rpiv/artifacts/designs/2026-08-31_16-37-32_project-storage-opening.md
-last_updated: 2026-09-03T02:11:53+0100
-last_updated_by: OpenCode
-last_updated_note: "Use the dedicated harness Vitest configuration for Phase 2 structured-clone verification."
+last_updated: 2026-10-10T12:00:00+0100
+last_updated_by: Claude Code
+last_updated_note: "2026-10-10: status set to complete; implemented (97b4767) and merged via PR #89 (59fb35b). The recorded strict-validation gap (Phase 4/5 Red gaps, mutation rerun waiver) still stands."
 content_hash: b6814c16d7dbb798ccbd7a47cf1ff5a11ba4512dcc02398b0bd63e56ba8dfbc3
 ---
 

@@ -12,6 +12,8 @@ Language Server Protocol responses are not automatically proof. Document synchro
 
 The accepted decision for issue 74 defines one provider-neutral, task-shaped Language observation intake. It treats the local draft ADR 0003 as revisable until separately published.
 
+- Note (2026-10-10): ADR 0003 is now published on `main` with Status Accepted (dated 2026-08-21, restored from the August salvage branch on 2026-10-04 in commit `47bec2c`). The "local draft" wording above records its state when this ADR was written. This note changes no decision in this ADR.
+
 ## Decisions
 
 ### Ownership And V1 Boundary

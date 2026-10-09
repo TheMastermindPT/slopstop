@@ -106,6 +106,7 @@ SlopStop starts as an empty private repository but already has confirmed product
 - Maintain an executable LikeC4 model of process, package, storage, provider, and telemetry boundaries.
 - Use React with CSS Modules and a small token/reset stylesheet. Add no router or client-state library until a concrete need exists.
 - The foundation shell uses a provisional technical-cartography direction with a living-navigation-instrument motif. It does not establish the final product identity; later visual variants replace it after explicit selection.
+  - Superseded (2026-10-10, see Amendment 2026-10-10): the technical-cartography direction is replaced by the approved Ragnarok brand identity (`PRODUCT.md` Brand Commitments) and the Seixo working-screen direction in `DESIGN.md`; layouts and the foundation shell stay provisional (see Amendment 2026-10-10).
 
 ## Consequences
 
@@ -122,4 +123,11 @@ The user approved the full Effect migration on 2026-10-03 (record: main `.rpiv/a
 - Protocol, harness, and configuration validation use Effect Schema (`effect` 4.0.0) instead of Zod. The protocol package owns one strict decode policy (unknown keys rejected at every level) and a project-owned issue vocabulary; public `ProtocolParseIssue` diagnostics keep their former codes and paths.
 - The kernel still depends on no workspace package. It may import `effect` pure data modules (`Schema`, `Brand`, `Data`) so identity brands and ordering values have one definition; it contains no services, layers, or runtime.
 - Wire formats are unchanged: UUID text, RFC 3339 strings that are never converted to `Date`, bigint/number behavior, optional-versus-absent members, decoded key order (persisted fingerprints), and shallow output freezing where the former schemas froze values.
-- Effect runtime, services, and resource management for harness and Electron main are separate later migration units; SQL client choice is undecided and owned by the user.
+- Effect runtime, services, and resource management for harness and Electron main are separate later migration units; SQL client choice is undecided and owned by the user (superseded 2026-10-05: `node:sqlite` in the harness database worker, see Persistence and Amendment 2026-10-10).
+
+## Amendment 2026-10-10: Consistency Notes
+
+This note records later decisions so the text above does not mislead readers. It changes no decision; it points to where each one now lives.
+
+- SQL client: the 2026-10-03 amendment's statement that the SQL client choice is undecided is superseded by the 2026-10-05 Persistence amendment. Drizzle generates the SQL migrations, and Node's built-in `node:sqlite` inside the harness database worker runs them and every query.
+- Visual direction: the provisional technical-cartography direction under Documentation And Visual Foundation is superseded. The user approved the Ragnarok brand identity on 2026-10-09; the brand commitments live in `PRODUCT.md` (Brand Commitments) and the exact visual values and the Seixo component kit live in `DESIGN.md`. As `PRODUCT.md` states, layouts and the foundation shell stay provisional and cheap to replace until the working-screen design is approved.

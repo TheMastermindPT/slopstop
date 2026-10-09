@@ -30,7 +30,7 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Application coordinator | Deterministic software that owns canonical project state, scheduling, policy, budgets, and recovery. |
 | Forger | The single logical AI lead of one Run (formerly "Waypoint parent"; ADRs 0007-0020 and existing code identifiers keep the former name until migrated), preserving identity across safe restart, resume, compaction, runtime session replacement, and model changes. |
 | Worker | One bounded, attributed, non-nesting attempt to perform an exact Delegation task. |
-| Supervisor | Provisional (GitHub #99): the agent above Runs that proposes how to split a user request into new or changed Waypoints (through Frame, as a map revision the user accepts), coordinates Forgers of linked Waypoints, and commissions deep and architecture reviews; it never changes files, approves, or starts a Run. |
+| Supervisor | ADR 0021 (GitHub #99): the agent above Runs that proposes how to split a user request into new or changed Waypoints (through Frame, as a map revision the user accepts), coordinates Forgers of linked Waypoints, and commissions deep and architecture reviews; it never changes files, approves, or starts a Run. |
 | Worker family | Doers, which may change files, or readers, which only research or review and never change anything. |
 | Agent dialogue | An application-mediated conversation between agents: durable, attributed, budgeted from the Run, shown in its own thread, entering another agent's context only as an agent-authored source without authority. |
 | Decision checkpoint | A group of proposed decisions shown together; each is accepted on its own or with Accept all, or corrected in conversation. |

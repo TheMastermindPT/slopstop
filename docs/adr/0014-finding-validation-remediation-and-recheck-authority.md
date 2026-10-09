@@ -4,6 +4,10 @@
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
+## Note (2026-10-10): amended by ADR 0021
+
+[ADR 0021](0021-supervisor-forger-and-mediated-agent-dialogue.md) (accepted 2026-10-09), "Review rounds", amends "Remediation Handoff And Budgets": review fix rounds default to two as a visible proposal value, and a third or fourth round is proposed in Attention as a Run amendment the user approves, only for serious findings.
+
 ## Context
 
 ADR 0010 gives Validation producers typed Finding-proposal and Finding-recheck Evidence, exact scopes, and append-only evaluations. ADR 0012 makes current Finding disposition a mandatory Completion dependency. ADR 0007 reserves Run validation and remediation transitions.

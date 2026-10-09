@@ -4,6 +4,11 @@
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
+## Note (2026-10-10): amended by ADR 0021 and ADR 0022
+
+- [ADR 0021](0021-supervisor-forger-and-mediated-agent-dialogue.md) (accepted 2026-10-09), "Agent dialogue": adds the application-mediated agent dialogue next to "Parallel Worker Coordination" (direct channels stay prohibited) and a new **agent-authored** source kind, trust "no authority", for "Invocation Context And Resume Reconstruction".
+- [ADR 0022](0022-decision-scope-and-implementing-waypoints.md) (accepted 2026-10-09), "Decisions in Run context" and "Foundation sections by role": amends source selection in "Invocation Context And Resume Reconstruction" (which accepted decisions a Forger, Worker or reviewer receives, and the recorded exclusion reason for the rest).
+
 ## Context
 
 ADR 0007 makes Execution the owner of Run and Worker transitions and leaves exact AgentRuntime invocation and result schemas to a later decision. ADR 0008 makes the deterministic Application coordinator the sole process and committed-action authority, while keeping model and tool invocation records outside Process-job state. The remaining boundary must let one Waypoint parent and several bounded Workers use a deterministic test runtime, a selected provider, and optionally Mastra without allowing provider sessions, callbacks, retries, or storage to become a second execution authority.

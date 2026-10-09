@@ -6,10 +6,11 @@ branch: main
 repository: slopstop
 topic: "Persistent primary Project Conversation — PC-S1 final intent oracles"
 tags: [design, conversation, workspace, persistence, ragnarok]
-status: in-review
-last_updated: 2026-09-13T00:49:28+0100
-last_updated_by: Pedro Mesquita
-last_updated_note: "Add exact consent-selection and during-version replacement oracles from v3 coverage review."
+status: superseded
+superseded_by: .rpiv/artifacts/designs/2026-10-09_13-54-08_conversation-c1-local-save.md
+last_updated: 2026-10-10T12:00:00+0100
+last_updated_by: Claude Code
+last_updated_note: "2026-10-10: status set to superseded; PC-S1 merged in reduced scope at e748604 (add-repository and remove-from-list) and conversation saving is now owned by the C1 design 2026-10-09_13-54-08_conversation-c1-local-save.md. Design content unchanged."
 content_hash: 62f60b4067a9f9fcb60e33192d37d3b9ec3ee5dec47505584dd3078cecd3217e
 ---
 

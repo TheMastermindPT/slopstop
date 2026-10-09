@@ -2,7 +2,8 @@
 date: 2026-10-05
 author: coordenador-claude (Claude Code), for the implementer agent
 repository: slopstop
-status: approved-to-plan
+status: complete
+status_note: "2026-10-10: both items landed on main, the race fix at 7058508 and S6b at bb83ad2 (15 cases, coordinator-agreed set)."
 tags: [pc-s1, remove-from-list, race, tests, s6b]
 ---
 
