@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 0aa4634e817a7aed8fce6f3d7d51fbadfc7ac81b90ac99e67caca25fbfcd46ac
+content_hash: 6e96000a8b984bf27db2f768e02bb103550d7f3b604e1cbc5facc02f0536fa5c
 ---
 
 # Conversation — Human Decisions
@@ -279,3 +279,21 @@ Prompted by the coordinator ↔ design-agent peer dialogue used in this session,
 
 - **Chain order, links only:** the order and root of chained upgrades come only from the source→target links, and `started_at` is not checked at all. A clock that moved backwards must never turn a valid chain into `REGISTRY_CORRUPT` (this follows the approved G16 wording). The coordinator had wrongly confirmed a strict-time reading to the implementer; that confirmation is withdrawn.
 - **Approved S1 contract amendments:** (1) a CNV-B5 case that opens in safe mode with recovery required counts as "never opened"; (2) CNV-B5b case 1 is a guard, and case 2's red came from temporarily restoring the one-source retention; (3) CNV-B22 uses three real upgrades instead of an SQL seed, with the gap disclosed; (4) the C1-0 recovery test now expects cause `broken` instead of `unproven`, and the data stays quarantined.
+
+## 24. Visual and interaction decisions (user, via the ui-ux agent, 2026-10-09)
+
+Relayed verbatim by the ui-ux agent; recorded here as decided or open.
+
+- **Decided:**
+  - model text streams in progressively;
+  - the anvil-and-hammer strike also serves as the "agent is thinking" indicator;
+  - a custom dark title bar with the rune (frameless window, no native Windows title bar);
+  - the Rive startup plays on first install and on every launch;
+  - different sounds signal different kinds of completed tasks;
+  - syntax highlighting uses the Ragnarok palette;
+  - the UI language is English for v1;
+  - role agents get distinct icons, still to be drawn;
+  - live before/after diffs while an agent writes files;
+  - the Waypoint panel shows diffs of the files changed for that Waypoint, with an expand button (the user will refine this);
+  - a shortcut opens a cheat sheet listing every command.
+- **Open:** how tool calls are displayed (HTML examples coming); error, failure and success states; first use; chart ideas for Runs and Diagnostics; the command list; Windows accessibility; notifications outside the app beyond sounds; the app icon ("aquele striker que eu te falei"), whose meaning is still to be confirmed with the user.
