@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: b97e139645e338df61900002397404942e49ed7661280f3ab47fde6a5504dd42
+content_hash: a67789367d7d0e2865e71ac503301dd654b826a6b1d36e309148e0a5558f92ef
 ---
 
 # Conversation — Human Decisions
@@ -305,3 +305,8 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
   - a broken state is shown with a blood outline, with no new colour;
   - the blocking screen shows the eclipse with the Raidho rune;
   - the rune stroke is thin everywhere, in the ratio of the approved frame 109:49.
+- **State catalogue, shortcuts and charts (user, same day):**
+  - The state catalogue (prototype `states.html`: six tones and five scopes, each scope for a different case) is approved.
+  - The Ctrl K palette and the Ctrl / shortcut sheet (`keys.html`) are approved: "Está muito bem feito". The actual shortcut list is to be defined later.
+  - Charts: "gostei de todos os gráficos das runs" and "Em relação ao número 2, ficara em dólares e tokens. Sinceramente gostei de tudo o que implementaste nos gráficos." All Runs charts are in: timeline, budget, cost per Waypoint, last 30 Runs, and tests. Costs show both dollars and tokens. The Diagnostics charts are liked too, and their order is left to the plan. Open: whether the timeline shows every agent of a Run or only the selected Waypoint's.
+  - New request: show how much of a subscription plan is used and how much remains, in Settings or elsewhere. Not designed yet; it depends on whether the provider exposes usage (the ADR 0009 Amendment 1 subscription/CLI mode).
