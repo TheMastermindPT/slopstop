@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 5b8c4b20126438a94ea61434a1f4f866e4c737965f732115e99598d5eac34c11
+content_hash: c49dce403bb30ab3bcb493b4f9fe73c735ed3e87ce9ffaf0e335c2ec06351ffe
 ---
 
 # Conversation — Human Decisions
@@ -488,4 +488,4 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - the composed-IPC-failure proof is deferred again;
   - the proposed copy, as listed in G24: "Write a message", "Loading messages…", "No messages yet", "Messages you save stay on this computer.", "Could not load this conversation.", "Read only: <reason>", "Not saved.", "Not confirmed.", and the "Save locally" button.
 - **G25 confirmed:** a sent save that is then lost (a disconnect, a stop, or a malformed reply while pending) answers `uncertain` ("Not confirmed."). A decodable but wrong reply stays `broken`.
-- **G28 accepted as a temporary exception:** the desktop bridge keeps its Promise core. The user asked to define when it migrates. It migrates with #123 (Effect unit 2b: one ManagedRuntime per process, Electron main included), in roadmap phase 2 right after C1 and **before C2**, because C2 adds streaming and cancellation through this bridge.
+- **G28 accepted as a temporary exception:** the desktop bridge keeps its Promise core. The user asked to define when it migrates. It migrates with #123 (Effect unit 2b: one ManagedRuntime per process, Electron main included), in roadmap phase 2 right after C1 and **before C2**, because C2 adds streaming and cancellation through this bridge. The user specified it comes after #105 (TypeScript 7 and the Effect language-service rules), the roadmap phase 2 order.
