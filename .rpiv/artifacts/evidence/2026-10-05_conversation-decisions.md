@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 7a401c19b024b06ced1a0c4755b135b99abf8536a20583a1808694c77c6f3fb9
+content_hash: 3ccd4e2d8bc138f7a3df2194f655cc378f382337e4fc8ec57391de3b41a3015c
 ---
 
 # Conversation — Human Decisions
@@ -437,3 +437,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 ## 37. C1 S3 design approved (user decision, 2026-10-10)
 
 - The user approved ("sim, aprovo") C1 design revision 4.3 (content_hash `5ff869b7b774e2cc6bd1143ef507488868b9c2020ae0e80840e7576649df2e19`) for slice S3. It was reached through two intent review rounds, the user-approved revision 4.2 with a bounded verifier (§36), and revision 4.3, whose nine verifier findings the coordinator checked one by one against `.rpiv/artifacts/evidence/2026-10-10_c1-s3-rev42-verification.md`. S3 (#107) may start.
+
+## 38. Order: C1 S3 before the #94 measurements (user decision, 2026-10-10)
+
+- The user chose option (a): C1 S3 (#107) starts now, and the #94 measurement steps (2-4) come after it. #94 Step 1, the test-side instrumentation gated by `SLOPSTOP_TRACE_94` with no runs, may be written between S3 steps. S3 heavy runs keep running on an idle machine. If a stall appears during S3, the run stops and becomes #94 evidence; no rerun hides it.
+- The #94 Step 0 findings so far: about 10-13 registration tests take 5-7 s at idle against a 15 s budget, so they fail under load; separate stalls (up to about 96x) are suspected in the shared SQLite worker path. The remedy for the slowdown is a user decision after the measurements; timeouts are not raised.
