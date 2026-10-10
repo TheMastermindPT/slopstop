@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 147d70e411c0de0492b0d6381434c5d195e7484dd6b74a9be83ca197476a7e13
+content_hash: cbd1bc827152a7cf0ed8b161fb11ac69a616c4801e7d9488cdd100a673dad2ac
 ---
 
 # Conversation — Human Decisions
@@ -456,3 +456,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 ## 41. C1 S3 accepted (user decision, 2026-10-10)
 
 - The round-3 limited verifier closed round-2 items A-H with no new defect. Final heavy runs on 97aeaa1 passed: integration 2143, e2e 11/11, launch-smoke OK, root mutation 88.25, conversation mutation 92.41. The user accepted S3 and authorised a squash merge into local main without a push. S3 changes no database schema, so no new `userData` backup is needed.
+
+## 42. C1 S4 in React, and #94 measurements in parallel (user decision, 2026-10-10)
+
+- **C1 S4 (the Conversation window) is built in React** from the coded prototypes, so the Conversation React port happens inside C1 (DL:348) without building the screen twice. The C1 design needs an S4 revision (React renderer, bundled fonts, CSP, DESIGN.md and the #121 decisions, the per-slice accessibility checklist) with its intent review and the user's approval before building.
+- **#94 measurements run in parallel** in a separate Herdr agent, `medições` (pane w3:p28), in its own worktree. Measurement batches and heavy runs never overlap with other test runs: each batch needs the coordinator's go-ahead on a free machine (§35 rules apply).
