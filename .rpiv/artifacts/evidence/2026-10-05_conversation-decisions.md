@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 25a8133febb8e14434dd70ba009f41d7bdc9efe3fdd31f9167bb9820e5d69778
+content_hash: 5b8c4b20126438a94ea61434a1f4f866e4c737965f732115e99598d5eac34c11
 ---
 
 # Conversation — Human Decisions
@@ -479,3 +479,13 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - The bounded verifier on revision 5.2 (`1718800d…`) confirmed both round-2 blockers fixed. Of 55 claims, 41 were Verified, 13 Weakened and 1 Falsified.
 - **Stale activation:** "Reopen Project" cannot work in the real app, because the coordinator refuses a switch from a stale activation and refuses activate with PROJECT_ALREADY_ACTIVE. The user accepted showing the stale-activation notice without an action. The recovery is a recorded gap: owner the coordinator, trigger the first real occurrence.
 - The user chose revision 5.3, applying every verifier item with a resolution table and no new agents. The coordinator checks each item, then the user approves.
+
+## 46. C1 S4 design approved (user decisions, 2026-10-10)
+
+- The user approved C1 design revision 5.3 (`e05cac0b6573365816e033a2490dbd0cd0f4a0898e26b1d61274839b9d369180`) for S4a and S4b, after the coordinator checked every rev-5.2 verifier item. Approved with it:
+  - G29: one per-window CSP owner, with the main policy also written into the page as a `<meta>` (fixes #130);
+  - G30: S4a merges only together with S4b;
+  - the composed-IPC-failure proof is deferred again;
+  - the proposed copy, as listed in G24: "Write a message", "Loading messages…", "No messages yet", "Messages you save stay on this computer.", "Could not load this conversation.", "Read only: <reason>", "Not saved.", "Not confirmed.", and the "Save locally" button.
+- **G25 confirmed:** a sent save that is then lost (a disconnect, a stop, or a malformed reply while pending) answers `uncertain` ("Not confirmed."). A decodable but wrong reply stays `broken`.
+- **G28 accepted as a temporary exception:** the desktop bridge keeps its Promise core. The user asked to define when it migrates. It migrates with #123 (Effect unit 2b: one ManagedRuntime per process, Electron main included), in roadmap phase 2 right after C1 and **before C2**, because C2 adds streaming and cancellation through this bridge.
