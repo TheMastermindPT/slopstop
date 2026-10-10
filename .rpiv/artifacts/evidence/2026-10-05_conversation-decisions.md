@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: cbd1bc827152a7cf0ed8b161fb11ac69a616c4801e7d9488cdd100a673dad2ac
+content_hash: 2c2125128059dc8b550c386323e838b6a30e854d96956e0e396ab383581441af
 ---
 
 # Conversation — Human Decisions
@@ -461,3 +461,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - **C1 S4 (the Conversation window) is built in React** from the coded prototypes, so the Conversation React port happens inside C1 (DL:348) without building the screen twice. The C1 design needs an S4 revision (React renderer, bundled fonts, CSP, DESIGN.md and the #121 decisions, the per-slice accessibility checklist) with its intent review and the user's approval before building.
 - **#94 measurements run in parallel** in a separate Herdr agent, `medições` (pane w3:p28), in its own worktree. Measurement batches and heavy runs never overlap with other test runs: each batch needs the coordinator's go-ahead on a free machine (§35 rules apply).
+
+## 43. C1 S4 scope (user decisions, 2026-10-10)
+
+- **Split:** S4a "renderer foundation" covers bundled fonts, Seixo tokens, the Runa icons S4 uses, the focus ring, and an accessibility e2e harness (axe, forced-colors and reduced motion in the real Electron launch with the real CSP). S4b "Conversation window" covers the bridge, IPC, preload and React surface, keeping behaviour IDs CNV-B16 to B18 and B31 to B35. Each is its own red-green slice with its own candidate review.
+- **Shell:** S4 restyles only the Conversation region. The old shell (rail, header, Projects sidebar) stays until the shell slice of the React port, so two looks coexist for a while.
+- **Old prototype window** (`apps/desktop/src/renderer/prototype`, about 6,300 lines): deleted entirely in S4, with its knip, Forge and main entries and the shell.test prototype journey. The ragnarok-hero prototypes stay the reference.
+- **Dependencies:** `@fontsource/red-hat-text`, `@fontsource/cinzel`, `@fontsource/cascadia-code` (OFL-1.1, pinned in the catalog, served locally under `font-src 'self'`) and `@axe-core/playwright` (MPL-2.0, devDependency, e2e only). They are included in the licence check before the first installer.
