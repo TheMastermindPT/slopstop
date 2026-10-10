@@ -9,10 +9,10 @@ tags: [design, conversation, storage, upgrade, protocol, coordinator, desktop, c
 lane: rigorous
 lane_reasons: ["files: 6 > 5", "weak sensitive word: schema", "sensitive word: preload"]
 status: ready
-last_updated: 2026-10-09T19:20:00+0100
+last_updated: 2026-10-10T18:00:00+0100
 last_updated_by: Pedro Mesquita
-last_updated_note: "Revision 3 amended after S1 candidate review round 1: G16 and the S1 chain rule now order the chain by its links only and never check started_at (Pedro, decision U1, decisions log §23, main commit da60c26). After review round 2, the node-adapters :819 line says the root is found by links, replacing the C1-0 :264 started_at rule. Behaviour IDs kept. Approved by Pedro on 2026-10-09 (revision 3)."
-content_hash: 8a67ea7a3b0c9bbbd8a1f1e4efb6e80502f49cfac88c3f380c1d35116aedd93f
+last_updated_note: "Approved by Pedro on 2026-10-10 (revision 4.3, content_hash 5ff869b7b774e2cc6bd1143ef507488868b9c2020ae0e80840e7576649df2e19; decisions log §37); approved copy under .rpiv/evidence/2026-10-09_13-54-08_conversation-c1-local-save/. S3 (#107) may start. Revision 4.3 (every rev-4.2 bounded-verifier finding applied, Pedro's choice; the coordinator checks each item, then Pedro approves; no new review agents). Revision 4.2 (after S3 intent review round 2, the last; Pedro chose option A, decisions log §36: fix every round-2 item, then one verifier limited to the fixes). Revision 4.1 (after the S3 intent review round 1, which failed: six verified blockers, all fixable). Revision 4, for slice S3 before #107 (coordinator hand-off, 2026-10-10). Adds the CNV-B13 read-after-admission-closes rows (U2, decisions log §29), and folds in what S2 changed: deviation 6a (the dedicated WRITER_CLIENT_ABANDON_FAILED release code arrives with protocol v8, CNV-B36), U3 (a failed settlement keeps the S1 retry-at-release), the round-3 rule that admission closes inside the writer slot (§32), and #102 fixed inside S3 (CNV-B37). Facts for S3 re-verified at main 80228ac. Behaviour IDs kept; S1 and S2 commitments unchanged. Needs an independent intent review (rigorous lane) before Pedro approves."
+content_hash: 5ff869b7b774e2cc6bd1143ef507488868b9c2020ae0e80840e7576649df2e19
 ---
 
 # Design: Conversation C1 — save and reopen messages locally, no model
@@ -32,6 +32,13 @@ The first Conversation tables raise the canonical Project database from schema 3
   - §14–15 and §17–18: the visual structure belongs to the UI/UX agent. This design fixes behaviour and seams, not pixels.
   - §16: the Q1–Q3 answers and agent roles.
   - §19: the linked worktree and the C1 merge order (S1 merges only together with S2).
+- The same log as committed in `59a8d9b` (file SHA-256 `46c535c6e48eaf3b50b237b5c3cb11cde8428542bc0ea759a3a23f3ed04a9619`), for revision 4 only:
+  - §28: deviation 6a (the dedicated release code waits for protocol v8) and deviation 6b;
+  - §29: U2 (read routing after the writer's admission closes belongs to S3's CNV-B13) and U3 (a failed settlement keeps the S1 retry-at-release);
+  - §30: the names Strand, Weave and Forger, used in new text only;
+  - §32: the bounded S2 round 3, whose fix B makes a failed settlement close admission inside the writer slot.
+- §36 of the same log (commit `e59bbb7`): option A for revision 4.2 and one verifier limited to the fixes; deviation 6b extended to S3's CNV-B14; the G17 extension accepted. `git diff --name-only 80228ac 7a1b041` lists only the decisions log, so the S3 source anchors at `80228ac` hold at `7a1b041`.
+- S2 result: `.rpiv/artifacts/evidence/2026-10-09_c1-s2-tdd-evidence.md` ("Design-vs-result gaps", "U2", "U3", "Review round 3"), merged in `ba4e15b`.
 - Inherited requirements: `.rpiv/artifacts/evidence/2026-09-12_pc-s1-intent-v1-brief.md`.
   - The parts used are "Proposed ownership" (:39-46), "Inherited and settled" (:76-83), "Proposed product behavior" (:85-89) and the Conversation contract (:206).
   - Its source anchors are stale. The facts below are re-verified at `9aab1cc`.
@@ -64,6 +71,8 @@ The first Conversation tables raise the canonical Project database from schema 3
 - **Uncertain commits:** canonical settlement keeps the uncertainty and recovers it at reactivation (`canonical-command-repository.ts:398-415`, `canonical-writer-recovery.ts:61-116`). pc-s1 :68 asks for close-and-reopen reconciliation; adopted in G6.
 - **S3a deviation 10:** expected protocol rows are pinned by one literal table in the protocol test.
 - **S3b G4:** the bridge keeps harness codes and separates a lost connection from a malformed reply.
+- **S2 round 3, fix B** (decisions §32): a settlement failure published its flags after the slot permit was released, so a queued call could take the free permit and reach the repository. Rule: any state change that refuses later work is made **inside** the slot, before the permit is released. S3 adds no admission state of its own (G18).
+- **#102:** a cleanup error thrown from a test's `finally` hides the assertion that actually failed. A broken result that was already answered is not a cleanup fault (G19).
 
 ## Architecture
 
@@ -160,7 +169,9 @@ New module `apps/harness/src/conversation/`: `conversation-store.ts` (Effect pro
 - **Admission is re-checked after the slot is acquired**, on both paths. A command or save queued behind work that closed admission therefore answers `writer-unavailable`, never an internal error.
 - **Only the in-process busy flag** (`exclusively`, `canonical-command-repository.ts:342-343`) becomes the typed `WriterOwnerBusy`. It is a defensive branch, unreachable through the queue, and pinned by one writer-level test (CNV-B24).
   - The `hasUnfinishedTransaction` guard (:388-390) keeps its meaning: the client state is unknown. It stays non-retryable and closes admission (`degrade-distinguishes-broken`).
-- **Plain contention never closes admission.** This covers the slot, SQLite BUSY/LOCKED, and a body-stage `broken` outcome such as a corrupt row. Only an unknown client state closes it.
+- **Plain contention never closes admission for Conversation work.** This covers the slot, SQLite BUSY/LOCKED in a Conversation transaction, and a Conversation body-stage `broken` outcome such as a corrupt row. A **settlement** is different: any failure there, including SQLite BUSY/LOCKED at begin or a body error, is a thrown settlement (only `WriterOwnerBusy` is mapped to `command-busy`), and it closes admission (S1 behaviour, U3). A failure to snapshot a command (`snapshotCanonicalCommand`) closes it too.
+- **A thrown settlement** (U3, decisions §29). `runSettlement` keeps the S1 rule: any thrown error closes admission for both paths, and the queued work answers `writer-unavailable` (S2 F1). The client is **not** abandoned: release runs the S1 stages (`releaseFence`, `closeRepository`, `releaseLease`) with the S1 retry-at-release. Abandonment (G6 case 2) covers only an unknown client state left by Conversation work. This is a recorded design-vs-result gap, accepted by Pedro.
+- **Admission closes inside the slot** (S2 round 3, fix B, decisions §32). Both the abandonment flag and the failed-settlement flag are set while the permit is still held, so no call queued behind the failure can take the free permit and reach the repository.
 
 **Uncertain commit (G6).** `runClassifiedWriteTransaction` rolls back before it returns `commit: "uncertain"` (`project-storage-transaction.ts:51-79`). Two cases follow.
 
@@ -177,8 +188,9 @@ New module `apps/harness/src/conversation/`: `conversation-store.ts` (Effect pro
      - It force-closes the raw worker client instead. Closing the SQLite connection rolls back and releases its locks.
      - It then releases the lease as usual.
      - The fence stays `active`. The next activation's existing abandoned-active-fence recovery supersedes it (`canonical-command-repository.ts:247`, `writer_recovery_records.reason = 'abandoned-active-fence'`).
-     - A switch or `project.close` therefore answers `sourceReleased: true`, and the next activation is read-write.
+     - A switch therefore answers `sourceReleased: true`, a coordinator stop resolves, and the next activation is read-write. (`project.close` is a Storage-level command that never reaches the coordinator; deviation 6b, decisions §28.)
      - If the raw close itself fails, the release fails with its own diagnostic (`WRITER_CLIENT_ABANDON_FAILED`) and stays `release-failed`. This is a genuine broken state, never reported as released.
+       - Through S2 (deviation 6a, decisions §28) the release reports `WRITER_REPOSITORY_CLOSE_FAILED` with the cause `WRITER_CLIENT_ABANDON_FAILED`, because the release vocabulary is part of the protocol. S3 adds the dedicated code with protocol v8 (CNV-B36).
    - The in-slot abandonment never awaits queued settlements. The queued work re-checks admission on acquiring the slot and returns at once, so `closeOnce` (`canonical-project-writer.ts:98-110`) cannot deadlock.
 
 In every case, a resend with the same `saveId` converges through the exact-retry rule. A new identity is never minted.
@@ -186,15 +198,17 @@ In every case, a resend with the same `saveId` converges through the exact-retry
 ### Read path (C5)
 
 - **Read-write activation with admission open:** the read runs through the writer's slot queue on the writer's client, so it is serialized with saves and settlements.
-- **Read-only activation (G10), or read-write after admission closed (R2-C3):** the read opens a short-lived read-only client per request on the generation pool.
+- **Read-only activation (G10), or read-write after admission closed (R2-C3, U2):** the read opens a short-lived read-only client per request on the generation pool (`readProjectConversationReadOnly`, `withReadOnlyClient`, S2).
+  - **Routing (S3, G17).** The coordinator's `conversationRead` owns it, inside **one** admitted registration: it first offers a read-write activation's read to the writer (`writer.conversationRead`); when the writer answers `writer-unavailable`, it runs the same read through the per-request read-only client on the activation's recorded `canonicalDatabasePath` (`ActiveActivation`, File Map). Because both attempts sit in the same admitted entry, a switch or stop drains the fallback read before it closes the Storage session. The harness runtime only dispatches. The decision comes from the writer's own in-slot answer, never from a flag the runtime reads before the slot, so a closure that happens while the read waits is covered too (G18).
+  - Admission can close by an abandonment (the CNV-B10 (b) close fault), a thrown settlement (U3), or a failed command snapshot. All route the same way: the coordinator acts on any writer refusal of a read.
   - That client sets `PRAGMA busy_timeout = 2000` instead of `timeout: 0` (R2-C4), because read-only is exactly when another process may be writing. A short external commit therefore does not fail the read.
-- In every case, a lock held past the wait gives `ConversationStorageBusy`, which surfaces as `unavailable PROJECT_STORAGE_UNAVAILABLE`, never as broken or empty.
+- In every case, a lock held past the wait gives `ConversationStorageBusy`, which surfaces as `unavailable PROJECT_STORAGE_UNAVAILABLE`, never as broken or empty. Any other read-only client failure (open, read or close) is `ConversationStorageBroken` → `broken PROJECT_STORAGE_BROKEN`. Neither answers an empty conversation.
 
 ### Coordinator admission
 
 - `active-project-coordinator.ts` extracts the synchronous checks of `execute` into one function, `admitActiveWork(request, kind)`. `execute`, `conversationRead` and `conversationSave` all use it.
 - The refusal order is identical. Read-only refuses saves and commands, not reads.
-- Admitted work registers in `admitted` before its first await, so `release` (switch, stop, close) drains it, and a pending lifecycle refuses new work (G8).
+- Admitted work registers in `admitted` before its first await, so `release` (switch and coordinator stop) drains it, and a pending lifecycle refuses new work (G8). `project.close` closes only `project.open` Storage sessions and never enters the coordinator (deviation 6b).
 - An it.each table pins precedence for combined conditions against `execute` (C8).
 
 ### Protocol (version 8) and the result vocabulary
@@ -283,13 +297,13 @@ open / switch / restart --> activate --> (migration-required: S3b upgrade, chain
 
 - **G1** Dedicated Conversation messages, protocol v8. The workspace `conversation.*` contracts and `project.command` stay untouched (§16).
 - **G2** One FIFO slot queue in the writer serializes canonical settlement and Conversation work. Admission is re-checked after acquiring the slot.
-  - Contention (slot, SQLite busy) and body-stage broken outcomes never close admission.
-  - Only an unknown client state (a failed close, or an unfinished transaction) closes writer admission, for both paths. The writer then releases with an abandoned client (G6).
+  - For Conversation work, contention (slot, SQLite busy) and body-stage broken outcomes never close admission. For a settlement, any thrown failure (including SQLite busy or a body error) closes it; only `WriterOwnerBusy` maps to `command-busy`.
+  - Three things close writer admission, for both paths: (1) an unknown client state left by Conversation work (a failed close, or an unfinished transaction), which also abandons the client (G6); (2) any thrown settlement, which does **not** abandon it and keeps the S1 retry-at-release (U3, decisions §29); (3) a failed command snapshot (`snapshotCanonicalCommand`, `canonical-project-writer.ts:199-203`). Paths (1) and (2) close admission inside the slot and refuse work already queued (decisions §32). Path (3) closes it before the command enters the slot, sets no `failed` flag, and does not refuse work already queued, which still runs on a known client.
   - Rejected: a second SQLite client, which would get immediate cross-client `SQLITE_BUSY`; and recovering a broken client in the same session, because its state is unknown.
 - **G3** Tables are declared complete for later additive slices: author `model`, branch parent and fork references, composite keys. C2's data goes in new tables.
 - **G4** Lazy conversation creation on the first save. Two racing first saves leave exactly one conversation and one root branch, through unique indexes plus serialization in the slot.
 - **G5** Identity first, then conflict.
-- **G6** Uncertain commits are reconciled by `saveId` on a separate read-only connection (pc-s1 :68). A known client state keeps the writer usable. An unknown one abandons the client: release skips the fence and repository stages, force-closes the raw client, releases the lease, and leaves the fence to the next activation's abandoned-fence recovery. A new identity is never minted.
+- **G6** Uncertain commits are reconciled by `saveId` on a separate read-only connection (pc-s1 :68). A known client state keeps the writer usable. An unknown client state left by Conversation work abandons the client (a thrown settlement never does, U3): release skips the fence and repository stages, force-closes the raw client, releases the lease, and leaves the fence to the next activation's abandoned-fence recovery. A new identity is never minted.
 - **G7** Busy means SQLite BUSY/LOCKED only, through one exported predicate shared with the registry. Everything else is broken.
 - **G8** Conversation work is refused, not queued, during lifecycle operations, the same as `execute`.
 - **G9** Chained upgrades in the first slice (Pedro, §16 Q1 = A).
@@ -302,6 +316,10 @@ open / switch / restart --> activate --> (migration-required: S3b upgrade, chain
   - An S1 amendment found during S2 review reopens S1 acceptance and rebases S2. A pushed commit is never rewritten; the amendment is a new commit.
   - S2's head is what reaches `main`, so S2's gates include `pnpm test:e2e` and `package:launch-smoke`. The package smoke drives the writer that S2 changes (`package-smoke.mjs:40, :47`).
   - The C1 branch is never run against the real `userData` before S1 and S2 merge.
+- **G17 Read routing after admission closes** (U2, decisions §29). A read-write activation's read goes to the writer first; on `writer-unavailable` it falls back to the per-request read-only client. Saves keep answering `writer-unavailable`. Owned by S3 (CNV-B13). U2's own text names the abandonment; Pedro accepted the extension to a failed settlement and a failed command snapshot (decisions log §36, commit `e59bbb7`). Rejected: refusing reads after an abandonment, which would hide saved messages while the Project is still open.
+- **G18 One owner for admission state** (S2 round 3, decisions §32). Only the writer decides, inside its slot, whether work is admitted. The coordinator's `admitActiveWork` checks only lifecycle, activation and access; it never caches the writer's admission. A failed settlement keeps the S1 retry-at-release and does not abandon the client (U3).
+- **G19 #102 is fixed inside S3**, because S3 already touches `process-bootstrap.ts`. A `project.list` that answered `broken` with a registry-data code (`REGISTRY_CORRUPT`, `REGISTRY_SCHEMA_UNKNOWN`, `REGISTRY_SCHEMA_NEWER`) completed its cleanup: a failed `finally` cleanup (the listing Storage owner's `stop`, `project-listing.ts:226-227`; the registry client's `close`, `registry-database.ts:106-108`) would have replaced that code with `INTERNAL_FAILURE`. Such a listing no longer makes the cleanup unconfirmed. `INTERNAL_FAILURE`, work still running past the budget, and a rejection during the drain stay unconfirmed. Stop then reports every unconfirmed part, including the registry stop, in one `RegistrationCleanupUnconfirmed` error, so the original failure is never masked (`degrade-distinguishes-broken`).
+- **G20 Names** (decisions §30, ADR 0021). New text uses Strand (formerly Feature), Weave and Forger. Existing text, ADR quotes and code identifiers keep the former names until the rename slice. C1 itself names none of these concepts.
 - **G16 Chain order from links** (R2-C5). The chain order and its root are derived from source→target links; the root is the row whose source is no row's target. `started_at` comes from an injected clock and is never checked: equal or backward times never make a correctly linked chain `REGISTRY_CORRUPT` (Pedro, S1 review round 1, U1).
 
 ## Slices
@@ -473,7 +491,7 @@ Fault seams (R2-C9):
     - The separate connection sees the row → `saved`.
     - The next command and save answer `writer-unavailable`. A read still answers, through the per-request read-only client (R2-C3).
     - A command queued behind the failing save answers `writer-unavailable`, not an internal error (R2-C1).
-    - A switch and, in a second run, a `project.close` answer `sourceReleased: true`.
+    - A switch and, in a second run, a `project.close` answer `sourceReleased: true`. (Built as a coordinator stop: deviation 6b, decisions §28.)
     - The next activation is read-write and records an `abandoned-active-fence` recovery.
     - A resend with the same `saveId` answers `replayed`.
   - Oracle, case (c): an exclusive lock held past the read-only client's wait makes the reconciliation read fail → `uncertain`.
@@ -523,14 +541,35 @@ Fault seams (R2-C9):
 
 ### S3 `c1-s3-conversation-protocol` — protocol v8, coordinator admission, runtime
 
-**Behaviour.** The harness answers read and save for the active Project only, with every row of the result table. Switch, stop and close drain admitted work and refuse new work.
+**Behaviour**
+- The harness answers read and save for the active Project only, with every row of the result table. A switch and a coordinator stop drain admitted work and refuse new work. `project.close` is a Storage-level command and is out of this rule (deviation 6b, decisions §28).
+- After the writer's admission closes, reads still return the stored page through the read-only client; saves answer `writer-unavailable` (G17).
+- A failed force-close of an abandoned client reports its own release code (CNV-B36).
+- A broken Project listing whose cleanup completed no longer makes the runtime stop fail; a listing whose cleanup failed still does, with every unconfirmed part named (CNV-B37).
 
-**Seams.** `startHarnessProcessRuntime` over a transport (S3a seam (a)); coordinator unit tests.
+**S2 constraints S3 must honour**
+- The writer stays the one owner of admission, decided inside its slot (G18). S3 adds no admission flag in the coordinator or the runtime.
+- A failed settlement keeps the S1 retry-at-release (U3). S3 never maps its release failure to `WRITER_CLIENT_ABANDON_FAILED`.
+- `WriterOwnerBusy` still maps to `command-busy` with admission open (existing pin).
+
+**Effect (AGENTS.md).** The coordinator's `conversationRead` and `conversationSave` are Effect programs (`Effect.fn`) that call the S2 store programs, exposed to the Promise-based coordinator and runtime through one documented temporary Promise facade, the precedent of the writer's `conversation` facade (`canonical-project-writer.ts:38-48`); `runPromise` appears only in that facade. The per-request client is opened through `withReadOnlyClient` (`acquireRelease`). `admitActiveWork` and the CNV-B37 cleanup rule are plain synchronous functions. The listing adapter's `stop` collects failures as values and throws once at the facade.
+
+**S3 anchors, re-verified at `80228ac`.** `execute` `active-project-coordinator.ts:651-672`; `release` :498-520; `stop` :604-616; `releaseCode` :260-273; switch release-failed :633-643; `runSettlement` `canonical-project-writer.ts:174-193`; `tracked` :153-173; `closeOnce` :137-145; `WriterOwnerBusy` `canonical-command-repository.ts:377`; protocol code list `canonical-project-protocol.ts:141-156`, activation `broken` union :234-251, `switchReleaseDiagnosticSchema` :411-425; `project.close` routing `harness-runtime.ts:267-271`; unrouted registry fallthrough :285-291 and :329-335. The Facts section above keeps its `9aab1cc` anchors for S1 and S2.
+
+**Seams**
+- **(a) Process runtime:** `startHarnessProcessRuntime` over a transport (S3a seam (a)), real worker clients. Used for the plain rows that real data, real locks and real fences produce: `saved`, `replayed`, `conflict`, `SAVE_ID_REUSED`, `stale-writer`, the refusal rows, `read` (null, messages, read-only Project), the real-lock busy rows, CNV-B30 identity, and CNV-B37 integration.
+- **(b) Composed runtime:** `startHarnessRuntime` over a coordinator composed in the test, the precedent of `canonical-writer-recovery-runtime-fixture.ts:162` and `conformance-counter-command.ts:701`. Its writer repositories use the fixture's `faultingClient` (`writerClientFaults`, `writerClientCloses`, `noteSettlementHolds`, `project-storage-upgrade-fixture.ts:65-128`, plus a new `writerClientCalls` counter of `execute` and `transaction` calls), and its read-only paths are injected: reads through the coordinator's `readConversationReadOnly` port, and the save's reconciliation through `openReconciliationClient`, both with a hooked opener (`readOnlyClientOpenHooks`, `conversation-writer-fixture.ts:42`). The `uncertain` row hooks `openReconciliationClient` to release the shared reader and take the exclusive lock at the moment the reconciliation opens, as the CNV-B10 (c) fault does in S2. Used for: storage broken (injected), both closure kinds, the CANTOPEN row, the client-call counts, every held or same-turn row in CNV-B14, the CNV-B13 queued-read rows and the fallback paging row. The `uncertain` row also runs here, in the busy file (it holds a real lock, CNV-B10 (c)). With no `projectRegistration` in this composition, an unrouted command answers `project.registration.result unavailable PROJECT_REGISTRATION_UNAVAILABLE` (`harness-runtime.ts:285-291`).
+- **Unit tests** with fakes: coordinator (CNV-B14 same-turn rows, CNV-B29, B36, B38), canonical application (CNV-B40), runtime (CNV-B39), writer (CNV-B36), registration (CNV-B37).
+- **Test teardown (#102 lesson).** A test that ends with a failed release or an abandoned client asserts the release outcome explicitly. Its teardown collects a cleanup failure and reports it together with the first assertion failure, never instead of it.
 
 **Files**
 - `packages/protocol`: new `project-conversation-protocol.ts`; `protocol.ts` (v8, factories); `index.ts`; the `protocolVersion: 7` pins.
 - The desktop pin: `apps/desktop/src/main/canonical-writer-package-smoke-test-peers.ts:73`.
-- `apps/harness`: `active-project-coordinator.ts`, `harness-runtime.ts`, `canonical-project-application.ts`, `process-bootstrap.ts`.
+- `apps/harness`: `active-project-coordinator.ts` (`admitActiveWork`, `conversationRead` with the G17 fallback, `conversationSave`; `ActiveActivation` records `canonicalDatabasePath` when `acquireWritable` publishes it, for both access variants, so the fallback never narrows a session union; new dependencies: the Conversation ids and clock, a `readConversationReadOnly(input: { canonicalDatabasePath, projectId, after }) → Effect<page, ConversationStorageBusy | ConversationStorageBroken>` port that defaults to `readProjectConversationReadOnly`, and an optional `openReconciliationClient(databasePath) → LocalLibsqlClient` passed to `saveConversationMessage` as its `openReadOnlyClient` (`conversation-save.ts:25`), defaulting to the generation read-only client; the two are separate so a test can hook the save's reconciliation without touching reads), `node-active-project-coordinator.ts` (production wiring of those dependencies), `harness-runtime.ts` (dispatch), `canonical-project-application.ts` (strict decode and request-echo correlation of the two new results, CNV-B40), `process-bootstrap.ts`.
+- `conversation/conversation-store.ts`: `readProjectConversationReadOnly` passes the existing optional `openReadOnlyClient` (:255) through.
+- Deviation 6a (CNV-B36): `packages/protocol/src/canonical-project-protocol.ts` (code list :141-156, activation `broken` union :234-251, `switchReleaseDiagnosticSchema` :411-425) and its test (the `broken` pin and the switch application failure list); `apps/harness/src/canonical-project-writer.ts` (`CanonicalProjectWriterReleaseFailureCode` :28-32, `abandonClient` :285-292).
+- #102 (CNV-B37): `registration/project-registration-preparation.ts` (`trackedListing` :279-291); a new exported `registration/registration-listing.ts` that takes over `registrationListing` from `process-bootstrap.ts:145-157`, with owner, observer and registry ports; the flipped pin in `tests/integration/registration-project-upgrade.integration.test.ts:114-115`.
+- Tests: `tests/integration/project-conversation-runtime.integration.test.ts`; a separate `tests/integration/project-conversation-runtime-busy.integration.test.ts`, added to `apps/harness/vitest.native-long-files.ts`; a composed-runtime fixture beside the existing ones, with a new `conversationWorkHolds` gate next to `noteSettlementHolds` and the `writerClientCalls` counter; `project-storage-upgrade-fixture.ts` exports `faultingClient`, `recordNoteCommand` and `noteAggregateId`, which are module-private today; the fakes that typecheck lists.
 
 **Contracts**
 - **CNV-B12** `encodes conversation messages strictly` → `packages/protocol/src/project-conversation-protocol.test.ts`.
@@ -540,35 +579,100 @@ Fault seams (R2-C9):
     - text of 32768 bytes (multibyte) passes;
     - 32769 bytes, empty text, `" \t\r\n"` and NBSP-only text fail;
     - an extra key, or a row in the wrong status, fails;
-    - a version-7 command → `PROTOCOL_VERSION_UNSUPPORTED`.
-  - Expected red: after scaffolding the exports, the union rejects `project.conversation.save`.
-- **CNV-B13** `maps $outcome through the harness for $op` → `tests/integration/project-conversation-runtime.integration.test.ts`.
-  - An it.each over every harness-produced row of the result table, per op, through the real runtime:
-    - save: `saved`, `replayed`, `conflict`, `SAVE_ID_REUSED`, `uncertain CONVERSATION_SAVE_UNCONFIRMED` (the CNV-B10 (c) fault), storage busy, storage broken, `stale-writer`, `writer-unavailable`, `inactive`, `project-mismatch`, `stale-activation`, `coordinator-unavailable`, `read-only`;
-    - read: `read` with `{ conversation: null }`, `read` with messages, `read` on a read-only Project (the earlier messages), read busy, read broken, `inactive`, `project-mismatch`, `stale-activation`, `coordinator-unavailable`.
-  - Each row is compared with `toEqual` against the protocol map. The busy rows run in native-long.
-  - Expected red: after protocol scaffolding, the runtime does not route the commands. They fall to the registry handler and answer `request.failure HARNESS_INTERNAL_FAILURE` instead of a result (the S3a B26 precedent). The observed red is recorded.
-- **CNV-B14** `drains conversation work on switch and close` (same file).
-  - Oracle:
-    - a save is held at the store, then a switch is sent: the save answers `saved` before the switch releases;
-    - a save sent during the pending switch → `coordinator-unavailable`;
-    - a held read, then a switch: the read answers before the release;
-    - a read sent during the pending switch → `coordinator-unavailable`;
-    - the same holds for `project.close`;
-    - after returning, the read shows the message.
-  - Expected red: the switch releases before the held save answers.
+    - a version-7 command → `PROTOCOL_VERSION_UNSUPPORTED`;
+    - rejected commands (it.each): `after` -1 and 1.5, `expectedRevision` -1 and 1.5, `saveId` `"not-a-uuid"`, a missing `activationId`, a `projectId` that is not a UUID;
+    - accepted edges: `after: 0`, `after: null`, `expectedRevision: 0`;
+    - rejected result rows: a message with `cursor` 0, a negative `revision`, a `nextCursor` that is negative.
+  - Expected red: after scaffolding the exports, the union rejects `project.conversation.save`. The `after`, `expectedRevision`, `saveId` and result-row bound rows are red against a scaffold that types those fields as plain numbers and strings; they are recorded as the first red of the schema refinement. The missing-`activationId` and non-UUID `projectId` rows are guards: any `Struct` scaffold that reuses the branded `ProjectIdSchema` already rejects them.
+- **CNV-B13** `maps $outcome through the harness for $op` → `tests/integration/project-conversation-runtime.integration.test.ts`; the busy rows in `project-conversation-runtime-busy.integration.test.ts` (native-long).
+  - An it.each over every harness-produced row of the result table, per op; the seam column says (a) or (b):
+    - save: `saved` (a), `replayed` (a), `conflict` (a), `SAVE_ID_REUSED` (a), `uncertain CONVERSATION_SAVE_UNCONFIRMED` (b, the CNV-B10 (c) fault, busy file, native-long: about 8.7 s at the writer seam in S2), storage busy (a, real lock, native-long), storage broken (b, injected `SQLITE_IOERR`), `stale-writer` (a, moved `writer_fence` row), `writer-unavailable` (b), `inactive`, `project-mismatch`, `stale-activation`, `coordinator-unavailable`, `read-only` (a);
+    - read: `read` with `{ conversation: null }`, `read` with messages, `read` on a read-only Project (the earlier messages), read busy (a, native-long), read broken (b), `inactive`, `project-mismatch`, `stale-activation`, `coordinator-unavailable` (a).
+  - Each row is compared with `toEqual` against the protocol map.
+  - **Paging row** (the `after` pass-through): 101 messages seeded by raw SQL; `after: null` → 100 messages and `nextCursor: 100`; `after: 100` → 1 message and `nextCursor: null`. Run once through the writer (seam (a)) and once through the G17 fallback after a failed-settlement closure (seam (b)).
+  - **Rows after the writer's admission closes (R2-C3; U2, decisions §29), seam (b):** after the writer's admission closes, by an abandonment (B10(b) close fault) or a failed settlement, `project.conversation.read` answers through the per-request read-only client: the stored page as before, a save answers writer-unavailable, and a read-only client failure answers busy or broken, never an empty conversation.
+    - Closure kinds (it.each):
+      - **abandonment:** the CNV-B10 (b) fault: a closing save whose commit is acknowledged and whose close fails (`writerClientFaults.push({ match: /^close$/, error })`); it answers `saved` with `replayed: false`, which the row asserts;
+      - **failed settlement:** `writerClientFaults.push({ match: /^close$/, error })` before a fixture note `project.command` (`recordNoteCommand`, type `fixture.record-note`, `project-storage-upgrade-fixture.ts:123-148`, with `noteAggregateId`). The one-shot fault leaves the settlement transaction unfinished (`canonical-command-repository.ts:354-360`); the settlement throws and closes admission, and the S1 retry-at-release closes it at release (U3).
+    - Setup: one message saved and its page read (P1), then the closure. Expected page, per kind:
+      - failed settlement: the read `toEqual`s P1 (the command writes no Conversation row);
+      - abandonment: the read `toEqual`s P1 plus the closing save's message (`conversationMessageId`, cursor and `savedAt` from its `saved` answer), with `revision` P1 + 1 and `nextCursor: null`.
+    - Oracles, per closure kind:
+      - the read answers the expected page above;
+      - a further save with a new `saveId` → `writer-unavailable` (`WRITER_UNAVAILABLE`, "Saving is unavailable until the Project is reopened.", retryable false);
+      - with an exclusive lock held past the read-only client's 2 s wait → `unavailable PROJECT_STORAGE_UNAVAILABLE`, retryable true (busy file, native-long);
+      - with `SQLITE_CANTOPEN` from the injected read-only opener → `broken PROJECT_STORAGE_BROKEN`;
+      - in no case `read` with `{ conversation: null }`;
+      - `writerClientCalls` (the writer client's `execute` and `transaction` calls) does not change during the reads: the reads never use the writer's client; `writerClientCloses.count` does not change either (no force-close).
+    - Expected red: with the plain rows green, the minimal scaffold maps the writer's refusal of a read to `broken PROJECT_STORAGE_BROKEN` (the result table has no `writer-unavailable` row for reads). The test observes that row instead of the stored page.
+  - **Queued-read rows (G17/G18, the round-3 lesson), seam (b), per closure kind:** the closing save (held by `conversationWorkHolds`) or the closing settlement (held by `noteSettlementHolds`) holds the slot; a read is sent and queues behind it; the hold is released and the closure happens. Oracle: the read answers the expected page of its closure kind (above) through the read-only client, never `writer-unavailable`, `broken` or null.
+    - Expected red: none — guard. It passes once the plain closure rows pass, because the routing uses the writer's in-slot answer. It is bound by a recorded mutation: the coordinator decides the fallback from a closure check made **before** entering the writer slot; the queued read then answers `broken PROJECT_STORAGE_BROKEN`, and the row must fail.
+  - Expected red (plain rows): after protocol scaffolding, the runtime does not route the commands. Through seam (a) they fall to the registry handler and answer `request.failure HARNESS_INTERNAL_FAILURE` (`harness-runtime.ts:329-335`, the S3a B26 precedent); through seam (b) they answer `project.registration.result unavailable PROJECT_REGISTRATION_UNAVAILABLE`. The observed reds are recorded.
+  - Durations: every busy row records its idle time, as S2 did (#94); each must stay under the 15 s per-test budget, and any timeout goes to the coordinator before a rerun.
+- **CNV-B14** `drains conversation work on switch and stop` (deviation 6b extended to S3, decisions §36: switch and coordinator stop, never `project.close`).
+  - **Build order.** Phase 1 comes after the plain CNV-B13 rows and before CNV-B38; phase 2 comes after CNV-B38 and the CNV-B13 closure rows are green. At the plain-B13 stage, saves and writer reads are registered in `admitted` (they go through `admitActiveWork` like `execute`); read-only reads are not yet registered (the named scaffold).
+  - **Phase 1, read-only variants (red first).**
+    - Same-turn row → `src/active-project-coordinator.test.ts`, with a fake writer and a fake `readConversationReadOnly` port whose answers are gated: in one synchronous turn, `conversationRead` on a read-only activation, then `switchProject` or `stop`. Oracle: the release (the session's `close`) is called only after the gate opens; the read answers its page; the switch result or stop resolution comes after it. Expected red: the release is called while the gate is closed (the scaffold does not register the read).
+    - Same-turn save row (same file): `conversationSave`, then `switchProject` or `stop` in the same turn; same oracle with the fake writer's `close`. Expected red: none — guard (saves are registered from the plain-B13 stage).
+    - Per-request read row → runtime file, seam (b): on a read-only activation, a read is held in the per-request client; the gate sits in the hooked opener's wrapper, on the client's first `execute`, before any statement runs, so no SHARED lock blocks the target activation. Then a switch, or a coordinator stop, is sent. Oracle: the read answers its page first; the transport's `project.switch.result` is sent, or the stop promise resolves, only after that; a save or read sent during the pending switch or stop → `coordinator-unavailable`; after returning to the Project, the read shows the message. Expected red: `project.switch.result` (or the stop resolution) is recorded while the gated read is still held.
+  - **Phase 2, fallback variants (guards).**
+    - Same-turn fallback row (coordinator unit file): the fake writer answers `writer-unavailable`, `conversationRead` falls back to the gated port, then `switchProject` or `stop` in the same turn; same oracle.
+    - Per-request read row after a failed-settlement closure (seam (b)): as the phase-1 row, on a read-write activation whose admission closed by the failed-settlement injection of CNV-B13.
+    - Expected red: none — guards, since CNV-B38 already registers the fallback inside the admitted entry. Bound by a recorded mutation that registers Conversation work in `admitted` after its first await; the same-turn fallback row must fail under it.
+  - All same-turn rows, both phases, are bound by that recorded mutation; it is the only window where "registers in `admitted` before its first await" changes behaviour.
+  - **Writer-held rows** → seam (b): a save held by `conversationWorkHolds`, or a held writer read, then a switch or a stop; the work answers first.
+    - Expected red: none — pin over two redundant drains, the coordinator's `admitted` and S2's writer `closeOnce` (`canonical-project-writer.ts:137-145`). Bound by the combined recorded mutation (registration after the first await **and** `closeOnce` ignoring `conversations`): `releaseFence` then meets the held transaction and the switch answers `release-failed`.
 - **CNV-B15** `keeps the canonical command path unchanged`: the existing canonical command and coordinator suites run unchanged.
   - Expected red: none — pin.
 - **CNV-B29** `refuses $kind with $expected when lifecycle=$pending, state=$state, project=$project, activation=$activation, access=$access` → `src/active-project-coordinator.test.ts`.
   - Oracle: an it.each table of combined conditions (pending lifecycle × state × project × activation × access). For every row, `execute`, `conversationSave` and `conversationRead` give the same status, except that `conversationRead` is not refused for read-only access.
-  - Expected red: `conversationSave` does not exist; once it does, it differs for read-only combined with a mismatch.
-- **CNV-B30** `keeps message identity after reopen` (runtime file).
+  - Expected red: `conversationSave` and `conversationRead` do not exist (a typed missing-method failure after scaffolding the interface). Once `admitActiveWork` is shared, the table is a guard, bound by a recorded mutation: in `admitActiveWork`, the read-only check runs before the Project-match check; the read-only × mismatch rows must then fail.
+- **CNV-B30** `keeps message identity after reopen` (runtime file, seam (a)).
   - Oracle: the messages read after a switch and back, and after a new runtime on the same root, `toEqual` the originals (`conversationMessageId`, cursor, text, `savedAt`).
   - Expected red: none — composition guard, like CNV-B19. It cannot pass at base, and passes once B13 is green; this is recorded.
+- **CNV-B36** `fails release with the abandon code when the force-close fails` → `src/canonical-project-writer.test.ts`, `src/active-project-coordinator.test.ts` and `packages/protocol/src/canonical-project-protocol.test.ts` (deviation 6a, decisions §28).
+  - Oracle:
+    - writer: an abandoned client whose `abandonClient` rejects → the release error has `code: "WRITER_CLIENT_ABANDON_FAILED"` directly, no longer `WRITER_REPOSITORY_CLOSE_FAILED` with a wrapped cause; a second release attempt retries only the abandon stage, then releases the lease;
+    - coordinator: a fake writer whose `close` rejects with `CanonicalProjectWriterReleaseError("WRITER_CLIENT_ABANDON_FAILED")`; a switch away answers, after `decodeStrict(CanonicalProjectSwitchResultSchema)`, `{ status: "release-failed", request, diagnostic: { code: "WRITER_CLIENT_ABANDON_FAILED", message: "Project activation resources could not be released.", retryable: true } }`;
+    - protocol: the code is in `canonicalProjectActivationDiagnosticCodes`, in the activation `broken` union (with a `["broken", "WRITER_CLIENT_ABANDON_FAILED"]` pin row) and in `switchReleaseDiagnosticSchema`'s retryable group; a version-8 switch reply with it decodes, and with `retryable: false` it fails;
+    - U3 (writer test): a settlement that throws, then `releaseFence` rejects → the first `close` rejects with `code: "WRITER_FENCE_RELEASE_FAILED"` after calling only `releaseFence`; a second `close` calls `releaseFence`, the repository `close` and `lease.release`, and resolves; the recorded call list is `["fence", "fence", "repository", "lease"]`, the S1 precedent (`canonical-project-writer.test.ts:419-485`); `abandonClient` is never called. Expected red: none — guard; at the coordinator the same case answers `{ code: "WRITER_FENCE_RELEASE_FAILED", retryable: true }`.
+  - Build order: the writer row, then the coordinator row, then the protocol rows. Expected red: the S2 pin (T2, `fails release with the abandon cause …`) observes `WRITER_REPOSITORY_CLOSE_FAILED`, and that assertion changes in this slice; the coordinator row, written before the protocol change, throws at `decodeStrict` because the switch schema rejects the code; the protocol rows fail to decode before the vocabulary changes.
+- **CNV-B37** `stops cleanly after a broken listing whose cleanup completed` (#102, G19).
+  - Unit, preparation owner → a new `src/registration/project-registration-preparation.test.ts` (no unit test exists for this owner; the listing is faked through its `listing` port, the registry through a stub). The drain budget uses fake timers (`vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })`, precedent `registration-bootstrap-guards.integration.test.ts:320`):
+    - a listing that resolves `broken` with each registry-data code (`REGISTRY_CORRUPT`, `REGISTRY_SCHEMA_UNKNOWN`, `REGISTRY_SCHEMA_NEWER`) → `close()` answers `{ status: "closed" }`. Red: `{ status: "broken", code: "INTERNAL_FAILURE" }` (`trackedListing` marks any broken result, :287);
+    - a listing that resolves `{ status: "broken", code: "INTERNAL_FAILURE" }` (its own cleanup failed, `project-listing.ts:226-235`) → `close()` answers `{ status: "broken", code: "INTERNAL_FAILURE" }`. Pin;
+    - a listing still running past the cleanup budget → `{ status: "broken", code: "INTERNAL_FAILURE" }`. Pin;
+    - a listing that rejects while `close()` drains it → `{ status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" }`. Pin;
+    - a listing that rejected before `close()` → `{ status: "closed" }`. Pin of today's behaviour: the real listing never rejects (`listRegisteredProjects` maps every error, `project-listing.ts:234-236`), so no change is made.
+  - Unit, listing adapter → a new `src/registration/registration-listing.test.ts`, with owner, observer and registry fakes:
+    - observer unconfirmed and listing unconfirmed → `stop()` rejects with one `RegistrationCleanupUnconfirmed` whose `parts` are `["observer", "listing"]`, with the message "Project registration cleanup is unconfirmed: observer, listing.";
+    - the registry stop rejects as well → `parts` are `["registry", "observer", "listing"]`; the registry failure is the error's `cause`;
+    - only the listing unconfirmed → `parts: ["listing"]`, message "Project registration cleanup is unconfirmed: listing.";
+    - only the registry stop rejects → `parts: ["registry"]`, the registry failure as `cause`, message "Project registration cleanup is unconfirmed: registry.";
+    - all three confirmed → `stop()` resolves.
+    - Red: today `stop` throws only "Project registration observer cleanup is unconfirmed.", and a registry stop rejection hides both checks (`process-bootstrap.ts:150-155`).
+  - Integration, seam (a): the pin at `registration-project-upgrade.integration.test.ts:114-115` flips: `list()` still answers `REGISTRY_CORRUPT`, and `session.dispose()` resolves. Red: the dispose rejects with "Project listing cleanup is unconfirmed." (`process-bootstrap.ts:155`).
+- **CNV-B38** `routes a refused read to the read-only reader` → `src/active-project-coordinator.test.ts`, with a fake writer and a fake `readConversationReadOnly` port.
+  - Oracle:
+    - the writer answers `writer-unavailable` for a read → the port is called once with `{ canonicalDatabasePath, projectId, after }` equal to the activation's path and the request's values, including a row with `after: 100`; its page is returned;
+    - the writer answers a page → the port is not called;
+    - a read-only activation's read → the port is called directly, with the same arguments;
+    - a save answered `writer-unavailable` is returned as is and never rerouted;
+    - the port fails with `ConversationStorageBusy` → `unavailable PROJECT_STORAGE_UNAVAILABLE`; with `ConversationStorageBroken` → `broken PROJECT_STORAGE_BROKEN`.
+  - Expected red: with the CNV-B13 scaffold, the refused read returns `broken PROJECT_STORAGE_BROKEN` and the port is never called.
+- **CNV-B39** `dispatches conversation commands to the coordinator` → `src/harness-runtime.test.ts`.
+  - Oracle: `project.conversation.read` and `project.conversation.save` reach `conversationRead` and `conversationSave` once each, with the decoded payload, and their results are sent as the matching v8 result events; a malformed payload gets the runtime's existing strict-decode failure answer without calling the coordinator.
+  - Expected red: the commands fall to the registry handler (the CNV-B13 plain-row red).
+- **CNV-B40** `rejects a foreign conversation result` → `src/canonical-project-application.test.ts`.
+  - Oracle: a coordinator conversation result whose `request` is not the sent request, or that has an extra key → a sanitised `CanonicalProjectApplicationError` with no `cause` and `name` as its only own key, as the existing methods pin; an owner exception, a synchronous throw or a rejection, propagates unchanged (`rejects.toBe(sentinel)`), as the existing methods do.
+  - Expected red: the scaffolded wrappers pass the coordinator result through unchecked, so the foreign result is returned.
 
 **Risks**
 - Protocol pin churn (S3a precedent: 10 files plus the desktop pin).
 - The admission refactor touches `execute`.
+- The read fallback must not run on the abandoned client, and must not add an admission check outside the writer (G18).
+- Adding methods to `ActiveProjectCoordinator` (aliased as `CanonicalProjectApplication`, `canonical-project-application.ts:15`) breaks every `satisfies ActiveProjectCoordinator` fake, e.g. `canonical-project-application.test.ts:87`; `pnpm typecheck` lists them, and they are updated in this slice.
+- CNV-B37 changes a registration cleanup rule; the unit cases keep the genuinely unconfirmed paths unconfirmed.
 
 ### S4 `c1-s4-conversation-window` — bridge, IPC, preload, renderer
 
@@ -673,7 +777,7 @@ Fault seams (R2-C9):
 **Mutation**, with the coordinator's go-ahead (R2-C13):
 - S1: the chain rule and the filesystem agreement, through `stryker.project-storage.config.json`;
 - S2: the store, the slot queue and `sqlite-busy`, through the new `stryker.conversation.config.json`;
-- S3: the protocol module and `admitActiveWork`, through the root `stryker.config.json` (unit tests).
+- S3: through the root `stryker.config.json` (unit tests). Its `mutate` list gains, with Stryker's line-range form recorded at build time: `project-conversation-protocol.ts` (whole new file), `canonical-project-protocol.ts` (the CNV-B36 ranges), `active-project-coordinator.ts` (`admitActiveWork`, `conversationRead`, `conversationSave` and the G17 routing), `canonical-project-application.ts` (the two new wrappers), `registration/project-registration-preparation.ts` (only the code CNV-B37 drives, at `80228ac`: `pendingListing`, `listProjects`, `cleanupUnconfirmed` and `drainPreparations` :225-264, `trackedListing` :279-292, `close` :352-367) and the new `registration/registration-listing.ts`; `harness-runtime.ts` is already listed. Each mutated range has a unit oracle: CNV-B12, CNV-B14 same-turn rows, CNV-B29, CNV-B36, CNV-B37, CNV-B38, CNV-B39 and CNV-B40. The root config is incremental, so the final S3 run is `pnpm exec stryker run --force` on the final candidate, once, with per-file scores recorded for every S3 file. The CNV-B36 writer change is mutated by `stryker.conversation.config.json`, which already lists `canonical-project-writer.ts`; the final S3 candidate also runs that config once (it is not incremental), with per-file scores recorded.
 - `WriterOwnerBusy` is a defensive branch, pinned by its writer-level test.
 
 **Push gate:** `pnpm check:deep`.
@@ -694,6 +798,10 @@ Fault seams (R2-C9):
 | Distinct desktop diagnostics (upgrade-window design :339-350) | Re-deferred. Trigger: a real occurrence. |
 | `process-entry` → desktop log link, proven hop by hop (decisions §8 :84) | Carried. This design is the C1 gate, so there is no separate gate review. Owner: the coordinator. Trigger: the first missing upgrade log line in a real run, or S5's e2e if it reads the desktop log. |
 | Generation-cap semantics (node-adapters :155) | Re-deferred. Trigger: retention policy work (nothing is deleted today). |
+| S2 deviation 6a: the dedicated `WRITER_CLIENT_ABANDON_FAILED` code (decisions §28) | Done in S3 (CNV-B36). |
+| U2: read routing after the writer's admission closes (decisions §29) | Done in S3 (CNV-B13, G17). |
+| U3: settlement close failures keep the S1 retry-at-release (decisions §29) | Accepted design-vs-result gap; honoured in S3 (G18, CNV-B36 last oracle). |
+| #102: listing cleanup masks the real failure | Done in S3 (CNV-B37, G19). |
 
 ## Deferred Work
 
@@ -725,7 +833,86 @@ Request: the coordinator hand-off of 2026-10-09, after C1-0 landed on `origin/ma
 - **Round 1** (coordinator, three reviewers): failed. The findings are in `c1-intent-round1.md` and are resolved below.
 - **Round 2** (the last; revision 2, SHA-256 `77b62e02…`): failed, with fixable findings, in `c1-intent-round2.md`.
 - **Pedro's decision** (decisions log `679b9ae`): the designer writes revision 3, the coordinator checks every item, and there is no third reviewer round. Pedro then approves.
-- Revision 3 therefore has no independent reviewer pass.
+- Revision 3 therefore has no independent reviewer pass. Pedro approved it on 2026-10-09; S1 and S2 were built from it and merged in `ba4e15b`.
+- **Revision 4** (2026-10-10, for S3 before #107; content_hash `8b7aa9ee…`): changes only S3, the read path, G2/G6 wording and G17–G20, from Pedro's S2 decisions (§28, §29, §32) and #102. Rigorous lane: it needs an independent intent review of slice `c1-s3-conversation-protocol` before Pedro approves. Status `in-review` until then.
+
+- **Revision-4 intent review, round 1** (2026-10-10; slice-verifier, artifact-code-reviewer and artifact-coverage-reviewer on `8b7aa9ee…`, every finding adversarially verified by claim-verifier): **failed**, all three. 6 blockers and the concerns below, all verified or weakened, one falsified (code F5). Resolved in revision 4.1 (table below). Round 2 is the last (at most two rounds); after it Pedro decides.
+
+- **Revision-4.1 intent review, round 2** (the last; `e2dffc1a…`): **failed**, all three. Every round-1 item was confirmed resolved; 3 new verified test-contract blockers and about 10 concerns. Evidence: `.rpiv/artifacts/evidence/2026-10-10_c1-s3-intent-review-1.md` and `-2.md`. Pedro chose option A (decisions log §36): revision 4.2 fixes every item, then one verifier limited to these fixes (as in §32), then Pedro approves.
+
+### Revision-4 changes
+| Source | Change |
+|---|---|
+| U2 (§29) | CNV-B13 rows after admission closes (abandonment and failed settlement); read path routing (G17). |
+| Deviation 6a (§28) | G6 note; CNV-B36 adds `WRITER_CLIENT_ABANDON_FAILED` to the v8 release vocabulary. |
+| U3 (§29) | G2 bullet; G18; CNV-B36 keeps settlement release codes. |
+| Round 3 fix B (§32) | G2 bullet "admission closes inside the slot"; G18; S3 adds no admission state. |
+| #102 | G19; CNV-B37; files and the flipped pin. |
+| Names (§30) | G20; new text only. |
+
+### Revision-4 round-1 resolution
+| Finding (verified) | Resolution in 4.1 |
+|---|---|
+| slice B1, code F2, coverage B14-CLOSE: `project.close` never reaches the coordinator (6b not folded in) | `project.close` removed from S3 Behaviour, CNV-B14, the admission section and G6 :190; the drain is proven on switch and coordinator stop, as 6b did for S2. No routing change. |
+| slice B2, code F3: G19 would clear real listing cleanup failures | G19 narrowed: only the three registry-data codes count as completed, because a failed `finally` cleanup (`project-listing.ts:226-227`, `registry-database.ts:106-108`) replaces them with `INTERNAL_FAILURE`, which stays unconfirmed. New CNV-B37 oracle for `INTERNAL_FAILURE`. |
+| slice C3, code F1, coverage SEAM: the process seam cannot inject faults or holds | Two named seams: (a) process runtime for plain, identity and real-lock rows; (b) `startHarnessRuntime` over a composed coordinator for fault and hold rows. Row-to-seam map; seam (b) red stated. |
+| coverage READ-RACE, slice S5, code F9: no oracle for a closure while the read waits | CNV-B13 queued-read rows per closure kind, as a guard bound by a recorded pre-slot-routing mutation. |
+| slice C6/C7, code F4/F6, coverage B37-REJECT / B37-STOP-SEAM | CNV-B37 rejected cases split by timing with today's exact values as pins; the stop rule moves to the exported `registration/registration-listing.ts` with its own unit file, one `RegistrationCleanupUnconfirmed` error, registry stop included. |
+| slice C1, code F8: the fallback owner and drain | The coordinator owns G17 inside one admitted registration; files and the opener dependency added; CNV-B14 fallback-read drain row. |
+| slice C2: the closure red cannot be observed | Red restated against a named scaffold (`broken PROJECT_STORAGE_BROKEN`). |
+| slice C4, code F10, coverage B36-RUNTIME | CNV-B36 coordinator oracle in `active-project-coordinator.test.ts` with the full diagnostic; red stated. |
+| slice C5, code F7: G2/G6 still pre-U3 | Both reworded. |
+| coverage B14-RED | CNV-B14 red moved to the read held in the per-request client; writer-held rows recorded as guards bound by a mutation. |
+| slice S2, coverage NATIVE-LONG | Separate native-long runtime file, registered in `vitest.native-long-files.ts`, durations recorded. |
+| code F11: Effect rules | Stated for the coordinator methods, `admitActiveWork` and the listing adapter. |
+| code F14, coverage MUTATION | CNV-B38 (routing unit) and CNV-B39 (dispatch unit); mutate list widened. |
+| slice S1, code F12 | The code also joins the activation `broken` union and its test pin; anchors corrected. |
+| slice S3, coverage B29-RED | CNV-B29 marked as a guard bound by a named mutation. |
+| slice S4: stale anchors | "S3 anchors at `80228ac`" list added to S3. |
+| code F13 (weakened): fakes | Risk line: typecheck lists every `satisfies ActiveProjectCoordinator` fake. |
+| coverage 102-TEST-CLEANUP (weakened) | S3 test-teardown rule added. |
+| code F5 (falsified) | No change; CNV-B37 still names its time control (fake timers, precedent `registration-bootstrap-guards.integration.test.ts:320`). |
+| slice R0: packet identity | Round 2 gets `workflow_path` and the stamped content_hash. |
+
+### Revision-4.1 round-2 resolution
+| Finding (verified) | Resolution in 4.2 |
+|---|---|
+| slice B1, code 01, coverage B13-ABANDON-PAGE: the abandonment closure commits the closing save | Expected page per kind: failed settlement = P1; abandonment = P1 plus the closing message, revision + 1. The closing save's `saved, replayed: false` is asserted; "a further save". Queued-read rows use the same per-kind page. |
+| coverage B12-FIELD-BOUNDS | CNV-B12 rejection rows for `after`, `expectedRevision`, `saveId`, `activationId`, `projectId`; accepted edges; bad result rows. |
+| coverage B14-SAME-TURN, slice C1 | Same-turn coordinator rows bound by the "register after first await" mutation; writer-held rows relabelled as pins over two drains, bound by the combined mutation. |
+| slice C2, code 05, coverage B14-RED | Per-request read rows: build order (after plain B13, before B38), the scaffold named, the gate placed before any statement, and the red is the ordering observation on `project.switch.result` or the stop resolution. |
+| slice C3, coverage UNCERTAIN-NATIVE-LONG | The `uncertain` row moves to the native-long busy file. |
+| slice C4, code 08 | G2 and the writer section limit the contention clause to Conversation work; a thrown settlement (including BUSY) and a snapshot failure close admission; routing acts on any writer refusal. |
+| slice C5, code 02 | A `readConversationReadOnly` port in the File Map; CNV-B38 states its exact arguments. |
+| slice C6 (weakened): identity | `git diff --name-only 80228ac 7a1b041` = the decisions log only; recorded in the inputs. |
+| slice S1, code 07 | The failed-settlement injection is the seam (b) `writerClientFaults` close fault before a fixture note command. |
+| slice S2, code 04, coverage B36-U3 | CNV-B36 U3 writer row with the exact code `WRITER_FENCE_RELEASE_FAILED`, the stages, no abandon call; guard. |
+| slice S3: U2 covers abandonment only | Pedro accepted the extension to a failed settlement and snapshot (§36, `e59bbb7`); G17 cites it. |
+| code 03, coverage B37-SINGLE-PART | Adapter rows for listing-only and registry-only failures. |
+| code 06 | CNV-B40 for the canonical application wrappers; added to the mutate scope. |
+| code 09 (weakened) | `ActiveActivation` records `canonicalDatabasePath`. |
+| code 10 | CNV-B36 build order stated. |
+| coverage MUTATION-PREPARATION-SCOPE | Line-range mutate entries; per-file scores. |
+| coverage MUTATION-INCREMENTAL | Final S3 run is `pnpm exec stryker run --force`, once, on the final candidate. |
+| coverage AFTER-PASSTHROUGH | CNV-B38 checks `{ canonicalDatabasePath, projectId, after }` incl. `after: 100`; CNV-B13 paging row with 101 messages, through the writer and the fallback. |
+| coverage B13-CLOSES-PROXY | `writerClientCalls` counts `execute` and `transaction` calls; the close count keeps its narrower meaning. |
+| slice S4 (falsified) | No change beyond the line-range scope. |
+
+### Revision-4.2 verification resolution
+Source: `.rpiv/artifacts/evidence/2026-10-10_c1-s3-rev42-verification.md` (one bounded verifier on `882180ce…`, every finding checked by claim-verifier; no blockers). Pedro chose to apply every finding as revision 4.3; the coordinator checks each item, with no new review agents. Line numbers are in this revision.
+
+| Finding id | Change | Lines |
+|---|---|---|
+| B14-ORDER (concern) | CNV-B14 split into phase 1 (read-only variants, red first, before CNV-B38) and phase 2 (fallback variants, guards, after CNV-B38 and the closure rows); the registration state of saves and writer reads at the plain-B13 stage stated; the same-turn read-only row is red, the same-turn save row a guard. | :613-622 |
+| SEAM-B-RECONCILE-OPENER (concern) | New optional coordinator dependency `openReconciliationClient`, passed to `saveConversationMessage` as its `openReadOnlyClient` and wired in `node-active-project-coordinator.ts`; seam (b) hooks it for the `uncertain` row. | :568, :561 |
+| B40-OWNER-EXCEPTION (concern) | CNV-B40 oracle: the invalid-result error is sanitised with no `cause`; an owner exception propagates unchanged, as the existing methods do. | :667 |
+| PREP-RANGE (concern) | Preparation mutate ranges narrowed to :225-264, :279-292 and :352-367 at `80228ac`. | :780 |
+| G2-THREE-PATHS (suggestion) | G2 names three closure paths; the snapshot path closes admission before the slot and does not refuse queued work. | :301 |
+| B36-U3-STAGES (suggestion) | Exact calls across two closes, `["fence", "fence", "repository", "lease"]`, S1 precedent `canonical-project-writer.test.ts:419-485`. | :638 |
+| B12-RED-LABELS (suggestion) | Missing `activationId` and non-UUID `projectId` rows marked as guards. | :586 |
+| TEXT-RESIDUES (suggestion) | Read path cites the recorded `canonicalDatabasePath`; the note command is `recordNoteCommand` (:123-148); the fixture exports `faultingClient`, `recordNoteCommand` and `noteAggregateId`. | :202, :596, :572 |
+| MUTATION-RUNS (suggestion) | The final S3 candidate also runs `stryker.conversation.config.json` once; CNV-B12 joins the oracle list. | :780 |
+| Partly-resolved rows (slice C2/code 05/B14-RED; slice C4/code 08; code 06; MUTATION-PREPARATION-SCOPE) | Closed by B14-ORDER, G2-THREE-PATHS, B40-OWNER-EXCEPTION and PREP-RANGE above. | as above |
 
 ### Round-1 resolution
 
@@ -786,5 +973,6 @@ Request: the coordinator hand-off of 2026-10-09, after C1-0 landed on `origin/ma
 - `.rpiv/artifacts/designs/2026-10-05_20-37-14_project-database-staged-upgrade.md`
 - `.rpiv/artifacts/designs/2026-10-06_18-48-25_upgrade-window.md`
 - `docs/adr/0004-canonical-board-index.md`, `0005-storage-lifecycle-and-recovery.md`, `0006-physical-persistence-layout.md`, `0009-provider-neutral-agent-runtime-and-turn-contracts.md` (Amendment 1)
-- GitHub issues #92, #93
+- GitHub issues #92, #93, #102, #107
+- `.rpiv/artifacts/evidence/2026-10-09_c1-s2-tdd-evidence.md`; decisions log at `59a8d9b` (§28–§32)
 - `.rpiv/decisions/degrade-distinguishes-broken.md`, `.rpiv/decisions/shared-vocab-union.md`
