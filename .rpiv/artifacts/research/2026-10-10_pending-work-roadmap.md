@@ -32,7 +32,7 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review. 
 1. **Done 2026-10-10:** C1 S1 + S2 squash-merged to local main as `ba4e15b` after review rounds 1-2 and a user-approved bounded round 3 (DL §32); final-head proof on ac6569c. The real `userData` was backed up first to `%APPDATA%SlopStop-backup-2026-10-10` (67 files, hashes verified).
 2. **Documentation consistency:** done on 2026-10-10 (d601e5b section-7 corrections, e44236d Strand/Weave sweep; prototypes and Figma by the ui-ux agent). Remaining: the #1 map paragraph.
 3. **GitHub issues** for untracked items (see "Issues created").
-4. **Push main** after the merge, once its gates pass (the last push failed at launch-smoke).
+4. **Done 2026-10-10:** main pushed (origin/main 7a1b041) on the second attempt; the first failed on #94 registration timeouts under load (push-main-7), the retry on an idle machine passed (push-main-8). The C1 branch and worktree were deleted.
 5. **In parallel with phases 0-1: #94** timeouts under load [S2-S5 all need e2e and launch-smoke runs].
 
 ### Phase 1 — finish Conversation C1
