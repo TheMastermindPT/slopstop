@@ -29,7 +29,7 @@ last_updated_by: coordenador-claude
 Revision 2 (2026-10-10), after an adversarial completeness and ordering review. Each phase starts when the previous one is done unless marked "in parallel"; reasons are in brackets. Sections 3-7 hold the detail and sources. ADR line numbers refer to the files after commits d601e5b and e44236d.
 
 ### Phase 0 — now (in progress)
-1. **C1 S2 round-1 fixes** (DL §29) → heavy runs → candidate review round 2 (the last) → user merge decision → **S1 + S2 squash merge** (G15). **Before the merge:** back up the real `userData`, because merged main auto-upgrades the user's real Projects (C1D:711).
+1. **Done 2026-10-10:** C1 S1 + S2 squash-merged to local main as `ba4e15b` after review rounds 1-2 and a user-approved bounded round 3 (DL §32); final-head proof on ac6569c. The real `userData` was backed up first to `%APPDATA%SlopStop-backup-2026-10-10` (67 files, hashes verified).
 2. **Documentation consistency:** done on 2026-10-10 (d601e5b section-7 corrections, e44236d Strand/Weave sweep; prototypes and Figma by the ui-ux agent). Remaining: the #1 map paragraph.
 3. **GitHub issues** for untracked items (see "Issues created").
 4. **Push main** after the merge, once its gates pass (the last push failed at launch-smoke).
