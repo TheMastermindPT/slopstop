@@ -11,6 +11,14 @@
 
 This ADR uses "Feature", the former name of **Strand** (decisions log §30; see `CONTEXT.md` Former Names). The two names denote the same concept; this note changes no decision.
 
+## Note (2026-10-10): v1 scope decisions
+
+The user decided (FRD `.rpiv/artifacts/discover/2026-10-10_00-59-10_v1-scope-deferred-decisions.md`; decisions log §31):
+- Dialogue stays pair-only: one recipient per message, two participants per dialogue. One agent may hold several pair dialogues at once, each with its own subject, limit and closing state.
+- The provisional default for messages per agent per dialogue is **12** (replaces 6 in the Provisional defaults table), still visible and editable in the Project profile.
+- The closing state is a mandatory, fixed-format field declared by each agent and validated by the application; a missing or invalid field refuses the message. The application never infers it from free text.
+- Phase 2 (cross-Waypoint dialogue through the Supervisor, with the Supervisor coordination budget) is in v1. Its mechanics across Runs at different epochs are left to design.
+
 ## Context
 
 ADR 0007 makes one logical Waypoint parent the supervisor of each Run and Workers the executors of single Delegation tasks. ADR 0009 forbids Workers from creating, joining or coordinating one another, and gives each agent its own Turn Machine and Invocation context record. No construct lets one agent send content to another except fan-in results, Finding remediation handoffs (ADR 0014) and Task-input snapshots (ADR 0015).

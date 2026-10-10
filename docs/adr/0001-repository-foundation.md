@@ -131,3 +131,10 @@ This note records later decisions so the text above does not mislead readers. It
 
 - SQL client: the 2026-10-03 amendment's statement that the SQL client choice is undecided is superseded by the 2026-10-05 Persistence amendment. Drizzle generates the SQL migrations, and Node's built-in `node:sqlite` inside the harness database worker runs them and every query.
 - Visual direction: the provisional technical-cartography direction under Documentation And Visual Foundation is superseded. The user approved the Ragnarok brand identity on 2026-10-09; the brand commitments live in `PRODUCT.md` (Brand Commitments) and the exact visual values and the Seixo component kit live in `DESIGN.md`. As `PRODUCT.md` states, layouts and the foundation shell stay provisional and cheap to replace until the working-screen design is approved.
+
+## Amendment 2026-10-10: v1 Identity, Packaging And Diagnostics
+
+User decisions for v1, the personal version with possibly one trusted tester (FRD `.rpiv/artifacts/discover/2026-10-10_00-59-10_v1-scope-deferred-decisions.md`; decisions log §31):
+- **Identity:** the visible identity becomes Ragnarok in v1: executable and product name, the `userData` folder (`%APPDATA%Ragnarok`, reached by a verified copy that keeps the old folder intact) and the AppUserModelId. The app identifier `dev.slopstop.desktop` changes with it. Internal names (`slopstop.db`, `slopstop_runtime_*`, `@slopstop/*`) stay.
+- **Packaging:** a simple unsigned Windows installer without auto-update is in v1. This narrows the Release and Packaging deferral; signing, auto-update and publishing stay deferred. An automatic licence check over dependencies and bundled tools must pass before the first installer is distributed.
+- **Diagnostics:** consent-gated Sentry is in v1. It needs a consent screen, a persisted consent record (ADR 0006) and a provisioned DSN. It stays off until consent and sends only sanitised events.

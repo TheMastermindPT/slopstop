@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 65ffeb9bb2d4bd0f4e23de40758b3f45569d2af31971ac023170d6c5fe0f6b9d
+content_hash: 37d9f170c623a76a0a0140674a24d2b3252454185e55ae56cd16a7aa278ca83d
 ---
 
 # Conversation — Human Decisions
@@ -382,3 +382,19 @@ Relayed verbatim by the ui-ux agent; recorded here as decided or open.
 - **Open:** whether the map's Chapter view label (one Feature) becomes the Strand view or keeps a separate label.
 - **Map view labels renamed (user, same day):** "Saga" (the whole-Project view) becomes **Weave**, the fabric where all Strands cross. "Chapter" (one Feature's view) is dropped: the one-Strand view is simply called **Strand**. Rejected for the Project view: Loom, Tapestry, Web. This closes the open point above.
 - **Consistency requirement (user):** "vamos ter que atualizar documentacao para ficar consistente, caso contrario eu e os agente podem ficar confusos". Every current document, the prototypes and Figma move to Strand and Weave in one sweep. ADRs keep their accepted text plus a former-names note; code identifiers move in a dedicated rename slice after C1.
+
+## 31. v1 scope interview (user decisions, 2026-10-10)
+
+FRD: `.rpiv/artifacts/discover/2026-10-10_00-59-10_v1-scope-deferred-decisions.md` (consensus confirmed).
+- **v1 means** "para mim, e talvez peça ao meu irmão para testar".
+- **Diagnostics:** Sentry with consent in v1: a consent screen, a persisted choice and a provisioned DSN; off until consent; sanitised events only.
+- **Identity:** the visible rename to Ragnarok is in v1 (executable, `%APPDATA%\Ragnarok` with a verified copy that keeps the old folder, AppUserModelId, titles). Internal names stay SlopStop. Challenged and narrowed from a full rename.
+- **ISOL-1:** deferred; v1 admits trusted repositories only, with the current warning.
+- **Packaging:** a simple unsigned Windows installer without auto-update; a licence check over dependencies and bundled tools must pass before the first installer is distributed.
+- **Agent dialogue:** pairs only, several concurrent pair dialogues per agent; the default limit is 12 messages per agent per dialogue (was 6); phase 2 (cross-Waypoint through the Supervisor) is in v1; the closing state is an agent-declared mandatory field that the app validates.
+- **C2:** both billing modes, one active at a time.
+- **Models:** one default model chosen at first install, plus overrides per role and per task (model and effort).
+- **Bundled quality tools:** pinned per release, plus an Update control limited to tested versions, with a change list, a self-check and rollback.
+- **Architecture review:** proposed by the Supervisor at the end of each Strand, plus on request.
+- **Project profile:** default lane, review rounds and dialogue limits, the test-discipline exception, models per role.
+- **Open visual items:** a session with the ui-ux agent (#121) before the React port. **Rive paid plan:** only before a public version. **Evaluation protocol and product thesis:** part of v1 acceptance (#125).

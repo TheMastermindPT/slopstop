@@ -333,3 +333,7 @@ The shared contract suite adds these governed-CLI-session cases:
 ### Note (2026-10-09): both credentials may be stored, one mode active
 
 User decision (decisions log, 2026-10-09): a user may keep both the subscription CLI sign-in and an API key configured, but exactly one billing mode is active at a time. Switching is manual and applies only to Runs prepared afterwards; a Run keeps its pinned mode, and SlopStop never switches modes automatically. This refines the "Each user selects exactly one billing mode" rule without changing it.
+
+## Note (2026-10-10): both billing modes in C2
+
+The user decided that the first real-model Conversation (C2) delivers both billing modes of Amendment 1, subscription and api, with one active at a time and no automatic switching (FRD `.rpiv/artifacts/discover/2026-10-10_00-59-10_v1-scope-deferred-decisions.md`; decisions log §31). The governed CLI session machinery therefore lands with C2, not first with Workers. Models start from one default chosen at first install, with overrides per role and per task (model and effort).
