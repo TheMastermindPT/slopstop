@@ -50,18 +50,16 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review. 
 5. **#95, #97** C1-0 residuals.
 
 ### Phase 3 — the new interface
-1. Decisions: local Rive runtime; ADR note for the splash-window CSP; custom frameless title bar (Electron security review); Settings shell with the sounds toggle and first-install sound prompt (DL:292, :304). The Rive paid plan is a release gate (#103), not a prerequisite.
+1. Decisions: the open visual items through a session with the ui-ux agent (#121); local Rive runtime; ADR note for the splash-window CSP; custom frameless title bar (Electron security review); Settings shell with the sounds toggle and first-install sound prompt (DL:292, :304). The Rive paid plan is a release gate (#103), not a prerequisite.
 2. **React port** of the remaining prototype screens (`ragnarok-hero/PORT-PLAN.md`), deleting the old UI slice by slice; map motion in CSS.
 3. From here on, **accessibility is an acceptance criterion of every slice** (PRODUCT.md:75, :173), not an end pass.
 
 ### Phase 4 — decisions before the model
 1. **#101 agent runtime.** ADR 0009 Amendment 1 already withdrew Mastra as the planned first adapter; the open choice and the document cleanup remain: `mastra.db` in ADRs 0001:56, 0002:15, 0006, the storage manifest and `docs/architecture/model.c4`; PRODUCT.md:84 and AGENTS.md. Then **#93**. (Zod in ADR 0006:26 does not depend on #101.)
-2. **How C2 runs in subscription mode:** a governed CLI session (ADR 0009 role table), which pulls part of the process-job and CLI-seal machinery forward, or C2 starts API-only.
-3. **Models:** first-install default model, per-task model and effort overrides (rpiv-method FRD), and the cheap-model paired evaluation (memory: Luna, DeepSeek, Haiku).
-4. **v1 scope:** dialogue phase 2 and the Supervisor coordination budget.
+2. **Decided 2026-10-10 (v1-scope FRD):** C2 delivers both billing modes, which brings the governed-CLI process machinery into C2; one default model at first install plus overrides per role and task. Still open here: the cheap-model paired evaluation (memory: Luna, DeepSeek, Haiku).
 
 ### Phase 5 — C2 real-model Conversation
-The Project conversation with the Supervisor as its agent (ADR 0021): model replies, Context proposals and records, per-message model choice, streaming, the contract for credentials, attribution, failure and interruption (#85, C1D:701); the Models and credentials part of Settings (safeStorage, both billing modes, one active); the plan-usage meter if subscription mode is used; branching.
+The Project conversation with the Supervisor as its agent (ADR 0021): model replies, Context proposals and records, per-message model choice, streaming, the contract for credentials, attribution, failure and interruption (#85, C1D:701); the Models and credentials part of Settings (safeStorage, both billing modes, one active); the governed CLI session for subscription mode (both billing modes, one active); the plan-usage meter; branching.
 
 ### Phase 6 — Frame and the real map
 1. **#92 Storage-operation journal first**, with a minimal ADR 0013 storage-operation partition [mandatory follow-up of ADR 0005; every later schema upgrade otherwise ships on the temporary marker and the S1 chain rule].
@@ -71,7 +69,7 @@ The Project conversation with the Supervisor as its agent (ADR 0021): model repl
 Board admission and durable read positions from real Waypoint sources.
 
 ### Phase 8 — Runs and Workers
-Supervised Runs (ADRs 0007-0009), the Forger and Workers, the governed CLI Worker path and its open checks (ADR 0009:327-331), agent dialogue phase 1 (ADR 0021), the Run approval view; Project-profile surfaces needed by Run preparation (discipline override, rpiv lanes, Foundation sections); decisions in Run context and the "Decision changed" Attention item (ADR 0022); #104 inference for existing Projects (a read-only Worker); the lower log panel for process output (PRODUCT.md:53); the Project activity feed (a projection of Execution events, PRODUCT.md:57). **Security:** ISOL-1 before any untrusted repository; named-pipe isolation (#43) only if a named pipe is productized (production uses anonymous pipes today). Whether ISOL-1 gates Workers on trusted personal repositories is a user decision.
+Supervised Runs (ADRs 0007-0009), the Forger and Workers, the governed CLI Worker path and its open checks (ADR 0009:327-331), agent dialogue phase 1 and phase 2 (both in v1; pairs only, 12 messages default, agent-declared closing state; ADR 0021 note), the Supervisor coordination budget, the Run approval view; architecture review proposed at the end of each Strand; Project-profile surfaces needed by Run preparation (discipline override, rpiv lanes, Foundation sections); decisions in Run context and the "Decision changed" Attention item (ADR 0022); #104 inference for existing Projects (a read-only Worker); the lower log panel for process output (PRODUCT.md:53); the Project activity feed (a projection of Execution events, PRODUCT.md:57). **Security:** ISOL-1 deferred for v1 (trusted repositories only, decided 2026-10-10); mandatory before untrusted repositories or a public release (#111). Named-pipe isolation only if a named pipe is productized.
 
 ### Phase 9 — Evidence, Findings, Candidate and Integration
 ADRs 0010-0020 with artifact retention and result limits; user-approved commits with decision and Run trailers (PRODUCT.md:123); #100 rpiv method inside Ragnarok [its review rounds need Findings].
@@ -80,28 +78,26 @@ ADRs 0010-0020 with artifact retention and result limits; user-approved commits 
 Verified Memory (ADR 0017); TypeScript language intelligence (ADRs 0003, 0016) and the Debug Adapter Safety Boundary.
 
 ### Phase 11 — storage lifecycle and the rest of Settings
-Backup, encrypted export, migration, restore, import, reset, Close/Archive/Delete (PRODUCT.md:92-95; ADR 0002:32); Application and Project Settings pages; the Diagnostics destination and its charts (DL:311); Supervisor budget surfaces if phase 2 is in v1.
+Backup, encrypted export, migration, restore, import, reset, Close/Archive/Delete (PRODUCT.md:92-95; ADR 0002:32); Application and Project Settings pages (Project profile: default lane, review rounds and dialogue limits, test discipline, models per role); the Diagnostics destination and its charts (DL:311); Supervisor coordination budget surfaces (phase 2 is in v1).
 
 ### Phase 12 — packaging, diagnostics and identity
-Consent-gated diagnostics (PRODUCT.md:25; open: live Sentry upload with a DSN or local-only, ADR 0001:72-73); Stable Product Identity and final visual identity acceptance; the **technical rename SlopStop → Ragnarok** (app identifier, `userData` paths, `slopstop.db`; needs a storage migration; user decides v1 or later).
+Consent-gated Sentry with a DSN (decided for v1); Stable Product Identity and final visual identity acceptance; the **visible rename to Ragnarok** (executable, `%APPDATA%Ragnarok` via a verified copy, AppUserModelId; internal names stay); a **licence check** over dependencies and bundled tools, then a **simple unsigned Windows installer** for the tester; the bundled-tool Update control (tested versions, rollback).
 
 ### Phase 13 — v1 acceptance
-Recalibrate provisional numbers from real use (ADRs 0004/0005/0009/0018/0019/0020); triage leftover mutation survivors and review suggestions; technical acceptance, multi-week personal acceptance, final freeze; the evaluation protocol against the baseline.
+Recalibrate provisional numbers from real use (ADRs 0004/0005/0009/0018/0019/0020); triage leftover mutation survivors and review suggestions; technical acceptance, multi-week personal acceptance, final freeze; the evaluation protocol against the baseline, with the product-thesis consequences (#125; decided as part of v1 acceptance).
 
 ### After v1 or unscheduled
-#103 monetization and licensing (Anthropic's written confirmation, ADR 0009:318; licence audit; trademark; #103 also suggests a licence check in the gates now), installers, signing and auto-update, live DAP, dialogue phase 2 if left out of v1. Research with pending human decisions: Jev evaluation and JEV-F01/F02, skill-procedures adoption, inspiration-project candidates, Effect/Alchemy/Bun questions (README:24-34). Ideas: #100 professional delivery flow, #104 advisor panel. Tooling: the planned PreToolUse hook for ask-before-branch/PR.
+#103 monetization and licensing (Anthropic's written confirmation, ADR 0009:318; licence audit; trademark; #103 also suggests a licence check in the gates now), installers, signing and auto-update, live DAP, code signing and auto-update; the Rive paid plan; ISOL-1 before untrusted repositories. Research with pending human decisions: Jev evaluation and JEV-F01/F02, skill-procedures adoption, inspiration-project candidates, Effect/Alchemy/Bun questions (README:24-34). Ideas: #100 professional delivery flow, #104 advisor panel. Tooling: the planned PreToolUse hook for ask-before-branch/PR.
 
 ## 3. Decisions the user still owns
 
 - **#101 agent runtime** (AI SDK vs Mastra, maybe per billing mode). Blocks C2 and #93. PRODUCT.md:84 and AGENTS.md stay unchanged until decided (DL:340).
-- **v1 scope:** is dialogue phase 2 with the Supervisor coordination budget in v1 (ADR 0021)? Consent-gated diagnostics are already v1 (PRODUCT.md:25); open is live Sentry upload with a DSN versus local-only (ADR 0001:72-73). Does ISOL-1 gate Workers on trusted personal repositories? Is the technical rename SlopStop → Ragnarok in v1?
-- **Bundled quality tools inside Ragnarok:** update control, pinning, rollback, licence redistribution (DL:325-329; rpiv-method FRD:177). Needs an interview and an ADR.
-- **Before the React port:** Rive paid plan (watermark); ADR note for the splash-window CSP (DL:273-274).
-- **Open visual items** (states, the palette, charts and the Run timeline were decided later in DL §24): first use; Windows accessibility; notifications outside the app; app icon meaning; drawing the role-agent icons (marks partly approved, DL:330, :361); Waypoint panel diffs.
-- **FRD open questions:** #99 closing-state production/validation and phase 2 across Runs (agent-coordination FRD:187-189); #100 adjustable Project-profile options and the periodic architecture-review trigger (rpiv-method FRD:175-176).
+- **v1 scope:** closed on 2026-10-10, see `.rpiv/artifacts/discover/2026-10-10_00-59-10_v1-scope-deferred-decisions.md`.
+- **Before the React port:** ADR note for the splash-window CSP (DL:273-274). The Rive paid plan waits for a public version.
+- **Open visual items** (states, the palette, charts and the Run timeline were decided later in DL §24): first use; Windows accessibility; notifications outside the app; app icon meaning; drawing the role-agent icons (marks partly approved, DL:330, :361); Waypoint panel diffs. They go to a session with the ui-ux agent (#121).
+- **FRD open questions:** #99 phase 2 mechanics across Runs (for design). Closed 2026-10-10: the closing state is agent-declared and validated; the Project-profile options and the architecture-review trigger are decided.
 - **Agents at 100% of budget:** the Run-pause rule is design input only, not a contract (DL:320).
-- **Evaluation protocol:** candidate tasks and success criterion; alternative evaluation project (`research/2026-10-04_ragnarok-vs-baseline-evaluation-protocol.md:86-97`).
-- **Product thesis** roadmap consequences (`research/2026-10-03_product-thesis.md:61`).
+- **Evaluation protocol and product thesis:** part of v1 acceptance; tasks and criterion decided in #125 at that point.
 - **Kept product ideas** (`research/2026-10-07_developer-value-ideas.md`), raised when their area is designed; deliberately inventory-only, no issue.
 - **#103 monetization and licensing** (deferred until after personal v1), including Anthropic's written confirmation (release gate, ADR 0009:318), the licence audit and the "Ragnarok" trademark check.
 - **#104 Foundation** discovery (quiz, inference for existing Projects, later changes, instructions file).
