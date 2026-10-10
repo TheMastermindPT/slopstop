@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 4f5908cb8d08c4c570d52dcc565acb24f11cf136773f844563636cc82dec7365
+content_hash: 7a401c19b024b06ced1a0c4755b135b99abf8536a20583a1808694c77c6f3fb9
 ---
 
 # Conversation — Human Decisions
@@ -433,3 +433,7 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Deviation 6b extended to S3:** CNV-B14 uses the switch and the coordinator stop instead of `project.close`, because `project.close` does not reach the coordinator. App behaviour is unchanged. Accepted.
 - **G17 extension accepted:** besides abandonment and a failed settlement (U2), a failed writer snapshot also routes the read to the per-request read-only client. One rule, no special cases.
 - **Main push retry succeeded:** push-main-8 on an idle machine passed the deep pre-push gate (integration 2115 passed, e2e 11/11, launch-smoke OK), and origin/main is now 7a1b041.
+
+## 37. C1 S3 design approved (user decision, 2026-10-10)
+
+- The user approved ("sim, aprovo") C1 design revision 4.3 (content_hash `5ff869b7b774e2cc6bd1143ef507488868b9c2020ae0e80840e7576649df2e19`) for slice S3. It was reached through two intent review rounds, the user-approved revision 4.2 with a bounded verifier (§36), and revision 4.3, whose nine verifier findings the coordinator checked one by one against `.rpiv/artifacts/evidence/2026-10-10_c1-s3-rev42-verification.md`. S3 (#107) may start.
