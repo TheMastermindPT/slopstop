@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 9a4baa6464e6051a262dd0910bc1ce9b0e2050255042a9c86b7bfaa2fa40d9df
+content_hash: a603685a584e3f886e32fa22e43eef6f6befa147acc119d431124edf21a241d6
 ---
 
 # Conversation — Human Decisions
@@ -403,3 +403,14 @@ FRD: `.rpiv/artifacts/discover/2026-10-10_00-59-10_v1-scope-deferred-decisions.m
 
 - Round 2 (the last) closed every round-1 item and found four verified concerns: (A) a work defect with a failed close skips client abandonment, a regression from F2; (B) the settlement failure flags are published after the slot is released; (C) the non-busy rethrow in the Conversation transaction is untested; (D) the project-storage mutation score was carried from an earlier candidate, and its proof log is a placeholder.
 - The user approved ("sim") a short, bounded round 3 beyond the two-round cap. It covers fixes A and B, tests for C and the suggestions, evidence corrections, heavy reruns on the final head including both mutation configs, and one verifier limited to these fixes instead of a full three-reviewer round.
+
+## 33. #121 visual and interaction decisions (user, 2026-10-10)
+
+The user answered the seven #121 boards in the ui-ux agent's session (hub `ragnarok-hero/v1-121.html`), and the coordinator confirmed four points in its own session.
+- **First use:** data copy → billing (skippable, with an Attention reminder before the first Run) → default model (Opus 5.5 preselected) → crash reports (off until consent) → first Project. Sounds are not a setup step: after the first real Run sound, a toast offers Turn off or Keep (option B). When the copy fails repeatedly, "Start from scratch" sits behind a confirmation, and the old folder is never deleted.
+- **Accessibility:** all proposals accepted. Text follows the Windows Text size setting. Toasts pause on hover or focus and stay 12 s with a screen reader. Under reduced motion the map zoom becomes a 120 ms fade, which changes the earlier "instant". Title-bar caption buttons are native Windows buttons inside the dark rune title bar (option A). An agent runs an NVDA speech-log pass per phase, and the user listens with Narrator. The stronger focus ring and the 12-point checklist apply per slice from the React port onward.
+- **Notifications:** no tray icon in v1. Minimised, Runs keep working; closing the window asks, then pauses Runs (confirmed). Our own per-event sound always plays, even under Do Not Disturb (confirmed against the ui-ux recommendation), while the Windows toast follows Do Not Disturb. Hide-details on the lock screen is on by default (confirmed). Windows toasts fire for plan at 80% (once per usage window) and for a proposed architecture review; calm events keep their sounds. The taskbar flashes only for broken and plan at 100%.
+- **App icon:** candidate B, the Raidho rune in frost on a carbon plate. The meaning of "striker" is moot.
+- **Role marks:** the polished marks are approved, including the Research and Security redraws. New reader roles: Architecture, Accessibility, Performance. The closing state shows on every message. **Not changed:** the user kept the ADR 0021 rule that two "no agreement" declarations close a dialogue (confirmed in the coordinator session), overriding the ui-ux proposal.
+- **Waypoint Changes tab:** a separate tab, and the panel widens to 480 px. It opens on the waiting or writing Run. Each file row shows the role mark, plus the Worker name on hover. Above 800 changed lines a file shows a summary only.
+- **Run timeline:** on the Runs page above the list, joining all Runs in progress on a fixed time scale. The filter only dims the other Waypoints. The Supervisor lane is always visible. The DESIGN.md sentence was adopted.
