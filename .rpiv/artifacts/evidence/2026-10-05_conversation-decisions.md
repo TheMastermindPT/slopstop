@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 2c2125128059dc8b550c386323e838b6a30e854d96956e0e396ab383581441af
+content_hash: 6ca767f1f23bfe71fb1d30e9693dd49ebfb73b935880780beb299d38558713b9
 ---
 
 # Conversation — Human Decisions
@@ -468,3 +468,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Shell:** S4 restyles only the Conversation region. The old shell (rail, header, Projects sidebar) stays until the shell slice of the React port, so two looks coexist for a while.
 - **Old prototype window** (`apps/desktop/src/renderer/prototype`, about 6,300 lines): deleted entirely in S4, with its knip, Forge and main entries and the shell.test prototype journey. The ragnarok-hero prototypes stay the reference.
 - **Dependencies:** `@fontsource/red-hat-text`, `@fontsource/cinzel`, `@fontsource/cascadia-code` (OFL-1.1, pinned in the catalog, served locally under `font-src 'self'`) and `@axe-core/playwright` (MPL-2.0, devDependency, e2e only). They are included in the licence check before the first installer.
+
+## 44. C1 S4 design: revision 5.2 and the CSP clarification (user decisions, 2026-10-10)
+
+- S4 intent review round 2 (the last) on revision 5.1 (`fb948d46…`) found 2 blockers (the focus ring's transparent outline versus CNV-B42, and "Save is never disabled" pinned only for read-only) and about 26 concerns. The user chose revision 5.2 fixing every item, plus one verifier limited to the fixes (as in §36), then approval.
+- **CSP clarification (user):** nothing changes. The Rive startup runs in its own splash window, the only window allowed `wasm-unsafe-eval` (DL:268-274); the main window keeps the strict CSP. The header-only CSP gap is issue #130; S4a's G29 builds one per-window CSP owner whose main-window policy never contains `wasm-unsafe-eval`.
