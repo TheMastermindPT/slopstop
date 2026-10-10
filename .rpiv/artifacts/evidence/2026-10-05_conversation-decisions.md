@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 3ccd4e2d8bc138f7a3df2194f655cc378f382337e4fc8ec57391de3b41a3015c
+content_hash: 1dc654973f50dd7a27cffa4668c354f768404b50ff184bcb30f62d9c8dfeb679
 ---
 
 # Conversation — Human Decisions
@@ -442,3 +442,7 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The user chose option (a): C1 S3 (#107) starts now, and the #94 measurement steps (2-4) come after it. #94 Step 1, the test-side instrumentation gated by `SLOPSTOP_TRACE_94` with no runs, may be written between S3 steps. S3 heavy runs keep running on an idle machine. If a stall appears during S3, the run stops and becomes #94 evidence; no rerun hides it.
 - The #94 Step 0 findings so far: about 10-13 registration tests take 5-7 s at idle against a 15 s budget, so they fail under load; separate stalls (up to about 96x) are suspected in the shared SQLite worker path. The remedy for the slowdown is a user decision after the measurements; timeouts are not raised.
+
+## 39. CodeScene waiver for C1 S3 (user decision, 2026-10-10)
+
+- `apps/harness/src/registration/project-registration-preparation.ts` scores 8.03, the same pre-existing score as on main; C1 S3 step 10 (CNV-B37, #102) added no smell. The user accepted it as recorded pre-existing debt for C1 S3 only, the same kind of waiver as #110, with the refactor to 10 tracked in #129 after the #94 measurements.
