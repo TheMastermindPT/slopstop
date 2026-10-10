@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: a603685a584e3f886e32fa22e43eef6f6befa147acc119d431124edf21a241d6
+content_hash: 46671f22fd25f127a71f3a4ea48b01113819e89bc70047ffc2cc76265a2a8012
 ---
 
 # Conversation — Human Decisions
@@ -414,3 +414,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Role marks:** the polished marks are approved, including the Research and Security redraws. New reader roles: Architecture, Accessibility, Performance. The closing state shows on every message. **Not changed:** the user kept the ADR 0021 rule that two "no agreement" declarations close a dialogue (confirmed in the coordinator session), overriding the ui-ux proposal.
 - **Waypoint Changes tab:** a separate tab, and the panel widens to 480 px. It opens on the waiting or writing Run. Each file row shows the role mark, plus the Worker name on hover. Above 800 changed lines a file shows a summary only.
 - **Run timeline:** on the Runs page above the list, joining all Runs in progress on a fixed time scale. The filter only dims the other Waypoints. The Supervisor lane is always visible. The DESIGN.md sentence was adopted.
+
+## 34. Role profiles (user decisions, 2026-10-10)
+
+- Each agent role gets a **role profile**: a versioned, Ragnarok-owned record with instructions, allowed tools, an output schema, context sources and a default model and effort. rpiv rules that depend on tools agents will not have (MCP, subagent spawning, AskUserQuestion, gh, web, hooks, scripts) move into the application. Tracked in #128.
+- **Editable (user: "gostaria que fosse possível editar"):** instructions, model and effort are free. Tools stay within the family: a reader never gets write tools, and network needs explicit approval.
+- **Scope:** profiles are app-wide, with a visible per-Project override.
+- **Safety:** every edit is a new version with a diff, with one-click revert to the Ragnarok original. A Run pins the versions it used. When Ragnarok ships a new profile version, the user sees the diff and chooses keep, adopt or merge.
