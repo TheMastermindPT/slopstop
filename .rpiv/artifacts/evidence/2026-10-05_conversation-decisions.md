@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 82d1b00f6912ecf49ebe6bd7b036d5e815f7335eab2324f06736c80f5f6688f2
+content_hash: 5ff9dec47e16b230158fcc66ed1bd14acec8b4c5a3ff56700d1c4c03d6e4d009
 ---
 
 # Conversation — Human Decisions
@@ -500,3 +500,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - In S4a E2, axe reported no violations in normal colours. Under emulated forced colours it reported color-contrast false positives: the rendered text is black on white, but axe reads `-webkit-text-fill-color`, which Chromium's emulation leaves unforced. The old shell shows the same false positives.
 - The user approved replacing the oracle in CNV-B44 and in S4b's CNV-B47. In the forced-colours run only, axe's `color-contrast` rule is disabled, because a forced theme's contrast comes from the user's system theme. A direct assertion replaces it: every text element in the region computes the forced CanvasText colour, with `forced-color-adjust: auto`, plus the screenshot. The axe configuration is recorded. Normal-colour axe runs keep every rule.
+
+## 49. #94 fix scope (user decisions, 2026-10-11)
+
+- **(c) approved as planned:** a per-process template plus a whole-root copy for `createCanonicalCommandDatabase` and the package-smoke `seed()`, together with the cwd fix. An equivalence test (same tree; same schema and rows per database; byte equality where it holds; a real `open` answering read-write) keeps the real create exercised and is bound by a mutation.
+- **(d):** D1, injecting the manual clock into the native-observer deadline test (about 7 s down to under 1 s, every assertion kept), plus a separate product slice d-P1 that caches the generated migration resources per authority, so they are not reloaded on every application.db open. No verification is removed; d-P2 (fewer integrity and schema checks) is not chosen.
+- **Instrumentation stays** in the repository, off by default and proved inert when off.
+- **The 4a synthetic burst is repeated** after (c), to measure the direct effect on the 18 timeouts.
