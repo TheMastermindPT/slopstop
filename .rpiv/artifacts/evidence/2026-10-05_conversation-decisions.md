@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 46671f22fd25f127a71f3a4ea48b01113819e89bc70047ffc2cc76265a2a8012
+content_hash: 799b4f8367888eb5eafae4edbd6a013b8b5bc32681bb2a7b9fdb52ccc2c5ea54
 ---
 
 # Conversation — Human Decisions
@@ -421,3 +421,7 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Editable (user: "gostaria que fosse possível editar"):** instructions, model and effort are free. Tools stay within the family: a reader never gets write tools, and network needs explicit approval.
 - **Scope:** profiles are app-wide, with a visible per-Project override.
 - **Safety:** every edit is a new version with a diff, with one-click revert to the Ragnarok original. A Run pins the versions it used. When Ragnarok ships a new profile version, the user sees the diff and chooses keep, adopt or merge.
+
+## 35. #94 investigation scope (user decision, 2026-10-10)
+
+- The user approved ("sim, tudo ok se for necessário"), when needed, (a) instrumentation in production code beyond test-side tracing and (b) a load generator plus `handle.exe` to see open file handles. Standing rules stay in force: no timeout raises and no gate weakening without the user; heavy runs only with the coordinator's go-ahead on a free machine; new production code follows the Effect rules.
