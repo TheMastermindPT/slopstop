@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 37d9f170c623a76a0a0140674a24d2b3252454185e55ae56cd16a7aa278ca83d
+content_hash: 9a4baa6464e6051a262dd0910bc1ce9b0e2050255042a9c86b7bfaa2fa40d9df
 ---
 
 # Conversation — Human Decisions
@@ -398,3 +398,8 @@ FRD: `.rpiv/artifacts/discover/2026-10-10_00-59-10_v1-scope-deferred-decisions.m
 - **Architecture review:** proposed by the Supervisor at the end of each Strand, plus on request.
 - **Project profile:** default lane, review rounds and dialogue limits, the test-discipline exception, models per role.
 - **Open visual items:** a session with the ui-ux agent (#121) before the React port. **Rive paid plan:** only before a public version. **Evaluation protocol and product thesis:** part of v1 acceptance (#125).
+
+## 32. C1 S2 round 3 approved (user decision, 2026-10-10)
+
+- Round 2 (the last) closed every round-1 item and found four verified concerns: (A) a work defect with a failed close skips client abandonment, a regression from F2; (B) the settlement failure flags are published after the slot is released; (C) the non-busy rethrow in the Conversation transaction is untested; (D) the project-storage mutation score was carried from an earlier candidate, and its proof log is a placeholder.
+- The user approved ("sim") a short, bounded round 3 beyond the two-round cap. It covers fixes A and B, tests for C and the suggestions, evidence corrections, heavy reruns on the final head including both mutation configs, and one verifier limited to these fixes instead of a full three-reviewer round.
