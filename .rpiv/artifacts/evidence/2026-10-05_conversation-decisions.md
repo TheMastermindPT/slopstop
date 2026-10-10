@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 84d5a207c0cf23bc102a55b622b7a2764d9e363660675f7d6fc2dc0098ed945b
+content_hash: 147d70e411c0de0492b0d6381434c5d195e7484dd6b74a9be83ca197476a7e13
 ---
 
 # Conversation — Human Decisions
@@ -452,3 +452,7 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - S3 candidate review round 2 (the last) closed every round-1 item and found no production defect. What remained: three test-contract gaps (a clean listing closing clean, the injected reconciliation opener actually being used, the writer-read arguments), the repository evidence for the heavy runs with per-file mutation scores, a too-wide coordinator mutation range, and test hygiene.
 - The user approved a short, bounded round 3, as in §32. It covers those fixes, fresh heavy runs on the final candidate (the changes touch integration tests) and one verifier limited to the fixes. The S3 merge decision follows.
 - **Win32-only rows accepted:** the CNV-B13 read-only rows and the CNV-B14 phase-1 per-request rows run only on Windows. v1 is Windows, and Linux is deferred (#112). This is recorded as a deviation to revisit when Linux enters.
+
+## 41. C1 S3 accepted (user decision, 2026-10-10)
+
+- The round-3 limited verifier closed round-2 items A-H with no new defect. Final heavy runs on 97aeaa1 passed: integration 2143, e2e 11/11, launch-smoke OK, root mutation 88.25, conversation mutation 92.41. The user accepted S3 and authorised a squash merge into local main without a push. S3 changes no database schema, so no new `userData` backup is needed.
