@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 6ca767f1f23bfe71fb1d30e9693dd49ebfb73b935880780beb299d38558713b9
+content_hash: 25a8133febb8e14434dd70ba009f41d7bdc9efe3fdd31f9167bb9820e5d69778
 ---
 
 # Conversation — Human Decisions
@@ -473,3 +473,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - S4 intent review round 2 (the last) on revision 5.1 (`fb948d46…`) found 2 blockers (the focus ring's transparent outline versus CNV-B42, and "Save is never disabled" pinned only for read-only) and about 26 concerns. The user chose revision 5.2 fixing every item, plus one verifier limited to the fixes (as in §36), then approval.
 - **CSP clarification (user):** nothing changes. The Rive startup runs in its own splash window, the only window allowed `wasm-unsafe-eval` (DL:268-274); the main window keeps the strict CSP. The header-only CSP gap is issue #130; S4a's G29 builds one per-window CSP owner whose main-window policy never contains `wasm-unsafe-eval`.
+
+## 45. C1 S4 revision 5.3 (user decisions, 2026-10-10)
+
+- The bounded verifier on revision 5.2 (`1718800d…`) confirmed both round-2 blockers fixed. Of 55 claims, 41 were Verified, 13 Weakened and 1 Falsified.
+- **Stale activation:** "Reopen Project" cannot work in the real app, because the coordinator refuses a switch from a stale activation and refuses activate with PROJECT_ALREADY_ACTIVE. The user accepted showing the stale-activation notice without an action. The recovery is a recorded gap: owner the coordinator, trigger the first real occurrence.
+- The user chose revision 5.3, applying every verifier item with a resolution table and no new agents. The coordinator checks each item, then the user approves.
