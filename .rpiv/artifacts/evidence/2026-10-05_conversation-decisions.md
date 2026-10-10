@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 83031881541384f687fa238c8b0803ce57141cf503421402caddff22aadcc559
+content_hash: 82d1b00f6912ecf49ebe6bd7b036d5e815f7335eab2324f06736c80f5f6688f2
 ---
 
 # Conversation — Human Decisions
@@ -495,3 +495,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - The #94 cause is proven (evidence `.rpiv/artifacts/evidence/2026-10-10_94-timeouts-under-load.md` on `feat/94-instrumentation`, 7ff05de). The stall-type timeouts are CPU starvation from concurrent multi-threaded repository searches (ripgrep). A synthetic burst produced 18 real 15 s timeouts, all inside the burst window, and every stalled step finished later. Quiet baselines were clean.
 - The user chose remedy **(c)**: lighter canonical fixtures, a seeded database template instead of a full Storage create per test, together with the one-line cwd fix in `canonical-writer-package-smoke.integration.test.ts:45`. The user also chose **(d)**: lighten the slowdown population, the ~13 registration tests at 5-7 s whose most expensive step is the confirm at ~1.8 s.
 - Not chosen now: (a1) a written rule, (a3) a CPU pre-flight before push, (b) lower-priority agent searches, and (e) production tracing (P2). They stay recorded in #94. Timeouts are untouched.
+
+## 48. Forced-colours accessibility oracle (user decision, 2026-10-11)
+
+- In S4a E2, axe reported no violations in normal colours. Under emulated forced colours it reported color-contrast false positives: the rendered text is black on white, but axe reads `-webkit-text-fill-color`, which Chromium's emulation leaves unforced. The old shell shows the same false positives.
+- The user approved replacing the oracle in CNV-B44 and in S4b's CNV-B47. In the forced-colours run only, axe's `color-contrast` rule is disabled, because a forced theme's contrast comes from the user's system theme. A direct assertion replaces it: every text element in the region computes the forced CanvasText colour, with `forced-color-adjust: auto`, plus the screenshot. The axe configuration is recorded. Normal-colour axe runs keep every rule.
