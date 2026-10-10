@@ -36,7 +36,7 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review. 
 5. **In parallel with phases 0-1: #94** timeouts under load [S2-S5 all need e2e and launch-smoke runs].
 
 ### Phase 1 — finish Conversation C1
-1. **S3** protocol v8, coordinator admission, runtime; the dedicated `WRITER_CLIENT_ABANDON_FAILED` code (6a); read-after-abandonment routing (U2, CNV-B13). **Fix #102 inside S3** [S3 rewrites the runtime routing in `process-bootstrap.ts`, the file behind #102].
+1. **Done 2026-10-10:** S3 squash-merged to local main as `34b7477` (rounds 1-2 plus a bounded round 3, DL §40-§41; #102 fixed inside it). Original plan: **S3** protocol v8, coordinator admission, runtime; the dedicated `WRITER_CLIENT_ABANDON_FAILED` code (6a); read-after-abandonment routing (U2, CNV-B13). **Fix #102 inside S3** [S3 rewrites the runtime routing in `process-bootstrap.ts`, the file behind #102].
 2. **S4** bridge, IPC, preload, renderer. Proposal, user decides at S4: build it in React from the prototypes. This is the user's "Conversation to React right after C1" (DL:348) without doing the screen twice.
 3. **S5** the real-app journey.
 4. **Close-out:** split `project-storage-node-adapters.ts` (CodeScene waiver, DL:68); review the carried C1-gate items with triggers (C1D:691-697: `project.upgrade` admission checks, F9 listing concurrency, G2 IPC failure proof, desktop diagnostics, `process-entry` log link, generation-cap semantics).
