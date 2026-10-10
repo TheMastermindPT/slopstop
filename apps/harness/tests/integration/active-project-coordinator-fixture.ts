@@ -19,6 +19,7 @@ import {
 import type { CanonicalWriterLeaseAcquisition } from "../../src/storage/canonical-writer-lease.js";
 import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js";
 import { createMigratedSettlement } from "./conformance-counter-command.js";
+import { refusedConversationPorts } from "./refused-conversation-ports.js";
 
 const projectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000010");
 export const activationId = decodeStrict(
@@ -135,6 +136,7 @@ export function fixture(realCommands = false, id: ProjectId = projectId) {
       touch("fence");
       return realCommands ? real.releaseFence("2026-09-05T12:00:04.000Z") : { status: "current" };
     }),
+    ...refusedConversationPorts,
     close: vi.fn(async () => {
       touch("repository");
       await real.close();

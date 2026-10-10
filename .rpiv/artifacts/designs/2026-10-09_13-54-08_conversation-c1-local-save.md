@@ -9,10 +9,10 @@ tags: [design, conversation, storage, upgrade, protocol, coordinator, desktop, c
 lane: rigorous
 lane_reasons: ["files: 6 > 5", "weak sensitive word: schema", "sensitive word: preload"]
 status: ready
-last_updated: 2026-10-09T21:00:00+0100
+last_updated: 2026-10-09T19:20:00+0100
 last_updated_by: Pedro Mesquita
-last_updated_note: "Revision 3, approved by Pedro on 2026-10-09 after the coordinator checked every round-2 item (no third reviewer round, by his decision). intent review round 2 findings applied (see Round-2 resolution). Behaviour IDs kept. Authority: decisions log at 679b9ae (§16-19, including the merge order)."
-content_hash: afdaf570b3e1ebaf90ab42d1658353895802d1deb2e7cbb860968624c586d96b
+last_updated_note: "Revision 3 amended after S1 candidate review round 1: G16 and the S1 chain rule now order the chain by its links only and never check started_at (Pedro, decision U1, decisions log §23, main commit da60c26). After review round 2, the node-adapters :819 line says the root is found by links, replacing the C1-0 :264 started_at rule. Behaviour IDs kept. Approved by Pedro on 2026-10-09 (revision 3)."
+content_hash: 8a67ea7a3b0c9bbbd8a1f1e4efb6e80502f49cfac88c3f380c1d35116aedd93f
 ---
 
 # Design: Conversation C1 — save and reopen messages locally, no model
@@ -302,7 +302,7 @@ open / switch / restart --> activate --> (migration-required: S3b upgrade, chain
   - An S1 amendment found during S2 review reopens S1 acceptance and rebases S2. A pushed commit is never rewritten; the amendment is a new commit.
   - S2's head is what reaches `main`, so S2's gates include `pnpm test:e2e` and `package:launch-smoke`. The package smoke drives the writer that S2 changes (`package-smoke.mjs:40, :47`).
   - The C1 branch is never run against the real `userData` before S1 and S2 merge.
-- **G16 Chain order from links** (R2-C5). The chain order and its root are derived from source→target links; the root is the row whose source is no row's target. `started_at` comes from an injected clock, so it only has to increase strictly along the chain. Equal or backward times are `REGISTRY_CORRUPT` only when the links are also inconsistent.
+- **G16 Chain order from links** (R2-C5). The chain order and its root are derived from source→target links; the root is the row whose source is no row's target. `started_at` comes from an injected clock and is never checked: equal or backward times never make a correctly linked chain `REGISTRY_CORRUPT` (Pedro, S1 review round 1, U1).
 
 ## Slices
 
@@ -328,13 +328,12 @@ The order is S1 → S2 → S3 → S4 → S5. Behaviour IDs are `CNV-B…`. Each 
 - `application-database-migration.ts` (G12, G16): the chain rule. The completed rows of a Storage, ordered by their source→target links from the root, must satisfy all of:
   - they form one unbranched chain;
   - exactly the last row's target is the active generation;
-  - no source is in `storage_generations`;
-  - `started_at` increases strictly along the chain.
+  - no source is in `storage_generations`.
 
   Anything else is `REGISTRY_CORRUPT`. The file also provides `chainRootCreatedAt`, `chainRetainedGenerationIds` and `receiptGenerationResolves`.
 - `project-storage-upgrade-node-adapter.ts`: `completedUpgradeFor` returns the row targeting the active generation; `proveUnfinishedUpgrade` (:601-605) retains every chain source.
 - `project-storage-node-adapters.ts`:
-  - :819-824 compares with the chain root's `sourceCreatedAt`, the earliest by `started_at`, as the C1-0 design :264 required;
+  - :819-824 compares with the chain root's `sourceCreatedAt`; the root is found by links (replaces the C1-0 :264 `started_at` rule);
   - :1070-1077 admits every retained chain generation.
 - `registration-confirmation-store.ts:265-273`: a receipt's generation is valid in either of two cases:
   - it is activated in `storage_generations` with the reservation's create request;
@@ -767,7 +766,7 @@ Request: the coordinator hand-off of 2026-10-09, after C1-0 landed on `origin/ma
 | R2-C2 typed busy only | Only the `exclusively` flag becomes `WriterOwnerBusy` (defensive, one writer test). `hasUnfinishedTransaction` stays non-retryable and closes admission. |
 | R2-C3 read after admission closes | Falls back to the per-request read-only client. Case in CNV-B10 (b). |
 | R2-C4 read-only busy wait | `busy_timeout = 2000` on the read-only client. CNV-B25 read-only cases. |
-| R2-C5 chain order | G16: order and root from links; `started_at` only strictly increasing. |
+| R2-C5 chain order | G16: order and root from links only; `started_at` is not checked (amended by U1, S1 review round 1). |
 | R2-C6 B1 rules | CNV-B1 it.each of raw-SQL rejections, one per permanent rule. |
 | R2-C7 composer isolation | CNV-B32 isolation oracle, driven from the literal table. |
 | R2-C8 B35 rows | CNV-B35 it.each over every non-`read` read row except stale-activation. |

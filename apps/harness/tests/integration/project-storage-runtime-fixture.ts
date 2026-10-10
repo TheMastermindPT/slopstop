@@ -292,6 +292,44 @@ export const retryUpgradeIds = {
 
 const attemptIds = { 1: upgradeIds, 2: retryUpgradeIds } as const;
 
+/** The ids of a fourth upgrade, interrupted on a chain of three. */
+export const fourthUpgradeIds = {
+  targetGenerationId: decodeStrict(
+    StorageGenerationIdSchema,
+    "00000000-0000-4000-8000-000000000054",
+  ),
+  upgradeId: decodeStrict(
+    ProjectStorageCreateRequestIdSchema,
+    "00000000-0000-4000-8000-0000000000a4",
+  ),
+} as const;
+
+/** The ids of a third upgrade (interrupted on a chain of two, or the third link). */
+export const thirdUpgradeIds = {
+  targetGenerationId: decodeStrict(
+    StorageGenerationIdSchema,
+    "00000000-0000-4000-8000-000000000044",
+  ),
+  upgradeId: decodeStrict(
+    ProjectStorageCreateRequestIdSchema,
+    "00000000-0000-4000-8000-0000000000a3",
+  ),
+} as const;
+
+/** The instants of a later, chained upgrade (strictly after `upgradeTimes`). */
+export const chainedUpgradeTimes = {
+  started: "2026-10-09T10:00:00.000Z",
+  activated: "2026-10-09T10:00:01.000Z",
+} as const;
+
+/** The instants of a third chained upgrade (strictly after `chainedUpgradeTimes`). */
+export const thirdUpgradeTimes = {
+  started: "2026-10-10T10:00:00.000Z",
+  activated: "2026-10-10T10:00:01.000Z",
+} as const;
+
+type UpgradeInstants = Readonly<{ started: string; activated: string }>;
+
 type UpgradeDiagnostics = NonNullable<NodeProjectStorageOptions["upgradeDiagnostics"]>;
 type UpgradeDiagnosticEvent =
   | Readonly<{ kind: "abandoned"; event: Parameters<UpgradeDiagnostics["abandoned"]>[0] }>
@@ -308,6 +346,21 @@ export type UpgradeOwnerOptions = Readonly<{
   upgradeDiagnostics?: UpgradeDiagnostics;
   /** Attempt 1's target generation instead of `upgradeIds.targetGenerationId`. */
   targetGenerationId?: typeof upgradeIds.targetGenerationId;
+  /** Attempt 1's upgrade id instead of `upgradeIds.upgradeId`. */
+  upgradeId?: typeof upgradeIds.upgradeId;
+  /** The instants every upgrade call reads (default `upgradeTimes`). */
+  times?: UpgradeInstants;
+  /** Another Storage's creation ids (default `fixedCreationIds`): a second Project in the root. */
+  identity?: StorageCreationIds;
+}>;
+
+/** The ids a Storage's creation allocates. */
+type StorageCreationIds = Readonly<{
+  storageId: typeof fixedCreationIds.storageId;
+  locationId: string;
+  generationId: typeof fixedCreationIds.generationId;
+  canonicalDatabaseLineageId: typeof fixedCreationIds.canonicalDatabaseLineageId;
+  runtimeDatabaseLineageId: typeof fixedCreationIds.runtimeDatabaseLineageId;
 }>;
 
 /**
@@ -321,11 +374,13 @@ export function createUpgradeStorageOwner(root: string, options: UpgradeOwnerOpt
   let nextAttempt: 1 | 2 = options.attempt ?? 1;
   let running: 1 | 2 | undefined;
   const diagnostics: UpgradeDiagnosticEvent[] = [];
+  const identity = options.identity ?? fixedCreationIds;
   const ids = {
     ...attemptIds,
     1: {
       ...upgradeIds,
       targetGenerationId: options.targetGenerationId ?? upgradeIds.targetGenerationId,
+      upgradeId: options.upgradeId ?? upgradeIds.upgradeId,
     },
   };
   const current = () => ids[running ?? nextAttempt];
@@ -340,12 +395,12 @@ export function createUpgradeStorageOwner(root: string, options: UpgradeOwnerOpt
     migrationResourcesRoot: checkedInMigrationRoot,
     applicationVersion: "0.0.0",
     ids: {
-      storageId: () => fixedCreationIds.storageId,
-      locationId: () => fixedCreationIds.locationId,
+      storageId: () => identity.storageId,
+      locationId: () => identity.locationId,
       generationId: () =>
-        upgradeClock === undefined ? upgradeIds.sourceGenerationId : current().targetGenerationId,
-      canonicalLineageId: () => fixedCreationIds.canonicalDatabaseLineageId,
-      runtimeLineageId: () => fixedCreationIds.runtimeDatabaseLineageId,
+        upgradeClock === undefined ? identity.generationId : current().targetGenerationId,
+      canonicalLineageId: () => identity.canonicalDatabaseLineageId,
+      runtimeLineageId: () => identity.runtimeDatabaseLineageId,
       upgradeId: () => current().upgradeId,
     },
     clock: { now },
@@ -374,7 +429,8 @@ export function createUpgradeStorageOwner(root: string, options: UpgradeOwnerOpt
     upgrade: async (request: Parameters<typeof owner.upgrade>[0]) => {
       running = nextAttempt;
       nextAttempt = 2;
-      upgradeClock = [upgradeTimes.started, upgradeTimes.activated];
+      const times = options.times ?? upgradeTimes;
+      upgradeClock = [times.started, times.activated];
       try {
         return await owner.upgrade(request);
       } finally {

@@ -63,6 +63,9 @@ const tables = [
   "command_idempotency",
   "command_receipts",
   "command_rejections",
+  "conversation_branches",
+  "conversation_messages",
+  "conversations",
   "project_state",
   "project_workspaces",
   "repository_bindings",
@@ -161,8 +164,8 @@ function verifyStorage(
     metadata_key: "canonical",
     database_kind: "canonical",
     format_version: 1,
-    schema_version: 3,
-    last_migration_id: "0002_initial_repository_binding",
+    schema_version: 4,
+    last_migration_id: "0003_conversation_messages",
   });
   const state = only(value, "project_state");
   const updated = decodeStrict(utc, state["updated_at"]);
@@ -176,26 +179,52 @@ function verifyStorage(
   });
 }
 
+/** The two writer generations in order, with their acquisition times, tokens and release. */
+function writerGenerationTimes(value: Snapshot, released: boolean) {
+  const generations = [...rowsOf(value, "writer_generations", 2)].sort(
+    (a, b) => Number(a["writer_generation"]) - Number(b["writer_generation"]),
+  );
+  const second = generations[1];
+  requireProof(generations[0] && second);
+  const acquired = generations.map((row) => decodeStrict(utc, row["acquired_at"]));
+  const tokens = generations.map((row) => decodeStrict(digest, row["token_digest"]));
+  requireProof(tokens[0] !== tokens[1]);
+  const terminal = released ? decodeStrict(utc, second["released_at"]) : null;
+  const [firstTime, secondTime] = acquired;
+  requireProof(firstTime && secondTime && firstTime <= secondTime);
+  if (terminal !== null) requireProof(secondTime <= terminal);
+  return { generations, acquired, tokens, terminal, secondTime };
+}
+
+type HandoffExpectation = Readonly<{ projectId: string; acquired: readonly string[] }>;
+
+function verifyHandoffs(value: Snapshot, { projectId, acquired }: HandoffExpectation) {
+  const handoffs = [...rowsOf(value, "writer_handoffs", 2)].sort(
+    (a, b) => Number(a["to_writer_generation"]) - Number(b["to_writer_generation"]),
+  );
+  handoffs.forEach((row, i) => {
+    exact(row, {
+      project_id: projectId,
+      handoff_id: decodeStrict(uuid, row["handoff_id"]),
+      from_writer_generation: i === 0 ? null : 1,
+      to_writer_generation: i + 1,
+      kind: i === 0 ? "initial" : "recovery",
+      recorded_at: acquired[i],
+    });
+  });
+  requireProof(handoffs[0]?.["handoff_id"] !== handoffs[1]?.["handoff_id"]);
+}
+
 function verifyAuthority(
   value: Snapshot,
   projectId: string,
   activationIds: readonly string[],
   released: boolean,
 ) {
-  const generations = [...rowsOf(value, "writer_generations", 2)].sort(
-    (a, b) => Number(a["writer_generation"]) - Number(b["writer_generation"]),
+  const { generations, acquired, tokens, terminal, secondTime } = writerGenerationTimes(
+    value,
+    released,
   );
-  const first = generations[0];
-  const second = generations[1];
-  requireProof(first && second);
-  const acquired = generations.map((row) => decodeStrict(utc, row["acquired_at"]));
-  const tokens = generations.map((row) => decodeStrict(digest, row["token_digest"]));
-  requireProof(tokens[0] !== tokens[1]);
-  const terminal = released ? decodeStrict(utc, second["released_at"]) : null;
-  const firstTime = acquired[0];
-  const secondTime = acquired[1];
-  requireProof(firstTime && secondTime && firstTime <= secondTime);
-  if (terminal !== null) requireProof(secondTime <= terminal);
   generations.forEach((row, i) => {
     exact(row, {
       project_id: projectId,
@@ -214,20 +243,7 @@ function verifyAuthority(
     activated_at: secondTime,
     released_at: terminal,
   });
-  const handoffs = [...rowsOf(value, "writer_handoffs", 2)].sort(
-    (a, b) => Number(a["to_writer_generation"]) - Number(b["to_writer_generation"]),
-  );
-  handoffs.forEach((row, i) => {
-    exact(row, {
-      project_id: projectId,
-      handoff_id: decodeStrict(uuid, row["handoff_id"]),
-      from_writer_generation: i === 0 ? null : 1,
-      to_writer_generation: i + 1,
-      kind: i === 0 ? "initial" : "recovery",
-      recorded_at: acquired[i],
-    });
-  });
-  requireProof(handoffs[0]?.["handoff_id"] !== handoffs[1]?.["handoff_id"]);
+  verifyHandoffs(value, { projectId, acquired });
   const recovery = only(value, "writer_recovery_records");
   exact(recovery, {
     project_id: projectId,

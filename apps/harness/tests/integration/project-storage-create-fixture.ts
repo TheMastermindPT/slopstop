@@ -47,6 +47,7 @@ import { createProjectStorageOwner } from "../../src/storage/project-storage-sto
 import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js";
 import { createMigratedSettlement } from "./conformance-counter-command.js";
 import { checkedInMigrationRoot, switchDeferred } from "./project-storage-runtime-fixture.js";
+import { refusedConversationPorts } from "./refused-conversation-ports.js";
 
 export {
   checkedInMigrationRoot,
@@ -367,6 +368,7 @@ function switchRepositoryPorts(
       await observations.run(`${name}.fence`, `${name}.fence@${time}`);
       return realCommands ? real.releaseFence(time) : { status: "current" };
     }),
+    ...refusedConversationPorts,
     close: vi.fn(async () => {
       await run("repository.close");
       await real.close();

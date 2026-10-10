@@ -270,7 +270,7 @@ it(
       database.exec("PRAGMA foreign_keys = ON");
       seedCanonicalConstraintAuthority(database);
       const before = canonicalTableCounts(database);
-      expect(before).toEqual([1, 0, 3, 0, 1, 0, 0, 1, 1, 0, 3, 0, 0]);
+      expect(before).toEqual([1, 0, 3, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 3, 0, 0]);
       for (const scenario of canonicalConstraintCases) {
         database.exec("SAVEPOINT invalid_case");
         try {

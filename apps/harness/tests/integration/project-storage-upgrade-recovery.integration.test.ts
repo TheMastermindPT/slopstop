@@ -313,7 +313,7 @@ it.for(caseVariantNames)(
 );
 
 it(
-  "keeps unproven upgrade leftovers quarantined: a target equal to the retained generation",
+  "keeps upgrade leftovers quarantined as broken: a target equal to a retained generation",
   async () => {
     const root = await createTemporaryApplicationRoot();
     await createUpgradedProject({ root });
@@ -340,10 +340,12 @@ it(
       const activation = await fixture.owner.acquireActivation(openRequest);
       if (activation.status === "ready") await activation.session.close();
       expect(await entriesOf({ directory: generationPaths(root).generation })).toEqual(retained);
+      // The rogue target row puts the completed upgrade's source back in `storage_generations`,
+      // so the upgrade chain rule refuses the registry before the proof compares directories.
       expect(fixture.diagnostics).toEqual([
         {
           kind: "discardFailed",
-          event: { projectId: openRequest.projectId, upgradeId: rogueUpgradeId, cause: "unproven" },
+          event: { projectId: openRequest.projectId, upgradeId: rogueUpgradeId, cause: "broken" },
         },
       ]);
     } finally {

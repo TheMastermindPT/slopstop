@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { decodeStrict, ProjectActivationIdSchema } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { createCanonicalCommandRegistry } from "../../src/canonical-command-registry.js";
+import { WriterOwnerBusy } from "../../src/storage/canonical-command-repository.js";
 import {
   appliedReceipt,
   createCanonicalCommandDatabase,
@@ -275,9 +276,7 @@ it.each([false, true])(
       rejectRecoveryCommit(f, landed);
       const first = f.send(2, "project.command", settlementRequest);
       await entered.promise;
-      await expect(repository.settle(unchangedText)).rejects.toEqual(
-        new Error("Canonical Writer transaction is already owned."),
-      );
+      await expect(repository.settle(unchangedText)).rejects.toEqual(new WriterOwnerBusy());
       expect(f.dependencies.sha256Text).toHaveBeenCalledTimes(1);
       expect(f.calls).toEqual([]);
       expect(f.prepare).not.toHaveBeenCalled();

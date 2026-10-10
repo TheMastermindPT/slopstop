@@ -22,6 +22,13 @@
       "when": 1790887541570,
       "tag": "0002_initial_repository_binding",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791556607254,
+      "tag": "0003_conversation_messages",
+      "breakpoints": true
     }
   ]
 }

@@ -562,3 +562,111 @@ export const canonicalEvents = sqliteTable(
     check("canonical_events_payload_sha256", sha256Check(table.payloadHash)),
   ],
 );
+
+export const conversations = sqliteTable(
+  "conversations",
+  {
+    conversationId: text("conversation_id").primaryKey(),
+    projectId: text("project_id").notNull(),
+    scopeKind: text("scope_kind", { enum: ["project", "waypoint"] }).notNull(),
+    waypointId: text("waypoint_id"),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "conversations_project_fk",
+      columns: [table.projectId],
+      foreignColumns: [canonicalProjectState.projectId],
+    }).onDelete("restrict"),
+    uniqueIndex("conversations_project_scope_uq")
+      .on(table.projectId)
+      .where(sql`${table.scopeKind} = 'project'`),
+    check("conversations_id_uuid", domainIdentityCheck(table.conversationId)),
+    check("conversations_scope_kind", sql`${table.scopeKind} in ('project', 'waypoint')`),
+    check(
+      "conversations_scope_shape",
+      sql`
+        (${table.scopeKind} = 'project' and ${table.waypointId} is null)
+        or (${table.scopeKind} = 'waypoint' and ${table.waypointId} is not null)
+      `,
+    ),
+    check(
+      "conversations_waypoint_uuid",
+      sql`${table.waypointId} is null or (${domainIdentityCheck(table.waypointId)})`,
+    ),
+  ],
+);
+
+export const conversationBranches = sqliteTable(
+  "conversation_branches",
+  {
+    branchId: text("branch_id").primaryKey(),
+    conversationId: text("conversation_id").notNull(),
+    parentBranchId: text("parent_branch_id"),
+    forkMessageId: text("fork_message_id").references(
+      (): AnySQLiteColumn => conversationMessages.messageId,
+      { onDelete: "restrict" },
+    ),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "conversation_branches_conversation_fk",
+      columns: [table.conversationId],
+      foreignColumns: [conversations.conversationId],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "conversation_branches_parent_fk",
+      columns: [table.conversationId, table.parentBranchId],
+      foreignColumns: [table.conversationId, table.branchId],
+    }).onDelete("restrict"),
+    uniqueIndex("conversation_branches_conversation_branch_uq").on(
+      table.conversationId,
+      table.branchId,
+    ),
+    uniqueIndex("conversation_branches_root_uq")
+      .on(table.conversationId)
+      .where(sql`${table.parentBranchId} is null`),
+    check("conversation_branches_id_uuid", domainIdentityCheck(table.branchId)),
+    check(
+      "conversation_branches_fork_shape",
+      sql`
+        (${table.parentBranchId} is null and ${table.forkMessageId} is null)
+        or (${table.parentBranchId} is not null and ${table.forkMessageId} is not null)
+      `,
+    ),
+  ],
+);
+
+export const conversationMessages = sqliteTable(
+  "conversation_messages",
+  {
+    messageId: text("message_id").primaryKey(),
+    conversationId: text("conversation_id").notNull(),
+    branchId: text("branch_id").notNull(),
+    cursor: integer("cursor").notNull(),
+    author: text("author", { enum: ["user", "model"] }).notNull(),
+    body: text("body").notNull(),
+    saveId: text("save_id").notNull(),
+    saveFingerprint: text("save_fingerprint").notNull(),
+    savedAt: text("saved_at").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "conversation_messages_branch_fk",
+      columns: [table.conversationId, table.branchId],
+      foreignColumns: [conversationBranches.conversationId, conversationBranches.branchId],
+    }).onDelete("restrict"),
+    uniqueIndex("conversation_messages_branch_cursor_uq").on(table.branchId, table.cursor),
+    uniqueIndex("conversation_messages_save_uq").on(table.saveId),
+    check("conversation_messages_id_uuid", domainIdentityCheck(table.messageId)),
+    check("conversation_messages_cursor_positive_safe", positiveSafeIntegerCheck(table.cursor)),
+    check("conversation_messages_author", sql`${table.author} in ('user', 'model')`),
+    check(
+      "conversation_messages_body_size",
+      sql`typeof(${table.body}) = 'text' and length(cast(${table.body} as blob)) between 1 and 32768`,
+    ),
+    check("conversation_messages_save_uuid", domainIdentityCheck(table.saveId)),
+    check("conversation_messages_save_fingerprint_sha256", sha256Check(table.saveFingerprint)),
+  ],
+);

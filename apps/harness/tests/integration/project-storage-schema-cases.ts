@@ -22,10 +22,21 @@ export const canonicalGenerationTwoTables = [
   "writer_recovery_records",
 ] as const;
 
-export const canonicalCurrentTables = [
+const canonicalGenerationThreeTables = [
   ...canonicalGenerationTwoTables,
   "project_workspaces",
   "repository_bindings",
+].sort();
+
+export const canonicalConversationTables = [
+  "conversation_branches",
+  "conversation_messages",
+  "conversations",
+] as const;
+
+export const canonicalCurrentTables = [
+  ...canonicalGenerationThreeTables,
+  ...canonicalConversationTables,
 ].sort();
 
 const project = "00000000-0000-4000-8000-000000000010";
@@ -90,8 +101,8 @@ export async function expectCreatedCanonicalSchema(
       metadata_key: "canonical",
       database_kind: "canonical",
       format_version: 1,
-      schema_version: 3,
-      last_migration_id: "0002_initial_repository_binding",
+      schema_version: 4,
+      last_migration_id: "0003_conversation_messages",
     },
   ]);
   expect(canonical.prepare("SELECT * FROM project_state").all()).toEqual([
@@ -113,11 +124,11 @@ export async function expectCreatedCanonicalSchema(
       created_at: "2026-09-04T12:00:00.000Z",
     },
   ]);
-  expect(canonicalTableCounts(canonical)).toEqual([0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0]);
-  expect(databaseSpecs.canonical.columns).toHaveLength(90);
-  expect(databaseSpecs.canonical.checks).toHaveLength(63);
-  expect(databaseSpecs.canonical.indexes).toHaveLength(15);
-  expect(databaseSpecs.canonical.foreignKeys).toHaveLength(13);
+  expect(canonicalTableCounts(canonical)).toEqual([0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0]);
+  expect(databaseSpecs.canonical.columns).toHaveLength(109);
+  expect(databaseSpecs.canonical.checks).toHaveLength(75);
+  expect(databaseSpecs.canonical.indexes).toHaveLength(20);
+  expect(databaseSpecs.canonical.foreignKeys).toHaveLength(18);
   await expect(
     requireDeclaredSchemaObjects(sqliteExecutor(canonical), databaseSpecs.canonical),
   ).resolves.toBeUndefined();

@@ -1,6 +1,6 @@
 import type { ProjectActivationId, ProjectId, WriterGeneration } from "@slopstop/protocol";
 import { decodeStrict, UuidTextSchema, WriterGenerationSchema } from "@slopstop/protocol";
-import { Schema } from "effect";
+import { Data, Schema } from "effect";
 import {
   type CanonicalCommandSnapshot,
   canonicalChangedOnce as changedOnce,
@@ -32,6 +32,7 @@ import {
 } from "./canonical-writer-recovery.js";
 import type { LocalLibsqlClient, LocalLibsqlTransaction } from "./local-libsql-worker-client.js";
 import {
+  type ClassifiedWriteTransactionOutcome,
   runClassifiedWriteTransaction,
   withWriteTransaction,
 } from "./project-storage-transaction.js";
@@ -45,8 +46,29 @@ export interface CanonicalCommandRepository {
   verifyFence(): Promise<WriterFenceCheck>;
   settle(commandText: string): Promise<CanonicalCommandSettlementResult>;
   releaseFence(releasedAt: string): Promise<WriterFenceCheck>;
+  /**
+   * Runs Conversation write work in one classified write transaction on the writer's client,
+   * after the settlement fence check; a stale fence answers `stale-writer` and runs nothing.
+   */
+  conversationTransaction<Result>(
+    work: (tx: LocalLibsqlTransaction) => Promise<Result>,
+  ): Promise<ClassifiedWriteTransactionOutcome<FencedConversationWork<Result>>>;
+  /** True when a transaction's close failed: the client's state is unknown. */
+  readonly hasUnfinishedClient: boolean;
+  /**
+   * Force-closes the raw client whose state is unknown, without the fence and repository
+   * stages; closing the connection rolls back and releases its locks.
+   */
+  abandonClient(): Promise<void>;
+  /** Runs Conversation read work in one transaction on the writer's client; no fence check. */
+  conversationRead<Result>(
+    work: (tx: LocalLibsqlTransaction) => Promise<Result>,
+  ): Promise<ClassifiedWriteTransactionOutcome<Result>>;
   close(): Promise<void>;
 }
+export type FencedConversationWork<Result> =
+  | Readonly<{ status: "current"; result: Result }>
+  | Readonly<{ status: "stale-writer" }>;
 export type CanonicalCommandRepositoryFailureCode =
   | "WRITER_FENCE_ACTIVATION_FAILED"
   | "WRITER_FENCE_CHECK_FAILED"
@@ -95,6 +117,18 @@ export class CanonicalCommandRepositoryError extends Error {
     options?: ErrorOptions,
   ) {
     super(messages[code], options);
+  }
+}
+
+/**
+ * The transaction owner is already running work. The writer's slot queue makes this
+ * unreachable; if it is ever reached, the caller treats it as plain contention.
+ */
+export class WriterOwnerBusy extends Data.TaggedError("WriterOwnerBusy")<{
+  readonly message: string;
+}> {
+  constructor() {
+    super({ message: "Canonical Writer transaction is already owned." });
   }
 }
 
@@ -340,7 +374,7 @@ class CanonicalTransactionOwner {
   }
 
   async exclusively<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.busy) throw new Error("Canonical Writer transaction is already owned.");
+    if (this.busy) throw new WriterOwnerBusy();
     this.busy = true;
     try {
       await this.closeTransaction();
@@ -348,6 +382,13 @@ class CanonicalTransactionOwner {
     } finally {
       this.busy = false;
     }
+  }
+
+  /** Closes the client outside `exclusively`: its unfinished transaction cannot be closed. */
+  async abandon(): Promise<void> {
+    if (this.closed) return;
+    await this.client.close();
+    this.closed = true;
   }
 
   async close(beforeClose: () => Promise<void> = async () => {}): Promise<void> {
@@ -413,6 +454,36 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
     if (outcome.commit === "uncertain")
       this.uncertainty = Object.freeze({ commandId: command.commandId, fingerprint });
     throw outcome.error;
+  }
+
+  async conversationTransaction<Result>(
+    work: (tx: LocalLibsqlTransaction) => Promise<Result>,
+  ): Promise<ClassifiedWriteTransactionOutcome<FencedConversationWork<Result>>> {
+    const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
+    return this.owner.exclusively(() =>
+      runClassifiedWriteTransaction<LocalLibsqlTransaction, FencedConversationWork<Result>>(
+        this.owner,
+        async (tx) => {
+          if (!(await currentSettlementFence(tx, this.projectId, this.writerGeneration, digest)))
+            return { status: "stale-writer" };
+          return { status: "current", result: await work(tx) };
+        },
+      ),
+    );
+  }
+
+  get hasUnfinishedClient(): boolean {
+    return this.owner.hasUnfinishedTransaction;
+  }
+
+  abandonClient(): Promise<void> {
+    return this.owner.abandon();
+  }
+
+  conversationRead<Result>(
+    work: (tx: LocalLibsqlTransaction) => Promise<Result>,
+  ): Promise<ClassifiedWriteTransactionOutcome<Result>> {
+    return this.owner.exclusively(() => runClassifiedWriteTransaction(this.owner, work));
   }
 
   async verifyFence(): Promise<WriterFenceCheck> {

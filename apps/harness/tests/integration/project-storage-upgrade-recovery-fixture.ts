@@ -133,7 +133,7 @@ export function abandonedEvent(reason: "failed" | "interrupted") {
 /** Stops the owner from inside an upgrade at `after-staged-copy`, leaving it unfinished. */
 export async function stopDuringUpgrade(
   { root }: ProjectRoot,
-  options: Pick<UpgradeOwnerOptions, "targetGenerationId"> = {},
+  options: Pick<UpgradeOwnerOptions, "targetGenerationId" | "upgradeId" | "times"> = {},
 ) {
   let stopping: Promise<void> | undefined;
   const fixture: UpgradeOwner = createUpgradeStorageOwner(root, {
@@ -146,12 +146,13 @@ export async function stopDuringUpgrade(
   return { outcome, stopping, diagnostics: fixture.diagnostics };
 }
 
-/** Opening answers read-write on `generationId`. */
+/** Opening `request`'s Project (default the fixture Project) answers read-write on `generationId`. */
 export async function expectReadWriteOn(
   owner: UpgradeOwner["owner"],
   generationId: string,
+  request = openRequest,
 ): Promise<void> {
-  const activation = await owner.acquireActivation(openRequest);
+  const activation = await owner.acquireActivation(request);
   expect(activation).toMatchObject({
     status: "ready",
     session: { mode: "read-write", result: { identity: { generationId } } },

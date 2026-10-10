@@ -5,11 +5,16 @@
     "apps/harness/src/process-fatal-diagnostics.ts",
     "apps/harness/src/storage/sqlite-schema-expression.ts",
     "apps/harness/src/storage/project-storage-database-specs.ts",
+    "apps/harness/src/storage/project-storage-spec-builders.ts",
+    "apps/harness/src/storage/project-storage-conversation-specs.ts",
     "apps/harness/src/storage/database-schema-verifier.ts",
     "apps/harness/src/storage/project-storage-upgrade-eligibility.ts",
     "apps/harness/src/storage/generated-migrations.ts",
     "apps/harness/src/storage/project-storage-manifest.ts",
-    "apps/harness/src/storage/project-storage-upgrade-recovery.ts"
+    "apps/harness/src/storage/project-storage-upgrade-recovery.ts",
+    "apps/harness/src/storage/application-database-migration.ts:142-284",
+    "apps/harness/src/storage/project-storage-node-adapters.ts:1036-1043",
+    "apps/harness/src/storage/project-storage-node-adapters.ts:1075-1081"
   ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],

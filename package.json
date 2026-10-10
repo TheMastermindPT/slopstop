@@ -32,6 +32,7 @@
     "test:e2e": "pnpm --filter @slopstop/desktop test:e2e",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:mutation": "stryker run",
+    "test:mutation:conversation:harness": "pnpm exec stryker run stryker.conversation.config.json",
     "test:mutation:project-storage:desktop": "pnpm exec stryker run stryker.project-storage-desktop.config.json",
     "test:mutation:project-storage:harness": "pnpm exec stryker run stryker.project-storage.config.json",
     "test:unit": "vitest run",

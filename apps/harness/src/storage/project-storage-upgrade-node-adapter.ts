@@ -6,6 +6,11 @@ import {
   type StorageGenerationId,
 } from "@slopstop/protocol";
 import { Result, Schema } from "effect";
+import {
+  chainRetainedGenerationIds,
+  orderUpgradeChain,
+  readUpgradeChainRegistry,
+} from "./application-database-migration.js";
 import { type GeneratedMigration, planUpgradeMigrations } from "./generated-migrations.js";
 import {
   type LocalLibsqlClient,
@@ -598,11 +603,8 @@ async function proveUnfinishedUpgrade(
 ): Promise<UnfinishedProof> {
   const client = await context.applicationClient();
   if (!(await registryProvesUnfinished(client, upgrade))) return { status: "unproven" };
-  const completed = await completedUpgradeFor(client, upgrade.storageId);
-  const retainedGenerationIds = [
-    upgrade.sourceGenerationId,
-    ...(completed === undefined ? [] : [completed.sourceGenerationId]),
-  ];
+  const chain = await upgradeChainFor(client, upgrade.storageId);
+  const retainedGenerationIds = [upgrade.sourceGenerationId, ...chainRetainedGenerationIds(chain)];
   const proven = await upgradeOutputIsProven({
     projectRoot: context.paths.forCreation(upgrade.projectId, upgrade.targetGenerationId)
       .projectRoot,
@@ -641,33 +643,41 @@ const completedUpgradeSchema = Schema.Struct({
   upgradeId: generationRowSchema.fields.createRequestId,
   sourceGenerationId: generationRowSchema.fields.generationId,
   targetGenerationId: generationRowSchema.fields.generationId,
+  sourceCreateRequestId: generationRowSchema.fields.createRequestId,
   sourceCreatedAt: generationRowSchema.fields.createdAt,
 });
 export type CompletedUpgrade = typeof completedUpgradeSchema.Type;
 
 /**
- * The single completed upgrade of a Storage, if any. A registry head older than the upgrade
- * table has none; more than one is broken until chained upgrades are supported.
+ * The completed upgrades of a Storage as one chain, root first, checked by the registry's chain
+ * rule. A registry head older than the upgrade table has none.
  */
-export async function completedUpgradeFor(
+export async function upgradeChainFor(
   client: Pick<LocalLibsqlClient, "execute">,
   storageId: GenerationRow["storageId"],
-): Promise<CompletedUpgrade | undefined> {
+): Promise<readonly CompletedUpgrade[]> {
   const table = await client.execute(
     "SELECT name FROM sqlite_schema WHERE type = 'table' AND name = 'storage_upgrades'",
   );
-  if (table.rows.length === 0) return undefined;
-  const result = await client.execute({
-    sql: `SELECT upgrade_id AS upgradeId, source_generation_id AS sourceGenerationId,
-      target_generation_id AS targetGenerationId, source_created_at AS sourceCreatedAt FROM storage_upgrades
-      WHERE storage_id = ? AND state = 'completed'`,
-    args: [storageId],
+  if (table.rows.length === 0) return [];
+  const [upgrades, registry] = await Promise.all([
+    client.execute({
+      sql: `SELECT upgrade_id AS upgradeId, source_generation_id AS sourceGenerationId,
+        target_generation_id AS targetGenerationId,
+        source_create_request_id AS sourceCreateRequestId, source_created_at AS sourceCreatedAt
+        FROM storage_upgrades WHERE storage_id = ? AND state = 'completed'`,
+      args: [storageId],
+    }),
+    readUpgradeChainRegistry(client, storageId),
+  ]);
+  const chain = orderUpgradeChain({
+    links: decodeStrict(Schema.Array(completedUpgradeSchema), resultObjects(upgrades)),
+    ...registry,
   });
-  const rows = decodeStrict(Schema.Array(completedUpgradeSchema), resultObjects(result));
-  if (rows.length > 1) {
-    throw new ProjectStorageBrokenError("Project Storage upgrade authority is not unique.");
+  if (chain === undefined) {
+    throw new ProjectStorageBrokenError("Project Storage upgrade chain is inconsistent.");
   }
-  return rows[0];
+  return chain;
 }
 
 const upgradedCreateSchema = Schema.Struct({

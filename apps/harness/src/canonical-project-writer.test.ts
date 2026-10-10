@@ -6,11 +6,21 @@ import {
   ProjectIdSchema,
   WriterGenerationSchema,
 } from "@slopstop/protocol";
+import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import * as writers from "./canonical-project-writer.js";
-import type { CanonicalCommandRepository } from "./storage/canonical-command-repository.js";
+import {
+  type CanonicalCommandRepository,
+  WriterOwnerBusy,
+} from "./storage/canonical-command-repository.js";
 import type { CanonicalCommandSettlementResult } from "./storage/canonical-command-settlement.js";
 import { CanonicalWriterLeaseError } from "./storage/canonical-writer-lease.js";
+import type { LocalLibsqlTransaction } from "./storage/local-libsql-worker-client.js";
+
+/** Conversation work is never expected by these writer tests. */
+async function refusedConversationTransaction(): Promise<never> {
+  throw new Error("Unexpected Conversation work.");
+}
 
 function submission() {
   return decodeStrict(CanonicalProjectCommandRequestSchema, {
@@ -41,7 +51,18 @@ const receipt = decodeStrict(CanonicalCommandReceiptSchema, {
     { eventId: "77777777-7777-4777-8777-777777777502", eventOrdinal: 1 },
   ],
 });
-function writerFixture(settle: CanonicalCommandRepository["settle"]) {
+/** Conversation ports a test overrides; the rest refuse Conversation work. */
+type ConversationPorts = Partial<
+  Pick<
+    CanonicalCommandRepository,
+    "conversationTransaction" | "conversationRead" | "abandonClient" | "hasUnfinishedClient"
+  >
+>;
+
+function writerFixture(
+  settle: CanonicalCommandRepository["settle"],
+  ports: ConversationPorts = {},
+) {
   const request = submission();
   const repository = {
     projectId: request.projectId,
@@ -51,7 +72,12 @@ function writerFixture(settle: CanonicalCommandRepository["settle"]) {
       status: "current",
     })),
     releaseFence: vi.fn(async (_time: string) => ({ status: "current" as const })),
+    conversationTransaction: refusedConversationTransaction,
+    conversationRead: refusedConversationTransaction,
+    hasUnfinishedClient: false,
+    abandonClient: refusedConversationTransaction,
     close: vi.fn(async () => undefined),
+    ...ports,
   };
   const lease = { release: vi.fn(async () => undefined) };
   const writer = writers.createCanonicalProjectWriter({
@@ -364,6 +390,10 @@ it("refuses stale fences and preserves native close failure", async () => {
       settle: unexpectedSettlement,
       verifyFence: async () => ({ status }),
       releaseFence: vi.fn(async () => ({ status })),
+      conversationTransaction: refusedConversationTransaction,
+      conversationRead: refusedConversationTransaction,
+      hasUnfinishedClient: false,
+      abandonClient: refusedConversationTransaction,
       close: vi.fn(async () => undefined),
     };
     const lease = {
@@ -411,6 +441,10 @@ it("retains failed release ownership and resumes cleanup on stop retry", async (
         touch("fence");
         return { status: "current" as const };
       }),
+      conversationTransaction: refusedConversationTransaction,
+      conversationRead: refusedConversationTransaction,
+      hasUnfinishedClient: false,
+      abandonClient: refusedConversationTransaction,
       close: vi.fn(async () => {
         touch("repository");
       }),
@@ -448,4 +482,305 @@ it("retains failed release ownership and resumes cleanup on stop retry", async (
     };
     expect(calls).toEqual(expected[stage]);
   }
+});
+
+it("answers command-busy for a busy transaction owner and keeps admission open", async () => {
+  const outcomes: (() => Promise<CanonicalCommandSettlementResult>)[] = [
+    async () => {
+      throw new WriterOwnerBusy();
+    },
+    async () => ({ status: "settled", receipt }),
+  ];
+  const { writer, repository, lease } = writerFixture(() => {
+    const next = outcomes.shift();
+    if (next === undefined) throw new Error("Unexpected settlement.");
+    return next();
+  });
+  await expect(pendingResult(writer.settle(submission().command))).resolves.toEqual(
+    blockedResult(submission().command.commandId, "command-busy").result,
+  );
+  await expect(pendingResult(writer.settle(submission().command))).resolves.toEqual(
+    expectedResult("settled"),
+  );
+  expect(repository.releaseFence).not.toHaveBeenCalled();
+  expect(repository.close).not.toHaveBeenCalled();
+  expect(lease.release).not.toHaveBeenCalled();
+  await writer.close("2026-09-05T12:00:04.000Z");
+});
+
+describe("Conversation work queued behind a failure that closed admission", () => {
+  it("answers writer-unavailable for a save queued behind a failing settlement", async () => {
+    const hold = deferred<CanonicalCommandSettlementResult>();
+    const started = deferred<void>();
+    const conversationTransaction = vi.fn(refusedConversationTransaction);
+    const { writer, lease } = writerFixture(
+      () => {
+        started.resolve();
+        return hold.promise;
+      },
+      { conversationTransaction },
+    );
+    const settling = pendingResult(writer.settle(submission().command));
+    await started.promise;
+    const queued = writer.conversation(() => Effect.succeed("unreached"));
+    const failure = new Error("private settlement failure");
+    hold.reject(failure);
+    await expect(settling).rejects.toBe(failure);
+    await expect(queued).resolves.toEqual({ status: "writer-unavailable" });
+    expect(conversationTransaction).not.toHaveBeenCalled();
+    await writer.close("2026-09-05T12:00:04.000Z");
+    expect(lease.release).toHaveBeenCalledOnce();
+  });
+});
+
+/** A transaction the fake repository hands to Conversation work; the work never touches it. */
+const untouchedTransaction: LocalLibsqlTransaction = {
+  closed: true,
+  execute: () => Promise.reject(new Error("Unexpected statement.")),
+  commit: async () => undefined,
+  rollback: async () => undefined,
+  close: async () => undefined,
+};
+
+/** A repository transaction that runs the work and closes it acknowledged, after `gate`. */
+function acknowledgedTransaction(gate: Promise<void> = Promise.resolve()) {
+  const run: CanonicalCommandRepository["conversationTransaction"] = async (work) => {
+    await gate;
+    const result = await work(untouchedTransaction);
+    return {
+      status: "succeeded",
+      stage: "closed",
+      commit: "acknowledged",
+      result: { status: "current", result },
+    };
+  };
+  return run;
+}
+
+const completedWith = (value: string) => ({
+  status: "completed",
+  result: { _tag: "Success", success: value },
+});
+
+describe("Conversation admission", () => {
+  it("answers writer-unavailable without the repository after close() and after a failure", async () => {
+    for (const closing of ["close", "failed settlement"] as const) {
+      const conversationTransaction = vi.fn(refusedConversationTransaction);
+      const conversationRead = vi.fn(refusedConversationTransaction);
+      const failure = new Error("private settlement failure");
+      const { writer } = writerFixture(
+        async () => {
+          throw failure;
+        },
+        { conversationTransaction, conversationRead },
+      );
+      if (closing === "close") await writer.close("2026-09-05T12:00:04.000Z");
+      else await expect(pendingResult(writer.settle(submission().command))).rejects.toBe(failure);
+      await expect(writer.conversation(() => Effect.succeed("unreached"))).resolves.toEqual({
+        status: "writer-unavailable",
+      });
+      await expect(writer.conversationRead(() => Effect.succeed("unreached"))).resolves.toEqual({
+        status: "writer-unavailable",
+      });
+      expect(conversationTransaction).not.toHaveBeenCalled();
+      expect(conversationRead).not.toHaveBeenCalled();
+    }
+  });
+
+  it("drains admitted Conversation work on a plain close before any release stage", async () => {
+    const gate = deferred<void>();
+    const { writer, repository, lease } = writerFixture(unexpectedSettlement, {
+      conversationTransaction: acknowledgedTransaction(gate.promise),
+    });
+    const log: string[] = [];
+    repository.releaseFence.mockImplementation(async () => {
+      log.push("fence");
+      return { status: "current" };
+    });
+    repository.close.mockImplementation(async () => {
+      log.push("repository");
+    });
+    lease.release.mockImplementation(async () => {
+      log.push("lease");
+    });
+    const admitted = writer.conversation(() =>
+      Effect.sync(() => {
+        log.push("work");
+        return "drained";
+      }),
+    );
+    const closing = writer.close("2026-09-05T12:00:04.000Z");
+    // One event-loop turn: a close that did not wait for the work would release now.
+    await new Promise((turn) => setImmediate(turn));
+    gate.resolve();
+    await expect(admitted).resolves.toMatchObject(completedWith("drained"));
+    await closing;
+    expect(log).toEqual(["work", "fence", "repository", "lease"]);
+  });
+
+  it("answers ConversationStorageBusy for a busy owner and keeps admission open", async () => {
+    const acknowledged = acknowledgedTransaction();
+    let calls = 0;
+    const conversationTransaction: CanonicalCommandRepository["conversationTransaction"] = (
+      work,
+    ) => {
+      calls += 1;
+      return calls === 1 ? Promise.reject(new WriterOwnerBusy()) : acknowledged(work);
+    };
+    const { writer } = writerFixture(unexpectedSettlement, { conversationTransaction });
+    await expect(writer.conversation(() => Effect.succeed("unreached"))).resolves.toMatchObject({
+      status: "completed",
+      result: { _tag: "Failure", failure: { _tag: "ConversationStorageBusy" } },
+    });
+    await expect(writer.conversation(() => Effect.succeed("next"))).resolves.toMatchObject(
+      completedWith("next"),
+    );
+    await writer.close("2026-09-05T12:00:04.000Z");
+  });
+
+  it("fails release with the abandon cause when the force-close fails (6a)", async () => {
+    const abandonFailure = new Error("private force-close failure");
+    const abandonClient = vi.fn(async () => {
+      throw abandonFailure;
+    });
+    const { writer, repository, lease } = writerFixture(unexpectedSettlement, {
+      conversationTransaction: acknowledgedTransaction(),
+      hasUnfinishedClient: true,
+      abandonClient,
+    });
+    await expect(writer.conversation(() => Effect.succeed("saved"))).resolves.toMatchObject(
+      completedWith("saved"),
+    );
+    await expect(writer.close("2026-09-05T12:00:04.000Z")).rejects.toMatchObject({
+      code: "WRITER_REPOSITORY_CLOSE_FAILED",
+      cause: { message: "WRITER_CLIENT_ABANDON_FAILED", cause: abandonFailure },
+    });
+    expect(abandonClient).toHaveBeenCalledOnce();
+    expect(repository.releaseFence).not.toHaveBeenCalled();
+    expect(repository.close).not.toHaveBeenCalled();
+    expect(lease.release).not.toHaveBeenCalled();
+  });
+});
+
+/** A repository transaction whose body failed: the work's error is classified, never thrown. */
+const failedBodyTransaction: CanonicalCommandRepository["conversationTransaction"] = async (
+  work,
+) => {
+  try {
+    const result = await work(untouchedTransaction);
+    return {
+      status: "succeeded",
+      stage: "closed",
+      commit: "acknowledged",
+      result: { status: "current", result },
+    };
+  } catch (primaryError) {
+    return {
+      status: "failed",
+      stage: "body",
+      commit: "not-attempted",
+      primaryError,
+      error: primaryError,
+    };
+  }
+};
+
+describe("Conversation abandonment", () => {
+  it("abandons the client when a defect's transaction also leaves it unfinished", async () => {
+    const abandonClient = vi.fn(async () => undefined);
+    const { writer, repository, lease } = writerFixture(unexpectedSettlement, {
+      conversationTransaction: failedBodyTransaction,
+      hasUnfinishedClient: true,
+      abandonClient,
+    });
+    const bug = new Error("Conversation work defect.");
+    await expect(writer.conversation(() => Effect.die(bug))).rejects.toBe(bug);
+    await expect(writer.conversation(() => Effect.succeed("unreached"))).resolves.toEqual({
+      status: "writer-unavailable",
+    });
+    await writer.close("2026-09-05T12:00:04.000Z");
+    expect(abandonClient).toHaveBeenCalledOnce();
+    expect(repository.releaseFence).not.toHaveBeenCalled();
+    expect(repository.close).not.toHaveBeenCalled();
+    expect(lease.release).toHaveBeenCalledOnce();
+  });
+});
+
+describe("Admission after a failed settlement", () => {
+  it("refuses Conversation work arriving at any point after the settlement failure", async () => {
+    const conversationTransaction = vi.fn(refusedConversationTransaction);
+    const failure = new Error("private settlement failure");
+    const probes: Promise<unknown>[] = [];
+    const { writer } = writerFixture(
+      () => {
+        const rejected = Promise.reject(failure);
+        // Probe every microtask turn after the rejection, then the next macrotask turns.
+        for (let turns = 0; turns < 40; turns += 1) {
+          let chain: Promise<unknown> = rejected.catch(() => undefined);
+          for (let index = 0; index < turns; index += 1) chain = chain.then(() => undefined);
+          probes.push(chain.then(() => writer.conversation(() => Effect.succeed("unreached"))));
+        }
+        for (let turns = 0; turns < 3; turns += 1)
+          probes.push(
+            new Promise((turn) => setImmediate(turn)).then(() =>
+              writer.conversation(() => Effect.succeed("unreached")),
+            ),
+          );
+        return rejected;
+      },
+      { conversationTransaction },
+    );
+    await expect(pendingResult(writer.settle(submission().command))).rejects.toBe(failure);
+    const answers = await Promise.allSettled(probes);
+    expect(
+      answers.map((answer) => (answer.status === "fulfilled" ? answer.value : answer.reason)),
+    ).toEqual(Array.from({ length: probes.length }, () => ({ status: "writer-unavailable" })));
+    expect(conversationTransaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("Repository rejections on the Conversation path", () => {
+  it("rethrows a non-busy repository rejection on save and read", async () => {
+    const rejection = new Error("private repository failure");
+    const reject = async (): Promise<never> => {
+      throw rejection;
+    };
+    const { writer } = writerFixture(unexpectedSettlement, {
+      conversationTransaction: reject,
+      conversationRead: reject,
+    });
+    await expect(writer.conversation(() => Effect.succeed("unreached"))).rejects.toBe(rejection);
+    await expect(writer.conversationRead(() => Effect.succeed("unreached"))).rejects.toBe(
+      rejection,
+    );
+  });
+
+  it("answers ConversationStorageBusy for a busy owner on read", async () => {
+    const { writer } = writerFixture(unexpectedSettlement, {
+      conversationRead: async () => {
+        throw new WriterOwnerBusy();
+      },
+    });
+    await expect(writer.conversationRead(() => Effect.succeed("unreached"))).resolves.toMatchObject(
+      {
+        status: "completed",
+        result: { _tag: "Failure", failure: { _tag: "ConversationStorageBusy" } },
+      },
+    );
+  });
+
+  it("answers a command after an abandonment synchronously, without the repository", async () => {
+    const { writer, repository } = writerFixture(unexpectedSettlement, {
+      conversationTransaction: acknowledgedTransaction(),
+      hasUnfinishedClient: true,
+      abandonClient: async () => undefined,
+    });
+    await expect(writer.conversation(() => Effect.succeed("saved"))).resolves.toMatchObject(
+      completedWith("saved"),
+    );
+    expect(writer.settle(submission().command)).toEqual(
+      blockedResult(submission().command.commandId, "writer-unavailable"),
+    );
+    expect(repository.settle).not.toHaveBeenCalled();
+  });
 });

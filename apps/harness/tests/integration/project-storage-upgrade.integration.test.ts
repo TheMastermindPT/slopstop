@@ -28,6 +28,7 @@ import {
   upgradeIds,
   upgradeTimes,
 } from "./project-storage-runtime-fixture.js";
+import { canonicalConversationTables } from "./project-storage-schema-cases.js";
 import {
   conflictingStagedTable,
   holdExclusiveLock,
@@ -96,12 +97,17 @@ function expectUpgradedCanonical(before: SourceSnapshot, target: TargetPaths): v
       metadata_key: "canonical",
       database_kind: "canonical",
       format_version: 1,
-      schema_version: 3,
-      last_migration_id: "0002_initial_repository_binding",
+      schema_version: 4,
+      last_migration_id: "0003_conversation_messages",
     },
   ]);
-  expect(after["repository_bindings"]).toEqual([]);
-  expect(after["project_workspaces"]).toEqual([]);
+  for (const table of [
+    "repository_bindings",
+    "project_workspaces",
+    ...canonicalConversationTables,
+  ]) {
+    expect(after[table], table).toEqual([]);
+  }
   for (const table of comparableCanonicalTables) {
     expect(after[table], table).toEqual(before.canonical[table]);
   }
@@ -502,7 +508,7 @@ it(
         projectSequence: 3,
         runtimeWaterline: 0,
         createdAt: upgradeTimes.started,
-        canonical: { schemaVersion: 3 },
+        canonical: { schemaVersion: 4 },
       });
       for (const attempt of [1, 2, 3]) {
         const activation = await fixture.owner.acquireActivation(openRequest);

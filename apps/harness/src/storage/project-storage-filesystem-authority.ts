@@ -391,6 +391,7 @@ export async function upgradeOutputIsProven(input: {
   targetGenerationId: string;
   retainedGenerationIds: readonly string[];
 }): Promise<boolean> {
+  // Backup check: the upgrade chain rule already refuses a target that is a retained source.
   if (input.retainedGenerationIds.includes(input.targetGenerationId)) return false;
   const output = new Set(upgradeOutputNames(input.targetGenerationId));
   for (const entry of await readdir(input.projectRoot, { withFileTypes: true })) {

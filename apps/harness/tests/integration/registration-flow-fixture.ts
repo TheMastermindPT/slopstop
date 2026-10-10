@@ -11,8 +11,11 @@ import {
   createProjectActivateCommand,
   createProjectListCommand,
   createProjectRegistrationCommand,
+  createProjectUpgradeCommand,
   decodeStrict,
+  type HarnessMessage,
   type ProjectRegistrationRequest,
+  ProjectUpgradeRequestSchema,
   parseHarnessMessage,
 } from "@slopstop/protocol";
 import { afterEach } from "vitest";
@@ -23,6 +26,13 @@ import {
   transportFor,
 } from "./project-storage-runtime-fixture.js";
 import { installedGit } from "./registration-git-fixture.js";
+
+/** Each harness event name with the payload it carries. */
+type PayloadByEvent = {
+  [Event in HarnessMessage as Event["event"]]: Event extends { payload: infer Payload }
+    ? Payload
+    : never;
+};
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -40,13 +50,16 @@ export type GitConsent = Readonly<{
 
 /**
  * A harness process runtime over a fresh installation, driven through its transport with
- * one fresh Git repository at `directory`.
+ * one fresh Git repository at `directory`. Given the `root` of an earlier session, it starts a
+ * new runtime over that installation and repository instead.
  */
-export async function registrationSession() {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-flow-"));
-  roots.push(root);
+export async function registrationSession(existing?: Readonly<{ root: string }>) {
+  const root = existing?.root ?? (await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-flow-")));
   const directory = path.join(root, "repository");
-  execFileSync(installedGit, ["init", "--quiet", directory]);
+  if (existing === undefined) {
+    roots.push(root);
+    execFileSync(installedGit, ["init", "--quiet", directory]);
+  }
   const { port1, port2 } = new MessageChannel();
   const stop = startHarnessProcessRuntime({
     logger: silentHarnessLogger,
@@ -70,29 +83,35 @@ export async function registrationSession() {
     messageId: `00000000-0000-4000-8000-${String(sequence++).padStart(12, "0")}`,
     sentAt: "2026-10-04T12:00:00.000Z",
   });
-  const register = async (request: ProjectRegistrationRequest) => {
-    const event = await exchange(createProjectRegistrationCommand(metadata(), request));
-    if (event.event !== "project.registration.result")
-      throw new Error(`Unexpected harness event ${JSON.stringify(event)}`);
-    return event.payload;
+  /** Sends one command and answers the payload of the one event it must produce. */
+  const answer = async <Name extends keyof PayloadByEvent>(
+    command: unknown,
+    name: Name,
+  ): Promise<PayloadByEvent[Name]> => {
+    const event = await exchange(command);
+    if (event.event !== name) throw new Error(`Unexpected harness event ${JSON.stringify(event)}`);
+    // The event name was just checked, so this event carries the payload of `name`.
+    return Reflect.get(event, "payload") as PayloadByEvent[Name];
   };
-  const list = async () => {
-    const event = await exchange(createProjectListCommand(metadata()));
-    if (event.event !== "project.list.result")
-      throw new Error(`Unexpected harness event ${JSON.stringify(event)}`);
-    return event.payload;
-  };
-  const activate = async (projectId: string) => {
-    const event = await exchange(
+  const register = (request: ProjectRegistrationRequest) =>
+    answer(createProjectRegistrationCommand(metadata(), request), "project.registration.result");
+  const list = () => answer(createProjectListCommand(metadata()), "project.list.result");
+  const activate = (projectId: string) =>
+    answer(
       createProjectActivateCommand(
         metadata(),
         decodeStrict(CanonicalProjectActivationRequestSchema, { projectId }),
       ),
+      "project.activate.result",
     );
-    if (event.event !== "project.activate.result")
-      throw new Error(`Unexpected harness event ${JSON.stringify(event)}`);
-    return event.payload;
-  };
+  const upgrade = (projectId: string) =>
+    answer(
+      createProjectUpgradeCommand(
+        metadata(),
+        decodeStrict(ProjectUpgradeRequestSchema, { projectId }),
+      ),
+      "project.upgrade.result",
+    );
   const approveGit = async (): Promise<GitConsent> => {
     const git = await register({ step: "prepare-git" });
     if (git.status !== "git-prepared") throw new Error("Git preparation missing");
@@ -144,6 +163,7 @@ export async function registrationSession() {
     register,
     list,
     activate,
+    upgrade,
     approveGit,
     prepareFolder,
     dispose: async () => {
@@ -161,14 +181,15 @@ export async function registerFolder(session: Session, folder: string) {
   const git = await session.approveGit();
   const { preparation, result } = await session.prepareFolder(folder, git);
   if (result.status !== "proposal-prepared") throw new Error("Proposal missing");
-  const registered = await session.register({
+  const confirmation = {
     step: "confirm",
     requestId: randomUUID(),
     ...preparation,
     proposalId: result.proposalId,
     proposalFingerprint: result.proposalFingerprint,
-  });
-  return { git, proposal: result, registered };
+  } as const;
+  const registered = await session.register(confirmation);
+  return { git, proposal: result, confirmation, registered };
 }
 
 /** Commits once in the repository and adds a linked worktree at `linked`. */

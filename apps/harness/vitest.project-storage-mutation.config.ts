@@ -14,6 +14,10 @@ export default defineConfig({
       "apps/harness/src/storage/generated-migrations.test.ts",
       "apps/harness/src/storage/project-storage-manifest.test.ts",
       "apps/harness/src/storage/project-storage-store.test.ts",
+      "apps/harness/tests/integration/project-storage-chained-upgrade.integration.test.ts",
+      "apps/harness/tests/integration/project-storage-conversation-schema.integration.test.ts",
+      "apps/harness/tests/integration/registration-project-upgrade.integration.test.ts",
+      "apps/harness/src/storage/application-database-migration.test.ts",
     ],
   },
 });

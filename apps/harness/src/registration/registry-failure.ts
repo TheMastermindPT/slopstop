@@ -4,7 +4,7 @@ import {
 } from "@slopstop/protocol";
 import { Schema } from "effect";
 import { ApplicationDatabaseFault } from "../storage/application-database-migration.js";
-import { storageErrorCode } from "../storage/project-storage-node-errors.js";
+import { isSqliteBusy } from "../storage/sqlite-busy.js";
 
 export const RegistryFailureSchema = Schema.Union([
   Schema.Struct({
@@ -33,8 +33,7 @@ export function registryFailure(
 ): RegistryFailure | { status: "broken"; code: "INTERNAL_FAILURE" } {
   if (error instanceof RegistryFault) return error.failure;
   if (error instanceof ApplicationDatabaseFault) return error.failure;
-  const code = storageErrorCode({ error });
-  if (code === "SQLITE_BUSY" || code === "SQLITE_LOCKED") {
+  if (isSqliteBusy(error)) {
     return { status: "unavailable", code: "REGISTRY_BUSY" };
   }
   return { status: "broken", code: "INTERNAL_FAILURE" };

@@ -9,7 +9,9 @@ import {
   UuidTextSchema,
 } from "@slopstop/protocol";
 import { Result, Schema } from "effect";
+import { receiptGenerationResolves } from "../storage/application-database-migration.js";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
+import { upgradeChainFor } from "../storage/project-storage-upgrade-node-adapter.js";
 import { PhysicalDirectoryKeySchema, samePhysicalIdentity } from "./physical-identity.js";
 import {
   PrepareProjectRegistrationSchema,
@@ -103,6 +105,26 @@ export function incomplete(request: ConfirmationRequest) {
   } as const;
 }
 
+/** The reservation record, its row's fingerprint and its row's common-directory key agree. */
+function reservationRowAgrees(
+  input: Readonly<{
+    record: Reservation;
+    row: (typeof reservationKeyRowsSchema.Type)[0];
+    id: string;
+  }>,
+): boolean {
+  const { record, row, id } = input;
+  const common = record.proposal.observation.physical.commonDirectory;
+  return [
+    record.reservationId === id,
+    digest(record) === row.fingerprint,
+    common.platform === row.platform,
+    common.volumeIdentity === row.volumeIdentity,
+    common.fileIdentity === row.fileIdentity,
+    common.birthIdentity === row.birthIdentity,
+  ].every(Boolean);
+}
+
 async function readReservation(transaction: LocalLibsqlTransaction, id: string) {
   const result = await transaction.execute({
     sql: "SELECT common_platform AS platform, common_volume_identity AS volumeIdentity, common_file_identity AS fileIdentity, common_birth_identity AS birthIdentity, record_json AS recordJson, record_fingerprint AS fingerprint FROM registration_reservations WHERE reservation_id = ?",
@@ -111,56 +133,81 @@ async function readReservation(transaction: LocalLibsqlTransaction, id: string) 
   try {
     const row = decodeStrict(reservationKeyRowsSchema, registryRows(result))[0];
     const record = decodeStrict(reservationSchema, JSON.parse(row.recordJson));
-    const common = record.proposal.observation.physical.commonDirectory;
-    if (
-      record.reservationId !== id ||
-      digest(record) !== row.fingerprint ||
-      common.platform !== row.platform ||
-      common.volumeIdentity !== row.volumeIdentity ||
-      common.fileIdentity !== row.fileIdentity ||
-      common.birthIdentity !== row.birthIdentity
-    )
-      throw corrupt();
+    if (!reservationRowAgrees({ record, row, id })) throw corrupt();
     return record;
   } catch {
     throw corrupt();
   }
 }
 
-export async function readConfirmation(
+/** The stored request row for `requestId` with its strictly decoded, self-consistent request. */
+async function readSavedConfirmation(
   transaction: LocalLibsqlTransaction,
-  request: ConfirmationRequest,
+  requestId: ConfirmationRequest["requestId"],
 ) {
   const result = await transaction.execute({
     sql: "SELECT input_fingerprint AS fingerprint, request_json AS requestJson, reservation_id AS reservationId FROM registration_requests WHERE request_id = ?",
-    args: [request.requestId],
+    args: [requestId],
   });
   const parsed = decodeStrictResult(requestRowsSchema, registryRows(result));
   if (Result.isFailure(parsed)) throw corrupt();
   const row = parsed.success[0];
   if (row === undefined) return undefined;
-  let saved: ConfirmationRequest;
-  try {
-    saved = decodeStrict(ConfirmationValidationRequestSchema, JSON.parse(row.requestJson));
-  } catch {
-    throw corrupt();
-  }
-  if (saved.requestId !== request.requestId || digest(saved) !== row.fingerprint) throw corrupt();
+  const saved = decodeSavedRequest(row.requestJson);
+  if (saved.requestId !== requestId || digest(saved) !== row.fingerprint) throw corrupt();
+  return { row, saved };
+}
+
+export async function readConfirmation(
+  transaction: LocalLibsqlTransaction,
+  request: ConfirmationRequest,
+) {
+  const stored = await readSavedConfirmation(transaction, request.requestId);
+  if (stored === undefined) return undefined;
+  const { row, saved } = stored;
   const reservation = await readReservation(transaction, row.reservationId);
   const proposal = await readProposal(transaction, saved.preparation);
-  if (
-    proposal === undefined ||
-    proposal.proposalId !== saved.proposalId ||
-    preparationFingerprint(proposal) !== saved.proposalFingerprint ||
-    !samePhysicalIdentity(
-      proposal.observation.physical.commonDirectory,
-      reservation.proposal.observation.physical.commonDirectory,
-    )
-  )
-    throw corrupt();
+  if (!savedProposalAgrees({ proposal, saved, reservation })) throw corrupt();
   if (digest(request) !== row.fingerprint) {
     throw new RegistryFault({ status: "rejected", code: "REGISTRATION_IDEMPOTENCY_CONFLICT" });
   }
+  return confirmationOutcome(transaction, { request, reservation });
+}
+
+/** A stored confirmation request decodes strictly, or the registry is corrupt. */
+function decodeSavedRequest(requestJson: string): ConfirmationRequest {
+  try {
+    return decodeStrict(ConfirmationValidationRequestSchema, JSON.parse(requestJson));
+  } catch {
+    throw corrupt();
+  }
+}
+
+/** The saved request's proposal still exists, unchanged, at the reservation's directory. */
+function savedProposalAgrees(
+  input: Readonly<{
+    proposal: Awaited<ReturnType<typeof readProposal>>;
+    saved: ConfirmationRequest;
+    reservation: Reservation;
+  }>,
+): boolean {
+  const { proposal, saved, reservation } = input;
+  if (proposal === undefined) return false;
+  return [
+    proposal.proposalId === saved.proposalId,
+    preparationFingerprint(proposal) === saved.proposalFingerprint,
+    samePhysicalIdentity(
+      proposal.observation.physical.commonDirectory,
+      reservation.proposal.observation.physical.commonDirectory,
+    ),
+  ].every(Boolean);
+}
+
+async function confirmationOutcome(
+  transaction: LocalLibsqlTransaction,
+  input: Readonly<{ request: ConfirmationRequest; reservation: Reservation }>,
+) {
+  const { request, reservation } = input;
   const publication = await readPublication(transaction, reservation);
   if (publication === undefined) return incomplete(request);
   if (publication.requestId === request.requestId) return publication;
@@ -241,6 +288,25 @@ export async function reserveConfirmation(
   return { status: "reserved" as const, reservation, request: input.request, created };
 }
 
+/** The published receipt matches its row and the reservation it was published for. */
+function receiptRowAgrees(
+  input: Readonly<{
+    receipt: RegisteredProject;
+    row: (typeof publicationRowsSchema.Type)[number];
+    reservation: Reservation;
+  }>,
+): boolean {
+  const { receipt, row, reservation } = input;
+  return [
+    digest(receipt) === row.fingerprint,
+    receipt.requestId === row.requestId,
+    receipt.projectId === reservation.projectId,
+    receipt.repositoryBindingId === reservation.repositoryBindingId,
+    receipt.workspaceId === reservation.workspaceId,
+    receipt.proposalId === reservation.proposal.proposalId,
+  ].every(Boolean);
+}
+
 export async function readPublication(
   transaction: LocalLibsqlTransaction,
   reservation: Reservation,
@@ -253,28 +319,43 @@ export async function readPublication(
     const row = decodeStrict(publicationRowsSchema, registryRows(result))[0];
     if (row === undefined) return undefined;
     const receipt = decodeStrict(RegisteredProjectSchema, JSON.parse(row.resultJson));
-    if (
-      digest(receipt) !== row.fingerprint ||
-      receipt.requestId !== row.requestId ||
-      receipt.projectId !== reservation.projectId ||
-      receipt.repositoryBindingId !== reservation.repositoryBindingId ||
-      receipt.workspaceId !== reservation.workspaceId ||
-      receipt.proposalId !== reservation.proposal.proposalId
-    )
-      throw corrupt();
-    const generation = await transaction.execute({
-      sql: "SELECT project_id, storage_id, create_request_id FROM storage_generations WHERE generation_id = ? AND activated_at IS NOT NULL",
-      args: [receipt.generationId],
-    });
-    if (
-      JSON.stringify(generation.rows) !==
-      JSON.stringify([[reservation.projectId, receipt.storageId, reservation.createRequestId]])
-    )
-      throw corrupt();
+    if (!receiptRowAgrees({ receipt, row, reservation })) throw corrupt();
+    if (!(await receiptGenerationAgrees(transaction, reservation, receipt))) throw corrupt();
     return receipt;
   } catch {
     throw corrupt();
   }
+}
+
+/**
+ * The receipt's generation is the activated generation its reservation created, or, after
+ * upgrades superseded it, the root source of the Storage's upgrade chain created by the same
+ * request, the chain ending at the registration's active generation.
+ */
+async function receiptGenerationAgrees(
+  transaction: LocalLibsqlTransaction,
+  reservation: Reservation,
+  receipt: RegisteredProject,
+): Promise<boolean> {
+  const generation = await transaction.execute({
+    sql: "SELECT project_id, storage_id, create_request_id FROM storage_generations WHERE generation_id = ? AND activated_at IS NOT NULL",
+    args: [receipt.generationId],
+  });
+  if (generation.rows.length !== 0) {
+    return (
+      JSON.stringify(generation.rows) ===
+      JSON.stringify([[reservation.projectId, receipt.storageId, reservation.createRequestId]])
+    );
+  }
+  const registration = await transaction.execute({
+    sql: "SELECT project_id FROM storage_registrations WHERE storage_id = ?",
+    args: [receipt.storageId],
+  });
+  if (JSON.stringify(registration.rows) !== JSON.stringify([[reservation.projectId]])) return false;
+  return receiptGenerationResolves(await upgradeChainFor(transaction, receipt.storageId), {
+    generationId: receipt.generationId,
+    createRequestId: reservation.createRequestId,
+  });
 }
 
 export class RegistrationPublicationCancelled extends Error {}
@@ -309,6 +390,31 @@ export function reservationFingerprint(reservation: Reservation) {
   return digest(reservation);
 }
 
+/** Every confirmation request of a reservation decodes, belongs to it and still reads back. */
+async function requireReservationRequests(
+  transaction: LocalLibsqlTransaction,
+  reservationId: string,
+): Promise<void> {
+  const requests = await transaction.execute({
+    sql: "SELECT request_id AS requestId, reservation_id AS reservationId, request_json AS requestJson FROM registration_requests WHERE reservation_id = ?",
+    args: [reservationId],
+  });
+  const rows = decodeStrictResult(reservationRequestRowsSchema, registryRows(requests));
+  if (Result.isFailure(rows)) throw corrupt();
+  for (const row of rows.success) await requireReservationRequest(transaction, row, reservationId);
+}
+
+async function requireReservationRequest(
+  transaction: LocalLibsqlTransaction,
+  row: (typeof reservationRequestRowsSchema.Type)[number],
+  reservationId: string,
+): Promise<void> {
+  const request = decodeSavedRequest(row.requestJson);
+  const belongs = request.requestId === row.requestId && row.reservationId === reservationId;
+  if (!belongs) throw corrupt();
+  if ((await readConfirmation(transaction, request)) === undefined) throw corrupt();
+}
+
 export async function readProjectRegistrationRecords(transaction: LocalLibsqlTransaction) {
   const ids = decodeStrictResult(
     reservationIdRowsSchema,
@@ -325,23 +431,7 @@ export async function readProjectRegistrationRecords(transaction: LocalLibsqlTra
     const reservation = await readReservation(transaction, reservationId);
     if (projects.has(reservation.projectId)) throw corrupt();
     projects.add(reservation.projectId);
-    const requests = await transaction.execute({
-      sql: "SELECT request_id AS requestId, reservation_id AS reservationId, request_json AS requestJson FROM registration_requests WHERE reservation_id = ?",
-      args: [reservationId],
-    });
-    const rows = decodeStrictResult(reservationRequestRowsSchema, registryRows(requests));
-    if (Result.isFailure(rows)) throw corrupt();
-    for (const row of rows.success) {
-      let request: ConfirmationRequest;
-      try {
-        request = decodeStrict(ConfirmationValidationRequestSchema, JSON.parse(row.requestJson));
-      } catch {
-        throw corrupt();
-      }
-      if (request.requestId !== row.requestId || row.reservationId !== reservationId)
-        throw corrupt();
-      if ((await readConfirmation(transaction, request)) === undefined) throw corrupt();
-    }
+    await requireReservationRequests(transaction, reservationId);
     const publication = await readPublication(transaction, reservation);
     records.push({ reservation, publication });
   }

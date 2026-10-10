@@ -1,0 +1,13 @@
+import { writeFile } from "node:fs/promises";
+import { it } from "vitest";
+import { createTemporaryApplicationRoot } from "./project-storage-runtime-fixture.js";
+import { createUpgradedProject } from "./project-storage-upgrade-fixture.js";
+import { captureStorageRoot, serializeStorageRootCapture } from "./storage-root-capture.js";
+
+it("captures a real C1-0 upgrade", async () => {
+  const root = await createTemporaryApplicationRoot();
+  await createUpgradedProject({ root });
+  const out = process.env["C1_CAPTURE_OUT"];
+  if (out === undefined) throw new Error("C1_CAPTURE_OUT is not set.");
+  await writeFile(out, serializeStorageRootCapture(await captureStorageRoot(root)));
+}, 60_000);

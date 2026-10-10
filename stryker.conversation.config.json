@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": [
+    "apps/harness/src/conversation/conversation-store.ts",
+    "apps/harness/src/conversation/conversation-rows.ts",
+    "apps/harness/src/conversation/conversation-errors.ts",
+    "apps/harness/src/conversation/conversation-save.ts",
+    "apps/harness/src/canonical-writer-conversation.ts",
+    "apps/harness/src/canonical-project-writer.ts",
+    "apps/harness/src/storage/sqlite-busy.ts"
+  ],
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "apps/harness/vitest.conversation-mutation.config.ts",
+    "related": true
+  },
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
+  "incremental": false,
+  "concurrency": 4,
+  "reporters": ["json", "html"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/conversation-harness.html"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  }
+}

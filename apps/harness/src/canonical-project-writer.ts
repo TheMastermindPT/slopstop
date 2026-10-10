@@ -6,8 +6,19 @@ import type {
   WriterGeneration,
 } from "@slopstop/protocol";
 import { CanonicalProjectCommandResultSchema, decodeStrict } from "@slopstop/protocol";
+import { Cause, Effect, Exit, Semaphore } from "effect";
 import { snapshotCanonicalCommand } from "./canonical-json.js";
-import type { CanonicalCommandRepository } from "./storage/canonical-command-repository.js";
+import {
+  type ConversationWork,
+  type ConversationWorkOutcome,
+  type ConversationWriteOutcome,
+  runConversationRead,
+  runConversationWork,
+} from "./canonical-writer-conversation.js";
+import {
+  type CanonicalCommandRepository,
+  WriterOwnerBusy,
+} from "./storage/canonical-command-repository.js";
 import type {
   CanonicalWriterLease,
   CanonicalWriterLeaseFailureCode,
@@ -24,6 +35,17 @@ export interface CanonicalProjectWriter {
   readonly activationId: ProjectActivationId;
   readonly writerGeneration: WriterGeneration;
   settle(command: TypedCommand): CanonicalProjectWriterSubmission;
+  /**
+   * Runs Conversation work in the writer's slot, after any queued settlement. Temporary Promise
+   * facade over the Effect slot queue: delete it once the writer's callers are Effects.
+   */
+  conversation<Value, Failure>(
+    work: ConversationWork<Value, Failure>,
+  ): Promise<ConversationWriteOutcome<Value, Failure>>;
+  /** Runs Conversation read work in the writer's slot; the same temporary facade. */
+  conversationRead<Value, Failure>(
+    work: ConversationWork<Value, Failure>,
+  ): Promise<ConversationWorkOutcome<Value, Failure>>;
   verifyFence(): Promise<
     { status: "current" | "stale" } | { status: "broken"; code: "WRITER_FENCE_CHECK_FAILED" }
   >;
@@ -85,10 +107,27 @@ function writerFailure(
   });
 }
 
+/** Runs a Promise in the slot and settles exactly as the Promise did. */
+async function inSlot<Value>(slot: Semaphore.Semaphore, run: () => Promise<Value>): Promise<Value> {
+  const exit = await Effect.runPromiseExit(
+    Semaphore.withPermit(slot)(Effect.tryPromise({ try: run, catch: (cause) => cause })),
+  );
+  if (Exit.isSuccess(exit)) return exit.value;
+  throw Cause.squash(exit.cause);
+}
+
 export function createCanonicalProjectWriter(
   input: CanonicalProjectWriterInput,
 ): CanonicalProjectWriter {
-  const release = stagedWriterRelease(input);
+  // An unknown client state abandons the client: admission closes and release force-closes it.
+  let abandoned = false;
+  // A failure closed admission: work already queued in the slot is refused, not run.
+  let failed = false;
+  const refusesQueued = () => abandoned || failed;
+  const release = stagedWriterRelease(input, () => abandoned);
+  // One FIFO slot for canonical settlement and Conversation work.
+  const slot = Semaphore.makeUnsafe(1);
+  const conversations = new Set<Promise<unknown>>();
   let admissionClosed = false;
   let inFlight:
     | Readonly<{ key: string; result: Promise<CanonicalProjectCommandResult> }>
@@ -97,14 +136,10 @@ export function createCanonicalProjectWriter(
   // The release time is the one given by the call that starts each close attempt.
   const closeOnce = retryableAttempt(() => {
     const time = requestedCloseTime;
-    const settlement = inFlight?.result;
+    const pending = [inFlight?.result, ...conversations];
     return (async () => {
       // Drain only; the original result still rejects for every admitted caller.
-      if (settlement !== undefined)
-        await settlement.then(
-          () => undefined,
-          () => undefined,
-        );
+      await Promise.allSettled(pending);
       await release(time);
     })();
   });
@@ -112,16 +147,49 @@ export function createCanonicalProjectWriter(
     requestedCloseTime = time;
     return closeOnce();
   };
+  const unavailable = { status: "writer-unavailable" } as const;
+  // Conversation work in the slot, drained by close; refused once admission closes. Admitted
+  // work that waited behind an abandonment or a failure is refused too; a plain close drains it.
+  const tracked = <Outcome>(run: () => Promise<Outcome>): Promise<Outcome | typeof unavailable> => {
+    if (admissionClosed) return Promise.resolve(unavailable);
+    const outcome = inSlot(slot, async () => {
+      if (refusesQueued()) return unavailable;
+      try {
+        return await run();
+      } finally {
+        // Resolved or rejected, an unfinished client is abandoned.
+        if (input.repository.hasUnfinishedClient) {
+          abandoned = true;
+          admissionClosed = true;
+        }
+      }
+    });
+    conversations.add(outcome);
+    const clear = () => {
+      conversations.delete(outcome);
+    };
+    void outcome.then(clear, clear);
+    return outcome;
+  };
   const runSettlement = async (
     key: string,
     commandId: TypedCommand["commandId"],
   ): Promise<CanonicalProjectCommandResult> => {
-    try {
-      return await settleWriterCommand(input, key, commandId);
-    } catch (error) {
-      admissionClosed = true;
-      throw error;
-    }
+    // A command queued behind an abandonment or a failure answers writer-unavailable (R2-C1).
+    return inSlot(slot, async () => {
+      if (refusesQueued()) return writerFailure(input, commandId, "writer-unavailable");
+      try {
+        return await settleWriterCommand(input, key, commandId);
+      } catch (error) {
+        // A busy owner is plain contention: retryable, and admission stays open.
+        if (error instanceof WriterOwnerBusy)
+          return writerFailure(input, commandId, "command-busy");
+        // Closed while the permit is held, so no call can take the slot behind the failure.
+        admissionClosed = true;
+        failed = true;
+        throw error;
+      }
+    });
   };
   const settle = (command: TypedCommand): CanonicalProjectWriterSubmission => {
     const commandId = command.commandId;
@@ -153,6 +221,8 @@ export function createCanonicalProjectWriter(
     activationId: input.activationId,
     writerGeneration: input.writerGeneration,
     settle,
+    conversation: (work) => tracked(() => runConversationWork(input.repository, work)),
+    conversationRead: (work) => tracked(() => runConversationRead(input.repository, work)),
     verifyFence: async () => {
       try {
         return await input.repository.verifyFence();
@@ -183,7 +253,7 @@ async function settleWriterCommand(
   });
 }
 
-function stagedWriterRelease(input: CanonicalProjectWriterInput) {
+function stagedWriterRelease(input: CanonicalProjectWriterInput, isAbandoned: () => boolean) {
   const releaseFence = async (time: string) => {
     let result: Awaited<ReturnType<CanonicalCommandRepository["releaseFence"]>>;
     try {
@@ -211,9 +281,22 @@ function stagedWriterRelease(input: CanonicalProjectWriterInput) {
       );
     }
   };
-  const stages = [releaseFence, closeRepository, releaseLease];
+  // The abandoned client cannot release its fence; the next activation recovers it.
+  const abandonClient = async () => {
+    try {
+      await input.repository.abandonClient();
+    } catch (cause) {
+      throw new CanonicalProjectWriterReleaseError("WRITER_REPOSITORY_CLOSE_FAILED", {
+        cause: new Error("WRITER_CLIENT_ABANDON_FAILED", { cause }),
+      });
+    }
+  };
+  let stages: readonly ((time: string) => Promise<void>)[] | undefined;
   let completed = 0;
   return async (time: string) => {
+    stages ??= isAbandoned()
+      ? [abandonClient, releaseLease]
+      : [releaseFence, closeRepository, releaseLease];
     for (const stage of stages.slice(completed)) {
       await stage(time);
       completed += 1;

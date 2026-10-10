@@ -79,6 +79,8 @@ export type ActiveProjectCoordinatorDependencies = Readonly<{
   storage: ProjectStorageActivationPort & ProjectStorageUpgradePort;
   leases: CanonicalWriterLeaseFactory;
   repositories: CanonicalCommandRepositoryFactory;
+  /** Builds each activation's writer (default `createCanonicalProjectWriter`). */
+  createWriter?: typeof createCanonicalProjectWriter;
   createActivationId(): ProjectActivationId;
   createWriterToken(): WriterCapabilityToken;
   now(): string;
@@ -424,7 +426,7 @@ async function acquireWritable(
     activatedAt: dependencies.now(),
   });
   if (repository.status === "broken") return failedRepository(context, ownership, repository);
-  const writer = createCanonicalProjectWriter({
+  const writer = (dependencies.createWriter ?? createCanonicalProjectWriter)({
     projectId: request.projectId,
     activationId,
     writerGeneration: repository.writerGeneration,

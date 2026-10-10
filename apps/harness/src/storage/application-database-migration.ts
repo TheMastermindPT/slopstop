@@ -139,11 +139,154 @@ async function requireApplicationRelationships(transaction: LocalLibsqlTransacti
   await requireUpgradeRelationships(transaction);
 }
 
+/** One completed upgrade, as the chain rule reads it. */
+export type UpgradeLink = Readonly<{
+  sourceGenerationId: string;
+  targetGenerationId: string;
+}>;
+
+/** The registry facts the chain rule checks a Storage's completed upgrades against. */
+type UpgradeChainRegistry = Readonly<{
+  activeGenerationId: string | null;
+  presentGenerationIds: ReadonlySet<string>;
+}>;
+
+export type UpgradeChainAuthority<Link extends UpgradeLink> = UpgradeChainRegistry &
+  Readonly<{ links: readonly Link[] }>;
+
+/** Reads a Storage's active generation and the generations still in `storage_generations`. */
+export async function readUpgradeChainRegistry(
+  executor: Pick<LocalLibsqlClient, "execute">,
+  storageId: string,
+): Promise<UpgradeChainRegistry> {
+  const [registration, generations] = await Promise.all([
+    executor.execute({
+      sql: "SELECT active_generation_id FROM storage_registrations WHERE storage_id = ?",
+      args: [storageId],
+    }),
+    executor.execute({
+      sql: "SELECT generation_id FROM storage_generations WHERE storage_id = ?",
+      args: [storageId],
+    }),
+  ]);
+  const active = registration.rows[0]?.[0];
+  return {
+    activeGenerationId: typeof active === "string" ? active : null,
+    presentGenerationIds: new Set(generations.rows.map((row) => String(row[0]))),
+  };
+}
+
+/**
+ * The upgrade chain rule, the one owner every reader asks. A Storage's completed upgrades,
+ * ordered by their source-to-target links from the root (the source no link targets), must form
+ * one unbranched chain whose last target is the active generation, whose sources are all gone
+ * from `storage_generations`. Times are never checked: a clock that moved backwards cannot turn a
+ * correctly linked chain into a corrupt one. Answers
+ * the chain root first, or `undefined` when the rows break the rule.
+ */
+export function orderUpgradeChain<Link extends UpgradeLink>(
+  authority: UpgradeChainAuthority<Link>,
+): readonly Link[] | undefined {
+  if (authority.links.length === 0) return [];
+  const chain = linkedFromRoot(authority.links);
+  return chain !== undefined && chainAgrees(chain, authority) ? chain : undefined;
+}
+
+/**
+ * Follows source-to-target links from the single root; `undefined` unless unbranched. Unique
+ * sources and unique targets give every generation at most one link in and one out, and the root
+ * has none in, so the walk never revisits a generation and ends; links it does not reach (a
+ * detached cycle) leave the chain shorter than the rows, which `chainAgrees` refuses.
+ */
+function linkedFromRoot<Link extends UpgradeLink>(links: readonly Link[]): Link[] | undefined {
+  const bySource = new Map(links.map((link) => [link.sourceGenerationId, link]));
+  const targets = new Set(links.map((link) => link.targetGenerationId));
+  if (bySource.size !== links.length || targets.size !== links.length) return undefined;
+  const roots = links.filter((link) => !targets.has(link.sourceGenerationId));
+  if (roots.length !== 1) return undefined;
+  const chain: Link[] = [];
+  for (let link = roots[0]; link !== undefined; link = bySource.get(link.targetGenerationId)) {
+    chain.push(link);
+  }
+  return chain;
+}
+
+function chainAgrees<Link extends UpgradeLink>(
+  chain: readonly Link[],
+  authority: UpgradeChainAuthority<Link>,
+): boolean {
+  const { links, activeGenerationId, presentGenerationIds } = authority;
+  return [
+    chain.length === links.length,
+    chain.at(-1)?.targetGenerationId === activeGenerationId,
+    chain.every((link) => !presentGenerationIds.has(link.sourceGenerationId)),
+  ].every(Boolean);
+}
+
+/** The creation time of the Storage's original generation: the chain root's source. */
+export function chainRootCreatedAt<Link extends UpgradeLink & { sourceCreatedAt: string }>(
+  chain: readonly Link[],
+): string | undefined {
+  return chain[0]?.sourceCreatedAt;
+}
+
+/** Every generation the chain superseded and keeps on disk, root first. */
+export function chainRetainedGenerationIds<Link extends UpgradeLink>(
+  chain: readonly Link[],
+): readonly Link["sourceGenerationId"][] {
+  return chain.map((link) => link.sourceGenerationId);
+}
+
+/**
+ * A registration receipt names the generation its reservation created. After upgrades that
+ * generation is gone; it still resolves when it is the chain root's source, created by the same
+ * request. The chain itself ends at the active generation (`orderUpgradeChain`).
+ */
+export function receiptGenerationResolves<
+  Link extends UpgradeLink & { sourceCreateRequestId: string },
+>(
+  chain: readonly Link[],
+  receipt: Readonly<{ generationId: string; createRequestId: string }>,
+): boolean {
+  const root = chain[0];
+  return (
+    root !== undefined &&
+    root.sourceGenerationId === receipt.generationId &&
+    root.sourceCreateRequestId === receipt.createRequestId
+  );
+}
+
+const upgradeLinkRowSchema = Schema.Struct({
+  storageId: Schema.String,
+  sourceGenerationId: Schema.String,
+  targetGenerationId: Schema.String,
+});
+
+async function requireUpgradeChains(transaction: LocalLibsqlTransaction): Promise<void> {
+  const decoded = decodeStrictResult(
+    Schema.Array(upgradeLinkRowSchema),
+    applicationDatabaseRows(
+      await transaction.execute(`
+        SELECT storage_id AS storageId, source_generation_id AS sourceGenerationId,
+          target_generation_id AS targetGenerationId
+        FROM storage_upgrades WHERE state = 'completed'`),
+    ),
+  );
+  if (Result.isFailure(decoded)) throw corrupt();
+  const storageIds = new Set(decoded.success.map((link) => link.storageId));
+  for (const storageId of storageIds) {
+    const chain = orderUpgradeChain({
+      links: decoded.success.filter((link) => link.storageId === storageId),
+      ...(await readUpgradeChainRegistry(transaction, storageId)),
+    });
+    if (chain === undefined) throw corrupt();
+  }
+}
+
 /**
  * Registry heads that include `storage_upgrades`: every upgrade belongs to its Storage's registered
- * Project; an in-progress upgrade's source is the active generation and its target is staging; a
- * completed upgrade's target is active and its source is gone; at most one completed upgrade per
- * Storage (chained upgrades are a later gate).
+ * Project; an in-progress upgrade's source is the active generation and its target is staging;
+ * the completed upgrades of each Storage satisfy the chain rule (`orderUpgradeChain`).
  */
 async function requireUpgradeRelationships(transaction: LocalLibsqlTransaction): Promise<void> {
   const table = await transaction.execute(
@@ -160,13 +303,9 @@ async function requireUpgradeRelationships(transaction: LocalLibsqlTransaction):
       WHERE r.project_id IS NOT u.project_id
         OR (u.state = 'in-progress' AND (r.active_generation_id IS NOT u.source_generation_id
           OR s.generation_id IS NULL OR t.creation_state IS NOT 'staging'))
-        OR (u.state = 'completed' AND (r.active_generation_id IS NOT u.target_generation_id
-          OR s.generation_id IS NOT NULL))
-      UNION ALL
-      SELECT 1 FROM storage_upgrades WHERE state = 'completed'
-      GROUP BY storage_id HAVING COUNT(*) > 1
       LIMIT 1`);
   if (conflicts.rows.length !== 0) throw corrupt();
+  await requireUpgradeChains(transaction);
 }
 
 function isDefiniteSchemaMismatch(error: unknown): error is ProjectStorageBrokenError {

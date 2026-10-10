@@ -15,7 +15,11 @@ import {
   type ApplicationDatabaseAuthority,
   createApplicationDatabaseAuthority,
 } from "./application-database-authority.js";
-import { ApplicationDatabaseFault } from "./application-database-migration.js";
+import {
+  ApplicationDatabaseFault,
+  chainRetainedGenerationIds,
+  chainRootCreatedAt,
+} from "./application-database-migration.js";
 import {
   requireDeclaredSchemaObjects,
   requireOwnedSchemaObjects,
@@ -816,12 +820,12 @@ async function requireActiveCreateAuthority(input: {
       input.generation.locationId,
     ).then((rows) => exactlyOne(rows, input.message)),
   ]);
-  const completed = await completedUpgradeFor(input.client, input.generation.storageId);
+  const chain = await upgradeChainFor(input.client, input.generation.storageId);
   const rowsAgree = [
     registration.storageId === input.generation.storageId,
     registration.activeGenerationId === input.generation.generationId,
     registration.activeLocationId === input.generation.locationId,
-    registration.createdAt === (completed?.sourceCreatedAt ?? input.generation.createdAt),
+    registration.createdAt === (chainRootCreatedAt(chain) ?? input.generation.createdAt),
     registration.activatedAt === input.generation.activatedAt,
     location.locationState === "committed",
     location.normalizedPath === input.expectedProjectRoot,
@@ -1067,12 +1071,12 @@ async function selectHealthyOpening(
     registration,
   });
   const generation = exactlyOne(generations, "Active generation authority is not unique.");
-  const completed = await completedUpgradeFor(input.client, registration.storageId);
+  const chain = await upgradeChainFor(input.client, registration.storageId);
   const filesystemAgrees = [
     !input.filesystem.hasRootDatabaseWitness,
     sameDirectories(input.filesystem.ordinaryGenerationIds, [
       registration.activeGenerationId,
-      completed?.sourceGenerationId,
+      ...chainRetainedGenerationIds(chain),
     ]),
   ].every(Boolean);
   if (!filesystemAgrees) {
@@ -1095,7 +1099,7 @@ async function selectHealthyOpening(
       },
       generation,
       paths: input.paths.forCreation(input.projectId, generation.generationId).active,
-      completedUpgrade: completed,
+      completedUpgrade: chain.at(-1),
     },
   };
 }
@@ -1802,8 +1806,8 @@ import { createPermitLock, type PermitLock, withPermit } from "./permit-lock.js"
 import type { ProjectStorageUpgradeDiagnostics } from "./project-storage-upgrade.js";
 import {
   type CompletedUpgrade,
-  completedUpgradeFor,
   createProjectStorageUpgradeSteps,
   type UpgradedCreateRequest,
+  upgradeChainFor,
   upgradedCreateRequest,
 } from "./project-storage-upgrade-node-adapter.js";
