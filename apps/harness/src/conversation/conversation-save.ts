@@ -17,7 +17,7 @@ export class ConversationCommitUncertain extends Data.TaggedError("ConversationC
 }> {}
 
 export type ConversationSaveInput = Readonly<{
-  writer: CanonicalProjectWriter;
+  writer: Pick<CanonicalProjectWriter, "conversation">;
   canonicalDatabasePath: string;
   message: SaveProjectMessageInput;
   dependencies: ConversationStoreDependencies;

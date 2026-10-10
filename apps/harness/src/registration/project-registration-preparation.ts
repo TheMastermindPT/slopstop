@@ -226,6 +226,21 @@ const pendingCreation = { status: "pending-recovery", code: "REGISTRATION_INCOMP
 const pendingListing = { status: "broken", code: "INTERNAL_FAILURE" } as const;
 type PendingClose = typeof pendingCleanup | typeof pendingCreation | typeof pendingListing;
 
+type BrokenListing = Extract<Awaited<ReturnType<Listing>>, Readonly<{ status: "broken" }>>;
+const registryDataCodes: ReadonlySet<BrokenListing["code"]> = new Set([
+  "REGISTRY_SCHEMA_UNKNOWN",
+  "REGISTRY_SCHEMA_NEWER",
+  "REGISTRY_CORRUPT",
+]);
+
+/**
+ * Whether a listing's own cleanup did not complete. Only the registry-data codes are answers
+ * whose cleanup completed; every other broken code is unconfirmed (G19, #102).
+ */
+function listingCleanupFailed(result: Awaited<ReturnType<Listing>>): boolean {
+  return result.status === "broken" && !registryDataCodes.has(result.code);
+}
+
 async function listProjects(dependencies: Dependencies, _input: unknown, signal: AbortSignal) {
   if (dependencies.listing === undefined) return pendingListing;
   return dependencies.listing(signal);
@@ -284,7 +299,7 @@ export function createProjectRegistrationPreparation(
           try {
             const work: Promise<Awaited<ReturnType<Listing>>> = listing(signal);
             const result = await work;
-            if (result.status === "broken") unconfirmed ??= pendingListing;
+            if (listingCleanupFailed(result)) unconfirmed ??= pendingListing;
             return result;
           } finally {
             activeListings -= 1;

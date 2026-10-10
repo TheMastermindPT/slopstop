@@ -41,5 +41,8 @@ export function createNodeActiveProjectCoordinator(
     createWriterToken: () =>
       decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
     now: currentTime,
+    // Conversation reads through a per-request read-only client and save reconciliations use
+    // the coordinator's defaults (the generation pool).
+    createConversationId: randomUUID,
   });
 }

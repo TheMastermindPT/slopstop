@@ -638,11 +638,12 @@ describe("Conversation admission", () => {
     await writer.close("2026-09-05T12:00:04.000Z");
   });
 
-  it("fails release with the abandon cause when the force-close fails (6a)", async () => {
+  it("fails release with the abandon code when the force-close fails (CNV-B36)", async () => {
     const abandonFailure = new Error("private force-close failure");
-    const abandonClient = vi.fn(async () => {
-      throw abandonFailure;
-    });
+    const abandonClient = vi
+      .fn<CanonicalCommandRepository["abandonClient"]>()
+      .mockRejectedValueOnce(abandonFailure)
+      .mockResolvedValue(undefined);
     const { writer, repository, lease } = writerFixture(unexpectedSettlement, {
       conversationTransaction: acknowledgedTransaction(),
       hasUnfinishedClient: true,
@@ -652,13 +653,53 @@ describe("Conversation admission", () => {
       completedWith("saved"),
     );
     await expect(writer.close("2026-09-05T12:00:04.000Z")).rejects.toMatchObject({
-      code: "WRITER_REPOSITORY_CLOSE_FAILED",
-      cause: { message: "WRITER_CLIENT_ABANDON_FAILED", cause: abandonFailure },
+      code: "WRITER_CLIENT_ABANDON_FAILED",
+      cause: abandonFailure,
     });
     expect(abandonClient).toHaveBeenCalledOnce();
+    expect(lease.release).not.toHaveBeenCalled();
+    // A second release retries only the abandon stage, then releases the lease.
+    await writer.close("2026-09-05T12:00:04.000Z");
+    expect(abandonClient).toHaveBeenCalledTimes(2);
+    expect(lease.release).toHaveBeenCalledOnce();
     expect(repository.releaseFence).not.toHaveBeenCalled();
     expect(repository.close).not.toHaveBeenCalled();
-    expect(lease.release).not.toHaveBeenCalled();
+  });
+
+  it("keeps the S1 retry-at-release after a thrown settlement (U3)", async () => {
+    const calls: string[] = [];
+    const abandonClient = vi.fn(async () => undefined);
+    const { writer, repository, lease } = writerFixture(
+      async () => {
+        throw new Error("private settlement failure");
+      },
+      { abandonClient },
+    );
+    let fenceFails = true;
+    repository.releaseFence.mockImplementation(async () => {
+      calls.push("fence");
+      if (fenceFails) {
+        fenceFails = false;
+        throw new Error("private fence failure");
+      }
+      return { status: "current" };
+    });
+    repository.close.mockImplementation(async () => {
+      calls.push("repository");
+    });
+    lease.release.mockImplementation(async () => {
+      calls.push("lease");
+    });
+    await expect(pendingResult(writer.settle(submission().command))).rejects.toThrow(
+      "private settlement failure",
+    );
+    await expect(writer.close("2026-09-05T12:00:04.000Z")).rejects.toMatchObject({
+      code: "WRITER_FENCE_RELEASE_FAILED",
+    });
+    expect(calls).toEqual(["fence"]);
+    await writer.close("2026-09-05T12:00:04.000Z");
+    expect(calls).toEqual(["fence", "fence", "repository", "lease"]);
+    expect(abandonClient).not.toHaveBeenCalled();
   });
 });
 

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type {
   CanonicalProjectActivationRequest,
   CanonicalProjectActivationResult,
@@ -6,6 +7,10 @@ import type {
   CanonicalProjectSwitchRequest,
   CanonicalProjectSwitchResult,
   ProjectActivationId,
+  ProjectConversationReadRequest,
+  ProjectConversationReadResult,
+  ProjectConversationSaveRequest,
+  ProjectConversationSaveResult,
   ProjectUpgradeRequest,
   ProjectUpgradeResult,
 } from "@slopstop/protocol";
@@ -20,10 +25,17 @@ import {
 } from "@slopstop/protocol";
 import { Deferred, Effect } from "effect";
 import {
+  type ConversationPorts,
+  readConversation,
+  saveConversation,
+} from "./active-project-conversation.js";
+import { type ActiveWorkKind, admitActiveWork } from "./active-work-admission.js";
+import {
   type CanonicalProjectWriter,
   CanonicalProjectWriterReleaseError,
   createCanonicalProjectWriter,
 } from "./canonical-project-writer.js";
+import { readProjectConversationReadOnly } from "./conversation/conversation-store.js";
 import type {
   ProjectStorageActivationOutcome,
   ProjectStorageActivationPort,
@@ -49,6 +61,10 @@ export interface ActiveProjectCoordinator {
   activate(request: CanonicalProjectActivationRequest): Promise<CanonicalProjectActivationResult>;
   switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
   execute(request: CanonicalProjectCommandRequest): Promise<CanonicalProjectCommandResult>;
+  /** Reads one page of the active Project's conversation. */
+  conversationRead(request: ProjectConversationReadRequest): Promise<ProjectConversationReadResult>;
+  /** Saves one user message in the active Project's conversation. */
+  conversationSave(request: ProjectConversationSaveRequest): Promise<ProjectConversationSaveResult>;
   upgrade(request: ProjectUpgradeRequest): Promise<ProjectUpgradeResult>;
   /**
    * Whether a Project is held or being activated or released; false while inactive or stopped.
@@ -83,6 +99,12 @@ export type ActiveProjectCoordinatorDependencies = Readonly<{
   createWriter?: typeof createCanonicalProjectWriter;
   createActivationId(): ProjectActivationId;
   createWriterToken(): WriterCapabilityToken;
+  /** Conversation and message ids (default `randomUUID`). */
+  createConversationId?(): string;
+  /** Reads a page through a per-request read-only client (default `readProjectConversationReadOnly`). */
+  readConversationReadOnly?: ConversationPorts["readConversationReadOnly"];
+  /** Opens the save reconciliation's read-only client (default: the generation pool). */
+  openReconciliationClient?: ConversationPorts["openReconciliationClient"];
   now(): string;
 }>;
 type Ownership = Readonly<{ session: ProjectStorageActivationSession }> &
@@ -101,6 +123,8 @@ type ActiveActivation = Readonly<{
   projectId: ProjectId;
   activationId: ProjectActivationId;
   ownership: Ownership;
+  /** The Project database, for reads through a per-request read-only client. */
+  canonicalDatabasePath: string;
 }> &
   (
     | Readonly<{ access: "read-only" }>
@@ -413,6 +437,7 @@ async function acquireWritable(
       access: "read-only",
       projectId: request.projectId,
       activationId,
+      canonicalDatabasePath: session.canonicalDatabasePath,
       ownership: { stage: "storage", session },
     });
   if (acquisition.status === "broken") return failedLease(context, session, acquisition);
@@ -436,6 +461,7 @@ async function acquireWritable(
   return context.publish({
     projectId: request.projectId,
     activationId,
+    canonicalDatabasePath: session.canonicalDatabasePath,
     ownership: { stage: "writer", writer, session },
     access: "read-write",
     writer,
@@ -483,6 +509,33 @@ export function createActiveProjectCoordinator(
   const admitted = new Set<Deferred.Deferred<void>>();
   let state: State = { status: "inactive" };
   let pendingLifecycle = 0;
+
+  const admit = (
+    request: Readonly<{ projectId: ProjectId; activationId: ProjectActivationId }>,
+    kind: ActiveWorkKind,
+  ) => admitActiveWork({ pendingLifecycle, state }, request, kind);
+
+  const conversationPorts: ConversationPorts = {
+    createId: dependencies.createConversationId ?? randomUUID,
+    now: dependencies.now,
+    readConversationReadOnly:
+      dependencies.readConversationReadOnly ?? readProjectConversationReadOnly,
+    ...(dependencies.openReconciliationClient === undefined
+      ? {}
+      : { openReconciliationClient: dependencies.openReconciliationClient }),
+  };
+
+  // Admitted work registers its completion before its first await, so release drains it.
+  const drained = async <Result>(run: () => Promise<Result>): Promise<Result> => {
+    const completion = Deferred.makeUnsafe<void>();
+    admitted.add(completion);
+    try {
+      return await run();
+    } finally {
+      Deferred.doneUnsafe(completion, Effect.void);
+      admitted.delete(completion);
+    }
+  };
 
   const enqueue = <Result>(operation: () => Promise<Result>): Promise<Result> => {
     pendingLifecycle++;
@@ -649,26 +702,25 @@ export function createActiveProjectCoordinator(
         };
       }),
     execute: async (request) => {
-      if (pendingLifecycle > 0) return commandFailure(request, "coordinator-unavailable");
-      if (state.status === "inactive") return commandFailure(request, "inactive");
-      if (state.status !== "active") return commandFailure(request, "coordinator-unavailable");
-      const active = state.activation;
-      if (active.projectId !== request.projectId)
-        return commandFailure(request, "project-mismatch");
-      if (active.activationId !== request.activationId)
-        return commandFailure(request, "stale-activation");
+      const admission = admit(request, "command");
+      if (admission.status === "refused") return commandFailure(request, admission.refusal);
+      const active = admission.activation;
       if (active.access === "read-only") return commandFailure(request, "read-only");
       const submission = active.writer.settle(request.command);
       if (submission.status === "completed") return submission.result;
       const operation = submission.result;
-      const completion = Deferred.makeUnsafe<void>();
-      admitted.add(completion);
-      try {
-        return await operation;
-      } finally {
-        Deferred.doneUnsafe(completion, Effect.void);
-        admitted.delete(completion);
-      }
+      return drained(() => operation);
+    },
+    // Temporary Promise facades over the conversation programs, for the Promise-based runtime.
+    conversationRead: (request) => {
+      const admission = admit(request, "read");
+      const run = () => Effect.runPromise(readConversation(admission, request, conversationPorts));
+      return admission.status === "admitted" ? drained(run) : run();
+    },
+    conversationSave: (request) => {
+      const admission = admit(request, "save");
+      const run = () => Effect.runPromise(saveConversation(admission, request, conversationPorts));
+      return admission.status === "admitted" ? drained(run) : run();
     },
     // Upgrades run in the lifecycle queue and only while no Project is held.
     upgrade: (request) =>

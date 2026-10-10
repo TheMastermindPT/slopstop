@@ -29,6 +29,7 @@ export type CanonicalProjectWriterReleaseFailureCode =
   | "WRITER_FENCE_STALE"
   | "WRITER_FENCE_RELEASE_FAILED"
   | "WRITER_REPOSITORY_CLOSE_FAILED"
+  | "WRITER_CLIENT_ABANDON_FAILED"
   | CanonicalWriterLeaseFailureCode;
 export interface CanonicalProjectWriter {
   readonly projectId: ProjectId;
@@ -286,9 +287,7 @@ function stagedWriterRelease(input: CanonicalProjectWriterInput, isAbandoned: ()
     try {
       await input.repository.abandonClient();
     } catch (cause) {
-      throw new CanonicalProjectWriterReleaseError("WRITER_REPOSITORY_CLOSE_FAILED", {
-        cause: new Error("WRITER_CLIENT_ABANDON_FAILED", { cause }),
-      });
+      throw new CanonicalProjectWriterReleaseError("WRITER_CLIENT_ABANDON_FAILED", { cause });
     }
   };
   let stages: readonly ((time: string) => Promise<void>)[] | undefined;

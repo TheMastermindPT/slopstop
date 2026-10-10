@@ -11,7 +11,10 @@ import {
   decodeStrict,
 } from "@slopstop/protocol";
 import { describe, expect, it, vi } from "vitest";
-import { unusedProjectUpgrade } from "../tests/integration/canonical-runtime-application-fixture.js";
+import {
+  unusedConversation,
+  unusedProjectUpgrade,
+} from "../tests/integration/canonical-runtime-application-fixture.js";
 import {
   switchApplicationFailures as switchFailures,
   switchResultBoundaries,
@@ -86,6 +89,7 @@ function commandApplication(value: CanonicalProjectCommandResult) {
     switchProject: unexpectedSwitch,
     execute: vi.fn<ActiveProjectCoordinator["execute"]>(async () => value),
     upgrade: unusedProjectUpgrade,
+    ...unusedConversation,
     stop: vi.fn(async () => undefined),
   } satisfies ActiveProjectCoordinator;
   return { owner, app: applications.createCanonicalProjectApplication(owner) };
@@ -378,6 +382,7 @@ it("validates canonical owner results without swallowing owner failures", async 
     switchProject: unexpectedSwitch,
     execute: vi.fn(async () => result),
     upgrade: unusedProjectUpgrade,
+    ...unusedConversation,
     stop: vi.fn(async () => undefined),
   };
   const app = create(owner);
@@ -430,6 +435,7 @@ function switchApplication(value: CanonicalProjectSwitchResult) {
     switchProject: vi.fn(async () => value),
     execute: async () => result,
     upgrade: unusedProjectUpgrade,
+    ...unusedConversation,
     stop: async () => undefined,
   };
   const app = applications.createCanonicalProjectApplication(owner);
@@ -556,6 +562,7 @@ it("rejects an invalid or foreign upgrade result", async () => {
     switchProject: unexpectedSwitch,
     execute: async () => result,
     upgrade: vi.fn<ActiveProjectCoordinator["upgrade"]>(async () => valid),
+    ...unusedConversation,
     stop: async () => undefined,
   } satisfies ActiveProjectCoordinator;
   const app = applications.createCanonicalProjectApplication(owner);
@@ -573,3 +580,80 @@ it("rejects an invalid or foreign upgrade result", async () => {
     await invalidResult(() => app.upgrade(upgradeRequest));
   }
 });
+
+const conversationTarget = { projectId: request.projectId, activationId: request.activationId };
+const readRequest = { ...conversationTarget, after: null };
+const saveRequest = {
+  ...conversationTarget,
+  saveId: "00000000-0000-4000-8000-000000000041",
+  expectedRevision: 0,
+  text: "Hello",
+};
+const readValid = { status: "read", request: readRequest, conversation: null } as const;
+const saveValid = {
+  status: "conflict",
+  request: saveRequest,
+  currentRevision: 2,
+} as const;
+
+function conversationApplication() {
+  const owner = {
+    activate: async () => activation,
+    switchProject: unexpectedSwitch,
+    execute: async () => result,
+    upgrade: unusedProjectUpgrade,
+    conversationRead: vi.fn<ActiveProjectCoordinator["conversationRead"]>(async () => readValid),
+    conversationSave: vi.fn<ActiveProjectCoordinator["conversationSave"]>(async () => saveValid),
+    stop: async () => undefined,
+  } satisfies ActiveProjectCoordinator;
+  return { owner, app: applications.createCanonicalProjectApplication(owner) };
+}
+
+it("rejects a foreign conversation result (CNV-B40)", async () => {
+  const { owner, app } = conversationApplication();
+  expect(await app.conversationRead(readRequest)).toEqual(readValid);
+  expect(await app.conversationSave(saveRequest)).toEqual(saveValid);
+  for (const value of [
+    { ...readValid, extra: "secret" },
+    { ...readValid, request: { ...readRequest, projectId: otherId } },
+    { ...readValid, request: { ...readRequest, activationId: otherId } },
+    { ...readValid, request: { ...readRequest, after: 100 } },
+  ]) {
+    Reflect.set(owner, "conversationRead", async () => value);
+    await invalidResult(() => app.conversationRead(readRequest));
+  }
+  for (const value of [
+    { ...saveValid, extra: "secret" },
+    { ...saveValid, request: { ...saveRequest, projectId: otherId } },
+    { ...saveValid, request: { ...saveRequest, saveId: "00000000-0000-4000-8000-000000000042" } },
+    { ...saveValid, request: { ...saveRequest, expectedRevision: 1 } },
+    { ...saveValid, request: { ...saveRequest, text: "Other" } },
+  ]) {
+    Reflect.set(owner, "conversationSave", async () => value);
+    await invalidResult(() => app.conversationSave(saveRequest));
+  }
+});
+
+it("rejects a result for a request carrying an extra key (CNV-B40)", async () => {
+  const { app } = conversationApplication();
+  const paddedRead = { ...readRequest, extra: undefined };
+  const paddedSave = { ...saveRequest, extra: undefined };
+  await invalidResult(() => app.conversationRead(paddedRead));
+  await invalidResult(() => app.conversationSave(paddedSave));
+});
+
+it.each(["synchronous throw", "asynchronous rejection"] as const)(
+  "propagates a conversation owner %s unchanged (CNV-B40)",
+  async (kind) => {
+    const { owner, app } = conversationApplication();
+    const sentinel = new Error("private conversation owner failure");
+    const fail = () => {
+      if (kind === "synchronous throw") throw sentinel;
+      return Promise.reject(sentinel);
+    };
+    owner.conversationRead.mockImplementationOnce(fail);
+    owner.conversationSave.mockImplementationOnce(fail);
+    await expect(app.conversationRead(readRequest)).rejects.toBe(sentinel);
+    await expect(app.conversationSave(saveRequest)).rejects.toBe(sentinel);
+  },
+);

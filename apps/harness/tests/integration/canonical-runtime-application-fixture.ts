@@ -6,6 +6,16 @@ import {
 } from "@slopstop/protocol";
 import { vi } from "vitest";
 
+/** Conversation methods for fakes that never read or save a conversation. */
+export const unusedConversation = {
+  conversationRead: async (): Promise<never> => {
+    throw new Error("Conversation read is unused by this fixture.");
+  },
+  conversationSave: async (): Promise<never> => {
+    throw new Error("Conversation save is unused by this fixture.");
+  },
+};
+
 /** An `upgrade` for fakes that never upgrade. */
 export async function unusedProjectUpgrade(): Promise<never> {
   throw new Error("Project upgrade is unused by this fixture.");
@@ -21,6 +31,7 @@ export function unusedCanonicalApplication(switchProject: () => Promise<never>) 
       throw new Error("Canonical command is unused by this fixture.");
     },
     upgrade: unusedProjectUpgrade,
+    ...unusedConversation,
     stop: async () => undefined,
   };
 }
@@ -80,6 +91,7 @@ export function createCanonicalRuntimeApplicationFixture<Stop extends () => Prom
       return inputs.commandResult;
     }),
     upgrade: unusedProjectUpgrade,
+    ...unusedConversation,
     stop: hooks.stop,
   };
   return { ...inputs, application };

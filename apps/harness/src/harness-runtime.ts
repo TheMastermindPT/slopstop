@@ -2,6 +2,8 @@ import {
   createProjectActivateResultEvent,
   createProjectCloseResultEvent,
   createProjectCommandResultEvent,
+  createProjectConversationReadResultEvent,
+  createProjectConversationSaveResultEvent,
   createProjectCreateResultEvent,
   createProjectListResultEvent,
   createProjectOpenResultEvent,
@@ -177,6 +179,16 @@ type RegistryMessage = Extract<
   DesktopMessage,
   { command: "project.list" | "project.registration" }
 >;
+type ConversationMessage = Extract<
+  DesktopMessage,
+  { command: "project.conversation.read" | "project.conversation.save" }
+>;
+function isConversationMessage(message: DesktopMessage): message is ConversationMessage {
+  return (
+    message.command === "project.conversation.read" ||
+    message.command === "project.conversation.save"
+  );
+}
 function isWorkspaceMessage(message: DesktopMessage): message is WorkspaceMessage {
   return message.command === "workspace.query" || message.command === "workspace.intent";
 }
@@ -291,6 +303,20 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     );
   };
 
+  const handleConversationMessage = async (message: ConversationMessage): Promise<void> => {
+    if (message.command === "project.conversation.read") {
+      const result = await options.canonicalProjectApplication.conversationRead(message.payload);
+      options.transport.send(
+        createProjectConversationReadResultEvent(nextMetadata(message.messageId), result),
+      );
+      return;
+    }
+    const result = await options.canonicalProjectApplication.conversationSave(message.payload);
+    options.transport.send(
+      createProjectConversationSaveResultEvent(nextMetadata(message.messageId), result),
+    );
+  };
+
   const handleWorkspaceMessage = async (message: WorkspaceMessage): Promise<void> => {
     // Sequence numbers follow emission order, so metadata is taken after the answer settles.
     if (message.command === "workspace.query") {
@@ -322,6 +348,7 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     if (isCanonicalProjectMessage(parsed.value)) return handleCanonicalProjectMessage(parsed.value);
     if (isProjectStorageMessage(parsed.value)) return handleProjectStorageMessage(parsed.value);
     if (isWorkspaceMessage(parsed.value)) return handleWorkspaceMessage(parsed.value);
+    if (isConversationMessage(parsed.value)) return handleConversationMessage(parsed.value);
     if (parsed.value.command === "system.handshake") {
       options.transport.send(createReadyEvent(nextMetadata(causationId), options.harnessVersion));
       return;

@@ -273,6 +273,11 @@ export const withReadOnlyClient = <Value>(
  * writer whose admission closed.
  */
 export const readProjectConversationReadOnly = (
-  input: Readonly<{ canonicalDatabasePath: string; projectId: ProjectId; after: number | null }>,
+  input: Readonly<{
+    canonicalDatabasePath: string;
+    projectId: ProjectId;
+    after: number | null;
+    openReadOnlyClient?: (databasePath: string) => LocalLibsqlClient;
+  }>,
 ): Effect.Effect<ProjectConversationPage, ConversationStorageFailure> =>
   withReadOnlyClient(input, (client) => readProjectConversation(client, input));

@@ -19,6 +19,16 @@ import {
   harnessFailureMessages,
 } from "./harness-failure-protocol.js";
 import {
+  type ProjectConversationReadRequest,
+  ProjectConversationReadRequestSchema,
+  type ProjectConversationReadResult,
+  ProjectConversationReadResultSchema,
+  type ProjectConversationSaveRequest,
+  ProjectConversationSaveRequestSchema,
+  type ProjectConversationSaveResult,
+  ProjectConversationSaveResultSchema,
+} from "./project-conversation-protocol.js";
+import {
   ProjectListRequestSchema,
   type ProjectListResult,
   ProjectListResultSchema,
@@ -74,7 +84,7 @@ import {
   WorkspaceQuerySchema,
 } from "./workspace-protocol.js";
 
-export const protocolVersion = 7 as const;
+export const protocolVersion = 8 as const;
 
 export const MessageIdSchema = UuidTextSchema.pipe(Schema.brand("MessageId"));
 export type MessageId = typeof MessageIdSchema.Type;
@@ -265,6 +275,16 @@ export const DesktopMessageSchema = Schema.Union([
     command: Schema.Literal("project.upgrade"),
     payload: ProjectUpgradeRequestSchema,
   }),
+  Schema.Struct({
+    ...DesktopCommandMetadataSchema,
+    command: Schema.Literal("project.conversation.read"),
+    payload: ProjectConversationReadRequestSchema,
+  }),
+  Schema.Struct({
+    ...DesktopCommandMetadataSchema,
+    command: Schema.Literal("project.conversation.save"),
+    payload: ProjectConversationSaveRequestSchema,
+  }),
   HandshakeCommandSchema,
   ProjectOpenCommandSchema,
   ProjectCreateCommandSchema,
@@ -300,6 +320,16 @@ export const HarnessMessageSchema = Schema.Union([
     ...HarnessEventMetadataSchema,
     event: Schema.Literal("project.upgrade.result"),
     payload: ProjectUpgradeResultSchema,
+  }),
+  Schema.Struct({
+    ...HarnessEventMetadataSchema,
+    event: Schema.Literal("project.conversation.read.result"),
+    payload: ProjectConversationReadResultSchema,
+  }),
+  Schema.Struct({
+    ...HarnessEventMetadataSchema,
+    event: Schema.Literal("project.conversation.save.result"),
+    payload: ProjectConversationSaveResultSchema,
   }),
   ReadyEventSchema,
   RequestFailureEventSchema,
@@ -528,6 +558,34 @@ export function createProjectUpgradeResultEvent(
   result: ProjectUpgradeResult,
 ): HarnessMessage {
   return createEvent(metadata, "project.upgrade.result", result);
+}
+
+export function createProjectConversationReadCommand(
+  metadata: CommandMetadata,
+  request: ProjectConversationReadRequest,
+): DesktopMessage {
+  return createCommand(metadata, "project.conversation.read", request);
+}
+
+export function createProjectConversationSaveCommand(
+  metadata: CommandMetadata,
+  request: ProjectConversationSaveRequest,
+): DesktopMessage {
+  return createCommand(metadata, "project.conversation.save", request);
+}
+
+export function createProjectConversationReadResultEvent(
+  metadata: EventMetadata,
+  result: ProjectConversationReadResult,
+): HarnessMessage {
+  return createEvent(metadata, "project.conversation.read.result", result);
+}
+
+export function createProjectConversationSaveResultEvent(
+  metadata: EventMetadata,
+  result: ProjectConversationSaveResult,
+): HarnessMessage {
+  return createEvent(metadata, "project.conversation.save.result", result);
 }
 
 export function createProjectSwitchCommand(

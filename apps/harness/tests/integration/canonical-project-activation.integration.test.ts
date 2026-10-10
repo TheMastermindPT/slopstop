@@ -28,7 +28,10 @@ import {
 import { createNodeProjectStorageDependencies } from "../../src/storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
 import { createUnavailableWorkspaceApplication } from "../../src/workspace-application.js";
-import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js";
+import {
+  unusedConversation,
+  unusedProjectUpgrade,
+} from "./canonical-runtime-application-fixture.js";
 import { productionSettlementRows } from "./conformance-counter-command.js";
 import {
   checkedInMigrationRoot,
@@ -230,6 +233,7 @@ function activationTransport(
       return app.execute(request);
     },
     upgrade: unusedProjectUpgrade,
+    ...unusedConversation,
     stop: () => app.stop(),
   };
   let id = 900;
@@ -292,7 +296,7 @@ function activationTransport(
       fail = true;
     },
     envelope: (event: string, sequence: number, causationId: string, payload: unknown) => ({
-      protocolVersion: 7,
+      protocolVersion: 8,
       messageType: "event",
       messageId: `00000000-0000-4000-8000-${String(900 + sequence).padStart(12, "0")}`,
       sentAt,

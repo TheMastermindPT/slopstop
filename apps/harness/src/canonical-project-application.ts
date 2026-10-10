@@ -7,6 +7,8 @@ import {
   CanonicalProjectCommandResultSchema,
   CanonicalProjectSwitchResultSchema,
   decodeStrictResult,
+  ProjectConversationReadResultSchema,
+  ProjectConversationSaveResultSchema,
   ProjectUpgradeResultSchema,
 } from "@slopstop/protocol";
 import { Result, type Schema } from "effect";
@@ -85,9 +87,33 @@ export function createCanonicalProjectApplication(
         await coordinator.upgrade(request),
         (result) => result.request.projectId === request.projectId,
       ),
+    conversationRead: async (request) =>
+      validatedResult(
+        ProjectConversationReadResultSchema,
+        await coordinator.conversationRead(request),
+        (result) => sameRequest(result.request, request),
+      ),
+    conversationSave: async (request) =>
+      validatedResult(
+        ProjectConversationSaveResultSchema,
+        await coordinator.conversationSave(request),
+        (result) => sameRequest(result.request, request),
+      ),
     holdsProject: () => coordinator.holdsProject?.() ?? true,
     stop: () => coordinator.stop(),
   };
+}
+
+/** Whether a result echoes the exact request it answers, field by field. */
+function sameRequest<Request extends Readonly<Record<string, unknown>>>(
+  echoed: Request,
+  sent: Request,
+): boolean {
+  const keys = Object.keys(sent);
+  return (
+    Object.keys(echoed).length === keys.length &&
+    keys.every((key) => Object.is(echoed[key], sent[key]))
+  );
 }
 
 function validatedResult<S extends Schema.ConstraintDecoder<unknown>>(

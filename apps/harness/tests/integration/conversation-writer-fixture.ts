@@ -45,7 +45,8 @@ export const readOnlyClientOpenHooks: (() =>
 
 const storeDependencies = { createId: randomUUID, now: () => new Date().toISOString() };
 
-function openReadOnlyClient(databasePath: string) {
+/** Opens a read-only client on the generation pool, through the next open hook. */
+export function openReadOnlyClient(databasePath: string) {
   const wrap = readOnlyClientOpenHooks.shift()?.();
   const client = createWorkerLocalLibsqlClient(databasePath, "generation", { readOnly: true });
   return wrap === undefined ? client : wrap(client);

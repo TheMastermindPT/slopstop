@@ -73,6 +73,24 @@ function injectedFault(statement: unknown): unknown {
 /** Raw closes of the writer's worker clients, counted for the force-close proof (T1). */
 export const writerClientCloses = { count: 0 };
 
+/** The writer clients' execute and transaction calls, statements in transactions included. */
+export const writerClientCalls = { count: 0 };
+
+/**
+ * Holds the next Conversation work inside its transaction: each entry runs, and is awaited,
+ * before the first Conversation statement of one transaction, first in first out.
+ */
+export const conversationWorkHolds: (() => Promise<void>)[] = [];
+
+/** Awaits the next Conversation work hold when `statement` is the work's first one. */
+async function holdConversationWork(statement: unknown, held: { done: boolean }) {
+  if (held.done) return;
+  const sql = typeof statement === "string" ? statement : Reflect.get(Object(statement), "sql");
+  if (!/conversation/u.test(String(sql))) return;
+  held.done = true;
+  await conversationWorkHolds.shift()?.();
+}
+
 /** Runs `operation` unless a fault named `name` is queued; the fault then skips the real call. */
 function unlessFaulted(name: string, operation: () => Promise<void>): Promise<void> {
   const fault = injectedFault(name);
@@ -87,8 +105,11 @@ function faultingClient(client: LocalLibsqlClient): LocalLibsqlClient {
   const execute =
     <Executor extends Pick<LocalLibsqlClient, "execute">>(
       executor: Executor,
+      held = { done: true },
     ): Executor["execute"] =>
-    (statement, args) => {
+    async (statement, args) => {
+      writerClientCalls.count += 1;
+      await holdConversationWork(statement, held);
       const fault = injectedFault(statement);
       return fault === undefined ? executor.execute(statement, args) : Promise.reject(fault);
     };
@@ -99,12 +120,13 @@ function faultingClient(client: LocalLibsqlClient): LocalLibsqlClient {
       return client.close();
     },
     transaction: async (mode) => {
+      writerClientCalls.count += 1;
       const tx = await client.transaction(mode);
       return {
         get closed() {
           return tx.closed;
         },
-        execute: execute(tx),
+        execute: execute(tx, { done: false }),
         // A faulted stage never runs: a faulted commit and rollback leave the write lock held.
         commit: () => unlessFaulted("commit", () => tx.commit()),
         rollback: () => unlessFaulted("rollback", () => tx.rollback()),
@@ -120,7 +142,7 @@ function faultingClient(client: LocalLibsqlClient): LocalLibsqlClient {
  */
 export const noteSettlementHolds: (() => Promise<void>)[] = [];
 
-const recordNoteCommand = defineCanonicalCommand({
+export const recordNoteCommand = defineCanonicalCommand({
   type: "fixture.record-note",
   version: 1,
   payloadSchema: Schema.Struct({ note: Schema.String.check(Schema.isMinLength(1)) }),
@@ -148,6 +170,33 @@ const recordNoteCommand = defineCanonicalCommand({
 });
 
 type SubmitNote = (note: string) => Promise<CanonicalProjectCommandResult>;
+
+/**
+ * The fixture coordinator's dependencies over `storage`: Node leases, the fixture note command,
+ * the writer clients through `faultingClient`, random ids and the wall clock.
+ */
+export function fixtureCoordinatorDependencies(storage: StorageOwner) {
+  const now = () => new Date().toISOString();
+  return {
+    storage,
+    leases: createNodeCanonicalWriterLeaseFactory(),
+    repositories: createCanonicalCommandRepositoryFactory({
+      registry: createCanonicalCommandRegistry([recordNoteCommand]),
+      createReceiptId: randomUUID,
+      createEventId: randomUUID,
+      now,
+      openClient: (databasePath) =>
+        faultingClient(createWorkerLocalLibsqlClient(databasePath, "generation")),
+      sha256Text: async (text) => createHash("sha256").update(text).digest("hex"),
+      createHandoffId: randomUUID,
+      createRecoveryRecordId: randomUUID,
+    }),
+    createActivationId: () => decodeStrict(ProjectActivationIdSchema, randomUUID()),
+    createWriterToken: () =>
+      decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
+    now,
+  };
+}
 
 type Coordinator = ReturnType<typeof createActiveProjectCoordinator>;
 
@@ -184,30 +233,13 @@ export async function withFixtureWriter(
     control: WriterControl,
   ) => Promise<void>,
 ): Promise<void> {
-  const now = () => new Date().toISOString();
   let writer: CanonicalProjectWriter | undefined;
   const coordinator = createActiveProjectCoordinator({
-    storage,
+    ...fixtureCoordinatorDependencies(storage),
     createWriter: (input) => {
       writer = createCanonicalProjectWriter(input);
       return writer;
     },
-    leases: createNodeCanonicalWriterLeaseFactory(),
-    repositories: createCanonicalCommandRepositoryFactory({
-      registry: createCanonicalCommandRegistry([recordNoteCommand]),
-      createReceiptId: randomUUID,
-      createEventId: randomUUID,
-      now,
-      openClient: (databasePath) =>
-        faultingClient(createWorkerLocalLibsqlClient(databasePath, "generation")),
-      sha256Text: async (text) => createHash("sha256").update(text).digest("hex"),
-      createHandoffId: randomUUID,
-      createRecoveryRecordId: randomUUID,
-    }),
-    createActivationId: () => decodeStrict(ProjectActivationIdSchema, randomUUID()),
-    createWriterToken: () =>
-      decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
-    now,
   });
   try {
     const activation = await coordinator.activate({ projectId });

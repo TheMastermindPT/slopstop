@@ -443,7 +443,11 @@ function switchProjectPorts(
     }),
   };
 }
-export function switchFixture(realCommands = false) {
+/** The switch fixture; `extra` adds coordinator dependencies (e.g. a read-only reader port). */
+export function switchFixture(
+  realCommands = false,
+  extra: Partial<Parameters<typeof createActiveProjectCoordinator>[0]> = {},
+) {
   const observations = switchObservations();
   const projects = {
     A: switchProjectPorts("A", observations, realCommands),
@@ -497,6 +501,7 @@ export function switchFixture(realCommands = false) {
     owner: createActiveProjectCoordinator({
       ...dependencies,
       storage: { ...dependencies.storage, upgrade: unusedProjectUpgrade },
+      ...extra,
     }),
     times: (...values: string[]) => {
       for (const time of values) clock.mockReturnValueOnce(time);
@@ -591,7 +596,7 @@ export const switchMessages = {
 };
 export function switchEvent(sequence: number, causation: number, event: string, payload: unknown) {
   return {
-    protocolVersion: 7,
+    protocolVersion: 8,
     messageType: "event",
     messageId: `99999999-9999-4999-8999-${String(999999999400 + sequence)}`,
     sentAt: switchTimes.T4,

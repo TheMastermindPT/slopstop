@@ -111,7 +111,7 @@ it.runIf(process.platform === "win32")(
 
     const session = await registrationSession({ root });
     expect(await session.list()).toEqual({ status: "broken", code: "REGISTRY_CORRUPT" });
-    // Known follow-up (coordinator log): a broken listing leaves its cleanup unconfirmed at stop.
-    await expect(session.dispose()).rejects.toThrow("Project listing cleanup is unconfirmed.");
+    // A broken listing whose own cleanup completed leaves nothing unconfirmed at stop (#102).
+    await expect(session.dispose()).resolves.toBeUndefined();
   },
 );

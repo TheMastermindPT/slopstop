@@ -4,7 +4,7 @@ import {
   ProjectStorageOpenResultSchema,
   projectUpgradeDiagnostics,
 } from "@slopstop/protocol";
-import { expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   activationId,
   command,
@@ -467,4 +467,532 @@ it("reports a Project held while it is still activating or releasing", async () 
   await f.owner.stop();
   expect(observed).toEqual([true, true]);
   expect(f.owner.holdsProject?.()).toBe(false);
+});
+
+import { CanonicalProjectSwitchResultSchema } from "@slopstop/protocol";
+import { unusedProjectUpgrade } from "../tests/integration/canonical-runtime-application-fixture.js";
+import { createActiveProjectCoordinator } from "./active-project-coordinator.js";
+import {
+  CanonicalProjectWriterReleaseError,
+  createCanonicalProjectWriter,
+} from "./canonical-project-writer.js";
+
+it.each(["WRITER_CLIENT_ABANDON_FAILED", "WRITER_FENCE_RELEASE_FAILED"] as const)(
+  "answers a switch whose writer release fails with %s as release-failed (CNV-B36)",
+  async (code) => {
+    const f = switchFixture();
+    const owner = createActiveProjectCoordinator({
+      ...f.dependencies,
+      storage: { ...f.dependencies.storage, upgrade: unusedProjectUpgrade },
+      createWriter: (input) => ({
+        ...createCanonicalProjectWriter(input),
+        close: async () => {
+          throw new CanonicalProjectWriterReleaseError(code);
+        },
+      }),
+    });
+    expect(await owner.activate({ projectId: switchProjects.A.projectId })).toMatchObject({
+      status: "active",
+      access: "read-write",
+    });
+    const result = await owner.switchProject?.(switchRequests.AB);
+    expect(decodeStrict(CanonicalProjectSwitchResultSchema, result)).toEqual({
+      status: "release-failed",
+      request: switchRequests.AB,
+      diagnostic: {
+        code,
+        message: "Project activation resources could not be released.",
+        retryable: true,
+      },
+    });
+  },
+);
+
+type AdmissionRow = Readonly<{
+  pending: boolean;
+  state: "inactive" | "active" | "stopped" | "release-failed";
+  project: "same" | "other";
+  activation: "same" | "stale";
+  access: "read-write" | "read-only";
+  expected: string;
+}>;
+
+const admissionRows: readonly AdmissionRow[] = [
+  {
+    pending: true,
+    state: "active",
+    project: "same",
+    activation: "same",
+    access: "read-write",
+    expected: "coordinator-unavailable",
+  },
+  {
+    pending: true,
+    state: "inactive",
+    project: "same",
+    activation: "same",
+    access: "read-write",
+    expected: "coordinator-unavailable",
+  },
+  {
+    pending: false,
+    state: "inactive",
+    project: "same",
+    activation: "same",
+    access: "read-write",
+    expected: "inactive",
+  },
+  {
+    pending: false,
+    state: "stopped",
+    project: "same",
+    activation: "same",
+    access: "read-write",
+    expected: "coordinator-unavailable",
+  },
+  {
+    pending: false,
+    state: "release-failed",
+    project: "same",
+    activation: "same",
+    access: "read-write",
+    expected: "coordinator-unavailable",
+  },
+  {
+    pending: false,
+    state: "active",
+    project: "other",
+    activation: "same",
+    access: "read-write",
+    expected: "project-mismatch",
+  },
+  {
+    pending: false,
+    state: "active",
+    project: "other",
+    activation: "same",
+    access: "read-only",
+    expected: "project-mismatch",
+  },
+  {
+    pending: false,
+    state: "active",
+    project: "same",
+    activation: "stale",
+    access: "read-write",
+    expected: "stale-activation",
+  },
+  {
+    pending: false,
+    state: "active",
+    project: "same",
+    activation: "stale",
+    access: "read-only",
+    expected: "stale-activation",
+  },
+  {
+    pending: false,
+    state: "active",
+    project: "same",
+    activation: "same",
+    access: "read-only",
+    expected: "read-only",
+  },
+];
+
+/** Brings the switch fixture into the row's state; returns the still-pending lifecycle, if any. */
+async function arrangeAdmission(f: ReturnType<typeof switchFixture>, row: AdmissionRow) {
+  const held = row.project === "same" ? "A" : "B";
+  if (row.state !== "inactive") {
+    if (row.access === "read-only") f.projects[held].native.tryLock.mockReturnValue(false);
+    expect(await f.owner.activate({ projectId: switchProjects[held].projectId })).toMatchObject({
+      status: "active",
+      access: row.access,
+    });
+  }
+  if (row.state === "stopped") await f.owner.stop();
+  if (row.state === "release-failed") {
+    f.faults.set(`${held}.repository.close`, [new Error("private release failure")]);
+    await expect(f.owner.stop()).rejects.toThrow();
+  }
+  if (!row.pending) return { lifecycle: undefined };
+  // Wrapped, so awaiting this arrangement does not await the lifecycle it starts.
+  return {
+    lifecycle:
+      row.state === "inactive"
+        ? f.owner.activate({ projectId: switchProjects.A.projectId })
+        : f.owner.stop(),
+  };
+}
+
+it.each(admissionRows)(
+  "refuses $expected when lifecycle pending=$pending, state=$state, project=$project, activation=$activation, access=$access (CNV-B29)",
+  async (row) => {
+    // A fake read-only reader: the admitted read-only row reads its page without a worker.
+    const f = switchFixture(false, {
+      readConversationReadOnly: () => Effect.succeed({ conversation: null }),
+    });
+    const { lifecycle } = await arrangeAdmission(f, row);
+    const activationId = row.activation === "same" ? switchProjects.A.activationId : newAEpoch;
+    const command = { ...switchCommands.A, activationId };
+    const target = { projectId: switchProjects.A.projectId, activationId };
+    const [executed, saved, read] = await Promise.all([
+      f.owner.execute(command),
+      f.owner.conversationSave({
+        ...target,
+        saveId: "00000000-0000-4000-8000-000000000031",
+        expectedRevision: 0,
+        text: "refused",
+      }),
+      f.owner.conversationRead({ ...target, after: null }),
+    ]);
+    await lifecycle;
+    expect(executed.status).toBe(row.expected);
+    expect(saved.status).toBe(row.expected);
+    if (row.expected === "read-only")
+      expect(read).toMatchObject({ status: "read", conversation: null });
+    else expect(read.status).toBe(row.expected);
+  },
+);
+
+import { Effect } from "effect";
+import type { ConversationPorts } from "./active-project-conversation.js";
+
+/** A gate a test opens; until then, the work behind it waits. */
+function gate() {
+  let open: () => void = () => undefined;
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  return { opened, open };
+}
+
+/**
+ * A coordinator over the switch fixture whose read-only reads and writer saves wait for `held`;
+ * the order of the read, save and lifecycle answers is recorded.
+ */
+function heldConversationCoordinator(held: Promise<void>) {
+  const f = switchFixture();
+  const order: string[] = [];
+  const owner = createActiveProjectCoordinator({
+    ...f.dependencies,
+    storage: { ...f.dependencies.storage, upgrade: unusedProjectUpgrade },
+    readConversationReadOnly: () =>
+      Effect.promise(async () => {
+        await held;
+        return { conversation: null };
+      }),
+    createWriter: (input) => {
+      const writer = createCanonicalProjectWriter(input);
+      return {
+        ...writer,
+        conversation: async () => {
+          await held;
+          return { status: "writer-unavailable" } as const;
+        },
+        // Refuses every read in its slot, so reads fall back to the held read-only reader.
+        conversationRead: async () => ({ status: "writer-unavailable" }) as const,
+        close: async (time) => {
+          order.push("writer.close");
+          return writer.close(time);
+        },
+      };
+    },
+  });
+  return { f, owner, order };
+}
+
+const sameTurnLifecycles = ["switch", "stop"] as const;
+
+type HeldOwner = ReturnType<typeof heldConversationCoordinator>["owner"];
+
+/** Same-turn rows: the work sent, its access, and the answers in order before the lifecycle. */
+const sameTurnRows = [
+  {
+    work: "read-only read",
+    access: "read-only",
+    send: (owner: HeldOwner) => owner.conversationRead({ ...switchProjects.A, after: null }),
+    answered: ["read"],
+  },
+  {
+    work: "save",
+    access: "read-write",
+    send: (owner: HeldOwner) =>
+      owner.conversationSave({
+        ...switchProjects.A,
+        saveId: "00000000-0000-4000-8000-000000000051",
+        expectedRevision: 0,
+        text: "held",
+      }),
+    answered: ["writer-unavailable", "writer.close"],
+  },
+  {
+    work: "fallback read (phase 2)",
+    access: "read-write",
+    send: (owner: HeldOwner) => owner.conversationRead({ ...switchProjects.A, after: null }),
+    answered: ["read", "writer.close"],
+  },
+] as const;
+
+describe.each(sameTurnRows)("a $work sent in the same turn as a lifecycle", (row) => {
+  it.each(sameTurnLifecycles)("is drained before %s releases (CNV-B14)", async (lifecycle) => {
+    const held = gate();
+    const { f, owner, order } = heldConversationCoordinator(held.opened);
+    if (row.access === "read-only") f.projects.A.native.tryLock.mockReturnValue(false);
+    expect(await owner.activate({ projectId: switchProjects.A.projectId })).toMatchObject({
+      access: row.access,
+    });
+    const work = row.send(owner).then((result) => order.push(result.status));
+    const released = (
+      lifecycle === "switch" ? owner.switchProject(switchRequests.AB) : owner.stop()
+    ).then(() => order.push(lifecycle));
+    await nextTurn();
+    await nextTurn();
+    expect(order).toEqual([]);
+    expect(f.projects.A.session.close).not.toHaveBeenCalled();
+    held.open();
+    await Promise.all([work, released]);
+    expect(order).toEqual([...row.answered, lifecycle]);
+    expect(f.projects.A.session.close).toHaveBeenCalledOnce();
+  });
+});
+
+import type { CanonicalProjectWriter } from "./canonical-project-writer.js";
+import {
+  ConversationStorageBroken,
+  ConversationStorageBusy,
+} from "./conversation/conversation-errors.js";
+import type { ProjectConversationPage } from "./conversation/conversation-store.js";
+import type { LocalLibsqlTransaction } from "./storage/local-libsql-worker-client.js";
+
+const fallbackPage: ProjectConversationPage = {
+  conversation: {
+    conversationId: "00000000-0000-4000-8000-000000000061",
+    branchId: "00000000-0000-4000-8000-000000000062",
+    revision: 101,
+    messages: [
+      {
+        messageId: "00000000-0000-4000-8000-000000000063",
+        cursor: 101,
+        author: "user",
+        text: "m101",
+        savedAt: "2026-10-10T12:00:00.000Z",
+      },
+    ],
+    nextCursor: null,
+  },
+};
+
+type WriterReadAnswer = "refused" | "page";
+
+/** A transaction whose every statement answers no rows: a read of it finds no conversation. */
+const emptyTransaction: LocalLibsqlTransaction = {
+  closed: false,
+  execute: async () => ({ columns: [], rows: [], rowsAffected: 0, lastInsertRowid: null }),
+  commit: async () => undefined,
+  rollback: async () => undefined,
+  close: async () => undefined,
+};
+
+/** A writer read that refuses, or runs the work on an empty transaction. */
+function writerRead(answer: WriterReadAnswer): CanonicalProjectWriter["conversationRead"] {
+  return async (work) =>
+    answer === "refused"
+      ? { status: "writer-unavailable" }
+      : {
+          status: "completed",
+          result: await Effect.runPromise(Effect.result(work(emptyTransaction))),
+        };
+}
+
+/**
+ * A coordinator over the switch fixture whose writer answers reads with `writerRead` (a refusal
+ * or a page) and saves with writer-unavailable, and whose read-only port answers `port`.
+ */
+function fallbackCoordinator(
+  readAnswer: WriterReadAnswer,
+  port: ConversationPorts["readConversationReadOnly"],
+) {
+  const f = switchFixture();
+  const readConversationReadOnly = vi.fn(port);
+  const owner = createActiveProjectCoordinator({
+    ...f.dependencies,
+    storage: { ...f.dependencies.storage, upgrade: unusedProjectUpgrade },
+    readConversationReadOnly,
+    createWriter: (input) => ({
+      ...createCanonicalProjectWriter(input),
+      conversationRead: writerRead(readAnswer),
+      conversation: async () => ({ status: "writer-unavailable" }) as const,
+    }),
+  });
+  return { f, owner, readConversationReadOnly };
+}
+
+it.each([null, 100])(
+  "routes a refused read to the read-only reader with after=%s (CNV-B38)",
+  async (after) => {
+    const { owner, readConversationReadOnly } = fallbackCoordinator("refused", () =>
+      Effect.succeed(fallbackPage),
+    );
+    await owner.activate({ projectId: switchProjects.A.projectId });
+    expect(await owner.conversationRead({ ...switchProjects.A, after })).toMatchObject({
+      status: "read",
+      conversation: { revision: 101, messages: [{ cursor: 101, text: "m101" }] },
+    });
+    expect(readConversationReadOnly).toHaveBeenCalledExactlyOnceWith({
+      canonicalDatabasePath: "A/slopstop.db",
+      projectId: switchProjects.A.projectId,
+      after,
+    });
+    await owner.stop();
+  },
+);
+
+it("keeps a writer's page and a refused save as they are (CNV-B38)", async () => {
+  const { owner, readConversationReadOnly } = fallbackCoordinator("page", () =>
+    Effect.succeed(fallbackPage),
+  );
+  await owner.activate({ projectId: switchProjects.A.projectId });
+  expect(await owner.conversationRead({ ...switchProjects.A, after: null })).toMatchObject({
+    status: "read",
+    conversation: null,
+  });
+  expect(
+    await owner.conversationSave({
+      ...switchProjects.A,
+      saveId: "00000000-0000-4000-8000-000000000064",
+      expectedRevision: 0,
+      text: "refused",
+    }),
+  ).toMatchObject({ status: "writer-unavailable" });
+  expect(readConversationReadOnly).not.toHaveBeenCalled();
+  await owner.stop();
+});
+
+it("reads a read-only activation through the read-only reader directly (CNV-B38)", async () => {
+  const { f, owner, readConversationReadOnly } = fallbackCoordinator("page", () =>
+    Effect.succeed(fallbackPage),
+  );
+  f.projects.A.native.tryLock.mockReturnValue(false);
+  await owner.activate({ projectId: switchProjects.A.projectId });
+  expect(await owner.conversationRead({ ...switchProjects.A, after: null })).toMatchObject({
+    status: "read",
+    conversation: { revision: 101 },
+  });
+  expect(readConversationReadOnly).toHaveBeenCalledExactlyOnceWith({
+    canonicalDatabasePath: "A/slopstop.db",
+    projectId: switchProjects.A.projectId,
+    after: null,
+  });
+  await owner.stop();
+});
+
+it.each([
+  [
+    "busy",
+    new ConversationStorageBusy({ cause: "held" }),
+    "unavailable",
+    "PROJECT_STORAGE_UNAVAILABLE",
+  ],
+  [
+    "broken",
+    new ConversationStorageBroken({ cause: "corrupt" }),
+    "broken",
+    "PROJECT_STORAGE_BROKEN",
+  ],
+] as const)(
+  "answers a %s read-only reader after a refused read with its row (CNV-B38)",
+  async (_name, failure, status, code) => {
+    const { owner } = fallbackCoordinator("refused", () => Effect.fail(failure));
+    await owner.activate({ projectId: switchProjects.A.projectId });
+    expect(await owner.conversationRead({ ...switchProjects.A, after: null })).toMatchObject({
+      status,
+      diagnostic: { code },
+    });
+    await owner.stop();
+  },
+);
+
+it("routes a read to the read-only reader after a failed command snapshot closes admission (G17)", async () => {
+  const readConversationReadOnly = vi.fn(() => Effect.succeed(fallbackPage));
+  const f = switchFixture(false, { readConversationReadOnly });
+  expect(await f.owner.activate({ projectId: switchProjects.A.projectId })).toMatchObject({
+    access: "read-write",
+  });
+  const command = { ...switchCommands.A, command: { ...switchCommands.A.command } };
+  const unreadable = new Error("private unreadable payload");
+  Object.defineProperty(command.command, "payload", {
+    enumerable: true,
+    get: () => {
+      throw unreadable;
+    },
+  });
+  await expect(f.owner.execute(command)).rejects.toBe(unreadable);
+  expect(await f.owner.conversationRead({ ...switchProjects.A, after: 100 })).toMatchObject({
+    status: "read",
+    conversation: { revision: 101 },
+  });
+  expect(readConversationReadOnly).toHaveBeenCalledExactlyOnceWith({
+    canonicalDatabasePath: "A/slopstop.db",
+    projectId: switchProjects.A.projectId,
+    after: 100,
+  });
+  await f.owner.stop();
+});
+
+import type { ActiveProjectCoordinatorDependencies } from "./active-project-coordinator.js";
+
+/** A coordinator over the switch fixture whose writer answers saves with `save`. */
+function saveCoordinator(
+  save: CanonicalProjectWriter["conversation"],
+  ports: Pick<
+    ActiveProjectCoordinatorDependencies,
+    "createConversationId" | "openReconciliationClient"
+  >,
+) {
+  const f = switchFixture();
+  return createActiveProjectCoordinator({
+    ...f.dependencies,
+    storage: { ...f.dependencies.storage, upgrade: unusedProjectUpgrade },
+    ...ports,
+    createWriter: (input) => ({ ...createCanonicalProjectWriter(input), conversation: save }),
+  });
+}
+
+const portSave = {
+  ...switchProjects.A,
+  saveId: "00000000-0000-4000-8000-000000000065",
+  expectedRevision: 0,
+  text: "ported",
+};
+
+it("saves with the injected conversation ids (CNV-B29)", async () => {
+  const id = "00000000-0000-4000-8000-000000000066";
+  const owner = saveCoordinator(
+    async (work) => ({
+      status: "completed",
+      result: await Effect.runPromise(Effect.result(work(emptyTransaction))),
+    }),
+    { createConversationId: () => id },
+  );
+  await owner.activate({ projectId: switchProjects.A.projectId });
+  expect(await owner.conversationSave(portSave)).toMatchObject({
+    status: "saved",
+    conversationMessageId: id,
+    cursor: 1,
+  });
+  await owner.stop();
+});
+
+it("reconciles an uncertain save through the injected opener (CNV-B29)", async () => {
+  const openReconciliationClient = vi.fn((): never => {
+    throw Object.assign(new Error("SQLITE_CANTOPEN"), { code: "SQLITE_CANTOPEN" });
+  });
+  const owner = saveCoordinator(async () => ({ status: "commit-uncertain" }), {
+    openReconciliationClient,
+  });
+  await owner.activate({ projectId: switchProjects.A.projectId });
+  expect(await owner.conversationSave(portSave)).toMatchObject({ status: "uncertain" });
+  expect(openReconciliationClient).toHaveBeenCalledExactlyOnceWith("A/slopstop.db");
+  await owner.stop();
 });

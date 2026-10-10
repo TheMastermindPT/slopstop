@@ -66,6 +66,21 @@ export {
   writerProofStaleCreateRequestId,
   writerProofStaleProjectId,
 } from "./canonical-writer-smoke-protocol.js";
+export type {
+  ProjectConversationDiagnostic,
+  ProjectConversationReadRequest,
+  ProjectConversationReadResult,
+  ProjectConversationSaveRequest,
+  ProjectConversationSaveResult,
+} from "./project-conversation-protocol.js";
+export {
+  conversationTextProblem,
+  ProjectConversationReadRequestSchema,
+  ProjectConversationReadResultSchema,
+  ProjectConversationSaveRequestSchema,
+  ProjectConversationSaveResultSchema,
+  projectConversationDiagnostics,
+} from "./project-conversation-protocol.js";
 export type { ProjectList, ProjectListResult } from "./project-list-protocol.js";
 export {
   ProjectListEntrySchema,
@@ -172,6 +187,10 @@ export {
   createProjectCloseResultEvent,
   createProjectCommand,
   createProjectCommandResultEvent,
+  createProjectConversationReadCommand,
+  createProjectConversationReadResultEvent,
+  createProjectConversationSaveCommand,
+  createProjectConversationSaveResultEvent,
   createProjectCreateCommand,
   createProjectCreateResultEvent,
   createProjectListCommand,

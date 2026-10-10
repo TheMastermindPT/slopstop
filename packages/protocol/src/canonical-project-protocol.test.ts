@@ -168,6 +168,7 @@ function activationOutcomes(): object[] {
       ["broken", "WRITER_FENCE_STALE"],
       ["broken", "WRITER_FENCE_RELEASE_FAILED"],
       ["broken", "WRITER_REPOSITORY_CLOSE_FAILED"],
+      ["broken", "WRITER_CLIENT_ABANDON_FAILED"],
       ["broken", "PROJECT_STORAGE_RELEASE_FAILED"],
     ].map(([status, code]) => ({
       status,
@@ -388,6 +389,7 @@ const switchFailures = [
     ["WRITER_FENCE_RELEASE_FAILED", true],
     ["WRITER_FENCE_STALE", false],
     ["WRITER_REPOSITORY_CLOSE_FAILED", true],
+    ["WRITER_CLIENT_ABANDON_FAILED", true],
     ["WRITER_LEASE_UNLOCK_FAILED", true],
     ["WRITER_LEASE_CLOSE_FAILED", true],
     ["PROJECT_STORAGE_RELEASE_FAILED", true],

@@ -95,7 +95,7 @@ export function settlementEvent(
   payload: unknown,
 ) {
   return {
-    protocolVersion: 7,
+    protocolVersion: 8,
     messageType: "event",
     messageId: `99999999-9999-4999-8999-999999999${500 + sequence}`,
     sentAt: "2026-09-05T12:00:06.000Z",

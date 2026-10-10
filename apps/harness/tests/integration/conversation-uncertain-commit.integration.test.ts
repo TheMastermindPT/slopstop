@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { Effect, Result } from "effect";
 import { expect, it } from "vitest";
 import { readProjectConversationReadOnly } from "../../src/conversation/conversation-store.js";
+import { sharedReader } from "./conversation-fence-fixture.js";
 import {
   type ConversationSession,
   canonicalSnapshot,
@@ -21,19 +22,6 @@ import {
   writerClientCloses,
   writerClientFaults,
 } from "./project-storage-upgrade-fixture.js";
-
-/** Another connection's open read transaction: its SHARED lock blocks a COMMIT. */
-function sharedReader(root: string) {
-  const database = new DatabaseSync(generationPaths(root).canonical, { readOnly: true });
-  database.exec("BEGIN");
-  database.prepare("SELECT count(*) FROM conversations").get();
-  return {
-    release: () => {
-      database.exec("COMMIT");
-      database.close();
-    },
-  };
-}
 
 const unpinned = { pinCanonical: false } as const;
 const message = (saveId: string) => ({ saveId, expectedRevision: 0, text: "uncertain" });

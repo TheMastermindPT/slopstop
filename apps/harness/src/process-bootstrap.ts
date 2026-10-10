@@ -119,7 +119,7 @@ export function startHarnessProcessRuntime(
           withHeldProject: services.canonicalProjects.withHeldProject,
         }),
       ),
-      projectListing: registrationListing(registration),
+      projectListing: createRegistrationListing(registration),
       applicationDatabase: services.applicationDatabase,
       transport: input.transport,
       canonicalProjectApplication: services.canonicalProjects,
@@ -139,22 +139,6 @@ export function startHarnessProcessRuntime(
     void runtime.dispose();
     throw error;
   }
-}
-
-// Listing and registration share the registry: it stops after the owner and the observer.
-function registrationListing(registration: ProjectRegistration["Service"]) {
-  return {
-    list: async () =>
-      decodeStrict(ProjectListResultSchema, await registration.owner.listProjects()),
-    stop: async () => {
-      const result = await registration.owner.close();
-      const observer = await registration.observer.close();
-      await registration.registry.stop();
-      if (observer.status !== "closed")
-        throw new Error("Project registration observer cleanup is unconfirmed.");
-      if (result.status !== "closed") throw new Error("Project listing cleanup is unconfirmed.");
-    },
-  };
 }
 
 const currentTime = () => new Date().toISOString();
@@ -284,7 +268,6 @@ function harnessServicesLayer(roots: HarnessRootPaths, upgradeLog: UpgradeEventL
   );
 }
 
-import { ProjectListResultSchema } from "@slopstop/protocol";
 import {
   createProjectRegistrationObserver,
   type ProjectRegistrationObserver,
@@ -302,6 +285,7 @@ import {
   createRegisteredProjectSessionValidation,
   createRegisteredProjectTargetValidation,
 } from "./registration/registered-project-selection.js";
+import { createRegistrationListing } from "./registration/registration-listing.js";
 import { createRegistrationRegistry } from "./registration/registration-registry.js";
 import type { RegistrationDatabaseOptions } from "./registration/registry-database.js";
 import { createVersionObservationExecution } from "./registration/version-observation-execution.js";

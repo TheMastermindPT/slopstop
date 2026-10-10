@@ -153,6 +153,7 @@ const canonicalProjectActivationDiagnosticCodes = [
   "WRITER_FENCE_STALE",
   "WRITER_FENCE_RELEASE_FAILED",
   "WRITER_REPOSITORY_CLOSE_FAILED",
+  "WRITER_CLIENT_ABANDON_FAILED",
 ] as const;
 export const CanonicalProjectActivationDiagnosticCodeSchema = Schema.Literals(
   canonicalProjectActivationDiagnosticCodes,
@@ -248,6 +249,7 @@ export const CanonicalProjectActivationResultSchema = wholeUnion([
     "WRITER_FENCE_STALE",
     "WRITER_FENCE_RELEASE_FAILED",
     "WRITER_REPOSITORY_CLOSE_FAILED",
+    "WRITER_CLIENT_ABANDON_FAILED",
   ]),
 ]);
 export type CanonicalProjectActivationResult = typeof CanonicalProjectActivationResultSchema.Type;
@@ -414,6 +416,7 @@ const switchReleaseDiagnosticSchema = wholeUnion([
     Schema.Literals([
       "WRITER_FENCE_RELEASE_FAILED",
       "WRITER_REPOSITORY_CLOSE_FAILED",
+      "WRITER_CLIENT_ABANDON_FAILED",
       "WRITER_LEASE_OPEN_FAILED",
       "WRITER_LEASE_LOCK_FAILED",
       "WRITER_LEASE_UNLOCK_FAILED",
