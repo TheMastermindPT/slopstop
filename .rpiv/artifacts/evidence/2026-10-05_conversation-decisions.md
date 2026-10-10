@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 1dc654973f50dd7a27cffa4668c354f768404b50ff184bcb30f62d9c8dfeb679
+content_hash: 84d5a207c0cf23bc102a55b622b7a2764d9e363660675f7d6fc2dc0098ed945b
 ---
 
 # Conversation — Human Decisions
@@ -446,3 +446,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 ## 39. CodeScene waiver for C1 S3 (user decision, 2026-10-10)
 
 - `apps/harness/src/registration/project-registration-preparation.ts` scores 8.03, the same pre-existing score as on main; C1 S3 step 10 (CNV-B37, #102) added no smell. The user accepted it as recorded pre-existing debt for C1 S3 only, the same kind of waiver as #110, with the refactor to 10 tracked in #129 after the #94 measurements.
+
+## 40. C1 S3 round 3 approved and win32 gating accepted (user decisions, 2026-10-10)
+
+- S3 candidate review round 2 (the last) closed every round-1 item and found no production defect. What remained: three test-contract gaps (a clean listing closing clean, the injected reconciliation opener actually being used, the writer-read arguments), the repository evidence for the heavy runs with per-file mutation scores, a too-wide coordinator mutation range, and test hygiene.
+- The user approved a short, bounded round 3, as in §32. It covers those fixes, fresh heavy runs on the final candidate (the changes touch integration tests) and one verifier limited to the fixes. The S3 merge decision follows.
+- **Win32-only rows accepted:** the CNV-B13 read-only rows and the CNV-B14 phase-1 per-request rows run only on Windows. v1 is Windows, and Linux is deferred (#112). This is recorded as a deviation to revisit when Linux enters.
