@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 799b4f8367888eb5eafae4edbd6a013b8b5bc32681bb2a7b9fdb52ccc2c5ea54
+content_hash: 4f5908cb8d08c4c570d52dcc565acb24f11cf136773f844563636cc82dec7365
 ---
 
 # Conversation — Human Decisions
@@ -425,3 +425,11 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 ## 35. #94 investigation scope (user decision, 2026-10-10)
 
 - The user approved ("sim, tudo ok se for necessário"), when needed, (a) instrumentation in production code beyond test-side tracing and (b) a load generator plus `handle.exe` to see open file handles. Standing rules stay in force: no timeout raises and no gate weakening without the user; heavy runs only with the coordinator's go-ahead on a free machine; new production code follows the Effect rules.
+
+## 36. C1 S3 design and the main push retry (user decisions, 2026-10-10)
+
+- **Main push:** the first attempt (push-main-7) failed in test:integration, with 4 registration tests failing (3 timeouts with EBUSY, 1 "Proposal missing"), the #94 pattern, while other agents were working. The user approved ONE retry on a fully idle machine. If it fails again, the push waits for the #94 fix. The failure is #94 evidence.
+- **S3 design:** intent review round 2 (the last) on revision 4.1 found 3 verified test-contract blockers and about 10 concerns. The user chose revision 4.2 fixing all of them, plus one verifier limited to the fixes (as in §32).
+- **Deviation 6b extended to S3:** CNV-B14 uses the switch and the coordinator stop instead of `project.close`, because `project.close` does not reach the coordinator. App behaviour is unchanged. Accepted.
+- **G17 extension accepted:** besides abandonment and a failed settlement (U2), a failed writer snapshot also routes the read to the per-request read-only client. One rule, no special cases.
+- **Main push retry succeeded:** push-main-8 on an idle machine passed the deep pre-push gate (integration 2115 passed, e2e 11/11, launch-smoke OK), and origin/main is now 7a1b041.
