@@ -1,5 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
+  // @effect/tsgo ships the Effect tsgo language-server binary used by the editor and agent LSP (no JS import);
+  // the tsconfig plugin name @effect/language-service is resolved by that binary, not installed as a package.
+  "ignoreDependencies": ["@effect/tsgo", "@effect/language-service"],
   "workspaces": {
     ".": {
       "project": ["*.{cjs,js,mjs,ts}"]
@@ -12,7 +15,6 @@
         "src/renderer/prototype/main.tsx",
         "tests/e2e/**/*.{mjs,ts}",
         "vitest.project-storage-mutation.config.ts",
-        "vitest.conversation-mutation.config.ts",
         "vite.*.config.ts"
       ],
       "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "*.config.ts"]
