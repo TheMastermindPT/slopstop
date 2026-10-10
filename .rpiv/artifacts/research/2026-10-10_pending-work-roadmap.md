@@ -150,4 +150,27 @@ Corrected the same day unless stated otherwise; see the git log for the commit.
 
 ## Issues created (2026-10-10)
 
-To be filled after creation.
+22 issues (#106-#127), 5 comments (#98 closure proposed, awaiting the user; #99; #100; #101; #105) and the #1 frontier paragraph, on 2026-10-10.
+
+| Issue | Topic | Roadmap phase |
+| --- | --- | --- |
+| #106 | Conversation C1 implementation parent (sub-issue of #85) | 0-1 |
+| #107 / #108 / #109 | C1 S3 / S4 / S5 (native blocked_by chain) | 1 |
+| #110 | Split project-storage-node-adapters.ts | 1 |
+| #111 | ISOL-1 and named-pipe isolation | 8 |
+| #112 | PC-S1 deferred registration scope | 8 or later |
+| #113 | Program: Packaging and Diagnostics | 12 |
+| #114 | Program: Supervised Runs and Workers | 8 |
+| #115 | Program: Evidence, Findings, Candidate and Integration | 9 |
+| #116 | Program: Verified Memory and TypeScript language intelligence | 10 |
+| #117 | Program: Settings | 3, 5, 11 |
+| #118 | Program: Storage lifecycle | 11 |
+| #119 | Program: Accessibility | per slice from 3 |
+| #120 | Program: v1 Convergence | 13 |
+| #121 | Open visual and interaction decisions | 3 |
+| #122 | Measure provisional numeric defaults | 13 |
+| #123 | Effect migration remainder (SQL pass, unit 2 lifecycle) | 2 |
+| #124 | Triage C1-0 mutation survivors and deep-review suggestions | 13 |
+| #125 | Evaluation tasks and success criterion | 13 |
+| #126 | Naming rule: Strand, Weave, Forger in new code | ongoing |
+| #127 | Triggered work register | triggered |
