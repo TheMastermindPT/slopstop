@@ -9,10 +9,10 @@ tags: [design, conversation, storage, upgrade, protocol, coordinator, desktop, c
 lane: rigorous
 lane_reasons: ["files: 6 > 5", "weak sensitive word: schema", "sensitive word: preload"]
 status: ready
-last_updated: 2026-10-10T18:00:00+0100
+last_updated: 2026-10-11T00:30:00+0100
 last_updated_by: Pedro Mesquita
-last_updated_note: "Approved by Pedro on 2026-10-10 (revision 4.3, content_hash 5ff869b7b774e2cc6bd1143ef507488868b9c2020ae0e80840e7576649df2e19; decisions log §37); approved copy under .rpiv/evidence/2026-10-09_13-54-08_conversation-c1-local-save/. S3 (#107) may start. Revision 4.3 (every rev-4.2 bounded-verifier finding applied, Pedro's choice; the coordinator checks each item, then Pedro approves; no new review agents). Revision 4.2 (after S3 intent review round 2, the last; Pedro chose option A, decisions log §36: fix every round-2 item, then one verifier limited to the fixes). Revision 4.1 (after the S3 intent review round 1, which failed: six verified blockers, all fixable). Revision 4, for slice S3 before #107 (coordinator hand-off, 2026-10-10). Adds the CNV-B13 read-after-admission-closes rows (U2, decisions log §29), and folds in what S2 changed: deviation 6a (the dedicated WRITER_CLIENT_ABANDON_FAILED release code arrives with protocol v8, CNV-B36), U3 (a failed settlement keeps the S1 retry-at-release), the round-3 rule that admission closes inside the writer slot (§32), and #102 fixed inside S3 (CNV-B37). Facts for S3 re-verified at main 80228ac. Behaviour IDs kept; S1 and S2 commitments unchanged. Needs an independent intent review (rigorous lane) before Pedro approves."
-content_hash: 5ff869b7b774e2cc6bd1143ef507488868b9c2020ae0e80840e7576649df2e19
+last_updated_note: "Approved by Pedro on 2026-10-10 (revision 5.3, content_hash e05cac0b6573365816e033a2490dbd0cd0f4a0898e26b1d61274839b9d369180; decisions log §46): G29, G30, the composed-IPC re-deferral and the G24 copy approved; G25 confirmed; G28 accepted as a temporary exception whose end trigger is #123 Effect unit 2b, scheduled in phase 2 right after C1 and before C2 (this supersedes the trigger text in G28 and Deferred Work; the decisions log is authoritative). The coordinator checked every rev-5.2 verifier item in 5.3. Approved copy under .rpiv/evidence/2026-10-09_13-54-08_conversation-c1-local-save/. S4a may start. Earlier: Revision 5.3 (every rev-5.2 bounded-verifier item applied, Pedro's choice, decisions log §45: stale activation shows its notice without an action and the recovery is a recorded gap; no new agents; the coordinator checks each item, then Pedro approves). Revision 5.2 (after S4 intent review round 2, the last, which failed with 2 blockers; Pedro chose option A, decisions log §44: every round-2 item fixed, #130 per-window CSP owner folded in, then one bounded verifier limited to the fixes, then Pedro approves). Revision 5.1 (after S4 intent review round 1, which failed: 9 blockers, all fixable; every finding resolved, see the Revision-5 round-1 resolution table; adds G29 CSP-in-page and G30 S4a merges with S4b, both for Pedro). Revision 5 (2026-10-10, for S4 only; decisions log §42 at 9e06d55 and §43 at 6a41350): S4 is built in React from the hero prototypes and split into S4a renderer foundation and S4b Conversation window; only the Conversation region is restyled; the old prototype window is deleted; the ui-ux agent's visual answers, the per-slice accessibility checklist, the bridge fault split and the stale-fact fixes are folded in. S1-S3 commitments unchanged. Needs an independent intent review of S4a and S4b (rigorous lane, at most two rounds) before Pedro approves. Earlier: Approved by Pedro on 2026-10-10 (revision 4.3, content_hash 5ff869b7b774e2cc6bd1143ef507488868b9c2020ae0e80840e7576649df2e19; decisions log §37); approved copy under .rpiv/evidence/2026-10-09_13-54-08_conversation-c1-local-save/. S3 (#107) may start. Revision 4.3 (every rev-4.2 bounded-verifier finding applied, Pedro's choice; the coordinator checks each item, then Pedro approves; no new review agents). Revision 4.2 (after S3 intent review round 2, the last; Pedro chose option A, decisions log §36: fix every round-2 item, then one verifier limited to the fixes). Revision 4.1 (after the S3 intent review round 1, which failed: six verified blockers, all fixable). Revision 4, for slice S3 before #107 (coordinator hand-off, 2026-10-10). Adds the CNV-B13 read-after-admission-closes rows (U2, decisions log §29), and folds in what S2 changed: deviation 6a (the dedicated WRITER_CLIENT_ABANDON_FAILED release code arrives with protocol v8, CNV-B36), U3 (a failed settlement keeps the S1 retry-at-release), the round-3 rule that admission closes inside the writer slot (§32), and #102 fixed inside S3 (CNV-B37). Facts for S3 re-verified at main 80228ac. Behaviour IDs kept; S1 and S2 commitments unchanged. Needs an independent intent review (rigorous lane) before Pedro approves."
+content_hash: e05cac0b6573365816e033a2490dbd0cd0f4a0898e26b1d61274839b9d369180
 ---
 
 # Design: Conversation C1 — save and reopen messages locally, no model
@@ -29,7 +29,8 @@ The first Conversation tables raise the canonical Project database from schema 3
 - Brief: `.rpiv/artifacts/handoffs/2026-10-05_conversation-c1-local-save-brief.md`.
 - User decisions: `.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` as committed in `679b9ae` (content hash `bceafed85b9fd06dd7fd98ddd2ea28bbe027426e452fe4194fb9c1bb3a6fcef5`):
   - §3–4: save and reopen first; the "Save locally" wording; the 32 KiB limit; option A for existing Projects.
-  - §14–15 and §17–18: the visual structure belongs to the UI/UX agent. This design fixes behaviour and seams, not pixels.
+  - §14–15 and §17–18: the visual structure belongs to the UI/UX agent. This design fixes behaviour and seams, not pixels. Revision 5 narrows this for S4: the Conversation region's look comes from the hero prototypes, DESIGN.md and the ui-ux agent's answers (G24), which this design records but does not own.
+- For revision 5 (S4 only): decisions log §17, §22, §24, §27 (:359, Runa v2), §33 and §42 at `9e06d55`, §43 at `6a41350`; `DESIGN.md`; `C:/Users/pedro/Documents/ragnarok-hero/PORT-PLAN.md`, the hero sources it names, and the 12-point checklist `access.src.html:381-393`; the ui-ux agent's answers V1–V7 and the designer's reconciliations R1–R4 (2026-10-10, through the coordinator).
   - §16: the Q1–Q3 answers and agent roles.
   - §19: the linked worktree and the C1 merge order (S1 merges only together with S2).
 - The same log as committed in `59a8d9b` (file SHA-256 `46c535c6e48eaf3b50b237b5c3cb11cde8428542bc0ea759a3a23f3ed04a9619`), for revision 4 only:
@@ -53,7 +54,7 @@ The first Conversation tables raise the canonical Project database from schema 3
 - Branching beyond the root branch; attachments; Waypoint conversations; `#`/`@`; `To:`.
 - Durable drafts: unsaved text is kept in memory per Project, not across a restart.
 - Frame, Decisions and Memory.
-- Visual identity and the final layout.
+- The visual port of the shell (rail, header, Projects sidebar, title bar) and the final app layout (G21).
 - The full Storage-operation journal (#92) and the Mastra head (#93).
 - Changing the workspace `conversation.*` contracts.
 
@@ -110,7 +111,7 @@ The first Conversation tables raise the canonical Project database from schema 3
 - The workspace `conversation.message.submit` cannot carry the contract (`workspace-protocol.ts:387-394, :564-571`).
 - Branded Conversation id schemas already exist (`workspace-protocol.ts:13-22`).
 - Shared availability texts are in `projectAvailabilityMessages` (`availability-messages.ts:5-9`). The S3b rows (`connectionLost`, harness rows) are in `project-upgrade-protocol.ts:47-74`.
-- `protocolVersion = 7` (`protocol.ts:77`); the desktop pin is at `canonical-writer-package-smoke-test-peers.ts:73`.
+- `protocolVersion = 7` (`protocol.ts:77`); the desktop pin is at `canonical-writer-package-smoke-test-peers.ts:73`. (Revision 5: version 8 since S3, `protocol.ts:87`.)
 - The renderer has no Conversation UI (`workspace-view.tsx:98-100`). `View` lacks the activation id and access (`:11-16`).
 - The S3b upgrade flow runs on activation (`projects-workspace.tsx:186-195`; `use-project-upgrade.ts:30-74`).
 
@@ -215,7 +216,7 @@ In every case, a resend with the same `saveId` converges through the exact-retry
 
 New `packages/protocol/src/project-conversation-protocol.ts` owns:
 - the read and save schemas;
-- the exported text predicate `conversationTextProblem(text): "empty" | "whitespace-only" | "too-large" | undefined`. Whitespace is the JavaScript `\s` class with the `u` flag; size is UTF-8 bytes via `TextEncoder`. The renderer and the harness both import it;
+- the exported text predicate `conversationTextProblem(text): "empty" | "whitespace-only" | "too-large" | undefined`. Whitespace is the JavaScript `\s` class with the `u` flag; size is UTF-8 bytes (S3 counts them by code point, `project-conversation-protocol.ts:98-105`; the tests check against `TextEncoder`). The renderer and the harness both import it;
 - `projectConversationDiagnostics`: the one map of `{ code, message, retryable }` rows, built from existing owners where they exist.
 
 Ids use the branded schemas from `workspace-protocol.ts:13-22`: `conversationId`, `branchId`, and `conversationMessageId`. The last is named so it cannot be confused with the envelope `messageId`.
@@ -249,40 +250,83 @@ The harness never produces the bridge-only rows. They exist so the bridge can ex
 
 ### Desktop
 
-**Bridge** (`project-entry-bridge.ts`)
-- `readConversation` and `saveConversation` follow S3b's `upgrade` pattern.
-- A `request.failure` gives `broken` with its harness code.
-- A malformed reply gives `broken PROTOCOL_MESSAGE_INVALID`.
-- A disconnect before sending gives `unavailable` (`connectionLost`).
-- **A disconnect after sending a save gives `uncertain CONVERSATION_SAVE_UNCONFIRMED`.** For a read it gives `unavailable` (`connectionLost`).
+Revision 5 (decisions §42, §43). S4 is built in React from the coded hero prototypes, in two slices: S4a (renderer foundation) and S4b (Conversation window). Only the Conversation region is restyled; the old shell stays until the shell slice of the React port (G21). Facts below are verified at `6a41350`.
 
-**IPC and preload**
-- `projects:conversation:read` and `projects:conversation:save`, registered in `registerProjectEntryIpc`.
-- The preload adds `readConversation` and `saveConversationMessage`, with strict decode both ways.
+**Facts (verified at `6a41350`)**
+- The renderer is already React 19 with CSS modules (`apps/desktop/package.json:24-25`; `projects-workspace.module.css`). "Not the current renderer style" means the visual system (Seixo, DESIGN.md), not the framework.
+- **Old shell CSS.** Three sources style the live shell:
+  - `renderer/prototype/prototype-global.css`: the `--prototype-*` tokens (:1-21) plus global element rules: `body` overflow, background and colour (:35-40), form controls `font: inherit` (:42-47), `button` cursor and disabled state (:54-60), scrollbars (:67-81), `:focus-visible` (:83-86) and reduced motion (:88-94). The production renderer imports it (`projects-workspace.tsx:21`), which `main.tsx:3` loads through `App` before `./global.css` (`main.tsx:4`), so `global.css` wins where both set a rule.
+  - `renderer/global.css`: the old palette (:1-16), `body` (:30-33), `button, a` 160 ms transitions (:35-41), `:focus-visible` outline in `--signal`, offset 4 px (:43-46), `::selection` (:48-51), reduced motion (:53-60).
+  - `projects-workspace.module.css`: descendant rules such as `.shell button` (:11-18: 1 px border, radius 0.35 rem) and `.workspace h2`, `.workspace p` (:134-143), and the `.workspace` padding. These beat a single CSS-module class inside the workspace area.
+  - `renderer/app.module.css` is imported nowhere.
+- No `@font-face` and no font file exist in the desktop app; only system fonts are used (`global.css:3, :15`). `vite.renderer.config.ts:4-9` sets no build options, so Vite's default `build.assetsInlineLimit` (4 KiB) applies, and a smaller font file would become a `data:` URL, which `font-src 'self'` blocks.
+- **CSP.** The policy is sent only as a response header (`main/security.ts:3-18, :26-33`): `font-src 'self'`, `script-src 'self'`, `style-src 'self' 'unsafe-inline'`, `img-src 'self' data:`; `security.test.ts` does not pin it. The e2e build and the packaged app load the renderer from `file://` (`main.ts:288-290`), and Electron's security guide says a header CSP cannot be used for `file://` loads ("it is not possible to use this method when loading a resource using the `file://` protocol"); `index.html` has no CSP `<meta>`. Nothing in the repository shows the policy is in force on those pages (G29).
+- `@phosphor-icons/react` is used by seven non-prototype renderer files; DESIGN.md:363 forbids it for new work.
+- **The old prototype window:** `renderer/prototype/` (about 6,300 lines); `vite.prototype.config.ts`; the Forge renderer `prototype_window` (`forge.config.ts:60-63`); the `--prototype` branches in `main/main.ts` (:69-71, :297-305, :377, :427); the declarations `PROTOTYPE_WINDOW_VITE_DEV_SERVER_URL` and `PROTOTYPE_WINDOW_VITE_NAME` (`main/forge-env.d.ts:3-4`) and their defines (`scripts/build-project-entry-e2e.mjs:13-14`); the stubs and the `"prototype"` quit-ownership row in `main/canonical-writer-package-smoke-main.test.ts` (:312-313, :349-363), which fails once `--prototype` is no longer read; the knip entry (`knip.jsonc:15`); the script `start:prototype`; and the e2e journey `tests/e2e/shell.test.ts:176-246` with its helpers `collectRendererErrors` and `capturePrototype` (:42-60).
+- The active Project's `activationId` and `access` already live in `Session.activation` (`projects-workspace.tsx:25-28, :92-116`); `View` carries only a display `label` (`workspace-view.tsx:11-16`). The active-mode body to replace is `workspace-view.tsx:95-101`.
+- The renderer guard is per harness epoch, not per activation (`projects-workspace.tsx:48-50, :74-88, :161-184`).
+- Existing e2e locators S4 must keep: `getByRole("status")` = "Harness ready" (`shell.test.ts:87, :159`; a second `role="status"` on screen breaks strict mode), region "Project workspace", heading "Project <name>", the exact text "Read-write" (`project-upgrade.test.ts:44-48`; `projects.test.ts:37-39`), `getByRole("alert")` count 0 during an upgrade (`project-upgrade.test.ts:54`), and `#ws-progress` as a polite region without a role.
+- **Where the preload API is listed:** `shared/desktop-api.ts` (channels :22-36 and the interface :38-57, insertion order); `preload/preload.ts` (the implementation); `preload.test.ts:34-42` (a partial `ExposedApi` type, 7 of 13 methods); `main/package-smoke-verifier.ts:29-43` and `package-smoke-verifier.test.ts` (about :381-395), both sorted; `tests/e2e/shell.test.ts:99-113`, sorted; `renderer/test-api.ts:19-67` (the shared fakes, insertion order; unused methods throw by convention, :18).
+- **The bridge does not yet separate "not sent" from "lost after send":** a call after `stop()` (`project-entry-bridge.ts:71`), a disconnect while pending (:50-52 with `harness-pending-request.ts:18-20`) and a stop while pending (:180-185) all fail with `{ kind: "transport" }`. A refused send is `{ kind: "send", code }` (:89). The upgrade mapping is exhaustive over these kinds (`project-upgrade-failure.ts:44-63`).
+- **A malformed reply never reaches the bridge's parse.** `HarnessSession` decodes every incoming message strictly against the whole v8 message union (`harness-session.ts:39-46`; `protocol.ts:485-487`) and turns a failure into a `protocol-error` event, which fails every pending request with `{ kind: "protocol" }` (`harness-pending-request.ts:21-25`). The bridge's own `desktop` fault is reached only by a decodable reply with the wrong event (:59), a `request` echo that does not match (:131-132), an unbuildable command, or a colliding id (`harness-pending-request.ts:64-74`).
+- Protocol facts: version 8 (`protocol.ts:87`); the message row is `{ conversationMessageId, cursor, author: "user", text, savedAt }` (`project-conversation-protocol.ts:182-188`); the harness page size is 100 (`conversation-store.ts:60`) and is not in the protocol; a replayed save returns the original message's `revision` (`conversation-store.ts:148`). Two codes are shared by two rows each: `WRITER_UNAVAILABLE` (`readOnly`, retryable; `writerUnavailable`, not) and `PROJECT_COORDINATOR_UNAVAILABLE` (`coordinatorUnavailable`, not retryable; `connectionLost`, retryable).
+- Effect in the Electron main process: it already runs Effect programs with `Effect.runPromise` at its edges (`desktop-shutdown.ts:28, :46`; `harness-supervisor.ts:195`); there is no service or Layer composition, and the project bridge is a Promise core shared by list, register, activate, switch and upgrade.
+- Accessibility automation: none in the repository (no axe, no `emulateMedia`). Playwright 1.62 supports `page.emulateMedia({ forcedColors, reducedMotion })`; `electron.launch` has `bypassCSP`, which S4 never uses. The workspace runs pnpm with `autoInstallPeers: false` and `strictPeerDependencies: true` (`pnpm-workspace.yaml:5, :11`).
 
-**Renderer** (behaviour only; the placement belongs to the UI/UX agent)
-- `View` gains `activationId` and `access`. The Conversation section replaces `workspace-view.tsx:98-100`.
+**Bridge** (`project-entry-bridge.ts`, S4b)
+- `readConversation` and `saveConversationMessage` use the existing `echoing` helper, as S3b's `upgrade` does.
+- **Fault split (G25).** The bridge gains an `unsent` fault for a call made after `stop()`. "Not sent" paths: `unsent`, a refused send, an unbuildable command, a colliding id. "Sent, then lost" paths: a disconnect while pending, a stop while pending, a `protocol-error` while pending. The upgrade mapping maps `unsent` to `connectionLost`, so S3b's behaviour is unchanged.
+- **Read mapping:** a harness result passes through unchanged; `request.failure` keeps its harness code as `broken`; a `protocol-error` (which includes every malformed reply), a decodable reply with the wrong event or a mismatched `request` echo, an unbuildable command and a colliding id → `broken PROTOCOL_MESSAGE_INVALID`; a refused send with `HARNESS_SESSION_MESSAGE_INVALID` → `broken PROTOCOL_MESSAGE_INVALID`; every other refused send, `unsent`, and a disconnect or stop while pending → `unavailable` (`connectionLost`).
+- **Save mapping:** as for a read, except that every "sent, then lost" path — a disconnect or a stop while pending, and a `protocol-error` while pending (which includes a malformed save reply) — gives `uncertain CONVERSATION_SAVE_UNCONFIRMED`, because the harness may have committed. A decodable reply with the wrong event or a mismatched `request` echo stays `broken PROTOCOL_MESSAGE_INVALID`.
+- The mapping is a plain function in a new `project-conversation-failure.ts`, beside `project-upgrade-failure.ts`.
+
+**IPC and preload** (S4b)
+- Channels `projects:conversation:read` and `projects:conversation:save`, registered in `registerProjectEntryIpc`, whose `Pick` gains the two bridge methods.
+- The preload adds `readConversation` and `saveConversationMessage`, with strict decode of the request before `invoke` and of the result after it.
+- The two sorted lists (`package-smoke-verifier.ts` with its test, and `shell.test.ts`) gain the names in sorted position; `desktop-api.ts`, `preload.ts`, the `ExposedApi` type in `preload.test.ts` and the shared fakes gain them through the type check. The shared fakes answer a read with `{ status: "read", request, conversation: null }` by default and throw on a save, so existing renderer tests run unchanged.
+
+**Renderer foundation** (S4a)
+- **Fonts.** `@fontsource/red-hat-text` (400, 500, 600), `@fontsource/cinzel` (400) and `@fontsource/cascadia-code` (400), pinned in the catalog and imported once by the renderer entry through each package's per-weight CSS (for example `@fontsource/red-hat-text/400.css`), which declares the latin and latin-ext faces among others. The renderer build never inlines font files (`build.assetsInlineLimit` returns false for `.woff` and `.woff2`), so every face is a same-origin file that `font-src 'self'` allows.
+- **One CSP owner, per window, also in the page (G29, #130).** A plain shared module (no Electron import) builds the policy: `contentSecurityPolicy({ window: "main", delivery: "header" | "meta", development: boolean })`. For the main window it returns today's policy exactly: the header in development adds the localhost connect sources, the packaged header does not, and the `<meta>` is always the packaged variant without `frame-ancestors` (which a `<meta>` ignores; the header keeps it). `security.ts` uses it for the header; a pure, exported HTML transform used by the renderer's Vite build writes the `<meta http-equiv="Content-Security-Policy">` as the first element after `<meta charset>`, before any script or stylesheet. The `window` parameter exists so the React port's Rive splash window (decisions log :268-274, #130) can later get its own variant that adds `'wasm-unsafe-eval'` to `script-src` for that window only; S4 builds no splash window and adds no such variant, and the main-window policy never contains `'wasm-unsafe-eval'`.
+- **Seixo theme, scoped (G22).** `theme/seixo.module.css` holds, on the region's root class: the DESIGN.md `colors`, `rounded` and `spacing` tokens; the component and elevation values the region uses, copied from DESIGN.md (`--button-primary-hover` #B2D6E8 from `components.button-primary-hover`, `--button-secondary-hover` #1B1F23, and the Soft, Button, Frost and Composer lifts from "Shadow Vocabulary", DESIGN.md:278, :280, :281 and :282; the Row lift and the Overlay are not used by the region); the decided focus ring (`ragnarok-hero/access.css:8-17`: `outline: 2px solid transparent; outline-offset: 2px` plus a 1.5 px frost line and a 5 px halo at 0.22; on frost-filled buttons the line sits outside a 2 px canvas gap, 3.5 px line, 7 px halo), which supersedes DESIGN.md:284's halo-only rule (decisions §33); and the forced-colors block (`ragnarok-hero/access.src.html:237-248`, ported under the region root, including `.button { border: 1px solid ButtonText }`). Its colour literals are only those declarations; the halo is written from `--frost` (`rgb(from var(--frost) r g b / 0.22)`); `transparent` appears only as the focus rule's outline colour and inside `@media (forced-colors: active)`, where `currentColor` and system colours may also appear. Every selector in it and in the region's other modules contains a module-local class; none is `:root`, `html`, `body`, `:global(...)`, an old-shell class, or made only of elements, attributes, pseudo-classes or `*`. The other region modules contain no colour literal: they use these properties.
+- **The old shell is layered and reset at the region edge (G22).** Every old-shell style sheet (`legacy-shell.css`, `global.css`, `projects-workspace.module.css` and the old feature modules) is wrapped in `@layer legacy-shell`, in its current import order, so its own cascade is unchanged. A layer only decides the properties both sides declare, so the region module also starts with an unlayered reset, `:where(.<root> *:not(svg, svg *)) { all: revert }` (zero specificity, so every region rule still wins; SVG is excluded so the icons' presentation attributes stay), which removes every legacy value — the old `h2`, `p` and `code` rules, `.shell button` and its hover, the global `:focus-visible` outline and the 160 ms transitions — from region elements; custom properties are not affected by `all`. `legacy-shell.css` is the new home of every `prototype-global.css` rule except the `#prototype-root` selectors, imported where `prototype-global.css` was (`projects-workspace.tsx:21`), and the old tokens are renamed from `--prototype-*` to `--legacy-*` with unchanged values, so the old shell looks the same (CNV-B50, plus a static check that every `var(--legacy-*)` names a declared property) and no "prototype" name remains. The reset matches elements only: pseudo-elements keep the legacy `::selection` colours and scrollbar styling inside the region until the shell slice (accepted). `all: revert` also returns `box-sizing` to `content-box`, so the region module declares `box-sizing: border-box` on its root and descendants; the region declares its own properties rather than relying on legacy ones.
+- **Runa icons.** One component with a name union renders inline SVG from the Runa v2 sources (`ragnarok-hero/icons-runa-v2`, accepted by Pedro, decisions log :359): `circle-x`, `triangle-alert`, `rotate-ccw`, `check`, `lock`, `info`. Each is decorative (`aria-hidden="true"`, `focusable="false"`), `stroke="currentColor"`, stroke width 1.5, square caps, mitred joins, 14 px in meta lines. No Lucide, no Phosphor in the region.
+- **Conversation region frame.** For an active Project, the region fills the workspace area edge to edge on the canvas tone: the workspace section drops its padding while the region is shown (a variant class in `projects-workspace.module.css`). The idle note (after a removal or a cancelled add, `workspace-view.tsx:20-23`) and the selection error, when present, render above the region in a new wrapper strip with the old `.workspace` padding (2 rem) and their current markup. The region's header holds the heading `h2#ws-heading` "Project <name>", the access word ("Read-write" or "Read-only") in its own element, and the `projectId` in Cascadia at the code size (12.5 px). The context line holds the info icon and "No model is connected yet. Messages are saved on this computer." The safe-mode and release-failed views and `UpgradeProblem` keep their current markup until the shell slice. The bundled Cascadia Code face (400) also serves the old shell's code text (`--legacy-font-code`, e.g. `.projectList code`); with `font-synthesis: none` (`global.css:4`) such text renders at 400 only. This is the one accepted change to the old shell's look, and the S4a screenshot review includes the Projects sidebar to show it.
+- **Old prototype window deleted (G23)**, with every entry listed in the facts above; the `"prototype"` quit-ownership row is deleted because it tests removed behaviour (no assertion is weakened). The dead `app.module.css` and the stale comment in `index.html:9-17` go too.
+
+**Renderer: the Conversation window** (S4b)
+- **Ownership.** A hook `use-project-conversation.ts` owns loading and saving for one activation; `conversation-region.tsx` and its parts render it. **Per-Project memory** lives in `ProjectsWorkspace`, keyed by `projectId`: `{ text, saveId, expectedRevision, outcome, activationId }`, where `outcome` is `none`, `pending`, `dropped` (a result lost to an old activation or harness epoch) or the last answered row, and `activationId` is the activation the region last loaded for that Project (it tells an opening load from a remount, and a current pending save from an old one). A save result updates the memory only while the memory's `saveId` still equals the result's `request.saveId` and its outcome is `pending`; a late result for an older `saveId` is ignored, so it can never overwrite newer state. Save results are written to that memory, not to component state, so a save survives the region being remounted inside one activation (the add flow or the removal view replace the region while they run). Pure rules (the save-outcome table, the slot precedence, the time format) are plain functions with their own unit tests. The renderer runs no Effect runtime; it may use pure `Match` and protocol schemas, as `use-project-upgrade.ts` does.
+- **Activation guard.** Every read and save result echoes its `request`; a result whose `activationId` is not the current activation's is dropped, and so is any result from an older harness epoch. A dropped pending save sets that Project's `outcome` to `dropped` (under the `saveId` rule above) and makes its composer editable; nothing else in another Project's memory changes.
 - **Loading.**
-  - On mount and on every new `activationId`, the section reads all pages, following `nextCursor` until `null`, and shows the messages in cursor order.
-  - A failed load is its own state, with the reason and "Reload". It never looks like an empty conversation, and saving stays disabled until a read succeeds.
-  - A `stale-activation` reload is dropped.
-- **The composer value is passed unchanged:** no trimming; `\r\n` and tabs are kept.
-- **"Save locally" is disabled** while any of these holds:
-  - `conversationTextProblem` reports a problem. Over the limit, it shows "This message is longer than 32 KiB." and keeps the text.
-  - The Project is read-only. The `read-only` reason text shows, and the earlier messages stay visible.
-  - A save is pending (a second press sends nothing).
-  - The last load failed.
-- **Save status.**
-  - While pending: "Saving…".
-  - After `saved`, and only then: "Saved". The composer clears and the message joins the list.
-  - **Every other outcome keeps the exact text in the composer, with its reason.** This covers pending, `conflict`, `rejected`, `uncertain`, each refusal row, and the bridge's `connectionLost`, harness and protocol rows.
-  - "Try again" resends the same `saveId` and text for `uncertain` and every retryable outcome.
-  - Editing the text mints a new `saveId` with the last known `expectedRevision`.
-  - A `conflict` reloads the conversation and keeps the composer text.
-- **Per-Project memory.** The composer text and any pending `saveId` are kept per `projectId`, in memory, across switches.
-  - A result that arrives for an old activation is dropped by the epoch guard. The text and `saveId` stay in that Project's memory.
-  - On return, "Try again" resends the same `saveId` under the new activation. The exact-retry rule resolves it, because the fingerprint excludes the activation.
-  - All of this is lost on app restart (durable drafts are a non-goal).
+  - On mount and on every new `activationId`, the region reads every page, sending `after: null` and then each `nextCursor` until it is `null`, and shows the messages in cursor order. It never assumes a page size. **Focus moves only for the first load of an activation (its `activationId` differs from the memory's) or a Reload**, and only while focus is on `body` or on the control that started it; a load caused by a remount inside one activation (same `activationId`) never moves focus, and the slot keeps showing that Project's current outcome.
+  - **Every successful read sets the Project's `expectedRevision` to the read's `revision`** (0 for `conversation: null`).
+  - After about 300 ms without an answer, the status slot says "Loading messages…". Before that, Save has no description; after it, Save is described by that line.
+  - `conversation: null` or no messages → the empty pattern: "No messages yet" and "Messages you save stay on this computer." Focus goes to the composer.
+  - A failed read on any page replaces the stream with a notice; no partial list stays; the draft is kept; focus goes to the notice's action (under the focus rule above). The Failure tone (circle-x, polite, announced through the status slot) shows "Could not load this conversation." and the row's message. The Broken tone (blood outline, triangle-alert, `role="alert"`) shows the same title, the row's message and a code line "Code <CODE>"; a rejected read shows the title, "The desktop could not load this conversation." and no code line. The action is "Reload" (rotate-ccw), which stays mounted and `aria-disabled` while it reads, and after a successful read focus goes to the composer. For `stale-activation` the harness already holds a newer activation, so neither a re-read nor the existing open path can succeed (a switch from the stale activation is refused, `active-project-coordinator.ts:249`; a fresh activation is refused while one is held, :363-368): the notice shows the Failure tone with the row's message and **no action** (Pedro, decisions log §45); recovery is a recorded gap.
+- **Messages.** An ordered list named "Messages". Each item shows "You", a `<time dateTime={savedAt}>` in 24-hour en-GB form in the system time zone (today: "14:02"; earlier this year: "9 Oct, 14:02"; another year: "9 Oct 2025, 14:02"), and the text as a React text node with `white-space: pre-wrap`. The stream opens at the newest message and scrolls to a new message after a save, with `behavior: "smooth"` in normal motion and `"auto"` under reduced motion.
+- **Composer.** A labelled textarea ("Message", placeholder "Write a message") and one frost primary button "Save locally" with no icon and no anvil (G24). Ctrl+Enter saves; Enter and Shift+Enter insert a new line. The value is passed unchanged: no trimming; spaces, tabs and line breaks are kept. While a save of the current activation is pending the textarea is read-only, so text typed after a press cannot be lost. The field's focus-within ring is the decided ring (two box-shadow layers: a 1.5 px frost line and a 5 px halo at 0.22), not Seixo V3's halo-only field rule (`ragnarok-hero/seixo.css:29`), which is below checklist 02's 3:1. The textarea itself has no outline in either colour mode (the ported forced-colors `:focus-visible` rule excludes it); under forced colours the field has `outline: 2px solid Highlight` (the ui-ux agent's answer V5, recorded in G24).
+- **Save is unavailable** (G26: `aria-disabled="true"`, never the `disabled` attribute, so it stays focusable and Tab reaches it; pressing it or Ctrl+Enter sends nothing). Its description:
+  - empty or whitespace-only text: none (the empty field is the reason);
+  - "too-large": described by "This message is longer than 32 KiB." in the status slot; the field is `aria-invalid`; the text is kept; it clears when the text fits;
+  - a read-only activation: the context line shows the §4 note and, below it, the lock icon and "Read only: " followed by `projectConversationDiagnostics.readOnly.message`; Save and the textarea (read-only) are described by that read-only line element only, not the whole context line; earlier messages stay visible;
+  - loading: none before 300 ms, then "Loading messages…" (which outranks a kept outcome line while it shows); a failed load: the notice's title;
+  - pending: the button's name becomes "Saving…" and it keeps focus if it had it.
+- **Save outcomes.**
+  - Pending: "Saving…" in the status slot.
+  - `saved` with `replayed: false`: the returned row joins the list, the composer clears, `expectedRevision` becomes the returned `revision`, focus is in the composer, and "Saved" (check icon) shows until the next input.
+  - `saved` with `replayed: true`: the composer clears, "Saved" shows, and the conversation is read again (which sets `expectedRevision`), because a replay returns the original message's revision.
+  - **Every other outcome keeps the exact text**, with its reason; focus does not move:
+    - `uncertain`: "Not confirmed." plus `diagnostic.message`, circle-x, polite;
+    - `conflict` (no diagnostic): the conversation is read again (which sets `expectedRevision`), and the slot says "The conversation changed and was reloaded. Save again to add your message.";
+    - `broken`: the Broken tone with "Not saved.", `diagnostic.message` and the code line "Code <CODE>", `role="alert"`;
+    - a rejected preload call (an IPC failure or a strict-decode throw): the Broken tone with "Not saved.", "The desktop could not complete this save." and no code line, `role="alert"`, no "Try again";
+    - every other row: "Not saved." plus `diagnostic.message`, circle-x, polite.
+  - "Try again" (rotate-ccw) appears only for `uncertain`, a `dropped` save and rows whose `retryable` is true (`read-only`, both `unavailable` rows); it resends the same `saveId` and text, and is `aria-disabled` while a read is in progress. Pressing it moves focus to Save ("Saving…"). A `stale-activation` save answer shows its line with no action (G21, §45).
+- **Save identity (G27).** A `saveId` is minted on the first press for a text. It is kept until the text is edited, or a definitive outcome arrives (`saved`, `conflict`, `rejected`); the next press after those mints a new one with the current `expectedRevision`. Every other outcome, including `broken` and a rejected call, keeps it, so a later press can never duplicate a committed message.
+- **What a Project shows on return.** When a Project's region loads under a new activation, its kept `outcome` decides the status slot: a `pending` save of the old activation (its memory `activationId` differs from the new one) and `dropped` show "Not confirmed." plus `projectConversationDiagnostics.saveUnconfirmed.message` and "Try again", with the composer editable; `uncertain` and both `unavailable` rows show their line and "Try again"; rows tied to the old activation (`read-only`, whose reason belongs to that activation's access, `writer-unavailable`, `stale-writer`, `stale-activation`, `inactive`, `project-mismatch`, `coordinator-unavailable`, `broken`, a rejected call) are cleared, keeping the text and `saveId`; `conflict` and `rejected` keep only the text; a kept `saved` shows nothing ("Saved" is not restored). "Try again" under the new activation resends the same `saveId` (the fingerprint excludes the activation). A save that answers while its activation is still current — the usual case, because the coordinator drains admitted work before it answers a switch (G13) — is applied normally, even if the region was remounted. All of this is lost on app restart (durable drafts are a non-goal).
+- **A rejected read** shows the Broken-tone load notice with the title "Could not load this conversation.", "The desktop could not load this conversation.", no code line, and "Reload".
+- **Announcements (G26).** One visible status slot under the composer, `#conversation-status`, is a polite live region **without** `role="status"`. Its precedence, highest first: the Failure-tone load title, the over-limit line, "Saving…", "Loading messages…", the kept outcome line, "Saved". Each line is one announcement per load or save (including a re-read after a replay or a conflict), not a stream of progress, so checklist 05's 10-second progress limit, which governs Run progress (`ragnarok-hero/access.src.html:141`), does not apply. Only Broken-tone elements use `role="alert"`. The "Messages" list and the stream have no `aria-live` and no `log` or `status` role, so messages are never announced one by one.
+- **Motion.** Region controls use the DESIGN.md 120 ms transitions in normal motion; under reduced motion every region transition is 0 s and no scroll is smooth. Nothing in C1 loops or animates on its own.
 
 ### Data flow
 
@@ -320,11 +364,21 @@ open / switch / restart --> activate --> (migration-required: S3b upgrade, chain
 - **G18 One owner for admission state** (S2 round 3, decisions §32). Only the writer decides, inside its slot, whether work is admitted. The coordinator's `admitActiveWork` checks only lifecycle, activation and access; it never caches the writer's admission. A failed settlement keeps the S1 retry-at-release and does not abandon the client (U3).
 - **G19 #102 is fixed inside S3**, because S3 already touches `process-bootstrap.ts`. A `project.list` that answered `broken` with a registry-data code (`REGISTRY_CORRUPT`, `REGISTRY_SCHEMA_UNKNOWN`, `REGISTRY_SCHEMA_NEWER`) completed its cleanup: a failed `finally` cleanup (the listing Storage owner's `stop`, `project-listing.ts:226-227`; the registry client's `close`, `registry-database.ts:106-108`) would have replaced that code with `INTERNAL_FAILURE`. Such a listing no longer makes the cleanup unconfirmed. `INTERNAL_FAILURE`, work still running past the budget, and a rejection during the drain stay unconfirmed. Stop then reports every unconfirmed part, including the registry stop, in one `RegistrationCleanupUnconfirmed` error, so the original failure is never masked (`degrade-distinguishes-broken`).
 - **G20 Names** (decisions §30, ADR 0021). New text uses Strand (formerly Feature), Weave and Forger. Existing text, ADR quotes and code identifiers keep the former names until the rename slice. C1 itself names none of these concepts.
+- **G21 S4 in React, split, Conversation region only** (Pedro, decisions §42, §43). S4 is built in React from the hero prototypes, as two slices: S4a (renderer foundation) and S4b (Conversation window), each with its own red-green cycle and candidate review. Behaviour IDs CNV-B16–B18 and B31–B35 move to S4b; their meaning is unchanged except where revision 5 says so: CNV-B16 (G25), CNV-B31 and CNV-B35 (a `stale-activation` read for the current activation is now a failed load with no action, not dropped, so the region never stays loading; Pedro, decisions log §45), and CNV-B33/B34 (focusable unavailable Save, G26). Only the Conversation region is restyled; the old shell (rail, header, Projects sidebar) stays until the shell slice of the React port, so two looks coexist for a while. Rejected: one large S4 (too big to review); porting the shell inside C1 (it changes every existing e2e locator).
+- **G22 Seixo is scoped to the region; the old shell is layered and reset at the region edge.** The DESIGN.md tokens, the component and elevation values the region uses, the decided focus ring and the forced-colors rules live in one CSS module on the region's root class; every region selector contains a module-local class, so only `@font-face` is global. Every old-shell style sheet is wrapped in `@layer legacy-shell` in its current order, so its own cascade is unchanged. Because a layer only decides properties both sides declare, the region also starts with an unlayered zero-specificity reset, `:where(.<root> *:not(svg, svg *)) { all: revert }`, which removes every legacy value (the old `h2`, `p`, `code` and `.shell button` rules, the global `:focus-visible` outline and the transitions) from region elements while leaving the icons' presentation attributes and all custom properties alone. CNV-B42 pins the module statically, CNV-B51 pins the look with rows a leak would fail, and CNV-B50 pins the old shell. The ring adopted here (decisions §33, `access.css:8-17`) supersedes DESIGN.md:284's halo-only rule; the ui-ux agent updates DESIGN.md (carry-forward). When the shell is ported, the scope moves to the app root and the layer and reset are deleted. The fonts are the three `@fontsource` packages, never inlined, served locally (§43).
+- **G23 The old prototype window is deleted in S4a** (Pedro, §43), with its Vite config, Forge renderer, `--prototype` branches, declarations and defines, knip entry, script, e2e journey and the unit row that tested `--prototype`. The `ragnarok-hero` prototypes stay the visual reference. The old shell keeps its look: every `prototype-global.css` rule it relies on moves into `legacy-shell.css` at the same place in the cascade, and the old tokens are renamed `--prototype-*` → `--legacy-*` with unchanged values (CNV-B50), so no "prototype" name remains in the desktop app.
+- **G24 Visual answers** (ui-ux agent, 2026-10-10, V1–V7 and R1–R4; it owns visuals). "Save locally" is a plain frost primary with no icon and no anvil (the anvil stays for a real Send, C2). No state uses the eclipse. Failure tone: circle-x; Broken tone: blood outline, triangle-alert, the code; Reload and Try again: rotate-ccw; Saved: check; read-only: lock; the note: info, in the context line. 24-hour en-GB times, no day separators. The stream opens at the newest message. The composer bar holds only Save. **Copy marked PROPOSED** by the ui-ux agent, for Pedro to approve with this revision: "Write a message", "Loading messages…", "No messages yet", "Messages you save stay on this computer.", "Could not load this conversation.", "Read only: <reason>", "Not saved.". Designer-proposed copy, same status: "Not confirmed." (for `uncertain` and a dropped save, which may have committed), the Broken-tone code line "Code <CODE>", "The conversation changed and was reloaded. Save again to add your message.", "The desktop could not complete this save.", "The desktop could not load this conversation."
+- **G25 The bridge tells "not sent" from "sent, then lost"** (the coordinator's relay of Pedro's answer, 2026-10-10; not yet in the decisions log, so Pedro confirms it with this revision). A call after `stop()` becomes its own `unsent` fault. For a save, every "sent, then lost" path — a disconnect or a stop while pending, and a `protocol-error` while pending, which is how every malformed reply arrives — answers `uncertain`, because the harness may have committed. A decodable reply with the wrong event or a mismatched echo stays `broken` because it points to a defect (`degrade-distinguishes-broken`); the kept `saveId` (G27) makes a later press replay any commit it hid. Reads answer `unavailable` or `broken` as in S3b. Rejected: keeping `protocol-error` as `broken` for a sent save, which would hide a possible commit.
+- **G26 Accessibility rules for S4** (Pedro, decisions §33; checklist `ragnarok-hero/access.src.html:381-393`). Every S4 slice states its checklist mapping. A failure is announced at once but politely; only the Broken tone is assertive (checklist 05). The status slot `#conversation-status` is a polite live region without `role="status"`, because a second `role="status"` breaks the existing strict e2e locators. An unavailable Save is never `disabled`: it is `aria-disabled="true"`, stays focusable, and is described by the visible reason where one exists (the repository's pattern, `add-repository-button.tsx:43-46`); this includes the pending Save, so focus is never dropped to `body`. Pressing "Try again" moves focus to Save; "Reload" stays mounted and `aria-disabled` while it reads, then focus goes to the composer. A load moves focus only when it is the first load of an activation or a Reload, and only while focus is on `body` or on the control that started it, so a remount inside one activation never steals focus from the add or removal flows. The composer field's focus-within ring is the decided ring (Seixo V3's halo-only field rule is below checklist 02's 3:1). The agent's NVDA speech-log pass and Pedro's Narrator listen are manual evidence per phase; the ui-ux agent's screenshot review covers states the real window cannot reach. Where the ui-ux proposal used `role="status"`, `role="alert"` or `disabled` for these cases, these rules win, and the ui-ux agent was told (R1, R2).
+- **G27 Save identity and revision in the window.** Every successful read sets the Project's `expectedRevision` to the read's `revision` (0 for none); a non-replayed `saved` sets it to the returned `revision`. A `saveId` lives until the text is edited or a definitive outcome (`saved`, `conflict`, `rejected`) arrives. Every other outcome keeps it, so "Try again" or a later press can only replay, never duplicate. While a save is pending the composer is read-only. Per-Project memory holds `{ text, saveId, expectedRevision, outcome, activationId }`; a result changes it only while its `saveId` matches a pending outcome; the outcome decides what a Project shows when it loads under a new activation (old pending and dropped saves show "Not confirmed." with "Try again"; `uncertain` and `unavailable` rows keep their line and "Try again"; rows tied to the old activation, including `read-only`, are cleared), and the status slot has a fixed precedence.
+- **G28 The desktop bridge keeps its Promise core.** S4b adds two `echoing` operations, one fault kind and one pure mapping function, and no new Promise coordination. The Electron main process already runs Effect programs through `Effect.runPromise` at its edges (`desktop-shutdown.ts:28`, `harness-supervisor.ts:195`), but it has no service or Layer composition, and the bridge's Promise core (`request`, `requestHarness`) is shared by list, register, activate, switch and upgrade; moving only the two new operations would fork it, and moving all of it is its own migration. Trigger (the same in Deferred Work): a slice that changes the bridge's request core beyond adding an operation, or the coordinator scheduling the desktop-main Effect migration. This is an explicit exception to "touched code follows the Effect rules" for reviewers, approved or rejected by Pedro with this revision.
+- **G29 One per-window CSP owner, and the main policy also written into the page** (found in revision-5 review round 1; Pedro: "nothing changes on CSP", issue #130). The renderer is loaded from `file://` in the e2e build and the packaged app, and Electron's security guide says a header CSP cannot apply there, so AGENTS.md's strict CSP may not be in force today. S4a moves the policy to one shared builder, `contentSecurityPolicy({ window, delivery, development })`, with no Electron import. For `window: "main"` it returns today's policy exactly: the header (with the localhost connect sources only in development) and a build-time `<meta>` that is always the packaged variant without `frame-ancestors`, placed as the first element after `<meta charset>`. The `window` parameter lets the React port later add the Rive splash window's own variant, with `'wasm-unsafe-eval'` in `script-src` for that window only (decisions log :268-274); S4 builds no splash window and no such variant, and a unit row pins that no main-window policy contains it. A positive control proves the policy is enforced (CNV-B48). Rejected: asserting "no violation" alone, which also passes when no policy applies.
+- **G30 S4a merges to `main` only together with S4b**, as S1 did with S2 (G15). On its own, S4a would replace the "not available in this view yet" sentence with a note about saving messages while no composer exists.
 - **G16 Chain order from links** (R2-C5). The chain order and its root are derived from source→target links; the root is the row whose source is no row's target. `started_at` comes from an injected clock and is never checked: equal or backward times never make a correctly linked chain `REGISTRY_CORRUPT` (Pedro, S1 review round 1, U1).
 
 ## Slices
 
-The order is S1 → S2 → S3 → S4 → S5. Behaviour IDs are `CNV-B…`. Each slice is one commit: red at its seam, minimal implementation, green, then a separate review and refactor.
+The order is S1 → S2 → S3 → S4a → S4b → S5. Behaviour IDs are `CNV-B…`. Each slice is one commit: red at its seam, minimal implementation, green, then a separate review and refactor.
 
 **Merge order (G15, decided):** S1 is not split; it merges to `main` only together with S2.
 
@@ -674,78 +728,222 @@ Fault seams (R2-C9):
 - Adding methods to `ActiveProjectCoordinator` (aliased as `CanonicalProjectApplication`, `canonical-project-application.ts:15`) breaks every `satisfies ActiveProjectCoordinator` fake, e.g. `canonical-project-application.test.ts:87`; `pnpm typecheck` lists them, and they are updated in this slice.
 - CNV-B37 changes a registration cleanup rule; the unit cases keep the genuinely unconfirmed paths unconfirmed.
 
-### S4 `c1-s4-conversation-window` — bridge, IPC, preload, renderer
+### S4a `c1-s4a-renderer-foundation` — fonts, the CSP in the page, Seixo theme, Runa icons, the Conversation region frame, accessibility harness
+
+Revision 5 (decisions §42, §43). S4a has no Conversation behaviour: it gives the region its look and the checks every later port slice reuses. It merges to `main` only together with S4b (G30). Anchors at `6a41350`.
+
+**Behaviour**
+- The bundled fonts load under the CSP in the e2e build and in the packaged app, and the main-window CSP is proven to be in force on those `file://` pages, with its content unchanged.
+- An active Project's workspace area is the Seixo Conversation region frame: heading, access word, `projectId` and the "No model is connected yet…" note, edge to edge. The placeholder sentence is gone. Every other view, and the old shell's look, are unchanged, except that the old shell's code text uses the bundled Cascadia Code face (accepted).
+- The old prototype window no longer exists.
+
+**Seams.** The renderer through `exposeApi` (jsdom); `security.test.ts` and a unit test of the shared CSP owner; `package-smoke-verifier` (packaged `file://`); the real Electron launch with a seeded `userData` (`runHarnessSeed`, `PC_UI_USER_DATA`), the CSP as built, and Playwright `emulateMedia`. Every S4a e2e test has a per-test timeout of 150 s; a seeding or launch timeout is a setup failure. Window sizes are set with `BrowserWindow.setContentSize` and checked with `innerWidth` and `innerHeight` before any measurement. The `securitypolicyviolation` listener is installed with `context().addInitScript` followed by a reload of the window, and the test asserts that the listener is present before reading its results.
+
+**Files**
+- `pnpm-workspace.yaml` (catalog), `apps/desktop/package.json`: the three `@fontsource` packages; `@axe-core/playwright` as a devDependency, plus `playwright-core` pinned at the `@playwright/test` version (1.62.1) if the strict peer check requires it (the install result is recorded); `start:prototype` removed.
+- `apps/desktop/vite.renderer.config.ts` (no font inlining; the build-time CSP `<meta>`), new `apps/desktop/src/shared/content-security-policy.ts` (the per-window policy builder and the pure HTML transform), `src/main/security.ts`, and `apps/desktop/vitest.main.config.ts` (its `include` gains `src/shared/**/*.test.ts`, so `pnpm check` and the root Stryker run collect the shared tests).
+- `apps/desktop/src/renderer`: `main.tsx` (font imports), new `legacy-shell.css` (the moved rules), `global.css`, `projects-workspace.module.css` and the other old modules (wrapped in `@layer legacy-shell`; `--prototype-*` renamed `--legacy-*`; the workspace variant without padding and the padded strip for the note and error), new `theme/seixo.module.css`, new `icons/runa-icon.tsx` with its path data, new `conversation/conversation-region.tsx` and `conversation-region.module.css`, `workspace-view.tsx`, `projects-workspace.tsx`; deleted: `prototype/**`, `app.module.css`.
+- `apps/desktop`: `index.html` (stale comment), `forge.config.ts`, `vite.prototype.config.ts` (deleted), `src/main/main.ts` (the `--prototype` branches), `src/main/forge-env.d.ts`, `scripts/build-project-entry-e2e.mjs`, `src/main/canonical-writer-package-smoke-main.test.ts` (the `"prototype"` row and stubs), `src/main/security.test.ts`, `src/main/package-smoke-verifier.ts` and its test.
+- `knip.jsonc` (prototype entry removed).
+- Tests: new `src/shared/content-security-policy.test.ts`, new `src/renderer/conversation/conversation-region.test.tsx`, new `src/renderer/icons/runa-icon.test.tsx`, new `src/renderer/theme/seixo-tokens.test.ts`, new `tests/e2e/renderer-foundation.test.ts`, new `tests/e2e/accessibility.ts` (the shared axe, media, sizing, zoom and violation-listener helper); `tests/e2e/shell.test.ts` (prototype journey and its helpers removed).
+
+**Contracts**
+- **CNV-B41** `loads the bundled fonts under the unchanged CSP`.
+  - `src/main/security.test.ts` (guard): the packaged header policy equals the literal of `security.ts:8-18` at `6a41350` exactly. Expected red: none — guard; it pins that S4a adds no origin.
+  - `tests/e2e/renderer-foundation.test.ts`: for each of `400 14px "Red Hat Text"`, `500 13px "Red Hat Text"`, `600 16px "Red Hat Text"`, `400 16px Cinzel`, `400 12.5px "Cascadia Code"`, `document.fonts.load(spec, "Aé€çő")` resolves to a non-empty list; for Red Hat Text 400, `document.fonts` then holds a face whose `unicodeRange` covers U+0151 (latin-ext) with `status` `"loaded"`; no `securitypolicyviolation` event fires; every font request is a same-origin file. Expected red: the lists are empty (no `@font-face`).
+  - Build output (same e2e file, reading `.vite/renderer`): no emitted CSS contains a `data:font` or `data:application/font` URL. Expected red: none — guard.
+  - `package-smoke-verifier.ts` (packaged `file://`): the smoke script also loads the five faces and returns `fonts`. Unit rows: "no fonts key" (accepted at red, rejected at green — the red row), "fonts loaded" (passes), "a face missing" (fails the smoke).
+- **CNV-B48** `enforces the main-window CSP on the file:// renderer` → `src/shared/content-security-policy.test.ts`, `tests/e2e/renderer-foundation.test.ts` and `package-smoke-verifier.ts`.
+  - Unit, exact literals: `contentSecurityPolicy({ window: "main", delivery: "header", development: false })` equals the CNV-B41 literal; with `development: true` it equals the same literal with ` http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*` after `connect-src 'self'`; with `delivery: "meta"`, for both `development: false` and `development: true`, it equals the packaged literal without `frame-ancestors 'none'` and has no `localhost`. No main-window result contains `wasm-unsafe-eval`.
+  - Unit, the pure HTML transform on the source `index.html`: the output's first element after `<meta charset>` is the CSP `<meta>` with exactly the meta literal, and no `<script>` or `<link>` precedes it.
+  - E2E, built output: the built `index.html` has that `<meta>` in that position and contains no `localhost`.
+  - E2E positive control: in the launched window, a deliberately disallowed load (a font face whose source is a `data:` URL, added by the test) fires `securitypolicyviolation` with `effectiveDirective` `font-src`; then the five bundled faces load with no violation.
+  - Packaged smoke: the smoke script returns the page's CSP `<meta>` content, and the verifier fails unless it equals the meta literal (unit rows "meta missing" and "meta differs" fail; "meta exact" passes).
+  - Expected red: unit — the builder does not return the meta variant (scaffold: it returns the header string for every delivery); e2e — at `6a41350` the positive control fires no violation on the `file://` page (Electron: a header CSP cannot apply to `file://`). If it does fire at red, that row is recorded as a guard and the `<meta>` stays as Electron's documented `file://` mechanism; the result is recorded in the S4a evidence.
+- **CNV-B42** `keeps the Seixo theme identical to DESIGN.md and scoped` → `src/renderer/theme/seixo-tokens.test.ts`.
+  - The test reads DESIGN.md (repository root) with a small line parser: the three flat front-matter blocks `colors`, `rounded` and `spacing` (two-space keys, quoted values), the `backgroundColor` of `components.button-primary-hover` and `components.button-secondary-hover`, and the code spans of the four "Shadow Vocabulary" bullets the region uses (DESIGN.md:278, :280, :281, :282), with the leading `box-shadow: ` and trailing `;` stripped and the bullet name mapped to the property ("Soft lift" → `--shadow-soft-lift`, "Button lift" → `--shadow-button-lift`, "Frost lift" → `--shadow-frost-lift`, "Composer lift" → `--shadow-composer-lift`); the Row lift and Overlay bullets are skipped; no YAML dependency.
+  - Oracle:
+    - every token has exactly one custom property in `seixo.module.css` with the same value (`--<name>`, `--radius-<name>`, `--space-<name>`), and so do `--button-primary-hover`, `--button-secondary-hover`, `--shadow-soft-lift`, `--shadow-button-lift`, `--shadow-frost-lift` and `--shadow-composer-lift`;
+    - `seixo.module.css`'s only hex, `rgb()` and `hsl()` literals are those declarations; the halo uses `rgb(from var(--frost) …)`; `transparent` occurs only as the focus rule's outline colour and inside `@media (forced-colors: active)`, where `currentColor` and system colours may also occur; every other `*.module.css` under `src/renderer/conversation/` (the glob also picks up S4b's modules) has no colour literal;
+    - every selector in the region modules contains a module-local class; none is `:root`, `html`, `body`, `:global(`, an old-shell class name, or made only of elements, attributes, pseudo-classes or `*`; the forced-colors block is nested under the region root;
+    - contrast computed from the pinned tokens: frost against canvas and against plate ≥ 3:1 (the ring); blood against canvas ≥ 3:1 (the Broken outline); ink-muted on each of frost-tint, ember-tint, moss-tint and blood-tint ≥ 4.5:1; ink and ink-dim on canvas and plate ≥ 4.5:1.
+  - Expected red: with an empty `seixo.module.css` scaffold, "no `--canvas` custom property".
+- **CNV-B43** `shows the Conversation region frame for an active Project` → `src/renderer/conversation/conversation-region.test.tsx`.
+  - Oracle: after a read-write activation, the "Project workspace" region holds heading "Project <name>", the exact text "Read-write", the `projectId`, and the exact note "No model is connected yet. Messages are saved on this computer."; the placeholder sentence of `workspace-view.tsx:99` is absent. A read-only activation shows "Read-only". A safe-mode result still shows "Writes unavailable. Storage needs attention before this Project can be used." Every icon in the region is `aria-hidden` and not focusable.
+  - Expected red: the placeholder sentence still shows.
+- **CNV-B49** `renders each Runa icon as a decorative stave` → `src/renderer/icons/runa-icon.test.tsx`.
+  - Oracle, an it.each over the six names: `aria-hidden="true"`, `focusable="false"`, `stroke="currentColor"`, stroke width 1.5, `stroke-linecap="square"`, `stroke-linejoin="miter"`, `fill="none"`, and path data equal to the Runa v2 source copied into the test as literals.
+  - Expected red: with a scaffold that renders an empty `<svg>`, "no stroke attributes and no path data".
+- **CNV-B44** `passes the accessibility harness on the region frame` → `tests/e2e/renderer-foundation.test.ts`, with `tests/e2e/accessibility.ts`.
+  - Oracle, with the seeded Project open read-write and the content sized 1280×800 (the workspace section then holds only the region):
+    - `AxeBuilder` with tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, included to `section[aria-label="Project workspace"]`, reports no violations; with `emulateMedia({ forcedColors: "active" })` it again reports none and the note text is still visible; `bypassCSP` is never set (`setLegacyMode(true)` is allowed if the default run needs a new page; the configuration used is recorded);
+    - with `emulateMedia({ reducedMotion: "reduce" })`, `matchMedia("(prefers-reduced-motion: reduce)").matches` is true in the window and `document.getAnimations()` has no animation inside the region;
+    - at zoom factors 0.5 and 2.0 (set on the window's `webContents`), the region has no horizontal overflow and the note is fully inside the viewport.
+  - Expected red: none — guard on the new frame (its look has its own red in CNV-B51). It is bound by a recorded check that a deliberate low-contrast note colour makes the harness fail.
+- **CNV-B51** `gives the region frame its Seixo look` → `tests/e2e/renderer-foundation.test.ts`.
+  - Oracle, at 1280×800 content: the heading's computed font family starts with "Red Hat Text"; the region's background equals canvas `rgb(5, 6, 6)`; the region's box equals the workspace section's box (the section's padding is 0); the note's colour equals ink-muted `rgb(154, 163, 171)`; the note's computed `max-width` is `none` (the region declares none; the legacy `.workspace p` gives `65ch`, which computes to pixels); the heading's computed `margin` equals the value the region module declares for it (the legacy `.workspace h2` gives `0 0 16px`) and its font size is not the legacy 22.4 px; the `projectId`'s font family starts with "Cascadia Code" and its font size is 12.5 px; every region element computes `box-sizing: border-box`.
+  - Expected red: at `6a41350` the heading computes "Segoe UI Variable" and the section has 32 px padding. Bound by two recorded checks: removing the region reset, and separately removing the `@layer legacy-shell` wrapper from `projects-workspace.module.css`, each makes the note `max-width` row fail (`.workspace p` then wins over the zero-specificity reset).
+- **CNV-B50** `keeps the old shell's look` → `tests/e2e/renderer-foundation.test.ts`.
+  - Oracle: these computed values equal literals recorded from `main` at `6a41350`: the `body` background and colour; a Projects-sidebar button's font family, cursor, border and radius; that button's `:focus-visible` outline colour, width and offset; `body` overflow; and the workspace section's padding (32 px) with no Project open and with a safe-mode Project open (the seed registers two clean Projects; the test makes repository-a safe-mode as `projects.test.ts:35-62` does: open A, switch to B, rename A's runtime database, refresh). A static row (`src/renderer/legacy-shell.test.ts`) checks that every `var(--legacy-*)` in the old style sheets names a property declared in `legacy-shell.css`.
+  - Expected red: none — guard. It is bound by a recorded check that dropping `legacy-shell.css` makes it fail.
+- **Removal (no behaviour ID).** The old prototype window and every entry for it are gone, and the old tokens are renamed `--legacy-*`: `rg -n -i "prototype" apps/desktop knip.jsonc --glob '!node_modules' --glob '!.vite' --glob '!out' --glob '!test-results'` returns no hit; `pnpm check`, knip, `pnpm check:duplicates` and `pnpm test:e2e` pass; the existing e2e locators listed in Desktop facts pass unchanged.
+- **Visual review (manual).** The ui-ux agent reviews screenshots, at scale 1 with content 1280×800 and 853×533, of: the frame; the frame with the idle note strip (after a cancelled add); and the Projects sidebar's code text in the bundled face. It checks them against the hero and DESIGN.md's anti-clone test (DESIGN.md:189); its sign-off, including acceptance of the sidebar code face, is recorded in the S4a evidence.
+
+**Accessibility checklist (G26).**
+
+| # | Point | In S4a |
+|---|---|---|
+| 01 | Keyboard | not applicable: the frame has no control |
+| 02 | Visible focus | the ring's CSS and its 3:1 contrast land here (CNV-B42); the frame has no control, so the ring is observed on real controls in S4b (CNV-B47) |
+| 03 | Single-letter shortcuts | not applicable |
+| 04 | Names, `lang="en"` | decorative icons (CNV-B43, B49); `lang="en"` already set (`index.html:2`) |
+| 05 | Announcements | not applicable: the frame announces nothing |
+| 06 | Map and diffs as text | not applicable |
+| 07 | Never colour alone | not applicable: the frame shows no state |
+| 08 | High contrast | CNV-B44 |
+| 09 | Zoom and scale | CNV-B44 (zoom); the 150 % scale run is in S4b, whose surface is larger |
+| 10 | Reduced motion | CNV-B44 |
+| 11 | AA contrast, axe | CNV-B44 (axe), CNV-B42 (non-text 3:1 and tint text pairs), CNV-B51 (the note's colour) |
+| 12 | Sounds | not applicable |
+
+**Risks**
+- `@axe-core/playwright` must run under the CSP as built. If it cannot, the slice stops and reports to the coordinator; `bypassCSP` is not an allowed workaround.
+- The `<meta>` CSP is new delivery for an unchanged main-window policy (G29); the development server keeps the header. The splash-window variant (#130) is not built here.
+- Two looks coexist until the shell slice (G21); the ui-ux agent asked for the shell slice to follow soon after C1.
+
+### S4b `c1-s4b-conversation-window` — bridge, IPC, preload, the React Conversation window
 
 **Behaviour**
 - In the active Project, "Save locally" saves the message, and "Saved" appears only after the harness confirms it.
 - Every other outcome keeps the text, with its reason.
-- Messages reload in order on every activation.
-- A read-only Project shows its messages, with saving disabled and the reason shown.
+- Messages reload in order on every activation, and the next save uses the loaded revision.
+- A read-only Project shows its messages, with saving unavailable and the reason shown.
+- The window meets the S4 items of the 12-point accessibility checklist.
 
-**Seams.** The bridge over a real `HarnessSession` with a Port fake; `registerProjectEntryIpc` with the `ipcMain` mock; `preload.test.ts`; the renderer through `exposeApi` with gated promises.
+**Seams.** The bridge over a real `HarnessSession` with a Port fake, and the pure `project-conversation-failure.ts` mapping for rows the real session cannot produce (as `project-entry-bridge.test.ts:278-285` does for the upgrade); `registerProjectEntryIpc` with the `ipcMain` mock; `preload.test.ts`; the renderer through `exposeApi` with gated promises (jsdom); the real Electron launch with a seeded `userData` for the accessibility journey, where a test may replace a conversation IPC handler from the main process (`application.evaluate` with `ipcMain.removeHandler` and `ipcMain.handle`) to reach states the seed cannot.
 
 **Files**
-- `apps/desktop/src/main`: `project-entry-bridge.ts`, `project-entry-ipc.ts`, `package-smoke-verifier.ts`.
-- `apps/desktop/src/shared/desktop-api.ts` and `apps/desktop/src/preload/preload.ts`.
-- `apps/desktop/src/renderer`: `workspace-view.tsx`, `projects-workspace.tsx`, new `conversation-section.tsx`, new `use-project-conversation.ts`, `test-api.ts`.
-- The API lists.
+- `apps/desktop/src/main`: `project-entry-bridge.ts`, `harness-pending-request.ts` or `project-upgrade-failure.ts` (the `unsent` kind), new `project-conversation-failure.ts`, `project-entry-ipc.ts`, `package-smoke-verifier.ts` and its test.
+- `apps/desktop/src/shared/desktop-api.ts`; `apps/desktop/src/preload/preload.ts`.
+- `apps/desktop/src/renderer`: `projects-workspace.tsx` (per-Project memory, activation passed down), `workspace-view.tsx`, `conversation/*` (region, messages, composer, status slot, `use-project-conversation.ts`, the pure save-outcome and time rules), `test-api.ts` (the default read answer), `window.d.ts` if needed.
+- Tests: `project-entry-bridge.test.ts`, `project-entry-ipc.test.ts`, `preload.test.ts`, new `src/renderer/conversation/project-conversation.test.tsx`, new `src/renderer/conversation/saved-at.test.ts`, new `tests/e2e/conversation-accessibility.test.ts`; the API list in `tests/e2e/shell.test.ts`; `tests/e2e/electron-launch.ts` (an optional extra-arguments parameter for the scale launch).
 
 **Contracts**
 - **CNV-B16** `maps conversation replies and transport faults` → `apps/desktop/src/main/project-entry-bridge.test.ts`.
-  - Oracle:
+  - Oracle, as one literal fault table per operation, in the style of the upgrade table (`project-entry-bridge.test.ts:150-241`):
     - each harness result is passed through unchanged;
     - `request.failure` with each harness code → its `broken` row;
-    - a malformed reply → `PROTOCOL_MESSAGE_INVALID`;
-    - a send that is not OK, and a save called after the bridge stopped (unsent) → `unavailable` (`connectionLost`), never `uncertain` (R2-C10);
-    - a disconnect after sending → `uncertain` for a save, `unavailable` for a read.
-  - The bridge distinguishes "not sent" (`project-entry-bridge.ts:71`) from "lost after send" (:47-49, :184) with separate failure kinds.
-  - Expected red: the methods are absent; after scaffolding, a disconnect after sending answers `unavailable`.
+    - a decodable reply with the wrong event, a mismatched `request` echo, an unbuildable command and a colliding id → `broken PROTOCOL_MESSAGE_INVALID`, for both operations;
+    - a call after `stop()`, a send refused with `HARNESS_SESSION_UNAVAILABLE` or `HARNESS_SESSION_SEND_FAILED` → `unavailable` (`connectionLost`), for both operations, never `uncertain` (R2-C10);
+    - a send refused with `HARNESS_SESSION_MESSAGE_INVALID` → `broken PROTOCOL_MESSAGE_INVALID`, for both operations, asserted on the pure mapping function (every bridge command is already decoded strictly by its factory, so the real session never refuses one this way);
+    - while pending, a disconnect, a stop, and a malformed reply (which the session turns into a `protocol-error`) → `uncertain CONVERSATION_SAVE_UNCONFIRMED` for a save; for a read, `unavailable` (`connectionLost`) for the first two and `broken PROTOCOL_MESSAGE_INVALID` for the third;
+    - the existing upgrade table still answers `connectionLost` for "a call after stop" (guard for the `unsent` mapping).
+  - Expected red: the methods are absent; after scaffolding them with the upgrade-style mapping, a disconnect while a save is pending answers `unavailable`.
 - **CNV-B17** `exposes strict conversation methods` → `project-entry-ipc.test.ts`, `preload.test.ts` and the API lists.
   - Oracle:
-    - the handlers forward valid values;
-    - an extra key throws, with no bridge call;
-    - the preload decodes both ways;
-    - the API list gains the two methods.
-  - Expected red: after scaffolding the handlers without forwarding, `invoke` is not called.
-- **CNV-B18** `saves locally and shows Saved only after confirmation` → `apps/desktop/src/renderer/project-conversation.test.tsx`.
+    - IPC: each handler forwards a valid request to the bridge method once; a request with an extra key throws and the bridge method is not called;
+    - preload: a valid request reaches `invoke` once with its channel; an extra key on the request rejects without `invoke`; an extra key on the result rejects; a diagnostic row that does not belong to the status rejects;
+    - the two sorted lists gain `readConversation` and `saveConversationMessage` in sorted position; the other places gain them through the type check (Desktop, IPC and preload).
+  - Expected red: IPC — after scaffolding the handlers without forwarding, the bridge method is not called; preload — the methods are absent.
+- **CNV-B18** `saves locally and shows Saved only after confirmation` → `apps/desktop/src/renderer/conversation/project-conversation.test.tsx`.
   - Oracle:
     - the note text is exact;
-    - while the save is pending: "Saving…", no "Saved", Save disabled, and a second press sends nothing;
-    - on `saved`: the message is in the list, the composer is empty, and "Saved" shows;
+    - after a read with revision 201, and separately after `conversation: null`, the first press sends exactly `{ projectId, activationId, saveId: <UUID>, expectedRevision: 201 | 0, text }` with the current activation;
+    - while the save is pending: "Saving…" in `#conversation-status`, no "Saved", the button has no `disabled` attribute, is `aria-disabled` and named "Saving…", and Tab still reaches it; the textarea is read-only; a second press or Ctrl+Enter sends nothing;
+    - on `saved` (`replayed: false`): the message is in the list, the composer is empty, "Saved" shows, focus is in the composer, and the next save carries the returned revision;
+    - on `saved` (`replayed: true`): the conversation is read again, the composer is empty, and "Saved" shows;
     - the composer value is sent unchanged: leading and trailing spaces, tabs and line breaks kept. A textarea normalises CR/CRLF to LF, so `\r\n` byte-exactness is pinned at the protocol (CNV-B12) and the store (CNV-B6), not here (R2-C11).
-  - Expected red: there is no Conversation section.
+  - Expected red: there is no composer.
 - **CNV-B31** `reloads all pages on every activation` (same file).
   - Oracle:
-    - 201 messages over three gated pages are shown in cursor order, after mount and again after a new activation;
-    - a reload from a stale activation is dropped.
+    - 201 messages over three gated pages of 120, 50 and 31 rows are shown in cursor order, after mount and again after a new activation; the sent `after` values are `[null, c120, c170]`;
+    - while a page is gated and the composer holds text: before 300 ms nothing shows "Loading messages…" and Save has no `disabled` attribute, is `aria-disabled` with no description, and Tab reaches it; after 300 ms (fake timers) the slot shows "Loading messages…" and Save is described by it; a press and Ctrl+Enter send nothing;
+    - focus: opening a Project whose conversation is empty moves focus to the composer; with a read-write Project open, starting the add flow and cancelling it with Esc, then releasing the region's read, leaves focus on "Add existing repository"; opening and cancelling the removal view leaves focus on that Project's Remove button (`[data-remove]`, as `use-remove-from-list.ts:86-89` and `workspace-hooks.ts:41` put it);
+    - a read result for an older activation, or from an older harness epoch (a harness status change while a read is pending), is dropped and changes nothing;
+    - a save that is still pending while the region is remounted inside the same activation (the add flow opened and cancelled meanwhile) shows "Saving…" and a read-only composer after the remount, and focus does not move; when its result arrives it is applied: the message is listed and the composer is empty;
+    - `conversation: null` shows "No messages yet" and "Messages you save stay on this computer.", and focus goes to the composer.
   - Expected red: only the first page is shown.
-- **CNV-B32** `keeps the text when a save answers $status $code` (same file).
-  - Driven from the literal result table: every save row except `saved`, including `PROJECT_STORAGE_UNAVAILABLE`, `PROJECT_STORAGE_BROKEN`, and the bridge rows.
+- **CNV-B32** `keeps the text when a save answers $status ($row)` (same file).
+  - Driven from the literal row table, keyed by status and row key, never by code alone (two codes are shared): every save row except `saved` — `conflict`, `rejected`, `uncertain`, `read-only`, `writer-unavailable`, `stale-writer`, `inactive`, `project-mismatch`, `stale-activation`, `coordinator-unavailable`, `unavailable` (`storageUnavailable`, `connectionLost`), `broken` (`storageBroken` and the three harness rows) — plus "preload call rejected".
   - Oracle:
-    - for pending and each row, the composer keeps the exact text and the row's reason shows;
-    - "Try again" resends the same `saveId` for `uncertain` and retryable rows;
+    - for pending and every row, the composer keeps the exact text. `uncertain`: "Not confirmed." plus the row's message in `#conversation-status`; `conflict`: the conflict line; `broken` rows: the Broken tone with "Not saved.", the row's `diagnostic.message` and "Code <CODE>", `role="alert"`; "preload call rejected": the Broken tone with "Not saved." and "The desktop could not complete this save.", no code line, `role="alert"`; every other row: "Not saved." plus the row's `diagnostic.message` in `#conversation-status`;
+    - "Try again" shows exactly for `uncertain`, `read-only` and both `unavailable` rows (and a `dropped` save), resends the same `saveId` and text, moves focus to Save ("Saving…"), and is `aria-disabled` while a read is in progress; a `stale-activation` answer shows its line with no action;
+    - the `saveId` is kept for every row except `conflict` and `rejected`; after those, and after editing, the next press sends a new `saveId` with the current `expectedRevision`;
+    - after `conflict`, the re-read's revision is the next press's `expectedRevision`, and that press answers `saved`;
     - editing after `uncertain` sends a new `saveId` with the old `expectedRevision`, and the resulting `conflict` reloads and keeps the edited text;
-    - per-Project isolation (R2-C7): Project A has a pending save, then the user switches to B. B's composer holds neither A's text nor A's `saveId`, and a save in B carries a fresh `saveId`. Returning to A restores A's text and `saveId`, and "Try again" under the new activation answers `replayed` or `saved`.
+    - drain order: Project A has a pending save, a switch to B starts, and the save answers `saved` before the switch resolves; on returning to A the message is listed and the composer is empty. In a second case the save answers `unavailable` (`storageUnavailable`) before the switch resolves; on returning to A, after loading, the slot shows "Not saved." and that row's message with "Try again", which resends the same `saveId` under the new activation. In a third case it answers `writer-unavailable`, and in a fourth `read-only`; on return the slot shows nothing from either, and the text and `saveId` are kept. In a fifth, A is left while its save is still pending and re-entered before the result arrives: the composer is editable and the slot shows "Not confirmed." with "Try again"; the late `saved` result for that `saveId` is then applied if the user has not pressed again, and ignored if a newer `saveId` exists;
+    - per-Project isolation (R2-C7): Project A has a pending save, the switch to B resolves first, and A's result arrives afterwards. B's composer holds neither A's text nor A's `saveId`, and a save in B carries a fresh `saveId`. Returning to A restores A's text and `saveId` with "Not confirmed." and "Try again". In one case "Try again" answers `saved` with `replayed: true` (re-read, composer cleared); in another, `replayed: false` (row appended, composer cleared);
+    - a harness status change while a save is pending drops its late result; after the harness is ready and A is opened again, the composer holds the text and is editable, and the slot shows "Not confirmed." plus `saveUnconfirmed.message` with "Try again", which resends the same `saveId`.
   - Expected red: the composer clears on submit.
-- **CNV-B33** `shows a read-only Project's messages with saving disabled` (same file).
-  - Oracle: the earlier messages are listed, Save is disabled, and the exact `read-only` reason text is visible.
-  - Expected red: the section is hidden, or Save is enabled.
+- **CNV-B33** `shows a read-only Project's messages with saving unavailable` (same file).
+  - Oracle: the earlier messages are listed; the exact §4 note and the exact text "Read only: " + `projectConversationDiagnostics.readOnly.message` are visible; the button has no `disabled` attribute, is `aria-disabled="true"`, Tab reaches it, and its accessible description equals the read-only line alone (not the note); the textarea is read-only with the same description; pressing the button or Ctrl+Enter sends nothing.
+  - Expected red: the button is enabled.
 - **CNV-B34** `applies the shared text rules` (same file).
   - Oracle:
-    - empty, `" \t\r\n"` or NBSP-only text → Save disabled;
-    - 32768 multibyte bytes → Save enabled;
-    - 32769 bytes → Save disabled, "This message is longer than 32 KiB." shown, and the text kept;
-    - the predicate used is the protocol export (import identity asserted).
-  - Expected red: Save is enabled for whitespace-only text.
-- **CNV-B35** `shows a failed load when a read answers $status $code` (same file).
-  - An it.each over every non-`read` read row except the dropped `stale-activation`: `inactive`, `project-mismatch`, `coordinator-unavailable`, `unavailable` (storage and connection), and `broken` (storage and the bridge rows).
-  - Oracle: each shows its reason and "Reload", never the empty state; Save stays disabled until a read succeeds.
+    - empty, `" \t\r\n"` or NBSP-only text → no `disabled` attribute, `aria-disabled="true"` with no description, Tab reaches it, and pressing sends nothing;
+    - 32768 multibyte bytes → saving is available;
+    - 32769 bytes → no `disabled` attribute, `aria-disabled`, Tab reaches it, described by "This message is longer than 32 KiB." in `#conversation-status`, the field `aria-invalid`, and the text kept; it clears when the text fits.
+  - Expected red: saving is available for whitespace-only text.
+- **CNV-B35** `shows a failed load when a read answers $status ($row)` (same file).
+  - An it.each over every non-`read` read row: `inactive`, `project-mismatch`, `stale-activation`, `coordinator-unavailable`, `unavailable` (`storageUnavailable`, `connectionLost`), `broken` (`storageBroken` and the three harness rows), plus "preload call rejected"; each also as the second page after a successful first page.
+  - Oracle: each replaces the stream with its notice — the Failure tone with "Could not load this conversation." and the row's message (announced through `#conversation-status`); for `broken`, the Broken tone with the same title, the row's message and "Code <CODE>"; for "preload call rejected", the Broken tone with the title "Could not load this conversation.", "The desktop could not load this conversation." and no code line; both Broken forms `role="alert"` — never the empty state and never a partial list. "Reload" has focus for every row except `stale-activation`, whose notice has no action (focus then goes to the notice's title, which is focusable with `tabIndex={-1}`, as `#ws-heading` is). While Reload reads, it keeps focus, it stays mounted and `aria-disabled`; after a successful read, focus is in the composer. Until a read succeeds, Save has no `disabled` attribute, is `aria-disabled`, Tab reaches it, and it is described by the notice's title; the draft is kept.
   - Expected red: an empty conversation is shown.
+- **CNV-B45** `shows each message as written, with its saved time` → `saved-at.test.ts` and the conversation test file.
+  - Oracle, the time rule as a plain function `(savedAt, now, timeZone)`, with `timeZone` "Europe/Lisbon":
+    - now `2026-10-10T12:00:00Z`: savedAt `2026-10-10T13:02:00Z` → "14:02"; `2026-10-09T23:30:00Z` → "00:30" (the next local day, so today); `2026-10-09T13:02:00Z` → "9 Oct, 14:02"; `2025-12-31T23:30:00Z` → "31 Dec 2025, 23:30";
+    - now `2027-01-01T00:10:00Z`: savedAt `2026-12-31T23:59:00Z` → "31 Dec 2026, 23:59";
+    - with `timeZone` "Asia/Tokyo" (UTC+9 all year), now `2026-12-31T15:30:00Z` (00:30 on 1 January 2027 there): savedAt `2026-12-31T14:30:00Z` → "31 Dec 2026, 23:30" (a year compared in UTC would drop the year);
+    - `<time dateTime>` equals `savedAt`;
+    - a message whose text is `"<b>x</b>\n  y"` renders that exact text content, with no `<b>` element.
+  - Expected red: the function does not exist.
+- **CNV-B46** `works by keyboard and announces politely` (same file).
+  - Oracle:
+    - Ctrl+Enter in the composer saves; Enter and Shift+Enter add a line and send nothing;
+    - focusing "Save locally" and pressing Enter saves; while pending and after a fault, focus stays on the button (it is never moved to `body`); after `saved`, focus is in the composer;
+    - after a failed load, focus is on "Reload"; after a fault, focus stays where it was;
+    - `#conversation-status` has `aria-live="polite"` and no `role`; only Broken-tone elements have `role="alert"`; the region adds no `role="status"` element; the "Messages" list and the stream have no `aria-live` and no `log` or `status` role;
+    - every state shows an icon and words, never colour alone;
+    - with `matchMedia("(prefers-reduced-motion: reduce)")` true, the post-save scroll is called with `behavior: "auto"`; otherwise `"smooth"`.
+  - Expected red: Ctrl+Enter does nothing.
+- **CNV-B47** `meets the accessibility checklist in the real window` → `tests/e2e/conversation-accessibility.test.ts`, with `tests/e2e/accessibility.ts`.
+  - Seeding: `runHarnessSeed` with the registered-Projects seed (repository-a and repository-b, both empty). Per-test timeout 150 s; a seeding or launch timeout is a setup failure. The content is sized with `setContentSize(1280, 800)` and `innerWidth`/`innerHeight` are asserted first.
+  - Oracle, with the CSP as built, in this order:
+    1. **Empty state** (open repository-a with the "Open Project repository-a" button): axe (`wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`) on `section[aria-label="Project workspace"]` reports no violations in normal and forced colours; focus is in the composer.
+    2. **Keyboard and focus:** typing two lines with Shift+Enter and pressing Ctrl+Enter saves; `#conversation-status` reads "Saved"; the new message is in view; focus is in the composer. Then, with new text typed in the composer, Tab moves focus to "Save locally". On that focused button, in normal colours: `outline-color` `rgba(0, 0, 0, 0)`, `outline-width` 2 px, `outline-offset` 2 px; a `box-shadow` of three layers with spreads 2 px, 3.5 px and 7 px whose colours equal canvas, frost and frost at alpha 0.22 (channels compared numerically); border width 0; font family starting with "Red Hat Text"; on hover, background `rgb(178, 214, 232)`. Under `forcedColors: "active"`: `outline-style` `solid`, `outline-width` 2 px, `outline-offset` 2 px (a missing region rule would leave the browser's default focus outline, which has a different offset and style), and a 1 px border. Pressing Enter on the button saves; afterwards focus is in the composer. With the textarea focused: the textarea's `outline-style` is `none` in both colour modes; the field's `box-shadow` has exactly two layers, a 1.5 px frost layer and a 5 px frost layer at alpha 0.22 (channels compared numerically); under forced colours the field has `outline-style` `solid` and `outline-width` 2 px.
+    3. **Over-limit fault:** pasting 32769 bytes shows the fault line; axe reports no violations in normal and forced colours; clearing restores the state.
+    4. **Many messages:** enough messages are saved through the window to overflow the stream; after reopening the Project, the newest message is in view.
+    5. **Reduced motion:** under `reducedMotion: "reduce"`, every region control's computed `transition-duration` is 0 s; after a save, a page-side MutationObserver on `#conversation-status` waits one `requestAnimationFrame` after "Saved" appears and then finds the stream at its end (`scrollTop + clientHeight >= scrollHeight - 1`), with no further scrolling in the next frame; the stream's computed `scroll-behavior` is `auto`.
+    6. **Zoom and scale:** at zoom factors 0.5 and 2.0, and in a second launch with `--force-device-scale-factor=1.5` and `setContentSize(853, 533)` (asserting `innerWidth` within 1 px of 853), the region has no horizontal overflow and "Save locally" is fully inside the viewport.
+    7. Throughout: no `pageerror` and no `securitypolicyviolation`. Each step saves a screenshot for the ui-ux review.
+    8. **Unreachable states, in further launches on the same `userData`** (so no handler needs restoring): before opening a Project, the test replaces conversation IPC handlers from the main process (`application.evaluate` with `ipcMain.removeHandler` and `ipcMain.handle`), then opens repository-b so the replaced read handler serves its load. One launch per group, each with its own replacements: (a) a save answering `uncertain`, then one answering `broken`, then a handler that throws (preload call rejected); (b) a read answering `unavailable`; (c) a read answering `broken`; (d) a handler that throws on read; (e) a read answering `stale-activation`; (f) the activate handler answering a read-only activation (echoing the request) with a read handler answering `read`. In each state: axe reports no violations in normal and forced colours; any focused "Try again" or "Reload" has `outline-color` `rgba(0, 0, 0, 0)`, `outline-width` 2 px, `outline-offset` 2 px and a 1.5 px frost layer, and under forced colours `outline-style` `solid`; a screenshot is saved.
+
+  - Expected red: the composer is missing (S4b's own surface).
+  - **Manual, recorded in the S4b evidence (G26):** an NVDA speech-log pass by an agent against the speech table below, then Pedro listens with Narrator; if NVDA is not available on the machine, that part is recorded as unavailable, not as passed. The ui-ux agent reviews the screenshots of every state (including step 4's) against the hero and DESIGN.md's anti-clone test; its sign-off is recorded.
+
+**Speech table (what the screen reader says).** Region "Project workspace"; heading "Project <name>"; list "Messages" with N items; each item: "You, <time>, <text>"; textbox "Message"; button "Save locally" (unavailable: "Save locally, dimmed", plus the description where one exists); "Saving…" while pending; the status slot phrases above; button "Try again"; button "Reload".
+
+**Accessibility checklist mapping (G26).**
+
+| # | Point | In S4b |
+|---|---|---|
+| 01 | Everything by keyboard | CNV-B46, CNV-B47; F6 zones and "Skip to Attention" belong to the shell slice |
+| 02 | Visible focus | CNV-B47 on Save, the composer, Try again and Reload (steps 2 and 8) |
+| 03 | Single-letter shortcuts | not applicable: S4 adds none |
+| 04 | Names, `lang="en"` | the speech table; icons decorative |
+| 05 | Announcements | CNV-B46; the 10-second progress limit does not apply, because each status line is one announcement per user action |
+| 06 | Map and diffs as text | not applicable |
+| 07 | Never colour alone | CNV-B46 |
+| 08 | High contrast | CNV-B47 forced colours |
+| 09 | Zoom 50–200 % and 150 % scale at 1280×800 | CNV-B47 |
+| 10 | Reduced motion | CNV-B46, CNV-B47 |
+| 11 | AA contrast, axe | CNV-B47 (axe); CNV-B42 (tones and non-text 3:1 from the tokens) |
+| 12 | Every sound has a visual twin | not applicable: C1 plays no sound |
 
 **Risks**
-- The layout is provisional (the UI/UX agent owns it).
-- The epoch guard and the per-Project memory.
+- The activation guard and the per-Project memory.
 - The API lists.
+- `uncertain` after a `protocol-error`: a malformed save reply cannot show whether the save committed; "Try again" resolves it by `saveId`.
+- Following the Windows Text size setting is a shell-level decision (decisions §33) and is deferred to the shell slice.
 
 ### S5 `c1-s5-conversation-journey` — the real app
 
@@ -758,6 +956,7 @@ Fault seams (R2-C9):
     - the generation-three Project is upgraded on opening, then accepts a save.
   - Expected red: none — composition guard (S3b B35 precedent); recorded as observed.
   - Per-test timeout: 150 s. A seeding or launch timeout is a setup failure.
+  - Revision 5, consistency with S4b: locators use the S4b speech table (region "Project workspace", list "Messages", textbox "Message", button "Save locally"). "Saved observed only after each save resolves" is checked with a MutationObserver on `#conversation-status`, as `project-upgrade.test.ts:34-53` checks `#ws-progress`. The generation-three Project needs a new env-gated seed file using `createGenerationThreeProject` (`project-storage-upgrade-fixture.ts:505`); the existing upgrade seed makes generation two. S5 adds no accessibility oracle of its own; CNV-B47 owns them.
 
 ### Success Criteria
 
@@ -772,17 +971,18 @@ Fault seams (R2-C9):
 - S1: `db:generate:check`; `pnpm test:e2e`, because the upgrade seed changes; `package:launch-smoke`, because the schema changes.
 - S2: `pnpm test:e2e` and `package:launch-smoke`. S2's head reaches `main` together with S1 (G15), and the package smoke drives the writer that S2 changes.
 - S3: `pnpm test:e2e` and `package:launch-smoke`, because the protocol pin changes, including the desktop peer.
-- S4 and S5: `pnpm test:e2e` and `package:launch-smoke`.
+- S4a, S4b and S5: `pnpm test:e2e` and `package:launch-smoke` (S4a's packaged font row runs in the launch smoke).
 
 **Mutation**, with the coordinator's go-ahead (R2-C13):
 - S1: the chain rule and the filesystem agreement, through `stryker.project-storage.config.json`;
 - S2: the store, the slot queue and `sqlite-busy`, through the new `stryker.conversation.config.json`;
 - S3: through the root `stryker.config.json` (unit tests). Its `mutate` list gains, with Stryker's line-range form recorded at build time: `project-conversation-protocol.ts` (whole new file), `canonical-project-protocol.ts` (the CNV-B36 ranges), `active-project-coordinator.ts` (`admitActiveWork`, `conversationRead`, `conversationSave` and the G17 routing), `canonical-project-application.ts` (the two new wrappers), `registration/project-registration-preparation.ts` (only the code CNV-B37 drives, at `80228ac`: `pendingListing`, `listProjects`, `cleanupUnconfirmed` and `drainPreparations` :225-264, `trackedListing` :279-292, `close` :352-367) and the new `registration/registration-listing.ts`; `harness-runtime.ts` is already listed. Each mutated range has a unit oracle: CNV-B12, CNV-B14 same-turn rows, CNV-B29, CNV-B36, CNV-B37, CNV-B38, CNV-B39 and CNV-B40. The root config is incremental, so the final S3 run is `pnpm exec stryker run --force` on the final candidate, once, with per-file scores recorded for every S3 file. The CNV-B36 writer change is mutated by `stryker.conversation.config.json`, which already lists `canonical-project-writer.ts`; the final S3 candidate also runs that config once (it is not incremental), with per-file scores recorded.
+- S4b: through the root `stryker.config.json`, whose `mutate` list gains the new `project-conversation-failure.ts`, the S4b ranges of `project-entry-bridge.ts` and `projects-workspace.tsx` (the per-Project memory), and the renderer's conversation hook, the region components that map state to controls, and the pure rules (save outcome, time format); `preload.ts`, `project-upgrade-failure.ts` and `harness-pending-request.ts` are already listed. Oracles: CNV-B16, CNV-B17, CNV-B18, CNV-B31–B35, CNV-B45, CNV-B46. The final S4b run is `pnpm exec stryker run --force` once, with per-file scores recorded. S4a runs the root config once on its final candidate (`pnpm exec stryker run --force`), for the new font and CSP-meta branches of `package-smoke-verifier.ts` (already listed) and the new `apps/desktop/src/shared/content-security-policy.ts` (added to the `mutate` list), with CNV-B41's and CNV-B48's rows as the oracle and per-file scores recorded.
 - `WriterOwnerBusy` is a defensive branch, pinned by its writer-level test.
 
 **Push gate:** `pnpm check:deep`.
 
-**Claim, re-established.** After S1 and S2 merge together (G15), every existing kind of Project opens read-write after its automatic upgrade: Storage-only v2 and v3, upgraded-once, and registered (CNV-B2, B3, B4, B20). Nothing writes the new tables until S2, and nothing in the UI uses them until S4.
+**Claim, re-established.** After S1 and S2 merge together (G15), every existing kind of Project opens read-write after its automatic upgrade: Storage-only v2 and v3, upgraded-once, and registered (CNV-B2, B3, B4, B20). Nothing writes the new tables until S2, and nothing in the UI uses them until S4b.
 
 ## C1-gate carry-forward
 
@@ -794,7 +994,12 @@ Fault seams (R2-C9):
 | `project.upgrade` skips the registered admission checks (S3 design, Deferred Work) | Re-deferred. Owner: the coordinator's issue list. Trigger: the first registered Project whose repository moved before its upgrade. |
 | Listing concurrency F9, extended to a chained switch between the listing scan and its registry read (`project-listing.ts:86`; node-adapters :1070-1077) | Accepted risk, carried. Worst case: a transient `recovery-required` row. The data-safety proofs hold. |
 | Representative-size timing (S3a) | Re-deferred. Trigger: measured real Project sizes. |
-| G2 residual: no composed IPC failure proof (upgrade-window design) | Carried. Owner: the coordinator. Trigger: the first real IPC failure, or the next change to `registerProjectEntryIpc`. |
+| G2 residual: no composed IPC failure proof (upgrade-window design) | Trigger fires in S4b, which changes `registerProjectEntryIpc`. S4b proves each hop separately: the IPC handler throws on an invalid request (CNV-B17), the preload rejects an invalid reply (CNV-B17), and the window shows a rejected call as broken while keeping the text (CNV-B32, CNV-B35). The composed hop (a main-process handler throw reaching the window) is re-deferred. Owner: the coordinator. Trigger: the first real IPC failure. Pedro approves this re-deferral with revision 5. |
+| Following the Windows Text size setting (decisions §33) | Deferred to the shell slice of the React port. Owner: the coordinator. |
+| `@phosphor-icons/react` still used by the old shell (DESIGN.md:363) | Stays until the last Phosphor user is ported (the shell slice); no new use. |
+| DESIGN.md:284 and :326 still state the halo-only focus rule (controls and composer) that §33's ring supersedes (G22) | The ui-ux agent updates DESIGN.md. Owner: the ui-ux agent, through the coordinator. |
+| Recovery from a `stale-activation` Conversation answer (Pedro, decisions log §45) | Gap: the notice shows the row's message with no action, because the renderer's open path cannot replace a stale activation (`projects-workspace.tsx:124-153`; `active-project-coordinator.ts:249, :363-368`). Owner: the coordinator. Trigger: the first real occurrence. |
+| Licence check of the S4 dependencies (§43): `@fontsource/red-hat-text`, `@fontsource/cinzel`, `@fontsource/cascadia-code` (OFL-1.1), `@axe-core/playwright` (MPL-2.0, dev only) | Carried into the licence check before the first installer. Owner: the coordinator. |
 | Distinct desktop diagnostics (upgrade-window design :339-350) | Re-deferred. Trigger: a real occurrence. |
 | `process-entry` → desktop log link, proven hop by hop (decisions §8 :84) | Carried. This design is the C1 gate, so there is no separate gate review. Owner: the coordinator. Trigger: the first missing upgrade log line in a real run, or S5's e2e if it reads the desktop log. |
 | Generation-cap semantics (node-adapters :155) | Re-deferred. Trigger: retention policy work (nothing is deleted today). |
@@ -811,6 +1016,9 @@ Fault seams (R2-C9):
 - **#93:** the Mastra head.
 - **Runtime-database migrations.** Trigger: the first runtime table.
 - **Durable drafts.** Trigger: a user request.
+- **The shell slice of the React port** (rail, header, Projects sidebar, title bar, F6 zones, Skip to Attention): right after C1, as the ui-ux agent asked, so the two looks do not coexist for long (G21).
+- **Moving the desktop bridge to Effect** (G28). Trigger: a slice that changes the bridge's request core beyond adding an operation, or the coordinator scheduling the desktop-main Effect migration.
+- **The Rive splash window's CSP variant** (#130; decisions log :268-274): built with the React port's startup slice through G29's `window` parameter.
 
 ## Verification Notes
 
@@ -819,6 +1027,7 @@ Fault seams (R2-C9):
 - The hash-bound rebuild pin.
 - The writer's hot path (G2).
 - The 5 s busy waits.
+- S4: the CSP on `file://` pages (G29); `@axe-core/playwright` under the CSP as built; packaged `file://` fonts; the five API lists; the activation guard and per-Project memory; e2e load from the parallel #94 measurements (heavy runs only with the coordinator's go-ahead).
 
 **Workspace (G14, decisions §19).** C1 is built in a linked worktree on a feature branch, as the rigorous lane recommends; the main working tree is not used. Gates and candidate reviews run against the worktree's frozen commits. Candidate reviewers get the saved diff and `workflow_path`.
 
@@ -839,6 +1048,140 @@ Request: the coordinator hand-off of 2026-10-09, after C1-0 landed on `origin/ma
 - **Revision-4 intent review, round 1** (2026-10-10; slice-verifier, artifact-code-reviewer and artifact-coverage-reviewer on `8b7aa9ee…`, every finding adversarially verified by claim-verifier): **failed**, all three. 6 blockers and the concerns below, all verified or weakened, one falsified (code F5). Resolved in revision 4.1 (table below). Round 2 is the last (at most two rounds); after it Pedro decides.
 
 - **Revision-4.1 intent review, round 2** (the last; `e2dffc1a…`): **failed**, all three. Every round-1 item was confirmed resolved; 3 new verified test-contract blockers and about 10 concerns. Evidence: `.rpiv/artifacts/evidence/2026-10-10_c1-s3-intent-review-1.md` and `-2.md`. Pedro chose option A (decisions log §36): revision 4.2 fixes every item, then one verifier limited to these fixes (as in §32), then Pedro approves.
+
+- **Revision 5** (2026-10-10, for S4 only; decisions §42, §43): rewrites the Desktop section and replaces S4 with S4a and S4b; adds G21–G28; updates S5, Success Criteria, carry-forward and Deferred Work. S1–S3 are unchanged. Rigorous lane: an independent intent review of `c1-s4a-renderer-foundation` and `c1-s4b-conversation-window` (at most two rounds), then Pedro approves. Status `in-review` until then.
+
+- **Revision-5 intent review, round 1** (2026-10-10; two slice-verifiers, artifact-code-reviewer and artifact-coverage-reviewer on `93ec1de3…`, every finding adversarially verified by claim-verifier): **failed**, all four. 9 blockers (8 verified, 1 weakened), about 48 concerns and 22 suggestions; one suggestion falsified (VC-26). Evidence: `.rpiv/artifacts/evidence/2026-10-10_c1-s4-intent-review-1.md`. Resolved in revision 5.1 (table below). Round 2 is the last; after it Pedro decides.
+
+- **Revision-5.2 bounded verification** (55 claim-verifiers, one per round-2 finding; `1718800d…`): 41 Verified, 13 Weakened, 1 Falsified (S4B-11). Evidence: `.rpiv/artifacts/evidence/2026-10-10_c1-s4-rev52-verification.md`. Pedro chose (decisions log §45): the stale-activation notice has no action and the recovery is a recorded gap; revision 5.3 applies every verifier item (table below); no new agents; the coordinator checks each item, then Pedro approves.
+
+### Revision-5.2 verification resolution
+| Verifier item | Change in 5.3 | Lines |
+|---|---|---|
+| R2-S4A-02, C2-02, VC2-03 (weakened): reset-removal check bound only max-width; heading rows; box-sizing; pseudo-elements | CNV-B51 pins note `max-width: none`, the heading's declared margin and non-legacy size, `border-box`; both binding checks (reset, layer) name the max-width row; the reset bullet names box-sizing and the accepted pseudo-element exception | :784 :785 :292 |
+| R2-S4A-05, C2-04, VC2-05, VC2-12: meta row with `development: true`; meta position worded two ways | Unit row covers both `development` values; G29 and the round-2 row say "first element after `<meta charset>`" | :757 :375 :1098 |
+| R2-S4A-06: stale CNV-B44 anchors in round-1 rows | Rows VC-02 and VC-23 point at CNV-B51 | :1133 :1170 |
+| R2-S4A-07, VC2-14: shadow parser maps six bullets to four properties; S4b modules unnamed | Parser takes the four named bullets, strips `box-shadow: `, maps names; Seixo bullet cites :278, :280-:282; the literal rule uses a glob | :764 :291 :767 |
+| R2-S4A-08 (weakened), C2-05: `src/shared` tests never collected | `vitest.main.config.ts` include gains `src/shared/**/*.test.ts` (S4a Files) | :744 |
+| R2-S4A-09, C2-09, VC2-11: latin-ext request unproven | Fonts imported through per-weight CSS (latin-ext declared); CNV-B41 asserts a loaded face whose `unicodeRange` covers U+0151 | :289 :753 |
+| R2-S4A-11 (weakened): bundled Cascadia changes the old shell, contradicting "unchanged" | Stated as the one accepted change in the Behaviour, the frame bullet and the S4a screenshot review, with the 400-only note | :737 :294 :790 |
+| R2-S4A-13: 853×533 screenshot scale unstated | S4a review is at scale 1, content 1280×800 and 853×533 | :790 |
+| S4B-01 (weakened): pending display after a remount; removal focus target; opening vs remount load | Memory gains `activationId`; focus rule keyed on the first load of an activation; CNV-B31 rows for the pending remount and the Remove-button target | :301 :863 :861 |
+| S4B-02 (weakened): kept `read-only` false after a read-write reopen; old vs current pending; precedence versus the loading description | `read-only` is cleared on a new activation; old pending identified by `activationId`; "Loading messages…" outranks the kept outcome; CNV-B32 fourth and fifth cases | :326 :326 :328 :874 |
+| S4B-03, S4B-11 (falsified): "Reopen Project" cannot work | Removed; the stale-activation notice has no action and focus goes to its title (Pedro, §45); carry-forward gap row | :305 :889 :1001 |
+| S4B-04 (weakened), VC2-01: Tab missing in CNV-B31 loading and CNV-B34 empty rows; overclaiming resolution rows | Tab added to both rows; round-1 and round-2 rows reworded; the historical C7 row annotated | :860 :883 :1134 :1094 :1278 |
+| S4B-05 (weakened): field ring layers, forced-colours width, attribution; textarea double ring; DESIGN.md:326 | Composer bullet: two layers, textarea without outline in both modes, V5 recorded in G24; CNV-B47 step 2 pins layers, width and the textarea; carry-forward names :326 | :307 :912 :1000 |
+| S4B-06 (weakened): handlers cannot be restored; missing save states; screenshot sources | Step 4 removed; step 8 runs in further launches (no restore), lists every fault group incl. Broken save, rejected calls, stale activation and read-only; every step saves a screenshot | :918 :917 |
+| S4B-12, VC2-13: "one per user action" inaccurate | Reworded to one per load or save, citing the Run-progress scope of the 10 s limit | :328 |
+| S4B-13: duplicated G25 sentence | Duplicate removed | :371 |
+| C2-01: wrong reason for the forced-colours offset row | Reason restated (the browser default outline, not the legacy rule) | :912 |
+| C2-03: rename typo would pass CNV-B50 and the `rg` check | Static row: every `var(--legacy-*)` names a declared property | :787 |
+| C2-07 (weakened): Broken save words not pinned in CNV-B32; rejected-read title | CNV-B32 pins "Not saved.", message and "Code <CODE>" for `broken`, and "Not saved." for a rejected call; the rejected-read notice has the title everywhere | :869 :327 |
+| C2-08: scroll final value and sampling moment | Page-side observer waits one frame after "Saved" and checks the stream is at its end, with no further scroll | :915 |
+| C2-10: late result overwriting newer state; old pending composer rule | A result changes memory only while its `saveId` matches a pending outcome; old pending shown as "Not confirmed." with an editable composer | :298 |
+| C2-12 (weakened): strip not reviewed; "cancel note" misnamed; strip padding | Renamed the idle note; the strip is a new wrapper with 2 rem padding; the S4a review includes it | :294 :790 |
+| VC2-04 (weakened), VC2-09: Try again/Reload width and forced style; Shift+Tab sequence | Step 8 pins width 2 px and forced `solid`; step 2 uses Tab from the composer and a valid typing order | :918 :912 |
+| VC2-08: kept `saved` on return | A kept `saved` shows nothing on return | :326 |
+| VC2-17: anchor and seed wording | Anchor `projects.test.ts:35-62`; the seed makes two clean Projects | :787 |
+| All other ids (Verified, no new defect) | No change | — |
+
+- **Revision-5.1 intent review, round 2** (the last; `fb948d46…`): **failed**, all four. Every round-1 item resolved or partly resolved; 2 verified blockers, 26 concerns (3 weakened) and 30 suggestions (2 weakened); none falsified. Evidence: `.rpiv/artifacts/evidence/2026-10-10_c1-s4-intent-review-2.md`. Pedro chose option A (decisions log §44): revision 5.2 fixes every item and folds in #130's per-window CSP owner, then one bounded verifier limited to the fixes, then Pedro approves.
+
+### Revision-5.1 round-2 resolution
+| Finding (verified unless marked) | Resolution in 5.2 |
+|---|---|
+| R2-S4A-01 (blocker), C2-01, VC2-04: `transparent` rule contradicts the decided ring; the legacy outline could reach Save | `transparent` is allowed as the focus rule's outline colour (Seixo theme bullet, CNV-B42); CNV-B47 step 2 pins Save's normal-colour outline (transparent, 2 px, offset 2 px) and the forced-colours offset 2 px, which the legacy rule (4 px) would fail. |
+| VC2-01 (blocker), S4B-04: "never disabled" pinned only for read-only | No-`disabled` and `aria-disabled` rows in CNV-B18 (pending), CNV-B31 (loading, with its description before and after 300 ms), CNV-B34 (over-limit) and CNV-B35 (failed load); Tab rows in CNV-B18, B34 and B35 (5.3 adds Tab to CNV-B31 and the CNV-B34 empty-text row). |
+| R2-S4A-02, C2-02, VC2-03: the layer only wins declared properties | G22 and the layer bullet: an unlayered zero-specificity `all: revert` reset at the region edge (SVG excluded); new CNV-B51 rows a leak fails (note colour and max-width, `projectId` font size), bound by removing the reset. |
+| R2-S4A-03: class-less selectors are global | CNV-B42: every region selector contains a module-local class; the forced-colors block is nested under the region root. |
+| R2-S4A-04, C2-03, VC2-02: `rg` check versus the kept `--prototype-*` tokens | Tokens renamed `--legacy-*` (values unchanged, CNV-B50 guards); the check runs over the whole of `apps/desktop` (tests and Vite configs included) and must return nothing. |
+| R2-S4A-05, C2-04, C2-05 (weakened), VC2-05, VC2-12, and #130 | G29 and the CSP bullet: `contentSecurityPolicy({ window, delivery, development })`, no Electron import; the `<meta>` is the packaged variant, the first element after `<meta charset>`; CNV-B48 pins three literals, the pure HTML transform (unit), the built file (e2e) and the packaged page's `<meta>` (smoke); the `window` parameter allows the later splash variant with `'wasm-unsafe-eval'`, never in the main policy. |
+| R2-S4A-06: CNV-B44's look rows had a red | Split: CNV-B44 keeps the guard rows; new CNV-B51 holds the look rows with their red at `6a41350`. |
+| R2-S4A-07, VC2-14: hover and elevation values had no home | The theme module declares the two hover colours and four lifts from DESIGN.md; CNV-B42 parses and pins them; no colour literal in other region modules. |
+| R2-S4A-08 (weakened): CSP owner not mutated | Added to the S4a mutation run. |
+| R2-S4A-09, C2-09, VC2-11: sample text did not reach latin-ext | Sample "Aé€çő" (ő is latin-ext); the round-1 resolution row is corrected. |
+| R2-S4A-10: setup-failure reds | CNV-B42 and CNV-B49 name a scaffold and a behavioural red. |
+| R2-S4A-11, VC2-15: listener timing; bundled Cascadia reaches the old shell | `addInitScript` then a reload, listener asserted (S4a Seams); the old shell's code face change is stated and goes to the ui-ux screenshot review. |
+| R2-S4A-12 (weakened): DESIGN.md:284 versus the adopted ring | G22 states that §33's ring supersedes DESIGN.md:284; carry-forward row for the ui-ux agent to update DESIGN.md. |
+| R2-S4A-13, S4B-09, C2-11, VC2-10: window sizing | `setContentSize(1280, 800)` and `setContentSize(853, 533)` with `innerWidth` asserted (within 1 px at scale 1.5). |
+| S4B-01: a remount inside one activation steals focus | Focus rule: only a load started by opening, switching, Reload or Reopen Project moves focus, and only from `body` or the starting control; CNV-B31 rows for the add flow and the removal view; save results go to per-Project memory, so a remount loses nothing. |
+| S4B-02, C2-10, VC2-08: memory lacks the outcome; no slot precedence | Memory is `{ text, saveId, expectedRevision, outcome }`; "What a Project shows on return" names each outcome's display; the status slot has a fixed precedence; CNV-B32 drain-order cases pin it. |
+| S4B-03: focus after Try again and Reload | Try again moves focus to Save; Reload stays mounted and `aria-disabled`, then focus goes to the composer (G26); CNV-B32 and CNV-B35 rows. |
+| S4B-05: composer ring | The field uses the decided ring, not Seixo V3's halo-only rule; CNV-B47 pins its layers and its forced-colours outline. |
+| S4B-06: no way to produce unreachable states | CNV-B47 replaces IPC handlers from the main process (step 8 since 5.3, in its own launches) to reach the fault and Broken states, with axe, forced colours, rings and screenshots. |
+| S4B-07, C2-06: MESSAGE_INVALID row unreachable | Asserted on the pure mapping function (S4b Seams, CNV-B16). |
+| S4B-08, C2-08 (weakened): no-op `getAnimations` check | Replaced: on the first frame after "Saved", `scrollTop` already equals its final value. |
+| S4B-10: read-only description | Points at the read-only line only; CNV-B33 pins it. |
+| S4B-11: Reload cannot fix `stale-activation` | 5.2 offered "Reopen Project"; the verifier falsified it (the real open path refuses). 5.3: no action (Pedro, §45); recovery gap carried. |
+| S4B-12, VC2-13: checklist 05 | Each status line is one announcement per user action, so the 10-second limit does not apply; CNV-B46 pins that the list and the stream are not live regions. |
+| S4B-13: G25's rationale | G25 says why wrong-event and mismatched replies stay `broken`, and that the kept `saveId` replays any hidden commit. |
+| C2-07: Broken-tone words | Read: title, row message, "Code <CODE>"; save: "Not saved.", message, code line; CNV-B32 and CNV-B35 pin them. |
+| C2-12: note and error above the flush region | They render in a padded strip above the region; included in the screenshot review. |
+| VC2-06 (weakened): epoch drop end state | A dropped save sets `outcome: dropped`, the composer is editable, and on return the slot shows "Not confirmed." with "Try again"; CNV-B32 pins it. |
+| VC2-07: year boundary in Lisbon winter | Added an Asia/Tokyo tuple (UTC+9). |
+| VC2-09: CNV-B47 order | Steps are ordered: empty-state axe and keyboard first, overflow messages later. |
+| VC2-16: two triggers for G28 | One trigger text in G28 and Deferred Work. |
+| VC2-17: padding variant on other views | CNV-B50 pins the 32 px padding with no Project and with a safe-mode Project. |
+| R2-S4A-00, S4B-00, VC2-00 (headers) | No change. |
+
+### Revision-5 round-1 resolution
+| Finding (verified unless marked) | Resolution in 5.1 |
+|---|---|
+| S4B-B16-MALFORMED-VS-PROTOCOL-ERROR, code F1, VC-01 (blockers): a malformed save reply arrives as a `protocol-error` | Desktop fact added (`harness-session.ts:39-46`); Bridge mappings and CNV-B16 rewritten: a malformed reply is a `protocol-error` (`uncertain` for a save, `broken` for a read); only a wrong-event reply, a mismatched echo, an unbuildable command or a colliding id are `broken`; rows for both operations. |
+| S4A-04, code F2, VC-07 (blockers): CNV-B42's colour rule contradicts the ring and forced-colors rules | CNV-B42 defines the allowed literals; the halo derives from `--frost`; system colours only under forced colors. |
+| S4B-EXPECTED-REVISION-FROM-READ (blocker), VC-16 (weakened) | G27 and the Loading bullet: every successful read sets `expectedRevision`; CNV-B18 pins the first save request after a read and after `conversation: null`; CNV-B32 pins the press after a conflict re-read. |
+| VC-02 (blocker), S4A-03, code F5, S4B-OLD-SHELL-LEAK: old shell styles reach the region; no oracle | G22: the old shell is wrapped in `@layer legacy-shell`; the workspace drops its padding for the region; CNV-B42 static selector rows; computed font, background and edge-to-edge rows (in CNV-B51 since 5.2); CNV-B47 border 0 and font rows. |
+| VC-03 (blocker, weakened), S4B-UNAVAILABLE-REASON, code F13 | Each unavailable state's description is named (none for empty text); CNV-B33 pinned no `disabled`; CNV-B34 and B35 pinned `aria-disabled` and the description (completed in 5.2 and 5.3: no `disabled` and Tab in CNV-B18, B31, B34, B35). |
+| VC-04 (blocker), S4B-CHECKLIST-02-OVERCLAIM | Row 02 restated; CNV-B47 adds the composer ring and its forced-colors outline; Try again and Reload confirmed in the ui-ux screenshot review. |
+| S4A-01, code F3, VC-05: removal list incomplete | Facts and S4a Files gain `forge-env.d.ts`, `build-project-entry-e2e.mjs`, the `"prototype"` unit row and the shell.test helpers; the removal check is a literal `rg`. |
+| S4A-02, code F4, VC-08 (weakened): moving only tokens changes the old look | `legacy-shell.css` takes every `prototype-global.css` rule except `#prototype-root`, at the same cascade place; new guard CNV-B50 with recorded computed values. |
+| S4A-05 (reduced motion in S4a, §43) | CNV-B44 reduced-motion row. |
+| S4A-06 (checklist 09 on the frame; 02 unobservable) | CNV-B44 zoom rows; S4a mapping table with reasons. |
+| S4A-07, VC-20: mutation scope | Success Criteria: S4a runs the root config once (`package-smoke-verifier.ts`); S4b adds `projects-workspace.tsx` ranges and the region components. |
+| S4A-08, code F6, VC-06: no proof the CSP is in force on `file://` | New fact; G29 and CNV-B48 (shared owner, build-time `<meta>`, positive control); "in development" dropped from the S4a behaviour. |
+| S4A-09, code F7: Vite may inline fonts as `data:` | No font inlining; CNV-B41 build-output guard. (Corrected in 5.2: the 5.1 sample stayed in the latin subset; the sample now includes ő.) |
+| S4A-10: five icons untested | New CNV-B49. |
+| S4A-11, code F10: S4a e2e timeout | 150 s per test, setup failures named. |
+| S4A-12: axe include selector | `section[aria-label="Project workspace"]`. |
+| S4A-13: smoke red row | "no fonts key" is the red row. |
+| S4A-14, code F9: axe peer under strict peers | `playwright-core` pin if required; install result recorded. |
+| S4A-15: S4a alone on `main` | G30: S4a merges only with S4b. |
+| S4B-TEST-API-DEFAULT (weakened), VC-27 | The shared fakes answer a read with `conversation: null` and throw on a save. |
+| S4B-PENDING-SAVE-FOCUS, code F12, VC-14 | The pending Save is `aria-disabled`, never `disabled`; CNV-B46 and CNV-B47 rows for the button path. |
+| S4B-REJECTED-CALL-CODE, VC-17 | A rejected call shows the Broken tone with its sentence and no code line; row named "preload call rejected". |
+| S4B-STATUS-SLOT-HANDLE | One slot, `#conversation-status`, pinned in CNV-B46 and used by CNV-B47 and S5. |
+| S4B-UNCERTAIN-NOT-SAVED | "Not confirmed." for `uncertain` and the dropped-pending return (PROPOSED copy, G24). |
+| S4B-PARTIAL-PAGING-FAILURE, VC-10 | CNV-B35 second-page rows; CNV-B31 uneven pages and the sent `after` values. |
+| S4B-STALE-ACTIVATION-READ, VC-11 | A `stale-activation` read for the current activation is a failed load (G21 notes the change). |
+| S4B-SCALE-FACTOR-RUN, VC-19 | The scale launch is 853×533 with `innerWidth` asserted; `electron-launch.ts` gains an extra-arguments parameter (code F18, weakened). |
+| S4B-TRACEABILITY | G21 lists the changed meanings; G25 marked for Pedro's confirmation; anchor :148. |
+| S4B-READ-ONLY-NOTE | Both lines shown; CNV-B33 pins the note. |
+| S4B-A11Y-ORACLE-REACH, VC-12, VC-18 | CNV-B46 scroll-behaviour row; CNV-B47 axe in the empty and over-limit states, transitions 0 s; tone contrast from tokens in CNV-B42. |
+| code F8 (weakened): axe may need a new page | `setLegacyMode(true)` allowed and recorded. |
+| code F11: vague ring oracle | Numeric layer check (spreads and colours). |
+| code F14, VC-13: time rule inputs | Exact tuples in Europe/Lisbon, with day and year boundaries. |
+| code F15: import identity tests a collaborator | Row dropped; the behaviour rows remain. |
+| code F16: 3:1 non-text contrast | CNV-B42 contrast rows from the tokens. |
+| code F17, VC-21: API lists misstated | Facts restated; "sorted position" applies to the two sorted lists. |
+| code F19: G28's premise | G28 reworded with the `runPromise` precedents. |
+| VC-09: harness epoch and drain order | CNV-B31 and CNV-B32 rows. |
+| VC-15: editing while pending | The composer is read-only while pending (G27). |
+| VC-22: licence check | Carry-forward row. |
+| VC-23: front-matter parsing | A line parser; typography not pinned (the fonts are checked by CNV-B41 and, since 5.2, CNV-B51). |
+| VC-24: opens at the newest message | CNV-B47 reopen row. |
+| VC-25 (weakened): craft and anti-clone review | The ui-ux screenshot review against DESIGN.md:189, per slice. |
+| VC-26 (falsified) | No change. |
+| VC-28: replayed true or false | Split into two cases. |
+
+### Revision-5 changes
+| Input | Change |
+|---|---|
+| §42 S4 in React | Desktop section rewritten; S4a and S4b; G21. |
+| §43 split, shell, prototype, dependencies | G21, G22, G23; S4a Files and dependencies. |
+| ui-ux answers V1–V7, reconciliations R1–R4 | G24, G26; the renderer bullets and CNV-B18, B31–B35, B45, B46. |
+| Stale facts | Protocol v8; `savedAt`; the bridge's missing "not sent" vs "lost" split (G25, CNV-B16); `protocol-error` on a sent save is `uncertain`; tests keyed by status and row, not code; no second `role="status"` (G26); CNV-B17's IPC red names the bridge call, not `invoke`; a send refused with `MESSAGE_INVALID` is `broken`. |
+| 12-point checklist (§33) | Per-slice mapping; CNV-B44, CNV-B46, CNV-B47; manual NVDA and Narrator evidence. |
+| G2 residual trigger | Fires in S4b; per-hop proofs; composed hop re-deferred for Pedro's approval. |
 
 ### Revision-4 changes
 | Source | Change |
@@ -932,7 +1275,7 @@ Source: `.rpiv/artifacts/evidence/2026-10-10_c1-s3-rev42-verification.md` (one b
 | C4 paging | CNV-B26 (100, 101, 201; exclusive `after`; `null` at the end). The renderer follows `nextCursor` (CNV-B31). |
 | C5 read path | Read-write: through the writer slot. Read-only: a per-request read-only client on the generation pool. Busy-read oracles in B9 and B25. |
 | C6 concurrency | A save during a settlement waits (CNV-B24) and is never broken. Two first saves create one root (CNV-B27). The listing chained switch is carried as F9. |
-| C7 renderer | Save is disabled while pending (CNV-B18). After an edit, a new `saveId` with the old revision, then a conflict reload (CNV-B32). |
+| C7 renderer | Save is unavailable while pending (CNV-B18; since revision 5 `aria-disabled`, never `disabled`, G26). After an edit, a new `saveId` with the old revision, then a conflict reload (CNV-B32). |
 | C8 precedence | CNV-B29: an it.each table against `execute`. |
 | C9 split S1 | Decided by Pedro: no split; S1 merges only with S2 (G15). `fork_message_id` and composite (`conversation_id`, `branch_id`) FKs added. The C2 fit is recorded under G3. |
 | C10 carry-forward | The C1-gate carry-forward table. |
@@ -976,3 +1319,4 @@ Source: `.rpiv/artifacts/evidence/2026-10-10_c1-s3-rev42-verification.md` (one b
 - GitHub issues #92, #93, #102, #107
 - `.rpiv/artifacts/evidence/2026-10-09_c1-s2-tdd-evidence.md`; decisions log at `59a8d9b` (§28–§32)
 - `.rpiv/decisions/degrade-distinguishes-broken.md`, `.rpiv/decisions/shared-vocab-union.md`
+- Revision 5: decisions log at `9e06d55` (§42) and `6a41350` (§43); `DESIGN.md`; `C:/Users/pedro/Documents/ragnarok-hero/PORT-PLAN.md`, `access.src.html` (checklist :381-393, forced colors :237-248), `access.css:8-17`, `components.css`, `conversation.css`, `states.src.html`, `icons-runa-v2/`; Playwright accessibility testing (`@axe-core/playwright`, Context7 `/websites/playwright_dev`)
