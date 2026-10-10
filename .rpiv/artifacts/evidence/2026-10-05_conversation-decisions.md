@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: c49dce403bb30ab3bcb493b4f9fe73c735ed3e87ce9ffaf0e335c2ec06351ffe
+content_hash: 83031881541384f687fa238c8b0803ce57141cf503421402caddff22aadcc559
 ---
 
 # Conversation — Human Decisions
@@ -489,3 +489,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - the proposed copy, as listed in G24: "Write a message", "Loading messages…", "No messages yet", "Messages you save stay on this computer.", "Could not load this conversation.", "Read only: <reason>", "Not saved.", "Not confirmed.", and the "Save locally" button.
 - **G25 confirmed:** a sent save that is then lost (a disconnect, a stop, or a malformed reply while pending) answers `uncertain` ("Not confirmed."). A decodable but wrong reply stays `broken`.
 - **G28 accepted as a temporary exception:** the desktop bridge keeps its Promise core. The user asked to define when it migrates. It migrates with #123 (Effect unit 2b: one ManagedRuntime per process, Electron main included), in roadmap phase 2 right after C1 and **before C2**, because C2 adds streaming and cancellation through this bridge. The user specified it comes after #105 (TypeScript 7 and the Effect language-service rules), the roadmap phase 2 order.
+
+## 47. #94 remedies (user decision, 2026-10-10)
+
+- The #94 cause is proven (evidence `.rpiv/artifacts/evidence/2026-10-10_94-timeouts-under-load.md` on `feat/94-instrumentation`, 7ff05de). The stall-type timeouts are CPU starvation from concurrent multi-threaded repository searches (ripgrep). A synthetic burst produced 18 real 15 s timeouts, all inside the burst window, and every stalled step finished later. Quiet baselines were clean.
+- The user chose remedy **(c)**: lighter canonical fixtures, a seeded database template instead of a full Storage create per test, together with the one-line cwd fix in `canonical-writer-package-smoke.integration.test.ts:45`. The user also chose **(d)**: lighten the slowdown population, the ~13 registration tests at 5-7 s whose most expensive step is the confirm at ~1.8 s.
+- Not chosen now: (a1) a written rule, (a3) a CPU pre-flight before push, (b) lower-priority agent searches, and (e) production tracing (P2). They stay recorded in #94. Timeouts are untouched.
