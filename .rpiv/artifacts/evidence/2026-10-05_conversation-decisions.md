@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 79e323dd27112b6910613c18a3876dab697eb4f9a8bd5b126d9f497a37a4d685
+content_hash: d72047664d329351243bcd36ab95562b2e7e2bd9d3d640a2418c8eb284716280
 ---
 
 # Conversation — Human Decisions
@@ -546,3 +546,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Stale-activation copy (user, same day):** the implementer checked the code. Choosing the Project again, or switching away and back, is always refused (stale-activation, then PROJECT_ALREADY_ACTIVE). Only restarting the app recovers. The notice keeps the title "Could not load this conversation." and gets the approved detail "This Project was reopened elsewhere. Restart Ragnarok to open it again." The harness diagnostic text stays for Diagnostics and logs. The §45 recovery gap stands.
 - **ui-ux review 2 (same day):** two more changes. D1: one 720 px column and one left edge for the plates, the header and the context lines. D2: the status slot is visually hidden, but still announced, while a load notice shows (8b, 8d, 8e), as in 8c. **User-approved copy change:** in read-only mode the composer shows no "Write a message" placeholder; the "Read only: <reason>" line explains why.
 - **Dead Try again (user, same day):** after a kept failure with Try again, editing the draft clears the saveId but keeps the outcome, so Try again stays visible and does nothing (`use-conversation-save.ts:77`). The user chose to hide Try again as soon as the draft is edited. The previous failure line may stay as information, and the edited text is saved as a new save with "Save locally". No dead button.
+
+## 55. #101 agent runtime for API mode (user decisions, 2026-10-11)
+
+- **Providers:** in API mode, v1 talks to Anthropic only; other providers maybe later.
+- **Checked (Context7 AI SDK docs and npm metadata, 2026-10-11):** the AI SDK covers schemas without Zod (`jsonSchema` with our own validation; Standard Schema inside provider-utils), cancellation (`abortSignal`, `onAbort`), tool approval (`needsApproval`, `toolApproval`, or a manual loop with tools that have no `execute`), Anthropic prompt caching (`cacheControl`, 1 h TTL) and adaptive thinking with effort. However `ai` 7.0.137 and `@ai-sdk/anthropic` 4.0.78 declare `zod` as a required peer dependency, so Zod would ship in the packaged harness. `ai` also depends on `@ai-sdk/gateway`, so a plain model-id string routes through the Vercel gateway. `@anthropic-ai/sdk` 0.133.0 declares `zod` only as an optional peer. Today Zod reaches the repository only through dev tools (knip, likec4, Stryker).
+- **Decision:** API mode uses the official Anthropic client (`@anthropic-ai/sdk`) behind the ADR 0009 runtime port. Mastra is out. The AI SDK may come later as a second adapter if other providers are wanted. Subscription mode stays the governed Claude CLI session (ADR 0009).
+- **Follow-up:** remove the Mastra references (PRODUCT.md:84, AGENTS.md, `mastra.db` in ADRs 0001, 0002 and 0006, the Project Storage manifest and `docs/architecture/model.c4`) in a separate change; #93 is resolved by that removal. The C2 design names the client version and keeps the API key in `safeStorage`.
