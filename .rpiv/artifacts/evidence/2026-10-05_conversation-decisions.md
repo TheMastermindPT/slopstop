@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 6a7b59911432bcbd4b0d97b042b2817fe689f019f3e6b40293f15ce9f5d7d3d3
+content_hash: c29f21d8b1ea0a8dbfc3af09aa4726052df71341d09765c81d9639a2e92534a0
 ---
 
 # Conversation — Human Decisions
@@ -582,3 +582,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Path:** the user chose "F1-F7 sem 3.ª ronda". The implementer applies F1-F7 with red-green where behavior or tests change; there is no third review round, and the unreviewed fix delta is recorded as residual risk. F8-F10 (shared activation fixture, a UI row for T13, a neutral owner for `staleActivationDetail`) are follow-ups.
 - **F7 copy:** under a read-only activation with a kept uncertain or dropped outcome, the line drops the "Try again to check it." sentence and says only "The save could not be confirmed.", because no Try again is offered (T6).
 - After the fixes: the root Stryker once on the final candidate, then a fresh package, E5 and E4; then Pedro's Narrator listen and acceptance; then deep-review and validate over the S4 range (§57).
+
+## 59. C1 S4b final mutation scope (user decision, 2026-10-11)
+
+- **Exception to the rpiv rule** "mutation runs once on the final candidate": the user chose "esta vai ser a excepção. apenas nos ficheiros alterados". The final mutation run on `020cb6a` covers only the five source files changed since the `aac55b5` root run: `conversation-region.tsx`, `load-notice.tsx`, `save-outcome.ts`, `settle-save.ts` and `use-conversation-save.ts`.
+- The other mutate entries keep their `aac55b5` scores (and `project-entry-bridge.ts` its T3 score), because their source is unchanged since then. Residual risk: changed tests are not re-measured against unchanged sources. This is a one-off exception, not a new rule.
