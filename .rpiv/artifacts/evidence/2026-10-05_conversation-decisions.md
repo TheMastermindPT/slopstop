@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: f276f08a014f14db27a773bef9c81492e080ea7cb8dd649ef33c8b6cdc6573ec
+content_hash: 78d91aadf52fd4ee971feadb31e328b1a00d5d51fc50141e4ca3736fe8207e8b
 ---
 
 # Conversation — Human Decisions
@@ -536,7 +536,7 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - a painted disabled look for an `aria-disabled` Save (still focusable);
   - status-row gap and tone icons;
   - the over-limit fault slot;
-  - failed-load notices in the Failure tone, with Reload on stale;
+  - failed-load notices in the Failure tone (the stale-activation notice keeps no action, per §45; the user confirmed this over C8's Reload, because a Reload there always fails again);
   - the uncertain row in the Unknown tone, with a ghost "Try again";
   - message meta on one baseline;
   - forced-colours edges.
