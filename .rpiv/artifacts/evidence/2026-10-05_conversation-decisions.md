@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: a99fa5653745ecdb682d2462b7909a8a7c090eb9c71cd5d81a0ef545fb4ce656
+content_hash: 67b9b463efe7c3b924eb175871f1beb59740d9cdd0831a599831b42564a78377
 ---
 
 # Conversation — Human Decisions
@@ -544,3 +544,4 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Copy:** under the composer, when the conversation did not load, Save's reason reads "Saving is off until the conversation loads." (approved), instead of repeating the notice.
 - **Stale-activation copy (user, same day):** the implementer checked the code. Choosing the Project again, or switching away and back, is always refused (stale-activation, then PROJECT_ALREADY_ACTIVE). Only restarting the app recovers. The notice keeps the title "Could not load this conversation." and gets the approved detail "This Project was reopened elsewhere. Restart Ragnarok to open it again." The harness diagnostic text stays for Diagnostics and logs. The §45 recovery gap stands.
 - **ui-ux review 2 (same day):** two more changes. D1: one 720 px column and one left edge for the plates, the header and the context lines. D2: the status slot is visually hidden, but still announced, while a load notice shows (8b, 8d, 8e), as in 8c. **User-approved copy change:** in read-only mode the composer shows no "Write a message" placeholder; the "Read only: <reason>" line explains why.
+- **Dead Try again (user, same day):** after a kept failure with Try again, editing the draft clears the saveId but keeps the outcome, so Try again stays visible and does nothing (`use-conversation-save.ts:77`). The user chose to hide Try again as soon as the draft is edited. The previous failure line may stay as information, and the edited text is saved as a new save with "Save locally". No dead button.
