@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 5470dc9096722341bd0913ca6030a316108d24a72f6605258c46919739798b3d
+content_hash: 6bc74fda6a84c9db4705cd236df2e9f9196664a1cbb405bf1c9053c2c430685d
 ---
 
 # Conversation — Human Decisions
@@ -554,3 +554,18 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Decision:** API mode uses the official Anthropic client (`@anthropic-ai/sdk`) behind the ADR 0009 runtime port. Mastra is out. The AI SDK may come later as a second adapter if other providers are wanted. Subscription mode stays the governed Claude CLI session (ADR 0009).
 - **Follow-up:** remove the Mastra references (PRODUCT.md:84, AGENTS.md, `mastra.db` in ADRs 0001, 0002 and 0006, the Project Storage manifest and `docs/architecture/model.c4`) in a separate change; #93 is resolved by that removal. The C2 design names the client version and keeps the API key in `safeStorage`.
 - **Cleanup timing (user, same day):** the text cleanup was done at once (PRODUCT.md, AGENTS.md, CONTEXT.md, `model.c4`, ADR amendments). The code cleanup of `mastra.db` and `mastraMigrationHead` (#93) comes after #105 (TypeScript 7 and the agreed configs) and #123 (Effect migration), before any new feature, "Dessa maneira deixamos tudo pronto antes de avancar com mais features". #101 closes after the text cleanup. The push of main waits until the implementer finishes the S4b runs.
+
+## 56. C1 S4b candidate review round 1 (user decisions, 2026-10-11)
+
+- Round 1 ran three reviewers on e3706d3, and the claim-verifier checked every finding. The result is twelve fixes, T1-T12:
+  - T1: focus ring on focused unavailable controls (ui-ux approves the visual);
+  - T2: "Saved" clears on the next input;
+  - T3: `project-entry-bridge.ts` S4b ranges in the mutate list;
+  - T4: the stale final-head E5 (package before E5);
+  - T5: the CNV-B32 isolation sub-rows;
+  - T6: no Try again under a read-only activation;
+  - T7-T11: missing oracles (focus guards, Reload pressed twice, saved-at month boundary, Try again available state, the not-loaded reason after a load);
+  - T12: classify the 60 survivors that were never classified.
+- **Activation check in settleSave (C6):** the real app cannot reach it today (G13 drain, in-order answers). The user chose "Corrigir por precaução": a pending save also requires the current `activationId`, while a dropped save's late answer stays accepted (fifth drain case). Add one row.
+- **Stale-activation save copy:** the user chose to match the §54 load notice. The save line for a stale activation now says "This Project was reopened elsewhere. Restart Ragnarok to open it again." instead of the harness text "The Project was reopened. Reload the conversation."
+- Pedro's Narrator listen (§52) remains a manual gate before acceptance. Round 2 is the last.
