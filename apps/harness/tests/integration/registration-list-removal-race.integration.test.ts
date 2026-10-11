@@ -17,6 +17,7 @@ import { TestTransport } from "./harness-test-transport.js";
 import { switchDeferred, switchRuntimeOptions } from "./project-storage-create-fixture.js";
 import { checkedInMigrationRoot } from "./project-storage-runtime-fixture.js";
 import { registerFolder, registrationSession } from "./registration-flow-fixture.js";
+import { missing94 } from "./trace-94.js";
 
 const unusedFlow: ProjectRegistrationFlow = {
   handle: () => Effect.die(new Error("Only Remove from list is exercised here.")),
@@ -28,7 +29,7 @@ type HeldProjectRunner = ReturnType<typeof fixture>["owner"]["withHeldProject"];
 async function raceRuntime(enterQueue?: HeldProjectRunner) {
   const session = await registrationSession();
   const { registered } = await registerFolder(session, session.directory);
-  if (registered.status !== "registered") throw new Error("Registration missing");
+  if (registered.status !== "registered") throw missing94("Registration missing", registered);
   const { projectId } = registered;
   await session.dispose();
   const options = {

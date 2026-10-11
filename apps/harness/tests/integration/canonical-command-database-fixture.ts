@@ -16,9 +16,10 @@ import {
 } from "../../src/storage/local-libsql-worker-client.js";
 import {
   createStorageRuntimeForRoot,
-  createTemporaryApplicationRoot,
   fixedCreationIds,
 } from "./project-storage-runtime-fixture.js";
+import { copyFromTemplate } from "./storage-root-template.js";
+import { step94, traced94 } from "./trace-94.js";
 
 export const canonicalCommandProjectId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 export const canonicalCommandAggregateId = "55555555-5555-4555-8555-555555555501";
@@ -136,7 +137,7 @@ async function rollbackObservedTransaction(
 }
 
 export async function settlementRows(file: string) {
-  const client = createWorkerLocalLibsqlClient(file, "generation");
+  const client = traced94(createWorkerLocalLibsqlClient(file, "generation"), "settlement-rows");
   try {
     const rows: Record<string, LocalLibsqlResultSet["rows"]> = {};
     for (const table of [
@@ -160,42 +161,67 @@ export async function settlementRows(file: string) {
   }
 }
 
+/**
+ * A canonical command database in a fresh application root: a whole-root copy of this file's
+ * template, which {@link buildCanonicalCommandDatabase} creates once per `extended` and Project.
+ */
 export async function createCanonicalCommandDatabase(
   extended = true,
   projectId = canonicalCommandProjectId,
 ): Promise<string> {
-  const root = await createTemporaryApplicationRoot();
+  const shape = { extended, projectId };
+  const root = await copyFromTemplate(`canonical:${extended}:${projectId}`, async (template) => {
+    await buildCanonicalCommandDatabase(template, shape);
+  });
+  return canonicalDatabaseFile(root, shape);
+}
+
+/** Which canonical command database a fixture builds. */
+export type CanonicalDatabaseShape = Readonly<{ extended: boolean; projectId: string }>;
+
+/** The canonical database path inside an application root built for `shape`. */
+function canonicalDatabaseFile(root: string, shape: CanonicalDatabaseShape): string {
+  const { generationId } = fixedCreationIds;
+  return path.join(root, "projects", shape.projectId, generationId, "slopstop.db");
+}
+
+/**
+ * Builds a canonical command database in `root` through the real Storage runtime: create, open
+ * and stop, then the conformance counter table when `extended`.
+ */
+export async function buildCanonicalCommandDatabase(
+  root: string,
+  { extended, projectId }: CanonicalDatabaseShape,
+): Promise<string> {
   const request = decodeStrict(ProjectStorageCreateRequestSchema, {
     projectId,
     createRequestId: "44444444-4444-4444-8444-444444444500",
   });
-  const storage = await createStorageRuntimeForRoot(root, {
-    clockNow: () => "2026-09-05T12:00:00.000Z",
-  });
+  const storage = await step94("canonical-db.runtime", () =>
+    createStorageRuntimeForRoot(root, { clockNow: () => "2026-09-05T12:00:00.000Z" }),
+  );
   try {
-    const created = parseHarnessMessage(await storage.create(request));
+    const created = parseHarnessMessage(
+      await step94("canonical-db.create", () => storage.create(request)),
+    );
     if (!created.ok) throw new Error("Canonical fixture creation returned an invalid envelope.");
     expect(created.value).toMatchObject({
       event: "project.create.result",
       payload: { status: "created", request, mode: "read-write" },
     });
-    const opened = parseHarnessMessage(await storage.open({ projectId: request.projectId }));
+    const opened = parseHarnessMessage(
+      await step94("canonical-db.open", () => storage.open({ projectId: request.projectId })),
+    );
     if (!opened.ok) throw new Error("Canonical fixture opening returned an invalid envelope.");
     expect(opened.value).toMatchObject({
       event: "project.open.result",
       payload: { status: "opened", mode: "read-write" },
     });
   } finally {
-    await storage.stop();
+    await step94("canonical-db.stop", () => storage.stop());
   }
-  const file = path.join(
-    root,
-    "projects",
-    request.projectId,
-    fixedCreationIds.generationId,
-    "slopstop.db",
-  );
-  const client = createWorkerLocalLibsqlClient(file, "generation");
+  const file = canonicalDatabaseFile(root, { extended, projectId });
+  const client = traced94(createWorkerLocalLibsqlClient(file, "generation"), "canonical-create");
   try {
     if (!extended) return file;
     await client.execute(`CREATE TABLE conformance_counter (

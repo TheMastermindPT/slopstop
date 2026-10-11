@@ -9,10 +9,11 @@ import {
   registrationSession,
   type Session,
 } from "./registration-flow-fixture.js";
+import { missing94 } from "./trace-94.js";
 
 async function registeredProject(session: Session) {
   const { git, registered } = await registerFolder(session, session.directory);
-  if (registered.status !== "registered") throw new Error("Registration missing");
+  if (registered.status !== "registered") throw missing94("Registration missing", registered);
   return { git, projectId: registered.projectId };
 }
 

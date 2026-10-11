@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { expect, it } from "vitest";
 import { rewindToGenerationThree } from "./project-storage-upgrade-fixture.js";
 import { registerFolder, registrationSession } from "./registration-flow-fixture.js";
+import { missing94 } from "./trace-94.js";
 
 /** The registered Project's active generation directory, read from the registry. */
 function activeGenerationDirectory(root: string, projectId: string): string {
@@ -23,7 +24,8 @@ async function registerThenStop() {
   const first = await registrationSession();
   try {
     const registration = await registerFolder(first, first.directory);
-    if (registration.registered.status !== "registered") throw new Error("Registration missing");
+    if (registration.registered.status !== "registered")
+      throw missing94("Registration missing", registration.registered);
     return { root: first.root, ...registration, projectId: registration.registered.projectId };
   } finally {
     await first.dispose();

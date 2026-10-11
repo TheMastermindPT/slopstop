@@ -11,6 +11,7 @@
     "vitest.registration.config.ts",
     "vitest.registration-files.ts",
     "vitest.native-long.config.ts",
-    "vitest.native-long-files.ts"
+    "vitest.native-long-files.ts",
+    "vitest.trace-94.ts"
   ]
 }

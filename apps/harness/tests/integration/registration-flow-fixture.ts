@@ -26,6 +26,7 @@ import {
   transportFor,
 } from "./project-storage-runtime-fixture.js";
 import { installedGit } from "./registration-git-fixture.js";
+import { begin94, end94, missing94 } from "./trace-94.js";
 
 /** Each harness event name with the payload it carries. */
 type PayloadByEvent = {
@@ -73,8 +74,11 @@ export async function registrationSession(existing?: Readonly<{ root: string }>)
   let sequence = 100;
   const exchange = async (command: unknown) => {
     const response = new Promise<unknown>((resolve) => port2.once("message", resolve));
+    const step = begin94({ kind: "exchange", label: "transport", detail: command });
     port2.postMessage(command);
-    const parsed = parseHarnessMessage(await response);
+    const reply = await response;
+    end94(step, reply);
+    const parsed = parseHarnessMessage(reply);
     if (!parsed.ok || parsed.value.messageType !== "event")
       throw new Error("Harness answered with an invalid message.");
     return parsed.value;
@@ -114,14 +118,14 @@ export async function registrationSession(existing?: Readonly<{ root: string }>)
     );
   const approveGit = async (): Promise<GitConsent> => {
     const git = await register({ step: "prepare-git" });
-    if (git.status !== "git-prepared") throw new Error("Git preparation missing");
+    if (git.status !== "git-prepared") throw missing94("Git preparation missing", git);
     const version = await register({
       step: "decide-git-version",
       selectionId: git.selectionId,
       consentId: randomUUID(),
       decision: "accepted",
     });
-    if (version.status !== "git-version-observed") throw new Error("Git version missing");
+    if (version.status !== "git-version-observed") throw missing94("Git version missing", version);
     const consent = {
       selectionId: git.selectionId,
       observationId: version.observationId,
@@ -132,13 +136,14 @@ export async function registrationSession(existing?: Readonly<{ root: string }>)
       ...consent,
       decision: "accepted",
     });
-    if (recorded.status !== "identity-queries-recorded") throw new Error("Consent missing");
+    if (recorded.status !== "identity-queries-recorded")
+      throw missing94("Consent missing", recorded);
     return consent;
   };
   /** Selects and trusts one folder, then prepares its proposal with the given Git consent. */
   const prepareFolder = async (folder: string, git: GitConsent) => {
     const selected = await register({ step: "select-repository", directory: folder });
-    if (selected.status !== "repository-selected") throw new Error("Selection missing");
+    if (selected.status !== "repository-selected") throw missing94("Selection missing", selected);
     const trustId = randomUUID();
     const trusted = await register({
       step: "decide-trust",
@@ -146,7 +151,7 @@ export async function registrationSession(existing?: Readonly<{ root: string }>)
       trustId,
       decision: "accepted",
     });
-    if (trusted.status !== "trust-recorded") throw new Error("Trust missing");
+    if (trusted.status !== "trust-recorded") throw missing94("Trust missing", trusted);
     const preparation = {
       preparationRequestId: randomUUID(),
       ...git,
@@ -180,7 +185,7 @@ export type Session = Awaited<ReturnType<typeof registrationSession>>;
 export async function registerFolder(session: Session, folder: string) {
   const git = await session.approveGit();
   const { preparation, result } = await session.prepareFolder(folder, git);
-  if (result.status !== "proposal-prepared") throw new Error("Proposal missing");
+  if (result.status !== "proposal-prepared") throw missing94("Proposal missing", result);
   const confirmation = {
     step: "confirm",
     requestId: randomUUID(),

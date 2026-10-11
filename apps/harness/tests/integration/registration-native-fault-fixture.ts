@@ -5,6 +5,7 @@ import {
   requireWindowsSuccess,
 } from "../../src/registration/windows-observer-api.js";
 import { createWindowsVersionChild } from "../../src/registration/windows-version-child.js";
+import { manualClock } from "./registration-manual-clock.js";
 import {
   createHeldNativeVersionScenario,
   createRegistryVersionScenario,
@@ -66,11 +67,14 @@ async function createNativeTriggerScenario(root: string, trigger: Trigger, fault
       ? createNativeOverflowApi(trigger)
       : { api: createWindowsObserverApi(), injectedBytes: () => 0 };
   const injected = cleanupFault(source.api, fault);
-  const native = createWindowsVersionChild(root, () => injected.api);
+  // The deadline case runs its 2 s deadline and 5 s cleanup budget on a manual clock (#94).
+  const time = trigger === "deadline" ? manualClock() : undefined;
+  const native = createWindowsVersionChild(root, () => injected.api, time?.clock);
   if (trigger === "deadline" || trigger === "cancellation") {
     const scenario = await createHeldNativeVersionScenario(root, native);
     return {
       ...scenario,
+      time,
       ready: scenario.owned.promise,
       release: () => scenario.release.resolve(),
       injectedBytes: source.injectedBytes,
@@ -80,6 +84,7 @@ async function createNativeTriggerScenario(root: string, trigger: Trigger, fault
   const scenario = await createRegistryVersionScenario(root, native);
   return {
     ...scenario,
+    time,
     ready: Promise.resolve(),
     release: () => undefined,
     injectedBytes: source.injectedBytes,
@@ -87,11 +92,24 @@ async function createNativeTriggerScenario(root: string, trigger: Trigger, fault
   };
 }
 
+/**
+ * Moves a manual observer clock to the 2000 ms deadline, then in 10 ms polls until the
+ * observation is done. A run that never settles jumps far ahead so it cannot hang.
+ */
+async function settleOnManualClock(time: ReturnType<typeof manualClock>) {
+  let event = await time.at(2000);
+  while (event === "waiting" && time.clock.now() < 30000)
+    event = await time.at(time.clock.now() + 10);
+  if (event !== "done") time.jump(60000);
+}
+
 export async function observeNativeTrigger(root: string, trigger: Trigger, fault: Fault) {
   const scenario = await createNativeTriggerScenario(root, trigger, fault);
   const observation = scenario.observer.inspectGitVersion(scenario.request);
+  scenario.time?.follow(observation);
   try {
     await scenario.ready;
+    if (scenario.time !== undefined) await settleOnManualClock(scenario.time);
     const close = trigger === "cancellation" ? await scenario.observer.close() : undefined;
     const result = await observation;
     return {

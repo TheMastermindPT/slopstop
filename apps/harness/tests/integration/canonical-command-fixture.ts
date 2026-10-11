@@ -40,6 +40,7 @@ import {
   expectCorrectedRows,
   writeCounter99,
 } from "./conformance-counter-command.js";
+import { traced94 } from "./trace-94.js";
 
 export {
   appliedReceipt,
@@ -874,7 +875,7 @@ export function expectAppliedRows(
 
 export async function createSettlementFixture(handoffId = "88888888-8888-4888-8888-888888888501") {
   const file = await createCanonicalCommandDatabase();
-  const raw = createWorkerLocalLibsqlClient(file, "generation");
+  const raw = traced94(createWorkerLocalLibsqlClient(file, "generation"), "settlement");
   const observation: SettlementObservation = {};
   const calls: string[] = [];
   let event = 500;

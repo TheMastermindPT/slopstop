@@ -25,6 +25,7 @@ import {
   countingIdentityChild,
   createSelectedGitRepository,
 } from "./registration-git-fixture.js";
+import { missing94 } from "./trace-94.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -51,7 +52,7 @@ const requestRowSql =
 async function registerRepository(scenario: Scenario, owner: Owner) {
   const { registry } = scenario;
   const selected = await registry.selectRepository();
-  if (selected.status !== "prepared") throw new Error("Selection missing");
+  if (selected.status !== "prepared") throw missing94("Selection missing", selected);
   const trust = {
     repositorySelectionId: selected.repositorySelectionId,
     trustId: randomUUID(),
@@ -66,7 +67,7 @@ async function registerRepository(scenario: Scenario, owner: Owner) {
     admission: { ...scenario.request, ...trust },
   };
   const proposal = await owner.prepare(preparation);
-  if (proposal.status !== "prepared") throw new Error("Preparation missing");
+  if (proposal.status !== "prepared") throw missing94("Preparation missing", proposal);
   const confirmation = confirmationRequest(preparation, proposal);
   const registered = decodeStrict(RegisteredProjectSchema, await owner.confirm(confirmation));
   return { confirmation, registered };

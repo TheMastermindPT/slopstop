@@ -8,6 +8,7 @@ import {
   registrationSession,
   uuid,
 } from "./registration-flow-fixture.js";
+import { missing94 } from "./trace-94.js";
 
 const fingerprint = /^[0-9a-f]{64}$/;
 
@@ -31,7 +32,7 @@ it.runIf(process.platform === "win32")(
         projectId: expect.stringMatching(uuid),
         name: "repository",
       });
-      if (registered.status !== "registered") throw new Error("Registration missing");
+      if (registered.status !== "registered") throw missing94("Registration missing", registered);
 
       const again = await session.prepareFolder(session.directory, git);
       expect(again.result).toEqual({
@@ -64,7 +65,7 @@ it.runIf(process.platform === "win32")(
       const linked = path.join(session.root, "linked");
       commitAndLinkWorktree(session.directory, linked);
       const { git, registered } = await registerFolder(session, session.directory);
-      if (registered.status !== "registered") throw new Error("Registration missing");
+      if (registered.status !== "registered") throw missing94("Registration missing", registered);
 
       const worktree = await session.prepareFolder(linked, git);
       expect(worktree.result).toEqual({
@@ -73,7 +74,7 @@ it.runIf(process.platform === "win32")(
         name: "repository",
       });
       const listed = await session.list();
-      if (listed.status !== "listed") throw new Error("List missing");
+      if (listed.status !== "listed") throw missing94("List missing", listed);
       expect(listed.projects).toHaveLength(1);
     } finally {
       await session.dispose();
@@ -87,7 +88,7 @@ it.runIf(process.platform === "win32")(
     const session = await registrationSession();
     try {
       const { git, registered } = await registerFolder(session, session.directory);
-      if (registered.status !== "registered") throw new Error("Registration missing");
+      if (registered.status !== "registered") throw missing94("Registration missing", registered);
       // Fixture for active Storage whose registration publication did not survive.
       const database = new DatabaseSync(path.join(session.root, "installation", "application.db"));
       try {

@@ -11,6 +11,7 @@ import { observeRepositoryDirectory } from "../../src/storage/repository-identit
 import { checkedInMigrationRoot } from "./project-storage-runtime-fixture.js";
 import { registerFolder, registrationSession } from "./registration-flow-fixture.js";
 import { installedGit } from "./registration-git-fixture.js";
+import { missing94 } from "./trace-94.js";
 
 // B3: one case per physical pointer limit and one precedence case for the family.
 const roots: string[] = [];
@@ -87,7 +88,7 @@ it.runIf(process.platform === "win32")(
     let projectId: string;
     try {
       const { registered } = await registerFolder(session, session.directory);
-      if (registered.status !== "registered") throw new Error("Registration missing");
+      if (registered.status !== "registered") throw missing94("Registration missing", registered);
       projectId = registered.projectId;
     } finally {
       await session.dispose();

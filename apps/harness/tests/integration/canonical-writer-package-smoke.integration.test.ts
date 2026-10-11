@@ -37,11 +37,17 @@ import {
   type WriterProofResourceDecorators,
 } from "./canonical-writer-package-smoke-fixture.js";
 import { observeFixturePort, portAdapter } from "./canonical-writer-smoke-test-transport.js";
+import {
+  checkedInMigrationRoot,
+  createTemporaryApplicationRoot,
+} from "./project-storage-runtime-fixture.js";
+import { copyFromTemplate } from "./storage-root-template.js";
+import { step94 } from "./trace-94.js";
 
 const project = "00000000-0000-4000-8000-000000000101";
 const proofId = "00000000-0000-4000-8000-000000000162";
 const epochs = [141, 142].map((n) => decodeStrict(ProjectActivationIdSchema, id(n)));
-const migrations = path.resolve("apps/harness/drizzle");
+const migrations = checkedInMigrationRoot;
 const cleanup: (() => Promise<void>)[] = [];
 const native = {
   packageName: "fs-native-extensions",
@@ -102,11 +108,12 @@ function control(step = "audit.initialize", stepNumber = 1, request = 175) {
 }
 
 it("characterizes real Storage Q creation after a closed independent P owner", async () => {
-  const f = await seed();
-  await f.client.close();
+  // P must really open and stop in Q's root, so this case seeds its own root instead of a copy.
+  const root = await createTemporaryApplicationRoot();
+  await buildSeed(root);
   const owner = createProjectStorageOwner(
     createNodeProjectStorageDependencies({
-      applicationStorageRoot: f.root,
+      applicationStorageRoot: root,
       migrationResourcesRoot: migrations,
       applicationVersion: "0.0.0",
     }),
@@ -127,9 +134,24 @@ afterEach(async () => {
   for (const close of cleanup.splice(0).reverse()) await close();
 });
 
+/** The seeded canonical database, relative to its application root; set by the template build. */
+let seedDatabase = "";
+
+/** A fresh copy of this file's seeded Storage root (#94), with a client on its database. */
 async function seed() {
-  const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-writer-proof-"));
-  cleanup.push(() => rm(root, { recursive: true, force: true }));
+  const root = await copyFromTemplate("writer-proof-seed", async (template) => {
+    seedDatabase = await buildSeed(template);
+  });
+  const client = createWorkerLocalLibsqlClient(path.join(root, seedDatabase), "generation");
+  cleanup.push(() => client.close());
+  return { root, client };
+}
+
+/**
+ * Seeds a real Storage root: create, activation, two writer generations and a second receipt.
+ * Answers the seeded canonical database path relative to `root`.
+ */
+async function buildSeed(root: string): Promise<string> {
   const dependencies = createNodeProjectStorageDependencies({
     applicationStorageRoot: root,
     migrationResourcesRoot: migrations,
@@ -137,25 +159,41 @@ async function seed() {
     clock: { now: () => time(0) },
   });
   const owner = createProjectStorageOwner(dependencies);
-  cleanup.push(() => owner.stop());
-  const created = await owner.create(
-    decodeStrict(ProjectStorageCreateRequestSchema, {
-      projectId: project,
-      createRequestId: id(111),
-    }),
+  try {
+    return await seedOwner(owner, root);
+  } finally {
+    await step94("smoke-seed.stop", () => owner.stop());
+  }
+}
+
+async function seedOwner(owner: ReturnType<typeof createProjectStorageOwner>, root: string) {
+  const created = await step94("smoke-seed.create", () =>
+    owner.create(
+      decodeStrict(ProjectStorageCreateRequestSchema, {
+        projectId: project,
+        createRequestId: id(111),
+      }),
+    ),
   );
   expect(created.status).toBe("ready");
-  const opened = await owner.acquireActivation({ projectId: writerProofProjectId });
+  const opened = await step94("smoke-seed.open", () =>
+    owner.acquireActivation({ projectId: writerProofProjectId }),
+  );
   if (opened.status !== "ready" || opened.session.mode !== "read-write")
     throw new Error("Seed Storage unavailable");
   const database = opened.session.canonicalDatabasePath;
-  await seedGenerations(database);
+  const relative = path.relative(root, database);
+  if (relative.startsWith("..") || path.isAbsolute(relative))
+    throw new Error("The seeded database lies outside its Storage root.");
+  await step94("smoke-seed.generations", () => seedGenerations(database));
   const client = createWorkerLocalLibsqlClient(database, "generation");
-  cleanup.push(() => client.close());
-  await seedSecondReceipt(client);
-  await opened.session.close();
-  await owner.stop();
-  return { root, client };
+  try {
+    await step94("smoke-seed.receipt", () => seedSecondReceipt(client));
+  } finally {
+    await client.close();
+  }
+  await step94("smoke-seed.close", () => opened.session.close());
+  return relative;
 }
 
 async function seedGenerations(database: string) {
@@ -592,32 +630,34 @@ it.each(
   async ({ table, column }) => {
     const f = await seed();
     const reached = vi.fn();
-    const run = await launch(f.root, (client) => ({
-      close: () => client.close(),
-      transaction: (mode) => client.transaction(mode),
-      execute: async (statement, args) => {
-        const result = await client.execute(statement, args);
-        const sql = typeof statement === "string" ? statement : statement.sql;
-        if (sql === `SELECT * FROM ${table}`) {
-          reached();
-          const index = result.columns.indexOf(column);
-          expect(index).toBeGreaterThanOrEqual(0);
-          return {
-            ...result,
-            rows: result.rows.map((row, n) =>
-              n === 0
-                ? row.map((value, i) =>
-                    i === index ? (value === null ? "private-invalid" : null) : value,
-                  )
-                : row,
-            ),
-          };
-        }
-        return result;
-      },
-    }));
+    const run = await step94("smoke.launch", () =>
+      launch(f.root, (client) => ({
+        close: () => client.close(),
+        transaction: (mode) => client.transaction(mode),
+        execute: async (statement, args) => {
+          const result = await client.execute(statement, args);
+          const sql = typeof statement === "string" ? statement : statement.sql;
+          if (sql === `SELECT * FROM ${table}`) {
+            reached();
+            const index = result.columns.indexOf(column);
+            expect(index).toBeGreaterThanOrEqual(0);
+            return {
+              ...result,
+              rows: result.rows.map((row, n) =>
+                n === 0
+                  ? row.map((value, i) =>
+                      i === index ? (value === null ? "private-invalid" : null) : value,
+                    )
+                  : row,
+              ),
+            };
+          }
+          return result;
+        },
+      })),
+    );
     run.port.postMessage(control());
-    await run.transport.terminated;
+    await step94("smoke.terminated", () => run.transport.terminated);
     expect(run.exits).toEqual([1]);
     expect(reached).toHaveBeenCalled();
     expect(run.results).toEqual([]);

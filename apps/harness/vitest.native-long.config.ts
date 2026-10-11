@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import { nativeLongIntegrationFiles } from "./vitest.native-long-files.js";
+import { trace94TestOptions } from "./vitest.trace-94.js";
 
 // These files run for minutes and drive SQLite workers and harness children; overlapping them
 // with every other file stalled unrelated cases past 15 s. The last group order runs them after
@@ -13,5 +14,6 @@ export default defineConfig({
     testTimeout: 15_000,
     maxWorkers: 2,
     sequence: { groupOrder: 2 },
+    ...trace94TestOptions,
   },
 });

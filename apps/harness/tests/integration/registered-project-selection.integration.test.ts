@@ -32,6 +32,7 @@ import {
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
 import { confirmationRequest, installedGit } from "./registration-git-fixture.js";
+import { missing94 } from "./trace-94.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -79,6 +80,55 @@ async function activate(host: ReturnType<typeof runtime>, projectId: ProjectId) 
       payload: CanonicalProjectActivationResultSchema,
     }),
   )(response).payload;
+}
+
+type Activation = Awaited<ReturnType<typeof activate>>;
+
+/** Answers `activation` when it is active, or throws `label` with the actual result. */
+function requireActive(activation: Activation, label: string) {
+  if (activation.status !== "active") throw missing94(label, activation);
+  return activation;
+}
+
+/** Switches `host` from its active Project to `projectId` and answers the switch result. */
+async function switchProject(
+  host: ReturnType<typeof runtime>,
+  from: Parameters<typeof createProjectSwitchCommand>[1]["from"],
+  projectId: ProjectId,
+) {
+  const response = await host.send(
+    createProjectSwitchCommand(
+      { messageId: randomUUID(), sentAt: new Date().toISOString() },
+      { from, to: { projectId } },
+    ),
+  );
+  return Schema.decodeUnknownSync(
+    Schema.Struct({
+      event: Schema.Literal("project.switch.result"),
+      payload: CanonicalProjectSwitchResultSchema,
+    }),
+  )(response).payload;
+}
+
+/** The selection test command for `projectId` under `activationId`. */
+function testCommand(projectId: ProjectId, activationId: string) {
+  return decodeStrict(CanonicalProjectCommandRequestSchema, {
+    projectId,
+    activationId,
+    command: {
+      commandId: randomUUID(),
+      type: "selection.test-command",
+      version: 1,
+      payload: {},
+    },
+  });
+}
+
+/** Sends one Project command through `host` and answers its raw response. */
+function sendCommand(host: ReturnType<typeof runtime>, request: ReturnType<typeof testCommand>) {
+  return host.send(
+    createProjectCommand({ messageId: randomUUID(), sentAt: new Date().toISOString() }, request),
+  );
 }
 
 function rows(f: Awaited<ReturnType<typeof registeredFixture>>, sql: string) {
@@ -156,7 +206,7 @@ async function registeredProjects(count: number) {
     const projects = [];
     for (const directory of directories) {
       const selected = await scenario.registry.selectRepository();
-      if (selected.status !== "prepared") throw new Error("Selection missing");
+      if (selected.status !== "prepared") throw missing94("Selection missing", selected);
       const trust = {
         repositorySelectionId: selected.repositorySelectionId,
         trustId: randomUUID(),
@@ -170,7 +220,7 @@ async function registeredProjects(count: number) {
         admission: { ...scenario.request, ...trust },
       };
       const proposal = await owner.prepare(preparation);
-      if (proposal.status !== "prepared") throw new Error("Preparation missing");
+      if (proposal.status !== "prepared") throw missing94("Preparation missing", proposal);
       const registered = decodeStrict(
         RegisteredProjectSchema,
         await owner.confirm(confirmationRequest(preparation, proposal)),
@@ -185,6 +235,12 @@ async function registeredProjects(count: number) {
   }
 }
 
+async function registeredPair() {
+  const [a, b] = await registeredProjects(2);
+  if (a === undefined || b === undefined) throw new Error("Registered Projects missing");
+  return [a, b] as const;
+}
+
 async function registeredFixture() {
   const [project] = await registeredProjects(1);
   if (project === undefined) throw new Error("Registered Project missing");
@@ -194,73 +250,43 @@ async function registeredFixture() {
 it.runIf(process.platform === "win32")(
   "runtime switches between two registered Projects and releases the old writer without creating Storage",
   async () => {
-    const [a, b] = await registeredProjects(2);
-    if (a === undefined || b === undefined) throw new Error("Registered Projects missing");
+    const [a, b] = await registeredPair();
     expect(b.registered.projectId).not.toBe(a.registered.projectId);
     const before = rows(a, "SELECT * FROM storage_generations ORDER BY project_id");
     expect(before).toHaveLength(2);
     const host = runtime(a.options);
     const reopened = runtime(a.options);
     try {
-      const activeA = await activate(host, a.registered.projectId);
-      if (activeA.status !== "active") throw new Error("Activation A missing");
-      expect(activeA.access).toBe("read-write");
-      const response = await host.send(
-        createProjectSwitchCommand(
-          { messageId: randomUUID(), sentAt: new Date().toISOString() },
-          {
-            from: { projectId: a.registered.projectId, activationId: activeA.activationId },
-            to: { projectId: b.registered.projectId },
-          },
-        ),
+      const activeA = requireActive(
+        await activate(host, a.registered.projectId),
+        "Activation A missing",
       );
-      const switched = Schema.decodeUnknownSync(
-        Schema.Struct({
-          event: Schema.Literal("project.switch.result"),
-          payload: CanonicalProjectSwitchResultSchema,
-        }),
-      )(response).payload;
+      expect(activeA.access).toBe("read-write");
+      const switched = await switchProject(
+        host,
+        { projectId: a.registered.projectId, activationId: activeA.activationId },
+        b.registered.projectId,
+      );
       if (switched.status !== "target-result" || switched.target.status !== "active")
-        throw new Error("Activation B missing");
+        throw missing94("Activation B missing", switched);
       expect(switched.target).toMatchObject({
         access: "read-write",
         request: { projectId: b.registered.projectId },
       });
       expect(switched.target.activationId).not.toBe(activeA.activationId);
-      const oldCommand = decodeStrict(CanonicalProjectCommandRequestSchema, {
-        projectId: a.registered.projectId,
-        activationId: activeA.activationId,
-        command: {
-          commandId: randomUUID(),
-          type: "selection.test-command",
-          version: 1,
-          payload: {},
-        },
-      });
-      expect(
-        await host.send(
-          createProjectCommand(
-            { messageId: randomUUID(), sentAt: new Date().toISOString() },
-            oldCommand,
-          ),
-        ),
-      ).toMatchObject({
+      const oldCommand = testCommand(a.registered.projectId, activeA.activationId);
+      expect(await sendCommand(host, oldCommand)).toMatchObject({
         event: "project.command.result",
         payload: { status: "project-mismatch", diagnostic: { code: "PROJECT_NOT_ACTIVE" } },
       });
       // A's native lease must be released even while the first runtime still owns B.
-      const reopenedA = await activate(reopened, a.registered.projectId);
-      if (reopenedA.status !== "active") throw new Error("Reopened A missing");
+      const reopenedA = requireActive(
+        await activate(reopened, a.registered.projectId),
+        "Reopened A missing",
+      );
       expect(reopenedA.access).toBe("read-write");
       expect(reopenedA.activationId).not.toBe(activeA.activationId);
-      expect(
-        await reopened.send(
-          createProjectCommand(
-            { messageId: randomUUID(), sentAt: new Date().toISOString() },
-            oldCommand,
-          ),
-        ),
-      ).toMatchObject({
+      expect(await sendCommand(reopened, oldCommand)).toMatchObject({
         payload: { status: "stale-activation", diagnostic: { code: "PROJECT_ACTIVATION_STALE" } },
       });
       expect(rows(a, "SELECT * FROM storage_generations ORDER BY project_id")).toEqual(before);
@@ -419,7 +445,7 @@ it.runIf(process.platform === "win32")(
       const second = await activate(reopened, f.registered.projectId);
       expect(second).toMatchObject({ status: "active", access: "read-write" });
       if (activation.status !== "active" || second.status !== "active")
-        throw new Error("Activation missing");
+        throw missing94("Activation missing", { activation, second });
       expect(second.activationId).not.toBe(activation.activationId);
       expect(rows(f, "SELECT * FROM storage_generations")).toEqual(before);
       expect(
@@ -438,7 +464,7 @@ it.runIf(process.platform === "win32")(
     const host = runtime(f.options);
     try {
       const active = await activate(host, f.registered.projectId);
-      if (active.status !== "active") throw new Error("Activation missing");
+      if (active.status !== "active") throw missing94("Activation missing", active);
       await rm(f.directory, { recursive: true });
       expect(
         await host.send(
@@ -486,25 +512,9 @@ it.runIf(process.platform === "win32")(
         writerGeneration: null,
         diagnostic: { code: "WRITER_UNAVAILABLE" },
       });
-      if (selected.status !== "active") throw new Error("Activation missing");
-      const command = decodeStrict(CanonicalProjectCommandRequestSchema, {
-        projectId: f.registered.projectId,
-        activationId: selected.activationId,
-        command: {
-          commandId: randomUUID(),
-          type: "selection.test-command",
-          version: 1,
-          payload: {},
-        },
-      });
-      expect(
-        await reader.send(
-          createProjectCommand(
-            { messageId: randomUUID(), sentAt: new Date().toISOString() },
-            command,
-          ),
-        ),
-      ).toMatchObject({
+      if (selected.status !== "active") throw missing94("Activation missing", selected);
+      const command = testCommand(f.registered.projectId, selected.activationId);
+      expect(await sendCommand(reader, command)).toMatchObject({
         event: "project.command.result",
         payload: { status: "read-only", diagnostic: { code: "WRITER_UNAVAILABLE" } },
       });

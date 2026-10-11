@@ -3,6 +3,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 import { registrationSession, uuid } from "./registration-flow-fixture.js";
 import { installedGit } from "./registration-git-fixture.js";
+import { missing94 } from "./trace-94.js";
 
 it.runIf(process.platform === "win32")(
   "drives folder trust and both Git consent stages across the harness boundary",
@@ -17,7 +18,7 @@ it.runIf(process.platform === "win32")(
         status: "repository-selected",
         repositorySelectionId: expect.stringMatching(uuid),
       });
-      if (selected.status !== "repository-selected") throw new Error("Selection missing");
+      if (selected.status !== "repository-selected") throw missing94("Selection missing", selected);
       expect(
         await session.register({
           step: "decide-trust",
@@ -32,7 +33,7 @@ it.runIf(process.platform === "win32")(
         selectionId: expect.stringMatching(uuid),
         executablePath: installedGit,
       });
-      if (git.status !== "git-prepared") throw new Error("Git preparation missing");
+      if (git.status !== "git-prepared") throw missing94("Git preparation missing", git);
       const version = await session.register({
         step: "decide-git-version",
         selectionId: git.selectionId,
@@ -45,7 +46,8 @@ it.runIf(process.platform === "win32")(
         observationId: expect.stringMatching(uuid),
         version: expect.stringMatching(/^\d+\.\d+\.\d+/),
       });
-      if (version.status !== "git-version-observed") throw new Error("Git version missing");
+      if (version.status !== "git-version-observed")
+        throw missing94("Git version missing", version);
       expect(
         await session.register({
           step: "decide-identity-queries",
@@ -73,7 +75,7 @@ it.runIf(process.platform === "win32")(
         }),
       ).toEqual({ status: "rejected", code: "REPOSITORY_NOT_FOUND" });
       const git = await session.register({ step: "prepare-git" });
-      if (git.status !== "git-prepared") throw new Error("Git preparation missing");
+      if (git.status !== "git-prepared") throw missing94("Git preparation missing", git);
       expect(
         await session.register({
           step: "decide-git-version",

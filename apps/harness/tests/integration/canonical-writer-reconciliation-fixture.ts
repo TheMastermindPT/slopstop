@@ -38,6 +38,7 @@ import {
 } from "./canonical-writer-recovery-fixture.js";
 import { expectPublicBrokenRecoveryActivation } from "./canonical-writer-recovery-runtime-fixture.js";
 import { writeCounter99 } from "./conformance-counter-command.js";
+import { traced94 } from "./trace-94.js";
 
 async function prepareRecoveryFamily(f: RecoveryFixture, family: string) {
   if (["conflict", "older"].includes(family))
@@ -243,7 +244,7 @@ export async function expectOtherProjectRecoveryIsolation() {
   const other = decodeStrict(ProjectIdSchema, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2");
   const file = await createCanonicalCommandDatabase(true, other);
   const f = await prepareRecoveryActivation(true);
-  const client = createWorkerLocalLibsqlClient(file, "generation");
+  const client = traced94(createWorkerLocalLibsqlClient(file, "generation"), "recovery-isolation");
   try {
     const before = await f.snapshot();
     const factory = createCanonicalCommandRepositoryFactory({
