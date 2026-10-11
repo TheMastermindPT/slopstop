@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 5ff9dec47e16b230158fcc66ed1bd14acec8b4c5a3ff56700d1c4c03d6e4d009
+content_hash: 64dd7168a29f851d85fc022ed537f2383afb40b607d5317a607633eb674475b7
 ---
 
 # Conversation — Human Decisions
@@ -507,3 +507,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **(d):** D1, injecting the manual clock into the native-observer deadline test (about 7 s down to under 1 s, every assertion kept), plus a separate product slice d-P1 that caches the generated migration resources per authority, so they are not reloaded on every application.db open. No verification is removed; d-P2 (fewer integrity and schema checks) is not chosen.
 - **Instrumentation stays** in the repository, off by default and proved inert when off.
 - **The 4a synthetic burst is repeated** after (c), to measure the direct effect on the 18 timeouts.
+
+## 50. #94 d-P1 dropped (user decision, 2026-10-11)
+
+- Step 0 measured the migration-resource load at about 3 ms of the about 50 ms per application.db open (about 6%). Caching would save about 0.3 s per registration-flow test (4.5-6 s idle), at the cost of moving resource verification from every open to once per process; the digest middle option saves almost nothing. The user chose not to do d-P1; it stays recorded in #94. The bigger levers (fewer opens per registry step, or fewer per-open verifications) are later design decisions.
+- The #94 fix therefore consists of (C) seeded canonical templates plus the cwd fix, D1 (the manual clock in the native-observer deadline test) and the instrumentation, which stays off by default.
