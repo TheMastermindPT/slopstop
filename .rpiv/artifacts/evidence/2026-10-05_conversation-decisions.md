@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 6bc74fda6a84c9db4705cd236df2e9f9196664a1cbb405bf1c9053c2c430685d
+content_hash: 8f3bfa72b074d1f24bb0ec91d4cda5bb691ae873b151d5e52558ab174dea94cb
 ---
 
 # Conversation — Human Decisions
@@ -569,3 +569,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Activation check in settleSave (C6):** the real app cannot reach it today (G13 drain, in-order answers). The user chose "Corrigir por precaução": a pending save also requires the current `activationId`, while a dropped save's late answer stays accepted (fifth drain case). Add one row.
 - **Stale-activation save copy:** the user chose to match the §54 load notice. The save line for a stale activation now says "This Project was reopened elsewhere. Restart Ragnarok to open it again." instead of the harness text "The Project was reopened. Reload the conversation."
 - Pedro's Narrator listen (§52) remains a manual gate before acceptance. Round 2 is the last.
+
+## 57. C1 S4 integration path under the current rpiv chain (user decision, 2026-10-11)
+
+- The current rpiv workflow runs implement → deep-review → validate → PR, with mutation once on the final candidate after the last review round, and integration under a separate authorization.
+- **Decision:** after Pedro accepts S4b, run `/rpiv:deep-review` and `/rpiv:validate` over the S4 range (merge-base `b96b305` with main through the final S4b head; `07651a2` is the accepted S4a head) before the S4a+S4b squash into main. This replaces the G30 "squash right after acceptance" path for S4; S5 is not awaited.
+- The root Stryker runs once on the final S4b candidate after round 2 closes; earlier runs (`aac55b5`, the T3 targeted run) are diagnostics only.
