@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 8f3bfa72b074d1f24bb0ec91d4cda5bb691ae873b151d5e52558ab174dea94cb
+content_hash: 6a7b59911432bcbd4b0d97b042b2817fe689f019f3e6b40293f15ce9f5d7d3d3
 ---
 
 # Conversation — Human Decisions
@@ -575,3 +575,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - The current rpiv workflow runs implement → deep-review → validate → PR, with mutation once on the final candidate after the last review round, and integration under a separate authorization.
 - **Decision:** after Pedro accepts S4b, run `/rpiv:deep-review` and `/rpiv:validate` over the S4 range (merge-base `b96b305` with main through the final S4b head; `07651a2` is the accepted S4a head) before the S4a+S4b squash into main. This replaces the G30 "squash right after acceptance" path for S4; S5 is not awaited.
 - The root Stryker runs once on the final S4b candidate after round 2 closes; earlier runs (`aac55b5`, the T3 targeted run) are diagnostics only.
+
+## 58. C1 S4b candidate review round 2 (user decisions, 2026-10-11)
+
+- Round 2 (the last) ran the three reviewers on `ff2cd8e`: all passed, no blocker; every round-1 fix T1-T14 holds. One concern and nine suggestions remain (table in the local evidence folder `.rpiv/evidence/2026-10-09_13-54-08_conversation-c1-local-save/s4b-review-round2.md`).
+- **Path:** the user chose "F1-F7 sem 3.ª ronda". The implementer applies F1-F7 with red-green where behavior or tests change; there is no third review round, and the unreviewed fix delta is recorded as residual risk. F8-F10 (shared activation fixture, a UI row for T13, a neutral owner for `staleActivationDetail`) are follow-ups.
+- **F7 copy:** under a read-only activation with a kept uncertain or dropped outcome, the line drops the "Try again to check it." sentence and says only "The save could not be confirmed.", because no Try again is offered (T6).
+- After the fixes: the root Stryker once on the final candidate, then a fresh package, E5 and E4; then Pedro's Narrator listen and acceptance; then deep-review and validate over the S4 range (§57).
