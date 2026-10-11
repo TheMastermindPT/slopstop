@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: c29f21d8b1ea0a8dbfc3af09aa4726052df71341d09765c81d9639a2e92534a0
+content_hash: 7c34bc6303aca5f24128f7580e70c32d12e3eebce87f6330d372ea5cde12bae6
 ---
 
 # Conversation — Human Decisions
@@ -587,3 +587,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - **Exception to the rpiv rule** "mutation runs once on the final candidate": the user chose "esta vai ser a excepção. apenas nos ficheiros alterados". The final mutation run on `020cb6a` covers only the five source files changed since the `aac55b5` root run: `conversation-region.tsx`, `load-notice.tsx`, `save-outcome.ts`, `settle-save.ts` and `use-conversation-save.ts`.
 - The other mutate entries keep their `aac55b5` scores (and `project-entry-bridge.ts` its T3 score), because their source is unchanged since then. Residual risk: changed tests are not re-measured against unchanged sources. This is a one-off exception, not a new rule.
+
+## 60. C1 S4b Narrator listen and acceptance (user decisions, 2026-10-11)
+
+- **Narrator listen (§52):** Pedro listened to the packaged candidate `a1fc648` on a separate seeded userData (`--user-data-dir`, the real `%APPDATA%/SlopStop` proven unchanged) following `narrator-checklist.md` part A, steps 1-8, and answered "tudo ok". Part B states (failures, read-only, stale activation, Try again) are covered by the ui-ux screenshot sign-off and the e2e rows. The NVDA pass stays unavailable (§52).
+- **Acceptance:** Pedro accepted S4b at the exact revision `a1fc648` ("Aceito a1fc648"), with the recorded residual risks: no third review round for the F1-F7 delta and the mutant-234 test (§58), and the changed-files-only final mutation (§59).
+- Next (§57): deep-review and validate over `b96b305..a1fc648`, then a separate integration authorization for the S4a+S4b squash into main.
