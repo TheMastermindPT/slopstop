@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: db715dd72839a52626818f4d0476370bf705709b43bd63f89f51ad6d3f16e80d
+content_hash: f276f08a014f14db27a773bef9c81492e080ea7cb8dd649ef33c8b6cdc6573ec
 ---
 
 # Conversation — Human Decisions
@@ -526,3 +526,19 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - #94 candidate review round 2 (the last) closed every serious round-1 item. One evidence claim was still overstated: run 4 of batch 2b had several 6-10x rows, not one. Four small suggestions remained: `seedDatabase` set only inside the template build, keeping the original build error when cleanup fails, a headed cwd log, and the Outcome's "Still open" list.
 - The user chose to apply these final corrections without another review round, with the coordinator checking each item. Then come the final heavy runs on the final head (integration, native-long, deep-style gates), then the merge decision.
+
+## 54. C1 S4b visual changes (user decisions, 2026-10-11)
+
+- The ui-ux review of the S4b screenshots (C1-C11) is applied in full:
+  - a centred 720 px column;
+  - Save inside the field bar;
+  - the composer anchored at the bottom;
+  - a painted disabled look for an `aria-disabled` Save (still focusable);
+  - status-row gap and tone icons;
+  - the over-limit fault slot;
+  - failed-load notices in the Failure tone, with Reload on stale;
+  - the uncertain row in the Unknown tone, with a ghost "Try again";
+  - message meta on one baseline;
+  - forced-colours edges.
+- **Contract amendment:** a rejected save or read (a preload call rejected, a rejected load) uses the Failure tone (fault slot or Failure notice, circle-x), not the Broken tone. Broken is reserved for an actual broken status. This amends the design's CNV-B32 and CNV-B35 rows; the sealed design body stays, and this log is authoritative.
+- **Copy:** under the composer, when the conversation did not load, Save's reason reads "Saving is off until the conversation loads." (approved), instead of repeating the notice.
