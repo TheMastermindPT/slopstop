@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 13bc5022963b8d674d9f0d13ed83b0ad83f93f8dc5978bea65ce054a36505c8d
+content_hash: db715dd72839a52626818f4d0476370bf705709b43bd63f89f51ad6d3f16e80d
 ---
 
 # Conversation — Human Decisions
@@ -521,3 +521,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - NVDA 2026.2 crashes at start on this machine. Its log shows `AttributeError: function 'lou_freeTableFile' not found`: it loads Windows' own `C:\Windows\System32\liblouis.dll` (Microsoft-signed, used by Narrator) instead of its bundled one. That cannot be fixed without administrator rights or touching a system file.
 - The user chose Narrator only for now. The §33 agent NVDA speech-log pass is recorded as "unavailable (incompatibility)", never as passed. The automated accessibility checks (axe, forced colours, zoom, announcements) and the user's Narrator listen stay. The NVDA pass returns when a compatible NVDA version exists.
+
+## 53. #94 closing path (user decision, 2026-10-11)
+
+- #94 candidate review round 2 (the last) closed every serious round-1 item. One evidence claim was still overstated: run 4 of batch 2b had several 6-10x rows, not one. Four small suggestions remained: `seedDatabase` set only inside the template build, keeping the original build error when cleanup fails, a headed cwd log, and the Outcome's "Still open" list.
+- The user chose to apply these final corrections without another review round, with the coordinator checking each item. Then come the final heavy runs on the final head (integration, native-long, deep-style gates), then the merge decision.
