@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 78d91aadf52fd4ee971feadb31e328b1a00d5d51fc50141e4ca3736fe8207e8b
+content_hash: ccb3f9a66793385e601b683e7f0295dcb3705a2456443ac7a6a731abe56dd048
 ---
 
 # Conversation — Human Decisions
@@ -542,3 +542,4 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - forced-colours edges.
 - **Contract amendment:** a rejected save or read (a preload call rejected, a rejected load) uses the Failure tone (fault slot or Failure notice, circle-x), not the Broken tone. Broken is reserved for an actual broken status. This amends the design's CNV-B32 and CNV-B35 rows; the sealed design body stays, and this log is authoritative.
 - **Copy:** under the composer, when the conversation did not load, Save's reason reads "Saving is off until the conversation loads." (approved), instead of repeating the notice.
+- **Stale-activation copy (user, same day):** the implementer checked the code. Choosing the Project again, or switching away and back, is always refused (stale-activation, then PROJECT_ALREADY_ACTIVE). Only restarting the app recovers. The notice keeps the title "Could not load this conversation." and gets the approved detail "This Project was reopened elsewhere. Restart Ragnarok to open it again." The harness diagnostic text stays for Diagnostics and logs. The §45 recovery gap stands.
