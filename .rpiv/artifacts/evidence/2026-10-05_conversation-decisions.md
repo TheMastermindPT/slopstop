@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 67b9b463efe7c3b924eb175871f1beb59740d9cdd0831a599831b42564a78377
+content_hash: 79e323dd27112b6910613c18a3876dab697eb4f9a8bd5b126d9f497a37a4d685
 ---
 
 # Conversation — Human Decisions
@@ -526,6 +526,7 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - #94 candidate review round 2 (the last) closed every serious round-1 item. One evidence claim was still overstated: run 4 of batch 2b had several 6-10x rows, not one. Four small suggestions remained: `seedDatabase` set only inside the template build, keeping the original build error when cleanup fails, a headed cwd log, and the Outcome's "Still open" list.
 - The user chose to apply these final corrections without another review round, with the coordinator checking each item. Then come the final heavy runs on the final head (integration, native-long, deep-style gates), then the merge decision.
+- Final head e993ec0 passed once on a clean tree: `pnpm check:deep` exit 0 (coverage 4781 passed, integration 2161 passed, e2e 11/11, launch-smoke OK, no timeout) and the headed cwd log from apps/harness 149/149. The user chose a squash merge into main (f45de07); push only when asked.
 
 ## 54. C1 S4b visual changes (user decisions, 2026-10-11)
 
