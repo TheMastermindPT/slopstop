@@ -1,0 +1,852 @@
+{
+  "schema": 1,
+  "artifact": "2026-10-11_19-07-31_b96b305-a1fc648-c1-s4-conversation-window.md",
+  "target": "b96b305..a1fc648",
+  "createdAt": "2026-10-11T18:54:58.378Z",
+  "review": {
+    "date": "2026-10-11T19:07:31+0100",
+    "author": "Pedro Mesquita",
+    "repository": "slopstop",
+    "branch": "feat/c1-s4-conversation-window",
+    "commit": "a1fc648",
+    "review_type": "pr",
+    "scope": "b96b305..a1fc648 (C1 S4a+S4b Conversation window)",
+    "scope_strategy": "explicit-range",
+    "in_scope_files_count": 86,
+    "status": "ready",
+    "review_status": "complete",
+    "sections": [
+      "## Reconciliation Notes\n\n- **Depth:** rigorous (lane `rigorous`; passed token `lane=rigorous`, `lane.mjs --range` also rigorous: lines 10001 > 150, files 86 >= 61, manifest `apps/desktop/package.json`, sensitive words `ipc`, `security`, `preload`).\n- **Scope:** explicit range `b96b305..a1fc648` resolved by the helper as `3ad6b8f..a1fc648` (b96b305 inclusive; it is the docs commit approving design revision 5.3). 86 reviewable files, 7 shards. `InScopeFiles` = `ChangedFiles`, so the in-scope pre-filter dropped 0 findings.\n- **Where the code was read:** the S4 worktree `slopstop-c1-s4` at HEAD a1fc648 (clean, read-only). This review lives in the main checkout; every evidence path resolves against the worktree.\n- **Gates (all read-only, no heavy runs):** desktop typecheck 0 errors; Biome lint and format 0 diagnostics on changed files; dependency-cruiser 0 violations; Knip 0 issues; jscpd 0 clones touching the diff; ast-grep 0 security sinks (2 empty-catch hits checked by hand: both catches have bodies); opengrep 1 candidate in a test file (dropped by Security); CodeScene `analyze_change_set` against 3ad6b8f: quality gates passed, 58 files, no degradations. SonarQube skipped: declared unused (AGENTS.md:35). No e2e, package, launch-smoke, Stryker or full test suite was run.\n- **Lenses:** 7 Quality and 7 Security diff-analysts (Security on every shard, rigorous lane). Security returned 0 rows on all shards; shard 6 explicitly traced the new IPC channels, preload, bridge strict decode, CSP builder and window options.\n- **Wave 3:** Predicate-Trace ran (gating predicates present); its two rows not already in Quality's table were added as Q31 and Q32 before verification instead of as a follow-up. The interaction sweep returned IX-1..IX-5, adopted as I1..I4; IX-5 (Low) was folded into Q11's evidence. Gap-finder produced G1..G5 at suggestion: the boundary files (IPC, bridge, preload, security, main) had no lens row but were traced row-free by Security shard 6, so no gap row was raised for them.\n- **Verification:** 41 findings verified. The verifier returned 29 Verified and 12 Weakened; after the overrides below the final tally is 29 Verified, 8 Weakened (demoted one tier) and 4 Falsified (withdrawn). Tag overrides: Q16 and Q32 were tagged Weakened but their justifications say the claimed behaviour cannot happen, so they were set to Falsified. Edge case: I1 (Weakened by the verifier) lost all three constituents (Q16 Falsified, Q21 and Q22 Weakened) and I2 (Weakened) lost both (Q13, Q14 Weakened, the behaviour is decided by design G25), and an interaction finding cannot sit below important, so both were withdrawn. `[subsumed-by]` notes pointing at I1 and I2 were dropped.\n- **Precedent weighting:** Q17 raised suggestion to important (`[precedent-weighted]`): the recovery-affordance class needed follow-ups in 43bc303, ca839da and ef3f92f. Q32 was also weighted, then withdrawn.\n- **Peer-mirror:** no bumps. 13 of the 22 stem pairs compare renderer or main files with harness files (cross-layer name matches, not peers) and 7 name deleted prototype files; the real peers showed design-driven divergence only.\n- **Fix rounds:** `git log --format='%(trailers:key=Review,valueonly)' 3ad6b8f..a1fc648` prints no value, so no deep-review fix round exists yet. The S4b candidate already had two independent review rounds (decisions log §56-§59), so any fix round on these findings is the human's call.\n- **Advisor:** not available; inline reconciliation.",
+      "## Spec Conformance\n\nno linked issue found (searched: PR body, branch name, commit messages). The only issue reference in the range is #123 (the bridge Effect migration that ends exception G28), which this range does not implement.\nrpiv contract conformance: run /rpiv:validate C:/Users/pedro/Documents/GitHub/slopstop-c1-s4/.rpiv/artifacts/designs/2026-10-09_13-54-08_conversation-c1-local-save.md",
+      "## Dependencies\n\n- Added: `@fontsource/cascadia-code`, `@fontsource/cinzel`, `@fontsource/red-hat-text` 5.3.0 (runtime, OFL-1.1, bundled by Vite into the renderer; `node_modules` is not packaged) and `@axe-core/playwright` 4.13.0 (dev, MPL-2.0, e2e only), all through exact-pinned catalog entries. Knip: no unused or unlisted dependencies.\n- CVE lens: no advisories found for the five new packages (web search only; no OSV or `pnpm audit` gate ran).\n- `pnpm-lock.yaml` also re-resolved unrelated peer contexts (likec4 now resolves its required react peers; vite, vitest and others gain terser/tsx/@opentelemetry/api peer suffixes; get-tsconfig 4.14.1 deduped to 4.14.3) and rebuilt the catalog block. No other version changed. This is lockfile drift from a full re-resolve, not caused by the new dependencies; it fills a peer that was missing at base.",
+      "## Pattern Analysis\n\n| new file | peer | result |\n| --- | --- | --- |\n| `apps/desktop/src/renderer/conversation/use-project-conversation.ts` | `apps/desktop/src/renderer/use-project-upgrade.ts` | Different responsibilities. The peer drops stale results with `host.isCurrent(generation)`; the conversation hook has no generation guard itself. Stale-answer protection lives in `settle-save.ts` (activation + epoch) for saves only; the read commit is unguarded (see Q21, Q22), which is latent today because the harness serialises reads and saves. |\n| `apps/desktop/src/renderer/conversation/save-outcome.ts` | `apps/desktop/src/renderer/add-repository/outcomes.ts` | Diverged by design: a status line with one `tryAgain` flag and its own tone vocabulary instead of an outcome screen with an action list. |\n| `apps/desktop/src/renderer/conversation/conversation-test-harness.tsx` | `apps/desktop/src/renderer/test-api.ts` | 13 mirrored, 6 diverged (scripted overrides). |\n| `apps/desktop/src/shared/content-security-policy.ts` | `apps/desktop/src/main/security.ts` | 4 mirrored; adds the `meta` delivery. |\n\n13 further pairs matched renderer or main files to harness files by name stem only (different layers), and 7 named prototype files deleted in this range.",
+      "## Impact\n\n- `apps/desktop/src/shared/desktop-api.ts` is the hub: preload, the project-entry and registration IPC, `main.ts`, `window.d.ts` and three renderer fakes depend on it. The channel names are also copied as literals in `tests/e2e/conversation-accessibility.test.ts:261-262` (Q24), and the API key list is hand-copied in `package-smoke-verifier.ts:30-46`, its test (Q30) and `tests/e2e/shell.test.ts`.\n- `apps/desktop/src/shared/content-security-policy.ts` feeds the session header (`security.ts:14-18`), the build-time `<meta>` (`vite.renderer.config.ts:3,6`) and the packaged smoke check (`package-smoke-verifier.ts:81`).\n- `apps/desktop/src/main/project-entry-bridge.ts` is built in `main.ts:380-386`; `canonical-writer-package-smoke-main.test.ts:84-92` still mocks it without the two conversation operations (harmless today, because that test never calls them).\n- The new IPC channels (`project-entry-ipc.ts:39-44`) take no sender or frame check, the same as every existing channel; the window keeps context isolation and sandbox on, and every value is strict-decoded in preload, IPC and the bridge.\n- Living doc `docs/ragnarok-prototype-coordination.md:69` still cites the deleted `prototype-app.tsx`.",
+      "## Precedents\n\n| hash | subject | 30d-follow-ups | note |\n| --- | --- | --- | --- |\n| 089bd90 | feat(desktop): update an older Project from the window | 43bc303 | Try again was driven by status, not retryability (C1-0 review Q49/Q50). Same class as I3/Q17. |\n| be631a2 | feat(desktop): add repositories through the preload API | c417342 | A new preload method missed the pinned key list in `package-smoke-verifier.ts`; launch-smoke was the only proof. |\n| 11b1989 | feat(projects): list and open registered projects in desktop | 5274425, 2e85b92 | Main test doubles and the shell journey went stale after wiring changes. |\n| 12ea0fc | feat(desktop): add isolated workspace supervision prototype | 9e7bfe5, 3df1047 | The prototype was wired into forge, forge-env, vite, knip and the lockfile; its removal in this range left no code or config reference (Knip clean). |\n| 52b5bc2 / 808c99a | remove a Project from the list | 7058508, c417342 | A renderer action raced activation; answers must be tied to their own activation. |\n\nComposite lessons: preload surface changes need launch-smoke proof; recovery affordances must follow the protocol, not the status (third recurrence here, I3); late answers must be tied to their own activation (the save path does this, the read path does not, Q21/Q22); main and shell doubles go stale when `main.ts` wiring changes; degrade must still tell broken apart.",
+      "## Recommendation\n\n**Merge: blocked by the rubric (7 important, 0 critical), but none of the blockers is a data or security defect.** The save and load core held up under verification: the four findings that claimed lost data, wrong revisions or stale answers (I1, I2, Q16, Q32) were withdrawn, because the harness serialises reads and saves and the approved design decides the remaining cases.\n\nWhat is left, in priority order:\n\n1. **I3 / Q17 (copy):** after editing a draft whose save could not be confirmed, the line still says \"Try again to check it.\" while the button is gone. Small renderer fix plus one test. Same class as three earlier follow-ups.\n2. **I4 / Q10 (accessibility, G26):** Reload and Try again still animate under reduced motion because the theme selector outranks the reduced-motion rules. Fix the specificity and give ghost-sm one owner.\n3. **Q12 (accessibility):** the forced-colours border targets a class no component uses, so the Unknown status row has no edge in forced colours; the test pins the dead selector.\n4. **Q5 (R15):** one canvas colour literal outside the Seixo scope.\n5. **Q23 (R5):** `as` casts in one renderer test file.\n\nThe suggestions (CSS polish, test-strength gaps, the cursor-advance guard Q15, the hard-coded 32 KiB copy Q18) can go to a follow-up. The discussion items (Q14, Q19, Q28, Q31) follow the approved design and need no change unless the human wants to revisit it.\n\nS4b already had two review rounds, so whether these become a fix round on the branch, a follow-up issue, or an accepted gap is for Pedro to decide."
+    ]
+  },
+  "findings": [
+    {
+      "kind": "dr",
+      "id": "I1",
+      "lens": "I",
+      "title": "A late read could rewind expectedRevision and drop the saved row (withdrawn)",
+      "severity": "critical",
+      "status": "withdrawn",
+      "verify": "Falsified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/use-conversation-load.ts",
+          "startLine": 154,
+          "quoted": [
+            "    store.update(projectId, (current) => ({ ...current, expectedRevision: result.revision }));"
+          ]
+        }
+      ],
+      "why": "Claimed: the read commit has no activation, epoch or revision guard, so a pre-save read settling after a save rewinds the revision.",
+      "fix": "n/a (withdrawn)",
+      "verifyNote": "The harness answers reads and saves through one FIFO writer slot (apps/harness/src/canonical-project-writer.ts:129-130), so a pre-save page cannot arrive after the saved answer, and an unmounted instance setMessages is a no-op. All three constituents (Q16, Q21, Q22) were Weakened or Falsified, so the interaction no longer stands on two verified constituents. The unguarded read commit stays a latent hazard, noted under Q21 and Q22.",
+      "fp": "4187f4660511831b"
+    },
+    {
+      "kind": "dr",
+      "id": "I2",
+      "lens": "I",
+      "title": "The desktop fault kind folds pre-send and post-send faults (withdrawn)",
+      "severity": "important",
+      "status": "withdrawn",
+      "verify": "Falsified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-upgrade-failure.ts",
+          "startLine": 21,
+          "quoted": ["  | Readonly<{ kind: \"desktop\" }>;"]
+        }
+      ],
+      "why": "Claimed: a possibly committed save is shown as broken because the desktop kind covers both pre-send and post-send faults.",
+      "fix": "n/a (withdrawn)",
+      "verifyNote": "Design G25 (.rpiv/artifacts/designs/2026-10-09_13-54-08_conversation-c1-local-save.md:371) explicitly keeps a decodable reply with the wrong event or a mismatched echo as broken, and undecodable payloads already arrive as protocol-error mapped to uncertain (apps/desktop/src/main/project-conversation-failure.ts:38, :78). Both constituents (Q13, Q14) were Weakened; an interaction finding cannot drop below important, so it is withdrawn and the residue stays in Q13 and Q14.",
+      "fp": "aadb14a56f1127ae"
+    },
+    {
+      "kind": "dr",
+      "id": "I3",
+      "lens": "I",
+      "title": "Not-confirmed copy says \"Try again\" after an edit hides Try again",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/save-outcome.ts",
+          "startLine": 94,
+          "quoted": [
+            "  return readOnly && line?.tone === \"unknown\" ? { ...line, message: notConfirmedReadOnly } : line;"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-region.tsx",
+          "startLine": 27,
+          "quoted": [
+            "    tryAgain: !pending && !readOnly && kept?.tryAgain === true && conversation.resendable,"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/renderer/conversation/use-conversation-save.ts",
+          "startLine": 101,
+          "quoted": [
+            "        : { ...memo, text, saveId: undefined, outcome: afterInput(memo.outcome) },"
+          ]
+        }
+      ],
+      "why": "Recovery availability is decided in three places with three inputs (load-notice.tsx:25 by status, save-outcome.ts:94 by tone and readOnly, conversation-region.tsx:27 by retryable and the kept saveId). After an uncertain save, editing the draft clears saveId (use-conversation-save.ts:101) and hides Try again, but on a read-write activation the line still says \"The save could not be confirmed. Try again to check it.\" This is the recovery-affordance class that already needed follow-up fixes three times (43bc303, ca839da T6, ef3f92f F7).",
+      "fix": "Derive the not-confirmed copy from the same resendable flag that shows the button (rewrite the message whenever Try again is hidden, not only when readOnly), and add a renderer test: uncertain, then edit, then assert neither Try again nor its wording is shown.",
+      "fp": "4ea5fbbde13c7677"
+    },
+    {
+      "kind": "dr",
+      "id": "I4",
+      "lens": "I",
+      "title": "Theme .seixo .ghostSm silently wins over the component sheet, including reduced motion",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo.module.css",
+          "startLine": 95,
+          "quoted": [".seixo .ghostSm {"]
+        },
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo.module.css",
+          "startLine": 147,
+          "quoted": ["  .seixo *,"]
+        },
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-parts.module.css",
+          "startLine": 285,
+          "quoted": ["  .action {"]
+        }
+      ],
+      "why": ".seixo .ghostSm (0,2,0) beats .action (0,1,0) and both reduced-motion overrides (.seixo * at seixo.module.css:147 and .action at conversation-parts.module.css:285). Reload and Try again keep their 120 ms transition under prefers-reduced-motion (G26), the .action plate and ink declarations are dead, and Reload and Try again differ on hover on the failure tint. Lowering the theme selector to fix motion would reactivate the dead plate background and contradict DESIGN.md ghost-sm.",
+      "fix": "Give the ghost-sm button one owner: keep only layout in .action, and make the reduced-motion rule match the theme specificity (for example .seixo .ghostSm inside the reduced-motion media block). Extend the e2e motion check to a frame with Reload or Try again mounted.",
+      "fp": "6c9d6c87c1726070"
+    },
+    {
+      "kind": "dr",
+      "id": "Q1",
+      "lens": "Q",
+      "title": "ghost-sm type style matches no DESIGN.md token",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "DESIGN.md",
+          "startLine": 120,
+          "quoted": ["  button-ghost-sm:"]
+        },
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo.module.css",
+          "startLine": 105,
+          "quoted": ["  font: 500 12px / 18px var(--font-text);"]
+        }
+      ],
+      "fix": "Name the type style in DESIGN.md button-ghost-sm (meta or label) and make seixo.module.css:105 use it.",
+      "fp": "2480bb8f46eef638"
+    },
+    {
+      "kind": "dr",
+      "id": "Q2",
+      "lens": "Q",
+      "title": "No test ties ghost-sm height, padding and hover to DESIGN.md",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "DESIGN.md",
+          "startLine": 120,
+          "quoted": ["  button-ghost-sm:"]
+        }
+      ],
+      "fix": "Extend seixo-tokens.test.ts to compare button-ghost-sm and button-ghost-sm-hover with the theme.",
+      "fp": "7984d223aaf55905"
+    },
+    {
+      "kind": "dr",
+      "id": "Q3",
+      "lens": "Q",
+      "title": "No pressed state for any Conversation button",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "DESIGN.md",
+          "startLine": 126,
+          "quoted": ["  button-ghost-sm-hover:"]
+        }
+      ],
+      "fix": "Add the 0.5px pressed nudge (DESIGN.md:323) as an :active rule for the region buttons, guarded against aria-disabled.",
+      "fp": "3ac6586e6e5f3f6c"
+    },
+    {
+      "kind": "dr",
+      "id": "Q4",
+      "lens": "Q",
+      "title": "Note strip keeps 2rem padding below 760px",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/projects-workspace.module.css",
+          "startLine": 157,
+          "quoted": ["    padding: 2rem 2rem 0;"]
+        }
+      ],
+      "fix": "Add .noteStrip to the max-width 760px block with 1rem padding, matching .workspace.",
+      "fp": "ceb890b5924f2a6f"
+    },
+    {
+      "kind": "dr",
+      "id": "Q5",
+      "lens": "Q",
+      "title": "Canvas colour copied as a literal outside the Seixo scope (R15)",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/projects-workspace.module.css",
+          "startLine": 159,
+          "quoted": ["    background: #050606;"]
+        },
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo.module.css",
+          "startLine": 11,
+          "quoted": ["  --canvas: #050606;"]
+        }
+      ],
+      "why": "R15 shared-vocab-union (.rpiv/decisions/shared-vocab-union.md, hard): #050606 is owned as --canvas at seixo.module.css:11; the note strip copies it as a literal, and only an e2e pixel check ties the two copies.",
+      "fix": "Expose the canvas token where the note strip can read it (or move the strip background into the Seixo scope) and drop the literal.",
+      "fp": "8f9506992d2cf346"
+    },
+    {
+      "kind": "dr",
+      "id": "Q6",
+      "lens": "Q",
+      "title": "Message column shifts off the composer edge when the stream scrolls",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-parts.module.css",
+          "startLine": 15,
+          "quoted": ["  width: min(calc(100% - 2 * var(--space-8)), var(--space-measure));"]
+        }
+      ],
+      "fix": "Reserve the scrollbar gutter on .stream (scrollbar-gutter: stable both-edges) or size the composer and header against the same box.",
+      "fp": "3d48eb8e20ffb755"
+    },
+    {
+      "kind": "dr",
+      "id": "Q7",
+      "lens": "Q",
+      "title": ".action visual declarations are dead under .seixo .ghostSm",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-parts.module.css",
+          "startLine": 122,
+          "quoted": [".action {"]
+        }
+      ],
+      "fix": "Keep only layout properties in .action (see I4).",
+      "fp": "f6dd3be9cb9c902c"
+    },
+    {
+      "kind": "dr",
+      "id": "Q8",
+      "lens": "Q",
+      "title": "Unavailable Save still lightens on hover",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-parts.module.css",
+          "startLine": 214,
+          "quoted": [".save:hover {"]
+        }
+      ],
+      "fix": "Guard .save:hover with :not([aria-disabled=\"true\"]), or cancel hover in the theme aria-disabled owner rule.",
+      "fp": "876e7742a99f6604"
+    },
+    {
+      "kind": "dr",
+      "id": "Q9",
+      "lens": "Q",
+      "title": "Reload and Try again behave differently on hover on the failure tint",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-parts.module.css",
+          "startLine": 291,
+          "quoted": [".notice[data-tone=\"failure\"] .action {"]
+        }
+      ],
+      "fix": "Align the two failure-tint rules (see I4).",
+      "fp": "8f07b508d6b54ce0"
+    },
+    {
+      "kind": "dr",
+      "id": "Q10",
+      "lens": "Q",
+      "title": "Reload and Try again still animate under reduced motion",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo.module.css",
+          "startLine": 147,
+          "quoted": ["  .seixo *,"]
+        }
+      ],
+      "why": "G26 requires no region transition under prefers-reduced-motion; the (0,1,0) .seixo * override loses to the (0,2,0) .seixo .ghostSm transition, and the e2e motion check samples a frame without these buttons.",
+      "fix": "Match the theme specificity in the reduced-motion block and add a check with a ghost-sm button mounted (see I4).",
+      "fp": "0d1b731c002e7902"
+    },
+    {
+      "kind": "dr",
+      "id": "Q11",
+      "lens": "Q",
+      "title": "Unavailable Reload and Try again still get the hover fill",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo.module.css",
+          "startLine": 112,
+          "quoted": [".seixo .ghostSm:hover {"]
+        }
+      ],
+      "fix": "Make the aria-disabled owner rule (seixo.module.css:125) also cancel hover for every variant; the same gap appears in Q8.",
+      "fp": "63ace40568a0b02b"
+    },
+    {
+      "kind": "dr",
+      "id": "Q12",
+      "lens": "Q",
+      "title": "Forced-colours statusChip selector is dead, so the Unknown status row loses its edge",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo.module.css",
+          "startLine": 178,
+          "quoted": ["  .seixo .statusChip,"]
+        },
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-parts.module.css",
+          "startLine": 263,
+          "quoted": ["  box-shadow: inset 0 0 0 1px var(--line-strong);"]
+        }
+      ],
+      "why": "No component applies statusChip. The Unknown status row draws its edge only with an inset box-shadow (conversation-parts.module.css:263), which forced colours removes, so that state has no edge in forced colours, against the comment above the rule. seixo-tokens.test.ts:264 pins the dead selector text, so the test passes.",
+      "fix": "Point the forced-colours border at the class the status row really uses (.statusRow or its tone attribute), and make the test check that the selector matches a rendered element.",
+      "fp": "82c172114b31ee41"
+    },
+    {
+      "kind": "dr",
+      "id": "Q13",
+      "lens": "Q",
+      "title": "A sent save with a wrong-event or mismatched reply shows as \"Not saved.\"",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-conversation-failure.ts",
+          "startLine": 76,
+          "quoted": ["  if (meaning.meaning === \"defect\")"]
+        }
+      ],
+      "fix": "If the product wants these replies treated as possibly committed, split the desktop fault into pre-send and post-send kinds; otherwise state the G25 choice next to :63-64.",
+      "verifyNote": "Narrower: malformed payloads already arrive as protocol-error and map to uncertain; only decodable wrong-event or echo-mismatch replies become broken, which design G25 (.rpiv/artifacts/designs/2026-10-09_13-54-08_conversation-c1-local-save.md:371) decides explicitly.",
+      "fp": "080b20a43c3b6b16"
+    },
+    {
+      "kind": "dr",
+      "id": "Q14",
+      "lens": "Q",
+      "title": "Upgrade mapping keeps its own copy of the fault table",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-conversation-failure.ts",
+          "startLine": 33,
+          "quoted": ["function faultMeaning(fault: ProjectRequestFault): FaultMeaning {"]
+        }
+      ],
+      "why": "faultMeaning is shared by the read and save mappings, but project-upgrade-failure.ts:50-66 keeps its own Match and harnessRows, so the upgrade path can drift; the upgrade protocol has no uncertain member, which limits a merge.",
+      "verifyNote": "Narrower: faultMeaning is shared by readConversationFailure (:54) and saveConversationFailure (:71); only the upgrade mapping is separate.",
+      "fp": "436534a956a31b84"
+    },
+    {
+      "kind": "dr",
+      "id": "Q15",
+      "lens": "Q",
+      "title": "Paged read loop never checks that the cursor advances",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/use-conversation-load.ts",
+          "startLine": 56,
+          "quoted": ["    after = result.conversation?.nextCursor ?? null;"]
+        }
+      ],
+      "fix": "Fail the load visibly (Broken tone) when nextCursor does not increase, so a harness defect cannot loop the IPC read forever (R12).",
+      "verifyNote": "Narrower: the only producer always advances the cursor (apps/harness/src/conversation/conversation-store.ts:216), so the infinite loop needs a harness defect.",
+      "fp": "b1695f1adaac4c37"
+    },
+    {
+      "kind": "dr",
+      "id": "Q16",
+      "lens": "Q",
+      "title": "Saved row could be overwritten by an in-flight read snapshot (withdrawn)",
+      "severity": "important",
+      "status": "withdrawn",
+      "verify": "Falsified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/use-project-conversation.ts",
+          "startLine": 39,
+          "quoted": [
+            "    if (!answer.replayed) setMessages((current) => withSavedRow(current, answer));"
+          ]
+        }
+      ],
+      "why": "Claimed: a read in flight overwrites messages with a pre-save snapshot after the saved row was appended.",
+      "fix": "n/a (withdrawn)",
+      "verifyNote": "A remounted instance read issued while the save is pending queues behind the save in the FIFO writer slot (apps/harness/src/canonical-project-writer.ts:129-130) and returns the post-save list; a stale unmounted instance setMessages cannot touch the live list. The verifier tagged it Weakened, but its justification contradicts the claimed behaviour, so the tag is overridden to Falsified.",
+      "fp": "5c409222afe4f671"
+    },
+    {
+      "kind": "dr",
+      "id": "Q17",
+      "lens": "Q",
+      "title": "Not-confirmed copy promises Try again after the button is withdrawn [precedent-weighted]",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/save-outcome.ts",
+          "startLine": 94,
+          "quoted": [
+            "  return readOnly && line?.tone === \"unknown\" ? { ...line, message: notConfirmedReadOnly } : line;"
+          ]
+        }
+      ],
+      "why": "Root cause is I3: the copy is rewritten only for read-only activations, so after an edit on a read-write activation the line still says \"Try again to check it.\" while Try again is hidden. Precedent-weighted: this recovery-affordance class needed follow-up fixes three times (43bc303, ca839da, ef3f92f).",
+      "fix": "Fix together with I3.",
+      "fp": "df90b910375b9d03"
+    },
+    {
+      "kind": "dr",
+      "id": "Q18",
+      "lens": "Q",
+      "title": "Renderer hard-codes the 32 KiB limit",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/save-outcome.ts",
+          "startLine": 131,
+          "quoted": [
+            "    return { tone: \"failure\", title: \"This message is longer than 32 KiB.\", tryAgain: false };"
+          ]
+        }
+      ],
+      "fix": "Export the limit (or a formatted label) from the protocol next to conversationTextProblem and build the copy from it.",
+      "fp": "814ea468d633bf3e"
+    },
+    {
+      "kind": "dr",
+      "id": "Q19",
+      "lens": "Q",
+      "title": "Reload ignores diagnostic.retryable, unlike Try again",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/load-notice.tsx",
+          "startLine": 25,
+          "quoted": ["  return failure.status !== \"stale-activation\";"]
+        }
+      ],
+      "why": "Reload is shown for inactive, project-mismatch, coordinator-unavailable and broken (all retryable:false), while the save path gates Try again on retryable. A read is harmless to repeat, and the approved design asks for Reload on every failed read except stale-activation; one explicit design line would stop the two rules looking inconsistent.",
+      "verifyNote": "The code follows design :305 and :327 (Reload on every failed read except stale-activation, decisions §45).",
+      "fp": "9635ae7c02315b8d"
+    },
+    {
+      "kind": "dr",
+      "id": "Q20",
+      "lens": "Q",
+      "title": "Orphan TSDoc block in the e2e window helper (R16, preference)",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/tests/e2e/conversation-window.ts",
+          "startLine": 101,
+          "quoted": [
+            "/** The colour channels and the spread of each computed `box-shadow` layer. */"
+          ]
+        }
+      ],
+      "fix": "Move the comment onto shadowLayers at :124.",
+      "fp": "a7222f12ae3ac9fd"
+    },
+    {
+      "kind": "dr",
+      "id": "Q21",
+      "lens": "Q",
+      "title": "Older-activation read test does not observe the store write",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/project-conversation.test.tsx",
+          "startLine": 259,
+          "quoted": ["    expect(controls().messages()).toEqual([]);"]
+        }
+      ],
+      "fix": "Assert Project A memory (expectedRevision) after the late read, or add an activation guard to the read commit so the latent unguarded write at use-conversation-load.ts:154 is pinned.",
+      "verifyNote": "Narrower: the harness drains admitted reads before it answers a switch (apps/harness/src/active-project-coordinator.ts:528-538), so the rewind-then-conflict has no live trace; what remains is an unobserved, unguarded store write.",
+      "fp": "c325b75b9f1b0d75"
+    },
+    {
+      "kind": "dr",
+      "id": "Q22",
+      "lens": "Q",
+      "title": "Harness-restart read test does not observe the store write",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-save-outcomes.test.tsx",
+          "startLine": 498,
+          "quoted": ["    expect(controls().messages()).toEqual([]);"]
+        }
+      ],
+      "fix": "Assert the store after the stale read, or check store.epoch() in the read commit as the save path does.",
+      "verifyNote": "Narrower: the real bridge fails every pending read with transport on disconnect (apps/desktop/src/main/harness-pending-request.ts:19-20), mapped to unavailable, so a read answer cannot cross a restart outside the fake.",
+      "fp": "c325b75b9f1b0d75"
+    },
+    {
+      "kind": "dr",
+      "id": "Q23",
+      "lens": "Q",
+      "title": "Test narrows mock calls with as casts (R5)",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-save-outcomes.test.tsx",
+          "startLine": 226,
+          "quoted": [
+            "  return { ...rendered, answer, request: () => sentSaves()[0] as ProjectConversationSaveRequest };"
+          ]
+        }
+      ],
+      "why": "R5 (AGENTS.md:57, hard): sentSaves()[0] as ProjectConversationSaveRequest, also at :129, :492 and :512. Sibling tests throw a named error when the call is missing, so a save that was never sent fails here as an unclear undefined-property error.",
+      "fix": "Use the sibling helper pattern (throw new Error(\"No save was sent\")) instead of the casts.",
+      "fp": "dbf0ede1cdba71bb"
+    },
+    {
+      "kind": "dr",
+      "id": "Q24",
+      "lens": "Q",
+      "title": "e2e copies IPC channel names as literals",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/tests/e2e/conversation-accessibility.test.ts",
+          "startLine": 261,
+          "quoted": ["const readChannel = \"projects:conversation:read\";"]
+        }
+      ],
+      "fix": "Import desktopIpcChannels from src/shared/desktop-api.ts, or have replaceHandlers check that the channel has a handler before replacing it.",
+      "fp": "2b62eb0c08559b9b"
+    },
+    {
+      "kind": "dr",
+      "id": "Q25",
+      "lens": "Q",
+      "title": "Font-inlining test passes when no CSS asset is built",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/tests/e2e/renderer-foundation.test.ts",
+          "startLine": 148,
+          "quoted": [
+            "  const styles = (await readdir(assets)).filter((name) => name.endsWith(\".css\"));"
+          ]
+        }
+      ],
+      "fix": "Assert styles.length > 0 before the loop.",
+      "fp": "3248ea93c629e582"
+    },
+    {
+      "kind": "dr",
+      "id": "Q26",
+      "lens": "Q",
+      "title": "Three hand copies of the Runa stave path data in tests",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-details.test.tsx",
+          "startLine": 152,
+          "quoted": [
+            "    [\"broken\", rows.storageBroken, \"M12 3L22 20H2ZM12 9V13.5M12 17V17.5\"],"
+          ]
+        }
+      ],
+      "fix": "Export the stave paths from runa-icon.tsx (or a test fixture) and reuse them.",
+      "fp": "a97041bd1bed599a"
+    },
+    {
+      "kind": "dr",
+      "id": "Q27",
+      "lens": "Q",
+      "title": "Colour-literal test passes with zero modules if the folder moves",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo-tokens.test.ts",
+          "startLine": 102,
+          "quoted": [
+            "  ...(existsSync(conversation) ? readdirSync(conversation, { withFileTypes: true }) : [])"
+          ]
+        }
+      ],
+      "fix": "Assert regionModules.length > 1 (or expect.hasAssertions) before the per-module loop.",
+      "fp": "ac5bdf6ed6b0565e"
+    },
+    {
+      "kind": "dr",
+      "id": "Q28",
+      "lens": "Q",
+      "title": "Region test guards against a removed sentence only",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-region.test.tsx",
+          "startLine": 73,
+          "quoted": ["    expect(workspace.queryByText(placeholder)).toBeNull();"]
+        }
+      ],
+      "why": "The sentence no longer exists in source, so the assertion only catches its exact return; a weak regression guard, not a behavioural check.",
+      "verifyNote": "It still fails if the sentence is reintroduced, so it can fail; it is a weak guard rather than a tautology.",
+      "fp": "5375c6871a35845d"
+    },
+    {
+      "kind": "dr",
+      "id": "Q29",
+      "lens": "Q",
+      "title": "package-smoke-verifier test checks script source substrings, not behaviour",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/package-smoke-verifier.test.ts",
+          "startLine": 512,
+          "quoted": ["    expect(packageSmokeRendererScript).toContain(\"document.fonts.load(\");"]
+        }
+      ],
+      "fix": "Keep it as a cheap guard and rely on package:smoke for behaviour, or evaluate the script against a fake document.",
+      "fp": "6b5a56c8f4778286"
+    },
+    {
+      "kind": "dr",
+      "id": "Q30",
+      "lens": "Q",
+      "title": "Third hand copy of the SlopStopApi key list",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/package-smoke-verifier.test.ts",
+          "startLine": 392,
+          "quoted": ["  methods: ["]
+        }
+      ],
+      "fix": "Tie the list to keyof SlopStopApi with a type-level exhaustiveness check (satisfies Record<keyof SlopStopApi, true>).",
+      "fp": "c1135f38e17834c4"
+    },
+    {
+      "kind": "dr",
+      "id": "Q31",
+      "lens": "Q",
+      "title": "Try again after a read-only answer resends a request the harness refuses again",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/save-outcome.ts",
+          "startLine": 85,
+          "quoted": [
+            "        tryAgain: answer.status !== \"stale-activation\" && answer.diagnostic.retryable,"
+          ]
+        }
+      ],
+      "why": "The read-only row is retryable:true, so Try again shows, but a read-only answer arises only when renderer and harness disagree about access, and the resend with the same activation is refused again (apps/harness/src/active-work-admission.ts:49).",
+      "verifyNote": "Design :324 lists read-only among the rows that offer Try again, so the code follows the approved design.",
+      "fp": "59efd670526d03c9"
+    },
+    {
+      "kind": "dr",
+      "id": "Q32",
+      "lens": "Q",
+      "title": "Late stale-activation answer could be settled under a newer activation (withdrawn)",
+      "severity": "critical",
+      "status": "withdrawn",
+      "verify": "Falsified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/settle-save.ts",
+          "startLine": 26,
+          "quoted": ["  const waiting = pending || memory.outcome.kind === \"dropped\";"]
+        }
+      ],
+      "why": "Claimed: a dropped outcome accepts a late stale-activation answer from an older activation.",
+      "fix": "n/a (withdrawn)",
+      "verifyNote": "Design :874-875 decides that a late result for the kept saveId is applied after re-entry, and the stale-activation case cannot happen: admission is synchronous (apps/harness/src/active-work-admission.ts:37-51) and admitted saves drain before a switch answers (apps/harness/src/active-project-coordinator.ts:528-538). The verifier tagged it Weakened, but its justification says the trace cannot happen, so the tag is overridden to Falsified.",
+      "fp": "12a8b0b9ea22acb4"
+    },
+    {
+      "kind": "dr",
+      "id": "G1",
+      "lens": "G",
+      "title": "Save send and settle across an await had no lens row",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/use-conversation-save.ts",
+          "startLine": 47,
+          "quoted": ["export function useConversationSave(scope: SaveScope) {"]
+        }
+      ],
+      "fix": "No action unless a future change touches the settle order; covered by behaviour tests.",
+      "fp": "f7736c2c3f0de2ff"
+    },
+    {
+      "kind": "dr",
+      "id": "G2",
+      "lens": "G",
+      "title": "Shared per-Project conversation store had no lens row",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-memory.ts",
+          "startLine": 27,
+          "quoted": ["export function createConversationMemory() {"]
+        }
+      ],
+      "fix": "No action; recorded for coverage.",
+      "fp": "1cef7759b2b3aa76"
+    },
+    {
+      "kind": "dr",
+      "id": "G3",
+      "lens": "G",
+      "title": "settleSave had no verified lens row",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/settle-save.ts",
+          "startLine": 18,
+          "quoted": ["export function settleSave("]
+        }
+      ],
+      "fix": "No action; recorded for coverage.",
+      "fp": "41d5c915ba65f8bd"
+    },
+    {
+      "kind": "dr",
+      "id": "G4",
+      "lens": "G",
+      "title": "Region mount condition (drives remounts) had no lens row",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/workspace-view.tsx",
+          "startLine": 46,
+          "quoted": ["  const regionShown = idle && props.view?.mode === \"active\";"]
+        }
+      ],
+      "fix": "No action; recorded for coverage.",
+      "fp": "5157ea6d3aeec2cd"
+    },
+    {
+      "kind": "dr",
+      "id": "G5",
+      "lens": "G",
+      "title": "Epoch bump runs on every ready or attempt change",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/projects-workspace.tsx",
+          "startLine": 81,
+          "quoted": ["    conversationMemory.newEpoch();"]
+        }
+      ],
+      "fix": "Confirm in a comment that the epoch is meant to change on every ready or attempt change, not only when the harness becomes ready.",
+      "fp": "53e119d95630a44f"
+    }
+  ]
+}

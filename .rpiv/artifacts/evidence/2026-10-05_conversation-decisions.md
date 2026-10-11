@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 7c34bc6303aca5f24128f7580e70c32d12e3eebce87f6330d372ea5cde12bae6
+content_hash: 126010e893bd1fceda6bd73ea8dd3cd5cf6ffabc5daf6f7d9c3eb0b274c156ca
 ---
 
 # Conversation — Human Decisions
@@ -593,3 +593,15 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Narrator listen (§52):** Pedro listened to the packaged candidate `a1fc648` on a separate seeded userData (`--user-data-dir`, the real `%APPDATA%/SlopStop` proven unchanged) following `narrator-checklist.md` part A, steps 1-8, and answered "tudo ok". Part B states (failures, read-only, stale activation, Try again) are covered by the ui-ux screenshot sign-off and the e2e rows. The NVDA pass stays unavailable (§52).
 - **Acceptance:** Pedro accepted S4b at the exact revision `a1fc648` ("Aceito a1fc648"), with the recorded residual risks: no third review round for the F1-F7 delta and the mutant-234 test (§58), and the changed-files-only final mutation (§59).
 - Next (§57): deep-review and validate over `b96b305..a1fc648`, then a separate integration authorization for the S4a+S4b squash into main.
+
+## 61. C1 S4 deep-review fix round (user decisions, 2026-10-11)
+
+- `/rpiv:deep-review b96b305..a1fc648 lane=rigorous` (agent "revisor", review `.rpiv/artifacts/reviews/2026-10-11_19-07-31_b96b305-a1fc648-c1-s4-conversation-window.md`): 0 critical, 7 important rows (5 distinct problems), 26 suggestions, 4 discussion, 4 withdrawn; security clean; gates clean.
+- **Fix round (the one deep-review round):** the user chose "Ronda de correções" for the important findings:
+  - I3/Q17: the not-confirmed copy follows the same condition that shows Try again; whenever Try again is hidden (read-only, or the draft was edited), the line says only "The save could not be confirmed.";
+  - I4/Q10: one owner for the ghost-sm button; reduced motion removes the Reload and Try again transition (G26);
+  - Q12: the forced-colours edge targets the class the status row really uses, and the test checks a rendered element;
+  - Q5: the note strip reads the canvas token instead of the `#050606` literal (shared-vocab-union);
+  - Q23: the four `as` casts on mock calls become the named-error helper.
+- This voids the S4b acceptance (§60): after the fix commit, gates, the targeted mutation on the changed source files, a fresh package, E5 and E4 run again, and Pedro accepts the fixed revision before `/rpiv:validate`.
+- The 26 suggestions and 4 discussion points go to one GitHub follow-up issue (user: "Sim, abre o issue").
