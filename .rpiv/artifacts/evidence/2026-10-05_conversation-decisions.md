@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 64dd7168a29f851d85fc022ed537f2383afb40b607d5317a607633eb674475b7
+content_hash: e127ea094df89c6f40ce6081476b74c47b94bdf9813b3b97d65ae5d7a61204e0
 ---
 
 # Conversation — Human Decisions
@@ -512,3 +512,7 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - Step 0 measured the migration-resource load at about 3 ms of the about 50 ms per application.db open (about 6%). Caching would save about 0.3 s per registration-flow test (4.5-6 s idle), at the cost of moving resource verification from every open to once per process; the digest middle option saves almost nothing. The user chose not to do d-P1; it stays recorded in #94. The bigger levers (fewer opens per registry step, or fewer per-open verifications) are later design decisions.
 - The #94 fix therefore consists of (C) seeded canonical templates plus the cwd fix, D1 (the manual clock in the native-observer deadline test) and the instrumentation, which stays off by default.
+
+## 51. C1 S4a accepted (user decision, 2026-10-11)
+
+- S4a passed candidate review rounds 1 and 2 with nothing serious left. Final-head runs on 0eb8a32 all passed: e2e 18/18, launch-smoke, root mutation 88.48, gates and CodeScene 10. The ui-ux agent confirmed the final screenshots and the anti-clone check. The user accepted S4a at 07651a2 (code identical to 0eb8a32). By G30 it merges to main only together with S4b. S4b starts on the same branch.
