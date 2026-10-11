@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e127ea094df89c6f40ce6081476b74c47b94bdf9813b3b97d65ae5d7a61204e0
+content_hash: 13bc5022963b8d674d9f0d13ed83b0ad83f93f8dc5978bea65ce054a36505c8d
 ---
 
 # Conversation — Human Decisions
@@ -516,3 +516,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 ## 51. C1 S4a accepted (user decision, 2026-10-11)
 
 - S4a passed candidate review rounds 1 and 2 with nothing serious left. Final-head runs on 0eb8a32 all passed: e2e 18/18, launch-smoke, root mutation 88.48, gates and CodeScene 10. The ui-ux agent confirmed the final screenshots and the anti-clone check. The user accepted S4a at 07651a2 (code identical to 0eb8a32). By G30 it merges to main only together with S4b. S4b starts on the same branch.
+
+## 52. Screen-reader check: Narrator only for now (user decision, 2026-10-11)
+
+- NVDA 2026.2 crashes at start on this machine. Its log shows `AttributeError: function 'lou_freeTableFile' not found`: it loads Windows' own `C:\Windows\System32\liblouis.dll` (Microsoft-signed, used by Narrator) instead of its bundled one. That cannot be fixed without administrator rights or touching a system file.
+- The user chose Narrator only for now. The §33 agent NVDA speech-log pass is recorded as "unavailable (incompatibility)", never as passed. The automated accessibility checks (axe, forced colours, zoom, announcements) and the user's Narrator listen stay. The NVDA pass returns when a compatible NVDA version exists.
