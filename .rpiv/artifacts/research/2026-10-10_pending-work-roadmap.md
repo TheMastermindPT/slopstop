@@ -9,7 +9,7 @@ tags: [roadmap, inventory, pending-work, deferred]
 status: complete
 last_updated: 2026-10-10T09:00:00+0100
 last_updated_by: coordenador-claude
-content_hash: 6383574f7a5b9e17d316c0b5fd879e841d5db32a360ac13e5267a10ab6d97e1e
+content_hash: eaa1a8763fb5c010b810a84df69a9ca66066699af89ec2a93c15cdb7afcdd461
 ---
 
 # Pending-work inventory and roadmap reference point (2026-10-10)
@@ -44,7 +44,7 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review. 
 
 ### Phase 2 — right after C1
 [The user decided the #99 interview starts when C1 is done; the foundations below come before C2 because C2's streaming and cancellation are heavy Effect code.]
-1. **#99 interview** continuation (Supervisor and dialogue details; agent-coordination FRD:187-189).
+1. **#99 interview** continuation (Supervisor and dialogue details; agent-coordination FRD:187-189). Also on its agenda (user, 2026-10-11): memories depend only on Evidence (ADR 0017), so a superseded decision never marks a dependent memory stale, and repository text that repeats a decision (ADRs, PRODUCT.md, AGENTS.md) is not tracked; discuss decision-dependent memory staleness and a list of documents that echo each decision.
 2. **#105 TypeScript 7 and the Effect language service** (about 2-4 hours, mostly machine time): toolchain compatibility (Vite, Vitest, Electron Forge, Biome, knip, dependency-cruiser, Stryker, drizzle-kit, typecheck scripts), option and behaviour changes, build speed, Forge/Drizzle lib-check warnings (#35); `effect-tsgo diagnostics` in the gates; the **Effect tsgo LSP server configuration**: a curated `diagnosticSeverity` set (candidates newPromise, runEffectInsideEffect, globalErrorInEffectFailure, unknownInEffectCatch, tryCatchInEffectGen, multipleEffectProvide, leakingRequirements, scopeInLayerEffect, schemaNumber), plugin options and a count of current violations (today `tsconfig.base.json` has only the minimal plugin entry). Go/no-go report with migration and rollback; a go becomes a normal slice. Until then `pnpm typecheck` (TS 6.0.2) is authoritative.
 3. **Effect unit 2b runtime and lifecycle, including the desktop bridge (G28 exception ends here, DL §46; must land before C2)** (`evidence/2026-10-03_effect-unit2-lifecycle-plan.md`; ADR 0001:126): one `ManagedRuntime` per process, services and Layers, shutdown sequencing; with **#96** (late harness log lines on quit).
 4. **SQL-to-Effect pass** for existing storage code [its prerequisites, the `claude -p` prototype and the cost analysis, were done on 2026-10-04].
