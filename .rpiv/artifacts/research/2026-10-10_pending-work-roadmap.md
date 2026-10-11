@@ -9,6 +9,7 @@ tags: [roadmap, inventory, pending-work, deferred]
 status: complete
 last_updated: 2026-10-10T09:00:00+0100
 last_updated_by: coordenador-claude
+content_hash: 6383574f7a5b9e17d316c0b5fd879e841d5db32a360ac13e5267a10ab6d97e1e
 ---
 
 # Pending-work inventory and roadmap reference point (2026-10-10)
@@ -48,6 +49,7 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review. 
 3. **Effect unit 2b runtime and lifecycle, including the desktop bridge (G28 exception ends here, DL §46; must land before C2)** (`evidence/2026-10-03_effect-unit2-lifecycle-plan.md`; ADR 0001:126): one `ManagedRuntime` per process, services and Layers, shutdown sequencing; with **#96** (late harness log lines on quit).
 4. **SQL-to-Effect pass** for existing storage code [its prerequisites, the `claude -p` prototype and the cost analysis, were done on 2026-10-04].
 5. **#95, #97** C1-0 residuals.
+6. **Runtime-database cleanup (#93, after #105 and #123, before any new feature; user 2026-10-11, DL §55):** with Mastra withdrawn, decide whether a runtime database is still needed, then rename or remove `mastra.db` and `mastraMigrationHead` with a storage upgrade, red-green and review.
 
 ### Phase 3 — the new interface
 1. Decisions: the open visual items through a session with the ui-ux agent (#121); local Rive runtime; ADR note for the splash-window CSP; custom frameless title bar (Electron security review); Settings shell with the sounds toggle and first-install sound prompt (DL:292, :304). The Rive paid plan is a release gate (#103), not a prerequisite.
@@ -55,7 +57,7 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review. 
 3. From here on, **accessibility is an acceptance criterion of every slice** (PRODUCT.md:75, :173), not an end pass.
 
 ### Phase 4 — decisions before the model
-1. **#101 agent runtime.** ADR 0009 Amendment 1 already withdrew Mastra as the planned first adapter; the open choice and the document cleanup remain: `mastra.db` in ADRs 0001:56, 0002:15, 0006, the storage manifest and `docs/architecture/model.c4`; PRODUCT.md:84 and AGENTS.md. Then **#93**. (Zod in ADR 0006:26 does not depend on #101.)
+1. **#101 agent runtime: decided 2026-10-11 (DL §55).** API mode uses the official Anthropic client (`@anthropic-ai/sdk`) behind the ADR 0009 port; Mastra is out; the AI SDK may come later as a second adapter. The text cleanup is done; the code cleanup is Phase 2 item 6 (#93). (Zod in ADR 0006:26 does not depend on #101.)
 2. **Decided 2026-10-10 (v1-scope FRD):** C2 delivers both billing modes, which brings the governed-CLI process machinery into C2; one default model at first install plus overrides per role and task. Still open here: the cheap-model paired evaluation (memory: Luna, DeepSeek, Haiku).
 
 ### Phase 5 — C2 real-model Conversation
@@ -91,7 +93,7 @@ Recalibrate provisional numbers from real use (ADRs 0004/0005/0009/0018/0019/002
 
 ## 3. Decisions the user still owns
 
-- **#101 agent runtime** (AI SDK vs Mastra, maybe per billing mode). Blocks C2 and #93. PRODUCT.md:84 and AGENTS.md stay unchanged until decided (DL:340).
+- **#101 agent runtime:** decided 2026-10-11, the Anthropic client in API mode (DL §55).
 - **v1 scope:** closed on 2026-10-10, see `.rpiv/artifacts/discover/2026-10-10_00-59-10_v1-scope-deferred-decisions.md`.
 - **Before the React port:** ADR note for the splash-window CSP (DL:273-274). The Rive paid plan waits for a public version.
 - **Open visual items** (states, the palette, charts and the Run timeline were decided later in DL §24): first use; Windows accessibility; notifications outside the app; app icon meaning; drawing the role-agent icons (marks partly approved, DL:330, :361); Waypoint panel diffs. They go to a session with the ui-ux agent (#121).
@@ -142,7 +144,7 @@ Corrected the same day unless stated otherwise; see the git log for the commit.
 - ADRs 0009, 0011 and 0014 carried no note that ADRs 0021 and 0022 amend them.
 - GitHub #1 still named #90 as the next front (updated with the issues on 2026-10-10).
 - Stale artifact status fields (`designs/2026-09-04_18-05-05_canonical-project-writer.md`, `designs/2026-09-12_22-45-37_persistent-project-conversation.md`, `handoffs/2026-10-05_list-removal-race-and-s6b-brief.md`).
-- **Not corrected, waiting for #101:** Mastra as the first runtime in PRODUCT.md:84 and AGENTS.md, and `mastra.db` in ADRs 0001:56, 0002:15, 0006, the manifest and `docs/architecture/model.c4` (DL:340). Zod in ADR 0006:26 can be removed independently.
+- **Mastra text corrected 2026-10-11** (PRODUCT.md, AGENTS.md, CONTEXT.md, `model.c4`, "Mastra Withdrawn" amendments in ADRs 0001, 0002, 0006, note in 0009). The file `mastra.db` and `mastraMigrationHead` stay until Phase 2 item 6. Zod in ADR 0006:26 can be removed independently.
 
 ## Issues created (2026-10-10)
 

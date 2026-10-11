@@ -292,6 +292,7 @@ The user then fixed one billing mode per user. This amendment adds a governed CL
 
 - Mastra is no longer the planned first optional runtime adapter. This supersedes the Mastra rules in "Authority And Runtime Boundary" and "Physical Records" for new work.
 - Removing `mastra.db` from the storage layout (ADR 0006 and the Project Storage manifest), and Mastra references from ADR 0001, ADR 0002 and the architecture model, is a separate follow-up change.
+- 2026-10-11 (#101, decisions log §55): API mode uses the official Anthropic client (`@anthropic-ai/sdk`) behind this port; other providers may come later as further adapters. ADRs 0001, 0002 and 0006 carry a "Mastra Withdrawn" amendment. The code change to the runtime database and manifest is planned after #105 and #123 and before C2 (#93).
 
 ### Conformance Additions
 

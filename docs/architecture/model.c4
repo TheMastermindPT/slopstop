@@ -45,9 +45,9 @@ model {
       description "SlopStop-owned event, projection, evidence, memory, approval, and recovery state."
     }
 
-    mastraDb = database "Mastra runtime data" {
-      technology "libSQL"
-      description "Framework-owned traces, memory, and runtime records kept separate from canonical state."
+    mastraDb = database "Runtime data" {
+      technology "node:sqlite"
+      description "Adapter-private runtime records kept separate from canonical state (file mastra.db until the storage cleanup that follows #101)."
     }
   }
 
@@ -76,7 +76,7 @@ model {
   slopstop.harness -[imports]-> slopstop.kernel "executes domain behavior"
   slopstop.protocol -[imports]-> slopstop.kernel "may reuse domain schemas"
   slopstop.harness -[persists]-> slopstop.canonicalDb "serializes canonical writes"
-  slopstop.harness -[persists]-> slopstop.mastraDb "isolates framework state"
+  slopstop.harness -[persists]-> slopstop.mastraDb "isolates adapter state"
   slopstop.harness -[requests]-> gitRepository "reads and performs approved effects"
   slopstop.harness -[requests]-> modelProviders "runs approved parent and worker turns"
   slopstop.desktop.main -[protects]-> operatingSystem "encrypts credentials"

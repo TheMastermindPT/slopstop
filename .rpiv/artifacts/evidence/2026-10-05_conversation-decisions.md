@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: d72047664d329351243bcd36ab95562b2e7e2bd9d3d640a2418c8eb284716280
+content_hash: 5470dc9096722341bd0913ca6030a316108d24a72f6605258c46919739798b3d
 ---
 
 # Conversation — Human Decisions
@@ -553,3 +553,4 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Checked (Context7 AI SDK docs and npm metadata, 2026-10-11):** the AI SDK covers schemas without Zod (`jsonSchema` with our own validation; Standard Schema inside provider-utils), cancellation (`abortSignal`, `onAbort`), tool approval (`needsApproval`, `toolApproval`, or a manual loop with tools that have no `execute`), Anthropic prompt caching (`cacheControl`, 1 h TTL) and adaptive thinking with effort. However `ai` 7.0.137 and `@ai-sdk/anthropic` 4.0.78 declare `zod` as a required peer dependency, so Zod would ship in the packaged harness. `ai` also depends on `@ai-sdk/gateway`, so a plain model-id string routes through the Vercel gateway. `@anthropic-ai/sdk` 0.133.0 declares `zod` only as an optional peer. Today Zod reaches the repository only through dev tools (knip, likec4, Stryker).
 - **Decision:** API mode uses the official Anthropic client (`@anthropic-ai/sdk`) behind the ADR 0009 runtime port. Mastra is out. The AI SDK may come later as a second adapter if other providers are wanted. Subscription mode stays the governed Claude CLI session (ADR 0009).
 - **Follow-up:** remove the Mastra references (PRODUCT.md:84, AGENTS.md, `mastra.db` in ADRs 0001, 0002 and 0006, the Project Storage manifest and `docs/architecture/model.c4`) in a separate change; #93 is resolved by that removal. The C2 design names the client version and keeps the API key in `safeStorage`.
+- **Cleanup timing (user, same day):** the text cleanup was done at once (PRODUCT.md, AGENTS.md, CONTEXT.md, `model.c4`, ADR amendments). The code cleanup of `mastra.db` and `mastraMigrationHead` (#93) comes after #105 (TypeScript 7 and the agreed configs) and #123 (Effect migration), before any new feature, "Dessa maneira deixamos tudo pronto antes de avancar com mais features". #101 closes after the text cleanup. The push of main waits until the implementer finishes the S4b runs.

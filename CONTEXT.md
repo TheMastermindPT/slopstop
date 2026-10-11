@@ -14,7 +14,7 @@ Use these terms consistently in code, schemas, tests, and UI copy.
 | Project snapshot | One immutable backup or export with its own opaque identity, sealed manifest, and checksums over an exact Storage generation. |
 | Application registry | Reconstructible installation-local location and active-generation data used to find and operate Storage; it is never canonical Project truth. |
 | Canonical database | The Project's `slopstop.db`, which owns directly queryable current state, immutable Accepted revisions, command settlement, and Canonical events without requiring event replay. |
-| Runtime database | The separately owned `mastra.db`, whose private runtime state cannot decide canonical Project truth. |
+| Runtime database | The separately owned runtime database (file `mastra.db` until the storage cleanup that follows #101), whose private runtime state cannot decide canonical Project truth. |
 | Database lineage | The opaque identity of one canonical or runtime database history, preserved by same-Project restore and replaced only by a contract that explicitly permits it. |
 | Canonical recovery package | An explicitly incomplete package containing verified canonical Project truth when runtime persistence is unavailable; it opens only in safe mode and requires explicit runtime reset before normal use. |
 | Persistence health | The independent healthy, migration-required, recovery-required, missing, corrupt, identity-conflict, unsupported-newer, unavailable, or broken state of one canonical or runtime database. |

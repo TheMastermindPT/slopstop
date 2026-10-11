@@ -162,3 +162,7 @@ Context: Conversation C1 raises the canonical database to schema 4, so Projects 
 - Every chain source directory and every `snapshots/<upgradeId>/` backup is retained; nothing is deleted.
 - A registration receipt names the generation its reservation created. After upgrades that generation is gone; the receipt still resolves when it is the chain root's source, created by the reservation's create request, and the Storage is registered to the reservation's Project with its chain ending at the active generation.
 - `storage_operations` (#92) replaces this rule together with the marker.
+
+## Amendment 2026-10-11: Mastra Withdrawn
+
+Mastra is not used (decision on #101; decisions log §55). In API mode the agent runtime is the official Anthropic client (`@anthropic-ai/sdk`) behind the ADR 0009 AgentRuntime port; subscription mode is a governed Claude CLI session. Read "Mastra" above as the runtime adapter: it owns only its prefixed handoff tables and any adapter-private schema in the runtime database. The runtime database keeps its file name `mastra.db` and the manifest keeps `mastraMigrationHead` until a later code slice, planned after #105 (TypeScript 7) and #123 (Effect migration) and before C2, decides whether a runtime database is still needed and renames or removes it with a storage upgrade (#93).
