@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 126010e893bd1fceda6bd73ea8dd3cd5cf6ffabc5daf6f7d9c3eb0b274c156ca
+content_hash: c19cc8ad1362d4c06126ba16f463840d01103460bc721adf13865e43bf5560d6
 ---
 
 # Conversation — Human Decisions
@@ -605,3 +605,11 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - Q23: the four `as` casts on mock calls become the named-error helper.
 - This voids the S4b acceptance (§60): after the fix commit, gates, the targeted mutation on the changed source files, a fresh package, E5 and E4 run again, and Pedro accepts the fixed revision before `/rpiv:validate`.
 - The 26 suggestions and 4 discussion points go to one GitHub follow-up issue (user: "Sim, abre o issue").
+
+## 62. C1 S4 deep-review re-review: last fixes without a further review (user decision, 2026-10-15)
+
+- The re-review (`.rpiv/artifacts/reviews/2026-10-15_09-38-54_b96b305-cec7422-c1-s4-fix-round-rereview.md`) of the fix commit `66a29a1`: I4/Q10, Q12 and Q23 resolved; I3/Q17 and Q5 partly resolved; two important findings left, and no second deep-review fix round exists.
+  - I1 (introduced by `66a29a1`): `.seixoTokens` joined the whole `.seixo` appearance rule, so the note strip takes the Seixo font and the layered `background: var(--canvas)` is dead.
+  - Q1 (pre-existing, fourth recurrence of the copy/affordance class): with a kept uncertain save and a broken (concealed) load, the polite status announces "Try again to check it." while Try again is withheld.
+- **Decision:** the user chose "Corrigir os dois". I1: a tokens-only rule for `.seixoTokens`, with the strip's own background owning the colour. Q1: the failed/concealed load joins the condition that drives both Try again and its wording, plus one rendered test. Each with red-green, in one fix commit carrying the re-review in its `Review:` trailer.
+- No further review: the unreviewed delta is recorded as residual risk (rpiv fix-round cap stop). Then the targeted mutation on the changed source files, a fresh package, E5 and E4; then Pedro's acceptance of the final revision; then `/rpiv:validate`.

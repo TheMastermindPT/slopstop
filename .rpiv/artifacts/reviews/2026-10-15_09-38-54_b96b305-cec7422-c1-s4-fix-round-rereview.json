@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "artifact": "2026-10-15_09-38-54_b96b305-cec7422-c1-s4-fix-round-rereview.md",
+  "target": "b96b305..cec7422",
+  "createdAt": "2026-10-15T08:56:34.022Z",
+  "review": {
+    "date": "2026-10-15T09:38:54+0100",
+    "author": "Pedro Mesquita",
+    "repository": "slopstop",
+    "branch": "feat/c1-s4-conversation-window",
+    "commit": "cec7422",
+    "review_type": "pr",
+    "scope": "b96b305..cec7422 re-review of the S4 deep-review fix round (lenses on a1fc648..cec7422)",
+    "scope_strategy": "explicit-range",
+    "in_scope_files_count": 11,
+    "status": "ready",
+    "review_status": "complete",
+    "sections": [
+      "## Reconciliation Notes\n\n- **Re-review after the one allowed fix round.** Prior review: `.rpiv/artifacts/reviews/2026-10-11_19-07-31_b96b305-a1fc648-c1-s4-conversation-window.md` (main checkout). Fix commit 66a29a1 (trailer `Review:`), docs-only cec7422 on top. `git log --format='%(trailers:key=Review,valueonly)' 3ad6b8f..cec7422` prints one value, so **one fix round is spent; there is no second round**.\n- **Depth:** rigorous (passed `lane=rigorous`; `lane.mjs --range 3ad6b8f..cec7422` also rigorous: lines 10008 > 150, files 59 > 5).\n- **Scope:** the requested range `b96b305..cec7422` resolves to `3ad6b8f..cec7422` (86 files) and anchors lane and metadata. The lenses ran on the fix delta `a1fc648..cec7422` (11 reviewable files, one shard, 54 KB) because the rest of the range was reviewed at a1fc648 and its findings are triaged (blockers fixed in 66a29a1, the rest moved to issue #131). Items in #131 were not re-raised; none was made worse by the delta.\n- **Drift:** the helper found no same-branch JSON baseline, and `store diff` against the prior JSON was not run: it would mark the #131 items as \"resolved\", which is false (they are deferred, not fixed). Prior blockers are tracked in the resolution table under Recommendation instead.\n- **Gates (read-only, no heavy runs):** desktop typecheck 0 errors; Biome lint and format 0 diagnostics on the 11 files; dependency-cruiser 0 violations; Knip 0 issues; ast-grep 0 renderer sinks; rg only the pre-existing e2e `console.log`; CodeScene `analyze_change_set` against a1fc648: quality gates passed, 7 files, no degradations. No e2e, package, Stryker or full suite was run; the coordinator reports the final chain on 66a29a1 passed (targeted Stryker, package, E5, E4 26/26).\n- **Lenses:** Quality and Security on the one shard. Security returned 0 rows. Quality returned 3 rows (Q1-Q3). Predicate-Trace confirmed Q1's path and added nothing new. The interaction sweep returned IX-1, adopted as I1 (constituents Q2, Q3). Gap-finder: G1 (save-outcome.ts); the other uncovered code files changed fewer than 5 lines.\n- **Verification:** 5 findings: 4 Verified, 1 Weakened (Q2: the visible change is the font family and the UpgradeProblem text, not the colour and size of the note paragraphs). 5 resolution claims checked separately: 3 resolved, 2 partly resolved.\n- **Precedent weighting:** Q1 raised suggestion to important (`[precedent-weighted]`): the recovery-affordance copy class has now needed four fixes (43bc303, ca839da, ef3f92f, 66a29a1).\n- **Advisor:** not available; inline reconciliation.",
+      "## Spec Conformance\n\nno linked issue found (searched: PR body, branch name, commit messages). The fix commit references only the prior review; follow-ups live in issue #131.\nrpiv contract conformance: run /rpiv:validate C:/Users/pedro/Documents/GitHub/slopstop-c1-s4/.rpiv/artifacts/designs/2026-10-09_13-54-08_conversation-c1-local-save.md",
+      "## Impact\n\n- `apps/desktop/src/renderer/theme/seixo.module.css` now reaches outside the region: `.seixoTokens` is applied to the note strip (`workspace-view.tsx:140`), a sibling of the region root, so the unlayered region appearance rule now styles part of the old shell (I1, Q2).\n- `outcomeLine`'s second argument has one production caller (`conversation-region.tsx:26`); `save-outcome.test.ts` never passes it (G1).\n- `status-row.tsx:21` adds `theme.toneEdge` to the status row; the forced-colours rule matches only the unknown and failure tones, and a concealed row clips it, so nothing visible changes outside forced colours.\n- `stryker.config.json` shifts the `workspace-view.tsx` ranges by one line for the new import; the coordinator reports the targeted Stryker run passed on 66a29a1.",
+      "## Precedents\n\n| hash | subject | 30d-follow-ups | note |\n| --- | --- | --- | --- |\n| 5a10573 | hide Try again once the draft is edited | ca839da, ef3f92f, 66a29a1 | Added a hiding condition for the button only; the copy followed later, one case at a time. Q1 is the next missing case. |\n| 9a1cc94 | honour reduced motion | 8c95786, 66a29a1 | A reduced-motion fix that relied on sheet order was undone by a later higher-specificity theme selector. Same cascade-order class as I1. |\n| c8427d8 | keep the focus ring on a focused unavailable control | ef3f92f | A specificity tie broke an accessibility state. |\n| 0eb8a32 | address the S4a candidate review round 1 | 66a29a1 | The forced-colours rule targeted a class nothing used; the token test pinned the selector text. Now fixed with a rendered e2e check. |\n\nComposite lessons: copy and affordance must come from one predicate that includes every hiding cause (Q1); cascade fixes must not rely on layer or sheet order between two owners (I1); prefer computed-style checks on rendered elements over selector-text checks.",
+      "## Recommendation\n\n**Merge: blocked by the rubric (2 important, 0 critical). No second fix round is allowed, so both go to Pedro.** Neither is a data or security defect.\n\n**Prior blockers at cec7422:**\n\n| prior finding | status | evidence |\n| --- | --- | --- |\n| I3 / Q17 Try again copy | partly resolved | The edited-draft case is fixed and tested (`conversation-save-outcomes.test.tsx:279-291`). The concealed broken-load case still announces the Try again wording (Q1); it existed before the fix. |\n| I4 / Q10 reduced motion and ghost-sm owner | resolved | `.seixo .ghostSm` reduced-motion rule at matching specificity (`seixo.module.css:160-162`); `.action` holds layout only; e2e motion check runs with Reload and Try again mounted; focus, aria-disabled and hover rules unchanged. |\n| Q12 forced-colours edge | resolved | The status row carries `toneEdge` (`status-row.tsx:21`); the e2e checks the rendered edge. |\n| Q5 canvas literal | partly resolved | The literal is gone, but the token declaration that replaced it is dead; the colour comes from the whole `.seixo` rule that `.seixoTokens` joined, which also changes the strip's font (I1, Q2, Q3). |\n| Q23 test casts | resolved | No request casts remain; `firstOf` fails by name. |\n\n**New findings:**\n\n1. **I1 (introduced by 66a29a1):** `.seixoTokens` joined the whole region appearance rule, so the note strip in the old shell gets the Seixo font and its background owner is the unlayered rule, while the intended layered declaration is dead. Small CSS fix: a tokens-only rule for `.seixoTokens`.\n2. **Q1 (pre-existing, remaining part of I3):** a screen reader hears \"Try again to check it.\" when a return-after-uncertain-save meets a broken load, with no Try again on screen. One-line condition change plus one rendered test.\n\nChoices for Pedro: (a) authorise a narrow exception fix for I1 and Q1 (both small, renderer-only); (b) move both to issue #131 as accepted gaps and continue to validate; (c) accept I1 now (visual only on the note strip) and move Q1 to #131.\n\nNext step once a choice is made: `/rpiv:validate <design> b96b305..cec7422`."
+    ]
+  },
+  "findings": [
+    {
+      "kind": "dr",
+      "id": "I1",
+      "lens": "I",
+      "title": "Note strip canvas has two owners across the legacy-shell layer; the intended one is dead",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo.module.css",
+          "startLine": 15,
+          "quoted": [".seixoTokens {"]
+        },
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo.module.css",
+          "startLine": 72,
+          "quoted": ["  background: var(--canvas);"]
+        },
+        {
+          "path": "apps/desktop/src/renderer/projects-workspace.module.css",
+          "startLine": 159,
+          "quoted": ["    background: var(--canvas);"]
+        },
+        {
+          "path": "apps/desktop/src/renderer/workspace-view.tsx",
+          "startLine": 140,
+          "quoted": [
+            "        <div className={`${theme[\"seixoTokens\"]} ${styles[\"noteStrip\"]}`}>"
+          ]
+        }
+      ],
+      "why": "66a29a1 added .seixoTokens as a second selector on the whole .seixo appearance rule, not a tokens-only rule. Its unlayered background (seixo.module.css:72) is the live owner of the note strip background, while the intended owner at projects-workspace.module.css:159 sits inside @layer legacy-shell and never applies on the same element (workspace-view.tsx:140). The two fixes are order-coupled: narrowing .seixoTokens to tokens revives :159, deleting :159 first makes the leak the only owner. The only guard (renderer-foundation.test.ts:452) pins the colour both rules produce, not the owner. Same cascade-order class as the I4 precedent trail.",
+      "fix": "Split the rule: keep the custom properties in a tokens-only rule shared by .seixo and .seixoTokens, and leave box-sizing, background, color, font and line-height on .seixo alone. The layered background at projects-workspace.module.css:159 then becomes the real owner; the existing seam e2e keeps passing.",
+      "fp": "bd655c83d3da4fcf"
+    },
+    {
+      "kind": "dr",
+      "id": "Q1",
+      "lens": "Q",
+      "title": "Concealed broken-load row still announces \"Try again to check it.\" with no button [precedent-weighted]",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/conversation-region.tsx",
+          "startLine": 26,
+          "quoted": ["  const kept = outcomeLine(conversation.outcome, !resendable);"]
+        },
+        {
+          "path": "apps/desktop/src/renderer/conversation/status-row.tsx",
+          "startLine": 28,
+          "quoted": ["      {props.concealed ? null : props.tryAgain}"]
+        },
+        {
+          "path": "apps/desktop/src/renderer/conversation/save-outcome.ts",
+          "startLine": 137,
+          "quoted": ["  return state.kept;"]
+        }
+      ],
+      "why": "The fix unified the read-only and edited-draft cases but not the concealed gate. On return with a kept uncertain or dropped outcome and a kept saveId (use-conversation-load.ts:115), a read answering broken fails the load; isBrokenLoad makes failureTone false (conversation-region.tsx:46), statusSlot falls through to the kept line (save-outcome.ts:137), and the visually hidden but aria-live row announces the Try again wording while status-row.tsx:28 withholds the button. Pre-existing at a1fc648, not introduced by 66a29a1, but it is the remaining part of prior finding I3, whose agreed fix said \"wherever Try again is hidden\". Precedent-weighted: this class has now recurred four times (43bc303, ca839da, ef3f92f, 66a29a1).",
+      "fix": "Pass the concealed state into the same condition (const resendable = !readOnly && conversation.resendable && load.kind !== \"failed\", or hand concealed to outcomeLine), and add a rendered test: uncertain save, return, broken read, assert the slot text has no Try again wording.",
+      "fp": "82f93b1c3b8d8b30"
+    },
+    {
+      "kind": "dr",
+      "id": "Q2",
+      "lens": "Q",
+      "title": "Note strip now uses the Seixo font family (old shell restyled) [subsumed-by I1]",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/theme/seixo.module.css",
+          "startLine": 15,
+          "quoted": [".seixoTokens {"]
+        }
+      ],
+      "fix": "Resolved by the I1 split (tokens-only rule for .seixoTokens).",
+      "verifyNote": "Narrower than first stated: .workspace p (projects-workspace.module.css:141-145) and .workspace .error (:161-162) still set colour and line-height on the note and error text, font-size already matched 14px and box-sizing already matched; what changes visibly is the font family (now Red Hat Text) and the inherited colour and line-height on the UpgradeProblem strong text. No artifact records this as intended (design G22 keeps the old shell look).",
+      "fp": "d5998ca07d9d6081"
+    },
+    {
+      "kind": "dr",
+      "id": "Q3",
+      "lens": "Q",
+      "title": "Layered canvas declaration on the note strip is dead [subsumed-by I1]",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/projects-workspace.module.css",
+          "startLine": 159,
+          "quoted": ["    background: var(--canvas);"]
+        }
+      ],
+      "fix": "Keep it and make it live through the I1 split; do not delete it first.",
+      "fp": "dce04d8d80f707d4"
+    },
+    {
+      "kind": "dr",
+      "id": "G1",
+      "lens": "G",
+      "title": "withoutTryAgain branch has no unit test row",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/conversation/save-outcome.ts",
+          "startLine": 91,
+          "quoted": [
+            "export function outcomeLine(outcome: SaveOutcome, withoutTryAgain = false): StatusLine | undefined {"
+          ]
+        }
+      ],
+      "fix": "Add save-outcome.test.ts rows calling outcomeLine with withoutTryAgain true for an unknown line and for a non-unknown line.",
+      "fp": "966648eebb5abd28"
+    }
+  ]
+}
