@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: c19cc8ad1362d4c06126ba16f463840d01103460bc721adf13865e43bf5560d6
+content_hash: 60345ab7a040e1755b714872bef41de39c867222e5f7d46e548b6eb93022eb7f
 ---
 
 # Conversation — Human Decisions
@@ -613,3 +613,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - Q1 (pre-existing, fourth recurrence of the copy/affordance class): with a kept uncertain save and a broken (concealed) load, the polite status announces "Try again to check it." while Try again is withheld.
 - **Decision:** the user chose "Corrigir os dois". I1: a tokens-only rule for `.seixoTokens`, with the strip's own background owning the colour. Q1: the failed/concealed load joins the condition that drives both Try again and its wording, plus one rendered test. Each with red-green, in one fix commit carrying the re-review in its `Review:` trailer.
 - No further review: the unreviewed delta is recorded as residual risk (rpiv fix-round cap stop). Then the targeted mutation on the changed source files, a fresh package, E5 and E4; then Pedro's acceptance of the final revision; then `/rpiv:validate`.
+
+## 63. C1 S4 acceptance of the final revision (user decision, 2026-10-15)
+
+- After the deep-review fix round (`66a29a1`, §61) and the re-review fixes (`6add959`, §62), the final chain on `6add959` passed (targeted Stryker on `conversation-region.tsx` 90.08 with no real unguarded survivor, package, E5, E4 26/26, CodeScene change set vs `b96b305` passed). `88c6d4d` adds evidence only.
+- **Acceptance:** Pedro accepted S4 at the exact revision `88c6d4d` ("Aceito 88c6d4d"), with the recorded residual risks: the changed-files-only final mutation (§59) and the independently unreviewed `cec7422..6add959` delta (§62). The changes since the Narrator listen (§60) touch only states the real window cannot reach and system settings (reduced motion, forced colours), so the listen was not repeated.
+- Next: `/rpiv:validate` over `b96b305..88c6d4d`, then a separate integration authorization for the squash into main.
