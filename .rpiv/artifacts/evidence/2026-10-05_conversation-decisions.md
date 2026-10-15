@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 965f6f9b547d7dd314d511276946f67db81643f7ad8c8ea2913a2d93b215e6a5
+content_hash: e13dfe75b220994849c75e529ca48cecb3fcd6f2a3fce335b7ff32d16c4416d2
 ---
 
 # Conversation — Human Decisions
@@ -661,3 +661,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Round 2 (the last) on `12c3804`: all three passed T1-T12 with no new defect; one concern (F1) and small suggestions (table in the local evidence folder `s5-review-round2.md`).
 - **F1, the `process-entry` → desktop log link** (user: "Aceitar como risco"): T7 showed a successful upgrade writes no harness log line, so S5 proves only the negative (no forwarded failure line, no `HARNESS_LOG_LINE_` code). The coordinator had changed R9's "settles the carry-forward" to "stays open" without a recorded user decision; Pedro now accepts the unproven positive link as residual risk at the C1 gate. The C1-gate carry-forward row keeps one trigger: the first missing upgrade log line in a real run. Owner: the coordinator.
 - **Leftovers** (user: "Aplicar sem 3.ª ronda"): S1 (the journey failure as the thrown error's `cause`), S2 and S3 (evidence wording), S4 (drop the unused export). No third review round; the unreviewed delta is recorded as residual risk. Then the final runs on the final tree, the `canOpen` (CNV-B52) mutation run once, and Pedro's S5 acceptance.
+
+## 71. C1 S5 acceptance and integration path (user decisions, 2026-10-15)
+
+- After the round-2 leftovers (`bd72469`), the final runs on the clean commit passed (gates, `pnpm test:e2e` 27/27, `package:launch-smoke`; integration last green on `cbbb087`, no harness file changed since) and the CNV-B52 mutation ran once: `projects-list.tsx:50-56`, 23/23 killed, score 100. `b636bc8` adds evidence only.
+- **Acceptance:** Pedro accepted S5 at the exact revision `b636bc8` ("Aceito b636bc8"), with the residual risks of §70 (unreviewed round-2 delta, the unexecuted T6 double-failure branch, the unproven positive log link).
+- **Integration path, exception** (user: "Nenhum"): no `/rpiv:deep-review` and no `/rpiv:validate` before the S5 squash. Residual risk: no feature-range deep review and no independent re-proof of red for S5. One-off, like §64.
+- Integration authorized: squash `feat/c1-s5-conversation-journey` (`b636bc8`) into main.
