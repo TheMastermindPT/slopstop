@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: c2d94d5d12e5392464e8ec4bfe7b90521bd484e0cab58026b075b36e42fa33a1
+content_hash: 965f6f9b547d7dd314d511276946f67db81643f7ad8c8ea2913a2d93b215e6a5
 ---
 
 # Conversation — Human Decisions
@@ -655,3 +655,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - Round 1 on `1665900` (three reviewers): 1 blocker (touched integration projects unproven), concerns on run evidence bound to pre-commit digests, the R2b poll, the `canOpen` mutation scope and the red re-proof wording, and seven suggestions. Table in the local evidence folder `s5-review-round1.md`.
 - **Decision:** the user chose "Corrigir tudo + ronda 2": fixes T1-T12, then the final runs on the fixed candidate (gates, `pnpm test:integration`, `pnpm test:e2e`, `package:launch-smoke`), then round 2 (the last). The `canOpen` mutation run happens once after the last round, with its range added to the root config now.
+
+## 70. C1 S5 candidate review round 2 (user decisions, 2026-10-15)
+
+- Round 2 (the last) on `12c3804`: all three passed T1-T12 with no new defect; one concern (F1) and small suggestions (table in the local evidence folder `s5-review-round2.md`).
+- **F1, the `process-entry` → desktop log link** (user: "Aceitar como risco"): T7 showed a successful upgrade writes no harness log line, so S5 proves only the negative (no forwarded failure line, no `HARNESS_LOG_LINE_` code). The coordinator had changed R9's "settles the carry-forward" to "stays open" without a recorded user decision; Pedro now accepts the unproven positive link as residual risk at the C1 gate. The C1-gate carry-forward row keeps one trigger: the first missing upgrade log line in a real run. Owner: the coordinator.
+- **Leftovers** (user: "Aplicar sem 3.ª ronda"): S1 (the journey failure as the thrown error's `cause`), S2 and S3 (evidence wording), S4 (drop the unused export). No third review round; the unreviewed delta is recorded as residual risk. Then the final runs on the final tree, the `canOpen` (CNV-B52) mutation run once, and Pedro's S5 acceptance.
