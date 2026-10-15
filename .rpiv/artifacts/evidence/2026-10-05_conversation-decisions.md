@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: ea6b12629515e0b4ac5749f2e8c682f56027e32e8bc5d7c5cbd20566bc911c6f
+content_hash: e465ecf5cc7a0701b2f8fa82e575c69cd1a6aa59f9377db31a941fa8803044e8
 ---
 
 # Conversation — Human Decisions
@@ -673,3 +673,11 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The push of main at `67f59fc` failed in pre-push check:deep: `conversation-accessibility.test.ts:518` (`g-try-again-unavailable`) threw `AbortError` in `focusFacts` (`conversation-window.ts:139`). Cause, confirmed from the trace: the forced-colours switch starts Try again's 120 ms transition; ~300 ms after the hanging read begins, "Loading messages…" outranks the kept failure line (designed precedence), the tone changes, the running transition is replaced and its `finished` promise rejects. The product behaves as designed; the race was in the test helper.
 - **Decision:** the user chose "Corrigir o teste num ramo curto". Branch `fix/e2e-animation-abort` (`a197995`): `focusFacts` settles animations with `allSettled` and loops until none run (bounded 1 s, with a named failure); no oracle changed, no timeout raised. A throwaway deterministic check showed the old helper failing with the same `AbortError` and the new one settling. Gates passed; the accessibility file passed 5 times in a row and the full e2e 27/27. Squashed into main, then the push is retried.
+
+## 73. #110 split of project-storage-node-adapters.ts (user decisions, 2026-10-15)
+
+- Worktree `C:/Users/pedro/Documents/GitHub/slopstop-110`, branch `refactor/110-split-node-adapters` at main `8fcee45` (user: "Sim"). The S4, S5 and e2e-fix branches and worktrees were deleted (user: "Sim, apaga os três").
+- Brief: `.rpiv/artifacts/designs/2026-10-15_20-38-03_split-project-storage-node-adapters.md` (worktree). Eight new files plus the kept composition file; bodies move verbatim; the public surface of `project-storage-node-adapters.ts` is unchanged; the two complex conditionals become named pure predicates; the project-storage mutation scores must not drop (baseline before the move, final after the last review).
+- **Lane:** `lane.mjs --paths` says normal; the user chose "Rigoroso" (every open, create and upgrade goes through this file).
+- **D1, Effect scope** (user: "Aprovo"): verbatim-moved code keeps its Promise form (moving without changing is not a change under AGENTS.md); new code (predicates, factories) follows the Effect rules; SQL bodies stay for #123.
+- Next: the rigorous intent review; build authorization takes effect when it passes or Pedro triages its findings.
