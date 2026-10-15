@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 9326f9c48fc7a856ce2af58f719fff0616c182e9651b3a08bd548591eadb6f11
+content_hash: c2d94d5d12e5392464e8ec4bfe7b90521bd484e0cab58026b075b36e42fa33a1
 ---
 
 # Conversation — Human Decisions
@@ -650,3 +650,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - CNV-B19 found a real red on arrival: after the restart, the upgraded Storage-only Project cannot be reopened. `canOpen` (`apps/desktop/src/renderer/projects-list.tsx:46-49`, from `846493f`) opens an unbound Project only in safe mode, so once upgraded its saved messages are unreachable in the window. Registered Projects reopen correctly (repository-a and repository-b passed every R2-R9 check across the restart).
 - Origin check: the upgrade-window design (:81) calls this "the legacy opening contract"; nothing states that an upgraded unbound Project must stay closed. There is no flow that binds a repository to an existing unbound Project ("Add existing repository" registers a new one), so the data would have no path back. The C1 design claim (:985) is that Storage-only v2 and v3 open read-write after their upgrade.
 - **Decision:** the user chose "A: corrigir dentro do S5". S5 widens to one product change: `canOpen` also opens an upgraded (healthy) unbound Project. It gets its own expected red (a renderer unit row) before the change; CNV-B19's R6 reopening proves it in the real window. The candidate review covers it.
+
+## 69. C1 S5 candidate review round 1 (user decision, 2026-10-15)
+
+- Round 1 on `1665900` (three reviewers): 1 blocker (touched integration projects unproven), concerns on run evidence bound to pre-commit digests, the R2b poll, the `canOpen` mutation scope and the red re-proof wording, and seven suggestions. Table in the local evidence folder `s5-review-round1.md`.
+- **Decision:** the user chose "Corrigir tudo + ronda 2": fixes T1-T12, then the final runs on the fixed candidate (gates, `pnpm test:integration`, `pnpm test:e2e`, `package:launch-smoke`), then round 2 (the last). The `canOpen` mutation run happens once after the last round, with its range added to the root config now.
