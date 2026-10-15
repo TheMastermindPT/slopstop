@@ -4,6 +4,10 @@ import type {
   CanonicalProjectSwitchRequest,
   CanonicalProjectSwitchResult,
   HarnessStatus,
+  ProjectConversationReadRequest,
+  ProjectConversationReadResult,
+  ProjectConversationSaveRequest,
+  ProjectConversationSaveResult,
   ProjectListResult,
   ProjectRegistrationResult,
   ProjectUpgradeRequest,
@@ -24,6 +28,8 @@ export const desktopIpcChannels = {
   activateProject: "projects:activate",
   switchProject: "projects:switch",
   upgradeProject: "projects:upgrade",
+  readConversation: "projects:conversation:read",
+  saveConversationMessage: "projects:conversation:save",
   getHarnessStatus: "harness:get-status",
   harnessStatusChanged: "harness:status-changed",
   retryHarness: "harness:retry",
@@ -42,6 +48,10 @@ export interface SlopStopApi {
   ): Promise<CanonicalProjectActivationResult>;
   switchProject(request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult>;
   upgradeProject(request: ProjectUpgradeRequest): Promise<ProjectUpgradeResult>;
+  readConversation(request: ProjectConversationReadRequest): Promise<ProjectConversationReadResult>;
+  saveConversationMessage(
+    request: ProjectConversationSaveRequest,
+  ): Promise<ProjectConversationSaveResult>;
   getRegistrationCapability(): Promise<RegistrationCapability>;
   /** Opens the main process's native folder dialog; the renderer never supplies a path. */
   chooseRepository(): Promise<RepositoryChoiceResult>;

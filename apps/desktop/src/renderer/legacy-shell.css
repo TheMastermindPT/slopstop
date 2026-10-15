@@ -1,0 +1,100 @@
+/*
+ * The old shell's global rules, moved from the deleted supervision window's style sheet with their
+ * values unchanged and the tokens renamed `--legacy-*`. Every old-shell sheet sits in this layer, so
+ * the unlayered Conversation region wins wherever both declare a property (design G22, G23).
+ */
+@layer legacy-shell {
+  :root {
+    color-scheme: dark;
+    font-family: "Segoe UI Variable", Aptos, "Segoe UI", sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    --legacy-night: #090b0a;
+    --legacy-deep: #0e1110;
+    --legacy-raised: #151817;
+    --legacy-panel: #1a1d1c;
+    --legacy-ink: #f0f2ef;
+    --legacy-muted: #a3aaa6;
+    --legacy-dim: #69716d;
+    --legacy-line: rgb(205 214 209 / 0.14);
+    --legacy-line-strong: rgb(205 214 209 / 0.29);
+    --legacy-blue: #d6ddd9;
+    --legacy-violet: #8d9892;
+    --legacy-amber: #d8a85f;
+    --legacy-danger: #d97863;
+    --legacy-success: #83ad90;
+    --legacy-font-code: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    min-width: 20rem;
+    min-height: 100%;
+    margin: 0;
+  }
+
+  body {
+    min-height: 100vh;
+    overflow: hidden;
+    background: var(--legacy-night);
+    color: var(--legacy-ink);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button,
+  select {
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  ::selection {
+    background: var(--legacy-violet);
+    color: #fff;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: rgb(156 166 161 / 0.34);
+    background-clip: padding-box;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--legacy-blue);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto;
+    }
+  }
+}

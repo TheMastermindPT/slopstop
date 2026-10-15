@@ -1,7 +1,10 @@
 import {
   decodeStrict,
   HarnessStatusSchema,
+  ProjectConversationReadResultSchema,
+  ProjectConversationSaveResultSchema,
   ProjectUpgradeResultSchema,
+  projectConversationDiagnostics,
   projectUpgradeDiagnostics,
   RetryHarnessResultSchema,
   WorkspaceIntentResultSchema,
@@ -33,6 +36,8 @@ await import("./preload.js");
 
 type ExposedApi = Readonly<{
   upgradeProject(request: unknown): Promise<unknown>;
+  readConversation(request: unknown): Promise<unknown>;
+  saveConversationMessage(request: unknown): Promise<unknown>;
   getHarnessStatus(): Promise<unknown>;
   queryWorkspace(query: unknown): Promise<unknown>;
   retryHarness(): Promise<unknown>;
@@ -195,32 +200,84 @@ describe("preload workspace API", () => {
   });
 });
 
-describe("preload Project API", () => {
-  it("upgrades through a strict preload method", async () => {
-    const request = { projectId: "00000000-0000-4000-8000-000000000010" };
-    const result = decodeStrict(ProjectUpgradeResultSchema, {
+const activation = {
+  projectId: "00000000-0000-4000-8000-000000000010",
+  activationId: "00000000-0000-4000-8000-000000000011",
+};
+const upgradeRequest = { projectId: activation.projectId };
+const readRequest = { ...activation, after: null };
+const saveRequest = {
+  ...activation,
+  saveId: "00000000-0000-4000-8000-000000000012",
+  expectedRevision: 0,
+  text: "Hello",
+};
+
+/**
+ * A strict preload method: a valid request reaches `invoke` once on its channel; an extra key on
+ * the request rejects before `invoke`; an extra key on the result, or a diagnostic row that does
+ * not belong to the result's status, rejects.
+ */
+type StrictMethod = readonly [
+  "upgradeProject" | "readConversation" | "saveConversationMessage",
+  string,
+  object,
+  object,
+  object,
+];
+
+const strictMethods: ReadonlyArray<StrictMethod> = [
+  [
+    "upgradeProject",
+    desktopIpcChannels.upgradeProject,
+    upgradeRequest,
+    decodeStrict(ProjectUpgradeResultSchema, {
       status: "failed",
-      request,
+      request: upgradeRequest,
       diagnostic: projectUpgradeDiagnostics.verificationFailed,
-    });
-    electronMocks.invoke.mockResolvedValueOnce(result);
-    const api = exposedApi();
+    }),
+    { diagnostic: projectUpgradeDiagnostics.storageUnavailable },
+  ],
+  [
+    "readConversation",
+    desktopIpcChannels.readConversation,
+    readRequest,
+    decodeStrict(ProjectConversationReadResultSchema, {
+      status: "unavailable",
+      request: readRequest,
+      diagnostic: projectConversationDiagnostics.storageUnavailable,
+    }),
+    { diagnostic: projectConversationDiagnostics.storageBroken },
+  ],
+  [
+    "saveConversationMessage",
+    desktopIpcChannels.saveConversationMessage,
+    saveRequest,
+    decodeStrict(ProjectConversationSaveResultSchema, {
+      status: "read-only",
+      request: saveRequest,
+      diagnostic: projectConversationDiagnostics.readOnly,
+    }),
+    { diagnostic: projectConversationDiagnostics.writerUnavailable },
+  ],
+];
 
-    await expect(api.upgradeProject(request)).resolves.toEqual(result);
-    expect(electronMocks.invoke).toHaveBeenCalledExactlyOnceWith(
-      desktopIpcChannels.upgradeProject,
-      request,
-    );
+describe("preload Project API", () => {
+  it.for(strictMethods)(
+    "%s is a strict preload method",
+    async ([method, channel, request, result, wrongRow]) => {
+      const call = exposedApi()[method];
+      electronMocks.invoke.mockResolvedValueOnce(result);
+      await expect(call(request)).resolves.toEqual(result);
+      expect(electronMocks.invoke).toHaveBeenCalledExactlyOnceWith(channel, request);
 
-    await expect(api.upgradeProject({ ...request, extra: true })).rejects.toThrow();
-    expect(electronMocks.invoke).toHaveBeenCalledTimes(1);
+      await expect(call({ ...request, extra: true })).rejects.toThrow();
+      expect(electronMocks.invoke).toHaveBeenCalledTimes(1);
 
-    electronMocks.invoke.mockResolvedValueOnce({ ...result, extra: true });
-    await expect(api.upgradeProject(request)).rejects.toThrow();
-    electronMocks.invoke.mockResolvedValueOnce({
-      ...result,
-      diagnostic: projectUpgradeDiagnostics.storageUnavailable,
-    });
-    await expect(api.upgradeProject(request)).rejects.toThrow();
-  });
+      electronMocks.invoke.mockResolvedValueOnce({ ...result, extra: true });
+      await expect(call(request)).rejects.toThrow();
+      electronMocks.invoke.mockResolvedValueOnce({ ...result, ...wrongRow });
+      await expect(call(request)).rejects.toThrow();
+    },
+  );
 });

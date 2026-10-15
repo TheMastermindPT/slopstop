@@ -7,6 +7,10 @@ import type {
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useAddRepository } from "./add-repository/use-add-repository.js";
 import { AddRepositoryButton } from "./add-repository-button.js";
+import {
+  ConversationMemoryProvider,
+  createConversationMemory,
+} from "./conversation/conversation-memory.js";
 import { type ListState, ProjectRows, safeModeLabel } from "./projects-list.js";
 import styles from "./projects-workspace.module.css";
 import { useRemoveFromList } from "./remove-from-list/use-remove-from-list.js";
@@ -18,7 +22,7 @@ import {
   workspaceRemovalHost,
 } from "./workspace-hooks.js";
 import { type View, WorkspaceSection } from "./workspace-view.js";
-import "./prototype/prototype-global.css";
+import "./legacy-shell.css";
 
 type Active = Extract<CanonicalProjectActivationResult, { status: "active" }>;
 const progressText = { opening: "Opening Project…", updating: "Updating Project…", idle: "" };
@@ -37,6 +41,7 @@ export function ProjectsWorkspace({
   const ready = status.state === "ready";
   const attempt = "attempt" in status ? status.attempt : 0;
   const [list, setList] = useState<ListState>({ status: "idle" });
+  const [conversationMemory] = useState(createConversationMemory);
   const [session, setSession] = useState<Session>({ kind: "none" });
   const [view, setView] = useState<View>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +78,7 @@ export function ProjectsWorkspace({
   }, [ready, clearProblem]);
   useEffect(() => {
     epoch.current += 1;
+    conversationMemory.newEpoch();
     selecting.current = false;
     setBusy(undefined);
     setSession({ kind: "none" });
@@ -85,7 +91,7 @@ export function ProjectsWorkspace({
       epoch.current += 1;
       request.current += 1;
     };
-  }, [ready, attempt, refresh, clearProblem]);
+  }, [ready, attempt, refresh, clearProblem, conversationMemory]);
 
   const nameOf = (projectId: ProjectId) => names.current.get(projectId) ?? projectId.slice(0, 8);
 
@@ -97,6 +103,8 @@ export function ProjectsWorkspace({
         name: nameOf(result.request.projectId),
         label: result.access === "read-only" ? "Read-only" : "Read-write",
         mode: "active",
+        activationId: result.activationId,
+        readOnly: result.access === "read-only",
       });
     } else if (result.status === "safe-mode") {
       setSession({ kind: "none" });
@@ -296,15 +304,17 @@ export function ProjectsWorkspace({
       <p id="ws-progress" className={styles["progress"]} aria-live="polite">
         {progressText[busy ?? "idle"]}
       </p>
-      <WorkspaceSection
-        flow={flow}
-        removal={removal}
-        view={view}
-        error={error}
-        busy={busy !== undefined}
-        problem={upgrade.problem}
-        onRetry={retryUpgrade}
-      />
+      <ConversationMemoryProvider value={conversationMemory}>
+        <WorkspaceSection
+          flow={flow}
+          removal={removal}
+          view={view}
+          error={error}
+          busy={busy !== undefined}
+          problem={upgrade.problem}
+          onRetry={retryUpgrade}
+        />
+      </ConversationMemoryProvider>
     </main>
   );
 }

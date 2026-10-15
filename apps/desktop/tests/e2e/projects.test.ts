@@ -1,24 +1,9 @@
-import { mkdtemp, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdtemp, rename, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { decodeStrict, RegisteredProjectSchema } from "@slopstop/protocol";
-import { Schema } from "effect";
 import { launchBuiltDesktop } from "./electron-launch.js";
-import { runHarnessSeed } from "./harness-seed.js";
-
-/** Registers the two seed repositories (repository-a, repository-b) through the harness. */
-async function seedTwoProjects(userData: string) {
-  runHarnessSeed("project-entry-ui-seed.integration.test.ts", "PC_UI_USER_DATA", userData);
-  const projects = decodeStrict(
-    Schema.Array(RegisteredProjectSchema),
-    JSON.parse(await readFile(path.join(userData, "fixture-projects.json"), "utf8")),
-  );
-  const first = projects[0];
-  const second = projects[1];
-  if (first === undefined || second === undefined) throw new Error("Seeded Projects missing");
-  return [first, second] as const;
-}
+import { seedTwoProjects } from "./harness-seed.js";
 
 test("lists and switches real saved Projects through the sandboxed Electron preload", async () => {
   test.setTimeout(150_000);

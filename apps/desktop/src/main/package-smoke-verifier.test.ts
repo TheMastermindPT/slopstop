@@ -375,7 +375,18 @@ const query = {
   projectId: "00000000-0000-4000-8000-000000000001",
   cursor: null,
 } as const;
-const exactResult = {
+/** The packaged main-window meta policy: the header without `frame-ancestors`. */
+const metaPolicy =
+  "default-src 'self'; base-uri 'none'; connect-src 'self'; font-src 'self'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'";
+const loadedFonts = [
+  { spec: '400 14px "Red Hat Text"', faces: 2 },
+  { spec: '500 13px "Red Hat Text"', faces: 2 },
+  { spec: '600 16px "Red Hat Text"', faces: 2 },
+  { spec: "400 16px Cinzel", faces: 2 },
+  { spec: '400 12.5px "Cascadia Code"', faces: 3 },
+];
+/** The renderer result before S4a, with neither `fonts` nor `cspMeta`. */
+const boundaryResult = {
   processType: "undefined",
   requireType: "undefined",
   methods: [
@@ -385,8 +396,10 @@ const exactResult = {
     "getRegistrationCapability",
     "listProjects",
     "queryWorkspace",
+    "readConversation",
     "registerProject",
     "retryHarness",
+    "saveConversationMessage",
     "submitWorkspaceIntent",
     "subscribeHarnessStatus",
     "subscribeWorkspaceNotifications",
@@ -410,6 +423,7 @@ const exactResult = {
     },
   },
 } as const;
+const exactResult = { ...boundaryResult, cspMeta: metaPolicy, fonts: loadedFonts };
 
 describe("packaged renderer boundary verifier", () => {
   it("validates exact packaged renderer boundary results", () => {
@@ -453,5 +467,49 @@ describe("packaged renderer boundary verifier", () => {
     expect(packageSmokeRendererScript).not.toContain("process.env");
     expect(packageSmokeRendererScript).not.toContain("process.argv");
     expect(packageSmokeRendererScript).not.toContain("SLOPSTOP_");
+  });
+});
+
+describe("packaged renderer fonts and CSP meta", () => {
+  it("rejects a result without fonts or the CSP meta", () => {
+    expect(() => validatePackageSmokeResult(boundaryResult)).toThrow();
+  });
+
+  it("accepts the five bundled faces loaded with the exact meta policy", () => {
+    expect(() => validatePackageSmokeResult(exactResult)).not.toThrow();
+  });
+
+  it("accepts a face that loaded exactly one file", () => {
+    const fonts = loadedFonts.map((font) => ({ ...font, faces: 1 }));
+    expect(() => validatePackageSmokeResult({ ...exactResult, fonts })).not.toThrow();
+  });
+
+  it.each([
+    [
+      "a face that loaded nothing",
+      loadedFonts.map((font, index) => ({ ...font, faces: index === 3 ? 0 : font.faces })),
+    ],
+    ["a face missing", loadedFonts.slice(1)],
+    ["a face out of order", [...loadedFonts].reverse()],
+    ["an extra face", [...loadedFonts, loadedFonts[0]]],
+    ["a face count that is not a number", loadedFonts.map((font) => ({ ...font, faces: "2" }))],
+    [
+      "fonts that are not a list",
+      Object.fromEntries(loadedFonts.map((font, index) => [index, font])),
+    ],
+  ])("fails the smoke for %s", (_label, fonts) => {
+    expect(() => validatePackageSmokeResult({ ...exactResult, fonts })).toThrow();
+  });
+
+  it.each([
+    ["meta missing", null],
+    ["meta differs", `${metaPolicy}; frame-ancestors 'none'`],
+  ])("fails the smoke for %s", (_label, cspMeta) => {
+    expect(() => validatePackageSmokeResult({ ...exactResult, cspMeta })).toThrow();
+  });
+
+  it("loads the faces and reads the CSP meta in the packaged window", () => {
+    expect(packageSmokeRendererScript).toContain("document.fonts.load(");
+    expect(packageSmokeRendererScript).toContain('meta[http-equiv="Content-Security-Policy"]');
   });
 });

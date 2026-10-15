@@ -22,6 +22,10 @@ vi.mock("electron", () => ({
 
 import { configureSessionSecurity, lockNavigation } from "./security.js";
 
+/** The packaged header policy, `security.ts:8-18` at `6a41350`: S4a adds no origin. */
+const packagedHeader =
+  "default-src 'self'; base-uri 'none'; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'";
+
 beforeEach(() => {
   electronMocks.app.isPackaged = true;
   vi.clearAllMocks();
@@ -45,7 +49,7 @@ describe("desktop security", () => {
     expect(responseCallback).toHaveBeenCalledWith({
       responseHeaders: {
         Existing: ["value"],
-        "Content-Security-Policy": [expect.not.stringContaining("localhost")],
+        "Content-Security-Policy": [packagedHeader],
       },
     });
   });

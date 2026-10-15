@@ -1,0 +1,199 @@
+/*
+ * Seixo, scoped to the Conversation region root (design G22). The old shell is wrapped in
+ * `@layer legacy-shell`; this unlayered, zero-specificity reset removes every legacy value from
+ * region elements, while SVG presentation attributes and custom properties stay.
+ */
+:where(.seixo *:not(svg, svg *)) {
+  all: revert;
+}
+
+/*
+ * The tokens are owned here once. `.seixoTokens` gives them, and nothing else, to an element
+ * outside the region, such as the note strip above it (deep review Q5, re-review I1).
+ */
+.seixo,
+.seixoTokens {
+  --canvas: #050606;
+  --iron: #0a0b0c;
+  --forged: #101214;
+  --plate: #16191c;
+  --line-subtle: #202429;
+  --line-strong: #3a4148;
+  --ink: #eceff1;
+  --ink-muted: #9aa3ab;
+  --ink-dim: #79828a;
+  --frost: #9cc9e0;
+  --frost-on: #08131a;
+  --frost-tint: #14232b;
+  --ember: #e09a4a;
+  --ember-tint: #2a1d10;
+  --moss: #8db892;
+  --moss-tint: #132019;
+  --blood: #e5766a;
+  --blood-tint: #2a1513;
+
+  --radius-row: 12px;
+  --radius-card: 14px;
+  --radius-band: 16px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-measure: 720px;
+
+  --button-primary-hover: #b2d6e8;
+  --button-secondary-hover: #1b1f23;
+
+  --shadow-soft-lift: 0 10px 28px -14px rgb(0 0 0 / 0.9), inset 0 1px 0 rgb(236 239 241 / 0.04);
+  --shadow-button-lift: 0 4px 12px -6px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(236 239 241 / 0.05);
+  --shadow-frost-lift:
+    0 6px 16px -8px rgb(156 201 224 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.35);
+  --shadow-composer-lift: 0 10px 28px -14px rgb(0 0 0 / 0.9);
+
+  /* The decided focus ring (decisions §33, `ragnarok-hero/access.css:8-17`). */
+  --focus-halo: rgb(from var(--frost) r g b / 0.22);
+  --fault-edge: rgb(from var(--blood) r g b / 0.35);
+  --fault-halo: rgb(from var(--blood) r g b / 0.14);
+  --focus-ring: 0 0 0 1.5px var(--frost), 0 0 0 5px var(--focus-halo);
+  --focus-ring-on-frost:
+    0 0 0 2px var(--canvas), 0 0 0 3.5px var(--frost), 0 0 0 7px var(--focus-halo);
+
+  --font-text: "Red Hat Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --font-code: "Cascadia Code", "Cascadia Mono", Consolas, monospace;
+  --transition-control: 120ms ease-out;
+}
+
+/* The region root's own appearance; `.seixoTokens` elements keep the old shell's. */
+.seixo {
+  box-sizing: border-box;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.seixo *,
+.seixo *::before,
+.seixo *::after {
+  box-sizing: border-box;
+}
+
+.seixo :focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+/* Frost-filled buttons: the line sits outside a 2px canvas gap. */
+.seixo .primary:focus-visible {
+  box-shadow: var(--focus-ring-on-frost);
+}
+
+/*
+ * The ghost small button (DESIGN.md components.button-ghost-sm): Reload and Try again. On a blood
+ * tint its text is --ink-muted (the Three Voices rule).
+ */
+.seixo .ghostSm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--ink-dim);
+  font: 500 12px / 18px var(--font-text);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-control),
+    color var(--transition-control);
+}
+
+.seixo .ghostSm:hover {
+  background: var(--forged);
+  color: var(--ink);
+}
+
+.seixo .ghostSm svg {
+  flex: none;
+}
+
+/*
+ * A Seixo button that cannot act still takes focus, but looks unavailable (ui-ux C4, R2). It loses
+ * its lift, never its focus ring (review round 1 T1).
+ */
+.seixo .button[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.seixo .button[aria-disabled="true"]:not(:focus-visible) {
+  box-shadow: none;
+}
+
+/* Focused, it lifts to 0.7 so its ring stays clear, still dimmer than an enabled button (ui-ux). */
+.seixo .button[aria-disabled="true"]:focus-visible {
+  opacity: 0.7;
+}
+
+/* The Broken tone: a blood outline around the notice (G24). */
+.seixo .failure {
+  border: 1px solid var(--blood);
+}
+
+/* Reduced motion: no region transition runs, including on the icons the reset leaves alone. */
+@media (prefers-reduced-motion: reduce) {
+  .seixo,
+  .seixo *,
+  .seixo *::before,
+  .seixo *::after {
+    transition-duration: 0s;
+    scroll-behavior: auto;
+  }
+
+  /* The ghost small button declares its transition at (0,2,0); match it here (deep review I4). */
+  .seixo .ghostSm {
+    transition-duration: 0s;
+  }
+}
+
+@media (forced-colors: active) {
+  /* The halo is a shadow and is removed; the transparent outline is painted instead. */
+  .seixo :focus-visible:not(textarea) {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+
+  /* Seixo buttons have no border; without their fill they would read as plain text. */
+  .seixo .button {
+    border: 1px solid ButtonText;
+  }
+
+  /* The composer field has no edge of its own; under forced colours it gets one (ui-ux C11). */
+  .seixo .composerField {
+    border: 1px solid CanvasText;
+  }
+
+  /* The composer field: its ring is a shadow, so the system highlight draws it instead (V5). */
+  .seixo .composerField:focus-within {
+    outline: 2px solid Highlight;
+  }
+
+  /*
+   * State words stay when colour goes: notices, failures and the toned status rows keep a system
+   * border. The Unknown row draws its edge as a shadow, which forced colours removes (deep review Q12).
+   */
+  .seixo .toneEdge:is([data-tone="unknown"], [data-tone="failure"]),
+  .seixo .notice,
+  .seixo .failure {
+    border: 1px solid CanvasText;
+  }
+}

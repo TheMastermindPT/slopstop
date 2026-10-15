@@ -2,6 +2,8 @@ import {
   CanonicalProjectActivationRequestSchema,
   CanonicalProjectSwitchRequestSchema,
   decodeStrict,
+  ProjectConversationReadRequestSchema,
+  ProjectConversationSaveRequestSchema,
   ProjectListRequestSchema,
   ProjectUpgradeRequestSchema,
 } from "@slopstop/protocol";
@@ -11,7 +13,15 @@ import type { ProjectEntryBridge } from "./project-entry-bridge.js";
 
 /** The Project handlers: each strictly decodes the renderer's value before the bridge sees it. */
 export function registerProjectEntryIpc(
-  projects: Pick<ProjectEntryBridge, "list" | "activate" | "switchProject" | "upgrade">,
+  projects: Pick<
+    ProjectEntryBridge,
+    | "list"
+    | "activate"
+    | "switchProject"
+    | "upgrade"
+    | "readConversation"
+    | "saveConversationMessage"
+  >,
 ): void {
   ipcMain.handle(desktopIpcChannels.listProjects, (_event, value: unknown) => {
     decodeStrict(ProjectListRequestSchema, value);
@@ -25,5 +35,11 @@ export function registerProjectEntryIpc(
   );
   ipcMain.handle(desktopIpcChannels.upgradeProject, (_event, value: unknown) =>
     projects.upgrade(decodeStrict(ProjectUpgradeRequestSchema, value)),
+  );
+  ipcMain.handle(desktopIpcChannels.readConversation, (_event, value: unknown) =>
+    projects.readConversation(decodeStrict(ProjectConversationReadRequestSchema, value)),
+  );
+  ipcMain.handle(desktopIpcChannels.saveConversationMessage, (_event, value: unknown) =>
+    projects.saveConversationMessage(decodeStrict(ProjectConversationSaveRequestSchema, value)),
   );
 }

@@ -88,6 +88,7 @@ spacing:
   "6": "24px"
   "8": "32px"
   "10": "40px"
+  measure: "720px"
 components:
   button-primary:
     backgroundColor: "{colors.frost}"
@@ -114,6 +115,15 @@ components:
     padding: "0 16px"
     height: "34px"
   button-ghost-hover:
+    backgroundColor: "{colors.forged}"
+    textColor: "{colors.ink}"
+  button-ghost-sm:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-dim}"
+    rounded: "{rounded.pill}"
+    padding: "0 12px"
+    height: "28px"
+  button-ghost-sm-hover:
     backgroundColor: "{colors.forged}"
     textColor: "{colors.ink}"
   button-icon:

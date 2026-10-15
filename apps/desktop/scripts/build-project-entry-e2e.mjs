@@ -10,8 +10,6 @@ await build({
   define: {
     MAIN_WINDOW_VITE_DEV_SERVER_URL: "undefined",
     MAIN_WINDOW_VITE_NAME: JSON.stringify("main_window"),
-    PROTOTYPE_WINDOW_VITE_DEV_SERVER_URL: "undefined",
-    PROTOTYPE_WINDOW_VITE_NAME: JSON.stringify("prototype_window"),
   },
   build: { outDir: ".vite/build", emptyOutDir: false },
 });

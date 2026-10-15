@@ -1,22 +1,5 @@
 import { app, session, type WebContents } from "electron";
-
-function contentSecurityPolicy(): string {
-  const developmentConnections = app.isPackaged
-    ? ""
-    : " http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*";
-
-  return [
-    "default-src 'self'",
-    "base-uri 'none'",
-    `connect-src 'self'${developmentConnections}`,
-    "font-src 'self'",
-    "frame-ancestors 'none'",
-    "img-src 'self' data:",
-    "object-src 'none'",
-    "script-src 'self'",
-    "style-src 'self' 'unsafe-inline'",
-  ].join("; ");
-}
+import { contentSecurityPolicy } from "../shared/content-security-policy.js";
 
 export function configureSessionSecurity(): void {
   session.defaultSession.setPermissionCheckHandler(() => false);
@@ -27,7 +10,13 @@ export function configureSessionSecurity(): void {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        "Content-Security-Policy": [contentSecurityPolicy()],
+        "Content-Security-Policy": [
+          contentSecurityPolicy({
+            window: "main",
+            delivery: "header",
+            development: !app.isPackaged,
+          }),
+        ],
       },
     });
   });

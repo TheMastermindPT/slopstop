@@ -5,6 +5,8 @@ import {
   CanonicalProjectSwitchRequestSchema,
   CanonicalProjectSwitchResultSchema,
   createProjectActivateCommand,
+  createProjectConversationReadCommand,
+  createProjectConversationSaveCommand,
   createProjectListCommand,
   createProjectRegistrationCommand,
   createProjectSwitchCommand,
@@ -12,6 +14,10 @@ import {
   type DesktopMessage,
   decodeStrict,
   type HarnessMessage,
+  ProjectConversationReadRequestSchema,
+  ProjectConversationReadResultSchema,
+  ProjectConversationSaveRequestSchema,
+  ProjectConversationSaveResultSchema,
   ProjectListResultSchema,
   type ProjectRegistrationRequest,
   ProjectRegistrationRequestSchema,
@@ -23,6 +29,10 @@ import {
 import type { Schema } from "effect";
 import { dispatchPendingHarnessEvent, requestHarness } from "./harness-pending-request.js";
 import type { HarnessSessionClient } from "./harness-session.js";
+import {
+  readConversationFailure,
+  saveConversationFailure,
+} from "./project-conversation-failure.js";
 import { type ProjectRequestFault, projectUpgradeFailure } from "./project-upgrade-failure.js";
 
 type Pending = {
@@ -31,6 +41,7 @@ type Pending = {
   fail(fault: ProjectRequestFault): void;
 };
 const transport = { kind: "transport" } as const;
+const unsent = { kind: "unsent" } as const;
 const desktop = { kind: "desktop" } as const;
 export function createProjectEntryBridge(options: {
   session: HarnessSessionClient;
@@ -68,7 +79,7 @@ export function createProjectEntryBridge(options: {
     parse: (value: unknown) => Result,
     broken: (fault: ProjectRequestFault) => Result,
   ): Promise<Result> {
-    if (stopped) return Promise.resolve(broken(transport));
+    if (stopped) return Promise.resolve(broken(unsent));
     return requestHarness({
       pending,
       createCommand,
@@ -176,6 +187,20 @@ export function createProjectEntryBridge(options: {
       command: createProjectUpgradeCommand,
       event: "project.upgrade.result",
       broken: projectUpgradeFailure,
+    }),
+    readConversation: echoing({
+      requestSchema: ProjectConversationReadRequestSchema,
+      resultSchema: ProjectConversationReadResultSchema,
+      command: createProjectConversationReadCommand,
+      event: "project.conversation.read.result",
+      broken: readConversationFailure,
+    }),
+    saveConversationMessage: echoing({
+      requestSchema: ProjectConversationSaveRequestSchema,
+      resultSchema: ProjectConversationSaveResultSchema,
+      command: createProjectConversationSaveCommand,
+      event: "project.conversation.save.result",
+      broken: saveConversationFailure,
     }),
     stop: () => {
       if (stopped) return;

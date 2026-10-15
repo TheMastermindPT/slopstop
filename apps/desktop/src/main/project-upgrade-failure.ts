@@ -10,12 +10,14 @@ import type { HarnessSessionSendResult } from "./harness-session.js";
 type SendErrorCode = Extract<HarnessSessionSendResult, { ok: false }>["error"]["code"];
 
 /**
- * Why a bridge request ended without a decoded reply: a pending failure, a refused send, or a
- * fault the bridge itself detected (an invalid command, a colliding id, or a mismatched reply).
+ * Why a bridge request ended without a decoded reply: a pending failure, a refused send, a call
+ * made after the bridge stopped (never sent), or a fault the bridge itself detected (an invalid
+ * command, a colliding id, or a mismatched reply).
  */
 export type ProjectRequestFault =
   | PendingFailure
   | Readonly<{ kind: "send"; code: SendErrorCode }>
+  | Readonly<{ kind: "unsent" }>
   | Readonly<{ kind: "desktop" }>;
 
 const rows = projectUpgradeDiagnostics;
@@ -48,6 +50,7 @@ export function projectUpgradeFailure(
   return Match.value(fault).pipe(
     Match.discriminatorsExhaustive("kind")({
       transport: () => connectionLost(request),
+      unsent: () => connectionLost(request),
       protocol: () => protocolInvalid(request),
       desktop: () => protocolInvalid(request),
       harness: ({ code }): ProjectUpgradeResult => ({

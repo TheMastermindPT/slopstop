@@ -13,6 +13,7 @@ import {
   writerProofNativeBindingFilename,
   writerProofNativePackageVersion,
 } from "@slopstop/protocol";
+import { contentSecurityPolicy } from "../shared/content-security-policy.js";
 
 const smokeQuery = decodeStrict(WorkspaceQuerySchema, {
   query: "memory-library.read",
@@ -33,8 +34,10 @@ const expectedMethods = [
   "getRegistrationCapability",
   "listProjects",
   "queryWorkspace",
+  "readConversation",
   "registerProject",
   "retryHarness",
+  "saveConversationMessage",
   "submitWorkspaceIntent",
   "subscribeHarnessStatus",
   "subscribeWorkspaceNotifications",
@@ -42,6 +45,8 @@ const expectedMethods = [
   "upgradeProject",
 ] as const;
 const expectedResultKeys = [
+  "cspMeta",
+  "fonts",
   "intentResult",
   "methods",
   "processType",
@@ -65,11 +70,31 @@ const expectedIntentResult = decodeStrict(WorkspaceIntentResultSchema, {
   },
 });
 
+/** The bundled faces the packaged window must load under its CSP (CNV-B41). */
+const bundledFaces = [
+  '400 14px "Red Hat Text"',
+  '500 13px "Red Hat Text"',
+  '600 16px "Red Hat Text"',
+  "400 16px Cinzel",
+  '400 12.5px "Cascadia Code"',
+] as const;
+const expectedCspMeta = contentSecurityPolicy({
+  window: "main",
+  delivery: "meta",
+  development: false,
+});
+
 export const packageSmokeRendererScript = `
 (async () => {
   const query = ${JSON.stringify(smokeQuery)};
   const intent = ${JSON.stringify(smokeIntent)};
+  const faces = ${JSON.stringify(bundledFaces)};
   return {
+    cspMeta:
+      document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute("content") ?? null,
+    fonts: await Promise.all(
+      faces.map(async (spec) => ({ spec, faces: (await document.fonts.load(spec, "Aé€çő")).length })),
+    ),
     processType: typeof globalThis.process,
     requireType: typeof globalThis.require,
     methods: Object.keys(window.slopstop).sort(),
@@ -109,6 +134,19 @@ function validatePreloadMethods(value: Readonly<Record<string, unknown>>): void 
   }
 }
 
+function validateFonts(value: unknown): void {
+  if (!Array.isArray(value) || value.length !== bundledFaces.length) failPackageSmoke();
+  bundledFaces.forEach((spec, index) => {
+    const font: unknown = value[index];
+    if (!isRecord(font) || font["spec"] !== spec) failPackageSmoke();
+    if (typeof font["faces"] !== "number" || font["faces"] < 1) failPackageSmoke();
+  });
+}
+
+function validateCspMeta(value: unknown): void {
+  if (value !== expectedCspMeta) failPackageSmoke();
+}
+
 function validateQueryResult(value: unknown): void {
   const result = decodeStrict(WorkspaceQueryResultSchema, value);
   if (!isDeepStrictEqual(result, expectedQueryResult)) {
@@ -132,6 +170,8 @@ export function validatePackageSmokeResult(value: unknown): void {
   validatePreloadMethods(value);
   validateQueryResult(value["queryResult"]);
   validateIntentResult(value["intentResult"]);
+  validateFonts(value["fonts"]);
+  validateCspMeta(value["cspMeta"]);
 }
 
 export type WriterProofStage =

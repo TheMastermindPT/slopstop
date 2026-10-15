@@ -309,8 +309,6 @@ beforeEach(() => {
   vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_SCENARIO", "writer-proof");
   vi.stubGlobal("MAIN_WINDOW_VITE_DEV_SERVER_URL", undefined);
   vi.stubGlobal("MAIN_WINDOW_VITE_NAME", "main_window");
-  vi.stubGlobal("PROTOTYPE_WINDOW_VITE_DEV_SERVER_URL", undefined);
-  vi.stubGlobal("PROTOTYPE_WINDOW_VITE_NAME", "prototype_window");
   vi.spyOn(process.stderr, "write").mockImplementation((chunk, encoding, callback) => {
     writes.push(String(chunk));
     const complete = typeof encoding === "function" ? encoding : callback;
@@ -346,10 +344,9 @@ describe("ordinary main characterization", () => {
       expect(writes).toEqual([]);
     },
   );
-  it.each(["unpackaged", "prototype", "ordinary"])("retains %s quit ownership", async (mode) => {
+  it.each(["unpackaged", "ordinary"])("retains %s quit ownership", async (mode) => {
     if (mode === "unpackaged") ports.app.isPackaged = false;
     if (mode === "ordinary") vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE", "0");
-    if (mode === "prototype") process.argv.push("--prototype");
     await load();
     ready();
     await flush();

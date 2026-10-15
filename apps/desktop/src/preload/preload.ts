@@ -5,6 +5,10 @@ import {
   CanonicalProjectSwitchResultSchema,
   decodeStrict,
   HarnessStatusSchema,
+  ProjectConversationReadRequestSchema,
+  ProjectConversationReadResultSchema,
+  ProjectConversationSaveRequestSchema,
+  ProjectConversationSaveResultSchema,
   ProjectListResultSchema,
   ProjectRegistrationResultSchema,
   ProjectUpgradeRequestSchema,
@@ -50,6 +54,22 @@ const api: SlopStopApi = {
       await ipcRenderer.invoke(
         desktopIpcChannels.upgradeProject,
         decodeStrict(ProjectUpgradeRequestSchema, request),
+      ),
+    ),
+  readConversation: async (request) =>
+    decodeStrict(
+      ProjectConversationReadResultSchema,
+      await ipcRenderer.invoke(
+        desktopIpcChannels.readConversation,
+        decodeStrict(ProjectConversationReadRequestSchema, request),
+      ),
+    ),
+  saveConversationMessage: async (request) =>
+    decodeStrict(
+      ProjectConversationSaveResultSchema,
+      await ipcRenderer.invoke(
+        desktopIpcChannels.saveConversationMessage,
+        decodeStrict(ProjectConversationSaveRequestSchema, request),
       ),
     ),
   getRegistrationCapability: async () =>

@@ -34,6 +34,11 @@ export const unusedWorkspaceApi = {
   upgradeProject: async () => {
     throw new Error("upgradeProject is not used by this test.");
   },
+  // Every opened Project reads its conversation; by default it has none yet.
+  readConversation: async (request) => ({ status: "read" as const, request, conversation: null }),
+  saveConversationMessage: async () => {
+    throw new Error("saveConversationMessage is not used by this test.");
+  },
   queryWorkspace: async () => {
     throw new Error("queryWorkspace is not used by this test.");
   },
@@ -50,6 +55,8 @@ export const unusedWorkspaceApi = {
   | "activateProject"
   | "switchProject"
   | "upgradeProject"
+  | "readConversation"
+  | "saveConversationMessage"
   | "getRegistrationCapability"
   | "chooseRepository"
   | "registerProject"

@@ -4,6 +4,11 @@ export default defineProject({
   test: {
     name: "desktop-main",
     environment: "node",
-    include: ["src/main/**/*.test.ts", "src/preload/**/*.test.ts", "build/**/*.test.ts"],
+    include: [
+      "src/main/**/*.test.ts",
+      "src/preload/**/*.test.ts",
+      "src/shared/**/*.test.ts",
+      "build/**/*.test.ts",
+    ],
   },
 });

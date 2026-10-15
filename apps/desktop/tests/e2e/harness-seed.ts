@@ -1,6 +1,9 @@
 import { execFileSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { decodeStrict, RegisteredProjectSchema } from "@slopstop/protocol";
+import { Schema } from "effect";
 
 /**
  * Runs one env-gated harness seed file in a vitest subprocess, so the E2E reaches harness
@@ -20,4 +23,17 @@ export function runHarnessSeed(testFile: string, envName: string, userData: stri
       stdio: "pipe",
     },
   );
+}
+
+/** Registers the two seed repositories (repository-a, repository-b) through the harness. */
+export async function seedTwoProjects(userData: string) {
+  runHarnessSeed("project-entry-ui-seed.integration.test.ts", "PC_UI_USER_DATA", userData);
+  const projects = decodeStrict(
+    Schema.Array(RegisteredProjectSchema),
+    JSON.parse(await readFile(path.join(userData, "fixture-projects.json"), "utf8")),
+  );
+  const first = projects[0];
+  const second = projects[1];
+  if (first === undefined || second === undefined) throw new Error("Seeded Projects missing");
+  return [first, second] as const;
 }

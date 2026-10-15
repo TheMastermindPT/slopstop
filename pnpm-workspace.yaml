@@ -19,6 +19,7 @@ minimumReleaseAgeExclude:
   - bare-module-resolve@1.12.5
 
 catalog:
+  "@axe-core/playwright": 4.13.0
   "@biomejs/biome": 2.5.8
   "@commitlint/cli": 21.2.2
   "@commitlint/config-conventional": 21.2.2
@@ -28,6 +29,9 @@ catalog:
   "@electron-forge/plugin-vite": 7.11.2
   "@electron-forge/shared-types": 7.11.2
   "@electron/fuses": 1.8.0
+  "@fontsource/cascadia-code": 5.3.0
+  "@fontsource/cinzel": 5.3.0
+  "@fontsource/red-hat-text": 5.3.0
   "@playwright/test": 1.62.1
   "@phosphor-icons/react": 2.1.10
   "@sentry/electron": 7.16.0

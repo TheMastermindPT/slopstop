@@ -20,7 +20,15 @@ export async function builtDesktopCommand(proof: string, userData: string) {
   return { executablePath, args: [shim] };
 }
 
-/** Launches the built desktop main bundle with `userData` redirected through a one-line shim. */
-export async function launchBuiltDesktop(proof: string, userData: string) {
-  return electron.launch(await builtDesktopCommand(proof, userData));
+/**
+ * Launches the built desktop main bundle with `userData` redirected through a one-line shim.
+ * Extra Chromium switches, such as `--force-device-scale-factor=1`, follow the shim.
+ */
+export async function launchBuiltDesktop(
+  proof: string,
+  userData: string,
+  extraArguments: readonly string[] = [],
+) {
+  const command = await builtDesktopCommand(proof, userData);
+  return electron.launch({ ...command, args: [...command.args, ...extraArguments] });
 }

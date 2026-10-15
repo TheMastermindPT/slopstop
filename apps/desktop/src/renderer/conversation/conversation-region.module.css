@@ -1,0 +1,71 @@
+/* The Conversation region's frame. Colours, radii and spacing come from the Seixo theme. */
+.region {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+/*
+ * The header and the context lines start at the Conversation column's left edge (ui-ux review 2
+ * D1). The inline padding equals the column's centring margin, so the header's rule stays full width.
+ */
+.regionHeader,
+.context {
+  padding-inline: max(var(--space-8), calc((100% - var(--space-measure)) / 2));
+}
+
+.regionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  padding-block: var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--line-subtle);
+}
+
+.heading {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+}
+
+.accessWord {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--ink-muted);
+}
+
+.projectId {
+  font-family: var(--font-code);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--ink-dim);
+  overflow-wrap: anywhere;
+}
+
+.context {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding-block: var(--space-3);
+  color: var(--ink-muted);
+}
+
+/* The stream or the failed-load notice takes the free height (ui-ux C3). */
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.context svg {
+  flex: none;
+}

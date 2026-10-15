@@ -5,6 +5,8 @@ import {
   CanonicalProjectActivationResultSchema,
   CanonicalProjectSwitchRequestSchema,
   createProjectActivateResultEvent,
+  createProjectConversationReadResultEvent,
+  createProjectConversationSaveResultEvent,
   createProjectListResultEvent,
   createProjectUpgradeResultEvent,
   createRequestFailureEvent,
@@ -12,14 +14,23 @@ import {
   decodeStrict,
   type HarnessFailureCode,
   harnessFailureMessages,
+  ProjectConversationReadRequestSchema,
+  ProjectConversationReadResultSchema,
+  ProjectConversationSaveRequestSchema,
+  ProjectConversationSaveResultSchema,
   ProjectUpgradeRequestSchema,
   type ProjectUpgradeResult,
   ProjectUpgradeResultSchema,
+  projectConversationDiagnostics,
   projectUpgradeDiagnostics,
 } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { upgradeResultForRow } from "../shared/upgrade-result-fixtures.js";
 import { HarnessSession } from "./harness-session.js";
+import {
+  readConversationFailure,
+  saveConversationFailure,
+} from "./project-conversation-failure.js";
 import { createProjectEntryBridge } from "./project-entry-bridge.js";
 import { projectUpgradeFailure } from "./project-upgrade-failure.js";
 
@@ -345,4 +356,283 @@ it("keeps list and registration transport results unchanged on request.failure",
     code: "PROJECT_REGISTRATION_TRANSPORT_FAILED",
   });
   bridge.stop();
+});
+
+const conversationRows = projectConversationDiagnostics;
+const activation = { projectId: randomUUID(), activationId: randomUUID() };
+const readRequest = decodeStrict(ProjectConversationReadRequestSchema, {
+  ...activation,
+  after: null,
+});
+const saveRequest = decodeStrict(ProjectConversationSaveRequestSchema, {
+  ...activation,
+  saveId: randomUUID(),
+  expectedRevision: 0,
+  text: "Hello",
+});
+
+/** Every shared failure a read or a save can answer, as a (status, row) pair. */
+const sharedRows = [
+  ["inactive", conversationRows.inactive],
+  ["project-mismatch", conversationRows.projectMismatch],
+  ["stale-activation", conversationRows.staleActivation],
+  ["coordinator-unavailable", conversationRows.coordinatorUnavailable],
+  ["unavailable", conversationRows.storageUnavailable],
+  ["unavailable", conversationRows.connectionLost],
+  ["broken", conversationRows.storageBroken],
+  ["broken", conversationRows.harnessInternalFailure],
+  ["broken", conversationRows.protocolMessageInvalid],
+  ["broken", conversationRows.protocolVersionUnsupported],
+] as const;
+const saveOnlyRows = [
+  ["rejected", conversationRows.saveIdReused],
+  ["uncertain", conversationRows.saveUnconfirmed],
+  ["read-only", conversationRows.readOnly],
+  ["writer-unavailable", conversationRows.writerUnavailable],
+  ["stale-writer", conversationRows.staleWriter],
+] as const;
+
+const savedMessage = {
+  conversationMessageId: randomUUID(),
+  cursor: 1,
+  author: "user",
+  text: "Hello",
+  savedAt: now(),
+} as const;
+const readResults = [
+  decodeStrict(ProjectConversationReadResultSchema, {
+    status: "read",
+    request: readRequest,
+    conversation: null,
+  }),
+  decodeStrict(ProjectConversationReadResultSchema, {
+    status: "read",
+    request: readRequest,
+    conversation: {
+      conversationId: randomUUID(),
+      branchId: randomUUID(),
+      revision: 1,
+      messages: [savedMessage],
+      nextCursor: null,
+    },
+  }),
+  ...sharedRows.map(([status, diagnostic]) =>
+    decodeStrict(ProjectConversationReadResultSchema, { status, request: readRequest, diagnostic }),
+  ),
+];
+const saveResults = [
+  decodeStrict(ProjectConversationSaveResultSchema, {
+    status: "saved",
+    request: saveRequest,
+    conversationMessageId: randomUUID(),
+    cursor: 1,
+    revision: 1,
+    savedAt: now(),
+    replayed: false,
+  }),
+  decodeStrict(ProjectConversationSaveResultSchema, {
+    status: "conflict",
+    request: saveRequest,
+    currentRevision: 3,
+  }),
+  ...[...saveOnlyRows, ...sharedRows].map(([status, diagnostic]) =>
+    decodeStrict(ProjectConversationSaveResultSchema, { status, request: saveRequest, diagnostic }),
+  ),
+];
+
+it.for(readResults.map((result) => [result.status, result] as const))(
+  "passes a %s read result through unchanged",
+  async ([, result]) => {
+    const { port, bridge } = setup();
+    const answer = bridge.readConversation(readRequest);
+    expect(port.sent).toEqual([
+      expect.objectContaining({ command: "project.conversation.read", payload: readRequest }),
+    ]);
+    port.emit("message", {
+      data: createProjectConversationReadResultEvent(port.metadata(), result),
+    });
+    expect(await answer).toEqual(result);
+    bridge.stop();
+  },
+);
+
+it.for(saveResults.map((result) => [result.status, result] as const))(
+  "passes a %s save result through unchanged",
+  async ([, result]) => {
+    const { port, bridge } = setup();
+    const answer = bridge.saveConversationMessage(saveRequest);
+    expect(port.sent).toEqual([
+      expect.objectContaining({ command: "project.conversation.save", payload: saveRequest }),
+    ]);
+    port.emit("message", {
+      data: createProjectConversationSaveResultEvent(port.metadata(), result),
+    });
+    expect(await answer).toEqual(result);
+    bridge.stop();
+  },
+);
+
+type Operation = "read" | "save";
+type ConversationCall = (fixture: Fixture) => Promise<unknown>;
+const conversationCalls: Readonly<Record<Operation, ConversationCall>> = {
+  read: ({ bridge }) => bridge.readConversation(readRequest),
+  save: ({ bridge }) => bridge.saveConversationMessage(saveRequest),
+};
+const conversationRequests = { read: readRequest, save: saveRequest } as const;
+const operations = ["read", "save"] as const;
+
+/** A decodable reply for the right command, but echoing another activation. */
+function foreignReply(fixture: Fixture, operation: Operation) {
+  const activationId = randomUUID();
+  return operation === "read"
+    ? createProjectConversationReadResultEvent(fixture.port.metadata(), {
+        status: "read",
+        request: decodeStrict(ProjectConversationReadRequestSchema, {
+          ...readRequest,
+          activationId,
+        }),
+        conversation: null,
+      })
+    : createProjectConversationSaveResultEvent(fixture.port.metadata(), {
+        status: "conflict",
+        request: decodeStrict(ProjectConversationSaveRequestSchema, {
+          ...saveRequest,
+          activationId,
+        }),
+        currentRevision: 0,
+      });
+}
+
+/** One fault, acted on a fixture around the operation's call. */
+type ConversationFault = readonly [
+  string,
+  Readonly<Record<Operation, object>>,
+  (fixture: Fixture, operation: Operation) => Promise<unknown>,
+];
+const lost = { status: "unavailable", diagnostic: conversationRows.connectionLost };
+const invalid = { status: "broken", diagnostic: conversationRows.protocolMessageInvalid };
+const unconfirmed = { status: "uncertain", diagnostic: conversationRows.saveUnconfirmed };
+
+const conversationFaults: ReadonlyArray<ConversationFault> = [
+  [
+    "a reply with the wrong event",
+    { read: invalid, save: invalid },
+    (fixture, operation) => {
+      const answer = conversationCalls[operation](fixture);
+      fixture.port.emit("message", {
+        data: createProjectUpgradeResultEvent(fixture.port.metadata(), notRequired),
+      });
+      return answer;
+    },
+  ],
+  [
+    "a reply for another activation",
+    { read: invalid, save: invalid },
+    (fixture, operation) => {
+      const answer = conversationCalls[operation](fixture);
+      fixture.port.emit("message", { data: foreignReply(fixture, operation) });
+      return answer;
+    },
+  ],
+  [
+    "a malformed reply while pending",
+    { read: invalid, save: unconfirmed },
+    (fixture, operation) => {
+      const answer = conversationCalls[operation](fixture);
+      fixture.port.emit("message", { data: { event: "project.conversation.read.result" } });
+      return answer;
+    },
+  ],
+  [
+    "a lost connection while pending",
+    { read: lost, save: unconfirmed },
+    (fixture, operation) => {
+      const answer = conversationCalls[operation](fixture);
+      fixture.session.detach();
+      return answer;
+    },
+  ],
+  [
+    "a stop while pending",
+    { read: lost, save: unconfirmed },
+    (fixture, operation) => {
+      const answer = conversationCalls[operation](fixture);
+      fixture.bridge.stop();
+      return answer;
+    },
+  ],
+  [
+    "a call after stop",
+    { read: lost, save: lost },
+    (fixture, operation) => {
+      fixture.bridge.stop();
+      return conversationCalls[operation](fixture);
+    },
+  ],
+  [
+    "a call after the connection was lost",
+    { read: lost, save: lost },
+    (fixture, operation) => {
+      fixture.session.detach();
+      return conversationCalls[operation](fixture);
+    },
+  ],
+  [
+    "a send that fails",
+    { read: lost, save: lost },
+    (fixture, operation) => {
+      fixture.port.postFails = true;
+      return conversationCalls[operation](fixture);
+    },
+  ],
+];
+
+it.for(
+  conversationFaults.flatMap(([label, expected, act]) =>
+    operations.map((operation) => [operation, label, expected, act] as const),
+  ),
+)("answers a conversation %s with one strict result: %s", async ([operation, , expected, act]) => {
+  const fixture = setup();
+  expect(await act(fixture, operation)).toEqual({
+    ...expected[operation],
+    request: conversationRequests[operation],
+  });
+  fixture.bridge.stop();
+});
+
+it.for(
+  harnessRows.flatMap(([code, row]) =>
+    operations.map((operation) => [operation, code, row] as const),
+  ),
+)("answers a conversation %s request.failure %s as broken", async ([operation, code, row]) => {
+  const fixture = setup();
+  const answer = conversationCalls[operation](fixture);
+  fixture.port.failLast(code, `Not the protocol message: ${harnessFailureMessages[code]}`);
+  expect(await answer).toEqual({
+    status: "broken",
+    request: conversationRequests[operation],
+    diagnostic: row,
+  });
+  fixture.bridge.stop();
+});
+
+it.for(operations)(
+  "answers a conversation %s with an invalid or a repeated message id as broken",
+  async (operation) => {
+    const expected = { ...invalid, request: conversationRequests[operation] };
+    const invalidId = setup(() => "not-a-uuid");
+    expect(await conversationCalls[operation](invalidId)).toEqual(expected);
+    invalidId.bridge.stop();
+    const id = randomUUID();
+    const repeated = setup(() => id);
+    void conversationCalls[operation](repeated);
+    expect(await conversationCalls[operation](repeated)).toEqual(expected);
+    repeated.bridge.stop();
+  },
+);
+
+it("maps a send refused as an invalid message to broken for both operations", () => {
+  const fault = { kind: "send", code: "HARNESS_SESSION_MESSAGE_INVALID" } as const;
+  expect(readConversationFailure(readRequest, fault)).toEqual({ ...invalid, request: readRequest });
+  expect(saveConversationFailure(saveRequest, fault)).toEqual({ ...invalid, request: saveRequest });
 });

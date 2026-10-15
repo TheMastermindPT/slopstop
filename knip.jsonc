@@ -12,7 +12,6 @@
         "forge.config.ts",
         "src/main/main.ts",
         "src/preload/preload.ts",
-        "src/renderer/prototype/main.tsx",
         "tests/e2e/**/*.{mjs,ts}",
         "vitest.project-storage-mutation.config.ts",
         "vite.*.config.ts"

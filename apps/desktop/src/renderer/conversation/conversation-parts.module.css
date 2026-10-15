@@ -1,0 +1,294 @@
+/* The Conversation window's parts. Colours, radii and spacing come from the Seixo theme. */
+.stream {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4) 0;
+}
+
+/* One centred column for messages, notices, status rows and the composer (ui-ux C1). */
+.messages,
+.empty,
+.notice,
+.statusRow,
+.composer {
+  width: min(calc(100% - 2 * var(--space-8)), var(--space-measure));
+  margin-inline: auto;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-block: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The plate's border matches its fill, so it is invisible here and drawn under forced colours (C11). */
+.message {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--forged);
+  border-radius: var(--radius-card);
+  background: var(--forged);
+  box-shadow: var(--shadow-soft-lift);
+}
+
+/* The author and the time on one baseline (C10). */
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.author {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.time {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ink-dim);
+}
+
+.text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.empty {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-6) 0;
+}
+
+.emptyTitle {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.emptyText {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+/* The Failure notice (C7, C8): blood tint, no outline, circle-x in blood. */
+.notice[data-tone="failure"] {
+  background: var(--blood-tint);
+}
+
+.notice[data-tone="failure"] > svg {
+  color: var(--blood);
+}
+
+.notice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: var(--space-1) var(--space-2);
+  margin-block: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--forged);
+  color: var(--ink);
+}
+
+.notice > :not(svg) {
+  grid-column: 2;
+}
+
+.noticeTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.noticeText,
+.noticeCode {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.noticeCode {
+  font-family: var(--font-code);
+  font-size: 12.5px;
+}
+
+/* Reload's place in the notice; its look is the theme's ghost small button (deep review I4). */
+.action {
+  justify-self: start;
+  margin-top: var(--space-2);
+}
+
+/* The field always sits 20px above what follows, the window edge included (ui-ux review 3). */
+.composer {
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-5);
+}
+
+/* Save inside the field, bottom right; its reason, when it has one, sits to its left. */
+.composerBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-2);
+}
+
+.reason {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ink-dim);
+}
+
+.field {
+  border-radius: var(--radius-card);
+  background: var(--iron);
+  box-shadow: var(--shadow-composer-lift);
+  transition: box-shadow var(--transition-control);
+}
+
+/* The decided ring on the field (two layers), not Seixo V3's halo-only field rule (G24). */
+.field:focus-within {
+  box-shadow: var(--focus-ring);
+}
+
+/* Over the limit (C6): the field's ring turns blood, even while it has focus. */
+.field:has(.textarea[aria-invalid="true"]) {
+  box-shadow:
+    0 0 0 1.5px var(--blood),
+    0 0 0 4px var(--fault-halo);
+}
+
+/* The field carries the ring: the textarea itself draws no outline in either colour mode. */
+.field .textarea:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.textarea {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.save {
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--frost);
+  color: var(--frost-on);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-frost-lift);
+  transition:
+    background-color var(--transition-control),
+    box-shadow var(--transition-control);
+}
+
+.save:hover {
+  background: var(--button-primary-hover);
+}
+
+/* The status row (ui-ux C5): icon, bold title and reason, Try again at the end (C9). */
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 22px;
+  margin-block: var(--space-2) var(--space-4);
+  border-radius: var(--radius-row);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.statusTitle {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.toneIcon {
+  flex: none;
+}
+
+[data-tone="saved"] .toneIcon {
+  color: var(--moss);
+}
+
+/* The Failure tone (C6, C7): the fault slot on a blood tint; secondary text is ink-muted there. */
+.statusRow[data-tone="failure"] {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--fault-edge);
+  background: var(--blood-tint);
+}
+
+[data-tone="failure"] .toneIcon {
+  color: var(--blood);
+}
+
+/* The Unknown tone (C9): a quiet edge, no fill, circle-help in ink-dim. */
+.statusRow[data-tone="unknown"] {
+  padding: var(--space-2) var(--space-3);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+[data-tone="unknown"] .toneIcon {
+  color: var(--ink-dim);
+}
+
+.tryAgain {
+  margin-left: auto;
+}
+
+[data-tone="failure"] .tryAgain {
+  color: var(--ink-muted);
+}
+
+/*
+ * Reduced motion: no region transition runs (G26). This sheet loads after the theme, so its own
+ * transitions are set to 0s here, where they are declared.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .field,
+  .save {
+    transition-duration: 0s;
+  }
+}
+
+/* On a blood tint, the ghost Reload's text is ink-muted (Three Voices rule; AA contrast). */
+.notice[data-tone="failure"] .action {
+  color: var(--ink-muted);
+}
+
+/* While a load notice is on screen the status row stays announced but is visually hidden (D2). */
+.statusRow[data-concealed="true"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

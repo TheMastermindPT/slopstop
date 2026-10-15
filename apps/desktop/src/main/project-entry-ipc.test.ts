@@ -30,6 +30,16 @@ function registered() {
       diagnostic: connectionUnavailable,
     })),
     upgrade: vi.fn<Projects["upgrade"]>(async (request) => ({ status: "not-required", request })),
+    readConversation: vi.fn<Projects["readConversation"]>(async (request) => ({
+      status: "read",
+      request,
+      conversation: null,
+    })),
+    saveConversationMessage: vi.fn<Projects["saveConversationMessage"]>(async (request) => ({
+      status: "conflict",
+      request,
+      currentRevision: 0,
+    })),
   } satisfies Projects;
   registerProjectEntryIpc(projects);
   const handlers = new Map(
@@ -91,4 +101,31 @@ it("registers strict Project IPC handlers: list, activate and switch as before",
   expect(projects.list).toHaveBeenCalledTimes(1);
   expect(projects.activate).toHaveBeenCalledTimes(1);
   expect(projects.switchProject).toHaveBeenCalledTimes(1);
+});
+
+it("registers strict conversation IPC handlers", async () => {
+  const { projects, handler } = registered();
+  const activation = { projectId, activationId: randomUUID() };
+  const read = { ...activation, after: null };
+  const save = { ...activation, saveId: randomUUID(), expectedRevision: 0, text: "Hello" };
+
+  await expect(handler(desktopIpcChannels.readConversation)(read)).resolves.toEqual({
+    status: "read",
+    request: read,
+    conversation: null,
+  });
+  expect(projects.readConversation).toHaveBeenCalledExactlyOnceWith(read);
+  expect(() => handler(desktopIpcChannels.readConversation)({ ...read, extra: true })).toThrow();
+  expect(projects.readConversation).toHaveBeenCalledTimes(1);
+
+  await expect(handler(desktopIpcChannels.saveConversationMessage)(save)).resolves.toEqual({
+    status: "conflict",
+    request: save,
+    currentRevision: 0,
+  });
+  expect(projects.saveConversationMessage).toHaveBeenCalledExactlyOnceWith(save);
+  expect(() =>
+    handler(desktopIpcChannels.saveConversationMessage)({ ...save, extra: true }),
+  ).toThrow();
+  expect(projects.saveConversationMessage).toHaveBeenCalledTimes(1);
 });
