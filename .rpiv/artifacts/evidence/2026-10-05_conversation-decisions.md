@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 45e536c081b9b6791d55461857322a831a2885c2f54dc712653735d6b81468b9
+content_hash: 27245a7569a13c2e9894f3f6f6254030adf4bb9ad6d82e96b1997be04954e089
 ---
 
 # Conversation — Human Decisions
@@ -699,3 +699,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - At checkpoint 6 the verbatim-moved `project-storage-create-inspection.ts` scored 8.81 in CodeScene (Code Duplication: `requireStagingCreateAuthority` and `requireActiveCreateAuthority` open with the same `Promise.all` reading the one registration row and the one location row, each through `exactlyOne`; plus Overall Code Complexity). The large file had hidden both smells; the brief's contingency covered only Primitive Obsession and Excess Arguments. Checkpoints 0-5 were green; the checkpoint 2 contingency (support file: five positional wrappers removed in favour of the existing object-argument helpers) is recorded in the TDD evidence.
 - **Decision:** the user chose "(a) Aplicar a função": one private helper `createAuthorityRows({ client, generation, message })` holds the shared read. The staging authority passes its literal message and the active authority passes `input.message`. Same queries, order, messages and errors; the `rowsAgree` checks stay verbatim. The helper keeps the Promise form, because it only extracts moved Promise code (D1, §73/§74). A throwaway copy scored 10. This is recorded as a second contingency in the evidence.
+
+## 77. #110 launch-smoke failure diagnosis (user decision, 2026-10-16)
+
+- On clean slice commit `343d1ba`, `pnpm test:integration` passed (2161) and `pnpm test:e2e` passed (27/27). `pnpm package:launch-smoke` exited 1 after 28 s with only "Packaged SlopStop smoke failed.", because locally `package-smoke.mjs:894-898` does not name the failed stage. No SlopStop or Electron process was left running. The same smoke passed on main `8fcee45` in yesterday's pre-push check:deep.
+- **Decision:** the user chose "Correr com CI=true": one diagnostic run of the same command on the same clean commit, with `CI=true`, which names the failed stage. It also sets `SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS=1` in the packaged app (`package-smoke.mjs:269-273`), so the environment is not identical. This run diagnoses the failure; it does not count as a pass. If the stage looks environmental, a comparison run on main follows.
