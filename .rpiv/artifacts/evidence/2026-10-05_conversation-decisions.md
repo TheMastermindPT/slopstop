@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 8a8875dae982643b035bc350d162644055e27108d318906bb709d16217da9658
+content_hash: 9610e2be33cb6c05ca7028afaafc63c36c35bbf603235e0b03d9890210b800d7
 ---
 
 # Conversation — Human Decisions
@@ -689,3 +689,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Factories** (user: "Novo, converter já"): the coordinator recommended treating them as moved code, but the user chose to convert them now. The locks become an Effect owner (a service built by a Layer, with `Semaphore`/`Deferred` coordination, per AGENTS.md), and the registry factory's operations become Effect programs, behind a temporary Promise facade for the not-yet-migrated callers. This narrows D1 (§73): only verbatim-moved functions keep their Promise form; SQL bodies still stay for #123. Lock semantics (create permit, per-Project permits, `forCreate`/`afterCreateDrain` sharing one permit, per-instance state) must be preserved and guarded.
 - **Revision** (user: "Aprovo, sem 2.ª revisão"): the implementer revises the brief with every intent-review fix and this decision; the coordinator checks each item; no second intent review round (recorded residual risk); Pedro's approval of the revised brief is this decision.
 - **Revision 2 checked** (2026-10-15): brief `d490024`, `content_hash 7afaf89c…`. The coordinator checked items 1-11 against the intent-review findings and §74 (dependency direction healthy opening → create inspection → registry rows, no back-edges including types; `check:boundaries` as the cycle gate; owners for `:126-159`; registry factory scope and single input; guard table and per-checkpoint commands; verbatim predicates first, with the `:381` residual; like-for-like baseline mutation; CodeScene 10 on the final state; one slice commit with checkpoints; locks as an Effect service with a per-instance temporary Promise facade and seven lock pins written and passing on the current code before conversion). Approved copy `approved-7afaf89cc279a31f5be4885d95800710031d83289524f0dd2db74fada47241fb.md`. Build authorization for #110 is in effect.
+
+## 75. #110 mutation config timeout (user decision, 2026-10-15)
+
+- The #110 baseline mutation stopped in Stryker's dry run (no mutant tested): `registration-bootstrap-guards.integration.test.ts:130` timed out at Vitest's 5 s default, because `apps/harness/vitest.project-storage-mutation.config.ts` sets no `testTimeout`; that file normally runs in the registration project with `testTimeout: 15_000` (it spawns Git and harness children). Machine idle (CPU 4-7 %).
+- **Decision:** the user chose "(b) 15 s, como o grupo normal": the project-storage mutation config gets `testTimeout: 15_000`, the limit the file already has in its normal project, so `isSeededReservation` keeps a mutation oracle. This is a recorded limit change approved by the user, not a loosening of any assertion. The baseline reruns once with it.
