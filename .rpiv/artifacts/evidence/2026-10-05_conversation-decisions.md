@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 706149779c75fdb6a4f458bfde3c906d4a2fb8b9e211d6798c28b666013ec1bb
+content_hash: 8e632d3261df12bd48db77048585f5fa611c8dd801c48aad373fce8c9b87d5d2
 ---
 
 # Conversation — Human Decisions
@@ -709,3 +709,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The §77 diagnostic run (CI=true, clean `343d1ba`) failed at "writer-proof scenario". Every earlier stage passed in the package, including bootstrap: absent-open, create, healthy open and close. The smoke does not print the writer child's output, so the writer step is unknown. The implementer's leading hypothesis (unproven) is a timing change from the new Effect lock and registry facades in the cross-process writer sequence.
 - **Decision:** the user chose "As duas: passo e main". (1) One run of a temporary, untracked copy of `package-smoke.mjs` that also prints the writer child's output, to name the failing writer step. The copy is deleted afterwards and the tree is restored by digest. (2) One plain `package:launch-smoke` on main code `8fcee45`, to rule out a failure that predates #110. It runs in the main checkout: its code equals `8fcee45`, and only the decisions log differs. No new worktree is needed. Both runs diagnose only; neither counts as a pass for the candidate.
+
+## 79. #110 launch-smoke regression confirmed; diagnosis authority (user decision, 2026-10-16)
+
+- §78 results: the diagnostic copy on `343d1ba` showed the app's private writer proof failing at `writer-transport` (a real harness utility process went away while no exit was expected; the fixture process imports no Storage code). Plain `package:launch-smoke` on main code `8fcee45` (main checkout, package rebuilt with `pnpm package` first) passed in 42 s. **The failure is a #110 regression.** It reproduces only in the packaged multi-process writer proof; the source-level `canonical-writer-package-smoke.integration.test.ts` passed in `test:integration`. Leading unproven hypothesis: an unhandled rejection or defect from the new Effect lock or registry code reaches the harness fatal path (`process-entry.ts:102-103`).
+- **Decision:** the user chose "Autorizar o diagnóstico até à causa". Temporary diagnostic-only changes and short single runs are authorised until the cause is found. Each run needs the coordinator's GO and runs one at a time, and each change is restored by digest (the package is rebuilt back to the candidate) and recorded. Any fix to the code goes back to the user first.
