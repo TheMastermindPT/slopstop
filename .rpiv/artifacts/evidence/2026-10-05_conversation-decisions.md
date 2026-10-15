@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: c9de4cff283b5d0e54dd659f3f113476eb26f32cb36ed1a1a9f9ca5476fada49
+content_hash: c9744f20abc8efa253d6da3f3b8c584330e677079bab2fc6d914af5ec73c5aef
 ---
 
 # Conversation — Human Decisions
@@ -631,3 +631,11 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Main pushed `e1c88a4..c8a72d1` (pre-push check:deep passed: unit 2983, integration 5144 and 2161, e2e 26/26, launch-smoke). Issues #108 (S4) and #130 (CSP; resolved in S4a, CNV-B48, with the premise corrected: the header policy was already in force on `file://`) are closed with evidence comments.
 - S5 workspace (user: "Sim"): branch `feat/c1-s5-conversation-journey`, worktree `C:/Users/pedro/Documents/GitHub/slopstop-c1-s5`, starting commit `c8a72d1`.
 - S5 contract (design rev 5.3 + appended Developer Context, `content_hash 0457b36e…`, CNV-B19): the user chose "Aprovo, com revisão de intenção". The rigorous-lane intent review (slice-verifier plus the code/coverage pair, intent mode) runs first; build authorization for S5 in that worktree takes effect when the intent review passes or Pedro triages its findings.
+
+## 66. C1 S5 intent review and contract refinements (user decisions, 2026-10-15)
+
+- Intent review of S5 on `c8a72d1` (slice-verifier, code and coverage reviewers, intent mode): 0 blockers; the slice-verifier failed Decisions on an inexact CNV-B19 oracle (F1); all three raised the same concerns (save and upgrade oracles, the recorder remounted per activation, message identity, seeding and timeouts, no failure route).
+- **Contract refinements R1-R11** (user: "Aprovo os 7"), appended to the design's Developer Context ("S5 intent review and oracle refinement"); design `content_hash c609a5a7df3a41efb7dbe65fcd14e3a7d96d6efd4dbc5ab30939bc807ec7f185`, approved copy `.rpiv/evidence/2026-10-09_13-54-08_conversation-c1-local-save/approved-c609a5a7df3a41efb7dbe65fcd14e3a7d96d6efd4dbc5ab30939bc807ec7f185.md`; S5 branch commit carries the entry.
+- **Registered upgrade in the real window** (user: "Sim, acrescenta"): the seed also rewinds one registered Project to generation three (R7).
+- **Extras** (user chose both): one recorded binding with the save handler set to "hang" (R10, a heavy run under the coordinator's GO), and the desktop-log assertions after each launch (R9), which settles the log-link carry-forward trigger for this journey.
+- Build authorization for S5 in `slopstop-c1-s5` is now in effect (§65).
