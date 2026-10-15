@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 60345ab7a040e1755b714872bef41de39c867222e5f7d46e548b6eb93022eb7f
+content_hash: 97ee3c3dd821cd462872b848bb7465c4efb4b43793bad39defd0fcd8495ae597
 ---
 
 # Conversation — Human Decisions
@@ -619,3 +619,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - After the deep-review fix round (`66a29a1`, §61) and the re-review fixes (`6add959`, §62), the final chain on `6add959` passed (targeted Stryker on `conversation-region.tsx` 90.08 with no real unguarded survivor, package, E5, E4 26/26, CodeScene change set vs `b96b305` passed). `88c6d4d` adds evidence only.
 - **Acceptance:** Pedro accepted S4 at the exact revision `88c6d4d` ("Aceito 88c6d4d"), with the recorded residual risks: the changed-files-only final mutation (§59) and the independently unreviewed `cec7422..6add959` delta (§62). The changes since the Narrator listen (§60) touch only states the real window cannot reach and system settings (reduced motion, forced colours), so the listen was not repeated.
 - Next: `/rpiv:validate` over `b96b305..88c6d4d`, then a separate integration authorization for the squash into main.
+
+## 64. C1 S4 validate skipped (user decision, 2026-10-15)
+
+- **Exception to §57 and the rpiv chain:** the user said "skip the validate next. this is an exception." `/rpiv:validate` over `b96b305..88c6d4d` was stopped before it ran anything; no validation report exists.
+- Residual risk: no independent re-proof of red per slice commit (reprove-red) and no consolidated validation report; the accepted candidate `88c6d4d` rests on the recorded TDD evidence, the reviews (§56, §58, §61, §62) and the final chain (§63). This is a one-off exception, not a new rule.
+- Next: a separate integration authorization for the S4a+S4b squash into main.
