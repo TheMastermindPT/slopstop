@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 27245a7569a13c2e9894f3f6f6254030adf4bb9ad6d82e96b1997be04954e089
+content_hash: 706149779c75fdb6a4f458bfde3c906d4a2fb8b9e211d6798c28b666013ec1bb
 ---
 
 # Conversation — Human Decisions
@@ -704,3 +704,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - On clean slice commit `343d1ba`, `pnpm test:integration` passed (2161) and `pnpm test:e2e` passed (27/27). `pnpm package:launch-smoke` exited 1 after 28 s with only "Packaged SlopStop smoke failed.", because locally `package-smoke.mjs:894-898` does not name the failed stage. No SlopStop or Electron process was left running. The same smoke passed on main `8fcee45` in yesterday's pre-push check:deep.
 - **Decision:** the user chose "Correr com CI=true": one diagnostic run of the same command on the same clean commit, with `CI=true`, which names the failed stage. It also sets `SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS=1` in the packaged app (`package-smoke.mjs:269-273`), so the environment is not identical. This run diagnoses the failure; it does not count as a pass. If the stage looks environmental, a comparison run on main follows.
+
+## 78. #110 writer-proof diagnosis runs (user decision, 2026-10-16)
+
+- The §77 diagnostic run (CI=true, clean `343d1ba`) failed at "writer-proof scenario". Every earlier stage passed in the package, including bootstrap: absent-open, create, healthy open and close. The smoke does not print the writer child's output, so the writer step is unknown. The implementer's leading hypothesis (unproven) is a timing change from the new Effect lock and registry facades in the cross-process writer sequence.
+- **Decision:** the user chose "As duas: passo e main". (1) One run of a temporary, untracked copy of `package-smoke.mjs` that also prints the writer child's output, to name the failing writer step. The copy is deleted afterwards and the tree is restored by digest. (2) One plain `package:launch-smoke` on main code `8fcee45`, to rule out a failure that predates #110. It runs in the main checkout: its code equals `8fcee45`, and only the decisions log differs. No new worktree is needed. Both runs diagnose only; neither counts as a pass for the candidate.
