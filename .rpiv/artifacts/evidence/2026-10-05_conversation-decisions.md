@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: c9744f20abc8efa253d6da3f3b8c584330e677079bab2fc6d914af5ec73c5aef
+content_hash: 02d3dafb0e59bf686f8711e78a9841d2a9ca3de18c02669e70d6d50092d9ba3c
 ---
 
 # Conversation — Human Decisions
@@ -639,3 +639,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Registered upgrade in the real window** (user: "Sim, acrescenta"): the seed also rewinds one registered Project to generation three (R7).
 - **Extras** (user chose both): one recorded binding with the save handler set to "hang" (R10, a heavy run under the coordinator's GO), and the desktop-log assertions after each launch (R9), which settles the log-link carry-forward trigger for this journey.
 - Build authorization for S5 in `slopstop-c1-s5` is now in effect (§65).
+
+## 67. C1 S5 journey order (user decision, 2026-10-15)
+
+- The implementer found that R6 and R7 conflicted: the rewound registered Project had to be repository-b, but R6 opened repository-b early, which would already upgrade it, so its later upgrade oracle (R5) would fail by construction.
+- **Decision:** the user chose option A, "o b é o registado antigo". The switch to repository-b is its upgrade open (R5), followed by one save. Then switching back to repository-a checks its two messages, the Storage-only generation-three Project is opened and saves one message, and the restart checks all three. R6 and R8 are amended in the design's Developer Context; design `content_hash 3e9a2147…`, approved copy `approved-3e9a214773f5335e87620ecf4239282c28a2ee841a042887efa2482f045bc1f3.md`; S5 branch commit `9779fbd`.
