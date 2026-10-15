@@ -131,14 +131,41 @@ export function shadowLayers(boxShadow: string): ShadowLayer[] {
   });
 }
 
+/** How long an element's transitions may keep running before its focus facts are refused. */
+const settleLimitMs = 1000;
+
+/**
+ * Waits until the element has no animation left. A transition cancelled by a later style change
+ * (its `finished` rejects with `AbortError`) counts as ended, and the replacing transition is
+ * waited for in the next pass. Fails clearly when animations still run after `limit` ms.
+ */
+function settleAnimations(locator: Locator) {
+  return locator.evaluate(async (element, limit) => {
+    const deadline = performance.now() + limit;
+    for (;;) {
+      const running = element.getAnimations();
+      if (running.length === 0) return;
+      const remaining = deadline - performance.now();
+      if (remaining <= 0) {
+        const names = running.map((animation) =>
+          animation instanceof CSSTransition ? animation.transitionProperty : animation.id,
+        );
+        throw new Error(`Animations still running after ${limit} ms: ${names.join(", ")}`);
+      }
+      await Promise.race([
+        Promise.allSettled(running.map((animation) => animation.finished)),
+        new Promise((resolve) => setTimeout(resolve, remaining)),
+      ]);
+    }
+  }, settleLimitMs);
+}
+
 /**
  * The computed focus facts of an element, read while it has focus, once its transitions (the 120 ms
- * control transitions) have finished.
+ * control transitions) have settled.
  */
 export async function focusFacts(locator: Locator) {
-  await locator.evaluate((element) =>
-    Promise.all(element.getAnimations().map((animation) => animation.finished)),
-  );
+  await settleAnimations(locator);
   return locator.evaluate((element) => {
     const style = getComputedStyle(element);
     return {

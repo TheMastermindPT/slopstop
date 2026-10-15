@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e13dfe75b220994849c75e529ca48cecb3fcd6f2a3fce335b7ff32d16c4416d2
+content_hash: ea6b12629515e0b4ac5749f2e8c682f56027e32e8bc5d7c5cbd20566bc911c6f
 ---
 
 # Conversation — Human Decisions
@@ -668,3 +668,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Acceptance:** Pedro accepted S5 at the exact revision `b636bc8` ("Aceito b636bc8"), with the residual risks of §70 (unreviewed round-2 delta, the unexecuted T6 double-failure branch, the unproven positive log link).
 - **Integration path, exception** (user: "Nenhum"): no `/rpiv:deep-review` and no `/rpiv:validate` before the S5 squash. Residual risk: no feature-range deep review and no independent re-proof of red for S5. One-off, like §64.
 - Integration authorized: squash `feat/c1-s5-conversation-journey` (`b636bc8`) into main.
+
+## 72. Pre-push e2e race fix (user decision, 2026-10-15)
+
+- The push of main at `67f59fc` failed in pre-push check:deep: `conversation-accessibility.test.ts:518` (`g-try-again-unavailable`) threw `AbortError` in `focusFacts` (`conversation-window.ts:139`). Cause, confirmed from the trace: the forced-colours switch starts Try again's 120 ms transition; ~300 ms after the hanging read begins, "Loading messages…" outranks the kept failure line (designed precedence), the tone changes, the running transition is replaced and its `finished` promise rejects. The product behaves as designed; the race was in the test helper.
+- **Decision:** the user chose "Corrigir o teste num ramo curto". Branch `fix/e2e-animation-abort` (`a197995`): `focusFacts` settles animations with `allSettled` and loops until none run (bounded 1 s, with a named failure); no oracle changed, no timeout raised. A throwaway deterministic check showed the old helper failing with the same `AbortError` and the new one settling. Gates passed; the accessibility file passed 5 times in a row and the full e2e 27/27. Squashed into main, then the push is retried.
