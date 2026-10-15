@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 9610e2be33cb6c05ca7028afaafc63c36c35bbf603235e0b03d9890210b800d7
+content_hash: 45e536c081b9b6791d55461857322a831a2885c2f54dc712653735d6b81468b9
 ---
 
 # Conversation — Human Decisions
@@ -694,3 +694,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The #110 baseline mutation stopped in Stryker's dry run (no mutant tested): `registration-bootstrap-guards.integration.test.ts:130` timed out at Vitest's 5 s default, because `apps/harness/vitest.project-storage-mutation.config.ts` sets no `testTimeout`; that file normally runs in the registration project with `testTimeout: 15_000` (it spawns Git and harness children). Machine idle (CPU 4-7 %).
 - **Decision:** the user chose "(b) 15 s, como o grupo normal": the project-storage mutation config gets `testTimeout: 15_000`, the limit the file already has in its normal project, so `isSeededReservation` keeps a mutation oracle. This is a recorded limit change approved by the user, not a loosening of any assertion. The baseline reruns once with it.
+
+## 76. #110 checkpoint 6 duplication (user decision, 2026-10-15)
+
+- At checkpoint 6 the verbatim-moved `project-storage-create-inspection.ts` scored 8.81 in CodeScene (Code Duplication: `requireStagingCreateAuthority` and `requireActiveCreateAuthority` open with the same `Promise.all` reading the one registration row and the one location row, each through `exactlyOne`; plus Overall Code Complexity). The large file had hidden both smells; the brief's contingency covered only Primitive Obsession and Excess Arguments. Checkpoints 0-5 were green; the checkpoint 2 contingency (support file: five positional wrappers removed in favour of the existing object-argument helpers) is recorded in the TDD evidence.
+- **Decision:** the user chose "(a) Aplicar a função": one private helper `createAuthorityRows({ client, generation, message })` holds the shared read. The staging authority passes its literal message and the active authority passes `input.message`. Same queries, order, messages and errors; the `rowsAgree` checks stay verbatim. The helper keeps the Promise form, because it only extracts moved Promise code (D1, §73/§74). A throwaway copy scored 10. This is recorded as a second contingency in the evidence.
