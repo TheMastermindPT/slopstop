@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 02d3dafb0e59bf686f8711e78a9841d2a9ca3de18c02669e70d6d50092d9ba3c
+content_hash: 9326f9c48fc7a856ce2af58f719fff0616c182e9651b3a08bd548591eadb6f11
 ---
 
 # Conversation — Human Decisions
@@ -644,3 +644,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The implementer found that R6 and R7 conflicted: the rewound registered Project had to be repository-b, but R6 opened repository-b early, which would already upgrade it, so its later upgrade oracle (R5) would fail by construction.
 - **Decision:** the user chose option A, "o b é o registado antigo". The switch to repository-b is its upgrade open (R5), followed by one save. Then switching back to repository-a checks its two messages, the Storage-only generation-three Project is opened and saves one message, and the restart checks all three. R6 and R8 are amended in the design's Developer Context; design `content_hash 3e9a2147…`, approved copy `approved-3e9a214773f5335e87620ecf4239282c28a2ee841a042887efa2482f045bc1f3.md`; S5 branch commit `9779fbd`.
+
+## 68. C1 S5 scope: reopening an upgraded Project without a repository (user decision, 2026-10-15)
+
+- CNV-B19 found a real red on arrival: after the restart, the upgraded Storage-only Project cannot be reopened. `canOpen` (`apps/desktop/src/renderer/projects-list.tsx:46-49`, from `846493f`) opens an unbound Project only in safe mode, so once upgraded its saved messages are unreachable in the window. Registered Projects reopen correctly (repository-a and repository-b passed every R2-R9 check across the restart).
+- Origin check: the upgrade-window design (:81) calls this "the legacy opening contract"; nothing states that an upgraded unbound Project must stay closed. There is no flow that binds a repository to an existing unbound Project ("Add existing repository" registers a new one), so the data would have no path back. The C1 design claim (:985) is that Storage-only v2 and v3 open read-write after their upgrade.
+- **Decision:** the user chose "A: corrigir dentro do S5". S5 widens to one product change: `canOpen` also opens an upgraded (healthy) unbound Project. It gets its own expected red (a renderer unit row) before the change; CNV-B19's R6 reopening proves it in the real window. The candidate review covers it.
