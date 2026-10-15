@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 97ee3c3dd821cd462872b848bb7465c4efb4b43793bad39defd0fcd8495ae597
+content_hash: c9de4cff283b5d0e54dd659f3f113476eb26f32cb36ed1a1a9f9ca5476fada49
 ---
 
 # Conversation — Human Decisions
@@ -625,3 +625,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Exception to §57 and the rpiv chain:** the user said "skip the validate next. this is an exception." `/rpiv:validate` over `b96b305..88c6d4d` was stopped before it ran anything; no validation report exists.
 - Residual risk: no independent re-proof of red per slice commit (reprove-red) and no consolidated validation report; the accepted candidate `88c6d4d` rests on the recorded TDD evidence, the reviews (§56, §58, §61, §62) and the final chain (§63). This is a one-off exception, not a new rule.
 - Next: a separate integration authorization for the S4a+S4b squash into main.
+
+## 65. C1 S4 pushed; S5 start (user decisions, 2026-10-15)
+
+- Main pushed `e1c88a4..c8a72d1` (pre-push check:deep passed: unit 2983, integration 5144 and 2161, e2e 26/26, launch-smoke). Issues #108 (S4) and #130 (CSP; resolved in S4a, CNV-B48, with the premise corrected: the header policy was already in force on `file://`) are closed with evidence comments.
+- S5 workspace (user: "Sim"): branch `feat/c1-s5-conversation-journey`, worktree `C:/Users/pedro/Documents/GitHub/slopstop-c1-s5`, starting commit `c8a72d1`.
+- S5 contract (design rev 5.3 + appended Developer Context, `content_hash 0457b36e…`, CNV-B19): the user chose "Aprovo, com revisão de intenção". The rigorous-lane intent review (slice-verifier plus the code/coverage pair, intent mode) runs first; build authorization for S5 in that worktree takes effect when the intent review passes or Pedro triages its findings.
