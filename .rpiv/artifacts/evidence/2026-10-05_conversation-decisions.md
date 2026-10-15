@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e465ecf5cc7a0701b2f8fa82e575c69cd1a6aa59f9377db31a941fa8803044e8
+content_hash: a3bdd71df8dd7dd4e4563d60ee1a39c0b224532343d3da5357ac1331bf456d40
 ---
 
 # Conversation — Human Decisions
@@ -681,3 +681,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Lane:** `lane.mjs --paths` says normal; the user chose "Rigoroso" (every open, create and upgrade goes through this file).
 - **D1, Effect scope** (user: "Aprovo"): verbatim-moved code keeps its Promise form (moving without changing is not a change under AGENTS.md); new code (predicates, factories) follows the Effect rules; SQL bodies stay for #123.
 - Next: the rigorous intent review; build authorization takes effect when it passes or Pedro triages its findings.
+
+## 74. #110 intent review round 1 (user decisions, 2026-10-15)
+
+- Intent review of the #110 brief (`aa5dff59…`, three reviewers): blockers were a runtime import cycle between create inspection and healthy opening (`:971` ↔ `:1068`), the cycle gate attributed to `check:architecture` (it is `check:boundaries`), and no check that `metadataIsCurrent` keeps the same result; plus concerns on unassigned declarations (`:126-159`), the registry factory's scope, guard-table gaps, per-instance locks, like-for-like mutation, CodeScene 10 per commit, and a Primitive Obsession risk in the support file.
+- **Commits** (user: "1 commit, passos como checkpoints"): the eight steps are uncommitted checkpoints (parent plus patch digest, with their test logs); the slice ends as one commit.
+- **Factories** (user: "Novo, converter já"): the coordinator recommended treating them as moved code, but the user chose to convert them now. The locks become an Effect owner (a service built by a Layer, with `Semaphore`/`Deferred` coordination, per AGENTS.md), and the registry factory's operations become Effect programs, behind a temporary Promise facade for the not-yet-migrated callers. This narrows D1 (§73): only verbatim-moved functions keep their Promise form; SQL bodies still stay for #123. Lock semantics (create permit, per-Project permits, `forCreate`/`afterCreateDrain` sharing one permit, per-instance state) must be preserved and guarded.
+- **Revision** (user: "Aprovo, sem 2.ª revisão"): the implementer revises the brief with every intent-review fix and this decision; the coordinator checks each item; no second intent review round (recorded residual risk); Pedro's approval of the revised brief is this decision.
