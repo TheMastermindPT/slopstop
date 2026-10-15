@@ -1,23 +1,12 @@
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { expect, it } from "vitest";
-import { rewindToGenerationThree } from "./project-storage-upgrade-fixture.js";
+import {
+  activeGenerationDirectory,
+  rewindToGenerationThree,
+} from "./project-storage-upgrade-fixture.js";
 import { registerFolder, registrationSession } from "./registration-flow-fixture.js";
 import { missing94 } from "./trace-94.js";
-
-/** The registered Project's active generation directory, read from the registry. */
-function activeGenerationDirectory(root: string, projectId: string): string {
-  const installation = path.join(root, "installation");
-  const database = new DatabaseSync(path.join(installation, "application.db"), { readOnly: true });
-  try {
-    const row = database
-      .prepare("SELECT active_generation_id FROM storage_registrations WHERE project_id = ?")
-      .get(projectId);
-    return path.join(installation, "projects", projectId, String(row?.["active_generation_id"]));
-  } finally {
-    database.close();
-  }
-}
 
 /** Registers the session's repository through the real flow, then stops that runtime. */
 async function registerThenStop() {
@@ -39,7 +28,7 @@ it.runIf(process.platform === "win32")(
     const registration = await registerThenStop();
     const { root, projectId } = registration;
     await rewindToGenerationThree({
-      generationDirectory: activeGenerationDirectory(root, projectId),
+      generationDirectory: activeGenerationDirectory(path.join(root, "installation"), projectId),
     });
 
     const session = await registrationSession({ root });
@@ -101,7 +90,7 @@ it.runIf(process.platform === "win32")(
   async () => {
     const { root, projectId } = await registerThenStop();
     await rewindToGenerationThree({
-      generationDirectory: activeGenerationDirectory(root, projectId),
+      generationDirectory: activeGenerationDirectory(path.join(root, "installation"), projectId),
     });
     const upgrader = await registrationSession({ root });
     try {

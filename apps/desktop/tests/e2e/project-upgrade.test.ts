@@ -3,10 +3,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { decodeStrict, ProjectUpgradeRequestSchema } from "@slopstop/protocol";
-import { launchBuiltDesktop } from "./electron-launch.js";
+import { recordSlotTexts, slotTexts } from "./conversation-window.js";
+import { expectDesktopLog, launchBuiltDesktop } from "./electron-launch.js";
 import { runHarnessSeed } from "./harness-seed.js";
-
-const startingMessage = "SlopStop desktop starting.";
 
 test("updates an older Project in the window", async () => {
   test.setTimeout(150_000);
@@ -29,17 +28,7 @@ test("updates an older Project in the window", async () => {
       exact: true,
     });
     await expect(open).toBeEnabled();
-    // Record each change of the progress line in order, collapsing repeats.
-    await page.evaluate(() => {
-      const target = document.getElementById("ws-progress");
-      if (target === null) throw new Error("#ws-progress is not mounted");
-      const seen: string[] = [];
-      Reflect.set(window, "progressSeen", seen);
-      new MutationObserver(() => {
-        const text = target.textContent ?? "";
-        if (seen.at(-1) !== text) seen.push(text);
-      }).observe(target, { childList: true, characterData: true, subtree: true });
-    });
+    await recordSlotTexts(page, "ws-progress");
     await open.click();
     const workspace = page.getByRole("region", { name: "Project workspace" });
     await expect(
@@ -49,17 +38,12 @@ test("updates an older Project in the window", async () => {
     // The refreshed list no longer shows the Project in safe mode.
     await expect(open).not.toContainText("Safe mode");
     await expect
-      .poll(() => page.evaluate(() => Reflect.get(window, "progressSeen")))
+      .poll(async () => (await slotTexts(page, "ws-progress")).texts)
       .toEqual(["Opening Project…", "Updating Project…", ""]);
     await expect(page.getByRole("alert")).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {
     await application.close();
   }
-  const log = await readFile(path.join(userData, "logs", "slopstop.jsonl"), "utf8");
-  const lines = log.split("\n").filter((line) => line.trim() !== "");
-  expect(
-    lines.filter((line) => Reflect.get(JSON.parse(line) as object, "msg") === startingMessage),
-  ).toHaveLength(1);
-  expect(log).not.toContain("HARNESS_LOG_LINE_");
+  await expectDesktopLog(userData, 1);
 });

@@ -1,11 +1,9 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile } from "node:fs/promises";
+import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { builtDesktopCommand, launchBuiltDesktop } from "./electron-launch.js";
-
-const startingMessage = "SlopStop desktop starting.";
+import { builtDesktopCommand, launchBuiltDesktop, startingLines } from "./electron-launch.js";
 
 /** A fresh proof directory holding its own `userData`. */
 async function proofDirectory() {
@@ -13,15 +11,6 @@ async function proofDirectory() {
   const userData = path.join(proof, "user-data");
   await mkdir(userData);
   return { proof, userData };
-}
-
-/** How many desktop log lines record a start under `userData`. */
-async function startingLines(userData: string): Promise<number> {
-  const log = await readFile(path.join(userData, "logs", "slopstop.jsonl"), "utf8").catch(() => "");
-  return log
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .filter((line) => Reflect.get(JSON.parse(line) as object, "msg") === startingMessage).length;
 }
 
 /** Starts a second desktop process as its own child, so that only it is ever stopped. */

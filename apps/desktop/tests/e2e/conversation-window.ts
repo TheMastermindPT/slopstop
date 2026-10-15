@@ -241,3 +241,89 @@ export function replaceHandlers(application: ElectronApplication, replacements: 
     }
   }, replacements);
 }
+
+/** A message as the window shows it: its exact text and its `time@datetime`. */
+export type ShownMessage = Readonly<{ text: string | null; savedAt: string | null }>;
+/** The slots whose text changes a recorder follows. */
+type RecordedSlot = "ws-progress" | "conversation-status";
+type TextRecord = { texts: string[]; messagesAtSaved: ShownMessage[] | undefined };
+
+/** Where a message's parts live: each list item, its text paragraph and its time. */
+const messageParts = {
+  item: `${regionSelector} ol[aria-label="Messages"] > li`,
+  text: ":scope > p",
+  time: "time",
+} as const;
+
+const readerName = "readShownMessages";
+
+/**
+ * Installs the page-side reader of the Messages list, the one mapping both `shownMessages` and the
+ * status recorder use: each item's exact text (not whitespace-normalised) and its time.
+ */
+function installMessageReader(page: Page) {
+  return page.evaluate(
+    ({ parts, name }) => {
+      Reflect.set(window, name, () =>
+        [...document.querySelectorAll(parts.item)].map((item) => ({
+          text: item.querySelector(parts.text)?.textContent ?? null,
+          savedAt: item.querySelector(parts.time)?.getAttribute("datetime") ?? null,
+        })),
+      );
+    },
+    { parts: messageParts, name: readerName },
+  );
+}
+
+/** The Messages list's items, each with its exact text and time. */
+export async function shownMessages(page: Page): Promise<ShownMessage[]> {
+  await installMessageReader(page);
+  return page.evaluate((name) => (Reflect.get(window, name) as () => ShownMessage[])(), readerName);
+}
+
+/**
+ * Records each change of a slot's text in order, collapsing repeats, with `scrollAfterSaved`'s
+ * observer pattern. For `#conversation-status` it also captures the Messages list in the callback
+ * where "Saved" first appears. The slot remounts per activation, so install again after each load;
+ * a new install disconnects the slot's previous observer.
+ */
+export async function recordSlotTexts(page: Page, slot: RecordedSlot) {
+  await installMessageReader(page);
+  await page.evaluate(
+    ({ slot: id, name }) => {
+      const target = document.getElementById(id);
+      if (target === null) throw new Error(`#${id} is not mounted`);
+      (Reflect.get(window, `${id}-observer`) as MutationObserver | undefined)?.disconnect();
+      const read = Reflect.get(window, name) as () => ShownMessage[];
+      const record: TextRecord = { texts: [], messagesAtSaved: undefined };
+      Reflect.set(window, `${id}-record`, record);
+      const observer = new MutationObserver(() => {
+        const text = target.textContent ?? "";
+        if (record.texts.at(-1) === text) return;
+        record.texts.push(text);
+        if (text === "Saved" && record.messagesAtSaved === undefined)
+          record.messagesAtSaved = read();
+      });
+      observer.observe(target, { childList: true, characterData: true, subtree: true });
+      Reflect.set(window, `${id}-observer`, observer);
+    },
+    { slot, name: readerName },
+  );
+}
+
+/** What a slot's recorder holds; `clear` empties it after reading. */
+export function slotTexts(page: Page, slot: RecordedSlot, clear = false): Promise<TextRecord> {
+  return page.evaluate(
+    ({ slot: id, clear: empty }) => {
+      const record = Reflect.get(window, `${id}-record`) as TextRecord | undefined;
+      if (record === undefined) throw new Error(`No recorder on #${id}`);
+      const read = { texts: [...record.texts], messagesAtSaved: record.messagesAtSaved };
+      if (empty) {
+        record.texts.length = 0;
+        record.messagesAtSaved = undefined;
+      }
+      return read;
+    },
+    { slot, clear },
+  );
+}

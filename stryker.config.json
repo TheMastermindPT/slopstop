@@ -47,6 +47,7 @@
     "apps/desktop/src/renderer/conversation/use-conversation-load.ts",
     "apps/desktop/src/renderer/conversation/use-conversation-save.ts",
     "apps/desktop/src/renderer/conversation/use-project-conversation.ts",
+    "apps/desktop/src/renderer/projects-list.tsx:50-56",
     "apps/desktop/src/renderer/projects-workspace.tsx:44-44",
     "apps/desktop/src/renderer/projects-workspace.tsx:81-81",
     "apps/desktop/src/renderer/projects-workspace.tsx:94-94",

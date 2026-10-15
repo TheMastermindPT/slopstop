@@ -43,9 +43,16 @@ function storageLabel(project: Entry) {
   return `Storage ${project.storage.status.replaceAll("-", " ")}`;
 }
 
+/**
+ * A registered Project opens while its repository is present; a Project without a repository
+ * opens in safe mode (to update or recover it) and, once healthy, read-write.
+ */
 function canOpen(project: Entry): boolean {
   if (project.registration === "registered") return project.repositoryLocation.status === "present";
-  return project.registration === "unbound" && project.storage.status === "safe-mode";
+  return (
+    project.registration === "unbound" &&
+    (project.storage.status === "safe-mode" || project.storage.status === "healthy")
+  );
 }
 
 export type RowProps = Readonly<{

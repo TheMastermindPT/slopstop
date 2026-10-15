@@ -1,5 +1,5 @@
 import { decodeStrict, type ProjectListResult, ProjectListResultSchema } from "@slopstop/protocol";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./app.js";
@@ -50,6 +50,38 @@ function renderWithList(list: ProjectListResult, linux = false) {
 
 const addButton = () => screen.findByRole("button", { name: "Add existing repository" });
 
+const healthy = { status: "healthy", storageId: unboundId, generationId: unboundId };
+const safeMode = (canonical: string) => ({
+  status: "safe-mode",
+  storageId: unboundId,
+  generationId: unboundId,
+  canonical,
+  runtime: "healthy",
+});
+const unavailableStorage = { status: "unavailable", code: "PROJECT_STORAGE_UNAVAILABLE" };
+const brokenStorage = { status: "broken", code: "PROJECT_STORAGE_OWNER_FAILED" };
+
+/** One listed Project: unbound, or bound to the named folder "chess". */
+function listedEntry(
+  registration: "registered" | "incomplete" | "unbound",
+  storage: object,
+  repositoryLocation: object,
+) {
+  const binding = { name: "chess", repositoryBindingId: unboundId, workspaceId: unboundId };
+  return {
+    registration,
+    projectId: unboundId,
+    access: "not-assessed",
+    storage,
+    repositoryLocation,
+    ...(registration === "unbound" ? {} : binding),
+    ...(registration === "incomplete" ? { code: "REGISTRATION_INCOMPLETE" } : {}),
+  };
+}
+
+const notBound = { status: "not-bound" };
+const present = { status: "present" };
+
 describe("Projects list", () => {
   it("names registered Projects by folder and unbound ones by short id", async () => {
     renderWithList(namedAndUnbound);
@@ -58,6 +90,76 @@ describe("Projects list", () => {
       screen.getByRole("button", { name: "Open Project without a repository 22222222" }),
     ).toBeTruthy();
   });
+
+  type OpenRow = Readonly<{
+    label: string;
+    registration: "registered" | "incomplete" | "unbound";
+    storage: object;
+    location: object;
+    openable: boolean;
+  }>;
+  const unbound = (label: string, storage: object, openable: boolean): OpenRow => ({
+    label: `an unbound Project ${label}`,
+    registration: "unbound",
+    storage,
+    location: notBound,
+    openable,
+  });
+  const repositories = [
+    { status: "missing", code: "REPOSITORY_NOT_FOUND" },
+    { status: "changed", code: "REPOSITORY_IDENTITY_CHANGED" },
+    { status: "unavailable", code: "REPOSITORY_INACCESSIBLE" },
+    { status: "invalid", code: "OBSERVATION_INVALID" },
+    { status: "broken", code: "INTERNAL_FAILURE" },
+  ];
+  const openRows: OpenRow[] = [
+    unbound("with healthy storage", healthy, true),
+    unbound("that needs its update", safeMode("migration-required"), true),
+    unbound("that needs recovery", safeMode("recovery-required"), true),
+    unbound("not registered in storage", { status: "not-registered" }, false),
+    unbound("whose storage is unavailable", unavailableStorage, false),
+    unbound("whose storage is broken", brokenStorage, false),
+    {
+      label: "an incomplete registration",
+      registration: "incomplete",
+      storage: healthy,
+      location: present,
+      openable: false,
+    },
+    ...[present, ...repositories].map(
+      (location): OpenRow => ({
+        label: `a registered Project whose repository is ${location.status}`,
+        registration: "registered",
+        storage: healthy,
+        location,
+        openable: location === present,
+      }),
+    ),
+  ];
+
+  it.each(openRows)(
+    "CNV-B52 decides whether $label can be opened",
+    async ({ registration, storage, location, openable }) => {
+      const control = {
+        ...listedEntry("registered", healthy, present),
+        projectId: registeredId,
+        name: "control",
+      };
+      renderWithList(
+        decodeStrict(ProjectListResultSchema, {
+          status: "listed",
+          projects: [listedEntry(registration, storage, location), control],
+          hiddenCount: 0,
+        }),
+      );
+      // The always-openable control row proves the list is ready before the row is judged.
+      const ready = await screen.findByRole("button", { name: "Open Project control" });
+      await waitFor(() => expect(ready.hasAttribute("disabled")).toBe(false));
+      const name = registration === "unbound" ? "without a repository 22222222" : "chess";
+      const open = screen.getByRole("button", { name: `Open Project ${name}` });
+      expect(open.hasAttribute("disabled")).toBe(!openable);
+    },
+  );
 
   it("offers adding an existing repository with its hint", async () => {
     renderWithList(namedAndUnbound);

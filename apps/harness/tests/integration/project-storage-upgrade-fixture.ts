@@ -389,6 +389,24 @@ function generationDirectory(root: string, generationId: string): string {
 }
 
 /**
+ * A registered Project's active generation directory, read from the registry under the
+ * application storage root.
+ */
+export function activeGenerationDirectory(storageRoot: string, projectId: string): string {
+  const database = new DatabaseSync(path.join(storageRoot, "application.db"), { readOnly: true });
+  try {
+    const generation = database
+      .prepare("SELECT active_generation_id FROM storage_registrations WHERE project_id = ?")
+      .get(projectId)?.["active_generation_id"];
+    if (typeof generation !== "string")
+      throw new Error(`No active generation registered for Project ${projectId}`);
+    return path.join(storageRoot, "projects", projectId, generation);
+  } finally {
+    database.close();
+  }
+}
+
+/**
  * Rewinds one generation's canonical database to schema 3 by dropping the empty schema-4
  * tables, and re-seals its manifest. Any Project's generation directory, registered or not.
  */

@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { decodeStrict, RegisteredProjectSchema } from "@slopstop/protocol";
+import { decodeStrict, ProjectIdSchema, RegisteredProjectSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
 
 /**
@@ -36,4 +36,22 @@ export async function seedTwoProjects(userData: string) {
   const second = projects[1];
   if (first === undefined || second === undefined) throw new Error("Seeded Projects missing");
   return [first, second] as const;
+}
+
+/**
+ * Seeds the conversation journey: repository-a, repository-b rewound to generation three, and a
+ * generation-three Project without a repository. Returns the latter's short identity.
+ */
+export async function seedConversationJourney(userData: string) {
+  await seedTwoProjects(userData);
+  runHarnessSeed(
+    "conversation-journey-ui-seed.integration.test.ts",
+    "SLOPSTOP_CONVERSATION_JOURNEY_SEED",
+    userData,
+  );
+  const { storageOnlyProjectId } = decodeStrict(
+    Schema.Struct({ storageOnlyProjectId: ProjectIdSchema }),
+    JSON.parse(await readFile(path.join(userData, "fixture-journey-projects.json"), "utf8")),
+  );
+  return { storageOnlyShort: storageOnlyProjectId.slice(0, 8) };
 }
