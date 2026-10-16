@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 6ecdc49f912a7332fe001b3a7283438658110c9f7f7116f9f5081da54dc88f1a
+content_hash: 576af7d301c4e4f1d79e281980097132cdf0446147e6d3ca45c3606c21a84ed8
 ---
 
 # Conversation — Human Decisions
@@ -736,3 +736,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - Carry U6 (service surface), U9 (duplicate storage-failure guard) and U11 (in-Effect barging residual) to issue #123.
   - Record U7 (rename-only red) and U12 (`.call`/`.apply` wrappers; test placement) as residuals.
   - There is no third review round: the coordinator checks each item. Then `package:launch-smoke` reruns, the final mutation runs, and Pedro accepts.
+
+## 83. rpiv workflow improvements (user decision, 2026-10-16)
+
+- The coordinator proposed four rpiv improvements; the user kept 2 (reuse mutation results) and 4 (less bureaucracy per decision and per round) and asked the coordinator to discuss them with a new rpiv session (herdr pane `w3:p2B`, renamed `rpiv`). The discussion produced a joint list of six items: (1) batch decision records and approved copies into one docs commit per slice, at every acceptance stop and before `/clear` or a handoff; (2) an `append-only.mjs` helper owning the append-only check; (3) a heavy-run evidence wrapper; (4) a review-packet builder plus a two-session ownership/freeze rule; (5) a findings-table template and round-2 focus fields with all three reviewers kept; (6) a per-mutant report-diff helper with an explicit range map. Withdrawn: reusing mutation results on the final candidate (unsound: results depend on the whole loaded closure), and fewer reviewers in round 2 (removes mandatory rigorous-lane roles; T1 was caught by one reviewer of three).
+- **Decision:** the user chose to implement only items 1 and 2, and approved a linked rpiv worktree `C:/Users/pedro/rpiv-claude-wt/append-only-batch` on the new branch `feat/append-only-batch-commits` from `4876216`. The rpiv session builds them red-green there; no commit, push or issue without the user's approval. Items 3-6 are not authorised.
