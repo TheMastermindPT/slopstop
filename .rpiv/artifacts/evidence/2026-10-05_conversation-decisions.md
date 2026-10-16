@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 81802e1cd1bde40103ef2c7572c6974bf20bfaa0df879ccafe194cfc1424d3ef
+content_hash: 2b79e37cf9bfd4b4f11939bf48e7f02c6f9231555deca8ebc105c8c789fe66f2
 ---
 
 # Conversation — Human Decisions
@@ -880,3 +880,16 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Final fix commit `cdcecce`. The rerun of `pnpm check` passed (3024 tests), and both runs are recorded in the evidence. The coordinator checked L1-L14 at their stated lines. ADR 0018 and ADR 0020 are untouched; ADR 0020:98 is a recorded stale count. Append-only: keep. The only removed lines under `docs/adr` are the 12 Status lines. Residual risk: the final fix delta was not reviewed by the three reviewers (§98).
 - **Decision:** the user chose "Aceito e junta ao main". The implementer flips Proposed→Accepted (12 ADR Status suffixes, 5 Amendment Status lines, 7 notes) in one mechanical commit. The coordinator checks the diff (K21), then squashes the branch into one main commit. The push stays separate. The provisional clauses are revisited only when the user asks.
 - **Integration (same day):** the coordinator checked the flip commit `f7d38e7`: 31 ADR lines changed, only `Proposed`→`Accepted` plus the acceptance date. The branch was squashed into main after the gates passed (pnpm check 3024, check:duplicates, knip).
+
+## 101. #99 cleanup and push timing (user decisions, 2026-10-16)
+
+- **Decisions:**
+  - The user chose to delete the `slopstop-99` worktree and the `docs/99-cross-waypoint-dialogue` branch. The coordinator first checked that the worktree had no changes and that main matches the branch content. Both are deleted; the branch was at `f7d38e7`.
+  - Push: "Mais tarde" again. Main is 23 commits ahead of origin.
+
+## 102. #123 split and order (user decision, 2026-10-16)
+
+- **Decision:** the user chose "Parte A primeiro, B depois".
+  - **Part A** (before C2): one ManagedRuntime per process (harness utility process and Electron main), services at real ownership boundaries, explicit shutdown, and the ApplicationDatabase Layer finalizer (#123 comment, #94 study). It also covers the #110 carry-forwards (in-Effect lock order, the locks service surface `createPermit`/`retainProject`, the duplicate `isStorageFailure`) and the Electron-main desktop bridge Promise core (C1 S4 G28, §46).
+  - **Part B** (the module-by-module SQL-body pass, with performance measured before and after) comes after C2.
+  - The rpiv designer runs the research, then the design, for Part A.
