@@ -34,9 +34,11 @@ function belongsToErrorCodeFamily(code: string | undefined, family: string): boo
   return code?.startsWith(`${family}_`) === true;
 }
 
-function rethrowKnownStorageError(error: unknown): void {
-  if (error instanceof ProjectStorageBrokenError) throw error;
-  if (error instanceof ProjectStorageUnavailableError) throw error;
+function isKnownStorageError(
+  error: unknown,
+): error is ProjectStorageBrokenError | ProjectStorageUnavailableError {
+  if (error instanceof ProjectStorageBrokenError) return true;
+  return error instanceof ProjectStorageUnavailableError;
 }
 
 export function isUnavailableStorageError(input: { error: unknown }): boolean {
@@ -57,10 +59,18 @@ export function isBusyStorageError(input: { error: unknown }): boolean {
   );
 }
 
-export function normalizeStorageError(input: { error: unknown; message: string }): never {
-  rethrowKnownStorageError(input.error);
+/** The storage failure an error stands for: a known one as is, else unavailable or broken. */
+export function storageFailureFor(input: {
+  error: unknown;
+  message: string;
+}): ProjectStorageBrokenError | ProjectStorageUnavailableError {
+  if (isKnownStorageError(input.error)) return input.error;
   if (isUnavailableStorageError({ error: input.error })) {
-    throw new ProjectStorageUnavailableError("Project Storage authority is unavailable.");
+    return new ProjectStorageUnavailableError("Project Storage authority is unavailable.");
   }
-  throw new ProjectStorageBrokenError(input.message, { cause: input.error });
+  return new ProjectStorageBrokenError(input.message, { cause: input.error });
+}
+
+export function normalizeStorageError(input: { error: unknown; message: string }): never {
+  throw storageFailureFor(input);
 }

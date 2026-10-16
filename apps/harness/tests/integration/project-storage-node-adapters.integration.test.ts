@@ -2,13 +2,20 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { expect, it, vi } from "vitest";
-import { ProjectStorageBrokenError } from "../../src/storage/project-storage-errors.js";
+import {
+  ProjectStorageBrokenError,
+  ProjectStorageUnavailableError,
+} from "../../src/storage/project-storage-errors.js";
 import {
   createNodeProjectStorageDependencies,
   type DatabaseSpec,
   databaseSpecs,
   loadGeneratedMigrations,
 } from "../../src/storage/project-storage-node-adapters.js";
+import {
+  type CreationCheckpoint,
+  createProjectStorageOwner,
+} from "../../src/storage/project-storage-store.js";
 import {
   createMigrationGuardFixture,
   generationOneGuardSpec,
@@ -389,3 +396,85 @@ it.each(["existing", "mutable"] as const)(
     }
   },
 );
+
+type RegistryFailureCase = Readonly<{
+  operation: "declareStaging" | "activate";
+  checkpoint: CreationCheckpoint;
+  message: string;
+}>;
+
+const registryFailureCases: readonly RegistryFailureCase[] = [
+  {
+    operation: "declareStaging",
+    checkpoint: "during-staging-transaction",
+    message: "Project Storage staging declaration failed.",
+  },
+  {
+    operation: "activate",
+    checkpoint: "during-activation-transaction",
+    message: "Project Storage activation failed.",
+  },
+];
+
+/** Creates a Project whose registry checkpoint throws, and returns what the registry rejected with. */
+async function registryRejection(failure: RegistryFailureCase, thrown: unknown) {
+  const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-registry-failure-"));
+  const base = createNodeProjectStorageDependencies({
+    applicationStorageRoot: root,
+    migrationResourcesRoot: path.resolve(import.meta.dirname, "../../drizzle"),
+    applicationVersion: "0.0.0",
+    failures: {
+      checkpoint: async (point) => {
+        if (point === failure.checkpoint) throw thrown;
+      },
+    },
+  });
+  const rejections: unknown[] = [];
+  const recorded = <Value>(operation: () => Promise<Value>) =>
+    operation().catch((error: unknown) => {
+      rejections.push(error);
+      throw error;
+    });
+  const owner = createProjectStorageOwner({
+    ...base,
+    registry: {
+      ...base.registry,
+      declareStaging: (creation, paths) =>
+        recorded(() => base.registry.declareStaging(creation, paths)),
+      activate: (creation, paths) => recorded(() => base.registry.activate(creation, paths)),
+    },
+  });
+  try {
+    await owner.create(createRequest);
+    expect(rejections).toHaveLength(1);
+    return rejections[0];
+  } finally {
+    await owner.stop();
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+it.each(registryFailureCases)(
+  "$operation turns a checkpoint error into its broken failure with the error as cause",
+  async (failure) => {
+    const thrown = new Error("checkpoint failed");
+    const rejection = await registryRejection(failure, thrown);
+    expect(rejection).toBeInstanceOf(ProjectStorageBrokenError);
+    expect(rejection).toMatchObject({ message: failure.message, cause: thrown });
+  },
+);
+
+it.each(registryFailureCases)(
+  "$operation reports a busy checkpoint error as unavailable",
+  async (failure) => {
+    const busy = Object.assign(new Error("database is locked"), { code: "SQLITE_BUSY" });
+    const rejection = await registryRejection(failure, busy);
+    expect(rejection).toBeInstanceOf(ProjectStorageUnavailableError);
+    expect(rejection).toMatchObject({ message: "Project Storage authority is unavailable." });
+  },
+);
+
+it.each(registryFailureCases)("$operation keeps a storage failure as it is", async (failure) => {
+  const unavailable = new ProjectStorageUnavailableError("checkpoint unavailable");
+  expect(await registryRejection(failure, unavailable)).toBe(unavailable);
+});

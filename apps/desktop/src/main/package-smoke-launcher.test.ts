@@ -102,15 +102,17 @@ function remove(file: string) {
   for (const key of tree.keys())
     if (key === file || key.startsWith(file + path.sep)) tree.delete(key);
 }
-function archive() {
+// A bundled fixture entry requires a shared chunk while it loads (load-order guard).
+function archive(fixtureEntry = 'require("./shared.cjs");') {
   const manifest = JSON.stringify({ name: "fs-native-extensions", version: "1.5.1" });
   const files = {
     ...Object.fromEntries(
-      ["harness.cjs", "writer-proof-fixture.cjs", "shared.cjs"].map((name) => [
-        name,
-        { size: 1, offset: "0" },
-      ]),
+      ["harness.cjs", "shared.cjs"].map((name) => [name, { size: 1, offset: "0" }]),
     ),
+    "writer-proof-fixture.cjs": {
+      size: fixtureEntry.length,
+      offset: String(1 + manifest.length),
+    },
     node_modules: {
       files: {
         "fs-native-extensions": {
@@ -120,11 +122,11 @@ function archive() {
     },
   };
   const json = Buffer.from(JSON.stringify({ files: { ".vite": { files: { build: { files } } } } }));
-  const bytes = Buffer.alloc(16 + json.length + 1 + manifest.length);
+  const bytes = Buffer.alloc(16 + json.length + 1 + manifest.length + fixtureEntry.length);
   bytes.writeUInt32LE(8 + json.length, 4);
   bytes.writeUInt32LE(json.length, 12);
   json.copy(bytes, 16);
-  bytes.write(`;${manifest}`, 16 + json.length);
+  bytes.write(`;${manifest}${fixtureEntry}`, 16 + json.length);
   return bytes;
 }
 function resources(output: string) {
@@ -420,6 +422,19 @@ it.each(["harness.cjs", "writer-proof-fixture.cjs", "shared.cjs"])(
     expect(ports.spawn).not.toHaveBeenCalled();
   },
 );
+it("rejects a fixture entry that loads fs-native-extensions before any launch", async () => {
+  resourceMutation = (root) =>
+    put(path.join(root, "app.asar"), {
+      kind: "file",
+      value: archive('require("./shared.cjs"); require("fs-native-extensions");'),
+    });
+  await execute();
+  expect(process.exitCode).toBe(1);
+  expect(ports.spawn).not.toHaveBeenCalled();
+  expect(stderr).toHaveBeenCalledWith(
+    "Packaged writer-proof fixture load order: loads-addon writer-proof-fixture.cjs -> fs-native-extensions\n",
+  );
+});
 afterEach(() => {
   Object.defineProperty(process, "platform", { value: hostPlatform });
   Object.defineProperty(process, "arch", { value: hostArchitecture });

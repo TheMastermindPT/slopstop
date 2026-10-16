@@ -13,8 +13,11 @@
     "apps/harness/src/storage/project-storage-manifest.ts",
     "apps/harness/src/storage/project-storage-upgrade-recovery.ts",
     "apps/harness/src/storage/application-database-migration.ts:142-284",
-    "apps/harness/src/storage/project-storage-node-adapters.ts:1036-1043",
-    "apps/harness/src/storage/project-storage-node-adapters.ts:1075-1081"
+    "apps/harness/src/storage/project-storage-healthy-opening.ts:108-115",
+    "apps/harness/src/storage/project-storage-healthy-opening.ts:147-153",
+    "apps/harness/src/storage/project-storage-database-authority.ts:189-194",
+    "apps/harness/src/storage/project-storage-node-registry.ts",
+    "apps/harness/src/storage/project-storage-locks.ts"
   ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],

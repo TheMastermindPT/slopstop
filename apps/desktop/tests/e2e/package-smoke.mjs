@@ -19,6 +19,7 @@ import {
   createRuntimeChallenge,
   verifyRuntimeWitness,
 } from "../../src/main/package-smoke-runtime.ts";
+import { nativeAddonLoadOrder } from "./package-smoke-load-order.mjs";
 
 const smokeTimeoutMs = 30_000;
 const writerTimeoutMs = 120_000;
@@ -192,6 +193,17 @@ async function assertWriterArchive(resources) {
     for (const match of source.matchAll(/(?:require|import)\(["']\.\/([^"']+\.cjs)["']\)/gu)) {
       archiveFile(bytes, headerSize, files[match[1]]);
     }
+  }
+  const loadOrder = nativeAddonLoadOrder("writer-proof-fixture.cjs", (name) =>
+    archiveFile(bytes, headerSize, files[name]).toString("utf8"),
+  );
+  if (loadOrder.status !== "deferred") {
+    // The top-level catch prints only the stage, so the load order is reported here.
+    const chain = loadOrder.status === "loads-addon" ? ` ${loadOrder.chain.join(" -> ")}` : "";
+    process.stderr.write(`Packaged writer-proof fixture load order: ${loadOrder.status}${chain}\n`);
+    throw new Error(
+      "Packaged writer-proof fixture failed the fs-native-extensions load-order check.",
+    );
   }
   const packageEntry = files.node_modules.files["fs-native-extensions"].files["package.json"];
   const manifest = JSON.parse(archiveFile(bytes, headerSize, packageEntry).toString("utf8"));

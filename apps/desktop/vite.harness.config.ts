@@ -160,6 +160,20 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [...nodeBuiltins, "fs-native-extensions", "koffi"],
+      output: {
+        // With the shared protocol chunk, Rolldown 1.2.4 was observed to keep its runtime helpers
+        // out of the Storage chunk, so the writer-proof fixture entry loads the native addon only
+        // after its native preflight. Runtime placement is Rolldown's choice, not a guarantee; the
+        // packaged smoke enforces the load order (tests/e2e/package-smoke-load-order.mjs, §80).
+        codeSplitting: {
+          groups: [
+            {
+              name: "protocol",
+              test: /packages[\\/](?:kernel|protocol)[\\/]|node_modules[\\/]effect[\\/]/,
+            },
+          ],
+        },
+      },
     },
   },
 });
