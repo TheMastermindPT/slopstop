@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e450676b21d19be12fad8c5577278fa060193b9a76c77de6fa8c97576657f506
+content_hash: 217124c71239d08340564075d80b19b92df5410069adc92aa5329bc582fc1e3a
 ---
 
 # Conversation — Human Decisions
@@ -751,3 +751,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - Final runs on `19a038e` (clean, digest `e3b0c442…`): `pnpm package` and `package:launch-smoke` passed (41 s); the Stryker dry run passed; the final mutation passed in 137 min (score 84.84; the 14 baseline files 86.28 against 86.07; the two new whole-file scopes 76.50). In the four remapped ranges, all 60 mutants keep their baseline status. In the other files, 3086 of 3086 match by location (2 went Killed -> Timeout, still detected). No baseline-killed mutant survives. New-scope survivors: 2 equivalent; the locks survivors are the recorded unobservable lock-table cleanup residual; the registry survivors are untested failure, defensive and missing-authority paths.
 - **Decision:** the user chose "Aceitar + issue para os testes". #110 is accepted as is. The implementer records the final runs and the baseline tally correction (metadataIsStale 7/16, isSeededReservation 9/4) in the evidence file in one docs commit. Issue #132 tracks the registry test gaps and the `metadataIsStale` gap. Next, the coordinator squashes the branch into one main commit (T8), and asks before the push.
+
+## 86. #110 deep review and validate (user exception, 2026-10-16)
+
+- The coordinator had not mentioned in §85 that the rpiv chain runs deep-review (rigorous depth) and then validate after acceptance. A deep-review fix would change the code and force a new final mutation (over 2 h).
+- **Decision:** the user chose "Saltar as duas, como no S5". Deep review and validate are skipped by user exception, as in §71. The branch is squashed into main after the implementer's evidence commit. The squash message records the exception.
