@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 46f7e752060a7282244dd18e16e9a3dfaf8498fc321c1d73209690e8a5385081
+content_hash: 542849031199338f4a0a843a0f047e72026486e24214b59ee0365a48c04c3ad4
 ---
 
 # Conversation — Human Decisions
@@ -719,3 +719,11 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - **Cause (diag 4):** a bundling effect, not a Storage behaviour change. With the #110 module graph, rolldown dropped the separate runtime chunk and put its interop helpers into `project-storage-store-*.cjs`. That chunk loads `fs-native-extensions` at module top level, and `writer-proof-fixture.cjs` now requires it statically. The addon is therefore loaded before the fixture's native-origin check (`canonical-writer-package-smoke-entry.ts:251-266`, which requires exactly one dlopen) and the check throws `WriterProofError`. The controller closes its port, so the proof reports `writer-transport`. On main the store chunk loads lazily, after the check. Ruled out: harness fatal handlers (diag 1), harness self-exit (diag 2), Effect error wrapping (diag 4).
 - **Decision:** the user chose "(a) Configuração + guarda". Change only the harness bundle configuration (`apps/desktop/vite.harness.config.ts`) so the fixture entry never statically requires the chunk that loads the addon, restoring main's layout; product code is unchanged. Add a guard to the package smoke's resource preflight that fails with a clear message when `writer-proof-fixture.cjs` statically requires that chunk. The native-origin check is not weakened. This stays inside #110.
+
+## 81. #110 candidate review round 1 (user decision, 2026-10-16)
+
+- Round 1 on `65a10bb` (three reviewers, identical packet): all three `failed`. Table T1-T13 at `.rpiv/evidence/2026-10-15_20-38-03_split-project-storage-node-adapters/review-round1.md` (local).
+  - T1 (high): the lock hand-off order changed. The new service wakes the next waiter on a `setImmediate` task, so a caller arriving at release can jump queued waiters. The base hands off synchronously. The coordinator confirmed it with a scratch script: base `held,waiting,late`, new `held,late,waiting`.
+  - T2 (blocker): the final mutation scope omits the new Effect code, which brief :138 requires (the packet wrongly called it an open question).
+  - Others: a missing 3-operation release pin, no oracle for the rewritten registry error mapping, the load-order guard's message, test and IIFE gap, the brief's Developer Context stopping at §75, stale evidence, two commits on the branch (resolved by the squash at integration), and code suggestions.
+- **Decision:** the user chose "Corrigir tudo": T1-T13 are fixed as proposed. T1 restores the synchronous FIFO hand-off and the start deferral while keeping Effect, with a binding pin first (red on `65a10bb`, green on the base code). Round 2 is the last round.
