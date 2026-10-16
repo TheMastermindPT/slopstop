@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 2b79e37cf9bfd4b4f11939bf48e7f02c6f9231555deca8ebc105c8c789fe66f2
+content_hash: 1045461790224501f6d6e31d9f3dfbb1743b26a72cbd5cea44c73ddb93e2106f
 ---
 
 # Conversation — Human Decisions
@@ -893,3 +893,16 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - **Part A** (before C2): one ManagedRuntime per process (harness utility process and Electron main), services at real ownership boundaries, explicit shutdown, and the ApplicationDatabase Layer finalizer (#123 comment, #94 study). It also covers the #110 carry-forwards (in-Effect lock order, the locks service surface `createPermit`/`retainProject`, the duplicate `isStorageFailure`) and the Electron-main desktop bridge Promise core (C1 S4 G28, §46).
   - **Part B** (the module-by-module SQL-body pass, with performance measured before and after) comes after C2.
   - The rpiv designer runs the research, then the design, for Part A.
+
+## 103. #123 Part A research checkpoints (user decisions, 2026-10-17)
+
+- Research `.rpiv/artifacts/research/2026-10-16_23-40-39_effect-unit2b-runtime-lifecycle-part-a.md` (rpiv designer; lane normal; 45 claims verified, 5 corrected). The user answered all eight open questions with the recommended option.
+- **Decisions:**
+  1. An explicit shutdown program runs before `dispose`; finalizers are used only for order-free releases. Same-turn admission closure, the withheld rule, not-held concurrency and aggregated failures are kept.
+  2. The ApplicationDatabase authority close gets a deadline, with a truthful "close not confirmed" outcome and never "closed". The bound is measured and set in design. Nothing is stopped when the authority was withheld.
+  3. FIFO in Effect: a fair lock on a Deferred hand-off, with the #110 order pins ported. The barging in `canonical-project-writer` `inSlot` and in the `project-registration-flow` steps is a defect, fixed with that lock.
+  4. Part A removes only the facades whose callers it migrates completely. The rest, including the four-level conversation-save nesting, moves to Part B.
+  5. #96 (a bounded wait for harness stdout) is in Part A, with the bound set in design. An IPC request after `dispose` answers unavailable and never hangs.
+  6. The bridge: one Effect bridge core with the drift between the three copies removed. A read during a protocol error answers broken, not unavailable (degrade-distinguishes-broken). Protocol cancel and multi-event replies are left to the C2 design.
+  7. The #123 baseline counts are refreshed. Launch-smoke and mutation are planned as heavy runs, each with the coordinator's go.
+  8. The test-only standalone authority leak is closed in Part A.
