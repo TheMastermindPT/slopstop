@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 542849031199338f4a0a843a0f047e72026486e24214b59ee0365a48c04c3ad4
+content_hash: 6ecdc49f912a7332fe001b3a7283438658110c9f7f7116f9f5081da54dc88f1a
 ---
 
 # Conversation — Human Decisions
@@ -727,3 +727,12 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - T2 (blocker): the final mutation scope omits the new Effect code, which brief :138 requires (the packet wrongly called it an open question).
   - Others: a missing 3-operation release pin, no oracle for the rewritten registry error mapping, the load-order guard's message, test and IIFE gap, the brief's Developer Context stopping at §75, stale evidence, two commits on the branch (resolved by the squash at integration), and code suggestions.
 - **Decision:** the user chose "Corrigir tudo": T1-T13 are fixed as proposed. T1 restores the synchronous FIFO hand-off and the start deferral while keeping Effect, with a binding pin first (red on `65a10bb`, green on the base code). Round 2 is the last round.
+
+## 82. #110 candidate review round 2 (user decision, 2026-10-16)
+
+- Round 2 on `6e5d915` (three reviewers, identical packet): no blocker. All three confirm T1: the facade restores the base hand-off and start order. T2-T13 are resolved, with T8 deferred to the squash. Twelve small items, U1-U12, are in `.rpiv/evidence/2026-10-15_20-38-03_split-project-storage-node-adapters/review-round2.md` (local). The only medium item is U1: the T4 error-mapping tests are not in the mutation include.
+- **Decision:** the user chose "Pequena correção final".
+  - Fix U1 (mutation include, plus a dry run), U2 (Developer Context lists the fix round's out-of-map files), U3 (launcher test for the guard's failure path), U4 (class static blocks count as load time), U5 (commit the deferral pin and correct the evidence), U8 (a thrown message that does not depend on the status) and U10 (record the 6e5d915 heavy runs).
+  - Carry U6 (service surface), U9 (duplicate storage-failure guard) and U11 (in-Effect barging residual) to issue #123.
+  - Record U7 (rename-only red) and U12 (`.call`/`.apply` wrappers; test placement) as residuals.
+  - There is no third review round: the coordinator checks each item. Then `package:launch-smoke` reruns, the final mutation runs, and Pedro accepts.
