@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 77e1acf9793ee846a45a0a6bfa2b000f995eb6845afa372fd5fad7cb77627d0b
+content_hash: e42fcdca5b1ffaec4c63367276a5290275be80828a18d2960ac7328b1368f9ea
 ---
 
 # Conversation — Human Decisions
@@ -769,3 +769,21 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - "Sim, pedir ao ui-ux agora": the ui-ux agent updated DESIGN.md's focus statements to the §33 ring as built. The coordinator checked the values against `seixo.module.css` and `conversation-parts.module.css`, mirrored the wording in `.impeccable/design.json`, and committed `f55cb69`.
   - "Sim, issue para uma slice pequena": a successful upgrade will be logged, and the harness-to-desktop log link proven in the real app. This is issue #133, queued after C1. It answers the open question "should successful upgrades be logged".
   - "Um issue de acompanhamento": the nine deferred rows and the licence check are tracked in issue #134, with code references updated for the #110 split. The design has an appended Developer Context pointer (append-only check: keep).
+
+## 89. Multi-process Project Storage tests (user decision, 2026-10-16)
+
+- A read-only survey found that the packaged smoke already proves writer exclusivity, a hard-killed writer, stale activation and native addon loading across processes, and that it caught the #110 bundle regression in `check:deep`. Two gaps remain: an upgrade killed mid-way is tested only against source, and an upgrade racing a second process that opens the same Project has no test at all.
+- **Decision:** the user chose "Um issue com as duas". Issue #135: first an integration test for the race, then a packaged upgrade-kill stage. It is queued in Phase 2.
+
+## 90. #99 interview continuation: phase 2 dialogue and decision staleness (user decisions, 2026-10-16)
+
+- FRD `.rpiv/artifacts/discover/2026-10-16_16-32-45_cross-waypoint-dialogue-and-decision-staleness.md` (consensus confirmed). Also, the user said no #94 follow-up issue is needed for the CodeScene finding (recorded in §88).
+- **Phase 2:**
+  - Waypoints linked by `blocks` or `related-to` talk through the Supervisor; other pairs need the Supervisor's visible admission. A Forger asks for a dialogue, or the Supervisor opens one on a detected conflict.
+  - Only the affected tasks of each involved Run pause. Technical agreements inside the approved plans need no approval and stay visible in the thread. Plan-changing agreements become one joint proposal for all affected Runs, which goes stale if any covered Run changes epoch or ends.
+  - The Supervisor answers for a Waypoint without an active Run. The coordination budget is per Strand; a cross-Strand dialogue is paid by the requesting Strand.
+- **Decision staleness:**
+  - A decision revision may be a mandatory memory dependency (amends ADR 0017); replacing or retiring it makes dependent memories stale.
+  - Documents repeating a decision are tracked by links plus a change-time search.
+  - One Attention item lists the affected memories, documents and Runs, with a Supervisor-proposed update. A user-only "wording only" mark skips staleness.
+- Open: where technical agreements are stored (the user leans to a new interface record, separate from Decisions, and wants to think about it).
