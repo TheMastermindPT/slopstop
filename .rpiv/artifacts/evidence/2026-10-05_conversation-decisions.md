@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: f7577613fc02f44822180996ebf1c94392fbfe9267de1e77cf3b1a6e10692086
+content_hash: 81802e1cd1bde40103ef2c7572c6974bf20bfaa0df879ccafe194cfc1424d3ef
 ---
 
 # Conversation — Human Decisions
@@ -849,3 +849,34 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - The coordinator checked revision 3 (closing path A). The six round-2 blockers are applied in the brief text. Every user decision from §90-§95 is reflected. The resolution table maps all 76 round-2 findings; the concerns and suggestions were not each re-verified. FRD Q1 (interface-record storage) stays open.
 - **Decisions:** the user approved the #99 design brief, revision 3 (`content_hash 0170dcb8d10d8de977afa1272b69cafd4fe22adf764517a984d86e788a44a0c2`; approved copy `approved-0170dcb8d10d8de977afa1272b69cafd4fe22adf764517a984d86e788a44a0c2.md` in `.rpiv/evidence/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness/`). The user also approved a linked worktree `C:/Users/pedro/Documents/GitHub/slopstop-99` on the new branch `docs/99-cross-waypoint-dialogue`, from the main commit that includes the approved brief. The implementer writes the ADR amendments there as one documentation slice. No push or PR.
 - **Format deviation (user decision, same day):** `validate-artifact --finalizing` rejects the approved brief, because the code fence at :168 has 11 lines (the limit is 10). The non-finalizing validation and the stamped `content_hash` are intact. The user chose "Aceitar como está": the approval stands on the exact text `0170dcb8…`, and the deviation is recorded here. The fence is fixed later through an appended note.
+
+## 97. #99 candidate review round 1 (user decisions, 2026-10-16)
+
+- Round 1 on `a7c6625` (three reviewers, identical packet): all failed. COV raised 3 blockers, plus concerns and suggestions. The table K1-K21 is in `.rpiv/evidence/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness/review-candidate-round1.md` (local). `lane.mjs --range` reports `normal`; the lane stays `rigorous`. The candidate is one commit. The coordinator's packet wrongly said no ADR line was removed; each ADR's Status line was replaced (V17).
+- **Decisions:**
+  - K5: add the missing hold-lifecycle rows beyond the approved text, through an appended note: the completed-proxy change-Run wait gets a "Decline" action; the time limit also covers an unavailable Supervisor proxy; a Contest hold on an ended Run is released.
+  - K6: remove the new `process-execution` ban for the `project-coordination` arm. How Run-absent governed CLI sessions are launched goes to issue #136, with the C2 CLI work.
+  - K7: a decision edit itself still pauses nothing, but a conflict dialogue that follows may hold only the affected tasks. ADR 0022:48 says so explicitly.
+  - K2: bring ADR 0019 and PRODUCT.md:124 into the set.
+  - K21: after acceptance, the Proposed→Accepted flip is checked by the coordinator through a diff (Status words, headings and `Status:` lines only), with no fresh review.
+  - The implementer fixes K1-K20 in one fix round. The coordinator approves K13's lines beyond the list. Round 2 is the last.
+
+## 98. #99 candidate review round 2 (user decisions, 2026-10-16)
+
+- Round 2 (the last) on `bb28854`: all three reviewers failed, with follow-on gaps of the round 1 fixes. The table L1-L14 is in `.rpiv/evidence/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness/review-candidate-round2.md` (local). There are two blockers:
+  - L1: the capture Artifact retention contradicts unamended ADR 0018.
+  - L2: five-arm limit-owner copies are left unamended after the sixth arm.
+- **Decisions:**
+  - L1: "Seguir o ADR 0018 como está". The capture Artifact follows ADR 0018 unchanged (`durable-record` for `evidence-produced`), and no new hold kind is added (the byte-hold sentence goes, or names an existing kind). ADR 0018 stays outside the set.
+  - Path: "Correção final, eu verifico". The implementer fixes L1-L14 in one final fix commit. The coordinator checks each item, with no third review round, and records the unreviewed delta as residual risk. Then the user accepts, and the coordinator checks the Proposed→Accepted flip by diff (12 ADRs, 7 notes).
+
+## 99. #99 final fix gate timeout (user decision, 2026-10-16)
+
+- The implementer's `pnpm check` on the final fix tree (L1-L14 applied, uncommitted) failed on one timeout: `apps/desktop/src/renderer/conversation/project-conversation.test.tsx:152` (CNV-B31) took 5641 ms against the 5000 ms Vitest default (no per-test override); 3023 of 3024 passed. The slice touches no code, and the same test passed on `a7c6625` and `bb28854`. CPU was about 60% when the coordinator checked (3 readings). The implementer stopped without a rerun, as the rule requires. This is a new case of the #94 kind of load-sensitive timeout.
+- **Decision:** the user chose "Repetir uma vez com CPU livre". With CPU at 6/5/5, the implementer reruns `pnpm check` once. If it passes, the implementer commits; if it fails again, they stop and report. No timeout is raised.
+
+## 100. #99 acceptance and integration (user decision, 2026-10-16)
+
+- Final fix commit `cdcecce`. The rerun of `pnpm check` passed (3024 tests), and both runs are recorded in the evidence. The coordinator checked L1-L14 at their stated lines. ADR 0018 and ADR 0020 are untouched; ADR 0020:98 is a recorded stale count. Append-only: keep. The only removed lines under `docs/adr` are the 12 Status lines. Residual risk: the final fix delta was not reviewed by the three reviewers (§98).
+- **Decision:** the user chose "Aceito e junta ao main". The implementer flips Proposed→Accepted (12 ADR Status suffixes, 5 Amendment Status lines, 7 notes) in one mechanical commit. The coordinator checks the diff (K21), then squashes the branch into one main commit. The push stays separate. The provisional clauses are revisited only when the user asks.
+- **Integration (same day):** the coordinator checked the flip commit `f7d38e7`: 31 ADR lines changed, only `Proposed`→`Accepted` plus the acceptance date. The branch was squashed into main after the gates passed (pnpm check 3024, check:duplicates, knip).
