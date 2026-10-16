@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e42fcdca5b1ffaec4c63367276a5290275be80828a18d2960ac7328b1368f9ea
+content_hash: b37f6bc77ab1cc30c75186a074f133ec7cf514758ddd65b1b4bcccd2d16188c4
 ---
 
 # Conversation — Human Decisions
@@ -787,3 +787,19 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - Documents repeating a decision are tracked by links plus a change-time search.
   - One Attention item lists the affected memories, documents and Runs, with a Supervisor-proposed update. A user-only "wording only" mark skips staleness.
 - Open: where technical agreements are stored (the user leans to a new interface record, separate from Decisions, and wants to think about it).
+
+## 91. #99 research despite uncertainty (user decision, 2026-10-16)
+
+- The user said much of the harness may still change once they try it, and that they are still quite unsure how memories and decisions will work in practice. The coordinator proposed pausing the research, marking the §90 FRD provisional and prioritising work the user can try first (C2, basic Runs).
+- **Decision:** the user chose "Continuar tudo". The rpiv designer's research continues on both topics (phase 2 dialogue and decision staleness).
+
+## 92. #99 research checkpoints (user decisions, 2026-10-16)
+
+- Research `.rpiv/artifacts/research/2026-10-16_17-01-10_cross-waypoint-dialogue-and-decision-staleness.md` (rpiv designer) found five FRD requirements in conflict with accepted text, and a new tension: a submitted joint proposal closes all dispatch in every covered Run (ADR 0011:131), and it stays closed after a rejection (:128). The coordinator's FRD wrongly listed ADR 0021:45 as kept in its Non-Goals.
+- **Decisions (six checkpoints):**
+  1. Amend ADR 0021:45 and PRODUCT.md:103: technical agreements inside the approved plans need no approval.
+  2. An agreement that changes a task contract or result schema (ADR 0011:84, :91), or contradicts an accepted decision, is always plan-changing.
+  3. While a joint proposal waits, only the affected tasks stop (narrower than ADR 0011:131); on rejection they resume the prior plan.
+  4. The single decision-change Attention item replaces ADR 0022:49's per-Run items, with one action per Run inside it.
+  5. "Wording only" also suppresses the per-Run notices. A scope-only or links-only edit is a real change, never "wording only".
+  6. Supervisor-opened dialogues and Project-scope decision searches are paid from a Project-level coordination reserve, approved once, with a warning at 80%.
