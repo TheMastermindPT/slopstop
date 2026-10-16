@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 16af9a9baf33ad63038575eda6c708ad1199406314e21544501743f5118a8541
+content_hash: f7577613fc02f44822180996ebf1c94392fbfe9267de1e77cf3b1a6e10692086
 ---
 
 # Conversation — Human Decisions
@@ -848,3 +848,4 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The coordinator checked revision 3 (closing path A). The six round-2 blockers are applied in the brief text. Every user decision from §90-§95 is reflected. The resolution table maps all 76 round-2 findings; the concerns and suggestions were not each re-verified. FRD Q1 (interface-record storage) stays open.
 - **Decisions:** the user approved the #99 design brief, revision 3 (`content_hash 0170dcb8d10d8de977afa1272b69cafd4fe22adf764517a984d86e788a44a0c2`; approved copy `approved-0170dcb8d10d8de977afa1272b69cafd4fe22adf764517a984d86e788a44a0c2.md` in `.rpiv/evidence/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness/`). The user also approved a linked worktree `C:/Users/pedro/Documents/GitHub/slopstop-99` on the new branch `docs/99-cross-waypoint-dialogue`, from the main commit that includes the approved brief. The implementer writes the ADR amendments there as one documentation slice. No push or PR.
+- **Format deviation (user decision, same day):** `validate-artifact --finalizing` rejects the approved brief, because the code fence at :168 has 11 lines (the limit is 10). The non-finalizing validation and the stamped `content_hash` are intact. The user chose "Aceitar como está": the approval stands on the exact text `0170dcb8…`, and the deviation is recorded here. The fence is fixed later through an appended note.
