@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: b37f6bc77ab1cc30c75186a074f133ec7cf514758ddd65b1b4bcccd2d16188c4
+content_hash: 16af9a9baf33ad63038575eda6c708ad1199406314e21544501743f5118a8541
 ---
 
 # Conversation — Human Decisions
@@ -803,3 +803,48 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   4. The single decision-change Attention item replaces ADR 0022:49's per-Run items, with one action per Run inside it.
   5. "Wording only" also suppresses the per-Run notices. A scope-only or links-only edit is a real change, never "wording only".
   6. Supervisor-opened dialogues and Project-scope decision searches are paid from a Project-level coordination reserve, approved once, with a warning at 80%.
+
+## 93. #99 design checkpoints (user decisions, 2026-10-16)
+
+- Design brief `.rpiv/artifacts/designs/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness.md` (rpiv designer; slices c99-s1 to c99-s3, documentation only, decisions G1-G14). The designer asked eleven checkpoints plus G11.
+- **Decisions:**
+  - C1: the Strand budget is approved inside the first Run approval of that Strand, and the Project reserve inside the Project's first Run approval. A Project-scope search before any Run asks once via Attention.
+  - C3: when the Project reserve reaches its limit, one Attention item appears, and no new Supervisor-opened dialogue or search runs until the user decides.
+  - C4: contesting a technical agreement holds its tasks until the agents re-agree or withdraw it.
+  - C5: the narrower closure (only affected tasks stop) applies to joint proposals only, labelled provisional. Single-Run amendments keep the whole-Run stop.
+  - C6: when a joint proposal goes out of date, its held tasks stay held while the Forgers re-check, for a bounded time; the user can release them.
+  - C7: after joint approval, the Runs continue on their own.
+  - C8: the provisional label covers only the named memory and decision clauses; safety invariants are never provisional. Review happens only when the user asks (the user chose "Quando eu pedir", not the recommended usage trigger).
+  - C9: a pinned-Run row has a "Keep the earlier version for this Run" action.
+  - C10: for docs-update work with no host Waypoint, the Supervisor proposes a docs-update Waypoint through a map revision.
+  - C11: a "Mark as meaning changed" action fixes a mistaken wording-only mark. The user added a general rule: "temos que ter em conta enganos humanos de maneira a podermos desfazer a accao". Every user action in this design needs a way to undo it.
+  - G11: the Attention rule J3 is refined to "one exact action per row" inside one item.
+
+## 94. #99 design intent review round 1 (user decisions, 2026-10-16)
+
+- Round 1 on brief `946c66d3…`: four reviewers, failed with 88 findings (10 blockers, 9 of them verified). The table and proposed resolutions R1-R30 are in `.rpiv/artifacts/evidence/2026-10-16_c99-design-intent-review-1.md`. The coordinator flagged the growing size against the user's stated uncertainty. The coordinator also disclosed that the "cannot be undone" escape in its §93 relay was its own addition.
+- **Decisions:**
+  - R4: one slice, one review and one commit for the whole amendment set.
+  - R8: an action that cannot be undone records why, and asks for confirmation first.
+  - R9: a contest hold lifts only when the agents re-agree or the user withdraws the contest. A no-agreement, needs-human or stopped close keeps the hold and raises Attention.
+  - R10: held tasks of an out-of-date joint proposal have an elapsed-time limit (number open). At expiry, Attention.
+  - R15: before a Strand's budget exists, the Project reserve pays that Strand's decision searches.
+  - R17: the change-time search and Foundation inference use a Run-absent read-only Project agent, not a Worker.
+  - R21: a plan-changing agreement with a Waypoint without a Run uses the joint path with one Run, so only the affected tasks stop.
+  - The designer fixes the remaining findings in one fix round; round 2 is the last.
+
+## 95. #99 design intent review round 2 (user decisions, 2026-10-16)
+
+- Round 2 (the last) on revision 2 `6051ada8…`: failed with 76 findings, 6 blockers (5 verified). The table and proposed resolutions Q1-Q22 are in `.rpiv/artifacts/evidence/2026-10-16_c99-design-intent-review-2.md`.
+- **Decisions:**
+  - Q3: for a completed proxy Waypoint, the user's Begin of its change Run comes first. Then the agreement re-enters as a two-Run joint set with that Waypoint's real Forger.
+  - Q7: at onboarding, the Project reserve for Foundation inference is asked once via Attention.
+  - Q9: the held-task time limit also covers a dialogue waiting on an unavailable Forger or a lapsed map link. At expiry, the app stops the dialogue with a named reason and raises Attention, and never sets an agent's closing state.
+  - Q12: the user's acceptance of the slice candidate also accepts the ADR amendments, so the single commit carries Accepted status.
+  - Q21: the Portuguese copy is "proposta ultrapassada", "tempo de espera esgotado" and "desatualizada".
+  - Closing path (A): the designer writes revision 3 applying Q1-Q22, with a resolution table that maps each finding to lines. The coordinator checks each item, with no new agents. Then the user approves.
+
+## 96. #99 design approval and workspace (user decisions, 2026-10-16)
+
+- The coordinator checked revision 3 (closing path A). The six round-2 blockers are applied in the brief text. Every user decision from §90-§95 is reflected. The resolution table maps all 76 round-2 findings; the concerns and suggestions were not each re-verified. FRD Q1 (interface-record storage) stays open.
+- **Decisions:** the user approved the #99 design brief, revision 3 (`content_hash 0170dcb8d10d8de977afa1272b69cafd4fe22adf764517a984d86e788a44a0c2`; approved copy `approved-0170dcb8d10d8de977afa1272b69cafd4fe22adf764517a984d86e788a44a0c2.md` in `.rpiv/evidence/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness/`). The user also approved a linked worktree `C:/Users/pedro/Documents/GitHub/slopstop-99` on the new branch `docs/99-cross-waypoint-dialogue`, from the main commit that includes the approved brief. The implementer writes the ADR amendments there as one documentation slice. No push or PR.
