@@ -1,6 +1,6 @@
 # ADR 0017: Evidence-To-Memory Invalidation And Trusted Read Authority
 
-- Status: Accepted
+- Status: Accepted; amended 2026-10-16 (see Amendment 1, Accepted)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
@@ -195,3 +195,93 @@ Required direct indexes cover replacement events by Project order and prior or r
 - `.rpiv/artifacts/research/2026-08-20_20-03-59_v1-program-requirements-coverage.md`
 - [Issue #13: Charter the verified-memory program](https://github.com/TheMastermindPT/slopstop/issues/13)
 - [Issue #76: Define the Evidence-to-Memory invalidation event contract](https://github.com/TheMastermindPT/slopstop/issues/76)
+
+## Amendment 1: Accepted Decision Revisions As Mandatory Memory Dependencies
+
+- Status: Accepted (2026-10-16)
+- Date: 2026-10-16
+- Decision owners: Pedro Mesquita
+- Issue: [#99](https://github.com/TheMastermindPT/slopstop/issues/99)
+- Design: `.rpiv/artifacts/designs/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness.md` (Architecture E; G9, G12)
+- Decisions log: `.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` §90-§98
+
+Line references in this amendment (`:N`) point to the text of this ADR as accepted before the amendment (commit `1b2256a`). Every decision above stays in force for Evidence members; the rules below add decision members to the same single dependency set.
+
+### Amendment Context
+
+The user decided (decisions log §90) that a decision revision may be a mandatory Memory dependency: replacing or retiring that decision makes dependent memories stale. ADR 0022 Amendment 1 gives each decision revision a meaning version and makes retirement a revision. This amendment binds Memory to that meaning version.
+
+### Names
+
+- In this ADR "accepted decision" always means an **Evidence decision** (:33, :47, :88): an ADR 0010 family decision.
+- Product and plan decisions are **accepted decision revisions** (ADR 0022:15, :21). New text uses these two qualified names and never the bare word.
+
+### Decision Dependency Member
+
+- The existing single mandatory set (:47-48, :138) gains one more typed member child: `memory_revision_mandatory_decision_dependencies`. It binds Project, decision id, exact accepted decision revision id, that revision's **meaning version** and the revision digest, through real composite foreign keys to the decision owner's revision rows.
+- There is still exactly one mandatory set per Memory Revision; its count and ordered set hash cover Evidence and decision members together.
+- **Evidence floor.** Every set keeps at least one Evidence member; decision members are extras. A set with only decision members is rejected at acceptance, because a memory resting only on a decision would be a copy of it (`PRODUCT.md` forbids duplicating accepted decision revisions as Verified Memory; ADR 0022:44).
+- Provisional: binding now; revisited only when Pedro asks (decisions log §93, C8). The Evidence floor is provisional.
+
+### Sentences This Amendment Changes
+
+Each sentence below states an Evidence-only rule. For a decision member it reads as follows; for an Evidence member it is unchanged.
+
+- :9 ("When any required Evidence decision stops being current"): also when a bound accepted decision revision's meaning version changes or the decision is retired.
+- :20 (Memory owns mandatory Evidence dependencies): Memory owns mandatory dependencies of both member kinds.
+- :47 (each member selects one family-current-key child): a member selects exactly one family-current-key child or one decision child.
+- :53 (only same-Project Evidence): decision members also reference only same-Project decision revisions in the same `slopstop.db`.
+- :59 (`accepted` proved current): for a decision member, "current" means the decision is not retired and its current meaning version equals the bound one.
+- :60 (any member ceasing to equal exact current Evidence authority): a decision member makes the revision effectively stale when the decision's current revision is a retirement or carries a different meaning version. A wording-only revision (ADR 0022 Amendment 1) keeps the meaning version and therefore keeps trust.
+- :63: a replaced Evidence decision, or a meaning-changing replacement or retirement of a bound decision, makes the old Memory Revision stale; neither makes it broken by itself.
+- :86-88 (trusted read steps 4-5): see "Trusted read" below. The exact equality of :88 is amended **for the decision member only**.
+- :113 (acceptance recheck): see "Acceptance" below.
+- :129 (`memory_revision_evidence_dependency_sets`): the set root keeps its table name and now owns members of both kinds.
+- :135 (minimum roots): the acceptance transaction creates the complete mandatory set with both member kinds and rejects a set without an Evidence member.
+- :138: each member root selects exactly one `memory_revision_mandatory_<family>_dependencies` child or one `memory_revision_mandatory_decision_dependencies` child.
+- :144: required direct indexes add decision members by `(project_id, decision_id, meaning_version)`; unsettled work is still an anti-join, never a global consumer cursor.
+- :157 and :171 ("any mandatory dependency replacement stales"): for a decision member, a wording-only revision is not a replacement of meaning and does not stale; a meaning-changing revision or a retirement does.
+- :172 (trusted-read safety): every trusted query also proves that every decision member is still the current non-retired meaning version.
+
+### Decision Change Event
+
+- The decision owner emits a new Canonical event, `decision-current-meaning-replaced` version `1`, in the same transaction as every meaning-changing decision revision and every retirement (ADR 0006:69). Its typed relational child holds decision id, prior and replacement revision ids, prior and replacement meaning versions, kind `replaced | retired`, and cause `mandatory-decision-no-longer-current`.
+- No event is emitted for a first revision or a wording-only revision (mirroring :41).
+- The payload holds identities, versions and hashes only: no decision text, excerpt or path (mirroring :39).
+- The decision owner never queries Memory (mirroring :19). Memory never moves a decision pointer.
+- Settlement takes a closed two-arm event union, `evidence-current-evaluation-replaced` or `decision-current-meaning-replaced`, still typed (:119). Settlement stays keyed by event (:140). Both event types order by `(project_sequence, event_ordinal)` (:66). The reverse dependency index (:52) gains a decision arm.
+
+### Trusted Read
+
+- A separate decision step runs after step 5 (:87-88): for each decision member, the decision's current revision is not a retirement, its meaning version equals the bound one, and the bound revision digest verifies.
+- Otherwise the Memory Revision is effectively `stale` immediately (:89), even before settlement materializes the transition.
+- An unreadable decision row returns `failed`, never empty or trusted (:96). :96's trusted-retrieval outcomes are unchanged; ADR 0022 Amendment 1 owns the separate decision-search vocabulary.
+
+### Acceptance
+
+- The acceptance recheck (:49) also requires every decision member to be the exact current, non-retired revision. Any concurrent decision revision, even wording-only, rejects acceptance; the user re-proposes against the new revision.
+- Stale stays immediate and terminal (:60-63). Re-verification still creates a new revision (:13, :61).
+
+### Not Provisional
+
+These rules are safety invariants and are never provisional: decision revisions as mandatory dependencies; effective stale at read; stale terminal; an unreadable decision row returns `failed`, never "none found" or trusted; and the event privacy rule. ADR 0022 Amendment 1 states the full invariant list.
+
+### Acceptance Proofs (Added)
+
+| Proof | Required observation |
+| --- | --- |
+| Wording-only keeps trust | A wording-only revision of a bound decision emits no event and leaves the Memory Revision effectively accepted. |
+| Scope-only and links-only edits stale | A revision that changes only scope or implementing Waypoints increments the meaning version and stales the bound revision. |
+| Retirement stales | Retiring a bound decision makes the revision effectively stale at once. |
+| Restore does not revive | Restoring a retired decision creates a new meaning version; the stale Memory Revision stays stale. |
+| Acceptance race | A decision revision between proposal review and acceptance rejects the Memory command. |
+| Decision-only set rejected | A set with no Evidence member is rejected. |
+| Decision-event delivery lag | Paused consumption leaves materialized state accepted while trusted read exposes effective stale. |
+| Mixed-set ordering | Overlapping Evidence and decision events delivered out of order retain the earliest by `(project_sequence, event_ordinal)` as the stale cause. |
+
+### Amendment Rejected Alternatives
+
+- A parallel decision-dependency set: it breaks "one set" (:47).
+- Modelling decisions as Evidence: it breaks ownership (:19).
+- Reusing `evidence-current-evaluation-replaced` for decisions: wrong owner and aggregate (:19, :26, :28).
+- A periodic sweep comparing decision pointers: a forbidden global cursor (:144), and a pointer comparison would pass silently after a wording-only edit or miss a retirement.

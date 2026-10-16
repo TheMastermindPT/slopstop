@@ -1,12 +1,31 @@
 # ADR 0006: Physical Persistence Layout
 
-- Status: Accepted
+- Status: Accepted; amended 2026-10-16 by note (Accepted)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
 ## Note (2026-10-10): former names
 
 This ADR uses "Feature", the former name of **Strand** (decisions log §30; see `CONTEXT.md` Former Names). The two names denote the same concept; this note changes no decision.
+
+## Note (2026-10-16): amended by the #99 phase 2 amendment set (Accepted)
+
+Status: Accepted (2026-10-16). Source: [ADR 0021 Amendment 1](0021-supervisor-forger-and-mediated-agent-dialogue.md), [ADR 0011 Amendment 1](0011-approved-run-preparation-and-amendment-authority.md), [ADR 0013 Amendment 1](0013-effect-reconciliation-and-recovery-journal.md), [ADR 0017 Amendment 1](0017-evidence-to-memory-invalidation-and-trusted-read-authority.md), [ADR 0022 Amendment 1](0022-decision-scope-and-implementing-waypoints.md); decisions log §90-§98. Line references (`:N`) point to this ADR as accepted before the note (commit `1b2256a`). No sentence above is rewritten; each listed sentence reads as stated here.
+
+- :41-58 (physical table families) gain these owner families in `slopstop.db`:
+  - Execution: the Project-keyed agent-dialogue family (dialogues, participants, admissions, payers, messages, routing events, technical-agreement entries, contest and withdrawal records); the coordination-budget family (budgets, approved revisions, waterlines); the Run-absent invocation family; joint amendment sets, task holds, change-Run proposals and their decisions (ADR 0011 Amendment 1);
+  - Application coordinator and Evidence: the `project-coordination` Effect subject (ADR 0013 Amendment 1) and its Evidence scope (ADR 0010 note);
+  - Integration: the `decision-search-capture` request and its commands; Evidence: the target observation, its `decision-search-capture` source child, its limit binding and its content Artifact (ADR 0010, ADR 0015 and ADR 0019 notes);
+  - Decisions: revisions with meaning version and revision kind (`content | retirement`), the wording-only link, scope and implementing children, the `decision-current-meaning-replaced` event child, echoes, echo searches and candidates, decision-change row answers, and decision follow-up proposals, their decisions and their Run links (`decision_follow_up_proposals`, `decision_follow_up_proposal_decisions`, `decision_follow_up_run_links`) (ADR 0022 Amendment 1);
+  - Memory: the decision member of the mandatory dependency set (ADR 0017 Amendment 1).
+- :62 still holds: none of these tables is created before its first behaviour.
+- :66-69 is unchanged: one applied receipt already may carry several events, which the joint approval receipt uses.
+- :70: ADR 0017 Amendment 1 also requires a `decision-current-meaning-replaced` relational child in the same transaction as every meaning-changing decision revision and every retirement.
+- :82-85: a cross-Waypoint dialogue's `map-link` admission reads a current, non-archived `blocks` (either direction) or `related-to` relationship; `derived-from` admits nothing.
+- :102: Execution-owned Invocation context records may also target a Run-absent invocation (Supervisor or Project agent).
+- :129: opening integrity also proves that every meaning-changing decision revision and retirement has its exact typed event.
+- :136: required indexes add decision members of Memory dependency sets by decision and meaning version.
+- :137 is unchanged: no full-text index; the decision echo search reads a captured content Artifact.
 
 ## Context
 

@@ -1,6 +1,6 @@
 # ADR 0007: Supervised Execution Aggregate Ownership
 
-- Status: Accepted
+- Status: Accepted; amended 2026-10-16 by note (Accepted)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
@@ -11,6 +11,27 @@
 - "Roles" renames the Waypoint parent to **Forger** in product language. This affects "Aggregate Boundaries" and "Waypoint Parent And Model Attribution"; the role, its authority and its identifiers here are unchanged until a rename slice migrates them.
 - "Roles" also adds a Supervisor above Runs (distinct from the Run-level Forger) and the doer/reader Worker families; Run, Worker and transition authority here are unchanged.
 - "Agent dialogue" and its Consequences add an Execution-owned agent-dialogue record family alongside the aggregates in "Aggregate Boundaries".
+
+## Note (2026-10-16): amended by the #99 phase 2 amendment set (Accepted)
+
+Status: Accepted (2026-10-16). Source: [ADR 0011 Amendment 1](0011-approved-run-preparation-and-amendment-authority.md), [ADR 0021 Amendment 1](0021-supervisor-forger-and-mediated-agent-dialogue.md); decisions log §90-§98. Line references (`:N`) point to this ADR as accepted before the note (commit `1b2256a`). No sentence above is rewritten; each listed sentence reads as stated here.
+
+- :25 unchanged: the Run-absent read-only Project agent is not a Worker and has no Delegation task.
+- :26: a `task-hold` Control request targets a Run; its typed child lists exact accepted Delegation tasks.
+- :27 and :69: a Model attempt may also belong to a Run-absent invocation (Supervisor or Project agent), attributed to its Project, invocation identity and coordination budget, with no Run.
+- :31-32: "no active Run" for a Supervisor proxy means the Waypoint's Run slot is vacant; any nonterminal Run status is answered by its own Forger. Statuses are unchanged.
+- :34: for joint components only, a compatible amendment request does not move the Run to `amendment-requested` and closes dispatch only for held tasks.
+- :36: a covered Run's own terminal transaction also writes `superseded` on its own pending joint component.
+- :43 unchanged: no new Run cause; a change Run started from a proxy dialogue uses `ACTION_SELECTED`.
+- :47: the commands gain `SubmitJointRunAmendment`, `ApproveJointRunAmendment`, `RejectJointRunAmendment`, `SettleJointRunAmendmentChanged`, `RequestTaskHold`, `ConfirmWorkerHeld`, `ReleaseTaskHold`, `DeclineChangeRunProposal` and `ResumeHeldWorker`, each with the declared write set in ADR 0011 Amendment 1.
+- :33-35 (lifecycle paths): joint approval changes no Run status. At approval the evaluator changes only condition codes; afterwards the existing transitions apply, and a `blocked` Run that never started still reaches `ready` and needs `StartRun` (ADR 0011 Amendment 1, "Run status").
+- :50: each of those is a specific command with a declared complete write set; the generic batch stays prohibited.
+- :51: a typed Forger hold proposal is an attributed runtime proposal; the coordinator admits it as a narrowing.
+- :56 and :59-60: a held in-flight Worker becomes `paused` after a Worker hold checkpoint and keeps its identity and slot; resume uses the same Worker under a fresh seal.
+- :79: Control-request kinds gain `task-hold`. Target shapes (:77) are unchanged.
+- :60, :81 and :98 ("only `ApproveRunAmendment`" for the epoch and for contained Model-change requests): `ApproveJointRunAmendment` also creates and activates the epochs of its components and moves their contained Model-change requests to `approved-pending-apply`; the target-specific apply commands still only consume that authority.
+- :94: the Control-request family gains `control_request_task_holds` and `control_request_task_hold_tasks`; the Worker family gains `worker_hold_checkpoints`.
+- :106 (fact): Action availability inputs are unchanged; a Strand coordination budget is not a Run budget input.
 
 ## Context
 

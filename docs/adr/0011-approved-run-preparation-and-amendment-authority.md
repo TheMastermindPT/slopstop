@@ -1,6 +1,6 @@
 # ADR 0011: Approved Run Preparation And Amendment Authority
 
-- Status: Accepted
+- Status: Accepted; amended 2026-10-16 (see Amendment 1, Accepted)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
@@ -314,3 +314,156 @@ Use at least these stable failures and conditions:
 - `docs/adr/0009-provider-neutral-agent-runtime-and-turn-contracts.md`
 - `docs/adr/0010-typed-evidence-ledgers-and-atomic-current-evaluations.md`
 - GitHub issue `#60`
+
+## Amendment 1: Joint Cross-Waypoint Amendment
+
+- Status: Accepted (2026-10-16)
+- Date: 2026-10-16
+- Decision owners: Pedro Mesquita
+- Issue: [#99](https://github.com/TheMastermindPT/slopstop/issues/99)
+- Design: `.rpiv/artifacts/designs/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness.md` (Architecture B, D; G6-G8, G12, G15)
+- Decisions log: `.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` §90-§98
+
+Line references in this amendment (`:N`) point to the text of this ADR as accepted before the amendment (commit `1b2256a`). Every decision above stays in force for single-Run preparation and amendments, including amendments that come from a phase 1 dialogue. The rules below apply only to **joint components** and to task holds.
+
+### Amendment Context
+
+ADR 0021 Amendment 1 lets the Forgers of parallel Waypoints agree. A plan-changing agreement must reach the user as one decision across every affected Run, while only the affected tasks stop. Before this amendment a submitted amendment closed all dispatch in its Run (:131) and kept it closed after a rejection (:128). The user decided (decisions log §92, UD3) that while a joint proposal waits only the affected tasks stop, and on rejection they resume the prior plan.
+
+### Joint Amendment Set
+
+- For N ≥ 1 covered Runs, a joint proposal consists of N per-Run proposals (:25, :246), one per covered Run, plus one immutable **joint amendment set**. The set has **no authority**. It records the member proposal ids and their manifest, view and classification hashes, each covered Run's bound epoch, the sealed prerequisite conditions (below), a set hash and one composed joint view.
+- Decisions stay per proposal (:247). The set is a grouping like the Approval Dependency Graph (:26), not a second approval aggregate (:28).
+- The set appears to the user as **exactly one** Attention item.
+- N = 1 is used when the other side is a Supervisor proxy (ADR 0021 Amendment 1). A proxy side's revision proposal is a **prerequisite** that must settle before the joint approval: a sealed `pending` proposal condition of the set, settled as accepted or as `PREREQUISITE_CHANGED` when rejected or superseded. It is never a task edge, a task input or a task-input source kind; :203 and :249 stay unchanged and ADR 0015:37 keeps its closed source kinds.
+- When a completed proxy Waypoint gains a change Run through the user's Begin, the agreement re-enters as a two-Run set with that Run's Forger, and the one-Run set closes with `PREREQUISITE_RUN_STARTED`. That is a closing, not `changed`; the holds carry into the two-Run set.
+- While a change-Run proposal waits for the user's Begin, its Attention row offers "Begin" or **"Decline"** (decisions log §97, K5). This applies to every change-Run proposal: for a completed Waypoint and for a Waypoint whose last Run ended `cancelled`, `failed` or `superseded` (ADR 0021 Amendment 1). The proposal is an Execution-owned record in `change_run_proposals`. `DeclineChangeRunProposal` writes the user's immutable decline in `change_run_proposal_decisions`, releases the holds that wait on it (`released-on-change-run-declined`) and makes a pending one-Run set `changed` with `PREREQUISITE_CHANGED`, in one transaction. A Begin is recorded by `BeginAction` itself, which links the new Run to the proposal in `change_run_proposal_decisions` in its own transaction. A `changed` set caused by a Decline opens **no** re-check dialogue, because its holds are already released.
+
+### Joint Components
+
+- A **joint component** is an amendment proposal with a narrowed request. It carries the exact compatible `run-amendment` Control request that :54 requires, but for a joint component that request closes dispatch **only for held tasks** and does not move the Run to `amendment-requested`. `SubmitJointRunAmendment` creates that narrowed request for each non-`initial` component in its own transaction, after the same compatibility proof as :131; `SubmitRunAmendmentRequest` never creates it. If any component fails that proof, the whole submission is rejected with `RUN_AMENDMENT_INCOMPATIBLE` and, as :131 requires, persists only the rejected receipt, structured rejection and idempotency settlement: no request, component, set or hold change.
+- **Source states.** A joint component may be sealed only while its Run is `running`, `paused`, `blocked` or `ready`, or `awaiting-approval` for an `initial` component. Any other state is refused with `JOINT_COMPONENT_STATE_INVALID`.
+- **Epochless members.** A covered Run still awaiting its initial approval joins as an `initial` component bound to "no epoch" plus its exact pending proposal. The joint approval performs `ApproveRunPreparation`'s write set (:214) for it, including the coordination-budget lines when applicable (ADR 0021 Amendment 1). That Run ends `ready` or `blocked` and still needs `StartRun`. A `draft` Run with no sealed proposal blocks submission with `JOINT_AMENDMENT_COMPONENT_MISSING`.
+- Single-Run approve and reject refuse a joint component with `JOINT_COMPONENT_REQUIRES_JOINT_DECISION`.
+- The sentences this replaces for joint components only, each kept unchanged for single-Run amendments: :54 (the request), :127 (`SubmitRunPreparation` source states and transition), :130 and :133 ("`StartRun` separately reopens dispatch"), :131 (whole-Run dispatch closure and `amendment-requested`), :165 (a checkpointed Worker continues only after `StartRun`), :215 (the request command row), :216 (the `RejectRunAmendment` row: a joint rejection returns no Run to `amendment-requested`); ADR 0007:34; `PRODUCT.md` "A compatible Run amendment request closes dispatch" and "Run pause and cancellation ... close their applicable dispatch immediately".
+- Provisional: binding now; revisited only when Pedro asks (decisions log §93, C8). The narrower closure applies to joint components only (including N = 1); single-Run amendments keep the whole-Run closure of :131, as ADR 0021:58 kept it.
+- Further sentences read with joint components:
+  - :9 (Note of 2026-10-10, "once a proposal is submitted this ADR applies unchanged"): true for single-Run proposals; a submitted joint component follows this amendment.
+  - :125-126: a change-Run proposal from a Supervisor proxy (ADR 0021 Amendment 1) leads only to the user's `BeginAction`, or to `BeginCandidateChangeRun` after the user's Request changes; the dialogue is provenance, never a cause, and `PrepareAutomaticAction` never starts from a dialogue.
+  - :95: a held task is not derived ready, because its pending `task-hold` Control request closes dispatch for that task only.
+  - :145: a held Worker that reached its Worker hold checkpoint is classified `checkpointed-worker-retained` when its task is affected and retained.
+  - :172-173: a task hold is a live restriction; it applies at once without another approval, and releasing it restores only authority already present in the epoch.
+  - :212-217 (command rows): unchanged for single-Run commands; the joint and hold commands have their own rows under "Commands" below.
+  - :271: the stable diagnostics gain the codes listed under "Diagnostics" below.
+  - :276-294 (Issue 60 Closure): rows :277, :286 and :288 gain the joint exceptions stated here; "Amendment Closure" below adds the joint rows.
+
+### Commands
+
+| Command | Atomic write or result |
+| --- | --- |
+| `SubmitJointRunAmendment` | The only command that seals joint components. In one Writer transaction it proves compatibility and creates the narrowed `run-amendment` Control request for each non-`initial` component, seals every component (reusing `SubmitRunPreparation`'s validation rules without its state transition), the joint set, the composed view and the sealed prerequisite conditions; receipt. |
+| `ApproveJointRunAmendment` | Decides the whole set: N `approved` decisions; for each covered Run, the `ApproveRunAmendment` write set without its lifecycle result (a Run that already had an epoch keeps its state, below), or the `ApproveRunPreparation` write set for an `initial` component; one epoch per Run; holds consumed (`consumed-on-approval`); one receipt. |
+| `RejectJointRunAmendment` | Decides the whole set: N `rejected` decisions; each narrowed `run-amendment` Control request and every contained Model-change request moves to `rejected` (as :128 does for a single Run); every hold released (`released-on-rejection`); prior epochs unchanged; for an `initial` component, `RejectRunPreparation`'s write set (:128, :213: `awaiting-approval -> draft`, no accepted plan, task, profile or epoch); one receipt. |
+| `SettleJointRunAmendmentChanged` | After the set became unapprovable, writes durable `superseded` decisions on its sibling components and moves each of their narrowed `run-amendment` Control requests and contained Model-change requests to `superseded` (ADR 0007:81); receipt. |
+| `RequestTaskHold` | A coordinator-admitted typed Forger hold proposal or a user action (Contest, "Hold again") creates one `task-hold` Control request and its exact task rows; receipt. |
+| `ConfirmWorkerHeld` | Records the Worker hold checkpoint and Worker `paused` for one held in-flight Worker. |
+| `ReleaseTaskHold` | The user's "Release held tasks" or a lifecycle row below releases a hold with exactly one release reason; receipt. |
+| `DeclineChangeRunProposal` | The user's Decline of one change-Run proposal: immutable decision row, holds released (`released-on-change-run-declined`), a pending one-Run set `changed` (`PREREQUISITE_CHANGED`); receipt. |
+| `ResumeHeldWorker` | Resumes a released held Worker as the same Worker identity under a fresh Invocation context record and Sealed Invocation. |
+
+- Each is a specific command with a declared complete write set (ADR 0007:50); the generic batch stays prohibited. All Runs of a Project share one `slopstop.db` and one Writer fence (ADR 0006:41-47, :71).
+- **One receipt** carries N decisions and N epochs. ADR 0006:66-69 already allows several events on one receipt, and is unchanged. The receipt sentences :37, :38, :60, :224 and :248 read, for a joint decision, as "the shared joint receipt": each epoch references its own proposal, decision and that shared receipt.
+- The "only X creates or approves" sentences gain the joint commands: `ApproveJointRunAmendment` also creates and activates epochs and moves contained Model-change requests to `approved-pending-apply` (:22, :93, :134, :277, :287; ADR 0007:60, :81, :98; ADR 0009:124 and :183; `PRODUCT.md` Model-change rule; `CONTEXT.md` Model change).
+- **Compare-and-set over all N Runs** (:133, :223-225). Everything the single-Run check verifies, plus: the set hash and cardinality; each member being its Run's current non-superseded pending proposal; each covered epoch equal to the bound epoch; no covered Run terminal or `recovery-required`; every prerequisite settled; every hold current. Any failure rejects the whole command before authority changes. Approve and Reject always decide all N components.
+
+### Unapprovable State: `changed`
+
+- `stale` stays reserved for accepted authority (:183-184). A joint set that can no longer be approved is `changed`, immediately by derivation, with exactly one closed cause: `EPOCH_MOVED`, `RUN_ENDED`, `COMPONENT_SUPERSEDED`, `RUN_RECOVERY_REQUIRED`, `HOLD_RELEASED` or `PREREQUISITE_CHANGED`.
+- Product copy: "out of date" in English and **"proposta ultrapassada"** in Portuguese, distinct from the held-task time limit ("tempo de espera esgotado") and from a stale memory ("desatualizada").
+- A covered Run's own terminal transaction writes `superseded` on its own component (amends ADR 0007:36 for joint components).
+- When a set goes `changed`, the application opens a **re-check dialogue** in the same thread with the same payer; the Forgers re-check and propose again.
+- A per-Run "Ask the Forger for an amendment proposal" row (ADR 0022 Amendment 1) on a Run with a pending joint component routes into the joint re-check and warns before superseding.
+
+### Task Hold
+
+- `task-hold` is a new Run-targeted Control-request kind with a typed child listing exact accepted `DelegationTaskId`s of the current plan (:93, :242, :257), validated by composite foreign key. Target shapes stay unchanged (ADR 0007:77).
+- Every hold has an attributed source:
+  - a **typed Forger hold proposal**, which the deterministic coordinator validates against the current plan and admits as a narrowing (the precedent of :96, :173, :175; ADR 0007:51); or
+  - a **user action**: Contest, or "Hold again".
+- Message text never places a hold. Each Run's own Forger names its own affected tasks (ADR 0021:36). Until another Run's Forger names its tasks, that Run keeps running and the thread shows the gap.
+- The application adds every Task-DAG descendant as explicit child rows with reason `named` or `descendant-of` (not a transitive index, :265).
+- Affected tasks that already succeeded are labelled "affected (completed)" and keep their result unless the component classifies it `invalidated` (:146, :148).
+- **Held in-flight Workers** move to Worker `paused`, keeping identity and slot (ADR 0007:56, :59-60), after a Worker hold checkpoint: ADR 0008's Worker stop-checkpoint proof without terminal stop. In CLI mode the session ends (ADR 0009 Amendment 1); continuation is a new stateless session under a new seal, and in-progress reasoning is lost; for task holds the continuation keeps the same Worker identity (ADR 0009 note).
+- **Held-task time limit.** One elapsed-time limit (number open, ADR 0021 Amendment 1 defaults) bounds every hold that waits on others: a `changed` set's re-check, a dialogue waiting on an unavailable Forger or an unavailable Supervisor proxy (decisions log §97, K5), and a dialogue whose admission lapsed. At expiry the application ends the open dialogue `stopped` (`hold-time-limit-reached`) and raises one Attention row, `TASK_HOLD_TIME_LIMIT_REACHED` (copy "tempo de espera esgotado"), with "Release held tasks". It never sets an agent's closing state. Contest holds are not time-limited.
+
+### Hold Lifecycle
+
+Each end has exactly one release reason:
+
+| How the dialogue or proposal ends | Hold |
+| --- | --- |
+| Technical agreement | released (`released-on-technical-agreement`) |
+| Plan-changing agreement, joint set submitted | kept until the set is decided |
+| Joint approval | consumed (`consumed-on-approval`) |
+| Joint rejection | released (`released-on-rejection`); prior plan resumes |
+| Joint set goes `changed` (any cause except a Decline) | kept while the re-check dialogue runs, until the time limit; then the dialogue stops and one Attention row appears |
+| Waiting on an unavailable Forger or an unavailable Supervisor proxy, or a lapsed admission | kept until the time limit; then the dialogue stops and one Attention row appears |
+| Waiting for the user's Begin of a change Run (completed proxy Waypoint) | kept; the change-Run proposal row offers "Begin" or "Decline" |
+| The change Run begins (`PREREQUISITE_RUN_STARTED`) | carried into the two-Run joint set unchanged |
+| The user declines the change-Run proposal | released (`released-on-change-run-declined`); a pending one-Run set becomes `changed` with `PREREQUISITE_CHANGED` |
+| `no-agreement`, `needs-human`, `stopped` (message limit, loop health, the user's stop) | kept; one Attention row with "Release held tasks" |
+| Coordination budget exhausted | kept; the budget's Attention item lists the held tasks; "Leave unchanged" ends the paid dialogues `stopped` (`budget-left-unchanged`), which gives the previous row |
+| Hand-over (`counterpart-run-started` or `counterpart-run-ended`) | carried to the new dialogue unchanged |
+| Contest hold | released on technical re-agreement or the user's "Withdraw contest" (`released-on-contest-withdrawn`), the two user-visible paths, or by the Run-end row below; a plan-changing re-agreement follows the joint-set rows |
+| The user's "Release held tasks" (every row above except Contest holds) | released (`released-by-user`); a pending joint set becomes `changed` with `HOLD_RELEASED` |
+| A covered Run ends | that Run's holds released (`released-on-run-end`), including a Contest hold on that Run (decisions log §97, K5) |
+
+### Unaffected Work Keeps Running
+
+- A joint component classifies each unaffected task `unaffected-continuing`: task id and fingerprint, with no edge into an affected task. Its Workers, results and effects stay governed by their own lifecycle under the source epoch, and its accepted results carry to the successor epoch by that sealed rule (declared, never inferred, :164).
+- After joint approval, a continuing Worker's later seals pin the successor epoch with that declared carry (ADR 0009 note). A result it produced under the source epoch enters a Candidate through the new member arm `continuing-result` (ADR 0015 note).
+- The complete-classification sentences gain this joint-only exception: :35, :54, :140, :152, :166, :168, :223, :246, :250, :288; ADR 0015:48, :133, :148, :150-151; `PRODUCT.md` "Run amendment request ... classify every prior task, Worker, result, and started effect"; `CONTEXT.md` Run amendment proposal. For a joint component, "every prior task" is classified either by the table at :142-150 or as `unaffected-continuing`.
+- A Run-wide change in a component (profile, workspace, discipline, Run-level limit) makes every nonterminal task affected.
+- **Run status.** No new Run status and no new Run cause (ADR 0007:32, :43 untouched). A covered Run that already has an epoch keeps its state with a pending component (ADR 0007:40), and keeps it through joint approval: a `running`, `ready` or `blocked` Run stays in its state and a `paused` Run stays `paused`. At approval the complete lifecycle evaluator still runs over the new epoch, but it changes only the Run's condition codes (adding or removing blockers, which close or reopen the affected dispatch), never its status. After approval, the existing transitions of ADR 0007 apply as for any live condition: a `blocked` Run whose blockers have cleared leaves `blocked` by those transitions, and a `blocked` Run that never started still reaches `ready` first and still needs `StartRun`. This replaces, for those Runs only, the `ready | blocked` result of :133 and :217 and the `awaiting-approval -> ready | blocked` path of ADR 0007:34. An `initial` component follows :129 and :214 (`ready` or `blocked`, then `StartRun`). "All remaining tasks held" is a derived label and condition, never a status.
+- **Rejection** writes N `rejected` decisions and releases every hold; held Workers resume as the same identity under a fresh seal on the prior epoch. For joint components only, this replaces :128's "dispatch stays closed".
+- **Approval** activates one epoch per Run under one receipt, marks each narrowed `run-amendment` request applied, moves contained Model-change requests to `approved-pending-apply`, and consumes the holds. Runs that already had an epoch continue without a separate `StartRun` (amends :130, :133 and :165 for joint components).
+
+### Coordination-Budget Lines In Run Approval
+
+- A Strand's coordination budget is a sealed, separately hashed input of the first Run approval proposal of any Waypoint in that Strand. It appears in the approval view (:74-76), and rejecting it rejects that approval. The Project reserve line is carried the same way only while no approved reserve revision exists (ADR 0021 Amendment 1). These lines extend :44 (exact owned inputs), :55 (budget proposal values), :129 and :214 (`ApproveRunPreparation`, which approves the lines with the epoch) and :237 (`run_policy_epoch_budget_limits` stays Run-scoped; the coordination lines are owned by the coordination budget, not by the epoch).
+- :10 (Note of 2026-10-10, ADR 0022 trigger): the decision-change trigger now reaches a Run through the single decision-change item of ADR 0022 Amendment 1. A wording-only revision raises none. "Nothing pauses automatically" still holds for the edit itself; a cross-Waypoint conflict dialogue that follows may hold only the affected tasks through a coordinator-admitted Forger hold proposal (ADR 0022 Amendment 1 on ADR 0022:48; decisions log §97, K7).
+
+### Physical Records
+
+Execution adds to the "Proposal and approval" family (:236): `joint_run_amendment_sets`, `joint_run_amendment_set_members`, `joint_run_amendment_set_views`, `joint_run_amendment_set_prerequisite_conditions`, `run_amendment_proposal_unaffected_continuing_tasks`, `change_run_proposals` and `change_run_proposal_decisions`. ADR 0007's Control-request family gains `control_request_task_holds` and `control_request_task_hold_tasks`, plus `worker_hold_checkpoints`. Every row uses ADR 0006's Project-scoped composite keys; holds reference accepted `delegation_tasks` of the current plan (:242).
+
+### Diagnostics
+
+This amendment owns `JOINT_AMENDMENT_CHANGED` (with the closed causes above), `JOINT_AMENDMENT_INCOMPLETE`, `JOINT_AMENDMENT_COMPONENT_MISSING`, `JOINT_COMPONENT_REQUIRES_JOINT_DECISION`, `JOINT_COMPONENT_STATE_INVALID`, `JOINT_AMENDMENT_BROKEN`, `PREREQUISITE_RUN_STARTED`, `TASK_HOLD_ACTIVE`, `TASK_HOLD_TARGET_INVALID`, `TASK_HOLD_TIME_LIMIT_REACHED`, `WORKER_HOLD_CHECKPOINT_PENDING` and `TASK_HOLD_BROKEN`. It references ADR 0021 Amendment 1's `DIALOGUE_ADMISSION_CHANGED`, `COORDINATION_BUDGET_EXHAUSTED`, `COORDINATION_BUDGET_MISSING` and `COORDINATION_BUDGET_PROPOSAL_CHANGED` without owning them.
+
+Each derived state keeps a distinct broken variant (:189, :293): a set whose evaluation fails is `JOINT_AMENDMENT_BROKEN`, never `changed` or approvable; a hold evaluation that fails is `TASK_HOLD_BROKEN`, never "no tasks held"; a broken "all remaining tasks held" or time-limit evaluation reports `TASK_HOLD_BROKEN`, never "not held" or "within the limit".
+
+### User Actions And Their Undo
+
+Under the undo rule of ADR 0021 Amendment 1 (a reversal is a new recorded action; the spent-budget rule applies):
+
+| User action | Undo or reversal (where it lives) | Not reversible (reason), confirm first |
+| --- | --- | --- |
+| Release held tasks (any non-Contest hold) | "Hold again" re-places a hold on tasks not yet started (thread) | Tasks started after the release cannot be un-started; a pending joint proposal becomes out of date (`HOLD_RELEASED`) and must be proposed again; confirm, naming both |
+| "Hold again" | "Release held tasks" (thread) | None |
+| Approve a joint proposal | A later amendment proposal, single or joint | Epochs are immutable (:22) and Runs continue at once; confirm |
+| Reject a joint proposal | The user asks for a new proposal in the thread; the Forgers propose again | Held tasks resume at once on the prior plan; work started cannot be un-started; confirm, naming the held tasks |
+| Begin a change Run (from a change-Run proposal) | Cancel the Run (existing Run controls) | None |
+| Decline a change-Run proposal | The user asks for a new change-Run proposal in the thread | Held tasks waiting on it resume at once and a pending one-Run set goes out of date (`PREREQUISITE_CHANGED`); confirm, naming the tasks |
+| Request changes on a completed Waypoint's Candidate | None | The `request-changes` decision is final for that review request (ADR 0015:83, :154); confirm |
+
+### Amendment Closure
+
+| Requirement | Explicit contract |
+| --- | --- |
+| One decision across Runs | One joint set, exactly one Attention item; Approve and Reject decide all N components under one receipt. |
+| Only affected tasks stop | `task-hold` with exact task rows and descendants; unaffected tasks are `unaffected-continuing`; no Run transition; provisional joint-only scope. |
+| Out of date is visible | `changed` with closed causes, a re-check dialogue and a time limit; never `stale`, never approvable. |
+| Rejection resumes the prior plan | N `rejected` decisions, holds released, held Workers resume as the same identity under fresh seals. |
+| Proxy sides | N = 1 with sealed prerequisites settled before approval; a needed Run starts only through the user's Begin and re-enters as a two-Run set. |
+| Failure distinctions | Pending, `changed`, held, time limit reached and broken stay distinct; none reads as clean or as "no tasks held". |

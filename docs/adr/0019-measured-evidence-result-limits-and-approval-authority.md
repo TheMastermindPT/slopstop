@@ -1,10 +1,19 @@
 # ADR 0019: Measured Evidence Result Limits And Approval Authority
 
-- Status: Accepted
+- Status: Accepted; amended 2026-10-16 by note (Accepted)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 - Issue: [#78](https://github.com/TheMastermindPT/slopstop/issues/78)
 - Research: [Measured Evidence result-size limits](../../.rpiv/artifacts/research/2026-08-26_17-25-29_evidence-result-size-limits.md)
+
+## Note (2026-10-16): amended by the #99 phase 2 amendment set (Accepted)
+
+Status: Accepted (2026-10-16). Source: [ADR 0010 note](0010-typed-evidence-ledgers-and-atomic-current-evaluations.md) (`decision-search-capture`), [ADR 0022 Amendment 1](0022-decision-scope-and-implementing-waypoints.md); decisions log §90-§98 (§97, K2: this ADR joins the set). Line references (`:N`) point to this ADR as accepted before the note (commit `1b2256a`). No sentence above is rewritten; each listed sentence reads as stated here.
+
+- :97, :139-142 and :170 (and the index rule :144; the closed approved-limit owner union `delegation-plan`, `run-policy-epoch`, `effect-declaration`, `integration-applicability-request`, `integration-approval`): the union gains a sixth arm, `decision-search-capture-request`, with the binding child `evidence_approved_limit_binding_decision_search_captures`; it has no headroom child (:142), see below. The arm is the inert capture request made for a change-time decision search or for Foundation inference; it fixes the complete limits of that capture's observation and content Artifact. It has the same exactly-one-child, direct-owner-equality and reverse-invalidation rules as the other arms.
+- :185 ("without adding a sixth direct Evidence-limit owner") and :190 ("Five direct owner arms"): read as six owner arms; the bundle profile of :185 still adds no owner of its own. ADR 0020:98 ("ADR 0019's five direct Evidence-limit owner arms") is not edited; it is recorded as a stale count, and the sixth arm does not change what that sentence protects (decisions log §98, L2).
+- :143 and :190 (three Integration-target capture sources): the source union gains `decision-search-capture` (ADR 0010 note), with its own source child; it creates no Integration attempt, approval request or mutation lease.
+- **No headroom in v1** for this arm (:107-111): a capture request always uses the accepted local-balanced default, offers no headroom surface, and an exhausted capture keeps its family truncation outcome, so the search over it is `truncated`, never `empty`.
 
 ## Context
 

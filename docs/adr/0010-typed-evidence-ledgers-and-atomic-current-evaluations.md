@@ -1,8 +1,32 @@
 # ADR 0010: Typed Evidence Ledgers And Atomic Current Evaluations
 
-- Status: Accepted
+- Status: Accepted; amended 2026-10-16 by note (Accepted)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
+
+## Note (2026-10-16): amended by the #99 phase 2 amendment set (Accepted)
+
+Status: Accepted (2026-10-16). Source: [ADR 0013 Amendment 1](0013-effect-reconciliation-and-recovery-journal.md), [ADR 0021 Amendment 1](0021-supervisor-forger-and-mediated-agent-dialogue.md), [ADR 0022 Amendment 1](0022-decision-scope-and-implementing-waypoints.md); decisions log §90-§98. Line references (`:N`) point to this ADR as accepted before the note (commit `1b2256a`). No sentence above is rewritten; each listed sentence reads as stated here.
+
+**Evidence scope kind `project-coordination`:**
+- :409 (closed scope kinds) gains `project-coordination`.
+- :386 (typed scopes family) gains the one-to-one child `project_coordination_evidence_scopes`, which binds one exact Run-absent coordination invocation and its `project-coordination` Effect (ADR 0013 Amendment 1).
+- :276 and :410: like `project-operation`, a `project-coordination` scope invents no state fingerprint; it has no `evidence_scope_fingerprints` child.
+- :275 (stable scope identity) and :433 (Recovery Journal key) apply unchanged.
+- ADR 0013:13 (mutation-lease owners) is unaffected.
+- ADR 0020:47 and :89 are classified **unaffected**: its `sealed-invocation` proof role is Run-scoped, and its subject ordering covers only arms that reach convergence; Run-absent invocations reach none.
+
+**Capture source `decision-search-capture`:**
+- :220 ("Only `TARGET_FINGERPRINT_CAPTURED` owns a fingerprint identity"): a second named capture source, `decision-search-capture`, may own one Integration-target fingerprint identity. It is a strictly local read-only capture, requested by the decision owner for a change-time decision search (ADR 0022 Amendment 1) or by onboarding for Foundation inference (ADR 0022:43, amended), with no mutation lease, process, credential, remote access or Effect beyond the read. Integration performs the capture (ADR 0015 note); Evidence owns its observation and the immutable content Artifact bound to that one fingerprint. The capture never becomes Integration applicability or apply authority.
+- :401, :439 and :440 (Integration-target observation tables and source union, `applicability-request | preparation | pre-apply`, as superseded by ADR 0019): the union gains a fourth arm, `decision-search-capture`, with the source child `integration_target_observation_decision_search_sources`, keyed by the exact capture request and its direct limit owner (ADR 0019 note), with no Integration attempt, approval or mutation lease.
+- Current fingerprint: a `decision-search-capture` observation never advances `integration_target_current_evaluations`, never moves its `latest_*` pointers, and never changes Integration applicability; its evaluation and decision stay under the capture's own source key, and its fingerprint identity is referenced only by its content Artifact and the search or inference that reads it.
+- :417 (closed Artifact origin kinds `evidence-produced`, `language-produced`, `imported-source`): unchanged. The content Artifact is an `evidence-produced` Artifact referencing the capture's target-observation Evidence entry.
+- Retention: ADR 0018 applies unchanged (decisions log §98, L1). Its producer-to-purpose matrix gives an `evidence-produced` Artifact the `durable-record` purpose, so the content Artifact is a durable record; no new byte-hold kind is added.
+- :326, :384 and :415 (approved-limit bindings and their five typed owner children): the owner union gains ADR 0019's sixth arm `decision-search-capture-request`, with the binding child `evidence_approved_limit_binding_decision_search_captures` (ADR 0019 note).
+- Missing, truncated, rejected and broken outcomes of this capture stay distinct, and a search over a failed capture is `failed` or `not-run`, never `empty`.
+
+**Candidate member arm `continuing-result`** (ADR 0011 Amendment 1, ADR 0015 note):
+- :400 and :437: `member_source_kind` gains `continuing-result`, with the typed child `candidate_delta_member_continuing_results`. It binds the exact `unaffected-continuing` classification of the approved joint component, the source epoch and the joint approval decision, instead of the current-epoch or carried-result child.
 
 ## Context
 

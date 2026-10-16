@@ -1,8 +1,25 @@
 # ADR 0015: Parallel Worker Candidate Composition And Exact Integration
 
-- Status: Accepted
+- Status: Accepted; amended 2026-10-16 by note (Accepted)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
+
+## Note (2026-10-16): amended by the #99 phase 2 amendment set (Accepted)
+
+Status: Accepted (2026-10-16). Source: [ADR 0011 Amendment 1](0011-approved-run-preparation-and-amendment-authority.md), [ADR 0022 Amendment 1](0022-decision-scope-and-implementing-waypoints.md), [ADR 0010 note](0010-typed-evidence-ledgers-and-atomic-current-evaluations.md); decisions log §90-§98. Line references (`:N`) point to this ADR as accepted before the note (commit `1b2256a`). No sentence above is rewritten; each listed sentence reads as stated here.
+
+**Joint amendments** (ADR 0011 Amendment 1):
+- :37 is kept: the closed Task-input source kinds are unchanged. A Supervisor-proxy revision prerequisite is a sealed proposal condition, never a task input.
+- :48, :133, :148 and :150-151: a Worker classified `unaffected-continuing` by a joint component keeps its task input and its accepted result under the source epoch. That result enters a Candidate through a new Composition member arm, `continuing-result` (table `composition_member_continuing_results`, beside :133's current-epoch and carried-result children), which binds the source epoch, the joint approval and the sealed carry rule instead of the current-epoch arm. The Candidate member gains the matching arm `candidate_delta_member_continuing_results` (ADR 0010 note).
+
+**Decision echoes** (ADR 0022 Amendment 1):
+- :48 and :50: a doer Worker's result may declare attributed, untrusted echo claims (a decision revision plus a location).
+- :62: Composition carries those claims into the Candidate manifest.
+- :97: an `applied` Integration application proof is the input to the decision owner's `RecordDecisionEchoes`, which accepts only claims inside the proof's changed paths. Integration never writes decision or echo state.
+
+**Capture source** (ADR 0010 note):
+- :91: Integration also performs the strictly local read-only `decision-search-capture` for a change-time decision search or for Foundation inference. It is not an applicability request and grants no approval, lease or apply authority. Evidence owns the resulting observation and content Artifact.
+- :117 (Integration commands): the list gains `RequestDecisionSearchCapture` and `RecordDecisionSearchCaptureOutcome`, which create the inert capture request (with its ADR 0019 direct limit owner) and record its outcome; neither creates an Integration attempt, approval request, lease or Effect.
 
 ## Context
 

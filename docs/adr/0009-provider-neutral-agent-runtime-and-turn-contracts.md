@@ -1,6 +1,6 @@
 # ADR 0009: Provider-Neutral Agent Runtime And Turn Contracts
 
-- Status: Accepted; amended 2026-10-04 (see Amendment 1)
+- Status: Accepted; amended 2026-10-04 (see Amendment 1); amended 2026-10-16 by note (Accepted)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
@@ -8,6 +8,35 @@
 
 - [ADR 0021](0021-supervisor-forger-and-mediated-agent-dialogue.md) (accepted 2026-10-09), "Agent dialogue": adds the application-mediated agent dialogue next to "Parallel Worker Coordination" (direct channels stay prohibited) and a new **agent-authored** source kind, trust "no authority", for "Invocation Context And Resume Reconstruction".
 - [ADR 0022](0022-decision-scope-and-implementing-waypoints.md) (accepted 2026-10-09), "Decisions in Run context" and "Foundation sections by role": amends source selection in "Invocation Context And Resume Reconstruction" (which accepted decisions a Forger, Worker or reviewer receives, and the recorded exclusion reason for the rest).
+
+## Note (2026-10-16): amended by the #99 phase 2 amendment set (Accepted)
+
+Status: Accepted (2026-10-16). Source: [ADR 0021 Amendment 1](0021-supervisor-forger-and-mediated-agent-dialogue.md), [ADR 0011 Amendment 1](0011-approved-run-preparation-and-amendment-authority.md), [ADR 0013 Amendment 1](0013-effect-reconciliation-and-recovery-journal.md), [ADR 0022 Amendment 1](0022-decision-scope-and-implementing-waypoints.md); decisions log §90-§98. Line references (`:N`) point to this ADR as accepted before the note (commit `1b2256a`). No sentence above is rewritten; each listed sentence reads as stated here.
+
+**Run-absent invocations** (ADR 0021 Amendment 1, "Run-Absent Invocations"):
+- :38 (target union): the Sealed Invocation target union gains a `run-absent` arm with Run explicitly absent, naming one arm of the Run-absent invocation family (`supervisor-coordination` or `project-agent`) and its purpose.
+- :39 and :43: a Run-absent seal pins no Run, policy epoch, Delegation plan or contracts; it pins the exact Project, invocation identity, coordination budget scope and reservation, and the billing mode current for that turn (because there is no Run to pin it; refines Amendment 1 :221).
+- :40: a `project-agent` seal uses `no-workspace-input` and pins the captured `decision-search-capture` content Artifact.
+- :32 (provider-neutral cycle): a Run-absent turn follows the same cycle; its "current authority" is its Project, invocation identity, owning request and coordination-budget waterline, not a Run epoch.
+- :23, :30-31 and :102: the Turn Machine also drives one Run-absent sequence per invocation family member. Each `supervisor-coordination` sequence is owned by its dialogue (dialogue, proxy-answer and admission turns), its conflict-scan request (`conflict-scan`) or its decision change event (`decision-follow-up`), and each `project-agent` sequence by its search or inference request; loop health applies to each.
+- :48-49 and :53: Execution also owns the Invocation context record of a Run-absent invocation. It records Project and the Run-absent target, with no Run and no policy epoch.
+- :72, :122, :175 and :178 (attribution sentences naming a Forger or Worker): also cover the Run-absent target.
+- :97-98: a Run-absent turn that observes `provider-unavailable` or `model-unavailable` records the matching Run-absent availability outcome against its own invocation; it never blocks a Run.
+- :108: a Run-absent provider dispatch is a `project-coordination` Effect (ADR 0013 Amendment 1), budgeted from its coordination budget.
+- :151-152: the physical records gain a Run-absent target arm with Project-scoped keys and no Run foreign key.
+- Amendment 1 :224-228 (role table) gains two rows, both a governed CLI session with no tools in subscription mode and the direct provider adapter in API mode, like Conversation (:228, :272): **Supervisor** and **Run-absent read-only Project agent**.
+- Amendment 1 :288-289 (budget units): coordination budgets count the same units, plus messages; subscription-mode Run-absent turns count plan utilization, and API-mode turns also count money (ADR 0021 Amendment 1).
+- Context selection (ADR 0022:34-35) gains the exclusion reason `retired` for a retired decision (ADR 0022 Amendment 1).
+
+**Task holds and joint amendments** (ADR 0011 Amendment 1):
+- :119-120: a task hold is not a Run pause and not a Worker stop. A held in-flight Worker reaches a Worker hold checkpoint (the Worker stop-checkpoint proof without terminal stop) and becomes `paused`, keeping its identity and slot.
+- :124 and :183: `ApproveJointRunAmendment` also creates and activates epochs, under one shared receipt.
+- :127: unchanged.
+- :129: a continuing Worker's later seals pin the successor epoch with its sealed `unaffected-continuing` carry.
+- Amendment 1 :272 and :280: for a held Worker in CLI mode, the session ends and continuation is a new stateless session under a new seal.
+- Amendment 1 :279 and :323: for task holds only, that continuation keeps the same Worker identity (as ADR 0007:60 already does for pause and resume); in-progress reasoning is still lost.
+
+**Dialogue turns**: a Forger turn in a cross-Waypoint dialogue keeps the Forger target with purpose `cross-waypoint-dialogue`; its budget scope is the dialogue's payer, not its Run.
 
 ## Context
 

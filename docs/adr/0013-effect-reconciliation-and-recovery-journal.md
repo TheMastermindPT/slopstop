@@ -1,6 +1,6 @@
 # ADR 0013: Effect Reconciliation And Recovery Journal
 
-- Status: Accepted
+- Status: Accepted; amended 2026-10-16 (see Amendment 1, Accepted)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
 
@@ -370,3 +370,47 @@ Startup and recovery must support these direct indexed queries without replaying
 - `docs/adr/0010-typed-evidence-ledgers-and-atomic-current-evaluations.md`
 - `docs/adr/0015-parallel-worker-candidate-composition-and-exact-integration.md`
 - GitHub issues `#19`, `#54`, and `#59`
+
+## Amendment 1: Project-Coordination Effect Subject
+
+- Status: Accepted (2026-10-16)
+- Date: 2026-10-16
+- Decision owners: Pedro Mesquita
+- Issue: [#99](https://github.com/TheMastermindPT/slopstop/issues/99)
+- Design: `.rpiv/artifacts/designs/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness.md` (Architecture C; G4)
+- Decisions log: `.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` §90-§98
+
+Line references in this amendment (`:N`) point to the text of this ADR as accepted before the amendment (commit `1b2256a`). Every decision above stays in force except where a rule below names the sentence it changes.
+
+### Amendment Context
+
+ADR 0021 Amendment 1 adds Run-absent provider calls: Supervisor coordination turns and the Run-absent read-only Project agent. Each is an `external-service` and budget effect (ADR 0009:108), but none has a Run, so none fits `run-worker`; none is an Artifact or Storage operation, so none fits `project-operation`; and none applies a Candidate, so none fits `integration`.
+
+### The Fourth Subject Arm
+
+- This amendment explicitly lifts the "no fourth variant" rule of :29 for exactly one arm, `project-coordination`. It also changes :268 (exactly one top-level subject child) and :344 (the closed arms) to include it. No generic owner, nullable universal Run, free-text operation or fifth variant is permitted.
+
+| Subject kind | Required fields | Explicitly absent |
+| --- | --- | --- |
+| `project-coordination` | Exact Project; exact Run-absent invocation identity (arm `supervisor-coordination` or `project-agent`, and its purpose); exact coordination budget; one `project-coordination` Evidence scope (ADR 0010 note); for `project-agent`, the captured `decision-search-capture` content Artifact as read-only input | Run, Forger, Worker, Delegation task, Run-workspace and mutation identities |
+
+- **Ownership** follows :19. The Application coordinator owns the Effect identity and declaration. **Execution** is the subject owner: it owns the Run-absent invocation lifecycle, its attributed owner observations, its retry authority and its broken or missing outcome. **Evidence** owns the Recovery Journal, the typed Effect observations, reconciliation and current Effect authority, exactly as for the other arms.
+- Declared classes include `external-service`, plus `credential-access` where the selected billing mode reads a credential reference (ADR 0009 Amendment 1). `workspace-files`, `git-*`, `local-artifacts` mutation and `project-storage` are prohibited for this arm; a declaration that names one fails closed before intent. This amendment sets no rule on `process-execution`: in subscription mode a Run-absent turn is a governed CLI session (ADR 0009 Amendment 1), and how that session is launched, including whether it is a Process job, is decided in issue [#136](https://github.com/TheMastermindPT/slopstop/issues/136) with the C2 CLI work (decisions log §97, K6).
+- The arm follows the append-before-execute order (:118-130) unchanged: its owner-specific pre-boundary record is the Run-absent Model attempt.
+- **Retry authority** (:182, :292). `AuthorizeEffectRetry` for this arm requires the matching subject-specific retry-authority child `effect_retry_project_coordination_authorities`: the exact Run-absent invocation identity, its current coordination-budget waterline version, and proof that its owning request is still open: its dialogue (dialogue, proxy-answer and admission turns), its conflict-scan request, its decision change event (decision follow-up turn), or its search or inference request. No Run Recovery row is created for this arm.
+- **Partition** (:234). The arm lives in `slopstop.db` under ADR 0006's Project-scoped command-idempotency and Writer-fencing rules.
+- **Tables** (:239-241). The "Project-coordination subjects" family adds `effect_project_coordination_subjects`, `effect_project_coordination_supervisor_targets` and `effect_project_coordination_project_agent_targets`. Each row carries only the fields listed above, with same-database composite foreign keys to the coordination budget and the Run-absent invocation record.
+- **Gate consumer.** The Run-absent Turn Machine (ADR 0009 note) is the gate consumer: it may cross the provider boundary only with the accepted pre-boundary `EFFECT_STARTED_UNSETTLED` decision for this arm, and a later turn only after the prior Effect has a terminal current outcome or explicit uncertainty that blocks it.
+- **Effect Dossier** (:203): the Dossier also joins the applicable Run-absent invocation owner state for this arm.
+- **Indexes** (:298). Effect subject children are also indexed by Run-absent invocation arm and identity, coordination budget and owning request.
+- :13 is unaffected: the mutation-lease owner union is not extended, because this arm never mutates.
+
+### Amendment Consequences
+
+- Every Run-absent provider dispatch has exactly one Effect subject, one Evidence scope and one Recovery Journal, so crash recovery can attribute a possible Supervisor or Project-agent request without inventing a Run.
+- The closed union grows by one named arm through an explicit amendment, which is the only way this ADR permits it to grow.
+
+### Amendment Rejected Alternatives
+
+- A nullable Run on `run-worker`: it would make "no Run" indistinguishable from a missing Run.
+- Modelling the turns as a `project-operation`: that arm owns Artifact and Storage operations, whose owners and before state differ.

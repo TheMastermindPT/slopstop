@@ -14,7 +14,7 @@ status: in-review
 last_updated: 2026-10-16T23:30:00+0100
 last_updated_by: Pedro Mesquita
 last_updated_note: "Revision 3 (2026-10-16): applies every round-2 resolution Q1-Q22 (evidence .rpiv/artifacts/evidence/2026-10-16_c99-design-intent-review-2.md) and Pedro's round-2 answers (decisions log §95): ADR 0010 joins the set; Contest holds release only by re-agreement or withdrawal; a completed proxy Waypoint's Begin comes first, then a two-Run joint set; onboarding asks once for the Project reserve; the held-task time limit also covers waits on an unavailable Forger or a lapsed map link; acceptance of the slice candidate also accepts the amendments; the Portuguese copy. Closing path (A): no new agents; the coordinator checks each item against the 'Revision-2 round-2 resolution' table, then Pedro approves. Earlier: revision 2 applied R1-R30 and §94; revision 1 recorded §93; the first draft came from the #99 research (dbb4132) and §90-§92."
-content_hash: 0170dcb8d10d8de977afa1272b69cafd4fe22adf764517a984d86e788a44a0c2
+content_hash: 58167ac5c4d8dafaa2260a9c4deaf70820887c1d4df40539daa33efc083ce65d
 ---
 
 # Design: #99 phase 2 cross-Waypoint dialogue and decision-dependent staleness
@@ -470,6 +470,27 @@ Each round-2 finding (evidence `.rpiv/artifacts/evidence/2026-10-16_c99-design-i
 | R2-ADR-16 | suggestion | Q21 | :83, :238, :343 |
 | R2-ADR-17 | suggestion | Q18 | :236, :241, :256, :358 |
 | R2-ADR-18 | suggestion | Q22 | :85, :101, :116, :172, :216, :302, :344, :347 |
+
+### Implementation (c99-s1, 2026-10-16)
+- Implementer: Claude Opus 5.5, in the linked worktree `C:/Users/pedro/Documents/GitHub/slopstop-99`, branch `docs/99-cross-waypoint-dialogue`, base `1b2256a`, under the build authority of decisions log §96 (relayed by the coordinator).
+- Written as **Proposed**: ADR 0011, 0013, 0017, 0021 and 0022 Amendment 1; dated notes in ADR 0006, 0007, 0008, 0009, 0010 and 0015; `PRODUCT.md` and `CONTEXT.md` edited on the listed lines. ADR 0020 classified unaffected in the ADR 0010 note.
+- TDD-exempt (documentation-only decision work). Verification rows D99-V1..V36, gates and traceability: `.rpiv/artifacts/evidence/2026-10-16_c99-amendments-evidence.md`. V25's acceptance half (flip to Accepted plus the decisions-log record) waits for Pedro's acceptance of the candidate.
+- Lane: `lane.mjs --paths` over the 13 changed files said `normal`; raise-only keeps `rigorous`.
+
+### Candidate review round 1 (2026-10-16)
+- Round 1 on `a7c6625` failed (table K1-K21: `.rpiv/evidence/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness/review-candidate-round1.md`). Pedro's decisions (decisions log §97):
+  - **K5 (added beyond the approved text):** the hold lifecycle gains three rows. A completed-proxy change-Run wait has a "Decline" action, which releases the waiting holds (`released-on-change-run-declined`) and makes a pending one-Run set `changed` with `PREREQUISITE_CHANGED`. The held-task time limit also covers an unavailable Supervisor proxy. A Contest hold on an ended Run is released (`released-on-run-end`). The `PREREQUISITE_RUN_STARTED` closing carries the holds into the two-Run set.
+  - **K6:** the `process-execution` ban for the `project-coordination` arm is removed; how Run-absent governed CLI sessions are launched goes to issue #136.
+  - **K7:** ADR 0022:48 is named: a decision edit itself still pauses nothing, but a conflict dialogue that follows may hold only the affected tasks.
+  - **K2:** ADR 0019 and `PRODUCT.md:124` join the amended set.
+  - **K21:** after acceptance, the Proposed→Accepted flip is checked by the coordinator through a diff, with no fresh review.
+  - The coordinator approved K13's lines beyond the listed ones. K1-K20 are applied in one fix commit; round 2 is the last.
+
+### Candidate review round 2 (2026-10-16)
+- Round 2 (the last) on `bb28854` failed with follow-on gaps (table L1-L14: `.rpiv/evidence/2026-10-16_17-36-22_cross-waypoint-dialogue-and-decision-staleness/review-candidate-round2.md`). Pedro's decisions (decisions log §98):
+  - **L1:** follow ADR 0018 as it is. The capture content Artifact is `evidence-produced`, so ADR 0018's matrix gives it the `durable-record` purpose; no new byte-hold kind; ADR 0018 stays outside the set.
+  - **Path:** one final fix commit for L1-L14, with no third review round; the coordinator checks every item and records the unreviewed delta as residual risk. After Pedro's acceptance, the coordinator checks the Proposed→Accepted flip by diff (12 ADRs: 5 Amendment sections and 7 dated notes, plus their Status lines).
+  - **L2:** ADR 0020:98 is not edited; it is recorded as a stale count of the limit-owner arms.
 
 ## References
 - `.rpiv/artifacts/research/2026-10-16_17-01-10_cross-waypoint-dialogue-and-decision-staleness.md`

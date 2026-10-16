@@ -1,8 +1,15 @@
 # ADR 0008: Run Workspace, Mutation Lease, And Process Job Lifecycle
 
-- Status: Accepted
+- Status: Accepted; amended 2026-10-16 by note (Accepted)
 - Date: 2026-08-26
 - Decision owners: Pedro Mesquita
+
+## Note (2026-10-16): amended by the #99 phase 2 amendment set (Accepted)
+
+Status: Accepted (2026-10-16). Source: [ADR 0011 Amendment 1](0011-approved-run-preparation-and-amendment-authority.md); decisions log §90-§98. Line references (`:N`) point to this ADR as accepted before the note (commit `1b2256a`). No sentence above is rewritten.
+
+- :72-75 (checkpoints, pause and cancellation): a **Worker hold checkpoint** applies the Worker stop checkpoint proof of :74 to one held in-flight Worker, without terminal stop. It allows that Worker to become `paused` under a task hold while the rest of the Run continues. It is not a Run pause and does not require a Run Safe checkpoint.
+- :34, :52 and :56 are unchanged: the Run-absent read-only Project agent has no Run workspace and no tools. How a Run-absent governed CLI session is launched, and whether it is a Process job under :50-52, is decided in issue [#136](https://github.com/TheMastermindPT/slopstop/issues/136) with the C2 CLI work (decisions log §97, K6).
 
 ## Context
 
