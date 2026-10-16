@@ -12,7 +12,7 @@ status: ready
 last_updated: 2026-10-15T21:00:00+0100
 last_updated_by: Pedro Mesquita
 last_updated_note: "S5 review round 2 note appended in Developer Context (log link accepted as residual risk at the C1 gate; decisions log §70). S5 review round 1 note appended in Developer Context (CNV-B52 for canOpen, R9 as built; decisions log §69). S5 scope change appended in Developer Context (a Project without a repository reopens after its upgrade; decisions log §68). R6 and R8 amended (repository-b is the rewound registered Project; decisions log §67). S5 oracle refinements R1-R11 appended in Developer Context after the S5 intent review; approved by Pedro (decisions log §66). Earlier approvals: revision 5.3 (§46), S5 contract start (§65)."
-content_hash: 8664099fe793ec069da9daaacac91426188dd321e0b666df9524ad5f90a5d2ba
+content_hash: 9603eba5af3959f81a33e8272b88cb1dcf3c42d1828e537d8054b57ad3363f81
 ---
 
 # Design: Conversation C1 — save and reopen messages locally, no model
@@ -1366,6 +1366,10 @@ The first green attempt of CNV-B19 failed on arrival at its last step: after the
 ### S5 review round 2 (decisions log §70, 2026-10-15)
 
 - R9 does not settle the `process-entry` → desktop log carry-forward (:1004): a successful upgrade writes no harness line, so the journey proves only the absence of failed or rejected upgrade lines. Pedro accepts the unproven positive link as residual risk at the C1 gate (§70). The carry-forward row keeps one trigger: the first missing upgrade log line in a real run; its "S5's e2e" trigger is spent. This supersedes R9's "settles" and the "stays open with its trigger" wording of the round-1 note.
+
+### C1-gate carry-forward review (decisions log §88, 2026-10-16)
+
+- Pedro reviewed the carry-forward table (:987-1009). The DESIGN.md focus rule is updated (commit `f55cb69`). The `process-entry` → desktop log link becomes issue #133 (a successful upgrade will be logged). The nine remaining deferred items and the licence check are tracked in issue #134, with code references updated for the #110 split.
 
 ## References
 

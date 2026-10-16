@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 217124c71239d08340564075d80b19b92df5410069adc92aa5329bc582fc1e3a
+content_hash: 77e1acf9793ee846a45a0a6bfa2b000f995eb6845afa372fd5fad7cb77627d0b
 ---
 
 # Conversation — Human Decisions
@@ -756,3 +756,16 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The coordinator had not mentioned in §85 that the rpiv chain runs deep-review (rigorous depth) and then validate after acceptance. A deep-review fix would change the code and force a new final mutation (over 2 h).
 - **Decision:** the user chose "Saltar as duas, como no S5". Deep review and validate are skipped by user exception, as in §71. The branch is squashed into main after the implementer's evidence commit. The squash message records the exception.
+
+## 87. #110 push and cleanup (user decision, 2026-10-16)
+
+- The #110 squash is on main as `ff162f5` (gates passed: pnpm check 3024, knip, check:duplicates, CodeScene safeguard), with `499a4c3` recording §86. Main is 15 commits ahead of origin.
+- **Decision:** the user chose "Mais tarde" for the push (check:deep, about 17 minutes). After the push passes, delete the `slopstop-110` worktree and the `refactor/110-split-node-adapters` branch, once the coordinator confirms the worktree is clean.
+
+## 88. C1-gate carry-forward review (user decisions, 2026-10-16)
+
+- The user asked to review the C1-gate carry-forward table (C1 design :987-1009). Eight rows were already done. The user also said a #94 follow-up issue for the CodeScene finding in `registered-project-selection.integration.test.ts` is not needed.
+- **Decisions:**
+  - "Sim, pedir ao ui-ux agora": the ui-ux agent updated DESIGN.md's focus statements to the §33 ring as built. The coordinator checked the values against `seixo.module.css` and `conversation-parts.module.css`, mirrored the wording in `.impeccable/design.json`, and committed `f55cb69`.
+  - "Sim, issue para uma slice pequena": a successful upgrade will be logged, and the harness-to-desktop log link proven in the real app. This is issue #133, queued after C1. It answers the open question "should successful upgrades be logged".
+  - "Um issue de acompanhamento": the nine deferred rows and the licence check are tracked in issue #134, with code references updated for the #110 split. The design has an appended Developer Context pointer (append-only check: keep).
