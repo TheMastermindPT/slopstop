@@ -194,7 +194,7 @@ Ragnarok is a precision instrument first. You supervise agents, read conversatio
 
 The full brand world appears only at the big moments. The fire-and-ice glow and the ash belong to the startup screen; the eclipse belongs to startup, empty states, loading and recovery.
 
-Density is medium. Text is set in Red Hat Text: open, humanist and clear at small sizes, never decorative. Colour is scarce, and when it appears it always means something: frost for live work, focus and the primary action; ember for a decision only a human can make; moss for accepted; blood for failure. Components follow the "Seixo" (polished stone) family the user chose on 2026-10-09: pill-shaped controls, generously rounded cards, borderless tonal fills, soft real shadows, and focus shown as a soft frost halo.
+Density is medium. Text is set in Red Hat Text: open, humanist and clear at small sizes, never decorative. Colour is scarce, and when it appears it always means something: frost for live work, focus and the primary action; ember for a decision only a human can make; moss for accepted; blood for failure. Components follow the "Seixo" (polished stone) family the user chose on 2026-10-09: pill-shaped controls, generously rounded cards, borderless tonal fills, soft real shadows, and focus shown as a frost ring: a thin frost line inside a soft frost halo.
 
 Linear sets the quality bar for craft, never the look. A screen fails review if it could be mistaken for Linear, or described as "Linear in other colours".
 
@@ -212,7 +212,7 @@ Linear sets the quality bar for craft, never the look. A screen fails review if 
 The world is carbon and graphite. Four state colours each carry exactly one meaning, and each has a dark tint for backgrounds.
 
 ### Primary
-- **Frost** (frost): the focus halo, selection, active work ("agent working", the "now" layer), the primary and Send buttons, and links. When frost fills a button, its text uses Frost-On (frost-on).
+- **Frost** (frost): the focus ring, selection, active work ("agent working", the "now" layer), the primary and Send buttons, and links. When frost fills a button, its text uses Frost-On (frost-on).
 
 ### Secondary
 - **Ember** (ember): only for genuine human attention: "Needs you" chips, the Attention count on the rail, the frame around a map item or card that waits for a human decision.
@@ -291,7 +291,7 @@ Depth comes from tonal steps (canvas, then iron, then forged, then plate) and fr
 - **Frost lift** (`box-shadow: 0 6px 16px -8px rgb(156 201 224 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.35)`): the primary and Send buttons.
 - **Composer lift** (`box-shadow: 0 10px 28px -14px rgb(0 0 0 / 0.9)`): the message field above the stream.
 - **Overlay** (`box-shadow: -24px 0 48px -12px rgb(0 0 0 / 0.8)`): the right panel as an overlay on narrow windows.
-- **Focus halo** (`box-shadow: 0 0 0 4px rgb(156 201 224 / 0.28)`; fields use 0.22): every focusable control.
+- **Focus ring** (`box-shadow: 0 0 0 1.5px frost, 0 0 0 5px rgb(156 201 224 / 0.22)`, with `outline: 2px solid transparent; outline-offset: 2px`): every focusable control and every field. On frost-filled buttons a 2px canvas gap separates the ring from the fill (`0 0 0 2px canvas, 0 0 0 3.5px frost, 0 0 0 7px rgb(156 201 224 / 0.22)`). Under forced colours the shadow disappears and the transparent outline is painted in the system colour.
 
 ### Named Rules
 **The Brand Moment Rule.** The fire-and-ice glow (ember top-left, frost bottom-right) and the ash belong to the startup screen only. The eclipse is reserved for big moments: startup, empty states, loading and recovery. Daily working screens carry no background glow. The eclipse is an ornament, never a domain object.
@@ -319,7 +319,7 @@ Soft and calm: pill-shaped, recessive at rest, clear on interaction.
 - **Secondary:** borderless plate fill with the button lift; hover deepens the plate.
 - **Ghost:** text only, in ink-dim; on hover it brightens to ink over a forged fill.
 - **Send (brand exception):** the primary style, with its label naming the destination ("Send to Project") followed by the anvil-and-hammer mark instead of an arrow. See Signature components.
-- **Focus:** the soft frost halo on every control.
+- **Focus:** the focus ring on every button, including the frost-gap variant on primary and Send. A button that cannot act still takes focus and keeps its full ring; it rests at 45% opacity and rises to 70% while focused, so the ring stays clear. Under forced colours every Seixo button also gets a 1px ButtonText border.
 - **Motion:** 120ms. Press nudges the button down by 0.5px.
 
 ### Chips
@@ -333,10 +333,10 @@ Soft and calm: pill-shaped, recessive at rest, clear on interaction.
 - **Internal padding:** 18 by 22px for checkpoints, 16 by 18px for map nodes, 11 by 12px for rows.
 
 ### Inputs / Fields
-- **Composer:** borderless plate fill, 14px corners, composer lift. On focus it shows the frost halo (no border change).
+- **Composer:** borderless plate fill, 14px corners, composer lift. The field carries the focus ring while its textarea has focus (no border change); the textarea draws no outline of its own. Over the limit, the ring turns blood (`0 0 0 1.5px blood, 0 0 0 4px rgb(229 118 106 / 0.14)`), even with focus. Under forced colours the field gets a 1px CanvasText edge, and a 2px Highlight outline while focused.
 - **To: selector:** a plate-filled pill, never typed text. Choosing a recipient sends nothing.
-- **Search:** a plate-filled pill; on focus, the frost halo.
-- **Edit field (decision wording):** plate fill, 14px corners, frost halo while editing.
+- **Search:** a plate-filled pill; on focus, the focus ring around the pill.
+- **Edit field (decision wording):** plate fill, 14px corners, the focus ring while editing.
 
 ### Navigation
 - **Rail:** Runa icons at one stroke width (1.5), with labels at 1280px and wider. The active item is a forged fill with 12px corners and the row lift; Attention is the Kenaz (torch) rune mark with an ember count of actionable items.
@@ -361,7 +361,7 @@ Soft and calm: pill-shaped, recessive at rest, clear on interaction.
 - **Do** pair every state colour with words or a diamond (Accepted · r4, Needs you).
 - **Do** use the Ragnarok-owned Runa icon set, version 2 (Figma 139:30 on page 125:30; SVG source ragnarok-hero/icons-runa-v2, 77 icons; superseding V1 at 126:30: straight rune-stave strokes, no curves, diamonds instead of circles, 1.5px, square caps, mitred joins) everywhere; the anvil on Send buttons is the only exception. A missing icon is drawn in the Runa style, never borrowed from another set.
 - **Do** keep conversation and decision text in Red Hat Text at 14/22, at about 720px measure, and bundle the fonts with the app.
-- **Do** give every control a hover, focus (the soft frost halo), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion (exception: the map zoom becomes a 120ms fade).
+- **Do** give every control a hover, focus (the focus ring), pressed and disabled state. Use 120–200ms motion with `cubic-bezier(0.16, 1, 0.3, 1)`, made instant under reduced motion (exception: the map zoom becomes a 120ms fade).
 - **Do** keep broken, stale, provisional and unknown states visible, each with its own words. Never show them as clean or absent.
 
 ### Don't:
