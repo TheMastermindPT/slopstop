@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 576af7d301c4e4f1d79e281980097132cdf0446147e6d3ca45c3606c21a84ed8
+content_hash: e450676b21d19be12fad8c5577278fa060193b9a76c77de6fa8c97576657f506
 ---
 
 # Conversation — Human Decisions
@@ -741,3 +741,13 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The coordinator proposed four rpiv improvements; the user kept 2 (reuse mutation results) and 4 (less bureaucracy per decision and per round) and asked the coordinator to discuss them with a new rpiv session (herdr pane `w3:p2B`, renamed `rpiv`). The discussion produced a joint list of six items: (1) batch decision records and approved copies into one docs commit per slice, at every acceptance stop and before `/clear` or a handoff; (2) an `append-only.mjs` helper owning the append-only check; (3) a heavy-run evidence wrapper; (4) a review-packet builder plus a two-session ownership/freeze rule; (5) a findings-table template and round-2 focus fields with all three reviewers kept; (6) a per-mutant report-diff helper with an explicit range map. Withdrawn: reusing mutation results on the final candidate (unsound: results depend on the whole loaded closure), and fewer reviewers in round 2 (removes mandatory rigorous-lane roles; T1 was caught by one reviewer of three).
 - **Decision:** the user chose to implement only items 1 and 2, and approved a linked rpiv worktree `C:/Users/pedro/rpiv-claude-wt/append-only-batch` on the new branch `feat/append-only-batch-commits` from `4876216`. The rpiv session builds them red-green there; no commit, push or issue without the user's approval. Items 3-6 are not authorised.
+
+## 84. rpiv items 1 and 2 commit (user decision, 2026-10-16)
+
+- The rpiv session built items 1 and 2 red-green in `C:/Users/pedro/rpiv-claude-wt/append-only-batch` (13 tests, red 13/13 against an unimplemented scaffold, then green 13/13; CodeScene 10). It added one rule the brief did not state, accepted by the coordinator: an unchanged approved line must stay in its section. The coordinator reran the tests and smoke-tested the helper on slopstop #110's real approved copies (current copy: keep; older pre-intent-review copy: reopen) and on edited copies (body edit, lane lowered: reopen; CRLF only: keep; missing copy: 1; directory: 2). Residuals: any added Developer Context line naming "lane" and the new value counts as recording a raise; multi-line frontmatter values always reopen.
+- **Decision:** the user approved one commit with both items on `feat/append-only-batch-commits`, after the CodeScene safeguard on the staged change. No push, PR or merge into rpiv main. From this decision on, decision records are committed in batches per item 1 (at acceptance stops and before `/clear` or a handoff).
+
+## 85. #110 candidate acceptance (user decision, 2026-10-16)
+
+- Final runs on `19a038e` (clean, digest `e3b0c442…`): `pnpm package` and `package:launch-smoke` passed (41 s); the Stryker dry run passed; the final mutation passed in 137 min (score 84.84; the 14 baseline files 86.28 against 86.07; the two new whole-file scopes 76.50). In the four remapped ranges, all 60 mutants keep their baseline status. In the other files, 3086 of 3086 match by location (2 went Killed -> Timeout, still detected). No baseline-killed mutant survives. New-scope survivors: 2 equivalent; the locks survivors are the recorded unobservable lock-table cleanup residual; the registry survivors are untested failure, defensive and missing-authority paths.
+- **Decision:** the user chose "Aceitar + issue para os testes". #110 is accepted as is. The implementer records the final runs and the baseline tally correction (metadataIsStale 7/16, isSeededReservation 9/4) in the evidence file in one docs commit. Issue #132 tracks the registry test gaps and the `metadataIsStale` gap. Next, the coordinator squashes the branch into one main commit (T8), and asks before the push.
