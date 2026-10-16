@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 8e632d3261df12bd48db77048585f5fa611c8dd801c48aad373fce8c9b87d5d2
+content_hash: 46f7e752060a7282244dd18e16e9a3dfaf8498fc321c1d73209690e8a5385081
 ---
 
 # Conversation — Human Decisions
@@ -714,3 +714,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - §78 results: the diagnostic copy on `343d1ba` showed the app's private writer proof failing at `writer-transport` (a real harness utility process went away while no exit was expected; the fixture process imports no Storage code). Plain `package:launch-smoke` on main code `8fcee45` (main checkout, package rebuilt with `pnpm package` first) passed in 42 s. **The failure is a #110 regression.** It reproduces only in the packaged multi-process writer proof; the source-level `canonical-writer-package-smoke.integration.test.ts` passed in `test:integration`. Leading unproven hypothesis: an unhandled rejection or defect from the new Effect lock or registry code reaches the harness fatal path (`process-entry.ts:102-103`).
 - **Decision:** the user chose "Autorizar o diagnóstico até à causa". Temporary diagnostic-only changes and short single runs are authorised until the cause is found. Each run needs the coordinator's GO and runs one at a time, and each change is restored by digest (the package is rebuilt back to the candidate) and recorded. Any fix to the code goes back to the user first.
+
+## 80. #110 launch-smoke cause and fix (user decision, 2026-10-16)
+
+- **Cause (diag 4):** a bundling effect, not a Storage behaviour change. With the #110 module graph, rolldown dropped the separate runtime chunk and put its interop helpers into `project-storage-store-*.cjs`. That chunk loads `fs-native-extensions` at module top level, and `writer-proof-fixture.cjs` now requires it statically. The addon is therefore loaded before the fixture's native-origin check (`canonical-writer-package-smoke-entry.ts:251-266`, which requires exactly one dlopen) and the check throws `WriterProofError`. The controller closes its port, so the proof reports `writer-transport`. On main the store chunk loads lazily, after the check. Ruled out: harness fatal handlers (diag 1), harness self-exit (diag 2), Effect error wrapping (diag 4).
+- **Decision:** the user chose "(a) Configuração + guarda". Change only the harness bundle configuration (`apps/desktop/vite.harness.config.ts`) so the fixture entry never statically requires the chunk that loads the addon, restoring main's layout; product code is unchanged. Add a guard to the package smoke's resource preflight that fails with a clear message when `writer-proof-fixture.cjs` statically requires that chunk. The native-origin check is not weakened. This stays inside #110.
