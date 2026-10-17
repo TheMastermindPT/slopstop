@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 522a62cf8a67ce0a4eeba290d0658035d7402c2ef26b1054073a6efeb174ca76
+content_hash: 1d04c3abb87b705f9e315ed2d34146795a5f79be1286846a1487c37066c6f6c4
 ---
 
 # Conversation — Human Decisions
@@ -941,3 +941,39 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - **Q9:** the packaged load-order risk at s1 is recorded as a residual (low: the writer-proof entry loads Storage dynamically, and the push runs launch-smoke).
   - **Path:** the designer applies Q1-Q14 without a third round. The coordinator checks each item, and the unreviewed delta is residual risk. Then the user approves the brief, and s1 proceeds.
 - **Approval and workspace (user decisions, same day):** the coordinator checked Q1-Q14 at the stated brief lines, and the brief passes `--finalizing`. The user approved the #123 Part A design brief (`content_hash 02d9420f1c6b366e232a93ca38cd6913e8f82099c85ce4740e31c23e85df0f75`; approved copy `approved-02d9420f1c6b366e232a93ca38cd6913e8f82099c85ce4740e31c23e85df0f75.md` in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/`). The user also approved a linked worktree `C:/Users/pedro/Documents/GitHub/slopstop-123` on the new branch `refactor/123-effect-lifecycle-part-a`, from the main commit with the approved brief, for s1 (the fair lock, rigorous).
+
+## 107. #123 s1 candidate review round 1 (decisions, 2026-10-17)
+
+- Round 1 on `cd28809` (three reviewers, identical packet): all failed. No reviewer found a code defect, and all three confirm the fair lock is correct. The table S1-S8 is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-candidate-s1-round1.md` (local).
+- **User decisions:**
+  - **S2:** add one oracle. Right after the gate opens, the next waiter is already running (`order` is exactly `[0]`), which pins the inline first hand-off.
+  - **S3:** narrow the flow mutate range to the two lock lines (`project-registration-flow.ts:205`, `:214`). This changes the §106 Q5 range.
+- **Coordinator decisions** (technical, disclosed to the user):
+  - S1: rerun the three-file integration suite at the candidate.
+  - S4: the `#abandon` index mutant is pre-registered as equivalent.
+  - S5: a `Deferred` gate, opened after `d1`, with rejected-promise fakes where feasible.
+  - S6: bind the gates to the candidate, and record the 9th CodeScene score.
+  - S7: record the B8(b) duration.
+  - S8: append the Developer Context pointer.
+
+## 108. #123 s1 candidate review round 2 (user decisions, 2026-10-17)
+
+- Round 2 (the last) on `a567672`: CR failed, SV passed with warnings, COV failed with one blocker. No reviewer found a code defect. The table T1-T5 is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-candidate-s1-round2.md` (local). The blocker, T1: B2 cannot see a double grant if the `#abandon` index check is mutated.
+- **Decisions** (all recommended):
+  - **T2:** add a reuse oracle: a second gated hand-off on the same lock runs inline.
+  - **T3:** the mutation pass rule also accepts the recorded #110 lock-table cleanup survivors (unobservable at the public surface), at their new line numbers in `project-storage-locks.ts`.
+  - **Path:** one final fix with no third round:
+    - T1: add the B2 double-grant oracle, bound once;
+    - T2: add the reuse oracle;
+    - T4: record the identity bindings;
+    - T5: use the exact range syntax and the 0-mutant note.
+    
+    The coordinator checks each item. Then the scoped mutation runs once (with the coordinator's go), and the user accepts s1.
+
+## 109. #123 s1 acceptance (user decision, 2026-10-17)
+
+- Final fix `24c661b` (T1 double-grant oracle, T2 reuse oracle, each bound once) and identity commit `164c914`, checked by the coordinator. The scoped mutation ran once on `164c914` (evidence commit `7462116`):
+  - project-storage: 84 mutants. permit-lock.ts had 33 killed, 8 timeout and 3 survivors: R6 NoCoverage 59:10; the pre-registered equivalent 58:9 `> 0`; and 58:9 `true`, which the coordinator confirmed as R6-class because it differs only on the post-hand-off path. project-storage-locks.ts had exactly the 10 recorded #110 cleanup survivors. The flow ranges had 0 mutants (the B6 red is the flow guard).
+  - conversation: canonical-project-writer.ts:112-119, 5/5 killed.
+  - The pass rule (§106, §108) is met.
+- **Decision:** the user chose "Aceito; seguir para a parte 2 no ramo". s1 is accepted. Work continues on `refactor/123-effect-lifecycle-part-a` with s2, and Part A integrates into main at the end. Residuals: the final fix delta was not reviewed by the three reviewers, and the packaged load order is checked only at push (Q9 a).
