@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 1045461790224501f6d6e31d9f3dfbb1743b26a72cbd5cea44c73ddb93e2106f
+content_hash: 522a62cf8a67ce0a4eeba290d0658035d7402c2ef26b1054073a6efeb174ca76
 ---
 
 # Conversation — Human Decisions
@@ -906,3 +906,38 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   6. The bridge: one Effect bridge core with the drift between the three copies removed. A read during a protocol error answers broken, not unavailable (degrade-distinguishes-broken). Protocol cancel and multi-event replies are left to the C2 design.
   7. The #123 baseline counts are refreshed. Launch-smoke and mutation are planned as heavy runs, each with the coordinator's go.
   8. The test-only standalone authority leak is closed in Part A.
+
+## 104. #123 Part A design checkpoints (user decisions, 2026-10-17)
+
+- Design brief `.rpiv/artifacts/designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md` (rpiv designer; feature lane normal). It has eight slices, s1 to s8. s1 (the fair lock) has the full contract; s2 to s8 have stable behaviour IDs.
+- **Decisions** (all recommended):
+  - **P1, close deadline:** s3 opens with a bounded measurement of the authority close (idle and #94 burst, with the coordinator's go). The default is 1000 ms unless the measured p99 is above 500 ms; then the work stops and the user is asked.
+  - **P1, listing cleanup:** the cleanup budget is shrunk below the 5000 ms desktop grace, so cleanup always ends before a forced kill.
+  - **P2:** the #96 drain bound is 1000 ms after exit (worst-case quit goes from 10 s to 11 s).
+  - **P3:** after `dispose`, requests answer with the existing unavailable codes; there is no new protocol code.
+  - **P4:** unified bridge behaviour:
+    - a null-correlated result and `system.failure` fail all pending requests as protocol errors, with fixed text;
+    - a throwing send answers its own envelope;
+    - a decode failure settles as protocol.
+    
+    This changes the workspace pin at `workspace-bridge.test.ts:586`, and the project-entry bridge stops ignoring these cases.
+  - **P5:** harness slices first, then Electron main.
+  - **P6:** s1 (fair lock), s3 (authority bounded close) and s5 (harness runtime) are raised to the rigorous lane, as for #110 (§73). The other slices stay normal.
+
+## 105. #123 Part A s1 intent review round 1 (decisions, 2026-10-17)
+
+- Round 1 on the brief (`content_hash 72ff0343…`; s1 rigorous): the slice-verifier and the code and coverage reviewers failed it with 4 blockers, 5 concerns and 5 suggestions. The table is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-intent-round1.md` (local). The main blocker, R1: B1's red was not observable, because the default `forkChild` starts the late caller after the wake.
+- **User decision, R9:** "Mutação curta por parte". A scoped mutation runs once on each rigorous slice's final candidate (s1, s3, s5), with the coordinator's go.
+- **Coordinator decision:** the coordinator approved the technical resolutions R1-R8 and R10-R14 as proposed, without asking the user. Integration suites over 2 minutes still need a go. The coordinator wrongly told the user this followed an agreed delegation rule; the user had not answered that proposal. It is disclosed to the user, and the user can contest any item.
+
+## 106. #123 Part A s1 intent review round 2 (user decisions, 2026-10-17)
+
+- Round 2 (the last) on the brief `f33dc042…`: failed with 2 blockers, 7 concerns and 5 suggestions. The table is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-intent-round2.md` (local). The blockers:
+  - Q1: the registration integration files ran through a config that excludes them (zero files ran).
+  - Q2: B8(a)'s re-entrant start was unnamed.
+- **Decisions** (all recommended):
+  - **Q6:** the user ratifies the coordinator's §105 approvals: R1-R8, R10-R14, the R6 residual and the R7 rule. The coordinator had explained each one to the user first.
+  - **Q5:** the s1 mutation is limited with `--mutate` to `permit-lock.ts`, `project-storage-locks.ts`, `canonical-project-writer.ts:111-118` and `project-registration-flow.ts:184-196`. It passes when every mutant is killed except the R6 survivors.
+  - **Q9:** the packaged load-order risk at s1 is recorded as a residual (low: the writer-proof entry loads Storage dynamically, and the push runs launch-smoke).
+  - **Path:** the designer applies Q1-Q14 without a third round. The coordinator checks each item, and the unreviewed delta is residual risk. Then the user approves the brief, and s1 proceeds.
+- **Approval and workspace (user decisions, same day):** the coordinator checked Q1-Q14 at the stated brief lines, and the brief passes `--finalizing`. The user approved the #123 Part A design brief (`content_hash 02d9420f1c6b366e232a93ca38cd6913e8f82099c85ce4740e31c23e85df0f75`; approved copy `approved-02d9420f1c6b366e232a93ca38cd6913e8f82099c85ce4740e31c23e85df0f75.md` in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/`). The user also approved a linked worktree `C:/Users/pedro/Documents/GitHub/slopstop-123` on the new branch `refactor/123-effect-lifecycle-part-a`, from the main commit with the approved brief, for s1 (the fair lock, rigorous).
