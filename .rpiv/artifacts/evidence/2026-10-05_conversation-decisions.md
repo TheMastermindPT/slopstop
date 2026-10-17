@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 1d04c3abb87b705f9e315ed2d34146795a5f79be1286846a1487c37066c6f6c4
+content_hash: 210734cd96da7e1670cc6f401347660b0031806a8fb0b2c42fe644756ed437ce
 ---
 
 # Conversation — Human Decisions
@@ -977,3 +977,179 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - conversation: canonical-project-writer.ts:112-119, 5/5 killed.
   - The pass rule (§106, §108) is met.
 - **Decision:** the user chose "Aceito; seguir para a parte 2 no ramo". s1 is accepted. Work continues on `refactor/123-effect-lifecycle-part-a` with s2, and Part A integrates into main at the end. Residuals: the final fix delta was not reviewed by the three reviewers, and the packaged load order is checked only at push (Q9 a).
+
+## 110. #123 s2 contract approval (user decision, 2026-10-17)
+
+- The rpiv designer detailed s2 (`u2b-s2-storage-failure-guard`, normal lane) with `/rpiv:revise` in the worktree brief. It is additive only; the append-only check reopens approval because it is a contract change. Contents:
+  - identity proof first (the three copies are the same two `instanceof` checks; five similar checks are out of scope);
+  - B1: the truth table of the exported `isKnownStorageFailure`;
+  - B2: the upgrade pins named;
+  - B3: a new pin on the registry's fail-or-defect split;
+  - TDD-exempt removal of the three private copies;
+  - no mutation in s2. Adding the files to the final combined run is decided then.
+  
+  The designer also restamped a stale hash left by the s1 round 2 append (no content change).
+- **Decision:** the user approved the s2 contract (`content_hash 1347547fc7704f021435d82c71c3ccc13fe165d50e3a76cea216ae200037c4c6`; approved copy `approved-1347547fc7704f021435d82c71c3ccc13fe165d50e3a76cea216ae200037c4c6.md`). The implementer builds s2 on the same branch. It is reviewed by the slice-verifier (normal lane).
+
+## 111. #123 s2 gate timeout (user decision, 2026-10-17)
+
+- On the s2 staged tree (parent `7462116`, wt `cb3222351ac552b8`), `pnpm check` failed 3053/3054. The failing test was the desktop `package-smoke-launcher.test.ts` "rejects missing ASAR entry harness.cjs" (a `vi.waitFor` timeout at :452), which s2 does not touch. The machine was loaded: the run took 2m42s against 43 s for s1, and CPU was 34-57% afterwards. The node processes running were idle MCP servers of the open sessions. Everything else passed. The implementer stopped without a rerun.
+- **Decision:** the user chose "Repetir uma vez com CPU livre", as in §99. The implementer reruns once when 3 readings are under 30%; it commits if the run passes, and otherwise stops and reports. This is another case of the #94 kind.
+
+## 112. #123 s2 review (coordinator triage, 2026-10-17)
+
+- The slice-verifier passed s2 (`fb7bde7`, normal lane): no violation and no code defect, behaviour unchanged, the pins are real guards. The coordinator triaged its soft warnings (technical, disclosed to the user):
+  - **R-LANE:** `lane.mjs --range 7462116..fb7bde7` was run by the coordinator, and the slice stays normal.
+  - **R-EVID:** already covered. The implementer recorded `git diff --binary 7462116 fb7bde7 -- apps` equal to the gated staged patch; the evidence file lies outside `apps`.
+  - **R-MUT:** carried to the final combined Part A mutation scope: add `project-storage-node-errors.ts` and `project-storage-upgrade-node-adapter.ts:558-564` to `mutate`, and add `project-storage-node-registry.test.ts` and `project-storage-node-errors.test.ts` to the mutation include.
+  - **I-B1** (name-versus-class row), **I-ORDER** and **I-CITE:** recorded, no change. The contract oracle is met.
+- s2 passes its gate in the normal lane. Its acceptance comes with the combined Part A acceptance.
+
+## 113. #123 s3 contract approval (user decisions, 2026-10-17)
+
+- The rpiv designer detailed s3 (`u2b-s3-authority-bounded-close`, rigorous) with `/rpiv:revise` in the worktree brief. It is additive only. Contents:
+  - an opening measurement of `stop()` with the coordinator's go: M-idle and M-drain, each quiet and under the #94 burst, 200 samples per cell. If the highest p99 is at most 500 ms, the deadline is 1000 ms; otherwise the slice stops for the user;
+  - B1: the bounded stop rejects with `ApplicationDatabaseCloseUnconfirmed`, and the outcome is memoized;
+  - B2: pins;
+  - B3: runtime aggregation;
+  - B4: `withhold()` in the withheld branch;
+  - B5: an `acquireRelease` safety net that turns an unconfirmed close into a defect;
+  - the Layer wiring is TDD-exempt, with its proof moved to s5 HR-B4;
+  - a scoped mutation that excludes `process-bootstrap.ts`; any survivor stops for the user.
+- **Decisions** (all recommended):
+  - The user approved the s3 contract (`content_hash 882c905a0e270e03788cb315bdf5c6c067affd0f3107b81e83cd0fe97187597c`; approved copy `approved-882c905a0e270e03788cb315bdf5c6c067affd0f3107b81e83cd0fe97187597c.md`), including the measurement rule, `withhold()`, the memoized unconfirmed outcome, the safety-net defect and the mutation scope.
+  - The user accepted as a recorded residual that admissions queued behind a lease that never confirms stay pending after an unconfirmed stop (the process exits; the existing pin is kept).
+  - Next: the rigorous intent review (slice-verifier in intent mode plus the code and coverage pair, at most 2 rounds).
+
+## 114. #123 s3 intent review round 1 (decisions, 2026-10-17)
+
+- Round 1 on the brief `882c905a…` (rigorous): failed with 2 blockers, 8 concerns and 9 suggestions. The table T1-T19 is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-intent-s3-round1.md` (local).
+- **User decisions:**
+  - **T3:** migrate one root per shape outside the timing, time only `stop()`, allow repeated bursts, and raise the run bound to 30 min (this replaces the approved 10 min). The user noted the machine is free now.
+  - **T5 (a):** drop "longest". The kept first-migration integration pins pass `closeDeadlineMs` 15 000 with their assertions unchanged. Recorded residual: a stop during a first migration may exceed 1 s in the real app.
+  - **T6:** NOT the exception route. The user chose "Testar já na parte 3": the Layer wiring of the safety net must get an observable test in s3 itself, with a red seen before the wiring. This replaces the TDD-exempt item and the move of its proof to s5.
+- **Coordinator decisions** (technical, disclosed to the user):
+  - T1 and T2: B1 and B3 are written red together, before the implementation, with a per-row Expected red.
+  - T4: a bounded-out sample counts as 15 000 ms, and an incomplete cell is broken and stops for the user.
+  - T7: the whole integration and registration suites run once on s3's final candidate, with the coordinator's go.
+  - T8: add `project-storage-upgrade-node-adapter.test.ts` and `project-storage-upgrade-steps.integration.test.ts` to the mutation include.
+  - T9: the deadline counts from the authority's `stop()` call.
+  - T10-T19 as proposed.
+- **Revised contract approval (user decision, same day):** the designer applied §114 with `/rpiv:revise`. It adds U2B-AC-B6, the safety-net wiring tested through `ManagedRuntime.make(harnessServicesLayer(...))` with roots that do not exist, red before the wiring; there are two new exports from `process-bootstrap.ts` (stop if knip flags them, never weaken the gate); and `process-bootstrap.ts` and its test join the s3 scoped mutation, reversing §113 point 7. The user approved the revised s3 contract (`content_hash 7894dee84091e43d9bbd34964e63fd7dcb8b6618de8fcf00ec32c1ffa0f4ccc7`; approved copy `approved-7894dee84091e43d9bbd34964e63fd7dcb8b6618de8fcf00ec32c1ffa0f4ccc7.md`). Next: intent review round 2 (the last).
+
+## 115. #123 s3 intent review round 2 (decisions, 2026-10-17)
+
+- Round 2 (the last) on the brief `7894dee8…` (rigorous): no blockers, 2 concerns, 6 suggestions. 18 of the round-1 items T1-T19 are resolved; T7 is partly resolved. The table U1-U8 is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-intent-s3-round2.md` (local). The coordinator checked U1 against `apps/harness/vitest.integration.config.ts:12-16` (it excludes `nativeLongIntegrationFiles`) and U2 against `package.json:17-18`.
+- **User decision:** "Aplicar tudo, sem 3ª ronda". U1-U8 are applied as proposed:
+  - **U1:** `pnpm exec vitest run --config apps/harness/vitest.native-long.config.ts` joins the T7 run, under the same coordinator go and stop rule.
+  - **U2:** the B6 knip rule uses `pnpm check:dead-code`, once on the final candidate before acceptance.
+  - **U3-U8:** text fixes.
+  There is no third round. The coordinator checks each item, and the delta nobody reviewed is a recorded residual risk. Next: `/rpiv:revise`, then the user approves the new hash.
+- **Revised contract approval (user decision, same day):** the designer applied U1-U8 with `/rpiv:revise`, and the coordinator checked each item against the text and the cited source lines. The only extra change is the round-2 review path in Verification Notes. The user approved the revised s3 contract (`content_hash 54eb35f4ea243ee414c85e60271c24c72e37a493acf92eaa5b67385a99e82bbe`; approved copy `approved-54eb35f4ea243ee414c85e60271c24c72e37a493acf92eaa5b67385a99e82bbe.md`). Next: `/rpiv:implement` s3, measurement first, under the coordinator's go with the CPU check.
+
+## 116. #123 s3 opening measurement aborted, Defender alerts (decisions, 2026-10-17)
+
+- The first opening measurement started at 17:33 on parent `fb7bde7`. The user aborted it at about 17:47: the PC was very slow, and Windows Defender kept raising Trojan:Win32/Bearfoos.B!ml alerts on `node_modules/@effect/tsgo-win32-x64/.../tsc.exe`.
+- All 800 samples were recorded, but `summary.json` was never written, so the run is **invalid**. Its raw numbers are for information only; at worst, drain-burst gave p99 398 ms and max 779 ms. The raw data is in `.rpiv/artifacts/evidence/2026-10-17_123-s3-close-measurement/` (untracked).
+- Cause:
+  - The #94 burst runs `rg -n --no-ignore` over the main checkout, node_modules included. Defender scanned the unsigned Go binary on every pass.
+  - Tool defect: consecutive burst windows overlapped by 5-14 s, because each bash burst ran about 194 s against a nominal 180 s. During each overlap, 12 loops ran instead of 6.
+- Coordinator check: the flagged `tsc.exe` files are byte-identical to the official npm tarball `@effect/tsgo-win32-x64@0.51.1` (SHA256 `5875AA37…E6E6`), and the pnpm-lock integrity matches. This is a likely false positive. Restoring the file or adding an exclusion is the user's call (admin rights).
+- **User decision:** "Carga sem node_modules". The repeat keeps the same 6 burst loops but excludes node_modules from the search. This is a recorded deviation from the #94 burst: the load is somewhat lighter.
+- **Coordinator decision** (technical, disclosed): the tool waits for each burst process to actually end before it starts the next window, so windows never overlap. The repeat needs the coordinator's go, with the CPU check.
+- **Repeat run (same day):**
+  - The run is valid. It started at 17:58 with CPU 29/15/14, on parent `fb7bde7`, under the §116 burst, and took 6 min.
+  - Results: M-idle quiet p99 0.10 ms, M-drain quiet p99 0.53 ms, M-idle burst p99 0.24 ms, M-drain burst p99 81 ms (max 128 ms).
+  - No overlaps, no failed bursts, every burst sample in its window.
+  - By the pre-agreed rule (highest p99 ≤ 500 ms), `APPLICATION_DATABASE_CLOSE_DEADLINE_MS` = 1000.
+  - Coordinator note: the aborted run's heavier #94-burst raw data (p99 398 ms, max 779 ms) also stays under 500 ms and 1000 ms, so the choice of burst does not change the deadline.
+  - No user decision was needed. The s3 build proceeds.
+
+## 117. #123 s3 candidate frozen (decisions, 2026-10-17)
+
+- Candidate `28765f1` (parent `fb7bde7`): one slice commit, not pushed. TDD evidence for B1-B6 is in `.rpiv/artifacts/evidence/2026-10-17_123-s3-tdd-evidence.md`. `pnpm check` 3072/3072, CodeScene 10 on all 9 candidate files, apps diff identity `da40cf1540b12315`.
+- **Coordinator decisions** (technical, disclosed to the user):
+  - (a) The measurement folder is committed as an evidence-only commit. Its tool, `close-measurement.test.ts`, keeps a recorded CodeScene exception (`runCell` cyclomatic 15): it is evidence outside the candidate, and refactoring it would change the recorded tool.
+  - (b) A `.gitignore` line ignores `node_modules/` under `.rpiv/artifacts/`, which the `!.rpiv/artifacts/**` exception otherwise exposes. This goes in the same evidence commit. The moved vitest cache is not restored.
+  - Order: `pnpm check:dead-code` first (light), then T7 (heavy, with the coordinator's go). The candidate review (rigorous, 3 reviewers) comes after T7, so the heavy run never overlaps the fan-out. The scoped mutation runs last, on the final candidate.
+- **check:dead-code finding (same day):**
+  - Evidence commit `1ce1e99`. Then `pnpm check:dead-code` failed with one finding: the unused export `APPLICATION_DATABASE_CLOSE_DEADLINE_MS` (`application-database-authority.ts:52`). It does not report the two `process-bootstrap.ts` exports.
+  - The slice stopped before T7, as the contract requires.
+  - **Coordinator decision** (technical, disclosed): drop the `export` and keep the value as a module-local constant. The tests keep the literal 1000 as an independent oracle: importing the constant would make B1/B5/B6 tautological about the value. The brief does not require the export (:375, :402, :510).
+  - The fix is a new commit (no amend), so the candidate becomes the new tip. Then come the gates, `check:dead-code` again, and T7. The candidate review has not run yet, so it reviews the new tip.
+- **New candidate, T7 (same day):**
+  - The candidate is now `25183e3` (parent `1ce1e99`): one line drops the export.
+  - Gates are green: `pnpm check` 3072/3072, typecheck 0, duplicates 0, CodeScene 10. `pnpm check:dead-code` is clean.
+  - T7 ran on `25183e3` (CPU 0/12/1, alone), all with exit 0:
+    - `vitest.integration`: 696 passed, 3 skipped (the env-gated seed helpers, older than s3), 74 s;
+    - `vitest.registration`: 238/238, 176 s;
+    - `vitest.native-long`: 1133/1133, 118 s.
+  - **Coordinator decision:** the T7 logs stay in the implementer's scratchpad and are appended to the s3 evidence in the next evidence-only commit, after the candidate review. The candidate stays frozen at `25183e3` for the review.
+  - Next: the candidate review, round 1 (rigorous, 3 reviewers).
+
+## 118. #123 s3 candidate review round 1 (decisions, 2026-10-17)
+
+- Round 1 on candidate `25183e3` (rigorous): 0 blockers, 1 concern, 8 suggestions, and no defect in the shipped behaviour. All three reviewers confirmed the U7 static check. The table V1-V9 is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-candidate-s3-round1.md` (local).
+- **User decision, V1:** "Acrescentar o teste". The `closeStarted` guard (`application-database-authority.ts:257-258`) gets an oracle in B5 "never stopped, lease held": a `stop()` after the safety net ran close rejects at `advance(0)` with the same instance. This is a contract addition through `/rpiv:revise`, and the user approves the new hash before the build.
+- **Coordinator decisions** (technical, disclosed):
+  - V2: correct the U6 0-mutant note. The error-class constructor runs per instance, so it does yield counted mutants, which B1 kills. This is part of the same revise.
+  - V3: the B3 aggregate checks each element with `toBe`.
+  - V4: the B5 "stopped and confirmed" row compares against the first `stop()`.
+  - V5: the scoped mutation ranges and includes are written before the run, covering the state initializers at :179-185. This is a config change with a new identity.
+  - V6: the T7 and `check:dead-code` results are appended to the s3 evidence and the brief Follow-up before acceptance.
+  - V9: the comments at :47 and :139 become TSDoc.
+  - V7: recorded residual (the thin margin under the #94 burst: raw max 779 ms against 1000).
+  - V8: carried to s5.
+  - Round 2 (the last) reviews the fix candidate. Mutation runs after it, on the final candidate.
+- **Revised contract approval (user decision, same day):** the designer applied §118 (V1 oracle and its Expected red, the V2 note, the V5 ranges; V3/V4/V6/V9 as implementation fixes; V7 residual; V8 to s5). The coordinator checked the diff and accepted the `harness-runtime.ts:154-157` range. The user approved `content_hash 523fff7418bc0b965a9efa8f5d8c5a698375cfc7dd50c278eed539e9d84e0a81` (approved copy `approved-523fff7418bc0b965a9efa8f5d8c5a698375cfc7dd50c278eed539e9d84e0a81.md`). Next: the fix candidate, gates, candidate round 2 (the last), then mutation.
+
+## 119. #123 s3 fix candidate, gate timeout rerun (decisions, 2026-10-18)
+
+- Fix commit `f124758` on `25183e3`. Production changes are only the two V9 TSDoc comments, with no line shift, so the V5 ranges hold and T7 is not rerun. The V1 oracle and its binding observation are recorded, and V3, V4 and V9 are done. Gates are green: check 3072/3072, typecheck 0, duplicates 0, CodeScene 10.
+- The evidence-only commit (staged digest `fd2ccdd47bea68c6`: the brief equal to `approved-523fff74…`, the V6 section, and the T7 logs) failed `pnpm check` with 2 desktop-renderer failures. Both tests passed in the check on `f124758`:
+  - `add-repository.test.tsx`, the focus walk;
+  - `conversation-details.test.tsx` CNV-B46.
+  CPU right after was 66/65/71, with LeagueClient and Overwolf running.
+- **User decision:** "Sim, uma vez". `pnpm check` is rerun once when three CPU readings are below 30%, as in §99 and §111. If it passes: commit, then `pnpm check:dead-code` on the tip. If it fails again, it comes to the user. The coordinator readings were 11/4/6, with no game processes.
+- **Rerun result (same day):** the one rerun passed: CPU 12/7/5, staged digest unchanged, 3072/3072. Evidence commit `ac4e735`. `pnpm check:dead-code` on `ac4e735` is clean. The final candidate is `ac4e735` (the apps patch from `25183e3` is the gated fix patch `2b1d52ec62e80a5d`). The rerun and the tip knip result go into the next evidence-only commit. Next: candidate review round 2 (the last).
+
+## 120. #123 s3 candidate review round 2 (decisions, 2026-10-18)
+
+- Round 2 (the last) on `ac4e735`: 0 blockers, 0 concerns, 4 suggestions, and no defect. Coverage passed with 0 findings. V1-V4, V9 and V5 are resolved; V6 is partly resolved. The table W1-W4 is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-candidate-s3-round2.md` (local).
+- **Coordinator decisions** (technical, disclosed; the user may contest them):
+  - W1: one evidence-only commit before acceptance records:
+    - the knip run on `ac4e735` (log and sha);
+    - both `pnpm check` attempts (the failure under load and the passing rerun);
+    - that the `25183e3` knip run has no log;
+    - the brief Follow-up entry for §118.
+  - W3: the same commit fixes two items in the evidence: the V1 citation becomes the assertion at :151, and the "No production line changes" wording is corrected.
+  - W2: the V9 scope is recorded as :47 and :139. The `AuthorityParts` comment at :143 follows the file's convention for private types, so there is no source change.
+  - W4: no range change.
+- Residual for acceptance: T7 ran on `25183e3`, not on the final candidate. The change after it is only 2 TSDoc lines in code that T7 runs (§119). The user's acceptance must name this.
+- Coverage note: the mutation run itself loads the machine, so V7 may show up as a dry-run failure or a spurious kill, not as a masked survivor.
+- At the time of these decisions the CPU was 56-100% (Firefox, WSL, the likec4 MCP server). The evidence commit gate and the mutation both wait for three readings under 30%. The mutation needs its own coordinator go.
+- **Evidence commit (same day):**
+  - `12aa956` is evidence-only, with 0 bytes of apps diff against `ac4e735`. W1, W2 and W3 are recorded. Gates passed at CPU 6/10/11, with 3072/3072.
+  - One rerun log's committed sha differs from the original, because `.gitattributes` eol=lf normalizes its 3 CR characters. Both values are recorded.
+  - The brief's appended Follow-up was not restamped. **Coordinator decision:** the designer restamps at the acceptance stop.
+  - The final candidate is `12aa956`.
+  - Mutation prep: the implementer writes the 8 V5 ranges into the config and takes backups. There is no run. The mutation waits for the user to free the machine (CPU was 43/77/49) and for the coordinator's go.
+
+## 121. #123 s3 scoped mutation and acceptance (decisions, 2026-10-18)
+
+- With the user's approval, the coordinator stopped the stuck likec4 MCP process (PID 25052, about 1.3 cores while idle) to free the machine.
+- Scoped mutation on `12aa956`, with config digest `42c03ba512c26f2e`. It ran once, alone, at CPU 10/19/8, from 00:35 to 00:39, with exit 0:
+  - 41 counted mutants, all 41 killed, score 100;
+  - 0 timeouts, 0 survivors, 0 NoCoverage;
+  - 1 static mutant ignored: the pre-registered tag at :56. The constant :52 has 0 mutants, as pre-registered, and the constructor's 3 mutants are killed by B1.
+- **User decision:** "Aceito". s3 is accepted, with the named residuals:
+  1. T7 ran on `25183e3`; after it, only 2 TSDoc lines changed.
+  2. The thin deadline margin under the #94 burst (V7: raw max 779 ms against 1000).
+  3. The measurement burst excluded node_modules (§116).
+  4. The intent round-2 delta was checked only by the coordinator (§115).
+  - V8 is carried to s5.
+- Batched closing steps:
+  - the implementer commits the mutation config and the mutation evidence as one evidence-only commit;
+  - the designer restamps the brief;
+  - the coordinator commits the decisions log on main.
+  Next: s4.
