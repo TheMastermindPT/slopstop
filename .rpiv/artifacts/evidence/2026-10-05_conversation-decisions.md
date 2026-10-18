@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 0c5dc442bf22e9e8c20e5acd2c29a453a37318ddb4a3e078c4acef5a35fcaea7
+content_hash: 482c11c31c9a81571844201caad9a55c3cc57344634b06b9efba8afc5d9567b7
 ---
 
 # Conversation — Human Decisions
@@ -1422,3 +1422,28 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - the fiber-ordering residual carried from s4.
   - s5 stays on the branch and goes to main with the rest of Part A.
 - **Next item (user decision, per §129):** "Sim, #105 agora", before s6. The designer researches TS 7 and the Effect tsgo LSP configuration (roadmap Phase 2 item 2) and writes a go/no-go report. Research only: no code change and no toolchain switch. Heavy commands need the coordinator's go.
+
+## 134. #105 research decisions (decisions, 2026-10-18)
+
+- **Research:** `.rpiv/artifacts/research/2026-10-18_20-08-00_typescript-7-and-effect-tsgo-gate.md`.
+  - TS 7.0.2 has 0 errors and is about 5-6x faster.
+  - dependency-cruiser needs the TS 6 JS API until TS 7.1. The alias layout fixes that: `typescript` → `@typescript/typescript6`, `@typescript/native` → `typescript@7.0.2`.
+  - Defender killed the Windows effect-tsgo binary on ProcessStart at 19:57:17. After that, the user added folder exclusions for `node_modules\@effect\tsgo-win32-x64` in slopstop and slopstop-123 and restored the file. The coordinator verified that all 4 tsc.exe copies match the npm hash 5875aa37.
+  - The Docker counts ran clean, and the container and volume were removed.
+- **User decisions:**
+  1. Compiler switch: "Depois da Parte A". A separate small slice on main after Part A integrates, with the alias layout.
+  2. Effect gate location: "No PC e no GitHub". effect-tsgo diagnostics go into `pnpm check` (Windows, which relies on the Defender exclusion) and into the CI `ubuntu-deep-check` job. On every tsgo version bump, the coordinator re-verifies the binary against npm.
+  3. Curated set: "Aceito a proposta" (artifact §5).
+     - Error: unknownInEffectCatch, globalErrorInEffectFailure, runEffectInsideEffect, tryCatchInEffectGen, multipleEffectProvide, leakingRequirements and scopeInLayerEffect.
+     - newPromise: error in src with 9 legacy waivers, off in tests.
+     - Warning: anyUnknownInErrorContext, schemaNumber, unnecessaryFailYieldableError and extendsNativeError.
+     - Options: `includeSuggestionsInTsc` false; `ignoreEffectWarningsInTscExitCode` true.
+  4. Part A fixes: "Parte própria, 's5b'", before s6.
+- **Coordinator decision (s5b scope):**
+  - The gate must pass when it lands, so s5b does all of the following on the Part A branch:
+    - adds the curated `diagnosticSeverity` config;
+    - adds the gate to `pnpm check` and CI;
+    - fixes every error-level hit in the Part A tree (src): 11 unknownInEffectCatch, 1 runEffectInsideEffect and 1 globalErrorInEffectFailure;
+    - registers the 9 newPromise waivers.
+  - The 8 hits that Part A introduced are a subset of these. Main's own hits reach main when Part A integrates.
+  - The designer writes the s5b brief, and its lane comes from `lane.mjs`.
