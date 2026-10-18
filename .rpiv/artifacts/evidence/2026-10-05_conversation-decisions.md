@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: a04a747ef9345b50011355d13984f76a32224d80c6b9918d0c1249e06cd1997a
+content_hash: 0c5dc442bf22e9e8c20e5acd2c29a453a37318ddb4a3e078c4acef5a35fcaea7
 ---
 
 # Conversation — Human Decisions
@@ -1213,3 +1213,212 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
     - W2: a `code_health_score` for `registry-database.ts` goes into the next evidence commit.
     - `registration-registry.test.ts` joins the mutation include, and the drain range is re-resolved at the combined run.
   - s4 is complete. As a normal-lane slice, it is accepted with the combined Part A result. Next: s5 (rigorous).
+
+## 125. #123 s5 contract (decisions, 2026-10-18)
+
+- s4 follow-ups: `df16fb7` (W1 comment, W2 CodeScene 10). The designer detailed `u2b-s5-harness-runtime` (rigorous) on `df16fb7`. The s5 block adds lines only.
+- **User decisions:**
+  - P-S5-1: the dispose deadline is 500 ms. Worst case 3000 + 1000 + 500 = 4500 ms, against the 5000 ms desktop grace.
+  - P-S5-2: measure first. An opening measurement of the listing chain and dispose runs for about 30 min, with the coordinator's go; the half-the-bound rule applies, and a miss stops the slice for the user.
+  - P-S5-3: the mutation pass rule is the s1/s3 rule. Every counted mutant is killed, a Timeout counts as killed, and any survivor stops the run. Nothing is pre-registered beyond the 0-mutant constants and tag arguments.
+  - Approved the s5 contract for intent review (`content_hash b4d8eb20b604c3f20b5e5820daf7b9374e2e0f014dcadc4fd80f6e217a8c2b48`; approved copy `approved-b4d8eb20b604c3f20b5e5820daf7b9374e2e0f014dcadc4fd80f6e217a8c2b48.md`).
+- **Coordinator decisions** (technical, disclosed): T-S5-A..I as proposed:
+  - an optional edge runner with a global default;
+  - a detached, timed dispose with `HarnessRuntimeDisposeUnconfirmed`;
+  - an async `startHarnessProcessRuntime`;
+  - V8 by a static check;
+  - completion in `onExit`;
+  - one chain deadline;
+  - the observer's internal `timeoutOrElse`;
+  - `RegistrationCleanupUnconfirmed` as a `Data.TaggedError`;
+  - no reply on an interruption-only exit, with a binding.
+- **Coordinator decision** (disclosed): the s5 opening measurement uses the §116 burst (6 loops, node_modules excluded, windows never overlap) instead of the raw #94 burst, for the same Defender and load reason the user accepted in §116. The brief's measurement line (:838) gets this through a Follow-up entry.
+
+## 126. #123 s5 intent review round 1 (decisions, 2026-10-18)
+
+- The designer appended the §125 Follow-up (`4636ed4e…`, append-only keep against `b4d8eb20…`).
+- Intent round 1: the gate failed with 4 blockers, 12 concerns and 8 suggestions. Effect feasibility, the V8 static check and D17 = 4500 ms are confirmed. The table Y1-Y24 is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-intent-s5-round1.md` (local).
+- **User decisions:**
+  - Y14: "Testar (1), isentar (2)". The `startHarnessProcessRuntime` wiring gets an off-disk unit row in `process-bootstrap.test.ts`, as in s3 B6, with a fake transport, a registration request in flight at `stop()` plus dispose, and the handle interrupted. `process-entry.ts` is TDD-exempt, with its reason recorded: it is the process entrypoint, testable only by a real launch, and `package:launch-smoke` covers the success path.
+  - Y15: "Medir também com trabalho". The opening measurement adds an M-listing-drain cell (one registration step in flight at stop), within the same ~30 min bound.
+- **Coordinator decisions** (technical, disclosed): Y1-Y13, Y16 and Y17-Y24 as proposed in the table. That includes:
+  - restating s3's measurement bounds for every cell;
+  - naming the scoped `--mutate` command, re-resolving the s3 entries, and dropping the `startHarnessProcessRuntime` call range, now covered by the Y14 row.
+- **Revised contract approval (user decision, same day):**
+  - The designer applied §126; the brief only adds lines. The `Promise.all` in `settleClose` stays inside the temporary Promise facade, over work that is already running. Coordinator note: AGENTS.md allows temporary facades, so no exception is needed unless a reviewer requires `Effect.forEach`.
+  - The user approved `content_hash e46c3b8ed61216820a39a0cc51cf8cb02d020a23d5055f296cbb9524190865bb` (approved copy `approved-e46c3b8ed61216820a39a0cc51cf8cb02d020a23d5055f296cbb9524190865bb.md`).
+  - Next: intent round 2 (the last).
+
+## 127. #123 s5 intent review round 2 (decisions, 2026-10-18)
+
+- Intent round 2 (the last) on `e46c3b8e…`: the gate failed with 1 blocker, 6 concerns and 6 suggestions, down from 4 blockers and 12 concerns. The table W1-W13 is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-intent-s5-round2.md` (local).
+- **Correction to §126 Y14:** the approved row does not hold a request in flight at `stop()` plus dispose. It proves the routing by a request after stop plus dispose, on a surviving subscription, that dies on the disposed runtime with one `HARNESS_INTERNAL_FAILURE`. B5 proves the in-flight shape at the `startHarnessRuntime` seam. The designer did not disclose this drift in the revise; it was found by the review (W6).
+- **User decisions:**
+  - W6: "Aceito a versão dele". The approved mechanism stands, recorded with one Developer Context line.
+  - Closing path: "Aplicar sem 3ª ronda". W1-W13 are applied through `/rpiv:revise` with no third intent round. The coordinator checks each item, and the unreviewed delta is a recorded residual. The 3-reviewer candidate review remains ahead.
+- **Coordinator decisions** (technical, disclosed): W1-W5 and W7-W13 as proposed. That includes the W1 B6 row `[registry, observer]` at 3000 ms; the W3 in-flight proof per sample, otherwise the cell is broken; and the W12/W13 residuals.
+- **Final contract approval (user decision, same day):**
+  - The designer applied W1-W13; the brief only adds lines.
+  - Disclosed deviations:
+    - W3 uses the same-turn registry admission;
+    - W10 also stops the listing before timing M-dispose.
+  - The coordinator checked the line map.
+  - The user approved `content_hash 1a915533f3e62e1e7b6aa43576ce2d26fed4ebb206506dda81a1bbcc9a0b8ff3` (approved copy `approved-1a915533f3e62e1e7b6aa43576ce2d26fed4ebb206506dda81a1bbcc9a0b8ff3.md`).
+  - Next: `/rpiv:implement` s5, measurement first, under the coordinator's go.
+
+## 128. #123 s5 opening measurement (decisions, 2026-10-18)
+
+- The measurement is valid: on parent `df16fb7`, at CPU 8/9/1, with the §116 burst. It ran for 9 min 14 s.
+- 1200/1200 samples settled, with 0 bound hits, 0 overlaps and 0 failed bursts. The W3 in-flight proof holds for 400/400 drain samples.
+- Highest p99 values:
+  - listing chain: 397 ms (M-listing-drain burst; max 419 ms), against a limit of 1500;
+  - dispose: 0.58 ms, against a limit of 250.
+- By the half-the-bound rule, D17's 3000 ms budget and the 500 ms dispose deadline stand. The coordinator checked `summary.json`. No user decision was needed. The s5 build proceeds.
+- Disclosed: window 1's logged end is 0.32 s after the burst exited, a log-timing artifact also present in the s3 tool. No sample was affected.
+- **Knip gate on the measurement tool (same day):** `pnpm check:dead-code` reported `effect` as an unlisted dependency of the evidence tool `shutdown-measurement.test.ts`. The root `package.json` does not list it. Knip scans the file system, so this also blocks the slice commit.
+  - **User decision:** "Ignorar as provas". `knip.jsonc` ignores `.rpiv/artifacts/evidence/**`: evidence tools are not product code, and no product path is excluded. This config-only change goes in the evidence commit, with its reason. The tool stays unchanged (sha256 `8820513e…`).
+
+## 129. #105 skipped, coordinator error, and its new place (decisions, 2026-10-18)
+
+- **Coordinator error, disclosed:** the roadmap's phase 2 order (`.rpiv/artifacts/research/2026-10-10_pending-work-roadmap.md:45-50`) is #99, then #105 (TypeScript 7 and the Effect language service: toolchain compatibility, a curated `diagnosticSeverity` set, violation counts, `effect-tsgo diagnostics` in the gates, and a go/no-go report), then #123. After #99 the coordinator went straight to #123, without asking the user and without a record. The user noticed it. As a result, the code of Part A s1-s4 was not checked against the curated Effect diagnostics.
+- **User decision:** "#105 a seguir à parte 5". s5 finishes as approved. Before s6, #105 produces its go/no-go report, and the chosen diagnostics are applied to the Part A code, so Part A is checked before it integrates into main.
+
+## 130. #123 s5 candidate frozen (decisions, 2026-10-18)
+
+- Candidate `1ab1762` (parent `f7c11a5`; apps patch `96d47b9212889e53`):
+  - Every Expected red matched, and the bindings were restored by digest.
+  - The B3/B4 attempt-1 fixture fault was disclosed and not counted.
+  - Gates are green: 3111/3111, check:dead-code 0, CodeScene 10 on every changed file.
+- **Coordinator decisions** (technical, disclosed):
+  - Preflight finding `no-test-line: U2B-HR-B2`: the B2 block uses "Tests:" with sub-bullets. The designer fixes the label format only, with no semantic change, through `/rpiv:revise`. Because append-only reopens, the user re-approves the hash.
+  - The designer adds the Developer Context "Implementation (u2b-s5-harness-runtime)" pointer.
+  - Heavy runs now, at CPU 1/2/3, one at a time, while the designer edits only the document:
+    - the integration, registration and native-long suites;
+    - `package:launch-smoke`.
+  - The candidate review (3 reviewers) comes after the heavy runs and the preflight fix. The scoped mutation runs last.
+- **Format re-approval (user decision, same day):**
+  - The B2 "Tests:" block became two "Test:" lines with the same text, and one observer path moved its line range outside the backticks. These are format-only changes; the coordinator checked the diff. The Implementation pointer and the Follow-up are appended.
+  - The slice preflight on `f7c11a5..1ab1762` is clean.
+  - The user re-approved `content_hash 94e1f491b480658fe64f3d95416e97a92fdab3dd391df2b88569880aa3b9ac59` (approved copy `approved-94e1f491b480658fe64f3d95416e97a92fdab3dd391df2b88569880aa3b9ac59.md`).
+- **Heavy runs on `1ab1762` (same day):**
+  - Passed: integration 696 (+3 env-gated skips), registration 238/238, native-long 1133/1133.
+  - `pnpm package:launch-smoke` failed in 1.2 s with "Packaged SlopStop smoke failed.". The likely cause is that the `slopstop-123` worktree has no packaged app (`apps/desktop/out` is absent), and launch-smoke tests an existing package without building one.
+  - **Coordinator decision** (disclosed): this is a wrong-command fault from the coordinator's go, not a product failure, so it is not a rerun to chase a green.
+    - First, one diagnostic run of launch-smoke with `CI=true` (about 1 s), to read the failing stage.
+    - If the stage is "package preflight", run `pnpm package:smoke`, which packages from `1ab1762` and then runs the same smoke, as the intended proof.
+    - Any other stage, or any failure of `package:smoke`, comes to the user.
+- **Launch-smoke diagnostic (same day):**
+  - `CI=true` showed "failed at package isolation". The code confirms the cause (`package-smoke.mjs:229-245`): `isolatePackagedOutput` renames `out/SlopStop-win32-x64`, which is absent in the worktree. So the package is missing, under a stage name the coordinator's condition did not name.
+  - **Coordinator decision:** the cause is the same, so `pnpm package:smoke` runs, with the go.
+  - Finding: `isolatePackagedOutput` creates its temp dir before the rename and never removes it on failure. That explains the unknown folder `slopstop-packaged-app-LIC0GZ` (2026-10-09, empty) and two new empty ones from today (`-aglYRR`, `-CScyXY`). Recorded as a test-tool defect for a follow-up.
+- **package:smoke and cleanup (same day):**
+  - `pnpm package:smoke` on `1ab1762` passed (exit 0, 60 s), with no tracked changes. All s5 heavy runs are green, except the scoped mutation, which runs last.
+  - **User decision:** "Apaga as três". The coordinator removed the three empty `slopstop-packaged-app-*` dirs with `rmdir` (which refuses non-empty dirs).
+  - Next: the s5 candidate review, round 1 (3 reviewers).
+
+## 131. #123 s5 candidate review round 1 (decisions, 2026-10-18)
+
+- Round 1 on `1ab1762`: 2 blockers, both technical. Every red and binding is confirmed, as are the static checks, the as-built W items, the heavy runs and the Effect rules. The table Z1-Z9 is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-candidate-s5-round1.md` (local).
+- **User decisions:**
+  - Z4: "Registar como risco". The interrupted-program path drops the other failures and skips `withhold`, so the safety net may close the database after a failed Storage stop. Nothing in production interrupts the stop program. This is recorded as a residual, revisited if that changes.
+  - Z5: "Reescrever a linha". The equivalent mutant at `registration-listing.ts:60` is removed by restructuring, so P-S5-3 stays intact.
+  - Z6: "Converter para Effect". The observer `settleClose` facade is removed, because its caller is now an Effect (AGENTS.md; §103 point 4). This reverses the coordinator's T-S5-G.
+- **Coordinator decisions** (technical, disclosed):
+  - Z1: add a B1 row with no listing, a Storage stop that never settles, and dispose. It rejects, with a binding on the global `runFork` at :443.
+  - Z2: complete from `Fiber.await` outside the provided effect, so a first `stop()` after `runtime.dispose()` settles; plus one row.
+  - Z3: B6 asserts that `ownerClose` is called synchronously, with a `yieldNow` binding.
+  - Z7: the listing range covers the helpers at :18-82, and the s3 entries are re-resolved.
+  - Z8: the W3 in-flight flag could never fail. This is a residual on §128; the bounds hold.
+  - Z9: logs for every gate on the new candidate, including duplicates, the final unit run bound to the final tree, and the saved clean preflight.
+  - The test additions go through `/rpiv:revise`, and the user approves the new hash before the build. Then the new candidate, light gates, round 2 (the last), and the mutation.
+  - The heavy suites rerun on the new candidate only if production code beyond the Z2/Z5/Z6 changes demands it. The coordinator decides that from the diff before the go.
+- **Revised contract approval (user decision, same day):**
+  - The designer applied §131, adding lines only.
+  - Deviation 1 was disclosed to the user: the Promise `close()` stays only for test callers (52 sites in 20 files, no production caller), with a removal trigger.
+  - Deviations 2-4 are accepted by the coordinator:
+    - after an interrupted close, a re-entry answers pending-recovery;
+    - Z1 and Z3 are pins with bindings;
+    - the Z2 oracle matches the "ManagedRuntime disposed" text.
+  - The user approved `content_hash 4057f6d14ef30210d4aedd9094ef6b3d756f5e0a40b4092e1ab6064780aaf735` ("Aprovo assim"; approved copy `approved-4057f6d14ef30210d4aedd9094ef6b3d756f5e0a40b4092e1ab6064780aaf735.md`).
+  - **Coordinator decision** (Z9 heavy runs): Z2, Z5 and Z6 change the listing chain, the observer close and the process stop. So the integration, registration and native-long suites and `package:smoke` all rerun once on the new candidate, before round 2. The mutation runs after round 2.
+
+## 132. #123 s5 candidate review round 2 (decisions, 2026-10-18)
+
+- **Fix candidate verified (coordinator):**
+  - `a17a2ac` is the candidate; `d48cb47` adds only the Z9 gate logs, and the apps diff between them is empty.
+  - Heavy runs on it all passed: integration 696 passed with 3 skipped, registration 238, native-long 1133, and `package:smoke`. The t7 logs are in `.rpiv/artifacts/evidence/2026-10-18_123-s5-r1/t7/`, still untracked.
+- **Round 2 (the last, 3 reviewers):** table `review-candidate-s5-round2.md` (sha256 d43122d9…).
+  - No blockers.
+  - Z1, Z2, Z3, Z5, Z6 and Z9 are resolved. Z4 and Z8 are residuals and were not worsened.
+  - The flow fixture `project-registration-flow.test.ts:54`, which the brief did not list, is accepted, and it is named in the acceptance record (V7).
+- **User decisions:**
+  - V1: the explicit `concurrency: "unbounded"` in `settleClose` produces 2 equivalent mutants. The work promises are already running, so awaiting them in sequence gives the same result. "Tirar a opção + comentário": drop the option and add an AGENTS.md:69 exception comment, as with s4 X3 (§124).
+  - V2: re-entry after a successful close was unpinned. "Acrescentar teste leve": add a test-only pin row with a binding against `Exit.isSuccess` → false.
+  - V3: a `stop()` first called after dispose leaves an unhandled rejection, which is fatal at process-entry:108. It is unreachable via `launchOnProcessRuntime` and existed already at `1ab1762`. "Corrigir já": an eager settle in `startStop` plus a row. This is a production change after the round cap, without review.
+- **Coordinator decisions:**
+  - V5: the Z2 oracle becomes `toBe('ManagedRuntime disposed')`.
+  - V6: assert that the interrupted closing fiber exits by interruption only.
+  - V5 and V6 bundle with V2.
+  - V4 (Weakened: the closeEffect side effects run before `onExit` is installed) is a residual. Fix it with `uninterruptibleMask` in the next slice that touches the observer.
+  - Diagnostics:
+    - commit the t7 logs before acceptance;
+    - correct the evidence count for the Z6 scaffold (6 unit files, not 7);
+    - mark codescene.log as a hand summary;
+    - record the command line for unit-set.log.
+  - Path: the designer revises the brief through `/rpiv:revise`. The user approves the new hash. The implementer builds the new candidate with red/binding rows and light gates. There is no third round: the delta (V1, V3 production; V2, V5, V6 tests) is recorded as unreviewed, as in §127.
+  - V3 touches the process stop, so `package:smoke` and the registration suite rerun once on the final candidate. Then the scoped mutation.
+- **Revised contract approval (user decision, same day):**
+  - The designer applied §132, adding lines only; the coordinator checked it with append-only against `approved-4057f6d1…`.
+  - Deviation 1 was disclosed to the user: V3 removes the unhandled rejection, but on that path the canonical stop's outcome is still not reported. That stays in the Z4 residual.
+  - Deviations 2-4 are accepted by the coordinator:
+    - the V3 red may be Vitest's failing run;
+    - V5 and V6 are pins, and V6 has no binding;
+    - the heavy runs are `package:smoke` and the registration suite only.
+  - The user approved `content_hash 394f724bd7735d7dc4b1cd5b571b9deeb1f4315f825fb2ff721149f5837fef77` ("Aprovo"; approved copy `approved-394f724b….md`).
+- **Round-2 candidate verified (coordinator):**
+  - `d38d9a3` is the candidate; `616ba41` adds only gate logs, and the apps diff between them is empty.
+  - The production diff matches design point 14: `settleClose` has no `concurrency` and carries the exception comment, and `startStop` settles in the caller's turn.
+  - Light gates are clean, and the preflight `f7c11a5..d38d9a3` is clean.
+  - Heavy runs both passed: registration 238/238 and `package:smoke`. The logs are in `.rpiv/artifacts/evidence/2026-10-18_123-s5-r2/t7/`, still untracked.
+  - The implementer disclosed that the first V3 red attempt was a fixture fault: a `vi.fn` stop handles its own promise. It was not counted. The red was then shown with a plain counting function.
+- **Mutation (user decision):** "Arranca agora". The scoped mutation runs once on `d38d9a3`, with the ranges re-resolved per Z7. It starts after 3 CPU readings under 30%, runs alone, and uses backups. Every mutant must be killed and nothing is pre-registered.
+- **Scoped mutation on `d38d9a3` (commit `de9966a`, score 98.30):**
+  - 173 killed, 1 survived, 2 NoCoverage, 0 timeout, 2 ignored (the pre-registered tags). P-S5-3 is not met.
+  - Survived: `harness-runtime.ts:344` `Exit.isSuccess(exit)` forced true in the registration edge.
+  - NoCoverage: `:438-439`, the catch that collects a throwing `stopNotifications()` into `intakeFailures`.
+  - Coordinator acceptance: the report copies are stored as `.json.txt` and `.html.txt` so that Biome does not format or lint evidence files. Their bytes are unchanged, and no code gate is weakened.
+- **User decision:** "Acrescentar 2 testes leves" (test-only).
+  - One row kills the `:344` survivor, for example a registration that fails or is interrupted while the transport sees the exact expected reply.
+  - One row covers a throwing workspace unsubscribe, which must appear among the stop failures.
+  - Each row gets a binding against the exact mutant, restored by digest.
+  - The brief is revised through `/rpiv:revise` and the user approves the hash.
+  - Then the mutation reruns scoped to `harness-runtime.ts` 335-351 and 425-446 only, with the coordinator's CPU go. Every mutant must be killed.
+  - No third round: the test delta is recorded as unreviewed, as in §127.
+- **Mutation follow-up contract (user decision, same day):**
+  - The designer added rows M1 and M2, adding lines only. The coordinator checked it with append-only against `approved-394f724b…`.
+  - M1:
+    - the dispose row re-asserts that nothing was sent after the existing `nextTurn`;
+    - the internal-failure reply pins `sequence: 1`;
+    - the binding is against `:344` forced true.
+  - M2: a throwing workspace unsubscribe makes `stop()` reject with that failure. The binding is against both mutants, at `:438` and `:439`.
+  - Deviations accepted by the coordinator:
+    - the M1 `sequence: 1` pin goes beyond the named case;
+    - M1 and M2 are pins with bindings, not reds;
+    - there are no heavy reruns, because the change is test-only.
+  - The user approved `content_hash b5fe4a70bbdb86d83b150232ebb8d6f06b4966ecc99b170217755374f0ccbdcf` ("Aprovo"; approved copy `approved-b5fe4a70….md`).
+- **Mutation rerun on `cef7554` (commit `1c33122`, test-only M1/M2, score 100.00):**
+  - 32 killed, 1 Timeout, 0 survived, 0 NoCoverage.
+  - The Timeout is `:345` `sendResult(exit.value)` removed. The "handle succeeds" row waits for a reply that never comes. In the `d38d9a3` run the same mutant was Killed.
+  - **Coordinator decision:** count the Timeout as detected. Stryker counts it so, and the test did notice the missing reply. This was disclosed to the user.
+
+## 133. #123 s5 acceptance and the start of #105 (decisions, 2026-10-18)
+
+- **s5 acceptance (user decision):** "Aceito". s5 is accepted at `cef7554`, with the evidence up to `1c33122`. The named residuals:
+  - Z4, extended by V3: on the never-run path the canonical stop's outcome is not reported;
+  - Z8;
+  - V4: `uninterruptibleMask` in the next slice that touches the observer;
+  - the unreviewed post-cap delta: V1 and V3 in production; V2, V5, V6, M1 and M2 in tests;
+  - the fixture `project-registration-flow.test.ts:54` (V7);
+  - the fiber-ordering residual carried from s4.
+  - s5 stays on the branch and goes to main with the rest of Part A.
+- **Next item (user decision, per §129):** "Sim, #105 agora", before s6. The designer researches TS 7 and the Effect tsgo LSP configuration (roadmap Phase 2 item 2) and writes a go/no-go report. Research only: no code change and no toolchain switch. Heavy commands need the coordinator's go.
