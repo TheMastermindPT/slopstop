@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 210734cd96da7e1670cc6f401347660b0031806a8fb0b2c42fe644756ed437ce
+content_hash: a04a747ef9345b50011355d13984f76a32224d80c6b9918d0c1249e06cd1997a
 ---
 
 # Conversation — Human Decisions
@@ -1153,3 +1153,63 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - the designer restamps the brief;
   - the coordinator commits the decisions log on main.
   Next: s4.
+
+## 122. #123 s4 contract (decisions, 2026-10-18)
+
+- The designer restamped the brief after the s3 acceptance (`6133702…`, append-only keep against `523fff74…`), then detailed `u2b-s4-standalone-authority` (normal lane). The s4 block adds lines only. There is no product reach: production always injects the authority (`process-bootstrap.ts:209-215`).
+- **User decisions:**
+  - Approved the s4 contract (`content_hash 3f8bf65de896312b5d7b962db68c1f938c920ce33f3b4ceb7b4e52cec1e0991d`; approved copy `approved-3f8bf65de896312b5d7b962db68c1f938c920ce33f3b4ceb7b4e52cec1e0991d.md`).
+  - P-M: the combined normal-slice mutation run passes only when every counted mutant is killed. There are no pre-registered s4 survivors; any survivor stops the run and comes to the user.
+- **Coordinator decisions** (technical, disclosed):
+  - T-A: an unconfirmed close surfaces inside the registry's existing `AggregateError`.
+  - T-B: the WeakMap entry is removed after the stop settles.
+  - T-C: no `closeDeadlineMs` on the registration options.
+  - T-D: a new unit seam with no disk.
+  - T-E: the heavy run is the whole registration suite, once, with the coordinator's go.
+  - T-F: the pending-then-database order is a static check at candidate review.
+
+## 123. #123 s4 candidate and the redundant injected check (decisions, 2026-10-18)
+
+- Candidate `509b205` on `95ba184`: one slice commit. B1-B3 were red then green in the contract's order, and the binding observation R (removal before stop) fails as expected. The kept pins pass. Gates are green: check 3080/3080, check:dead-code 0, CodeScene 10.
+- Implementer finding: the injected check in `stopStandaloneAuthority` (`registry-database.ts:81`) is redundant. `applicationDatabaseFor` never stores an injected authority in the WeakMap, so the map miss already returns. Deleting it (I1) stays green, so its mutants are equivalent, and P-M (§122) allows no pre-registered survivors. I2, a release that treats the injected authority as its own, fails both B3 rows, so B3 still binds the behaviour.
+- **Coordinator decision** (technical, disclosed; the user may contest it): delete the redundant check instead of pre-registering survivors, which keeps the user's P-M rule intact. Behaviour is unchanged. Design point 6 still holds, because the release never stops, awaits or touches an injected authority, and B3 with I2 proves it.
+  - The same scan applies to the `standaloneAuthorities.get(options) === authority` guard at :89. If nothing can replace the entry during the stop, its mutants are also equivalent, and the guard is removed the same way. The implementer confirms this with a binding observation.
+  - The fix is a new commit (no amend). The brief gets a Developer Context line recording it. Then the gates, then the whole registration suite with the coordinator's go.
+- **Fix candidate (same day):**
+  - `f1ffe93` on `509b205` removes the redundant injected check and simplifies the removal guard to an unconditional delete.
+  - The unconditional-delete binding stays green. A probe of concurrent `registry.stop()` calls found no path that replaces the entry. Residual: this rests on the observed Effect fiber ordering.
+  - I2' and R' still fail as expected. Gates are green: 3080/3080.
+  - The whole registration suite on `f1ffe93` passed: 238/238, 215 s, at CPU 11/13/21.
+- **Re-scan findings:**
+  - M1 and M2: the `concurrency` option in `stop`'s `forEach` gives equivalent mutants. **Coordinator decision:** drop the option (the default is sequential, with the same results and order for in-flight admissions).
+  - M3 and M4: `stopped = true` is not covered inside the mutation include. **User decision:** "Acrescentar teste leve". This adds a unit pin row through `/rpiv:revise`: registry work after `stop()` rejects with "Registration registry is stopped.". The user approves the new hash before the build.
+  - The suite result goes into the next evidence-only commit. The registration suite is rerun on the final candidate only if a production line other than the `forEach` option changes.
+- **Contract addition approval (user decision, same day):** the s4 pin row `refuses registry work after stop` (`hasUnsettled()` after stop rejects with "Registration registry is stopped."; binding against M3 and M4) and the Follow-up recording §123. The user approved `content_hash 9051298c8095574234ae1a95abb1ee798dd54991f518eff41f3c2b71eae326f2` (approved copy `approved-9051298c8095574234ae1a95abb1ee798dd54991f518eff41f3c2b71eae326f2.md`).
+- **Final s4 candidate (same day):**
+  - `a664b19` on `f1ffe93` adds the pin row (the M3 and M4 bindings fail at :207 as expected) and drops the `forEach` concurrency option. That option is the only production line change, so the registration suite is not rerun.
+  - The `f1ffe93` suite log is committed in `.rpiv/artifacts/evidence/2026-10-18_123-s4-registration/`.
+  - Gates are green: 3081/3081, check:dead-code 0, CodeScene 10.
+  - Next: the slice-verifier in candidate mode (normal lane). The combined mutation comes at the end of Part A.
+
+## 124. #123 s4 candidate review round 1 (decisions, 2026-10-18)
+
+- Slice-verifier round 1 on `a664b19` (normal lane): the gate failed. The table X1-X4 is in `.rpiv/evidence/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a/review-candidate-s4-round1.md` (local). T-F is satisfied statically, the `forEach` drop preserves behaviour, and DP6 holds.
+- **User decisions:**
+  - X1: "Mais um teste leve". The `stop` drain (:185-187) has no unit row with an admission in flight, so its mutants would survive or show NoCoverage. A new off-disk unit pin row calls `hasUnsettled()` and `stop()` in the same turn: `stop` waits for the admission, and its failure is `errors[0]` before any database failure. This also makes T-F executable. It goes through `/rpiv:revise`, and the user approves the new hash.
+  - X3: "Exceção com comentário". The `stop` drain keeps no explicit `concurrency`. That is a recorded exception to AGENTS.md:69: the loop only awaits admissions that are already running and launches no new work, and an explicit option would be an equivalent mutant against P-M. A code comment states why.
+- **Coordinator decisions** (technical, disclosed):
+  - X2: rerun the injected-authority integration file (about 4 s) on the final candidate, and record it and the final gates in the evidence.
+  - X4: three commits instead of one per slice is an accepted deviation, as in s3.
+- **Contract addition approval (same day):**
+  - The X1 pin row holds a lease, stops the authority directly, then calls `hasUnsettled()` and `registry.stop()` in the same turn. The `AggregateError` has `errors` [admission rejection, unconfirmed close]. Its bindings are `[...pending.values()] -> []` and the callback mutant.
+  - **Coordinator decision** (test classification, disclosed): the row stays a unit test. Its only file-system contact is a read-only `lstat` of a temporary path that does not exist, with no create, open or write. This is consistent with s3 B6.
+  - The user approved `content_hash 4ed6baee86bd8874225ebaa62e1f27de67aad03e834d25c11b642a07045fcf07` (approved copy `approved-4ed6baee86bd8874225ebaa62e1f27de67aad03e834d25c11b642a07045fcf07.md`).
+- **Fix candidate (same day):** `62bd010` on `a664b19` adds the in-flight admission row. Both bindings fail: the callback mutant fails one assertion earlier than the brief's wording. It also adds the X3 comment, the only production change, so there is no registration rerun. The X2 integration file passed 2/2 on the final tree. Gates are green: 3082/3082, knip clean, CodeScene 10. Next: slice-verifier round 2 (the last).
+- **Round 2 (the last, same day):**
+  - The slice-verifier found 0 blockers on `62bd010`. X1-X4 are resolved, and both drain mutants are killed. The `:223` wording difference does not matter.
+  - The table is in `review-candidate-s4-round2.md` (local).
+  - **Coordinator decisions** (technical, disclosed):
+    - W1: the X3 code comment drops its bare `(§124)` reference, because its rationale stands on its own. This is a comment-only delta, unreviewed, made in the next commit.
+    - W2: a `code_health_score` for `registry-database.ts` goes into the next evidence commit.
+    - `registration-registry.test.ts` joins the mutation include, and the drain range is re-resolved at the combined run.
+  - s4 is complete. As a normal-lane slice, it is accepted with the combined Part A result. Next: s5 (rigorous).
