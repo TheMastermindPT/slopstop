@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: a7616b980c4f59b332c6778a6c25455001610cc756fbf106f5837bab7a5a83c8
+content_hash: f674852b83b79358c9d2029bb53cdef3b1ebf336bf6e0ae66feb4087c89907cc
 ---
 
 # Conversation — Human Decisions
@@ -1591,3 +1591,63 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - The designer added the "Fix round 1" rows for K1-K6, K8-K13 and K15, plus the Follow-up K7, K14 and K15, adding lines only. The coordinator checked it with append-only.
   - The user approved `content_hash 491da0ba44603a2d0853cbf5b507bf20f675f033e2320078ffe9dd8d6db0de67` ("Aprovo"; approved copy `approved-491da0ba….md`).
   - The implementer builds the fix candidate on `feeab30`. Then e2e and `package:smoke` run with the coordinator's go, followed by the confirming round 2 and the mutation.
+- **s6 fix candidate `34641bc` (tree `9e4a4814`; evidence `b4fc9ed`), verified by the coordinator:**
+  - Reds: K10, K1, K9 and K2 (`AsyncFiberError`), each then green. Pins: K4, K3 and the logger-failure identity. K5 and K12 fixes, K11 TSDoc, K8. Every test-line change matches a brief row; no oracle was weakened.
+  - K13: a second `Effect.callback` resume is ignored (`effect/src/internal/effect.ts:1167-1168`), so both `settled` guards were removed. The B7 pins stay green, and the timer binding still fails.
+  - K15: all 10 bindings were re-run on tree `9e4a4814`; each failed as required and was restored by blob and tree.
+  - Gates: `pnpm check` (3206 tests; `check:effect` 50 advisory, the same as the base), typecheck, dead-code, duplicates, CodeScene 10 on every changed file. Heavy runs, each alone after 3 CPU readings under 30%: e2e 27/27 (4.9 min), then `package:smoke` exit 0. No timeout and no Defender alert.
+  - Disclosures, which go to round 2:
+    - K2: the owners scope is forked from `runtime.scope`, inside `Layer.suspend`.
+    - K10: the `servicesAtShutdown` snapshot.
+    - A round-1 fixture leak in the B2 main row was fixed with `mockImplementationOnce`.
+    - Round 1 recorded CodeScene 10.0 for `canonical-writer-package-smoke-main.test.ts`, but that file actually scored 9.68. The test was restructured and now scores 10.
+  - **Coordinator decision:** the confirming round 2 started (CPU 12/3/15%, nothing heavy running).
+- **s6 candidate review, round 2** (the confirming round; table `review-candidate-s6-round2.md`; claim-verifier: R1-R10 all Verified):
+  - Verdict FAILED, with 1 blocker (L3) and 1 Decisions violation (L1). Cross-slice is OK. There are no regressions; s1-s5b are untouched.
+  - L1 is a defect the fix introduced: at `desktop-shutdown.ts:108-111` a throwing `reportFailure` skips `exit(1)` after `preventDefault`, so quit hangs. The coordinator confirmed this in the source.
+  - L3: K16 cannot pass with the current Stryker ranges.
+  - The other findings are L2 and L4-L11, all local.
+- **User decisions at the cap (2026-10-19):**
+  - "Mais uma ronda curta": one more fix round for L1-L11, with red-green rows. After it comes a short confirming review limited to those rows.
+  - L3 (a): one mutate range `canonical-writer-package-smoke.ts:300-339`, with `// Stryker disable/restore` around the canceler `:333-337` (J7). The "all killed" rule stays.
+  - L1's new row and L4's assertion change go into the brief through revise, adding lines only, and the user approves the hash.
+- **s6 fix-round-2 contract (user decision, 2026-10-19):**
+  - The designer added the "Fix round 2" rows for L1-L11, adding lines only; append-only reports `reopen`.
+    - L4 changes an assertion: the B1 main row now asserts the bridge-stop order.
+    - L2, L7 and L11 strengthen assertions. Nothing is relaxed.
+  - The short confirming review uses the slice-verifier and the coverage reviewer, on the incremental diff only. The code reviewer is not run. e2e and `package:smoke` do not rerun, because L1 touches only the failure branch of `finish`.
+  - The user approved `content_hash c006beb3f63a8b60d936ea6300def478b8056ab601be10d1fca852131ebf6bec` ("Aprovo"; approved copy `approved-c006beb3….md`, which append-only checks as `keep`). `34641bc` is no longer the final candidate.
+  - **Correction (L9):** the K13 entry above cites `effect/src/internal/effect.ts:1167-1168`. The correct lines are `:1169-1170`, the `if (resumed) return` / `resumed = true` guard in effect 4.0.0. This log is append-only, so the correction is recorded here and the original line stays unedited.
+- **s6 L1 implementation choice (coordinator decision, 2026-10-19; the user may contest it):**
+  - With the contract's exact `try { report } finally { exit(1) }`, the report's error is rethrown after `exit(1)`. `beforeQuit` calls `void finish()`, so the rejection is unhandled (`l1-green-attempt1.log`).
+  - Chosen: (a) `try { report } catch { } finally { exit(1) }`, with a comment saying that a failing reporter has no further channel. The row and its assertions stay as contracted.
+  - Why: exit code 1 already marks the failure, so degrade-distinguishes-broken holds, and a throwing reporter cannot report itself.
+  - Rejected:
+    - (b) a rejection handler at the callers: the same effect, spread over two places.
+    - (c) a test-side `unhandledRejection` expectation: it accepts an unhandled rejection in production.
+  - This deviation from the contract's literal code goes into the fix evidence and the short review.
+- **s6 fix-round-2 candidate `01280f1` (tree `5b696627`; evidence `1688a16`), verified by the coordinator:**
+  - L1 is red at `34641bc`, then green with choice (a), with no unhandled error.
+  - L4 is the stated assertion change: the B1 main row asserts the full order storage, workspace, entry, harness, dispose.
+    - Its binding differs a little from the brief's wording: the entry stop is missing from the filtered order instead of coming after harness. The effect is the same.
+  - L2, L7 and L11 are pins.
+  - The removed test lines are each replaced by a stronger assertion.
+  - Stryker uses one range `:300-341`, two lines longer than 300-339 because of the directive lines, with disable/restore around the canceler. `project-entry-bridge.ts:79` is added.
+  - All 14 bindings were restored by blob and tree.
+  - Gates: `pnpm check` (3207 tests), typecheck, dead-code, duplicates, CodeScene 10. No e2e or smoke, as approved.
+  - The short review waits: the CPU was at 61/31/51%, then 100%, with other applications running.
+- **s6 short confirming review** (`review-candidate-s6-round3-short.md`; slice-verifier and coverage reviewer; claim-verifier: W1-W5 and L9 Verified):
+  - All 11 L rows are resolved. There is no product defect, and Decisions and Cross-slice are OK.
+  - F1, F2 and F3 are accepted.
+  - M1 is a blocker on the mutation gate only. Because of the empty catch, the `reportFailure?.` OptionalChaining mutant at `desktop-shutdown.ts:112` became equivalent.
+  - The notes M2-M7:
+    - M2: the trailing `restore all` is never applied. It is harmless.
+    - M3: K16 is read at the run with the current line numbers, and the J7 mutants are reported as Ignored.
+    - M4: a stale TSDoc clause.
+    - M5: when the reporter throws, both errors leave no trace beyond `exit(1)`.
+    - M6: the log entries were not yet committed.
+    - M7: the brief's L1 text still says try/finally.
+- **User decisions (2026-10-19):**
+  - F1 is ratified: choice (a) for L1 stands.
+  - M1 (b): `reportFailure` becomes required, which removes the equivalent mutant through restructuring (the standing rule). The small change runs the light gates and is not reviewed again; that is a named residual.
+  - M5 is accepted as a residual and is named at the s6 acceptance.

@@ -7,9 +7,9 @@ repository: slopstop
 topic: "Pending-work inventory and roadmap reference point"
 tags: [roadmap, inventory, pending-work, deferred]
 status: complete
-last_updated: 2026-10-10T09:00:00+0100
+last_updated: 2026-10-19T14:40:00+0100
 last_updated_by: coordenador-claude
-content_hash: eaa1a8763fb5c010b810a84df69a9ca66066699af89ec2a93c15cdb7afcdd461
+content_hash: bd93c7aa002407d2f2e4e4a80fbb843b15e6dfcb92fd541bea1929a8c40419c4
 ---
 
 # Pending-work inventory and roadmap reference point (2026-10-10)
@@ -27,29 +27,38 @@ content_hash: eaa1a8763fb5c010b810a84df69a9ca66066699af89ec2a93c15cdb7afcdd461
 
 ## Ordered roadmap
 
-Revision 2 (2026-10-10), after an adversarial completeness and ordering review. Each phase starts when the previous one is done unless marked "in parallel"; reasons are in brackets. Sections 3-7 hold the detail and sources. ADR line numbers refer to the files after commits d601e5b and e44236d.
+Revision 2 (2026-10-10), after an adversarial completeness and ordering review; status refreshed on 2026-10-19 (revision 3). Each phase starts when the previous one is done unless marked "in parallel"; reasons are in brackets. Sections 3-7 hold the detail and sources. ADR line numbers refer to the files after commits d601e5b and e44236d.
 
-### Phase 0 — now (in progress)
+**Where we are (2026-10-19):** Phases 0 and 1 are done. Phase 2: #99 and the #105 research are done; #123 Part A is in progress at s6 (branch `refactor/123-effect-lifecycle-part-a`, worktree `slopstop-123`). Local main is 32 commits ahead of origin; the push waits for the user (DL §87, §101).
+
+### Phase 0 — done
 1. **Done 2026-10-10:** C1 S1 + S2 squash-merged to local main as `ba4e15b` after review rounds 1-2 and a user-approved bounded round 3 (DL §32); final-head proof on ac6569c. The real `userData` was backed up first to `%APPDATA%SlopStop-backup-2026-10-10` (67 files, hashes verified).
 2. **Documentation consistency:** done on 2026-10-10 (d601e5b section-7 corrections, e44236d Strand/Weave sweep; prototypes and Figma by the ui-ux agent). Remaining: the #1 map paragraph.
-3. **GitHub issues** for untracked items (see "Issues created").
+3. **Done 2026-10-10:** GitHub issues for untracked items (see "Issues created").
 4. **Done 2026-10-10:** main pushed (origin/main 7a1b041) on the second attempt; the first failed on #94 registration timeouts under load (push-main-7), the retry on an idle machine passed (push-main-8). The C1 branch and worktree were deleted.
-5. **In parallel with phases 0-1: #94** timeouts under load [S2-S5 all need e2e and launch-smoke runs].
+5. **Done 2026-10-11: #94** timeouts under load, squash-merged as `f45de07` after its final `check:deep` (DL §53).
 
-### Phase 1 — finish Conversation C1
-1. **Done 2026-10-10:** S3 squash-merged to local main as `34b7477` (rounds 1-2 plus a bounded round 3, DL §40-§41; #102 fixed inside it). Original plan: **S3** protocol v8, coordinator admission, runtime; the dedicated `WRITER_CLIENT_ABANDON_FAILED` code (6a); read-after-abandonment routing (U2, CNV-B13). **Fix #102 inside S3** [S3 rewrites the runtime routing in `process-bootstrap.ts`, the file behind #102].
-2. **S4** bridge, IPC, preload, renderer. Proposal, user decides at S4: build it in React from the prototypes. This is the user's "Conversation to React right after C1" (DL:348) without doing the screen twice.
-3. **S5** the real-app journey.
-4. **Close-out:** split `project-storage-node-adapters.ts` (CodeScene waiver, DL:68); review the carried C1-gate items with triggers (C1D:691-697: `project.upgrade` admission checks, F9 listing concurrency, G2 IPC failure proof, desktop diagnostics, `process-entry` log link, generation-cap semantics).
+### Phase 1 — Conversation C1, done
+1. **Done 2026-10-10:** S3 squash-merged to local main as `34b7477` (rounds 1-2 plus a bounded round 3, DL §40-§41; #102 fixed inside it): protocol v8, coordinator admission, runtime; `WRITER_CLIENT_ABANDON_FAILED` (6a); read-after-abandonment routing (U2, CNV-B13).
+2. **Done 2026-10-15:** S4 bridge, IPC, preload, renderer, built in React (`c8a72d1`, pushed; #108 and #130 closed; DL §51-§65). The bridge kept its Promise core as the temporary G28 exception, which ends in #123 Part A (DL §46).
+3. **Done 2026-10-15:** S5 the real-app journey (`67f59fc`, plus the e2e race fix `8fcee45`; DL §66-§72).
+4. **Close-out, done 2026-10-16:** #110 split of `project-storage-node-adapters.ts` (`ff162f5`, DL §73-§87). The C1-gate carry-forward review (DL §88) moved the nine deferred rows and the licence check to **#134**, and opened **#133** (log a successful upgrade, prove the harness-to-desktop log link in the real app). The multi-process storage survey opened **#135** (DL §89).
 
-### Phase 2 — right after C1
-[The user decided the #99 interview starts when C1 is done; the foundations below come before C2 because C2's streaming and cancellation are heavy Effect code.]
-1. **#99 interview** continuation (Supervisor and dialogue details; agent-coordination FRD:187-189). Also on its agenda (user, 2026-10-11): memories depend only on Evidence (ADR 0017), so a superseded decision never marks a dependent memory stale, and repository text that repeats a decision (ADRs, PRODUCT.md, AGENTS.md) is not tracked; discuss decision-dependent memory staleness and a list of documents that echo each decision.
-2. **#105 TypeScript 7 and the Effect language service** (about 2-4 hours, mostly machine time): toolchain compatibility (Vite, Vitest, Electron Forge, Biome, knip, dependency-cruiser, Stryker, drizzle-kit, typecheck scripts), option and behaviour changes, build speed, Forge/Drizzle lib-check warnings (#35); `effect-tsgo diagnostics` in the gates; the **Effect tsgo LSP server configuration**: a curated `diagnosticSeverity` set (candidates newPromise, runEffectInsideEffect, globalErrorInEffectFailure, unknownInEffectCatch, tryCatchInEffectGen, multipleEffectProvide, leakingRequirements, scopeInLayerEffect, schemaNumber), plugin options and a count of current violations (today `tsconfig.base.json` has only the minimal plugin entry). Go/no-go report with migration and rollback; a go becomes a normal slice. Until then `pnpm typecheck` (TS 6.0.2) is authoritative.
-3. **Effect unit 2b runtime and lifecycle, including the desktop bridge (G28 exception ends here, DL §46; must land before C2)** (`evidence/2026-10-03_effect-unit2-lifecycle-plan.md`; ADR 0001:126): one `ManagedRuntime` per process, services and Layers, shutdown sequencing; with **#96** (late harness log lines on quit).
-4. **SQL-to-Effect pass** for existing storage code [its prerequisites, the `claude -p` prototype and the cost analysis, were done on 2026-10-04].
-5. **#95, #97** C1-0 residuals.
-6. **Runtime-database cleanup (#93, after #105 and #123, before any new feature; user 2026-10-11, DL §55):** with Mastra withdrawn, decide whether a runtime database is still needed, then rename or remove `mastra.db` and `mastraMigrationHead` with a storage upgrade, red-green and review.
+### Phase 2 — after C1, before C2 (in progress)
+[The foundations come before C2 because C2's streaming and cancellation are heavy Effect code.]
+1. **Done 2026-10-16: #99 interview** continuation: phase 2 dialogue and decision staleness (FRD `discover/2026-10-16_16-32-45_cross-waypoint-dialogue-and-decision-staleness.md`, DL §90-§101; ADR amendments accepted). Still open from it: where technical agreements are stored (the user is thinking about it, DL §90).
+2. **#105 TypeScript 7 and the Effect language service.** Research done 2026-10-18 (`research/2026-10-18_20-08-00_typescript-7-and-effect-tsgo-gate.md`, DL §134). The curated Effect diagnostics gate is built as #123 Part A s5b (`pnpm check:effect`, inside `pnpm check` and CI). **Remaining:** the TS 7 compiler-switch slice with the alias layout, on main **after Part A integrates** (DL §134.1); it also fixes the s5b residuals R2-1 and R2-2. Until then `pnpm typecheck` (TS 6.0.2) is authoritative. [Out of order: #123 s1-s5 ran before #105, a coordinator error; the user placed #105 before s6, DL §129.]
+3. **#123 Effect unit 2b, Part A (in progress; must land before C2; G28 ends here, DL §46, §102):** one `ManagedRuntime` per process (harness and Electron main), services and Layers, explicit shutdown, the ApplicationDatabase finalizer, the #110 carry-forwards and the desktop bridge core; with **#96** (late harness log lines on quit). Brief `designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md`.
+   - Done: s1 fair lock, s2, s3 bounded authority close, s4, s5 harness runtime (accepted, DL §105-§133), s5b Effect gate (done at `010ee05`; accepted with Part A).
+   - In progress: s6 desktop runtime (rigorous lane; candidate review round 1 fix round).
+   - Remaining: s7 bridge core (one `HarnessBridges` service), s8 stdout drain (#96), the combined mutation, the 2 manual criteria, Part A acceptance, integration into main and the push; then delete the `slopstop-110` worktree and branch (DL §87).
+4. **#133** successful-upgrade log and the proven log link (small slice, queued after C1, DL §88).
+5. **#135** multi-process storage tests: the upgrade-vs-open race integration test, then a packaged upgrade-kill stage (DL §89).
+6. **#95, #97** C1-0 residuals.
+7. **Runtime-database cleanup (#93, after #105 and #123, before any new feature; user 2026-10-11, DL §55):** with Mastra withdrawn, decide whether a runtime database is still needed, then rename or remove `mastra.db` and `mastraMigrationHead` with a storage upgrade, red-green and review. [DL §55 predates the Part A/B split; confirm with the user whether Part A is enough as the trigger.]
+8. **Moved after C2: #123 Part B**, the module-by-module SQL-to-Effect pass with performance measured before and after, the remaining Promise facades, the EW1-EW3 races, and `project-registration-preparation.ts` to Code Health 10 (DL §102, §103.4). See Phase 5b.
+
+The order of items 2 (switch), 4, 5, 6 and 7 after Part A is not decided; confirm the next item with the user before starting it (DL §129).
 
 ### Phase 3 — the new interface
 1. Decisions: the open visual items through a session with the ui-ux agent (#121); local Rive runtime; ADR note for the splash-window CSP; custom frameless title bar (Electron security review); Settings shell with the sounds toggle and first-install sound prompt (DL:292, :304). The Rive paid plan is a release gate (#103), not a prerequisite.
@@ -57,11 +66,14 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review. 
 3. From here on, **accessibility is an acceptance criterion of every slice** (PRODUCT.md:75, :173), not an end pass.
 
 ### Phase 4 — decisions before the model
-1. **#101 agent runtime: decided 2026-10-11 (DL §55).** API mode uses the official Anthropic client (`@anthropic-ai/sdk`) behind the ADR 0009 port; Mastra is out; the AI SDK may come later as a second adapter. The text cleanup is done; the code cleanup is Phase 2 item 6 (#93). (Zod in ADR 0006:26 does not depend on #101.)
+1. **#101 agent runtime: decided 2026-10-11 (DL §55).** API mode uses the official Anthropic client (`@anthropic-ai/sdk`) behind the ADR 0009 port; Mastra is out; the AI SDK may come later as a second adapter. The text cleanup is done; the code cleanup is Phase 2 item 7 (#93). (Zod in ADR 0006:26 does not depend on #101.)
 2. **Decided 2026-10-10 (v1-scope FRD):** C2 delivers both billing modes, which brings the governed-CLI process machinery into C2; one default model at first install plus overrides per role and task. Still open here: the cheap-model paired evaluation (memory: Luna, DeepSeek, Haiku).
 
 ### Phase 5 — C2 real-model Conversation
 The Project conversation with the Supervisor as its agent (ADR 0021): model replies, Context proposals and records, per-message model choice, streaming, the contract for credentials, attribution, failure and interruption (#85, C1D:701); the Models and credentials part of Settings (safeStorage, both billing modes, one active); the governed CLI session for subscription mode (both billing modes, one active); the plan-usage meter; branching.
+
+### Phase 5b — #123 Part B, right after C2
+The SQL-to-Effect pass and the rest of the Effect migration (Phase 2 item 8; DL §102).
 
 ### Phase 6 — Frame and the real map
 1. **#92 Storage-operation journal first**, with a minimal ADR 0013 storage-operation partition [mandatory follow-up of ADR 0005; every later schema upgrade otherwise ships on the temporary marker and the S1 chain rule].
@@ -126,8 +138,8 @@ Recalibrate provisional numbers from real use (ADRs 0004/0005/0009/0018/0019/002
 
 ## 6. Technical debt and residuals
 
-- **Open issues:** #92 journal; #93 Mastra head (after #101); #94 timeouts under load; #95 real-process quit during upgrade; #96 late harness log lines on quit; #97 mutation scope for C1-0 S5; #102 listing cleanup masking the real failure.
-- **Effect migration remainder:** existing SQL bodies in a dedicated pass (`research/2026-10-04_sql-code-to-effect-pros-cons.md:50-63`); Effect unit 2 lifecycle plan not started (`evidence/2026-10-03_effect-unit2-lifecycle-plan.md:38`).
+- **Open issues:** #92 journal; #93 Mastra head (after #101); #95 real-process quit during upgrade; #96 late harness log lines on quit (in #123 Part A s8); #97 mutation scope for C1-0 S5; #133 upgrade log and log link; #134 C1-gate deferred rows and the licence check; #135 multi-process storage tests. Closed: #94 (2026-10-11), #102 (fixed in C1 S3).
+- **Effect migration remainder:** the unit 2 lifecycle is #123 Part A (in progress); the existing SQL bodies are #123 Part B, after C2 (`research/2026-10-04_sql-code-to-effect-pros-cons.md:50-63`; DL §102).
 - **Mutation survivors not triaged:** C1-0 S1 scope (eligibility 13, generated-migrations 8, manifest 2), C1-0 S2 recovery; 41 out-of-scope C1-0 deep-review suggestions (DL:125).
 - **Measured numbers still provisional:** timeouts, heartbeats, retries, retention (ADRs 0004, 0005, 0009:163), artifact retention (ADR 0018), result limits (ADR 0019), convergence profile (ADR 0020); upgrade time target under 1 s once sizes are measured.
 - **Program handoff payload schemas** (Execution, Evidence, Frame, Memory, Language) left to the owning designs (#28).
@@ -144,7 +156,7 @@ Corrected the same day unless stated otherwise; see the git log for the commit.
 - ADRs 0009, 0011 and 0014 carried no note that ADRs 0021 and 0022 amend them.
 - GitHub #1 still named #90 as the next front (updated with the issues on 2026-10-10).
 - Stale artifact status fields (`designs/2026-09-04_18-05-05_canonical-project-writer.md`, `designs/2026-09-12_22-45-37_persistent-project-conversation.md`, `handoffs/2026-10-05_list-removal-race-and-s6b-brief.md`).
-- **Mastra text corrected 2026-10-11** (PRODUCT.md, AGENTS.md, CONTEXT.md, `model.c4`, "Mastra Withdrawn" amendments in ADRs 0001, 0002, 0006, note in 0009). The file `mastra.db` and `mastraMigrationHead` stay until Phase 2 item 6. Zod in ADR 0006:26 can be removed independently.
+- **Mastra text corrected 2026-10-11** (PRODUCT.md, AGENTS.md, CONTEXT.md, `model.c4`, "Mastra Withdrawn" amendments in ADRs 0001, 0002, 0006, note in 0009). The file `mastra.db` and `mastraMigrationHead` stay until Phase 2 item 7. Zod in ADR 0006:26 can be removed independently.
 
 ## Issues created (2026-10-10)
 
@@ -167,7 +179,7 @@ Corrected the same day unless stated otherwise; see the git log for the commit.
 | #120 | Program: v1 Convergence | 13 |
 | #121 | Open visual and interaction decisions | 3 |
 | #122 | Measure provisional numeric defaults | 13 |
-| #123 | Effect migration remainder (SQL pass, unit 2 lifecycle) | 2 |
+| #123 | Effect migration remainder: Part A lifecycle, Part B SQL pass | 2 (A), 5b (B) |
 | #124 | Triage C1-0 mutation survivors and deep-review suggestions | 13 |
 | #125 | Evaluation tasks and success criterion | 13 |
 | #126 | Naming rule: Strand, Weave, Forger in new code | ongoing |
