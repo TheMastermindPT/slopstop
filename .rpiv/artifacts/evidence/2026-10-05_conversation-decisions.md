@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 482c11c31c9a81571844201caad9a55c3cc57344634b06b9efba8afc5d9567b7
+content_hash: a7616b980c4f59b332c6778a6c25455001610cc756fbf106f5837bab7a5a83c8
 ---
 
 # Conversation — Human Decisions
@@ -1447,3 +1447,147 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
     - registers the 9 newPromise waivers.
   - The 8 hits that Part A introduced are a subset of these. Main's own hits reach main when Part A integrates.
   - The designer writes the s5b brief, and its lane comes from `lane.mjs`.
+- **s5b brief (lane normal: 28 files, package.json manifest), user decisions:**
+  - P-S5B-1, "Aprovo": the supervisor shutdown timeout becomes `HarnessShutdownTimeout`, with the same message and status. The pin at `harness-supervisor.test.ts:632` follows the change.
+  - P-S5B-2, "Exceção até à porta React": EW9 stays a waiver until the React port moves the test support out of src. The removal triggers EW1-EW8 stand as proposed: EW1-3 in Part B, EW4-5 in the SQL-to-Effect pass, EW6 and EW8 in s6, EW7 in s7.
+  - The user approved `content_hash 5d6aed56f5216620041a3322e5d19d6ad8e7bf2d32021679a89702356524c8c6` ("Aprovo"; approved copy `approved-5d6aed56….md`). The deviation was disclosed to the user: the gate runs the Effect build in tsc mode, because `effect-tsgo diagnostics` needs TS ≥7 installed, and that comes with the switch after Part A. A canary project guards against a silent clean.
+  - Coordinator decisions:
+    - The gate-script tests stay in the unit project beside the script, following the `apps/harness/scripts/check-golden-sql.test.mjs` precedent (real binary plus temporary disk, already in unit), as long as each test stays fast.
+    - There is no ci.yml change, because both jobs already run `pnpm check`. A kill on the GitHub Windows runner fails visibly.
+- **s5b build, coordinator decision (P-S5B-1 consequence):**
+  - A second row pins the old timeout value, at `harness-supervisor.test.ts:1094` ("stops forwarding when a stopping child never exits"), and the brief missed it.
+  - It changes the same way as the contracted B8 row: `toBeInstanceOf(HarnessShutdownTimeout)`, `toBeInstanceOf(Error)` and `toMatchObject({ _tag, message })`. The oracle is not weakened.
+  - It goes in the evidence as a disclosed brief omission.
+- **s5b candidate `54d2e12` (evidence `8881a57`):**
+  - The light gates are green: `pnpm check` (including the gate) and `check:effect` pass, with 50 advisory warnings.
+  - The B5 binding is observed: a planted `unknownInEffectCatch` fails both `check:effect` and `pnpm check`.
+  - The preflight finds 3 brief-format problems: `no-test-line` for B6, B7 and B9.
+  - Findings, recorded by the coordinator:
+    - B3: `plugins: []` does not disable the Effect build's rules, and the canary catches it;
+    - B2 has an extra row: a non-Effect exit 1 counts as BROKEN.
+- **User decision:** "Aprovo 15 s só nesse teste". The single test `passes on the repository` (about 3.3 s alone) gets `{ timeout: 15_000 }`. The project default stays at 5 s.
+- **Coordinator decisions:**
+  - s5b changes harness storage, bootstrap and registration sites and the desktop supervisor and shutdown. So the integration, registration and native-long suites and `package:smoke` run once on `54d2e12`, before the review.
+  - Then the designer fixes the B6, B7 and B9 Test lines (format only, disclosed; the user re-approves the hash), and the slice-verifier reviews the candidate.
+- **s5b heavy runs on `54d2e12` all passed** (commit `7270a5a`): integration 696 passed with 3 skipped, registration 238, native-long 1133, and `package:smoke`.
+- **s5b Test-line format fix (user decision):** the designer added Test lines for B6, B7 and B9 that name the existing tests. The change is format only, and the preflight `1c33122..54d2e12` is clean. The coordinator checked it with append-only: 3 contract lines and the Follow-up. The user approved `content_hash 54feb32c9f7534357833ad52516aaae4c0854fbdf7484d26d2343d2120976c68` ("Aprovo"; approved copy `approved-54feb32c….md`).
+- **s5b candidate review, round 1** (slice-verifier; table `review-candidate-s5b-round1.md`; claim-verifier: 10 of 10 Verified):
+  - Verdict FAILED, with 1 Decisions violation. Cross-slice is OK, and there are 14 Research warnings.
+  - User decisions:
+    - R1-1, "Repetir a prova": the B2 red is re-observed on a temporary scaffold-only copy (injectable ports, no classification), logged, and restored by digest. No code change.
+    - R1-4, "Bloqueia, muda o texto": the AGENTS.md:78 sentence is reworded so the gate blocks every error it reports, including TS-Go-only type errors. `pnpm typecheck` (TS 6) stays the type-checking authority.
+  - Coordinator triage:
+    - Fixed in a new candidate, each with pins and bindings:
+      - R1-2: the canary silent-clean shapes;
+      - R1-3: detail lines for every failure code;
+      - R1-6: the register scan covers every checked path, and reason and removeWhen are validated;
+      - R1-7: B5 asserts that all four packages ran;
+      - R1-10: the twin and the exception are named in the effect-rejection TSDoc.
+    - R1-5: score every changed file with CodeScene and save the tool output.
+    - R1-8 is a brief Follow-up and an item in the s6 contract.
+    - Residuals: R1-9, W4, W7, W8, W10 and W13.
+    - Path:
+      - the designer revises the brief and the user approves the hash;
+      - the implementer builds the new candidate on `7270a5a`, with the light gates;
+      - round 2 (the last) runs with the slice-verifier.
+    - There are no heavy reruns: only the gate script, tests, comments and AGENTS.md change. The coordinator re-checks the diff before round 2.
+- **s5b round-1 revised contract (user decision):**
+  - The designer added the B2 re-observation and rows B10-B13, the R1-4 AGENTS bullet and the R1-10 TSDoc, adding lines only. The coordinator checked it with append-only.
+  - Disclosed to the user: in the re-observation, only `missing package` throws. The other 3 rows return `{ ok: true }` with the fakes consumed (the scaffold text is logged). That is a valid red: without the classification, the gate passes the broken case.
+  - The user approved `content_hash 9ce8bef74cbe96ab62bff3c491e328266d4f4a42dabbc64e335f9e8172ec0e8d` ("Aprovo"; approved copy `approved-9ce8bef7….md`).
+- **s5b round-1 CodeScene result (user decision, "Registar como dívida"):**
+  - 24 of the 27 changed files score 10.
+  - `apps/harness/src/registration/project-registration-preparation.ts` scores 8.03, the same as at `1c33122`. s5b changed one line and the import, and the safeguard reports no degradation. It is recorded as pre-existing debt, with both tool outputs saved, and is refactored to 10 in Part B, which touches registration.
+  - The two one-line canary fixtures cannot be scored ("Could not determine Code Health score"). That tool output is recorded as is (coordinator).
+- **s5b round-1 candidate `010ee05` (evidence `a3ac687`), verified by the coordinator:**
+  - The diff `7270a5a..010ee05` touches only the gate script, its test, AGENTS.md, the two effect-rejection TSDoc headers and the brief. So the earlier decision of no heavy reruns stands.
+  - The B2 re-observation is valid: all 8 rows fail on the scaffold.
+  - B12 "registered under tests" was a red rather than the contract's pin, because tests/ was not scanned; this is disclosed.
+  - The light gates are green.
+  - Next: the designer runs preflight r3, then round 2 (the last) with the slice-verifier.
+- **s5b candidate review, round 2 (the last)** (`review-candidate-s5b-round2.md`):
+  - No blocker. Decisions and Cross-slice are OK, with 8 Research warnings.
+  - R1-1 through R1-10 are resolved. R1-5 holds in part (24 of 27, with the debt recorded per the user).
+- **User decision at the cap:** "Aceitar com riscos".
+  - R2-1 (the 20-line cap truncates the EFFECT_GATE_VIOLATIONS list; the gate still fails) and R2-2 (a duplicated canary line gives a mismatch with empty lines) are residuals, fixed in the TS 7 switch slice.
+  - R2-3, R2-4 and R2-6 go in a designer Follow-up through revise, and the user re-approves the hash.
+  - R2-7 is a residual.
+  - Disclosure correction by the coordinator: the user was told that the full list needs another run. In fact the gate never prints it, so the full list comes from the editor or a direct tsc run.
+- **Coordinator decision, R2-5 (a):** re-observe the B5 binding once on `010ee05` with `pnpm check:effect` only, restored by digest, as evidence.
+- **Next:**
+  - The 2 Manual criteria (Windows `pnpm check` outside the agent; CI on the first push) stay pending for the combined acceptance.
+  - s5b is the predecessor of s6.
+  - Its acceptance report waits for the combined Part A acceptance (normal lane).
+- **s5b round-2 Follow-up (user decision):** the designer recorded R2-3, R2-4 and R2-6 (the combined mutation scope now names the round-1 logic, with a node_modules pin row added before the run) and the residuals R2-1, R2-2 and R2-7 with their triggers. append-only gives keep. The user approved `content_hash f013ea5f37192ff37c73eee0f60f6c713b597e94783c267c5d7e6f7546b9d3e6` ("Aprovo"; approved copy `approved-f013ea5f….md`). The brief is committed with the R2-5 evidence.
+- **R2-5 re-observed** (commit `d28aad0`): a planted `unknownInEffectCatch` makes `pnpm check:effect` exit 1 with EFFECT_GATE_VIOLATIONS `project-storage-store.ts(767,24) unknownInEffectCatch`; the file was restored by blob. s5b is complete at `010ee05`, and its acceptance waits for the combined Part A acceptance.
+
+## 135. #123 Part A s6 start (decisions, 2026-10-18)
+
+- **Next item (user decision, roadmap order confirmed):** "Sim, parte 6 agora". The designer details `u2b-s6-desktop-runtime` just in time in the Part A brief. The R1-8 carry goes in: removing EW6 and EW8, with the register stale check as the red. The user approves the hash before the build.
+- **s6 brief** (`14883cde…`, unapproved): the lane rose to **rigorous**, from "files: 9 > 5" and the sensitive word "ipc". So s6 gets an intent review (3 agents), the pair at candidate review, the user's per-slice acceptance and a scoped mutation.
+- **User decisions:**
+  - P-S6-1, "Logo que começa a fechar": IPC answers the D11 unavailable envelopes from the turn the shutdown starts.
+  - P-S6-2, "Não abre a janela": `chooseRepository` answers unavailable during the close without opening the dialog. The workspace text is "The workspace is unavailable while SlopStop closes."
+  - P-S6-3, "Medir primeiro, depois 1 s": the desktop runtime dispose bound is 1 000 ms, and a miss exits 1. It is measured first (quiet and burst cells, the §116 burst, the half-the-bound rule) before it is fixed, as in s5.
+  - P-S6-4, "Só essa peça": EW6 `OwnedUtility.wait` becomes `Effect.callback` behind a recorded Promise facade for its 15 callers, with the removal trigger in Part B. EW6 and EW8 leave the register.
+- **Coordinator decision, P-S6-5 (a):** the stop program keeps its own requirement-free `Effect.runPromise` edge rather than running on the runtime, because running there would build the whole Layer during a failure exit. The Architecture text is corrected in the brief.
+- **Intent review GO (coordinator):** after the designer records the decisions, with 3 CPU readings under 30%, and with no heavy run at the same time.
+- **s6 intent review, round 1** (`review-intent-s6-round1.md`, brief `f96a6b4b…`): all 3 reviewers FAILED. The 28 merged rows are 6 blockers (I1-I6), 12 concerns and 10 suggestions. claim-verifier: 16 Verified, 1 Weakened.
+- **User decisions:**
+  - I12, "Responder 'indisponível'": the gate is re-read after the folder dialog closes. A shutdown during the dialog answers unavailable and registers nothing.
+  - I15, "Juntar na parte 7": the Architecture is corrected, and s7's core merges the three bridge services into one HarnessBridges service (one line added to the s7 outline).
+- **Coordinator decisions:**
+  - I10 (a): the step-0 measurement tool runs as an Electron main script, with the real supervisor.
+  - Every other row (I1-I9, I11, I13, I14, I16-I28) is applied via revise, adding lines only.
+  - Correction: the `OwnedUtility.wait` callers number 11, not 15 (I21). §135 P-S6-4 said 15.
+  - Then intent review round 2 (the last) runs with the same 3 reviewers. Its GO is given after 3 CPU readings under 30%.
+- **s6 intent review, round 2 (the last)** (`review-intent-s6-round2.md`, brief `e7e6fd09…`):
+  - No blocker, and all round-1 blockers are resolved.
+  - The 22 merged rows are 9 concerns (J1-J9) and 13 suggestions (J10-J22). claim-verifier: 12 of 12 Verified.
+- **User decisions (2026-10-19):**
+  - Cap: "Aplicar sem 3ª ronda". J1-J22 are applied via revise and recorded as an unreviewed delta. The user approves the final hash.
+  - J7, "Declarar já os 3":
+    - the defensive `Effect.callback` canceler lines are excluded from the s6 mutate ranges;
+    - the listener-removal mutant and the EW8 error text and tag mutants are pre-declared as survivors, with written reasons (s1 R6 precedent);
+    - this is a recorded exception to "all killed" for s6.
+  - Candidate review: "Permitir 1 volta de correção". s6's candidate review after the build gets round 1 plus one fix round and a confirming round 2, as in s5, even though the intent rounds used the slice cap.
+- **s6 contract approval (user decision):** the designer applied J1-J22, J7 and the candidate-review rule, adding lines only. The user approved `content_hash 1f402a8f75d2f8e70dd98f55e57684317c3529584102461150b14586bc42f6e4` ("Aprovo"; approved copy `approved-1f402a8f….md`).
+  - The implementer starts with step 0: the dispose-bound measurement, an Electron main bundle with 2 cells, quiet and the §116 burst, 200 samples each.
+  - It runs with the coordinator's go after 3 CPU readings under 30%, and its results come back before the build continues.
+- **s6 step 0 measurement** (commit `5f1bca3`, evidence `2026-10-18_123-s6-dispose-measurement/`):
+  - 4 cells of 200 samples. The highest p99 is 0.269 ms and the highest max 0.613 ms; 0 of 800 failed, and 0 hit the bound.
+  - The half-the-bound rule is met, so `DESKTOP_RUNTIME_DISPOSE_DEADLINE_MS = 1 000` stands.
+  - Disclosures accepted by the coordinator:
+    - the 1.3 MB bundle is not committed, but its rebuild command and sha256 are;
+    - the post-run Biome whitespace change does not touch any measured path;
+    - the CRLF logs carry dual hashes;
+    - the tool reproduces design point 1 in the evidence folder, because `desktop-runtime.ts` does not exist yet;
+    - the burst samples finish early in each window, the same residual shape as s5 Z8.
+- **Coordinator decision:** the build continues. After the freeze, the heavy runs are `package:smoke` and the desktop e2e journeys, because s6 changes the main quit path. They run alone, after 3 CPU readings under 30%.
+- **s6 candidate `b0e92fc`** (evidence `feeab30`; the apps diff between them is empty):
+  - The gates are green, CodeScene scores 10 on every changed file, and the preflight is clean.
+  - Heavy runs: e2e 27/27 and `package:smoke` both pass.
+  - Deviations 1-7 are disclosed and accepted by the coordinator for review:
+    - the B4 "before-quit before ready" row was a red rather than a pin;
+    - fixture-fault attempts are logged;
+    - jscpd and knip fixes, and helper extractions for CodeScene;
+    - the EW6 channel is UntypedRejection;
+    - the bridge factory input shape.
+- **Coordinator GO:** candidate review round 1 with the slice-verifier and the code and coverage pair. It starts after 3 CPU readings under 30%, with nothing heavy running.
+- **s6 candidate review, round 1** (`review-candidate-s6-round1.md`):
+  - No blocker.
+  - K1: a folder dialog cancelled after the shutdown starts answers `cancelled`, which breaks I12.
+  - K2 is a real defect: a partial Layer build after an owner is built makes `runSync` die with AsyncFiberError instead of the factory error.
+  - K3-K16 are concerns and suggestions. claim-verifier: 12 Verified, 1 Weakened.
+- **User decision, K13:** "Tirar se sobrarem". The implementer first checks in Effect whether a second `Effect.callback` resume is ignored. If it is, the redundant `settled` guards at `canonical-writer-package-smoke.ts:311/:318` are removed (s4 §123 precedent). If not, a test kills those mutants. Nothing is pre-declared.
+- **Coordinator triage:**
+  - K1-K6 and K8-K12, plus the K13 check, are the one fix round: a new candidate with rows, bindings and light gates.
+  - K7, K14 and K15 go in the designer's Follow-up and evidence. K15 means the final-bind digests are re-run on the fix candidate.
+  - K16 is checked at the mutation run.
+  - K9 moves the startup log and crash reporting into the DesktopLogger acquire, so e2e and `package:smoke` rerun once on the fix candidate.
+  - Then the confirming round 2 runs, and then the scoped mutation.
+  - The rows go into the brief through revise, and the user approves the hash.
+- **s6 fix-round contract (user decision, 2026-10-19):**
+  - The designer added the "Fix round 1" rows for K1-K6, K8-K13 and K15, plus the Follow-up K7, K14 and K15, adding lines only. The coordinator checked it with append-only.
+  - The user approved `content_hash 491da0ba44603a2d0853cbf5b507bf20f675f033e2320078ffe9dd8d6db0de67` ("Aprovo"; approved copy `approved-491da0ba….md`).
+  - The implementer builds the fix candidate on `feeab30`. Then e2e and `package:smoke` run with the coordinator's go, followed by the confirming round 2 and the mutation.
