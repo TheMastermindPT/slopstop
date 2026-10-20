@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: f674852b83b79358c9d2029bb53cdef3b1ebf336bf6e0ae66feb4087c89907cc
+content_hash: 17d226f36db1c212a870ee20862a2e276a46c04b7ea29431f5c2bb260db5a71c
 ---
 
 # Conversation — Human Decisions
@@ -1651,3 +1651,189 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - F1 is ratified: choice (a) for L1 stands.
   - M1 (b): `reportFailure` becomes required, which removes the equivalent mutant through restructuring (the standing rule). The small change runs the light gates and is not reviewed again; that is a named residual.
   - M5 is accepted as a residual and is named at the s6 acceptance.
+- **s6 short-review Follow-up (2026-10-19):**
+  - The designer recorded the Follow-up for M7, M1 (b), M2/M3 (how K16 is read at the run), M4 and M5. Every added line is in Developer Context; append-only reports `keep` against `approved-c006beb3…`.
+  - The user's decisions already cover the content, so the approval carries over. New `content_hash 80dd3084ccfb27fa6d71c580232e8cf44adc4c0fd486e52e18fc6e6aeb5949ab` (copy `approved-80dd3084….md`).
+  - M1 (b) changes fixtures only and no assertion; the binding is the typecheck.
+  - **Correction by the coordinator:** s6 has its own two Manual criteria (brief :1896-1902): the three quit paths, and a request during quit. Pedro runs them on Windows before the s6 acceptance. They are not the Part A ones.
+- **s6 M1 (b) candidate `5ed89e5` (tree `b67f0d2f`; evidence `e0b97ca`), verified by the coordinator:**
+  - `reportFailure` is required and is called without `?.`.
+  - Only fixtures changed: there is a shared `quietPorts` constant, added after jscpd flagged a clone. No `expect` line changed. M4's TSDoc is fixed.
+  - The binding (`?.` back, with no reporter) makes typecheck exit 2. The files were restored by blob and tree.
+  - Gates: `pnpm check` (3207 tests), typecheck, dead-code, duplicates, CodeScene 10. This is the final s6 candidate.
+- **User decision:** "Arranca agora" for the scoped s6 mutation on `5ed89e5` (CPU 28/8/15%).
+  - Every mutant must be killed except the J7 mutants (declared and Ignored), with the K14 correction.
+  - K16 is read as M3 describes.
+  - Any survivor goes to the user.
+- **s6 scoped mutation on `5ed89e5`** (evidence `4516f61`, `2026-10-19_123-s6-mutation/`):
+  - Score 92.96: 217 mutants, of which 198 killed, 15 survived, 0 timeouts and 4 Ignored (the J7 canceler). K16 is met.
+  - The tree was restored, and the sources are byte-identical to the backup.
+  - Two survivors fall under the declared exceptions: the EW8 `_tag` at `main.ts:123` and the EW8 message at `:133`.
+- **Coordinator triage of the 13 other survivors:**
+  - **Killable (6):**
+    - `smoke:302`, `:303` and `:316`: the trailing `checkWait` in `wait` repeats the check `polling` already made, and it masks the other two.
+    - `desktop-shutdown:91` `>1`→`>=1`: equivalent after the `===1` throw, so it needs a restructure.
+    - `:132` `exitCode !== undefined`→true: `??=` with undefined does nothing, so it needs a restructure.
+    - `:9` the `DesktopRuntimeDisposeUnconfirmed` tag: a test asserts the reported `_tag`.
+  - **Equivalent (7):**
+    - The five `Context.Service` keys (`desktop-runtime:47-64`): any unique key behaves the same.
+    - `main:106` `?.logger`: the L1 (a) catch makes the mutation invisible.
+    - `main:133` ObjectLiteral `{ message }`: the same class as the declared EW8 text.
+- **User decision:** "Corrigir 6 + declarar 7".
+  - The implementer restructures or adds tests for the 6, adding assertions without changing existing ones. The 7 are declared with written reasons. Then the scoped mutation runs once more.
+  - There is no further review; this delta is a named residual. The designer records it in a Follow-up afterwards.
+- **s6 smoke trio (2026-10-19):** removing the trailing `checkWait` in `wait` would change behaviour: it re-checks the gap after resume, and it already existed before s6 (`5f1bca3:327`). So it stays.
+  - `:302` and `:316` cannot be reached at the public seam. The predicates never throw, and everything `checkWait` reads only moves forward.
+  - `:303`: the attempted gap row also passes without the trailing check, because the next step's `proof.assert` raises the same failure. The cleanup-wait row would be fragile.
+  - **User decision:** "Declarar os 3". They are declared equivalent at the public seam, with that reason, and the attempted row is dropped as tautological.
+  - The facade goes away when the smoke migrates in Part B.
+  - The desktop-shutdown items: `:91` reordered; `:132` `??=` directly; `:9` the dispose-unconfirmed row imports the module fresh. That is a fixture change only.
+- **s6 survivor fixes `54d30da` (tree `f93999ff`; evidence `623b3b0`), verified by the coordinator:**
+  - `:91`: the AggregateError branch comes first. `:132`: `requestedExitCode ??= options.requestedExitCodeOnQuit?.()`. `:9`: the fixture imports the module fresh. No `expect` line changed.
+  - Each binding was restored by blob and tree. Gates: `pnpm check` (3207 tests), CodeScene 10.
+  - The mutation rerun scored 94.23: 212 mutants, 196 killed, 12 survived and 4 Ignored. The non-killed set is exactly the allowed set, and K16 is met.
+  - `54d30da` is the final s6 code. The designer records the mutation delta in a Follow-up. Next come the two s6 Manual criteria, run by Pedro, and then the s6 acceptance.
+- **s6 mutation Follow-up (2026-10-19):** the designer recorded the triage, the 10 declared equivalents, the restructures and the named residual: the post-review delta `01280f1..54d30da` (M1 (b) and the survivor fixes) is covered only by gates, bindings and the mutation rerun. append-only reports `keep` against `approved-80dd3084…`, so the approval carries over. New `content_hash f61da9c1364f019cab99b2617f376362cb56cbb5cdc5419cab5d30a577a1b436` (copy `approved-f61da9c1….md`). The brief is still uncommitted in the worktree; it goes in with the s6 acceptance evidence.
+
+## 136. #123 Part A s6 manual checks and acceptance (decisions, 2026-10-19)
+
+- **The s6 Manual criteria, run by Pedro on Windows in a development build (`pnpm dev`, worktree `slopstop-123` at `54d30da`):**
+  - All three quit paths closed the app: the X button, `Alt+F4`, and File → Exit. File → Exit took about 2-3 s, by eye, within the harness grace plus the bound. The main log shows no error.
+  - Request during quit (S6-J14): Pedro confirmed that it worked and that the window did not hang. No screen recording or console capture was kept.
+  - On the first `pnpm dev` the app ran but no window was visible; the next launch opened normally. The cause is unknown.
+  - Seen in passing: in dev mode, the renderer CSP blocks the inline Vite React-refresh preamble. This is pre-existing: `security.ts` has not changed since `c8a72d1`.
+- **User decision: "Aceito".** s6 is accepted at the exact revision `54d30da`, with evidence up to `623b3b0` and the brief at `content_hash f61da9c1…`. The named residuals:
+  1. the delta `01280f1..54d30da` (M1 (b) and the survivor fixes) was not reviewed; it is covered by gates, bindings and the mutation rerun;
+  2. M5: when the reporter itself throws at quit, only exit code 1 remains;
+  3. 10 mutants are declared equivalent, plus the J7 canceler and the EW8 pair;
+  4. e2e and `package:smoke` last ran on `34641bc`, not on the final code. The later changes touch only the quit failure branch, the fixtures and the mutation config;
+  5. the manual results were confirmed by eye, without a saved capture.
+- **Issue:** #137, dev-mode CSP and the Vite preamble; opened with the user's approval.
+- s6 stays on the branch and goes to main with the rest of Part A. Next is s7 `u2b-s7-bridge-core`, the next slice in the approved Part A brief.
+
+## 137. #123 Part A s7 contract (decisions, 2026-10-19)
+
+- **The s7 brief, `u2b-s7-bridge-core`:**
+  - It is rows B1-B9, added to the Part A brief at `content_hash 84d7d9139c19468722d96059a4d4948a6729209984664bffcd2ad02831221dba`. Append-only reports `reopen` (a new slice), with 274 added lines.
+  - The lane is raised to rigorous: 11 files, and the session and ipc sensitive words.
+  - An Architecture correction is recorded: `HarnessSession` has no nested-emit queue, so today a read during a protocol error answers unavailable. s7 builds that queue.
+- **User decisions (all recommended):**
+  - P-S7-1 (b): an Effect core, with the Promise facades on the bridge methods kept until C2.
+  - P-S7-2 (a): in-flight requests at shutdown answer the D11 unavailable envelopes for list, registration and workspace, and save stays uncertain. This adds B9.
+  - P-S7-3 (a): an undecodable entry-save reply is protocol, so the answer is uncertain (G25).
+  - P-S7-4 (a): the fixed text "Harness reported a failure." for `system.failure`.
+- **Coordinator decision:** the rigorous intent review starts on this contract (3 agents; CPU 7/18/10%). The user approves the hash after the review.
+- **s7 decisions recorded** in the brief: `content_hash 5a762a6486f0f009eb20656c71801792fbc65b565669c9449fc4b22745d1e7a1`, a Follow-up only.
+- **s7 intent review, round 1** (`review-intent-s7-round1.md`; claim-verifier: T1-T9 and T11-T13 Verified, T10 Weakened):
+  - Verdict FAILED, with 7 distinct blockers, all brief changes and none needing code. The main ones:
+    - R1: projection invalidations carry a null causation, so "null correlation fails all" would fail every pending request;
+    - R2: the uncorrelated texts contradict each other;
+    - R3-R5: the shared-core construction, the stop and the s6 build-failure rows;
+    - R6: B9 changes an existing assertion without saying so;
+    - R17: the `interrupted` oracle.
+  - The other findings are R8-R29.
+- **User decision, R7: "Aceito".** P-S7-1 (b) moves the f810132 settlement by one microtask. The two B6 timing rows (storage `:212`, workspace `:348`) each gain one flush step. Order and content are unchanged.
+- **Coordinator triage:** the designer applies R1-R29 through revise, adding lines only, and then the last intent round, round 2, runs.
+- **s7 round-1 fixes applied:** `content_hash fd612576cceefe022e35e61a4afea807b40dd5e5e5a9bd802aed4af6e9802e4a`, rows B1-B10, adding lines only. Every assertion change is stated: B6 (a)/(b)/(c), the B7 s6 build-failure rows, the K3 replacement, and the B8 register list.
+- **User decision, CPU waiver:** "Arranca já, só leitura". Intent round 2 starts with the CPU at 30-60% (a game client is open). The waiver covers only this read-only review. The CPU rule stays for tests, e2e, smoke and mutation.
+- **s7 intent review, round 2 (the last)** (`review-intent-s7-round2.md`; claim-verifier: V1-V9 Verified):
+  - Verdict FAILED, with 2 blockers, both in the brief only:
+    - S1: the standalone workspace would hold two subscriptions, which breaks the `workspace-bridge.test.ts:496/:502` pins;
+    - S2: the release order and isolation are proven only against a fake.
+  - The other findings are S3-S11. Among them, S3: dropping an undecodable notification silently would breach degrade-distinguishes-broken.
+- **User decisions at the cap:**
+  - "Corrigir sem 3.ª ronda": the designer applies S1-S11 through revise, with no third intent round. The unreviewed contract delta is a named residual, and the candidate review rounds are the next check.
+  - S1 (a): workspace notifications arrive through the core's single subscription, as a core observer for non-reply events, so every existing pin holds.
+  - The user approves the final hash.
+- **s7 contract approval (user decision, 2026-10-19):** the designer applied S1-S11 (Follow-up 20:40), adding lines only; append-only reports `reopen` against `approved-f61da9c1…`.
+  - The user approved `content_hash 3178bc4fc8e610b765d34bbee5eb93ddba146e541fdf403263101e9a40fb0c72` ("Aprovo"; copy `approved-3178bc4f….md`, which checks as `keep`).
+  - The named residual: this last revision had no intent review.
+  - The implementer builds s7 on `829c3cf` in `slopstop-123`. Heavy runs need the coordinator's GO, with the CPU rule.
+- **s7 B10 `partial construction` (coordinator decision, 2026-10-19; the user may contest it):**
+  - Under S1 (a) the only session subscribe in `createHarnessBridges` is the core's, so no workspace-constructor subscribe exists to fail.
+  - Chosen: (a). The row injects the fault on the core's subscribe; `createHarnessBridges` throws that error, 0 subscriptions remain, and no bridge is built.
+  - The bridge-constructor-throw cleanup in design point 6 has no trigger at the public seam, so it is dropped as unreachable rather than kept as an untestable defensive branch.
+  - Rejected: (b), a second subscription, which contradicts S1 (a); and (c), a test-only hook.
+  - The designer records this as a contract deviation in the next Follow-up.
+- **s7 candidate `f3d2c8f` (tree `94190546`; evidence `a838bb4`), verified by the coordinator:**
+  - 30 scaffold reds, then green in the order of work. 10 bindings, each restored by sha256 and tree.
+  - Every removed `expect` line corresponds to a listed change:
+    - the B7 s6 build-failure rows and the K3 replacement;
+    - the B6 (a)/(b) workspace case, now table-driven, plus a `not.toContain` strengthening.
+  - Gates: `pnpm check` (3252 tests; `check:effect` 50 advisory, the same as the base, with EW7 removed), typecheck, dead-code, duplicates, CodeScene 10.
+  - The disclosed deviations:
+    - B10 (a), as §137;
+    - three table titles renamed to match the contract, with no assertion change;
+    - B4 throws inside the try, with the same behaviour;
+    - the Stryker range in `harness-session.ts` is `:105-134`.
+- **Coordinator decision:** heavy-run GO (CPU 1/11/2%, no game client running). First e2e, then `package:smoke`, each alone.
+- **s7 heavy e2e on `f3d2c8f` FAILED (2026-10-20):** 25 passed and 2 failed, both in `conversation-accessibility.test.ts`. There was no Defender alert and the CPU was low before the run. `package:smoke` was not run.
+  - `:215`: the save hover backgroundColor was read mid-transition, `rgb(156, 201, 224)` instead of `rgb(178, 214, 232)`.
+  - `:518`: the `a-save-faults` forced-colours screenshot timed out after 30 s.
+  - s7 touched no renderer, CSS or e2e file. The same class of helper race appeared before (§72).
+- **User decision:** "Diagnóstico A/B", bounded to about 20 minutes. First read the traces. Then run only `conversation-accessibility.test.ts` once at `829c3cf` (s6, in the same worktree, detached, with no new worktree) and once at `f3d2c8f`.
+  - If it fails on both, it is a pre-existing test problem and gets a separate issue.
+  - If it fails only on s7, it is investigated as s7.
+- **s7 A/B diagnosis:**
+  - `conversation-accessibility.test.ts` alone passed 8/8 at the base `829c3cf` and 8/8 at the candidate, one run each.
+  - The traces show only renderer slowness, a 3.7 s screenshot before the stalled one, and a hover colour read mid-transition after a 190 ms settle.
+  - Conclusion: an intermittent failure in the visual layer, with no proven link to s7 and also no proof that it is pre-existing.
+- **User decision:** "Issue + seguir". Issue #138 was opened. `package:smoke` runs now. The full e2e runs again on the fix-round candidate and in `check:deep` before the push. The named residual is that s7's full e2e has one intermittent failed run.
+- **s7 `package:smoke` passed** on `f3d2c8f` (exit 0; CPU 22.9/22.5/20.6%; no Defender alert). The evidence commits are `2944137` and `2cf479d`, and they contain no code change.
+- **Coordinator decision:** candidate review round 1 starts on `f3d2c8f`, once the designer's own CPU readings are under 30%.
+- **s7 candidate review, round 1** (`review-candidate-s7-round1.md`; claim-verifier: C1-C21, of which 19 Verified and C1 and C7 Weakened):
+  - Verdict FAILED, with 3 blockers, 6 concerns and 9 suggestions (S7-K1 to K18), all fixable in one round. The blockers:
+    - K1: documentary. The contract lags the build: the D1 = B10 (a) decision is not recorded, design points 3 and 6 are wrong, and the Fixtures line is incomplete.
+    - K2: the release's `finally failAll` is unobserved.
+    - K3: the `AggregateError` branch never runs.
+  - All three reviewers agree that s7 has no plausible mechanism for #138 (C20).
+- **User decisions:** "Ratifico + corrigir K1-K18". D1 = B10 (a) is ratified. There is one fix round for K1-K18, with rows through revise, and the user approves the hash. After that: the full e2e on the fix candidate, then the confirming round 2, then the scoped mutation.
+- **s7 fix-round contract (user decision, 2026-10-20):**
+  - The designer added the "Fix round 1" rows for K1-K18 and 8 new bindings, adding lines only; append-only reports `reopen`. Every changed assertion is a strengthening.
+  - The user approved `content_hash ee3b13762b2f99a496da0710fb5c67d57556c80eb3cf71c36dd47732712256a4` ("Aprovo"; copy `approved-ee3b1376….md`, `keep`).
+  - The implementer builds the fix round on `2cf479d`.
+- **s7 fix candidate `4b37629` (tree `43713afa`; evidence `6fa6c88`), verified by the coordinator:**
+  - K1-K18 are done as written. The removed `expect` lines are the K17 exact-envelope and K18 `SchemaError` strengthenings.
+  - All 18 bindings were restored by sha256 and tree.
+  - Gates: `pnpm check` (3259 tests; `check:effect` the same as the base), typecheck, dead-code, duplicates, CodeScene 10.
+- **K12 finding (coordinator decision; the user may contest it):** the default `stryker.config.json` project-entry ranges were already stale at `829c3cf`. They had been set in `c8a72d1` for the `unsent` owner (`:44`), the stopped check (`:82`) and `readConversation`/`saveConversationMessage` (`:191-204`). Mapping them by content at `829c3cf` would preserve the drift. **Decision:** re-anchor them to the `c8a72d1` intent in the current file. This is config only and the default run is not part of this slice. It is recorded as a contract deviation for the designer's Follow-up.
+- Heavy runs wait: a game client is running (9 League processes; CPU 34/16/21%).
+- **s7 K12 config commit `cf95b0a`** (tree `721a9622`; it changes only `stryker.config.json`). The ranges were re-anchored to the `c8a72d1` intent: `:80`, `:103`, `:189-202`. Light gates passed.
+- **s7 fix-round heavy runs** on `cf95b0a` (evidence `f747bca`), each alone: full e2e 27/27 (5.4 min; #138 did not repeat), then `package:smoke` exit 0. No Defender alert.
+- **Coordinator decision:** the confirming round 2 starts (CPU 6/12/15%). It is scoped to K1-K18, the K12 deviation and the delta `f3d2c8f..cf95b0a`.
+- **s7 candidate review, round 2 (the confirming round)** (`review-candidate-s7-round2.md`; claim-verifier: R1-R9 Verified):
+  - K1-K18 are all resolved. There are no regressions, and Cross-slice and Research are OK.
+  - What remains is documentary: S7-L1, the K12 deviation not recorded in the brief. The mapping itself was confirmed correct.
+  - Suggestions L2 (inline `createId`/`now` option types) and L3 (two workspace oracles built from the production builders).
+- **User decisions:**
+  - "Ratifico" K12: the designer records it in a Follow-up, records only.
+  - L2 and L3 become named residuals.
+- **User decision:** "Arranca" for the scoped s7 mutation on `cf95b0a`, after the designer's records-only Follow-up. Every mutant must be killed, and any survivor goes to the user.
+- **s7 round-2 Follow-up:** records only. `content_hash 9f11fb36a8bf5264d135c34a734b859d0bb3c5ee73ef84909a3b466810590d21`; append-only reports `keep` against `approved-ee3b1376…`, so the approval carries over (copy `approved-9f11fb36….md`). The mutation GO has been sent.
+- **s7 scoped mutation on `cf95b0a`** (evidence `32ca10a`): score 96.19. 447 mutants: 429 killed, 17 survived, 0 timeouts and 1 Ignored (a static string). The sources are restored by sha256.
+  - Several survivors are real test gaps:
+    - the workspace revision floor, `workspace-bridge.ts:171/:182`;
+    - the registration result decode, `project-entry-bridge.ts:158`;
+    - the reply event names, `:157/:172/:179`.
+  - Some survivors look equivalent, for example `harness-session.ts:117` `>1` after `===1`, the same class as s6.
+- **User decision:** "Matar todos os possíveis".
+  - The implementer kills each survivor with new rows or restructures, without changing existing assertions.
+  - It declares only survivors proven equivalent, each with a written reason, and the coordinator verifies each declaration.
+  - The scoped mutation then runs once more.
+  - The declared list goes to the user at acceptance.
+- **s7 survivor kill `f88f3a3` (tree `f0c78986`; evidence `ee852b9`):**
+  - New rows, each with a binding, for core `:83`, entry `:157/:158/:172/:179` and workspace `:101`.
+  - A restructure at `harness-session.ts:117`. No existing assertion changed.
+  - Gates: `pnpm check` (3264 tests), CodeScene 10.
+  - The rerun scored 97.53: 435 killed, 11 survived and 1 Ignored.
+  - 10 mutants are declared equivalent (E1-E9 in `2026-10-20_123-s7-mutation-2/README.md`). The coordinator checked the reasons: E8 holds because a comparison with `undefined` is false, and E5/E6 because `harnessSendFailureMessage` reads only `error.code`.
+  - The run stopped on `workspace-bridge.ts:101` `stoppedText` → `""`. It is static, read at module load. Its binding kills it in source, but Stryker cannot activate it per test.
+- **Coordinator decision (within "Matar todos os possíveis"):** (b) restructure. The literal moves inside the `unsent` arm, so the mutant is placed at run time, as in the s6 `:9` precedent. Then one more scoped rerun. The declared list goes to the user at acceptance.
+- **s7 final mutation:** `03a50c8` (tree `f5e91866`) moves the workspace stopped text into the `unsent` arm (2+/3− lines, no assertion change, binding restored). Evidence `347c0fd`.
+  - The rerun scored 97.76: 447 mutants, 436 killed, 10 survived and 1 Ignored.
+  - The non-killed set is exactly the allowed set: the static storage `:38`, plus the 10 declared equivalents E1-E9, which the coordinator verified.
+  - `03a50c8` is the final s7 code. Next come the s7 Manual check (brief `:2344`) and the user's acceptance.
+- **Pause (user, 2026-10-21):** the user said "aceito o s6. e sim, volto no dia 22". s6 was already accepted (§136). This is not recorded as an s7 acceptance: the s7 Manual check has not been run, because the main log shows no app start after 2026-10-19 18:43. Work pauses until 2026-10-22, when the weekly usage limit resets. On return:
+  1. the s7 Manual check;
+  2. the s7 acceptance, with residuals L2, L3, the 10 declared equivalents E1-E9, the unreviewed post-round-2 delta (`f88f3a3`, `03a50c8`), the one intermittent e2e run (#138), and the S1-S11 contract revision that had no intent review;
+  3. then s8.
