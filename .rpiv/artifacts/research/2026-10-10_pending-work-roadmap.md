@@ -29,7 +29,7 @@ content_hash: 6bb8c30854d729d014b043cc8322d28043923895e13d7ae284ecf44e1efdb07b
 
 Revision 2 (2026-10-10), after an adversarial completeness and ordering review; status refreshed on 2026-10-19 (revision 3). Each phase starts when the previous one is done unless marked "in parallel"; reasons are in brackets. Sections 3-7 hold the detail and sources. ADR line numbers refer to the files after commits d601e5b and e44236d.
 
-**Where we are (2026-10-19):** Phases 0 and 1 are done. Phase 2: #99 and the #105 research are done; #123 Part A is in progress at s6 (branch `refactor/123-effect-lifecycle-part-a`, worktree `slopstop-123`). Local main is 32 commits ahead of origin; the push waits for the user (DL §87, §101).
+**Where we are (2026-10-23):** Phases 0 and 1 are done. Phase 2: #99, the #105 research and #123 Part A are done; Part A was squash-merged as `4cf6541` and pushed (DL §142). The next Phase 2 item is not chosen yet (DL §129).
 
 ### Phase 0 — done
 1. **Done 2026-10-10:** C1 S1 + S2 squash-merged to local main as `ba4e15b` after review rounds 1-2 and a user-approved bounded round 3 (DL §32); final-head proof on ac6569c. The real `userData` was backed up first to `%APPDATA%SlopStop-backup-2026-10-10` (67 files, hashes verified).
@@ -48,10 +48,9 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review; 
 [The foundations come before C2 because C2's streaming and cancellation are heavy Effect code.]
 1. **Done 2026-10-16: #99 interview** continuation: phase 2 dialogue and decision staleness (FRD `discover/2026-10-16_16-32-45_cross-waypoint-dialogue-and-decision-staleness.md`, DL §90-§101; ADR amendments accepted). Still open from it: where technical agreements are stored (the user is thinking about it, DL §90).
 2. **#105 TypeScript 7 and the Effect language service.** Research done 2026-10-18 (`research/2026-10-18_20-08-00_typescript-7-and-effect-tsgo-gate.md`, DL §134). The curated Effect diagnostics gate is built as #123 Part A s5b (`pnpm check:effect`, inside `pnpm check` and CI). **Remaining:** the TS 7 compiler-switch slice with the alias layout, on main **after Part A integrates** (DL §134.1); it also fixes the s5b residuals R2-1 and R2-2. Until then `pnpm typecheck` (TS 6.0.2) is authoritative. [Out of order: #123 s1-s5 ran before #105, a coordinator error; the user placed #105 before s6, DL §129.]
-3. **#123 Effect unit 2b, Part A (in progress; must land before C2; G28 ends here, DL §46, §102):** one `ManagedRuntime` per process (harness and Electron main), services and Layers, explicit shutdown, the ApplicationDatabase finalizer, the #110 carry-forwards and the desktop bridge core; with **#96** (late harness log lines on quit). Brief `designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md`.
+3. **#123 Effect unit 2b, Part A (**done 2026-10-23**, `4cf6541`, pushed; DL §142; G28 ends here, DL §46, §102):** one `ManagedRuntime` per process (harness and Electron main), services and Layers, explicit shutdown, the ApplicationDatabase finalizer, the #110 carry-forwards and the desktop bridge core; with **#96** (late harness log lines on quit). Brief `designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md`.
    - Done: s1 fair lock, s2, s3 bounded authority close, s4, s5 harness runtime (accepted, DL §105-§133), s5b Effect gate (done at `010ee05`; accepted with Part A).
-   - In progress: s6 desktop runtime (rigorous lane; candidate review round 1 fix round).
-   - Remaining: s7 bridge core (one `HarnessBridges` service), s8 stdout drain (#96), the combined mutation, the 2 manual criteria, Part A acceptance, integration into main and the push; then delete the `slopstop-110` worktree and branch (DL §87).
+   - Done: s6 desktop runtime, s7 bridge core, s8 stdout drain (#96), s9 harness fatal diagnostics (from the deep review), the combined mutation, the manual checks, the acceptance with named residuals (DL §142), integration and the push. The `slopstop-110` and `slopstop-123` worktrees are deleted.
 4. **#133** successful-upgrade log and the proven log link (small slice, queued after C1, DL §88).
 5. **#135** multi-process storage tests: the upgrade-vs-open race integration test, then a packaged upgrade-kill stage (DL §89).
 6. **#95, #97** C1-0 residuals.

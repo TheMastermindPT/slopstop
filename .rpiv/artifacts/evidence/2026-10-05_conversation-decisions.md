@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 72902f155de1fa6dd84d06f934bc33f7d812cc5040159f57019fd7bc3af6b29f
+content_hash: ecc03b116d93d9e6a7b949191976e2cf2f86554584bbf6b59a33c2ec3748c879
 ---
 
 # Conversation — Human Decisions
@@ -1972,3 +1972,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - the gate-script mutants in #139;
   - integration, e2e and smoke on the final code run in the `check:deep` before the push.
 - **Next:** integration into main and the push, each with the user's approval; then delete the `slopstop-110` worktree and branch (§87).
+- **Integration and push (user approvals, 2026-10-23):**
+  - The review files were committed on the branch (`6561077`). Part A was squash-merged into main as `4cf6541`; its tree equals the branch apart from main's own docs.
+  - #133 got a comment that adds the fatal-line forwarding to its scope.
+  - The push ran on an idle machine (CPU 1/3/2%). The pre-push `check:deep` passed, including e2e 27/27 and `package:launch-smoke`: `8fcee45..4cf6541`. This settles V2 and the final-code heavy runs.
+  - The `slopstop-110` and `slopstop-123` worktrees and both branches were deleted (§87 and the push approval). The Stryker reports were copied first to the main checkout's gitignored evidence folder (`worktree-reports/`).
+- **Next:** Phase 2 continues. Its order (the TS 7 switch, #133, #135, #95/#97, #93) is not decided; confirm with the user (§129).
