@@ -9,7 +9,7 @@ tags: [roadmap, inventory, pending-work, deferred]
 status: complete
 last_updated: 2026-10-19T14:40:00+0100
 last_updated_by: coordenador-claude
-content_hash: bd93c7aa002407d2f2e4e4a80fbb843b15e6dfcb92fd541bea1929a8c40419c4
+content_hash: 6bb8c30854d729d014b043cc8322d28043923895e13d7ae284ecf44e1efdb07b
 ---
 
 # Pending-work inventory and roadmap reference point (2026-10-10)
@@ -58,10 +58,12 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review; 
 7. **Runtime-database cleanup (#93, after #105 and #123, before any new feature; user 2026-10-11, DL §55):** with Mastra withdrawn, decide whether a runtime database is still needed, then rename or remove `mastra.db` and `mastraMigrationHead` with a storage upgrade, red-green and review. [DL §55 predates the Part A/B split; confirm with the user whether Part A is enough as the trigger.]
 8. **Moved after C2: #123 Part B**, the module-by-module SQL-to-Effect pass with performance measured before and after, the remaining Promise facades, the EW1-EW3 races, and `project-registration-preparation.ts` to Code Health 10 (DL §102, §103.4). See Phase 5b.
 
+9. **Whole-project architecture review** (`/rpiv:architectural-review`), scheduled by the coordinator on the user's delegation (2026-10-22). It runs after #123 Part A is integrated and the TS 7 switch has landed, and before Phase 3 and C2. Why then: the runtime, lifecycle and bridge foundations are settled, and C2 will build streaming and cancellation on them, so structural problems are cheapest to fix now. Scope: all workspaces (kernel, protocol, harness, desktop), checking the AGENTS.md boundaries, the Effect rules, duplication and the Part B candidates. The findings become a phased polish plan. Each item is then scheduled with the user, and none starts on its own.
+
 The order of items 2 (switch), 4, 5, 6 and 7 after Part A is not decided; confirm the next item with the user before starting it (DL §129).
 
 ### Phase 3 — the new interface
-1. Decisions: the open visual items through a session with the ui-ux agent (#121); local Rive runtime; ADR note for the splash-window CSP; custom frameless title bar (Electron security review); Settings shell with the sounds toggle and first-install sound prompt (DL:292, :304). The Rive paid plan is a release gate (#103), not a prerequisite.
+1. Decisions: the open visual items through a session with the ui-ux agent (#121); local Rive runtime; ADR note for the splash-window CSP; custom frameless title bar (Electron security review); Settings shell with the sounds toggle and first-install sound prompt (DL:292, :304). The Rive paid plan is a release gate (#103), not a prerequisite. **Added 2026-10-22 (user):** the ui-ux agent designs the initial repository-selection section (Project registration: choosing the repository) in Figma AND as HTML prototypes, in 3 distinct variants for the user to choose from, with the same anti-clone and rune rules.
 2. **React port** of the remaining prototype screens (`ragnarok-hero/PORT-PLAN.md`), deleting the old UI slice by slice; map motion in CSS.
 3. From here on, **accessibility is an acceptance criterion of every slice** (PRODUCT.md:75, :173), not an end pass.
 

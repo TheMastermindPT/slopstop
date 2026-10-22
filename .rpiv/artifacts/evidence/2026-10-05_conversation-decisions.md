@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 17d226f36db1c212a870ee20862a2e276a46c04b7ea29431f5c2bb260db5a71c
+content_hash: 72902f155de1fa6dd84d06f934bc33f7d812cc5040159f57019fd7bc3af6b29f
 ---
 
 # Conversation — Human Decisions
@@ -1837,3 +1837,138 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   1. the s7 Manual check;
   2. the s7 acceptance, with residuals L2, L3, the 10 declared equivalents E1-E9, the unreviewed post-round-2 delta (`f88f3a3`, `03a50c8`), the one intermittent e2e run (#138), and the S1-S11 contract revision that had no intent review;
   3. then s8.
+
+## 138. #123 Part A s7 manual check and acceptance (decisions, 2026-10-22)
+
+- **Dev mode is blank:** `pnpm dev` opened no visible window twice. After `rs`, the window was blank. Cause: since `c8a72d1`, the header CSP `script-src 'self'` (`apps/desktop/src/shared/content-security-policy.ts`) blocks the inline Vite React-refresh preamble, so the dev renderer never mounts. This is pre-existing and not s7. It widens #137.
+- **The s7 Manual check was run on the packaged build:** the coordinator packaged `347c0fd` (code `03a50c8`) with `electron-forge package`.
+  - Pedro opened a Project, read and saved a message, listed Projects, quit and reopened: the message was kept. The main log shows no error.
+  - Deviation: the `queryWorkspace` devtools step was not possible, because devtools are off when packaged. Workspace queries are covered by e2e and `package:smoke`.
+  - Pedro noted that Enter does not send. That is by design (CNV-B46: Enter adds a line, Ctrl+Enter saves).
+- **User decision: "Aceito".** s7 is accepted at `03a50c8`, with evidence up to `347c0fd` and the brief at `content_hash 9f11fb36…`. The named residuals:
+  - L2 and L3;
+  - the 10 declared equivalents E1-E9;
+  - the post-round-2 delta `f88f3a3` and `03a50c8`, covered by gates, bindings and the mutation only;
+  - the one intermittent e2e run (#138);
+  - the S1-S11 contract revision, which had no intent review;
+  - the manual check on the packaged build without the `queryWorkspace` step.
+- **Next:** s8 `u2b-s8-stdout-drain` (#96), the last slice of the approved Part A brief. Its contract is written just in time.
+
+## 139. #123 Part A s8 contract (decisions, 2026-10-22)
+
+- **s8 `u2b-s8-stdout-drain` (#96):** the contract changes one file, `harness-supervisor.ts` (`#stopChild`/`#watchOutput`).
+  - B1: after exit, stop waits until stdout ends or closes.
+  - B2: the 1000 ms bound.
+  - B3: pins for a missing or already-ended stdout.
+  - B4: the worst case resolves at 10999 ms, and the timeout path still rejects at 10000 ms.
+  - About 5 existing rows get a fixture-only stdout end. There are 4 bindings.
+- **User decisions (all recommended):**
+  - Q1: the lane is normal (D15).
+  - Q2 (a): a crash outside a stop keeps the unbounded forwarder.
+  - Q3 (a): no new e2e for #96.
+  - Q4 (a): the supervisor `#after` runFork timers are deferred beyond Part A.
+  - The contract was approved: `content_hash 315e45b64c714bc668581fe50e595034d56b07a93002b3aff28c9b272791cf77` ("Aprovo"; append-only reported `reopen` with 69 added lines; copy `approved-315e45b6….md`).
+  - The manual check runs on the packaged build (#137).
+- **s8 candidate `3001364` (tree `37f29532`; evidence `8b42834`, `09d7faf`), verified by the coordinator:**
+  - It changes `harness-supervisor.ts` (+36/-2), its test (+90) and the s8 mutation configs. No `expect` line is removed.
+  - The reds are B1, B2 and B4; B3 is a pin.
+  - The fixture-only stdout end was re-derived at the scaffold: 6 rows, one more than the brief's measured list. The contract allowed this (no assertion change).
+  - 4 bindings were restored by blob and tree.
+  - Gates: `pnpm check` (3271 tests), CodeScene 10.
+- **Coordinator decision:** heavy-run GO (CPU 1/9/10%, no game): full e2e, then `package:smoke`.
+- **s8 heavy runs on `3001364`** (evidence `88c5494`): e2e 27/27 (4.9 min; #138 did not repeat) and `package:smoke` exit 0. No Defender alert.
+  - The implementer first reported the evidence commit as `09d7faf`. In fact commitlint had refused the commit and the files were only staged. The coordinator caught this, and the commit is now `88c5494`.
+- **Coordinator decision:** the s8 candidate review starts under the normal lane: the designer's preflight, then the slice-verifier. The full deep-review and the user's acceptance come at the combined Part A result.
+- **s8 candidate review, round 1 (normal lane)** (`review-candidate-s8-round1.md`): PASSED with 0 findings. Decisions, Cross-slice and Research are OK. claim-verifier: V1-V9, of which 8 Verified and V7 Weakened (polish).
+  - The refuted risks: the drain against the s6 dispose deadline, a lost drain handle, and a respawn during the drain.
+  - Polish P1-P4 are records only.
+  - **Correction (P3) to the s8 candidate entry above:** the fixture-only rows are not "one more" than the measured list but a swap. The protocol-failed row needs no stdout end, and the handshake-timeout row needs two.
+- **User decision:** "Arranca" for the scoped s8 mutation on `3001364`. Every mutant must be killed, and any survivor goes to the user.
+- **s8 scoped mutation on `3001364`** (evidence `c80c7fb`): score 86.96. 69 mutants: 60 killed and 9 survived.
+  - Every new s8 drain line is killed.
+  - The 9 survivors are older lines inside the range: `harness-supervisor.ts:185` (the child identity guard in stop's exit handler), `:411` (the `"end"`/`"close"` detach in `finish`) and `:417` (the observation `forget` guard).
+- **User decision:** "Como no s7". Kill each killable survivor with new rows or a restructure, without changing existing assertions. Declare only proven equivalents, which the coordinator verifies. Then run the scoped mutation once more.
+- **Architecture review scheduled (user delegation, 2026-10-22: "decide tu depois quando fazer uma architecture review ao projeto e agenda isso"):**
+  - The coordinator placed a whole-project `/rpiv:architectural-review` in roadmap Phase 2 item 9. It runs after Part A is integrated and the TS 7 switch has landed, and before Phase 3 and C2.
+  - Why then: the runtime, lifecycle and bridge foundations are settled, and C2 builds on them.
+  - Its findings become a polish plan that is scheduled with the user.
+- **Phase 3 addition (user, 2026-10-22):** the ui-ux agent designs the initial repository-selection section in Figma and as HTML prototypes, in 3 variants for the user to choose from. This is recorded in roadmap Phase 3 item 1.
+- **Architecture review session (user, 2026-10-22):** the user opened a dedicated session for the whole-project review, herdr pane `w3:p2M`. When the review is due (Phase 2 item 9), the coordinator sends it the `/rpiv:architectural-review` request there.
+- **s8 survivor kill `4d22a65` (tree `61833a8c`; evidence `624c559`), verified by the coordinator:**
+  - `:411` is killed by a new row: every stdout listener is removed on end or close.
+  - `:185`: the redundant `#child` clear in stop's exit handler is removed. The observer's exit handler, registered at spawn and so run first, already clears it through `#handleProcessExit`, which the coordinator checked at `:297-302` and `:388-391`.
+  - `:417`: `forget` now deletes unconditionally.
+  - No `expect` line was removed. Gates: `pnpm check` (3273 tests), CodeScene 10.
+  - The rerun scored 98.41: 62 of 63 killed.
+  - One mutant is declared equivalent: `:418` `#observations.delete(child)` removed. Only memory differs, because the private map, keyed per spawn, is never read again for an exited child. The coordinator accepts this reason.
+- s8 is complete at code `4d22a65`. Next come the combined normal-slice mutation, the full deep-review of Part A, the packaged Manual check, and the user's combined acceptance.
+- **User decision:** "Arranca" for the combined normal-slice mutation (s2, s4 and s5b). The scope is R-MUT §112 plus the T8 widening, the s4 entries and S5B-R2-6, re-resolved on the final code `4d22a65`. The `node_modules` pin row comes first. The run happens once, alone, with backups, and survivors go to the user.
+- **S5B-R2-6 pin fixture (coordinator decision, 2026-10-22; the user may contest it):**
+  - The brief's fixture `apps/sample/node_modules/x/a.ts` is never scanned. The scan reads only a package's root files and its `src`, `tests` and `build` folders (`check-effect-diagnostics.mjs:220`, `:236-246`), so the binding could not bite.
+  - Chosen: the same row name and oracle, with the fixture at `apps/sample/src/node_modules/x/a.ts`, which reaches the `:242` exclusion. The binding is removing the exclusion, which gives `EFFECT_GATE_WAIVER_UNREGISTERED`.
+  - The combined run uses `stryker.project-storage.config.json` with the listed includes, as one run limited by `--mutate` to the combined ranges on `4d22a65` (the s5 Y11 precedent).
+- **Combined mutation, attempt 1 (evidence `708c461`):** the R2-6 pin is `3b01560` (pin passed, binding bites) and the config is `3f9fcfe`. Stryker's dry run failed on one test: `check-effect-diagnostics.test.mjs` "runs the canary before any package: real canary". It runs the real compiler, and it fails only inside the Stryker sandbox copy. It passes in `pnpm check`. No mutant ran, and the sources were restored.
+- **Coordinator decision (tooling only; the user may contest it):** (a) exclude that one real-canary row from the mutation run only, through a mutation-only Vitest name filter. The gate and `pnpm check` keep it.
+  - Rejected: (b) diagnosing the sandbox (cost, and the row is an end-to-end canary, not a logic killer); and (c) dropping the gate script, which would lose its mutation proof.
+  - If canary-comparison mutants survive without that row, they go to the user like any survivor.
+- **Combined mutation, attempt 2 (evidence `45cd736`):** with the real-canary row skipped (`dfeec6e`), the dry run failed on "passes on the repository" (`:414`). That row runs the whole real gate, canary included, on the repository root, and it hits the same sandbox-only canary failure. No mutant ran.
+- **Coordinator decision (the same class as attempt 1):** (a2) skip "passes on the repository" too, in the mutation-only filter. These two rows are the only ones that run the real compiler and the real canary on the real tree; both stay in `pnpm check`. The run happens once.
+- **Combined mutation, run 3** (config `1a2d2ce`, with the two real-tree canary rows skipped for mutation only; evidence `1feea7a`, `e011d6e`): score 79.12. 258 mutants: 191 killed, 6 timeouts, 37 survived, 15 NoCoverage and 9 Ignored (static). Per file:
+  - s4 is all killed (`registry-database.ts`, `registration-registry.ts`).
+  - Product code has 11 survived and 2 NoCoverage, in `project-storage-node-errors.ts` (9 S, 2 NC) and in `upgrade-node-adapter.ts:560/:561` (2 S, the cause dropped).
+  - The gate script `check-effect-diagnostics.mjs` has 26 survived and 13 NoCoverage.
+- **User decision:** "Produto agora, gate depois".
+  - The product-code non-killed mutants are handled now, as in s7: kill them, or declare proven equivalents that the coordinator verifies. Then the product ranges run once more.
+  - The gate-script mutants are a named residual, tracked in issue #139 and handled in the TS 7 compiler-switch slice.
+- **Product survivor kill `1796bcc` (tree `826d7f2e`; evidence `a9099c1`):** new rows for `node-errors :7`, `:57`, `:61` and `:63` and for the adapter `:560/:561`, plus a restructure of `isBusyStorageError` (`:62` removed). 9 bindings were restored by blob and tree. Gates: `pnpm check` (3281 tests), CodeScene 10.
+  - The product rerun scored 97.03 (93 killed, 5 timeouts, 2 survived, 1 NoCoverage, 4 Ignored).
+  - D1 (`:7` `=== null` → false, which is caught as a TypeError) and D2 (`:11` empty catch, which still returns `undefined`) are declared equivalent. The coordinator accepts both.
+  - It stopped on `:10` `typeof code === "string" ? code : undefined` → true. That mutant was a timeout in run 3 and is killable with a non-string code row.
+- **Coordinator decision (within "Produto agora"):** add that row with a binding, then run the product ranges once more.
+- **Product mutation, rerun 2:** `aabd716` (tree `123094d2`) adds the non-string code row, with its binding. Gates: `pnpm check` (3282 tests), CodeScene 10. Evidence `d7a0e22`.
+  - The rerun scored 98.02 on the product ranges. The non-killed set is exactly D1, D2 and the static Ignored.
+  - The combined mutation is closed for product code. The gate-script mutants stay in issue #139.
+- **Coordinator decision:** the full `/rpiv:deep-review` of #123 Part A starts (`main..refactor/123-effect-lifecycle-part-a`, final code `aabd716`).
+
+## 140. #123 Part A deep review and the fix decisions (decisions, 2026-10-22)
+
+- **Deep review** of `fdda65e..d7a0e22` (final code `aabd716`), by the designer: `slopstop-123/.rpiv/artifacts/reviews/2026-10-22_19-44-49_fdda65e-d7a0e22-123-part-a.md` (+ `.json`), not yet committed.
+  - Result: 0 critical, 3 important (I1, Q25, Q33), 42 suggestions, 12 for discussion. Verification: 38 verified, 18 weakened, 1 falsified (dropped). Merge: blocked on the 3 important findings.
+  - The composition checks passed: one `ManagedRuntime` per process, owners built by Layers and `acquireRelease`, no cross-app imports, no unregistered `new Promise`, and one storage-failure guard.
+  - Limits: the review was read-only. typecheck, knip, jscpd and dependency-cruiser were not rerun; it relies on the slice evidence.
+- **User decision (AskUserQuestion):** I1 (a), Q33 (b), Q25 (b), as the coordinator recommended.
+  - **I1 (a):** a new small slice, s9, in the normal lane. Both harness fatal sinks (`process-shutdown.ts:19` and the startup catch in `process-entry.ts:83`) receive the failure value. They log a redacted summary: the `_tag` values and the `RegistrationCleanupUnconfirmed` parts, never paths or messages. A runtime start or dispose failure gets its own fatal code, separate from an invalid bootstrap message. Q24 and Q27 are folded in. The slice extracts these exits so they can be tested, which also partly covers Q25.
+  - **Q33 (b):** accepted as a named residual. When the owner close outruns the 3 s budget, the observer's Git inspections are not aborted. The process exits right after, and the inspections are short.
+  - **Q25 (b):** the TDD exemption of `process-entry.ts` stays. The gap ("dispose settles before failStartup exits" is unproven) is named in the Part A acceptance, reduced by whatever s9 tests.
+  - The 🔵 and 💭 findings are recorded without fixes now. Their owners are decided at acceptance.
+- **Next:** the designer adds s9 to the brief with `/rpiv:revise` (append-only), the user approves the hash, the implementer builds it, and then the final heavy runs on the final code.
+
+## 141. #123 Part A s9 contract (decisions, 2026-10-22)
+
+- **s9 `u2b-s9-harness-fatal-diagnostics`** (normal lane) was added to the brief append-only: U2B-FD-B1 `summarizeHarnessFailure` (pure; tags and part names only, AggregateErrors flattened in order, at most 16 items, loop-safe), U2B-FD-B2 the shutdown sink logs `HARNESS_SHUTDOWN_FAILED` with the summary and exits once, U2B-FD-B3 `connectHarnessProcess` in `process-connection.ts` with the new code `HARNESS_RUNTIME_START_FAILED` and a pin that the exit waits for the launch to settle. The coordinator checked append-only against `approved-315e45b6…`: only added lines (92), reopen.
+- **Designer finding Q1:** the harness logs only to stdout, and the desktop forwards only upgrade lines (`harness-log-lines.ts`), so the s9 summary does not reach the main log on its own.
+- **User decision (AskUserQuestion):** s9 stays harness-only, with no protocol change. Forwarding these fatal lines to the desktop main log joins **#133** (which already must prove the harness-to-desktop log link). Until #133, the detail is not visible in `slopstop.jsonl`.
+- **User approval:** contract `content_hash a62c707915ea5e6701b4dc35c58790bd6fb0c0ec851fe81c062b4a918a26f5f3`. Approved copy saved in the evidence folder. The implementer builds s9 next.
+- **s9 build, gate timeout (2026-10-22):** red-green done; `pnpm check` failed 1 of 3303 unit tests: `apps/desktop/src/main/package-smoke-launcher.test.ts` "rejects missing ASAR entry harness.cjs", the default 1000 ms `vi.waitFor` at `:452` (s9 touches only `apps/harness/src`). The machine was loaded (a game was running, CPU 51-61%). The user was told and freed the machine; CPU then read 7/9/7/7%. Coordinator GO for one rerun of `pnpm check`; a second failure on the idle machine is a defect. The coordinator formatted the untracked review JSON with `biome format --write` (whitespace only), because `format:check` failed on it.
+- **s9 candidate `961eee1` (tree `bb4abe6e`; brief `e0cf6eff…`, append-only keep vs `a62c7079…`):** the authorized `pnpm check` rerun on the idle machine passed 3303/3303 (the timeout did not recur, so it was load). CodeScene 10 on 9 files. Review round 1 (slice-verifier): passed, 0 violations, 2 warnings, plus one confirmed polish item.
+- **Coordinator decisions (technical triage, the user may contest):**
+  - Fix round 1, in a new commit (no amend): V1, export the `RegistrationCleanupUnconfirmed` tag from `registration-listing.ts` and import it in the summary (shared-vocab-union); restore the fixture path `C:\private\project\slopstop.db`, whose backslashes were lost in three test files. Then review round 2, the last allowed.
+  - V2: `pnpm test:integration` runs at the final candidate, with the other final heavy runs (e2e, `package:smoke`, the s9 scoped mutation), each with its own coordinator GO.
+- **s9 fix round (2026-10-23):** V1 (`REGISTRATION_CLEANUP_TAG` exported and shared) and the fixture path restored; the backslashes had been lost by writing through the Bash tool. The `pnpm check` GO waited for an idle machine (a game was running), then ran at CPU 2/5/2%. **User decision:** no review round 2 for s9. The fix round goes straight to commit, then the final heavy runs.
+- **s9 fix commit `271b418`** (parent `961eee1`): `pnpm check` 3303/3303 on the idle machine; CodeScene 10. Residual: the fix delta has no independent review (user decision).
+- **Heavy runs (user, 2026-10-23):** the user objected to running about 20 minutes of gates on a small change. The coordinator stopped the sequence before any run started, so nothing ran. **User decision:** only the s9 scoped mutation runs now. `test:integration`, e2e and `package:smoke` are left to the `check:deep` before the push, which runs all three (this also settles V2).
+- **s9 scoped mutation on `271b418`** (evidence `14825b4`): 98.48. 137 mutants: 123 killed, 7 timeout, 1 survived, 1 NoCoverage, 5 Ignored (static). The two non-killed mutants are real gaps, not equivalents: `process-fatal-diagnostics.ts:69` (a non-string `_tag` is treated as a string) and `:78` (`RegistrationCleanupUnconfirmed` with non-array parts). **User decision:** accept both as named residuals. No kill round.
+- **Next:** the s8 Manual check on the packaged build (brief `:2412`); the s5b Defender check (brief `:1435`); then the combined Part A acceptance.
+
+## 142. #123 Part A combined acceptance (decisions, 2026-10-23)
+
+- **s5b Manual (brief `:1435`):** `Get-MpThreatDetection` shows nothing newer than 2026-10-18 19:57:17. Done. The CI half is recorded at the push.
+- **s8 Manual (brief `:2412`), on the packaged build:** the coordinator packaged `14825b4` (code `271b418`). The user registered a new repository, then reopened the app and opened an existing Project; the conversation showed. The quit had no visible delay. The main log of the run (00:10:46 local) shows a normal harness start and no error.
+  - The new Project did not open on its own after registration. This is by design since C1 S4 (`projects-workspace.tsx` `registered` only refreshes and marks it), not a Part A regression. With the user's approval, issue **#140** was opened for the ui-ux Phase 3 work.
+- **User decision: "Aceito".** #123 Part A is accepted at code `271b418`, with evidence up to `14825b4` and the brief at `content_hash e0cf6eff…`. The named residuals:
+  - s9: Q33; the rest of Q25; the summary reaches the desktop log only with #133; the fix delta `271b418` had no independent review; the mutation gaps `:69` and `:78`;
+  - the deep review's 42 suggestions and 12 discussion items, without fixes;
+  - the residuals already accepted in s1-s8 (§105-§139);
+  - the gate-script mutants in #139;
+  - integration, e2e and smoke on the final code run in the `check:deep` before the push.
+- **Next:** integration into main and the push, each with the user's approval; then delete the `slopstop-110` worktree and branch (§87).
