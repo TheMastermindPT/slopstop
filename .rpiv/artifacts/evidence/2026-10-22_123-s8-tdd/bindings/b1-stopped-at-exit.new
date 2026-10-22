@@ -1,0 +1,7 @@
+      Effect.andThen(
+        Effect.sync(() => {
+          this.#setStatus({ state: "stopped" });
+          this.#stopping = false;
+        }),
+      ),
+      Effect.andThen(drainOutput(observation)),

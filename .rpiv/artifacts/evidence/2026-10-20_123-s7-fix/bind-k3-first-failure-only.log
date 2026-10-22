@@ -1,0 +1,34 @@
+parent: 2cf479d
+tree: ebd5a68c154d4ecacc1ec1eab7a2a338ece7aa25
+working-tree digest: 14a17a3a26d29cdb
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-session.test.ts -t throws every listener failure at once after the drain
+started: 2026-10-20T11:19:29+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-session.test.ts (8 tests | 1 failed | 7 skipped) 8ms
+     × throws every listener failure at once after the drain 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > throws every listener failure at once after the drain
+AssertionError: expected Error: private listener failure A to be an instance of AggregateError
+ ❯ src/main/harness-session.test.ts:183:20
+    181|       thrown = error;
+    182|     }
+    183|     expect(thrown).toBeInstanceOf(AggregateError);
+       |                    ^
+    184|     expect(thrown).toMatchObject({
+    185|       message: "Harness session subscribers failed.",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  11:19:30
+   Duration  883ms (transform 183ms, setup 0ms, import 663ms, tests 8ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-session.ts bound blob 5f8322416a2bce81; restored blob e0c616d55aec0e10 (backup e0c616d55aec0e10) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

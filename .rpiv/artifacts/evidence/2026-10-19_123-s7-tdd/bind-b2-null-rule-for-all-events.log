@@ -1,0 +1,43 @@
+parent: 829c3cf
+tree: 4d4df55b014fafd9e3780d478f602d6be33490e8
+working-tree digest: 6b9afc2e6d4d5701
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-request-core.test.ts -t ignores non-reply events
+started: 2026-10-19T22:58:53+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-request-core.test.ts (10 tests | 2 failed | 7 skipped) 22ms
+     × ignores non-reply events whatever their correlation: 'system.ready with null correlation' 16ms
+     × ignores non-reply events whatever their correlation: 'workspace.projection.invalidated with…' 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-request-core.test.ts > harness request core > ignores non-reply events whatever their correlation: 'system.ready with null correlation'
+ FAIL  |desktop-main| src/main/harness-request-core.test.ts > harness request core > ignores non-reply events whatever their correlation: 'workspace.projection.invalidated with…'
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/main/harness-request-core.test.ts:193:39
+    191|       session.message(row.message(messageId(1)));
+    192|       await flush();
+    193|       expect(request.outcome.settled).toBe(false);
+       |                                       ^
+    194|       session.message(listReply(messageId(1)));
+    195|       expect(await request.result).toEqual(Result.succeed(listed));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed | 7 skipped (10)
+   Start at  22:58:54
+   Duration  1.04s (transform 268ms, setup 0ms, import 789ms, tests 22ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-request-core.ts bound blob 370c6e635ca5a70e; restored blob 7b85905e4d5494b0 (backup 7b85905e4d5494b0) MATCH; tree before 68732e761ea8ccd6 after 68732e761ea8ccd6 MATCH

@@ -1,0 +1,25 @@
+parent: 1688a16
+tree: 85961051f3e152947fbe183804d637c82ccc87a8
+working-tree digest: 06c755ced1971ef9
+command: pnpm typecheck
+started: 2026-10-19T17:49:27+01:00
+---
+$ pnpm -r --if-present typecheck
+Scope: 4 of 5 workspace projects
+packages/kernel typecheck$ tsc --noEmit -p tsconfig.json
+packages/kernel typecheck: Done
+packages/protocol typecheck$ tsc --noEmit -p tsconfig.json
+packages/protocol typecheck: Done
+apps/desktop typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck$ tsc --noEmit -p tsconfig.json
+apps/desktop typecheck: src/main/desktop-shutdown.test.ts(25,44): error TS2345: Argument of type '{ stopProjectStorageBridge: () => number; stopWorkspaceBridge: () => number; stopProjectEntryBridge: () => void; dispose: () => Promise<void>; stopHarness: () => Promise<void>; quit: Mock<...>; exit: Mock<...>; }' is not assignable to parameter of type 'Readonly<{ stopProjectStorageBridge(): void; stopWorkspaceBridge(): void; stopProjectEntryBridge(): void; stopHarness(): Promise<void>; dispose(): Promise<void>; reportFailure(error: unknown): void; requestedExitCodeOnQuit?(): number | undefined; quit(): void; exit(code: number): void; }>'.
+apps/desktop typecheck:   Property 'reportFailure' is missing in type '{ stopProjectStorageBridge: () => number; stopWorkspaceBridge: () => number; stopProjectEntryBridge: () => void; dispose: () => Promise<void>; stopHarness: () => Promise<void>; quit: Mock<...>; exit: Mock<...>; }' but required in type 'Readonly<{ stopProjectStorageBridge(): void; stopWorkspaceBridge(): void; stopProjectEntryBridge(): void; stopHarness(): Promise<void>; dispose(): Promise<void>; reportFailure(error: unknown): void; requestedExitCodeOnQuit?(): number | undefined; quit(): void; exit(code: number): void; }>'.
+apps/desktop typecheck: Failed
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @slopstop/desktop@0.0.0 typecheck: `tsc --noEmit -p tsconfig.json`
+Exit status 2
+[ELIFECYCLE] Command failed with exit code 2.
+--- exit: 2
+binding m1-optional-call: source apps/desktop/src/main/desktop-shutdown.ts bound blob 9fdc4c82679d2b59; restored blob e886a0b02aad8aa7 (backup e886a0b02aad8aa7) MATCH
+binding m1-fixture-omits: source apps/desktop/src/main/desktop-shutdown.test.ts bound blob 7db4c37df85bfdf5; restored blob ece9ca1ac43cc9e7 (backup ece9ca1ac43cc9e7) MATCH
+tree before 1d61c816bbccc9a7 after 1d61c816bbccc9a7 MATCH

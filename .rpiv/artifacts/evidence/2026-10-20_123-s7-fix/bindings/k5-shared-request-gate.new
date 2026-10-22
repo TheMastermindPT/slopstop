@@ -1,0 +1,5 @@
+  let gateClosed = false;
+  return {
+    request: (bridge, createCommand, expected) =>
+      Effect.suspend(() => {
+        if (gateClosed) return Effect.fail({ kind: "unsent" } as const);

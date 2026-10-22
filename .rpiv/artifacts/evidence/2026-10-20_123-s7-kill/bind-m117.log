@@ -1,0 +1,38 @@
+parent: 32ca10a
+tree: 6c969a2a185bdeeb72834b77cd32d0ef9cc13abc
+working-tree digest: 57c77454ab254b23
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-session.test.ts -t delivers an event to every subscriber before propagating listener failures
+started: 2026-10-20T18:41:11+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-session.test.ts (8 tests | 1 failed | 7 skipped) 9ms
+     × delivers an event to every subscriber before propagating listener failures 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > delivers an event to every subscriber before propagating listener failures
+AssertionError: expected [Function] to throw error including 'first subscriber failed' but got 'Harness session subscribers failed.'
+
+Expected: "first subscriber failed"
+Received: "Harness session subscribers failed."
+
+ ❯ src/main/harness-session.test.ts:58:57
+     56|     const ready = createReadyEvent(eventMetadata, "0.0.0");
+     57|
+     58|     expect(() => port.emit("message", { data: ready })).toThrow("first…
+       |                                                         ^
+     59|     expect(events).toEqual([{ type: "message", message: ready }]);
+     60|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  18:41:12
+   Duration  607ms (transform 161ms, setup 0ms, import 458ms, tests 9ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-session.ts bound blob 2e5368ce98be5458; restored blob aadf9c41e54a1036 (backup aadf9c41e54a1036) MATCH; tree before f0c7898665b905cd after f0c7898665b905cd MATCH

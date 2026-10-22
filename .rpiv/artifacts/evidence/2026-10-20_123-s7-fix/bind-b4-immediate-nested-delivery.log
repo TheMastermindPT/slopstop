@@ -1,0 +1,104 @@
+parent: 2cf479d
+tree: 3ce941b8253995603fb3a2296af2965e6ac28855
+working-tree digest: 93d1d2cd9ab92198
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-session.test.ts
+started: 2026-10-20T11:18:49+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-session.test.ts (8 tests | 4 failed) 23ms
+     × delivers a nested emit after the outer event reached every listener 6ms
+     × drains queued emits before rethrowing a listener failure 1ms
+     × throws every listener failure at once after the drain 2ms
+     × delivers queued emits in the order they were queued 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > delivers a nested emit after the outer event reached every listener
+AssertionError: expected [ 'disconnected', 'protocol-error' ] to deeply equal [ 'protocol-error', 'disconnected' ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:129:20
+    127|
+    128|     expect(first).toEqual(["protocol-error", "disconnected"]);
+    129|     expect(second).toEqual(["protocol-error", "disconnected"]);
+       |                    ^
+    130|   });
+    131|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > drains queued emits before rethrowing a listener failure
+AssertionError: expected [ 'disconnected', 'protocol-error' ] to deeply equal [ 'protocol-error', 'disconnected' ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:149:20
+    147|     expect(() => port.emit("message", { data: { event: "not-valid" } }…
+    148|     expect(first).toEqual(["protocol-error", "disconnected"]);
+    149|     expect(second).toEqual(["protocol-error", "disconnected"]);
+       |                    ^
+    150|
+    151|     // The delivering flag was reset: a later event on the same sessio…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > throws every listener failure at once after the drain
+AssertionError: expected Error: private listener failure B to be an instance of AggregateError
+ ❯ src/main/harness-session.test.ts:183:20
+    181|       thrown = error;
+    182|     }
+    183|     expect(thrown).toBeInstanceOf(AggregateError);
+       |                    ^
+    184|     expect(thrown).toMatchObject({
+    185|       message: "Harness session subscribers failed.",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > delivers queued emits in the order they were queued
+AssertionError: expected [ 'disconnected', 'message', …(1) ] to deeply equal [ 'protocol-error', …(2) ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
+    "message",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:209:20
+    207|     port.emit("message", { data: { event: "not-valid" } });
+    208|
+    209|     expect(second).toEqual(["protocol-error", "disconnected", "message…
+       |                    ^
+    210|   });
+    211| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 4 passed (8)
+   Start at  11:18:50
+   Duration  905ms (transform 194ms, setup 0ms, import 681ms, tests 23ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-session.ts bound blob 0c761a29b2a5510d; restored blob e0c616d55aec0e10 (backup e0c616d55aec0e10) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

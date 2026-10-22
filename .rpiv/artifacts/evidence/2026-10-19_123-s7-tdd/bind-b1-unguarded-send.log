@@ -1,0 +1,37 @@
+parent: 829c3cf
+tree: 57021badd894b346de56d68fb6c7846d193b4825
+working-tree digest: c7d336cd789f7bb2
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-request-core.test.ts -t throwing send
+started: 2026-10-19T22:58:45+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-request-core.test.ts (10 tests | 1 failed | 9 skipped) 9ms
+     × settles each harness request once by id: 'throwing send' 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-request-core.test.ts > harness request core > settles each harness request once by id: 'throwing send'
+Error: private send failure
+ ❯ session.sendError src/main/harness-request-core.test.ts:134:33
+    132|           "HARNESS_SESSION_SEND_FAILED",
+    133|           (session) => {
+    134|             session.sendError = new Error("private send failure");
+       |                                 ^
+    135|           },
+    136|           (session) => {
+ ❯ expectSendFailureFreesId src/main/harness-request-core.test.ts:54:3
+ ❯ run src/main/harness-request-core.test.ts:131:9
+ ❯ src/main/harness-request-core.test.ts:158:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  22:58:46
+   Duration  987ms (transform 225ms, setup 0ms, import 768ms, tests 9ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-request-core.ts bound blob a5245b6955a89271; restored blob 7b85905e4d5494b0 (backup 7b85905e4d5494b0) MATCH; tree before 68732e761ea8ccd6 after 68732e761ea8ccd6 MATCH

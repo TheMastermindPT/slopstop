@@ -1,0 +1,41 @@
+parent: e011d6e
+tree: 73e5c72f252c885b55157b1d5137ce29a175a192
+working-tree digest: b957a8b1e7e00092
+command: pnpm exec vitest run --project harness apps/harness/src/storage/project-storage-node-errors.test.ts -t unavailable class
+started: 2026-10-22T19:19:54+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/storage/project-storage-node-errors.test.ts (37 tests | 1 failed | 36 skipped) 6ms
+     × knows a busy storage error, directly or by its cause: 'unavailable class' 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/storage/project-storage-node-errors.test.ts > Project Storage Node error classification > knows a busy storage error, directly or by its cause: 'unavailable class'
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/storage/project-storage-node-errors.test.ts:100:43
+     98|     { name: "plain error", error: new Error("plain"), busy: false },
+     99|   ])("knows a busy storage error, directly or by its cause: $name", ({…
+    100|     expect(isBusyStorageError({ error })).toBe(busy);
+       |                                           ^
+    101|   });
+    102| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 36 skipped (37)
+   Start at  19:19:55
+   Duration  549ms (transform 142ms, setup 0ms, import 409ms, tests 6ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/storage/project-storage-node-errors.ts bound blob faf8bfcb50407488; restored blob 7f180253195f7038 (backup 7f180253195f7038) MATCH; tree before 826d7f2e67e666c0 after 826d7f2e67e666c0 MATCH

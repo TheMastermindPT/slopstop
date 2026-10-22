@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { decodeStrict } from "@slopstop/protocol";
 import { Duration, Effect, Result } from "effect";
+import { untypedRejection } from "../effect-rejection.js";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { sameExecutableIdentity } from "./executable-identity.js";
@@ -264,7 +265,7 @@ function drainPreparations(
     Effect.forEach(
       [...work],
       (pending) =>
-        Effect.result(Effect.tryPromise({ try: () => pending, catch: (error) => error })),
+        Effect.result(Effect.tryPromise({ try: () => pending, catch: untypedRejection })),
       { concurrency: "unbounded" },
     ),
     (results): PendingClose | Readonly<{ status: "closed" }> =>

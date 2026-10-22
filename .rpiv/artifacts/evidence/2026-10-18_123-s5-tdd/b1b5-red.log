@@ -1,0 +1,81 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime-shutdown.test.ts (10 tests | 1 failed | 7 skipped) 12ms
+   × settles the stop when the process runtime is disposed during the program 10ms
+ ❯ |harness| src/harness-runtime.test.ts (104 tests | 2 failed | 98 skipped) 197ms
+     × the listing stop interrupts itself 4ms
+     × interrupts an in-flight registration request at dispose without a reply 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime-shutdown.test.ts > settles the stop when the process runtime is disposed during the program
+AssertionError: expected [ 'listing-started' ] to deeply equal [ 'listing-started', …(1) ]
+
+- Expected
++ Received
+
+  [
+    "listing-started",
+-   "listing-interrupted",
+  ]
+
+ ❯ src/harness-runtime-shutdown.test.ts:363:19
+    361|     await advance(0);
+    362|     expect(disposing.state).toBe("resolved");
+    363|     expect(calls).toEqual(["listing-started", "listing-interrupted"]);
+       |                   ^
+    364|     expect(seen.state).toBe("rejected");
+    365|     expect(seen.value).toBeInstanceOf(Error);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |harness| src/harness-runtime.test.ts > shutdown failures while no Project is held > the listing stop interrupts itself
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array []
+
+
+Number of calls: 1
+
+ ❯ src/harness-runtime.test.ts:340:44
+    338|     expect(error).toBeInstanceOf(Error);
+    339|     expect(error).toMatchObject({ message: "All fibers interrupted wit…
+    340|     expect(f.applicationDatabase.stop).not.toHaveBeenCalled();
+       |                                            ^
+    341|     expect(f.applicationDatabase.withhold).not.toHaveBeenCalled();
+    342|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |harness| src/harness-runtime.test.ts > registration requests on the process runtime > interrupts an in-flight registration request at dispose without a reply
+AssertionError: expected [ 'handle-started' ] to deeply equal [ 'handle-started', …(1) ]
+
+- Expected
++ Received
+
+  [
+    "handle-started",
+-   "handle-interrupted",
+  ]
+
+ ❯ src/harness-runtime.test.ts:1301:21
+    1299|       await stop();
+    1300|       await runtime.dispose();
+    1301|       expect(calls).toEqual(["handle-started", "handle-interrupted"]);
+       |                     ^
+    1302|       expect(transport.sent).toEqual([]);
+    1303|       await nextTurn();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  3 failed | 6 passed | 105 skipped (114)
+   Start at  16:41:26
+   Duration  1.32s (transform 1.16s, setup 0ms, import 1.92s, tests 209ms, environment 0ms)
+

@@ -29,12 +29,14 @@ import {
   writerProofProjectId,
   writerProofStaleProjectId,
 } from "@slopstop/protocol";
+import { Effect, Result } from "effect";
 import {
   MessageChannelMain,
   type MessagePortMain,
   type UtilityProcess,
   utilityProcess,
 } from "electron";
+import { type UntypedRejection, untypedRejection } from "./effect-rejection.js";
 import {
   requireWriterProof,
   verifyPackagedWriterNative,
@@ -294,20 +296,26 @@ class OwnedUtility {
     requireWriterProof(performance.now() < options.deadline, options.stage);
     requireWriterProof(options.terminal === true || !this.terminal, "process-exit");
   }
+  /** Temporary Promise facade; remove when the writer package smoke migrates to Effect, Part B. */
   async wait(predicate: () => boolean, options: Wait): Promise<void> {
-    await new Promise<void>((resolve, reject) => {
+    const waited = await Effect.runPromise(Effect.result(this.polling(predicate, options)));
+    if (Result.isFailure(waited)) throw waited.failure.cause;
+    this.checkWait(options);
+  }
+  /** Resumes once `predicate` holds, or fails with the first failed check. */
+  polling(predicate: () => boolean, options: Wait): Effect.Effect<void, UntypedRejection> {
+    return Effect.callback<void, UntypedRejection>((resume) => {
       let timer: ReturnType<typeof setTimeout> | undefined;
       let settled = false;
+      // A second resume is ignored (effect/src/internal/effect.ts:1169-1170), so a repeated
+      // finish only repeats its idempotent cleanup.
       const finish = (error?: unknown) => {
-        if (settled) return;
         settled = true;
-        if (timer !== undefined) clearTimeout(timer);
+        clearTimeout(timer);
         this.proof.changes.delete(check);
-        if (error === undefined) resolve();
-        else reject(error);
+        resume(error === undefined ? Effect.void : Effect.fail(untypedRejection(error)));
       };
       const check = () => {
-        if (settled) return;
         try {
           this.checkWait(options);
           if (predicate()) finish();
@@ -321,8 +329,15 @@ class OwnedUtility {
       };
       this.proof.changes.add(check);
       check();
+      // Interruption only, and defensive: the facade passes no signal.
+      // Stryker disable all: S6-J7: defensive interruption canceler, unreachable through the facade
+      return Effect.sync(() => {
+        settled = true;
+        clearTimeout(timer);
+        this.proof.changes.delete(check);
+      });
+      // Stryker restore all: S6-J7: defensive interruption canceler, unreachable through the facade
     });
-    this.checkWait(options);
   }
   async exchange<T>(send: () => unknown, parse: (value: unknown) => T, options: Wait): Promise<T> {
     this.proof.assert(options.deadline, options.stage);

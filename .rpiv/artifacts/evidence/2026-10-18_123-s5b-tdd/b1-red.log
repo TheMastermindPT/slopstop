@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (3 tests | 2 failed) 139ms
+   × fails on a planted Effect error: 'unknownInEffectCatch' 52ms
+   × fails on a planted Effect error: 'newPromise' 45ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'unknownInEffectCatch'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'newPromise'
+AssertionError: expected { ok: true } to match object { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_VIOLATIONS",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:90:18
+     88|     return;
+     89|   }
+     90|   expect(result).toMatchObject({ ok: false, code: "EFFECT_GATE_VIOLATI…
+       |                  ^
+     91|   expect(result.violations).toEqual([violation]);
+     92|   expect(cli.status).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  20:45:26
+   Duration  308ms (transform 19ms, setup 0ms, import 34ms, tests 139ms, environment 0ms)
+

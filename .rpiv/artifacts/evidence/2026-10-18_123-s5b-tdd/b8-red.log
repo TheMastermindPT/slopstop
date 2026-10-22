@@ -1,0 +1,26 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (28 tests | 1 failed) 38ms
+     × kills after grace and rejects after the terminal exit deadline 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > kills after grace and rejects after the terminal exit deadline
+AssertionError: expected Error: Harness shutdown timed out. to be an instance of HarnessShutdownTimeout
+ ❯ src/main/harness-supervisor.test.ts:636:21
+    634|     await vi.advanceTimersByTimeAsync(1);
+    635|     await observedStop;
+    636|     expect(outcome).toBeInstanceOf(HarnessShutdownTimeout);
+       |                     ^
+    637|     expect(outcome).toBeInstanceOf(Error);
+    638|     expect(outcome).toMatchObject({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 27 passed (28)
+   Start at  20:59:34
+   Duration  3.70s (transform 199ms, setup 0ms, import 3.52s, tests 38ms, environment 0ms)
+

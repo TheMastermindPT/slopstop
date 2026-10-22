@@ -208,7 +208,7 @@ function expectUnsupportedBootstrapReceipt(value: unknown) {
   return receipt;
 }
 
-function startTrustedBootstrap(
+async function startTrustedBootstrap(
   applicationStorageRoot: string,
   session: ReturnType<typeof createProcessTransportFixture>,
 ) {
@@ -230,7 +230,7 @@ it(
     const session = createProcessTransportFixture();
     let stop: StopHarnessRuntime | undefined;
     try {
-      stop = startTrustedBootstrap(applicationStorageRoot, session);
+      stop = await startTrustedBootstrap(applicationStorageRoot, session);
       const { command, generationId } = await createBootstrapCommand(session);
       const { projectId } = command;
       const file = path.join(
@@ -285,7 +285,7 @@ it(
     let stop: StopHarnessRuntime | undefined;
 
     try {
-      stop = startTrustedBootstrap(applicationStorageRoot, session);
+      stop = await startTrustedBootstrap(applicationStorageRoot, session);
       await session.handshake();
       await expect(session.open()).resolves.toMatchObject({
         event: "project.open.result",
@@ -331,7 +331,7 @@ it("rejects overlapping bootstrap roots before starting the runtime", async () =
   ] as const) {
     const session = createProcessTransportFixture();
     try {
-      expect(() =>
+      await expect(
         startHarnessProcessRuntime({
           logger: silentHarnessLogger,
           bootstrap: {
@@ -341,7 +341,7 @@ it("rejects overlapping bootstrap roots before starting the runtime", async () =
           },
           transport: session.transport,
         }),
-      ).toThrow("Harness bootstrap roots must not overlap.");
+      ).rejects.toThrow("Harness bootstrap roots must not overlap.");
       expect(await pathExists(path.join(applicationRoot, "application.db"))).toBe(false);
     } finally {
       session.closePorts();
@@ -359,7 +359,7 @@ it("rejects a filesystem alias before persistence mutation", async () => {
   const session = createProcessTransportFixture();
 
   try {
-    expect(() =>
+    await expect(
       startHarnessProcessRuntime({
         logger: silentHarnessLogger,
         bootstrap: {
@@ -369,7 +369,7 @@ it("rejects a filesystem alias before persistence mutation", async () => {
         },
         transport: session.transport,
       }),
-    ).toThrow();
+    ).rejects.toThrow();
     expect(await pathExists(path.join(applicationRoot, "application.db"))).toBe(false);
   } finally {
     session.closePorts();

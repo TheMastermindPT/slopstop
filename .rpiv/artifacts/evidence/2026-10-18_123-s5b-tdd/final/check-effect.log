@@ -1,0 +1,5 @@
+head 54d2e121397ff4fc654c2738e98117215bfdeb23
+command: pnpm check:effect
+$ node apps/harness/scripts/check-effect-diagnostics.mjs
+Effect diagnostics verified; 50 advisory warnings.
+exit 0

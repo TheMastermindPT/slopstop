@@ -1,0 +1,12 @@
+counts: {'NoCoverage': 1, 'Ignored': 4, 'Killed': 93, 'Survived': 2, 'Timeout': 5}
+file: project-storage-node-errors.ts {'NoCoverage': 1, 'Ignored': 4, 'Killed': 63, 'Survived': 2, 'Timeout': 5}
+file: project-storage-upgrade-node-adapter.ts {'Killed': 9}
+file: registration-registry.ts {'Killed': 13}
+file: registry-database.ts {'Killed': 8}
+project-storage-node-errors.ts:10:12 | Survived | ConditionalExpression | 'true' | return typeof code === "string" ? code : undefined;
+project-storage-node-errors.ts:11:11 | NoCoverage | BlockStatement | '{}' | } catch {
+project-storage-node-errors.ts:21:39 | Ignored | ArrayDeclaration | '[]' | const unavailableExactCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
+project-storage-node-errors.ts:21:40 | Ignored | StringLiteral | '""' | const unavailableExactCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
+project-storage-node-errors.ts:21:50 | Ignored | StringLiteral | '""' | const unavailableExactCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
+project-storage-node-errors.ts:21:59 | Ignored | StringLiteral | '""' | const unavailableExactCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
+project-storage-node-errors.ts:7:42 | Survived | ConditionalExpression | 'false' | if (typeof input.error !== "object" || input.error === null) return undefined;

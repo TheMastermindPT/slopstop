@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime-shutdown.test.ts (12 tests | 1 failed | 11 skipped) 9ms
+   × rejects a stop first called after the process runtime is disposed 8ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 skipped (12)
+   Start at  17:39:34
+   Duration  1.05s (transform 547ms, setup 0ms, import 901ms, tests 9ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime-shutdown.test.ts > rejects a stop first called after the process runtime is disposed
+AssertionError: expected { Object (type, isError, ...) } to be 'Z2-SHAPE' // Object.is equality
+
+- Expected:
+"Z2-SHAPE"
+
++ Received:
+{
+  "isError": false,
+  "reason": "ManagedRuntime disposed",
+  "tag": "[object String]",
+  "type": "string",
+}
+
+ ❯ src/harness-runtime-shutdown.test.ts:455:136
+    453|     expect(seen.state).toBe("rejected");
+    454|     const reason = seen.value instanceof Error ? seen.value.message : …
+    455|     expect({ type: typeof seen.value, isError: seen.value instanceof E…
+       |                                                                                                                                        ^
+    456|     expect(reason).toContain("ManagedRuntime disposed");
+    457|     expect(stopMessages).toHaveBeenCalledOnce();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

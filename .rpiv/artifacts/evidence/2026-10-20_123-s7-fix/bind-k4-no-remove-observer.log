@@ -1,0 +1,53 @@
+parent: 2cf479d
+tree: 46c4e74994ee9a9d39df071648ffde7d482bc137
+working-tree digest: fca3983f51ae0e89
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-bridges.test.ts -t notifications after stop
+started: 2026-10-20T11:20:28+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-bridges.test.ts (13 tests | 1 failed | 12 skipped) 14ms
+     × shares one core across the three bridges: 'notifications after stop' 12ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'notifications after stop'
+AssertionError: expected [Function] to not throw an error but 'SchemaError(Expected no excess proper…' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"SchemaError(Expected no excess property
+  at [\"status\"]
+Expected no excess property
+  at [\"projects\"]
+Expected no excess property
+  at [\"hiddenCount\"]
+Missing key
+  at [\"capability\"]
+Missing key
+  at [\"scope\"]
+Missing key
+  at [\"revision\"])"
+
+ ❯ run src/main/harness-bridges.test.ts:358:15
+    356|         expect(() =>
+    357|           session.message(undecodableReply("workspace.projection.inval…
+    358|         ).not.toThrow();
+       |               ^
+    359|       },
+    360|     },
+ ❯ src/main/harness-bridges.test.ts:364:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  11:20:29
+   Duration  902ms (transform 243ms, setup 0ms, import 675ms, tests 14ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/workspace-bridge.ts bound blob 626d68370786b2e8; restored blob 9b04fbea542fc73e (backup 9b04fbea542fc73e) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

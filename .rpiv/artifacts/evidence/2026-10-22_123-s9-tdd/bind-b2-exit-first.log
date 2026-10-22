@@ -1,0 +1,104 @@
+parent: d7a0e22
+tree: 3e727578bba1bd878c177e4696232dab50e06f4b
+working-tree digest: 6f2b2cd5d4f36551
+command: pnpm exec vitest run --project harness apps/harness/src/process-fatal-diagnostics.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-connection.test.ts
+started: 2026-10-22T21:18:41+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/process-connection.test.ts (5 tests | 4 failed) 13ms
+   × reports a startup failure with its code and summary: invalid bootstrap 7ms
+   × reports a startup failure with its code and summary: 'runtime start and dispose fail' 2ms
+   × reports a startup failure with its code and summary: 'runtime start fails alone' 1ms
+   × reports a runtime start failure only after the launch settled 1ms
+ ❯ |harness| src/process-shutdown.test.ts (3 tests | 2 failed) 197ms
+   × reports a failed shutdown with its summary, then exits: 'rejects' 72ms
+   × reports a failed shutdown with its summary, then exits: 'throws' 61ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a startup failure with its code and summary: invalid bootstrap
+AssertionError: expected 3 to be less than 2
+ ❯ expectFatalThenExit src/process-connection.test.ts:17:50
+     15| function expectFatalThenExit(sink: ReturnType<typeof fakeSink>) {
+     16|   expect(sink.exit.mock.calls).toEqual([[1]]);
+     17|   expect(sink.fatal.mock.invocationCallOrder[0]).toBeLessThan(
+       |                                                  ^
+     18|     sink.exit.mock.invocationCallOrder[0] ?? 0,
+     19|   );
+ ❯ src/process-connection.test.ts:47:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a startup failure with its code and summary: 'runtime start and dispose fail'
+AssertionError: expected 7 to be less than 6
+ ❯ expectFatalThenExit src/process-connection.test.ts:17:50
+     15| function expectFatalThenExit(sink: ReturnType<typeof fakeSink>) {
+     16|   expect(sink.exit.mock.calls).toEqual([[1]]);
+     17|   expect(sink.fatal.mock.invocationCallOrder[0]).toBeLessThan(
+       |                                                  ^
+     18|     sink.exit.mock.invocationCallOrder[0] ?? 0,
+     19|   );
+ ❯ src/process-connection.test.ts:84:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a startup failure with its code and summary: 'runtime start fails alone'
+AssertionError: expected 11 to be less than 10
+ ❯ expectFatalThenExit src/process-connection.test.ts:17:50
+     15| function expectFatalThenExit(sink: ReturnType<typeof fakeSink>) {
+     16|   expect(sink.exit.mock.calls).toEqual([[1]]);
+     17|   expect(sink.fatal.mock.invocationCallOrder[0]).toBeLessThan(
+       |                                                  ^
+     18|     sink.exit.mock.invocationCallOrder[0] ?? 0,
+     19|   );
+ ❯ src/process-connection.test.ts:84:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a runtime start failure only after the launch settled
+AssertionError: expected 14 to be less than 13
+ ❯ expectFatalThenExit src/process-connection.test.ts:17:50
+     15| function expectFatalThenExit(sink: ReturnType<typeof fakeSink>) {
+     16|   expect(sink.exit.mock.calls).toEqual([[1]]);
+     17|   expect(sink.fatal.mock.invocationCallOrder[0]).toBeLessThan(
+       |                                                  ^
+     18|     sink.exit.mock.invocationCallOrder[0] ?? 0,
+     19|   );
+ ❯ src/process-connection.test.ts:114:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |harness| src/process-shutdown.test.ts > reports a failed shutdown with its summary, then exits: 'rejects'
+AssertionError: expected 3 to be less than 2
+ ❯ src/process-shutdown.test.ts:51:50
+     49|   ]);
+     50|   expect(sink.exit.mock.calls).toEqual([[1]]);
+     51|   expect(sink.fatal.mock.invocationCallOrder[0]).toBeLessThan(
+       |                                                  ^
+     52|     sink.exit.mock.invocationCallOrder[0] ?? 0,
+     53|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  |harness| src/process-shutdown.test.ts > reports a failed shutdown with its summary, then exits: 'throws'
+AssertionError: expected 6 to be less than 5
+ ❯ src/process-shutdown.test.ts:51:50
+     49|   ]);
+     50|   expect(sink.exit.mock.calls).toEqual([[1]]);
+     51|   expect(sink.fatal.mock.invocationCallOrder[0]).toBeLessThan(
+       |                                                  ^
+     52|     sink.exit.mock.invocationCallOrder[0] ?? 0,
+     53|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  6 failed | 19 passed (25)
+   Start at  21:18:42
+   Duration  2.50s (transform 3.72s, setup 0ms, import 6.15s, tests 219ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/process-fatal-diagnostics.ts bound blob c74874c8a47a8795; restored blob 569f54e967ec84a5 (backup 569f54e967ec84a5) MATCH; tree before f6d08d3572281592 after f6d08d3572281592 MATCH

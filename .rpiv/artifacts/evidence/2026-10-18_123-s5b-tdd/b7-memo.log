@@ -1,0 +1,124 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/process-bootstrap.test.ts (14 tests | 6 failed | 8 skipped) 25ms
+   × aggregates the program and the dispose: 'both fail' 16ms
+   × aggregates the program and the dispose: 'only the dispose fails' 3ms
+   × aggregates the program and the dispose: 'only the program fails' 1ms
+   × aggregates the program and the dispose: 'the dispose never ends, the program f…' 2ms
+   × aggregates the program and the dispose: 'both succeed' 1ms
+   × aggregates the program and the dispose: 'waits for the program before the disp…' 1ms
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 8 skipped (14)
+     Errors  3 errors
+   Start at  21:03:26
+   Duration  1.51s (transform 852ms, setup 0ms, import 1.35s, tests 25ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'both fail'
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'only the dispose fails'
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'only the program fails'
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'the dispose never ends, the program f…'
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'both succeed'
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'waits for the program before the disp…'
+AssertionError: expected Promise{…} to be Promise{…} // Object.is equality
+
+If it should pass with deep equality, replace "toBe" with "toStrictEqual"
+
+Expected: Promise{…}
+Received: serializes to the same string
+
+
+Compared values have no visual difference.
+
+ ❯ src/process-bootstrap.test.ts:288:18
+    286|   await advance(row.settlesAt > 0 ? 1 : 0);
+    287|   check(stopping);
+    288|   expect(stop()).toBe(first);
+       |                  ^
+    289| });
+    290|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 3 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: private program stop failure
+ ❯ src/process-bootstrap.test.ts:118:24
+    116| }
+    117|
+    118| const programFailure = new Error("private program stop failure");
+       |                        ^
+    119| const disposeFailure = new Error("private dispose failure");
+    120|
+ ❯ processTicksAndRejections node:internal/process/task_queues:104:5
+ ❯ VitestModuleEvaluator._runInlinedModule ../../node_modules/vitest/dist/module-evaluator.js:206:4
+ ❯ VitestModuleRunner.directRequest ../../node_modules/vite/dist/node/module-runner.js:1268:59
+ ❯ VitestModuleRunner.cachedRequest ../../node_modules/vite/dist/node/module-runner.js:1175:73
+ ❯ VitestModuleRunner.import ../../node_modules/vite/dist/node/module-runner.js:1129:10
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2457:5
+ ❯ collectTests ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2433:3
+ ❯ startTests ../../node_modules/@vitest/runner/dist/chunk-artifact.js:3278:17
+ ❯ ../../node_modules/vitest/dist/chunks/base.B6Opl8PE.js:90:5
+
+This error originated in "src/process-bootstrap.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "aggregates the program and the dispose: 'only the dispose fails'". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: private program stop failure
+ ❯ src/process-bootstrap.test.ts:118:24
+    116| }
+    117|
+    118| const programFailure = new Error("private program stop failure");
+       |                        ^
+    119| const disposeFailure = new Error("private dispose failure");
+    120|
+ ❯ processTicksAndRejections node:internal/process/task_queues:104:5
+ ❯ VitestModuleEvaluator._runInlinedModule ../../node_modules/vitest/dist/module-evaluator.js:206:4
+ ❯ VitestModuleRunner.directRequest ../../node_modules/vite/dist/node/module-runner.js:1268:59
+ ❯ VitestModuleRunner.cachedRequest ../../node_modules/vite/dist/node/module-runner.js:1175:73
+ ❯ VitestModuleRunner.import ../../node_modules/vite/dist/node/module-runner.js:1129:10
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2457:5
+ ❯ collectTests ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2433:3
+ ❯ startTests ../../node_modules/@vitest/runner/dist/chunk-artifact.js:3278:17
+ ❯ ../../node_modules/vitest/dist/chunks/base.B6Opl8PE.js:90:5
+
+This error originated in "src/process-bootstrap.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "aggregates the program and the dispose: 'the dispose never ends, the program f…'". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: private program stop failure
+ ❯ src/process-bootstrap.test.ts:118:24
+    116| }
+    117|
+    118| const programFailure = new Error("private program stop failure");
+       |                        ^
+    119| const disposeFailure = new Error("private dispose failure");
+    120|
+ ❯ processTicksAndRejections node:internal/process/task_queues:104:5
+ ❯ VitestModuleEvaluator._runInlinedModule ../../node_modules/vitest/dist/module-evaluator.js:206:4
+ ❯ VitestModuleRunner.directRequest ../../node_modules/vite/dist/node/module-runner.js:1268:59
+ ❯ VitestModuleRunner.cachedRequest ../../node_modules/vite/dist/node/module-runner.js:1175:73
+ ❯ VitestModuleRunner.import ../../node_modules/vite/dist/node/module-runner.js:1129:10
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2457:5
+ ❯ collectTests ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2433:3
+ ❯ startTests ../../node_modules/@vitest/runner/dist/chunk-artifact.js:3278:17
+ ❯ ../../node_modules/vitest/dist/chunks/base.B6Opl8PE.js:90:5
+
+This error originated in "src/process-bootstrap.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "aggregates the program and the dispose: 'both succeed'". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+

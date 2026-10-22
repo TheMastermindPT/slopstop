@@ -1,0 +1,18 @@
+head 68609d7 (apps = cef7554) cpu 3/6/7 start 2026-10-18T19:43:50+01:00
+command: pnpm test:mutation:project-storage:harness --mutate apps/harness/src/harness-runtime.ts:335-351,apps/harness/src/harness-runtime.ts:425-446
+$ pnpm exec stryker run stryker.project-storage.config.json "--mutate" "apps/harness/src/harness-runtime.ts:335-351,apps/harness/src/harness-runtime.ts:425-446"
+[32m19:44:02 (75808) INFO ProjectReader[39m Found 1 of 1145 file(s) to be mutated.
+[32m19:44:02 (75808) INFO Instrumenter[39m Instrumented 1 source file(s) with 33 mutant(s)
+[32m19:44:04 (75808) INFO ConcurrencyTokenProvider[39m Creating 4 test runner process(es).
+[32m19:44:07 (75808) INFO DryRunExecutor[39m Starting initial test run (vitest test runner with "perTest" coverage analysis). This may take a while.
+[32m19:44:59 (75808) INFO DryRunExecutor[39m Initial test run succeeded. Ran 235 tests in 52 seconds (net 47488.38989999999 ms, overhead 4594.610100000013 ms).
+[32m19:45:25 (75808) INFO MutationTestReportHelper[39m Final mutation score of 100.00 is greater than or equal to break threshold 80
+[32m19:45:25 (75808) INFO JsonReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/mutation.json
+[32m19:45:25 (75808) INFO HtmlReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/project-storage-harness.html
+[32m19:45:25 (75808) INFO MutationTestExecutor[39m Done in 1 minute and 23 seconds.
+
+real	1m35.520s
+user	0m0.091s
+sys	0m0.076s
+exit 0
+end 2026-10-18T19:45:26+01:00

@@ -1,0 +1,33 @@
+parent: feeab30
+tree: e7b88c5624b61443379f8a929f3ace29d684e5aa
+working-tree digest: a6af348fc6055614
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts -t logs the desktop start
+started: 2026-10-19T14:32:05+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts (80 tests | 1 failed | 79 skipped) 138ms
+     × logs the desktop start before building the owners 137ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > logs the desktop start before building the owners
+AssertionError: expected 17 to be less than 15
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:842:59
+    840|     );
+    841|     expect(start).toBeGreaterThanOrEqual(0);
+    842|     expect(ports.logInfo.mock.invocationCallOrder[start]).toBeLessThan(
+       |                                                           ^
+    843|       ports.supervisorCreated.mock.invocationCallOrder[0] ?? 0,
+    844|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 79 skipped (80)
+   Start at  14:32:06
+   Duration  780ms (transform 302ms, setup 0ms, import 505ms, tests 138ms, environment 0ms)
+
+--- exit: 1

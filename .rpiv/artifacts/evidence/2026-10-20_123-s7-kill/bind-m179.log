@@ -1,0 +1,63 @@
+parent: 32ca10a
+tree: 95f1a347630222d7b2c98fc63e593a199285f004
+working-tree digest: 791e0a2b6407f9cf
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/project-entry-bridge.test.ts -t switch
+started: 2026-10-20T18:41:27+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/project-entry-bridge.test.ts (111 tests | 1 failed | 106 skipped) 16ms
+   × answers its own decoded reply: 'switch' 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/project-entry-bridge.test.ts > answers its own decoded reply: 'switch'
+AssertionError: expected { …(3) } to deeply equal { status: 'target-result', …(2) }
+
+- Expected
++ Received
+
+  {
++   "diagnostic": {
++     "code": "PROJECT_COORDINATOR_UNAVAILABLE",
++     "message": "The Project connection is unavailable.",
++     "retryable": false,
++   },
+    "request": {
+      "from": {
+        "activationId": "eaf7b23b-572c-477c-a9bd-1efacfa08ed5",
+        "projectId": "dbb37566-b365-4d1d-bc60-a5ef07b4461e",
+      },
+      "to": {
+        "projectId": "9d420c04-a700-47df-a579-f44be5a6ca0c",
+      },
+    },
+-   "status": "target-result",
+-   "target": {
+-     "request": {
+-       "projectId": "9d420c04-a700-47df-a579-f44be5a6ca0c",
+-     },
+-     "status": "not-registered",
+-   },
++   "status": "coordinator-unavailable",
+  }
+
+ ❯ src/main/project-entry-bridge.test.ts:877:24
+    875|   const pending = row.start(bridge);
+    876|   port.emit("message", { data: row.reply(port.metadata()) });
+    877|   await expect(pending).resolves.toEqual(row.result);
+       |                        ^
+    878|   bridge.stop();
+    879| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed | 106 skipped (111)
+   Start at  18:41:28
+   Duration  661ms (transform 188ms, setup 0ms, import 502ms, tests 16ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/project-entry-bridge.ts bound blob 577036d32367a0c4; restored blob bf8ea0760a1c6a49 (backup bf8ea0760a1c6a49) MATCH; tree before f0c7898665b905cd after f0c7898665b905cd MATCH

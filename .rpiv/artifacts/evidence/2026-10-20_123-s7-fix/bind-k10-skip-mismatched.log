@@ -1,0 +1,83 @@
+parent: 2cf479d
+tree: e67fd87beb28d22863cfa191672edc046c6cb703
+working-tree digest: 23cf6e12a30c731a
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-bridges.test.ts -t cross-bridge correlated reply
+started: 2026-10-20T11:20:48+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-bridges.test.ts (13 tests | 2 failed | 11 skipped) 11ms
+     × shares one core across the three bridges: 'cross-bridge correlated reply: storag…' 9ms
+     × shares one core across the three bridges: 'cross-bridge correlated reply: worksp…' 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'cross-bridge correlated reply: storag…'
+AssertionError: expected undefined to deeply equal { status: 'broken', …(2) }
+
+- Expected:
+{
+  "diagnostic": {
+    "code": "PROJECT_STORAGE_TRANSPORT_FAILED",
+    "message": "Harness returned a mismatched Project Storage response.",
+  },
+  "request": {
+    "projectId": "758f8af1-9446-4a69-a40c-6f82eab2d201",
+  },
+  "status": "broken",
+}
+
++ Received:
+undefined
+
+ ❯ expectCrossBridgeMismatch src/main/harness-bridges.test.ts:149:33
+    147|   session.message(ownReply[other].event(sentId(session, target)));
+    148|   await flushMicrotasks();
+    149|   expect(pending[target].value).toEqual(expected);
+       |                                 ^
+    150|   expect(pending[other].settled).toBe(false);
+    151|   session.message(ownReply[other].event(sentId(session, other)));
+ ❯ src/main/harness-bridges.test.ts:364:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'cross-bridge correlated reply: worksp…'
+AssertionError: expected undefined to deeply equal { status: 'broken', …(2) }
+
+- Expected:
+{
+  "diagnostic": {
+    "code": "WORKSPACE_TRANSPORT_FAILED",
+    "message": "Harness returned a mismatched workspace response.",
+  },
+  "query": {
+    "cursor": null,
+    "projectId": "758f8af1-9446-4a69-a40c-6f82eab2d201",
+    "query": "memory-library.read",
+  },
+  "status": "broken",
+}
+
++ Received:
+undefined
+
+ ❯ expectCrossBridgeMismatch src/main/harness-bridges.test.ts:149:33
+    147|   session.message(ownReply[other].event(sentId(session, target)));
+    148|   await flushMicrotasks();
+    149|   expect(pending[target].value).toEqual(expected);
+       |                                 ^
+    150|   expect(pending[other].settled).toBe(false);
+    151|   session.message(ownReply[other].event(sentId(session, other)));
+ ❯ src/main/harness-bridges.test.ts:364:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 11 skipped (13)
+   Start at  11:20:49
+   Duration  815ms (transform 212ms, setup 0ms, import 602ms, tests 11ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-request-core.ts bound blob f5fb7e82e1b8dd0b; restored blob 470e5c9a59bc9fb5 (backup 470e5c9a59bc9fb5) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

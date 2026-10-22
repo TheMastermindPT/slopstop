@@ -1,0 +1,89 @@
+parent: 09d7faf
+tree: 7e61c43369270d236d136187d70c971cfd07886c
+working-tree digest: e3b0c44298fc1c14
+command: pnpm test:e2e
+started: 2026-10-22T18:21:31+01:00
+---
+$ pnpm --filter @slopstop/desktop test:e2e
+$ electron-forge package && playwright test --config playwright.config.ts
+[33m❯[39m Checking your system
+[33m❯[39m Checking package manager version
+[32m✔[39m Found pnpm@11.5.1
+[32m✔[39m Checking your system
+[?25h[33m❯[39m Preparing to package application
+[32m✔[39m Preparing to package application
+[33m❯[39m Running packaging hooks
+[33m❯[39m Running generateAssets hook
+[32m✔[39m Running generateAssets hook
+[33m❯[39m Running prePackage hook
+[33m❯[39m [plugin-vite] Building production Vite bundles
+[33m❯[39m Building main and preload targets...
+[33m❯[39m Building renderer targets...
+[33m❯[39m Building src/main/main.ts target
+[33m❯[39m Building src/preload/preload.ts target
+
+[43m[30m WARN [39m[49m [36minlineDynamicImports[39m option is deprecated, please use [36mcodeSplitting: false[39m instead.
+
+[32m✔[39m Building src/preload/preload.ts target
+[33m❯[39m Building harness writer-proof-fixture target
+[32m✔[39m Building src/main/main.ts target
+[32m✔[39m Built target main_window
+[32m✔[39m Building renderer targets...
+[32m✔[39m Building harness writer-proof-fixture target
+[32m✔[39m Building main and preload targets...
+[32m✔[39m [plugin-vite] Building production Vite bundles
+[32m✔[39m Running prePackage hook
+[32m✔[39m Running packaging hooks
+[33m❯[39m Packaging application
+› Determining targets...
+[33m❯[39m Packaging for x64 on win32
+[33m❯[39m Copying files
+[33m❯[39m Preparing native dependencies
+[33m❯[39m Finalizing package
+[32m✔[39m Copying files
+[32m✔[39m Preparing native dependencies
+[32m✔[39m Finalizing package
+[32m✔[39m Packaging for x64 on win32
+[32m✔[39m Packaging application
+[33m❯[39m Running postPackage hook
+[32m✔[39m Running postPackage hook
+[?25h
+Running 27 tests using 1 worker
+
+S4b accessibility screenshots: C:\Users\pedro\AppData\Local\Temp\opencode\s4b-a11y-7KE50l\s4b-visual
+  ok  1 tests\e2e\conversation-accessibility.test.ts:215:1 › meets the accessibility checklist in the real window (28.4s)
+  ok  2 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows a-save-faults accessibly (9.4s)
+  ok  3 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows b-read-unavailable accessibly (8.7s)
+  ok  4 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows c-read-broken accessibly (8.3s)
+  ok  5 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows d-read-rejected accessibly (8.3s)
+  ok  6 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows e-read-stale accessibly (8.1s)
+  ok  7 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows g-try-again-unavailable accessibly (8.5s)
+  ok  8 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows f-read-only accessibly (7.9s)
+  ok  9 tests\e2e\conversation.test.ts:140:1 › saves, switches, restarts and reopens (17.3s)
+  ok 10 tests\e2e\project-upgrade.test.ts:10:1 › updates an older Project in the window (10.8s)
+Project entry Electron proof: C:\Users\pedro\AppData\Local\Temp\opencode\pc-ui-proof-3xFp6t
+  ok 11 tests\e2e\projects.test.ts:8:1 › lists and switches real saved Projects through the sandboxed Electron preload (15.0s)
+
+  ok 12 tests\e2e\registration.test.ts:87:1 › registers a repository chosen in the main-process dialog through the preload API (9.5s)
+
+  ok 13 tests\e2e\registration.test.ts:114:1 › refuses a renderer-supplied directory without reaching the harness (6.8s)
+
+  ok 14 tests\e2e\registration.test.ts:141:1 › adds a repository through the add flow in the real window and opens it (12.3s)
+
+  ok 15 tests\e2e\registration.test.ts:179:1 › removes a Project from the list in the real window and brings it back by re-adding (11.5s)
+  ok 16 tests\e2e\renderer-foundation.test.ts:70:1 › loads the bundled fonts under the unchanged CSP (6.5s)
+  ok 17 tests\e2e\renderer-foundation.test.ts:108:1 › enforces the main-window CSP on the file:// renderer (6.5s)
+  ok 18 tests\e2e\renderer-foundation.test.ts:134:1 › writes the CSP meta into the built page (2ms)
+  ok 19 tests\e2e\renderer-foundation.test.ts:146:1 › never inlines a font in the built styles (1ms)
+  ok 20 tests\e2e\renderer-foundation.test.ts:235:1 › gives the region frame its Seixo look (14.3s)
+  ok 21 tests\e2e\renderer-foundation.test.ts:260:1 › passes the accessibility harness on the region frame (14.8s)
+  ok 22 tests\e2e\renderer-foundation.test.ts:361:1 › keeps the old shell's look (14.9s)
+S4a visual review screenshots: C:\Users\pedro\AppData\Local\Temp\opencode\s4a-foundation-c6By3G\s4a-visual
+  ok 23 tests\e2e\renderer-foundation.test.ts:445:1 › captures the region frame for the visual review (14.7s)
+  ok 24 tests\e2e\shell.test.ts:54:3 › built desktop shell › shows a real harness connection behind the strict renderer boundary (6.5s)
+  ok 25 tests\e2e\shell.test.ts:93:3 › built desktop shell › returns truthful unavailable workspace results through Electron (6.4s)
+  ok 26 tests\e2e\shell.test.ts:126:3 › built desktop shell › keeps the shell visible within the minimum window (6.5s)
+  ok 27 tests\e2e\single-instance.test.ts:41:1 › quits a second launch and keeps the first usable (16.7s)
+
+  27 passed (4.9m)
+--- exit: 0

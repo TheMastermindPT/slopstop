@@ -1,0 +1,1 @@
+    .filter((entry) => entry.isFile());

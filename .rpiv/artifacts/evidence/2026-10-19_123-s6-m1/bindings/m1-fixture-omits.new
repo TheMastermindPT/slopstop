@@ -1,0 +1,2 @@
+  dispose: () => Promise.resolve(),
+};

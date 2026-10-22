@@ -1,0 +1,1 @@
+    return { kind: valueKind(value), message: String(value instanceof Error ? value.message : value) };

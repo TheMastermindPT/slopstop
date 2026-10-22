@@ -89,6 +89,8 @@ async function beforeDeadline(work: Promise<void>, control: ObservationControl):
   try {
     await Promise.race([
       work,
+      // Effect waiver EW3: a per-request deadline race in the Windows version child.
+      // @effect-diagnostics-next-line newPromise:off
       new Promise<never>((_resolve, reject) => {
         cancelTimer = clock.schedule(Math.max(0, deadline - clock.now()), () =>
           reject(observationInterruption(control) ?? new ObserverLimitError(deadline)),

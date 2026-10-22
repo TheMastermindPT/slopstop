@@ -1,0 +1,13 @@
+head 1ab1762 cpu 14/16/6 start 2026-10-18T17:07:16+01:00
+$ pnpm --filter @slopstop/desktop package:launch-smoke
+$ node tests/e2e/package-smoke.mjs
+Packaged SlopStop smoke failed at package isolation.
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @slopstop/desktop@0.0.0 package:launch-smoke: `node tests/e2e/package-smoke.mjs`
+Exit status 1
+[ELIFECYCLE] Command failed with exit code 1.
+
+real	0m1.175s
+user	0m0.030s
+sys	0m0.076s
+exit 1

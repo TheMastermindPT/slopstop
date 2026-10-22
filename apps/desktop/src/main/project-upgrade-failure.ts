@@ -4,21 +4,7 @@ import {
   projectUpgradeDiagnostics,
 } from "@slopstop/protocol";
 import { Match } from "effect";
-import type { PendingFailure } from "./harness-pending-request.js";
-import type { HarnessSessionSendResult } from "./harness-session.js";
-
-type SendErrorCode = Extract<HarnessSessionSendResult, { ok: false }>["error"]["code"];
-
-/**
- * Why a bridge request ended without a decoded reply: a pending failure, a refused send, a call
- * made after the bridge stopped (never sent), or a fault the bridge itself detected (an invalid
- * command, a colliding id, or a mismatched reply).
- */
-export type ProjectRequestFault =
-  | PendingFailure
-  | Readonly<{ kind: "send"; code: SendErrorCode }>
-  | Readonly<{ kind: "unsent" }>
-  | Readonly<{ kind: "desktop" }>;
+import type { ProjectRequestFault } from "./harness-request-core.js";
 
 const rows = projectUpgradeDiagnostics;
 const harnessRows = {
@@ -51,6 +37,7 @@ export function projectUpgradeFailure(
     Match.discriminatorsExhaustive("kind")({
       transport: () => connectionLost(request),
       unsent: () => connectionLost(request),
+      stopped: () => connectionLost(request),
       protocol: () => protocolInvalid(request),
       desktop: () => protocolInvalid(request),
       harness: ({ code }): ProjectUpgradeResult => ({

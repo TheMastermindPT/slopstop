@@ -1,0 +1,16 @@
+preflight: partial
+unchecked: U2B-FD-B2 line 2471: `succeeded` never
+unchecked: U2B-FD-B2 line 2471: `sink.fatal` exactly once with `({ code: "HARNESS_SHUTDOWN_FAILED", failures: [{ kind: "error" }, { tag: "HarnessRuntimeDisposeUnconfirmed" }], omittedFailures: 0 }, "Harness shutdown failed.")`
+unchecked: U2B-FD-B2 line 2471: `sink.exit` exactly once with `1`, after `fatal` (`invocationCallOrder`)
+unchecked: U2B-FD-B2 line 2471: no `P`.
+unchecked: U2B-FD-B2 line 2472: `succeeded` once with "Harness message port closed."
+unchecked: U2B-FD-B2 line 2472: `sink.fatal` and `sink.exit` never.
+unchecked: U2B-FD-B3 line 2482: after `connectHarnessProcess` is called and pending callbacks are flushed (test-side `await new Promise(setImmediate)`, which the Effect rules allow in tests), `sink.fatal` and `sink.exit` have not been called
+unchecked: U2B-FD-B3 line 2482: after the test rejects it with `E`, `fatal` then `exit(1)` are called once each. With `launchOnProcessRuntime`'s existing pin (`process-bootstrap.test.ts:355`, the rejection comes only after the bounded dispose), this pins "the bounded dispose settles before the startup exit" (Q25, the cheap part).
+unchecked: U2B-FD-B3 line 2483: `sink.fatal` and `sink.exit` never.
+reprove: --commit 961eee178362605878de4d063133a524d8e0f933 --test apps/harness/src/process-fatal-diagnostics.test.ts::summarizes a fatal failure as metadata only: $name
+reprove: --commit 961eee178362605878de4d063133a524d8e0f933 --test apps/harness/src/process-shutdown.test.ts::reports a failed shutdown with its summary, then exits: $name
+reprove: --commit 961eee178362605878de4d063133a524d8e0f933 --test apps/harness/src/process-shutdown.test.ts::logs a clean shutdown without a fatal
+reprove: --commit 961eee178362605878de4d063133a524d8e0f933 --test apps/harness/src/process-connection.test.ts::reports a startup failure with its code and summary: $name
+reprove: --commit 961eee178362605878de4d063133a524d8e0f933 --test apps/harness/src/process-connection.test.ts::reports a runtime start failure only after the launch settled
+reprove: --commit 961eee178362605878de4d063133a524d8e0f933 --test apps/harness/src/process-connection.test.ts::attaches the stop of a good start

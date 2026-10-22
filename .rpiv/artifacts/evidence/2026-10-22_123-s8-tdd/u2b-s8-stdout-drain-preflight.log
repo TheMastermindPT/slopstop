@@ -1,0 +1,10 @@
+preflight: clean
+reprove: --commit 3001364708181cfbeb79fb9c3c46f0ae501ad78f --test apps/desktop/src/main/harness-supervisor.test.ts::waits after exit until stdout $event before the stop resolves
+reprove: --commit 3001364708181cfbeb79fb9c3c46f0ae501ad78f --test apps/desktop/src/main/harness-supervisor.test.ts::resolves the stop at the drain bound when stdout never ends
+reprove: --commit 3001364708181cfbeb79fb9c3c46f0ae501ad78f --test apps/desktop/src/main/harness-supervisor.test.ts::bounds the worst-case quit at the kill grace plus the drain
+reprove: --commit 3001364708181cfbeb79fb9c3c46f0ae501ad78f --test apps/desktop/src/main/harness-supervisor.test.ts::kills after grace and rejects after the terminal exit deadline
+reprove: --commit 3001364708181cfbeb79fb9c3c46f0ae501ad78f --test apps/desktop/src/main/harness-supervisor.test.ts::stops forwarding when a stopping child never exits
+reprove: --commit 3001364708181cfbeb79fb9c3c46f0ae501ad78f --test apps/desktop/src/main/harness-supervisor.test.ts::forwards upgrade lines written during shutdown until stdout ends
+reprove: --commit 3001364708181cfbeb79fb9c3c46f0ae501ad78f --test apps/desktop/src/main/harness-supervisor.test.ts::forwards an upgrade line that arrives after exit until stdout ends
+reprove: --commit 3001364708181cfbeb79fb9c3c46f0ae501ad78f --test apps/desktop/src/main/harness-supervisor.test.ts::removes child process observers on stop, the forwarder once stdout ends
+reprove: --commit 3001364708181cfbeb79fb9c3c46f0ae501ad78f --test apps/desktop/src/main/harness-supervisor.test.ts::detaches once and stops cleanly after natural child exit

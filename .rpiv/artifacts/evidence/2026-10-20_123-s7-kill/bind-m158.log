@@ -1,0 +1,34 @@
+parent: 32ca10a
+tree: d2372db5280bdef1aa60e3c4c819121b92df2a63
+working-tree digest: 7976efa8288a2c97
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/project-entry-bridge.test.ts -t register
+started: 2026-10-20T18:41:19+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/project-entry-bridge.test.ts (111 tests | 1 failed | 109 skipped) 12ms
+   × answers its own decoded reply: 'register' 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/project-entry-bridge.test.ts > answers its own decoded reply: 'register'
+AssertionError: promise rejected "'Fiber.runLoop: Not a valid effect: un…'" instead of resolving
+ ❯ src/main/project-entry-bridge.test.ts:877:24
+    875|   const pending = row.start(bridge);
+    876|   port.emit("message", { data: row.reply(port.metadata()) });
+    877|   await expect(pending).resolves.toEqual(row.result);
+       |                        ^
+    878|   bridge.stop();
+    879| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 109 skipped (111)
+   Start at  18:41:20
+   Duration  629ms (transform 193ms, setup 0ms, import 472ms, tests 12ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/project-entry-bridge.ts bound blob 0d47493c8decca21; restored blob bf8ea0760a1c6a49 (backup bf8ea0760a1c6a49) MATCH; tree before f0c7898665b905cd after f0c7898665b905cd MATCH

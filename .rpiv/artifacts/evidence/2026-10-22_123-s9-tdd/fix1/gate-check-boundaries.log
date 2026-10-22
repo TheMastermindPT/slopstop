@@ -1,0 +1,11 @@
+parent: 961eee1
+tree: dabbe5243279cf7b62d3bb8189d51f2e67d994cc
+working-tree digest: 834fa1e44e456bcf
+command: pnpm check:boundaries
+started: 2026-10-22T23:39:19+01:00
+---
+$ depcruise --config dependency-cruiser.config.cjs apps packages
+
+✔ no dependency violations found (535 modules, 2245 dependencies cruised)
+
+--- exit: 0

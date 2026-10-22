@@ -1,0 +1,45 @@
+parent: c80c7fb
+tree: dbb578b917646b1943c7ac81b28bf66830e589c0
+working-tree digest: 8f7751bbfd2b5d23
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-supervisor.test.ts -t removes every stdout listener
+started: 2026-10-22T18:45:45+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (39 tests | 1 failed | 37 skipped) 9ms
+     × removes every stdout listener when stdout 'close' arrives 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > removes every stdout listener when stdout 'close' arrives
+AssertionError: expected [ +0, 1, +0 ] to deeply equal [ +0, +0, +0 ]
+
+- Expected
++ Received
+
+  [
+    0,
+-   0,
++   1,
+    0,
+  ]
+
+ ❯ src/main/harness-supervisor.test.ts:1192:89
+    1190|       supervisorWith([child]).start();
+    1191|       child.stdout?.emit(event);
+    1192|       expect(["data", "end", "close"].map((name) => child.stdout?.list…
+       |                                                                                         ^
+    1193|         0, 0, 0,
+    1194|       ]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 37 skipped (39)
+   Start at  18:45:45
+   Duration  638ms (transform 213ms, setup 0ms, import 484ms, tests 9ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-supervisor.ts bound blob 989e762e5ddce4cb; restored blob 4c3691040af1cede (backup 4c3691040af1cede) MATCH; tree before a985933be15b63a7 after a985933be15b63a7 MATCH

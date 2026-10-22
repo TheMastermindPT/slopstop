@@ -1,0 +1,42 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/registration/registration-listing.test.ts (14 tests | 7 failed | 6 skipped) 13ms
+   × bounds the shutdown cleanup by its budget: 'the owner close never settles' 7ms
+   × bounds the shutdown cleanup by its budget: 'the observer close never settles' 1ms
+   × bounds the shutdown cleanup by its budget: 'the registry stop never settles' 1ms
+   × bounds the shutdown cleanup by its budget: 'the owner closes at 2 000 ms, the obs…' 1ms
+   × bounds the shutdown cleanup by its budget: 'the observer closes "closed" at 3 500…' 1ms
+   × bounds the shutdown cleanup by its budget: 'the owner is pending recovery, the ob…' 1ms
+   × bounds the shutdown cleanup by its budget: 'the observer is pending recovery, the…' 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the owner close never settles'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the observer close never settles'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the registry stop never settles'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the owner closes at 2 000 ms, the obs…'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the observer closes "closed" at 3 500…'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the owner is pending recovery, the ob…'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the observer is pending recovery, the…'
+AssertionError: expected 'pending' to be 'resolved' // Object.is equality
+
+Expected: "resolved"
+Received: "pending"
+
+ ❯ src/registration/registration-listing.test.ts:249:28
+    247|     expect(stopping.state).toBe("pending");
+    248|     await advance(1);
+    249|     expect(stopping.state).toBe("resolved");
+       |                            ^
+    250|     const expected = { parts: row.parts, cause: row.cause, hasCause: r…
+    251|     expect(budgetFailure(stopping.value)).toEqual(expected);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed | 1 passed | 6 skipped (14)
+   Start at  16:38:25
+   Duration  617ms (transform 207ms, setup 0ms, import 473ms, tests 13ms, environment 0ms)
+

@@ -1,0 +1,6 @@
+cpu before e2e: 6.2/12.1/13.8, alone (HEAD cf95b0a)
+e2e end 2026-10-20T16:37:42+01:00
+e2e result: 27 passed (5.4m), no #138 repeat
+cpu before package:smoke: 13.6/4.1/8.1, alone
+package:smoke end 2026-10-20T16:38:49+01:00
+package:smoke result: exit 0, validated renderer isolation, Project Storage, and Writer proof

@@ -59,7 +59,7 @@ const otherProjectId = "00000000-0000-4000-8000-0000000000f1";
 it("upgrades a migration-required Project through the harness", timeout, async () => {
   const root = await createTemporaryApplicationRoot();
   await createGenerationTwoProject(root);
-  const runtime = startRealUpgradeRuntime(root);
+  const runtime = await startRealUpgradeRuntime(root);
   try {
     expect((await runtime.activate(request.projectId)).payload).toEqual({
       status: "safe-mode",
@@ -543,7 +543,7 @@ it(`${logTitle}: an interrupted upgrade`, timeout, async () => {
   await createGenerationTwoProject(root);
   await (await stopDuringUpgrade({ root })).stopping;
   const logger = recordingLogger();
-  const runtime = startRealUpgradeRuntime(root, logger);
+  const runtime = await startRealUpgradeRuntime(root, logger);
   try {
     expect((await runtime.activate(request.projectId)).payload).toMatchObject({
       status: "safe-mode",
@@ -564,7 +564,7 @@ it(`${logTitle}: a busy discard`, timeout, async () => {
     await (await stopDuringUpgrade({ root })).stopping;
     const handle = new DatabaseSync(upgradePaths({ root }).stagedCanonical);
     const logger = recordingLogger(throwing);
-    const runtime = startRealUpgradeRuntime(root, logger);
+    const runtime = await startRealUpgradeRuntime(root, logger);
     try {
       payloads.push((await runtime.activate(request.projectId)).payload);
       expect(logger.calls).toEqual([

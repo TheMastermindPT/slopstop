@@ -1,0 +1,67 @@
+parent: 829c3cf
+tree: 16f73fd7c3ce8f2d7bab08c8892ac33d64a8ac70
+working-tree digest: cd50969958191fb9
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-session.test.ts
+started: 2026-10-19T22:59:01+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-session.test.ts (6 tests | 2 failed) 26ms
+     × delivers a nested emit after the outer event reached every listener 6ms
+     × drains queued emits before rethrowing a listener failure 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > delivers a nested emit after the outer event reached every listener
+AssertionError: expected [ 'disconnected', 'protocol-error' ] to deeply equal [ 'protocol-error', 'disconnected' ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:129:20
+    127|
+    128|     expect(first).toEqual(["protocol-error", "disconnected"]);
+    129|     expect(second).toEqual(["protocol-error", "disconnected"]);
+       |                    ^
+    130|   });
+    131|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > drains queued emits before rethrowing a listener failure
+AssertionError: expected [ 'disconnected', 'protocol-error' ] to deeply equal [ 'protocol-error', 'disconnected' ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:149:20
+    147|     expect(() => port.emit("message", { data: { event: "not-valid" } }…
+    148|     expect(first).toEqual(["protocol-error", "disconnected"]);
+    149|     expect(second).toEqual(["protocol-error", "disconnected"]);
+       |                    ^
+    150|
+    151|     // The delivering flag was reset: a later event on the same sessio…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 4 passed (6)
+   Start at  22:59:02
+   Duration  973ms (transform 236ms, setup 0ms, import 726ms, tests 26ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-session.ts bound blob 0c761a29b2a5510d; restored blob e0c616d55aec0e10 (backup e0c616d55aec0e10) MATCH; tree before 68732e761ea8ccd6 after 68732e761ea8ccd6 MATCH

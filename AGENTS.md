@@ -75,7 +75,7 @@ The project migrates fully to Effect, incrementally: new code and every code pat
 - The renderer (React) does not run an Effect runtime. It may use protocol schemas and types.
 - Tests provide fakes through `Effect.provideService` or test Layers. Fakes fail with `Effect.fail`, never `throw`, and time-based tests use `TestClock`, not real sleeps.
 - Reviewers check these rules on new and touched code.
-- Type checking authority: `pnpm typecheck` (the project's TypeScript, currently 6.0.2) is authoritative. The editor and agent LSP is Effect tsgo (TypeScript-Go 7 plus the Effect language service, enabled by the `@effect/language-service` plugin in `tsconfig.base.json`). An error reported only by the LSP is advisory: investigate it, but it does not block. Effect diagnostics from the LSP are advice unless a reviewer and the user promote one to a rule.
+- Type checking authority: `pnpm typecheck` (the project's TypeScript, currently 6.0.2) is the type-checking authority. The editor and agent LSP is Effect tsgo (TypeScript-Go 7 plus the Effect language service, enabled by the `@effect/language-service` plugin in `tsconfig.base.json`). In the editor, an error that only the LSP reports is advisory: investigate it. `pnpm check:effect`, which runs inside `pnpm check`, runs the same Effect build in tsc mode and blocks on every error it reports: each `error`-level Effect diagnostic, and any other error, including a type error that only TypeScript-Go reports, which the gate reports as a broken run and never as clean. Effect `warning` diagnostics stay advice unless a reviewer and the user promote one to a rule.
 
 ## Test Discipline
 

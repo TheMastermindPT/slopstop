@@ -1,0 +1,43 @@
+parent: 347c0fd
+tree: f57f89eece96389e4dc4205a6d9c68fb9583bc0a
+working-tree digest: d9d63f8df4c5ba87
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-supervisor.test.ts -t resolves the stop at the drain bound
+started: 2026-10-22T18:19:00+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (37 tests | 1 failed | 36 skipped) 14ms
+     × resolves the stop at the drain bound when stdout never ends 13ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > resolves the stop at the drain bound when stdout never ends
+AssertionError: expected { settled: false } to deeply equal { settled: true }
+
+- Expected
++ Received
+
+  {
+-   "settled": true,
++   "settled": false,
+  }
+
+ ❯ src/main/harness-supervisor.test.ts:1166:21
+    1164|     expect(child.stdout?.listenerCount("data")).toBe(1);
+    1165|     await vi.advanceTimersByTimeAsync(1);
+    1166|     expect(outcome).toEqual({ settled: true });
+       |                     ^
+    1167|     expect(supervisor.getStatus()).toEqual({ state: "stopped" });
+    1168|     expect(child.stdout?.listenerCount("data")).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 36 skipped (37)
+   Start at  18:19:00
+   Duration  656ms (transform 218ms, setup 0ms, import 498ms, tests 14ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-supervisor.ts bound blob 917bd874c5357cee; restored blob aeea8dc71c011094 (backup aeea8dc71c011094) MATCH; tree before 37f295329be4dba4 after 37f295329be4dba4 MATCH

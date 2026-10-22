@@ -1,0 +1,6 @@
+    settle(
+      message.causationId,
+      entry.expected === message.event
+        ? Effect.succeed(message.payload)
+        : Effect.fail({ kind: "desktop", reason: "mismatched-event" }),
+    );

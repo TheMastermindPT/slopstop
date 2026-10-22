@@ -1,0 +1,111 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/process-bootstrap.test.ts (13 tests | 5 failed) 30ms
+   × aggregates the program and the dispose: 'both fail' 2ms
+   × aggregates the program and the dispose: 'the dispose never ends, the program f…' 2ms
+   × reports a startup failure after a bounded dispose: 'the dispose dies with ApplicationData…' 4ms
+   × reports a startup failure after a bounded dispose: 'the dispose takes 10 ms' 1ms
+   × reports a startup failure after a bounded dispose: 'the dispose never ends' 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'both fail'
+AssertionError: expected Error: private dispose failure to be an instance of AggregateError
+ ❯ expectAggregate src/process-bootstrap.test.ts:151:17
+    149|
+    150| function expectAggregate(error: unknown, message: string, first: unkno…
+    151|   expect(error).toBeInstanceOf(AggregateError);
+       |                 ^
+    152|   expect(error).toMatchObject({ message });
+    153|   const errors = (error as AggregateError).errors;
+ ❯ check src/process-bootstrap.test.ts:200:24
+ ❯ src/process-bootstrap.test.ts:284:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'the dispose never ends, the program f…'
+AssertionError: expected 'pending' to be 'rejected' // Object.is equality
+
+Expected: "rejected"
+Received: "pending"
+
+ ❯ check src/process-bootstrap.test.ts:235:31
+    233|       disposeDeadlineMs: 50,
+    234|       check: (settled) => {
+    235|         expect(settled.state).toBe("rejected");
+       |                               ^
+    236|         const second = expectAggregate(
+    237|           settled.value,
+ ❯ src/process-bootstrap.test.ts:284:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > reports a startup failure after a bounded dispose: 'the dispose dies with ApplicationData…'
+AssertionError: expected Error: private startup failure to be an instance of AggregateError
+ ❯ expectAggregate src/process-bootstrap.test.ts:151:17
+    149|
+    150| function expectAggregate(error: unknown, message: string, first: unkno…
+    151|   expect(error).toBeInstanceOf(AggregateError);
+       |                 ^
+    152|   expect(error).toMatchObject({ message });
+    153|   const errors = (error as AggregateError).errors;
+ ❯ check src/process-bootstrap.test.ts:320:18
+ ❯ src/process-bootstrap.test.ts:368:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > reports a startup failure after a bounded dispose: 'the dispose takes 10 ms'
+ FAIL  |harness| src/process-bootstrap.test.ts > reports a startup failure after a bounded dispose: 'the dispose never ends'
+AssertionError: expected 'rejected' to be 'pending' // Object.is equality
+
+Expected: "pending"
+Received: "rejected"
+
+ ❯ src/process-bootstrap.test.ts:364:29
+    362|   if (row.settlesAt > 0) {
+    363|     await advance(row.settlesAt - 1);
+    364|     expect(launching.state).toBe("pending");
+       |                             ^
+    365|   }
+    366|   await advance(row.settlesAt > 0 ? 1 : 0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+ApplicationDatabaseCloseUnconfirmed: Project Storage application database close is unconfirmed.
+ ❯ Object.make src/process-bootstrap.test.ts:316:27
+    314|     settlesAt: 0,
+    315|     make: () => {
+    316|       const unconfirmed = new ApplicationDatabaseCloseUnconfirmed(1_00…
+       |                           ^
+    317|       return {
+    318|         release: Effect.die(unconfirmed),
+ ❯ src/process-bootstrap.test.ts:354:44
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2027:60
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:302:11
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20
+ ❯ runWithCancel ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10
+ ❯ ../../node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { deadlineMs: 1000, _tag: 'ApplicationDatabaseCloseUnconfirmed' }
+This error originated in "src/process-bootstrap.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "reports a startup failure after a bounded dispose: 'the dispose dies with ApplicationData…'". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 8 passed (13)
+     Errors  1 error
+   Start at  16:46:24
+   Duration  1.46s (transform 841ms, setup 0ms, import 1.29s, tests 30ms, environment 0ms)
+

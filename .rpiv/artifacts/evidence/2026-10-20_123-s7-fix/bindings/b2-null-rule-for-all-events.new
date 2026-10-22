@@ -1,0 +1,5 @@
+    if (message.causationId === null) {
+      failAll({ kind: "protocol", reason: "uncorrelated" });
+      return;
+    }
+    if (!isReply(message.event)) {

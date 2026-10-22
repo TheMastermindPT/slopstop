@@ -1,0 +1,169 @@
+parent: 9da01af
+tree: 94190546ff9e6b76c7bd0f213161c9be4e24a31b
+working-tree digest: e443fe655c7cc82e
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/project-entry-bridge.test.ts apps/desktop/src/main/project-storage-bridge.test.ts apps/desktop/src/main/harness-supervisor.test.ts --reporter=verbose
+started: 2026-10-20T00:24:22+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > request failure settles only its correlated Project Storage operation 6ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > correlates out-of-order open, create, and close results 1ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > maps HARNESS_SESSION_UNAVAILABLE to a Storage transport failure 1ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > maps HARNESS_SESSION_MESSAGE_INVALID to a Storage transport failure 0ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > maps HARNESS_SESSION_SEND_FAILED to a Storage transport failure 0ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > maps a thrown send failure and releases the request identity 1ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > correlates against the validated command payload instead of caller mutation 0ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > settles pending operations even when session unsubscribe throws 1ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > rejects mismatched, uncorrelated, disconnected, and stopped requests 2ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > fails pending operations once for 'protocol-error' 0ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > fails pending operations once for 'message' 0ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > rejects invalid local metadata and identity collision without losing the original 1ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > fails all pending work as protocol on 'uncorrelated result' 1ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > fails all pending work as protocol on 'system failure' 1ms
+ ✓ |desktop-main| src/main/project-storage-bridge.test.ts > settles an undecodable reply as protocol 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > keeps request failure status-neutral and reserves recovery for system failure 8ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > records child process events as metadata only 2ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > removes child process observers on stop, the forwarder once stdout ends 2ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > removes child process observers on exit, the forwarder once stdout ends 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > queues a protocol-failed child retry until confirmed exit 2ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > sends the same validated trusted roots to initial and retried harnesses 2ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > forwards Project Storage results without changing supervisor status 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > publishes workspace messages without changing supervisor status 2ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > fails startup immediately when the session cannot send handshake 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > connects once, accepts a ready handshake, and forwards output metadata 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > detaches once and stops cleanly after natural child exit 6ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > kills after grace and rejects after the terminal exit deadline 2ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > does not connect a child that spawns after shutdown starts 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > does not retry a protocol-failed child while shutdown is active 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > blocks automatic recovery for malformed and explicit protocol failures 2ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > uses bounded backoff before exposing explicit retry 4ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > cancels pending handshake and restart timers when stopped 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > reports handshake timeout and restarts safely after completed stop 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > reports synchronous spawn failure as a distinct state 0ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > starts when child output streams are unavailable 0ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > resolves the colocated harness bundle 0ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > forwards only harness upgrade log lines 2ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > forwards upgrade lines written during shutdown until stdout ends 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > forwards an upgrade line that arrives after exit until stdout ends 0ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > stops forwarding when a stopping child never exits 1ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > keeps stderr logging and the error listener when stdout end arrives before exit 0ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > keeps stderr logging and the error listener when stdout close arrives before exit 0ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > rejects an upgrade line whose time is no date 0ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > answers broken for a read during 'a protocol error' 2ms
+ ✓ |desktop-main| src/main/harness-supervisor.test.ts > answers broken for a read during 'a system failure' 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > returns a real list response and does not confuse disconnect with an empty installation 5ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > rejects activation replies for a different Project even with a matching message correlation 2ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > settles pending work on malformed input and rejects calls after stop 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes upgraded 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes not-required 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes not-registered 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes unsupported 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes notEligible 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes backupInvalid 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes verificationFailed 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes alreadyActive 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes storageUnavailable 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes coordinatorStopped 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes connectionLost 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes storageBroken 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes harnessInternalFailure 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes protocolMessageInvalid 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes protocolVersionUnsupported 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: echoes storageBusy 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: a reply for another Project 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: an activation result for the upgrade 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: a session protocol error 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: a lost connection while pending 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: a call after the connection was lost 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: a send that fails 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: a stop while pending 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: a call after stop 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: an invalid message id 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: a repeated message id 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: request.failure HARNESS_INTERNAL_FAILURE 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: request.failure PROTOCOL_MESSAGE_INVALID 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: request.failure PROTOCOL_VERSION_UNSUPPORTED 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers every upgrade reply with one strict result: an invalid command at send 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > keeps the activation result unchanged on request.failure 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > keeps the activation result unchanged on a session protocol error 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > keeps the activation result unchanged on a wrong-event reply 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > keeps the switch result unchanged on request.failure 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > keeps the switch result unchanged on a session protocol error 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > keeps the switch result unchanged on a wrong-event reply 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > keeps list and registration transport results unchanged on request.failure 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a read read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a read read result through unchanged 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a inactive read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a project-mismatch read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a stale-activation read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a coordinator-unavailable read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a unavailable read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a unavailable read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a broken read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a broken read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a broken read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a broken read result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a saved save result through unchanged 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a conflict save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a rejected save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a uncertain save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a read-only save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a writer-unavailable save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a stale-writer save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a inactive save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a project-mismatch save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a stale-activation save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a coordinator-unavailable save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a unavailable save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a unavailable save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a broken save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a broken save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a broken save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > passes a broken save result through unchanged 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read with one strict result: a reply with the wrong event 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save with one strict result: a reply with the wrong event 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read with one strict result: a reply for another activation 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save with one strict result: a reply for another activation 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read with one strict result: a malformed reply while pending 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save with one strict result: a malformed reply while pending 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read with one strict result: a lost connection while pending 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save with one strict result: a lost connection while pending 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read with one strict result: a stop while pending 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save with one strict result: a stop while pending 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read with one strict result: a call after stop 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save with one strict result: a call after stop 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read with one strict result: a call after the connection was lost 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save with one strict result: a call after the connection was lost 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read with one strict result: a send that fails 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save with one strict result: a send that fails 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read request.failure HARNESS_INTERNAL_FAILURE as broken 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save request.failure HARNESS_INTERNAL_FAILURE as broken 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read request.failure PROTOCOL_MESSAGE_INVALID as broken 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save request.failure PROTOCOL_MESSAGE_INVALID as broken 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read request.failure PROTOCOL_VERSION_UNSUPPORTED as broken 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save request.failure PROTOCOL_VERSION_UNSUPPORTED as broken 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation read with an invalid or a repeated message id as broken 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers a conversation save with an invalid or a repeated message id as broken 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > maps a send refused as an invalid message to broken for both operations 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers its own envelope when send throws 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > fails all pending work as protocol on 'uncorrelated result' 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > fails all pending work as protocol on 'system failure' 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > settles an undecodable reply as protocol: 'read' 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > settles an undecodable reply as protocol: 'save' 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > settles an undecodable reply as protocol: 'list' 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > settles pending work even when session unsubscribe throws 1ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers the closing envelope for work in flight at stop: 'list' 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers the closing envelope for work in flight at stop: 'registration' 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers the closing envelope for work in flight at stop: 'read' 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers the closing envelope for work in flight at stop: 'upgrade' 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers the closing envelope for work in flight at stop: 'activate' 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers the closing envelope for work in flight at stop: 'switch' 0ms
+ ✓ |desktop-main| src/main/project-entry-bridge.test.ts > answers the closing envelope for work in flight at stop: 'save' 0ms
+
+ Test Files  3 passed (3)
+      Tests  153 passed (153)
+   Start at  00:24:23
+   Duration  742ms (transform 629ms, setup 0ms, import 1.57s, tests 113ms, environment 0ms)
+
+--- exit: 0

@@ -1,5 +1,7 @@
 import { decodeStrict } from "@slopstop/protocol";
+import { Cause, Effect, Exit, Fiber } from "effect";
 import { describe, expect, it, vi } from "vitest";
+import { advance, track } from "../tests/integration/application-database-close-fixture.js";
 import {
   createProjectRegistrationObserver,
   type GitVersionInspectionRequest,
@@ -192,6 +194,123 @@ describe("Project registration observer executable admission", () => {
       finish(prepared);
       await observation;
       await closing;
+      vi.useRealTimers();
+    }
+  });
+
+  it("answers cleanup unconfirmed when aborted work prepares before the deadline", async () => {
+    vi.useFakeTimers();
+    let finish: (result: GitVersionInspectionResult) => void = () => undefined;
+    const observer = createProjectRegistrationObserver(
+      {
+        inspect: () =>
+          new Promise<GitVersionInspectionResult>((resolve) => {
+            finish = resolve;
+          }),
+      },
+      openAdmission,
+    );
+    const request = decodeStrict(GitVersionInspectionRequestSchema, {
+      selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
+      consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
+    });
+    const observation = observer.inspectGitVersion(request);
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      let result: unknown;
+      const closing = observer.close().then((value) => {
+        result = value;
+      });
+      await vi.advanceTimersByTimeAsync(10);
+      expect(result).toBeUndefined();
+      finish(
+        decodeStrict(GitVersionInspectionResultSchema, {
+          status: "prepared",
+          selectionId: request.selectionId,
+          observationId: "c42caec7-06c4-49bd-9a34-e5b034ab2477",
+          version: "2.53.0.windows.1",
+        }),
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(result).toEqual({ status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" });
+      await closing;
+      await observation;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("answers cleanup unconfirmed when one of two inspections is pending recovery", async () => {
+    vi.useFakeTimers();
+    const finishes: Array<(result: GitVersionInspectionResult) => void> = [];
+    const observer = createProjectRegistrationObserver(
+      {
+        inspect: () =>
+          new Promise<GitVersionInspectionResult>((resolve) => {
+            finishes.push(resolve);
+          }),
+      },
+      openAdmission,
+    );
+    const request = decodeStrict(GitVersionInspectionRequestSchema, {
+      selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
+      consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
+    });
+    const observations = [observer.inspectGitVersion(request), observer.inspectGitVersion(request)];
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      expect(finishes).toHaveLength(2);
+      let result: unknown;
+      const closing = observer.close().then((value) => {
+        result = value;
+      });
+      finishes[0]?.({ status: "cancelled" });
+      finishes[1]?.({ status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(result).toEqual({ status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" });
+      await closing;
+      await Promise.all(observations);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("answers closed again to a second close after a confirmed close", async () => {
+    const observer = createProjectRegistrationObserver(
+      { inspect: () => new Promise<GitVersionInspectionResult>(() => undefined) },
+      openAdmission,
+    );
+    expect(await observer.close()).toEqual({ status: "closed" });
+    expect(await observer.close()).toEqual({ status: "closed" });
+  });
+
+  it("answers cleanup unconfirmed after an interrupted Effect close", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const observer = createProjectRegistrationObserver(
+        { inspect: () => new Promise<GitVersionInspectionResult>(() => undefined) },
+        openAdmission,
+      );
+      const request = decodeStrict(GitVersionInspectionRequestSchema, {
+        selectionId: "a728db30-50c9-4aef-a5d6-9a70536314fe",
+        consentId: "fefb33aa-d12b-424a-b87a-6f757cd029a3",
+      });
+      void observer.inspectGitVersion(request);
+      await advance(0);
+      const closing = Effect.runFork(observer.closeEffect);
+      await advance(0);
+      await Effect.runPromise(Fiber.interrupt(closing));
+      // The interrupted caller stays interrupted; only a later close answers.
+      const interrupted = await Effect.runPromise(Fiber.await(closing));
+      expect(Exit.isFailure(interrupted)).toBe(true);
+      expect(Exit.isFailure(interrupted) && Cause.hasInterruptsOnly(interrupted.cause)).toBe(true);
+      const later = track(observer.close());
+      await advance(0);
+      expect(later).toEqual({
+        state: "resolved",
+        value: { status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" },
+      });
+    } finally {
       vi.useRealTimers();
     }
   });

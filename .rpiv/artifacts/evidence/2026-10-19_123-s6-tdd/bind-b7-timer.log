@@ -1,0 +1,60 @@
+parent: 5f1bca3
+working-tree digest: 5db2cef331a3f5c3
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke.test.ts -t leaves no timer after a wait
+started: 2026-10-19T12:51:37+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/canonical-writer-package-smoke.test.ts (151 tests | 2 failed | 149 skipped) 31ms
+     × leaves no timer after a wait: 'passed proof' 26ms
+     × leaves no timer after a wait: 'failed wait' 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke.test.ts > scripted full sequence > leaves no timer after a wait: 'passed proof'
+AssertionError: expected 6 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 6
+
+ ❯ src/main/canonical-writer-package-smoke.test.ts:410:32
+    408|     expect(settled).toBe(true);
+    409|     await expect(result).resolves.toMatchObject(expected);
+    410|     expect(vi.getTimerCount()).toBe(0);
+       |                                ^
+    411|   });
+    412|   it("attempts other cleanup while one child has not exited", async ()…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke.test.ts > scripted full sequence > leaves no timer after a wait: 'failed wait'
+AssertionError: expected 2 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 2
+
+ ❯ src/main/canonical-writer-package-smoke.test.ts:410:32
+    408|     expect(settled).toBe(true);
+    409|     await expect(result).resolves.toMatchObject(expected);
+    410|     expect(vi.getTimerCount()).toBe(0);
+       |                                ^
+    411|   });
+    412|   it("attempts other cleanup while one child has not exited", async ()…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 149 skipped (151)
+   Start at  12:51:38
+   Duration  681ms (transform 213ms, setup 0ms, import 501ms, tests 31ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/canonical-writer-package-smoke.ts bound blob 7c413f8ee5771007; restored blob edc2069204fa9530 (backup edc2069204fa9530) MATCH; digest before ef80aee162e9b117 after ef80aee162e9b117 MATCH

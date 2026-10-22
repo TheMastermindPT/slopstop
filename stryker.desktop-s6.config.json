@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": [
+    "apps/desktop/src/main/desktop-shutdown.ts",
+    "apps/desktop/src/main/desktop-runtime.ts",
+    "apps/desktop/src/main/project-entry-ipc.ts:42-43",
+    "apps/desktop/src/main/project-entry-ipc.ts:48-48",
+    "apps/desktop/src/main/project-entry-ipc.ts:53-53",
+    "apps/desktop/src/main/project-entry-ipc.ts:58-58",
+    "apps/desktop/src/main/project-entry-ipc.ts:63-63",
+    "apps/desktop/src/main/project-entry-ipc.ts:68-68",
+    "apps/desktop/src/main/project-registration-ipc.ts:18-21",
+    "apps/desktop/src/main/project-registration-ipc.ts:39-39",
+    "apps/desktop/src/main/project-registration-ipc.ts:47-47",
+    "apps/desktop/src/main/project-registration-ipc.ts:66-66",
+    "apps/desktop/src/main/main.ts:96-106",
+    "apps/desktop/src/main/main.ts:123-139",
+    "apps/desktop/src/main/main.ts:294-323",
+    "apps/desktop/src/main/main.ts:441-441",
+    "apps/desktop/src/main/canonical-writer-package-smoke.ts:300-341",
+    "apps/desktop/src/main/project-entry-bridge.ts:79-79"
+  ],
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "apps/desktop/vitest.desktop-s6-mutation.config.ts",
+    "related": false
+  },
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
+  "incremental": false,
+  "concurrency": 4,
+  "reporters": ["json", "html"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/desktop-s6.html"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  }
+}

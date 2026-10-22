@@ -34,7 +34,12 @@ function belongsToErrorCodeFamily(code: string | undefined, family: string): boo
   return code?.startsWith(`${family}_`) === true;
 }
 
-function isKnownStorageError(
+/**
+ * A typed Project Storage failure, known by its class alone, subclasses included. This is the
+ * single owner of that check (`.rpiv/decisions/shared-vocab-union.md`); error codes are classified
+ * by {@link isUnavailableStorageError} and {@link isCorruptStorageError} instead.
+ */
+export function isKnownStorageFailure(
   error: unknown,
 ): error is ProjectStorageBrokenError | ProjectStorageUnavailableError {
   if (error instanceof ProjectStorageBrokenError) return true;
@@ -52,11 +57,8 @@ export function isBusyStorageError(input: { error: unknown }): boolean {
   if (input.error instanceof ProjectStorageUnavailableError) return true;
   if (isUnavailableStorageError(input)) return true;
   const { error } = input;
-  return (
-    error instanceof Error &&
-    error.cause !== undefined &&
-    isBusyStorageError({ error: error.cause })
-  );
+  // An undefined cause answers false in the recursion, so it needs no guard here.
+  return error instanceof Error && isBusyStorageError({ error: error.cause });
 }
 
 /** The storage failure an error stands for: a known one as is, else unavailable or broken. */
@@ -64,7 +66,7 @@ export function storageFailureFor(input: {
   error: unknown;
   message: string;
 }): ProjectStorageBrokenError | ProjectStorageUnavailableError {
-  if (isKnownStorageError(input.error)) return input.error;
+  if (isKnownStorageFailure(input.error)) return input.error;
   if (isUnavailableStorageError({ error: input.error })) {
     return new ProjectStorageUnavailableError("Project Storage authority is unavailable.");
   }

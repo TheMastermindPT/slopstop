@@ -12,7 +12,7 @@ import { silentHarnessLogger, transportFor } from "./project-storage-runtime-fix
 it("dispatches a real saved Project list through the process protocol", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-list-transport-"));
   const { port1, port2 } = new MessageChannel();
-  const stop = startHarnessProcessRuntime({
+  const stop = await startHarnessProcessRuntime({
     logger: silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",

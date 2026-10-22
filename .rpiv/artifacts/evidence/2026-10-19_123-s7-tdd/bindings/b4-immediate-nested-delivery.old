@@ -1,0 +1,4 @@
+    if (this.#delivering) {
+      this.#queued.push(event);
+      return;
+    }

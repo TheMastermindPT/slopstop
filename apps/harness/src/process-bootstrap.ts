@@ -3,12 +3,13 @@ import { lstatSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { decodeStrict, HarnessBootstrapSchema } from "@slopstop/protocol";
-import { Context, Effect, Layer, ManagedRuntime } from "effect";
+import { Cause, Context, Data, Effect, Exit, Fiber, Layer, ManagedRuntime, Result } from "effect";
 import type { ActiveProjectCoordinatorWithHeld } from "./active-project-coordinator.js";
 import {
   type CanonicalProjectApplication,
   createCanonicalProjectApplication,
 } from "./canonical-project-application.js";
+import { untypedRejection } from "./effect-rejection.js";
 import {
   type HarnessTransport,
   type StopHarnessRuntime,
@@ -22,7 +23,7 @@ import {
 import type { RegistrationRegistry } from "./registration/registration-registry.js";
 import {
   type ApplicationDatabaseAuthority,
-  createApplicationDatabaseAuthority,
+  acquireApplicationDatabaseAuthority,
 } from "./storage/application-database-authority.js";
 import { createNodeProjectStorageDependencies } from "./storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "./storage/project-storage-store.js";
@@ -77,15 +78,110 @@ function rootsOverlap(first: string, second: string): boolean {
   );
 }
 
-export function startHarnessProcessRuntime(
+/** How long a process stop or a failed startup waits for the runtime dispose. */
+const HARNESS_RUNTIME_DISPOSE_DEADLINE_MS = 500;
+
+/** A runtime dispose that did not settle by its deadline; it keeps running as the process exits. */
+export class HarnessRuntimeDisposeUnconfirmed extends Data.TaggedError(
+  "HarnessRuntimeDisposeUnconfirmed",
+)<{
+  readonly message: string;
+  readonly deadlineMs: number;
+}> {
+  constructor(deadlineMs: number) {
+    super({ message: "Harness runtime dispose is unconfirmed.", deadlineMs });
+  }
+}
+
+type CombinedFailureMessage = "Harness process shutdown failed." | "Harness startup failed.";
+
+/** One failure is reported as is; two are reported together, in order, never replaced. */
+function combinedFailure(failures: readonly unknown[], message: CombinedFailureMessage): unknown {
+  return failures.length === 1 ? failures[0] : new AggregateError(failures, message);
+}
+
+/**
+ * Disposes `runtime` and answers its failures, at most one. The dispose closes its scope
+ * uninterruptibly, so it runs detached and only the wait for it is bounded: past the deadline
+ * it keeps running while the process exits.
+ */
+function boundedDispose(
+  runtime: Pick<ManagedRuntime.ManagedRuntime<unknown, unknown>, "disposeEffect">,
+  deadlineMs: number,
+): Effect.Effect<readonly unknown[]> {
+  return Effect.forkDetach(runtime.disposeEffect).pipe(
+    Effect.flatMap(Fiber.await),
+    Effect.map((exit) => (Exit.isSuccess(exit) ? [] : [Cause.squash(exit.cause)])),
+    Effect.timeoutOrElse({
+      duration: deadlineMs,
+      orElse: () => Effect.succeed([new HarnessRuntimeDisposeUnconfirmed(deadlineMs)]),
+    }),
+  );
+}
+
+/**
+ * Builds one process runtime from `layer` and starts the harness on it. The returned stop runs
+ * the program, then a bounded dispose; a startup failure is reported only after a bounded
+ * dispose settled. Runs on the global runtime, which outlives the process runtime.
+ */
+export function launchOnProcessRuntime<Services, LayerError>(
   input: Readonly<{
-    bootstrap: unknown;
-    transport: HarnessTransport;
-    /** The process log; upgrade diagnostics of the coordinator's Storage owner go here. */
-    logger: UpgradeEventLogger;
+    layer: Layer.Layer<Services, LayerError>;
+    start: (runtime: ManagedRuntime.ManagedRuntime<Services, LayerError>) => StopHarnessRuntime;
+    disposeDeadlineMs?: number;
   }>,
-): StopHarnessRuntime {
-  const bootstrap = decodeStrict(HarnessBootstrapSchema, input.bootstrap);
+): Promise<StopHarnessRuntime> {
+  const deadlineMs = input.disposeDeadlineMs ?? HARNESS_RUNTIME_DISPOSE_DEADLINE_MS;
+  const runtime = ManagedRuntime.make(input.layer);
+  const shutdown = (stopHarness: StopHarnessRuntime) =>
+    Effect.gen(function* () {
+      const program = yield* Effect.result(
+        Effect.tryPromise({ try: () => stopHarness(), catch: untypedRejection }),
+      );
+      const failures = [
+        ...(Result.isFailure(program) ? [program.failure.cause] : []),
+        ...(yield* boundedDispose(runtime, deadlineMs)),
+      ];
+      if (failures.length > 0) {
+        return yield* Effect.fail(combinedFailure(failures, "Harness process shutdown failed."));
+      }
+    });
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const started = yield* Effect.result(
+        Effect.try({ try: () => input.start(runtime), catch: untypedRejection }),
+      );
+      if (Result.isSuccess(started)) return started.success;
+      const disposeFailures = yield* boundedDispose(runtime, deadlineMs);
+      return yield* Effect.fail(
+        combinedFailure([started.failure.cause, ...disposeFailures], "Harness startup failed."),
+      );
+    }),
+  ).then((stopHarness) => {
+    // Built at the Promise edge, after the startup ran: every call shares one stop outcome.
+    let disposal: Promise<void> | undefined;
+    return () => {
+      disposal ??= Effect.runPromise(shutdown(stopHarness));
+      return disposal;
+    };
+  });
+}
+
+type HarnessRuntimeIo = Readonly<{
+  transport: HarnessTransport;
+  /** The process log; upgrade diagnostics of the coordinator's Storage owner go here. */
+  logger: UpgradeEventLogger;
+}>;
+
+export async function startHarnessProcessRuntime(
+  input: HarnessRuntimeIo & Readonly<{ bootstrap: unknown }>,
+): Promise<StopHarnessRuntime> {
+  return launchHarnessProcessRuntime(checkHarnessBootstrap(input.bootstrap), input);
+}
+
+/** Decodes the bootstrap message and checks its roots; it throws before any runtime exists. */
+export function checkHarnessBootstrap(message: unknown): HarnessRootPaths {
+  const bootstrap = decodeStrict(HarnessBootstrapSchema, message);
   const applicationStorageRoot = trustedRoot(bootstrap.applicationStorageRootUrl);
   const migrationResourcesRoot = trustedRoot(bootstrap.migrationResourcesRootUrl);
   if (
@@ -94,51 +190,50 @@ export function startHarnessProcessRuntime(
   ) {
     throw new Error("Harness bootstrap roots must not overlap.");
   }
+  return { applicationStorageRoot, migrationResourcesRoot };
+}
+
+export function launchHarnessProcessRuntime(
+  roots: HarnessRootPaths,
+  input: HarnessRuntimeIo,
+): Promise<StopHarnessRuntime> {
   // One runtime per harness process builds the owners once, sharing one application
   // database authority. Their shutdown order stays explicit in the harness runtime.
-  const runtime = ManagedRuntime.make(
-    harnessServicesLayer({ applicationStorageRoot, migrationResourcesRoot }, input.logger),
-  );
-  try {
-    const services = runtime.runSync(
-      Effect.gen(function* () {
-        return {
-          applicationDatabase: yield* ApplicationDatabase,
-          projectStorage: yield* ProjectStorage,
-          registration: yield* ProjectRegistration,
-          canonicalProjects: yield* CanonicalProjects,
-        };
-      }),
-    );
-    const { registration } = services;
-    const stopHarness = startHarnessRuntime({
-      projectRegistration: withListRemoval(
-        registration.flow,
-        createListRemoval({
-          options: registration.options,
-          withHeldProject: services.canonicalProjects.withHeldProject,
+  return launchOnProcessRuntime({
+    layer: harnessServicesLayer(roots, input.logger),
+    start: (runtime) => {
+      const services = runtime.runSync(
+        Effect.gen(function* () {
+          return {
+            applicationDatabase: yield* ApplicationDatabase,
+            projectStorage: yield* ProjectStorage,
+            registration: yield* ProjectRegistration,
+            canonicalProjects: yield* CanonicalProjects,
+          };
         }),
-      ),
-      projectListing: createRegistrationListing(registration),
-      applicationDatabase: services.applicationDatabase,
-      transport: input.transport,
-      canonicalProjectApplication: services.canonicalProjects,
-      workspaceApplication: createUnavailableWorkspaceApplication(),
-      projectStorageApplication: createProjectStorageApplication(services.projectStorage),
-      harnessVersion: "0.0.0",
-      createId: randomUUID,
-      now: currentTime,
-    });
-    let disposal: Promise<void> | undefined;
-    return () => {
-      const stopped = stopHarness();
-      disposal ??= stopped.finally(() => runtime.dispose());
-      return disposal;
-    };
-  } catch (error) {
-    void runtime.dispose();
-    throw error;
-  }
+      );
+      const { registration } = services;
+      return startHarnessRuntime({
+        projectRegistration: withListRemoval(
+          registration.flow,
+          createListRemoval({
+            options: registration.options,
+            withHeldProject: services.canonicalProjects.withHeldProject,
+          }),
+        ),
+        projectListing: createRegistrationListing(registration),
+        applicationDatabase: services.applicationDatabase,
+        transport: input.transport,
+        canonicalProjectApplication: services.canonicalProjects,
+        workspaceApplication: createUnavailableWorkspaceApplication(),
+        projectStorageApplication: createProjectStorageApplication(services.projectStorage),
+        harnessVersion: "0.0.0",
+        createId: randomUUID,
+        now: currentTime,
+        runtime,
+      });
+    },
+  });
 }
 
 const currentTime = () => new Date().toISOString();
@@ -155,7 +250,8 @@ class UpgradeLog extends Context.Service<UpgradeLog, UpgradeEventLogger>()(
 class HarnessRoots extends Context.Service<HarnessRoots, HarnessRootPaths>()(
   "slopstop/harness/HarnessRoots",
 ) {}
-class ApplicationDatabase extends Context.Service<
+/** The harness process's one shared application database authority, built by its Layer. */
+export class ApplicationDatabase extends Context.Service<
   ApplicationDatabase,
   ApplicationDatabaseAuthority
 >()("slopstop/harness/ApplicationDatabase") {}
@@ -181,7 +277,8 @@ class CanonicalProjects extends Context.Service<
 const applicationDatabaseLayer = Layer.effect(
   ApplicationDatabase,
   Effect.gen(function* () {
-    return createApplicationDatabaseAuthority(yield* HarnessRoots);
+    // Scoped: disposing the runtime closes an authority the shutdown never stopped or withheld.
+    return yield* acquireApplicationDatabaseAuthority(yield* HarnessRoots);
   }),
 );
 
@@ -259,7 +356,11 @@ const canonicalProjectsLayer = Layer.effect(
   }),
 );
 
-function harnessServicesLayer(roots: HarnessRootPaths, upgradeLog: UpgradeEventLogger) {
+/**
+ * The harness process's application Layer: the owners built once for its one runtime, sharing
+ * one application database authority.
+ */
+export function harnessServicesLayer(roots: HarnessRootPaths, upgradeLog: UpgradeEventLogger) {
   return canonicalProjectsLayer.pipe(
     Layer.provideMerge(Layer.mergeAll(projectStorageLayer, projectRegistrationLayer)),
     Layer.provideMerge(applicationDatabaseLayer),

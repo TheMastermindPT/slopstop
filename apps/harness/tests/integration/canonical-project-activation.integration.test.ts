@@ -322,7 +322,7 @@ async function productionTransport() {
   const sent: unknown[] = [];
   let delivered = (): void => undefined;
   const base = transportFor(port1);
-  const stop = startHarnessProcessRuntime({
+  const stop = await startHarnessProcessRuntime({
     logger: silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",

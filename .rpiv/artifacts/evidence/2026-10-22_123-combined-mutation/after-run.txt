@@ -1,0 +1,9 @@
+apps/harness/src/storage/project-storage-node-errors.ts MATCH
+apps/harness/src/storage/project-storage-upgrade-node-adapter.ts MATCH
+apps/harness/src/registration/registry-database.ts MATCH
+apps/harness/src/registration/registration-registry.ts MATCH
+apps/harness/scripts/check-effect-diagnostics.mjs MATCH
+stryker.project-storage.config.json MATCH
+apps/harness/vitest.project-storage-mutation.config.ts MATCH
+git status:
+?? .rpiv/artifacts/evidence/2026-10-22_123-combined-mutation/

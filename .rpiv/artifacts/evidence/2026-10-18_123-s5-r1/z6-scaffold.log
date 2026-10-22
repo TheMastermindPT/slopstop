@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+
+ Test Files  6 passed (6)
+      Tests  167 passed (167)
+   Start at  17:40:29
+   Duration  2.77s (transform 2.60s, setup 0ms, import 5.37s, tests 1.69s, environment 1ms)
+

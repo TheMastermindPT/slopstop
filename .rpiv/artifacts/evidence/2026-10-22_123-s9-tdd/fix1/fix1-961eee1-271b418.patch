@@ -1,0 +1,98 @@
+diff --git a/apps/harness/src/process-connection.test.ts b/apps/harness/src/process-connection.test.ts
+index aa693ee..d2ee591 100644
+--- a/apps/harness/src/process-connection.test.ts
++++ b/apps/harness/src/process-connection.test.ts
+@@ -4,7 +4,7 @@ import { HarnessRuntimeDisposeUnconfirmed } from "./process-bootstrap.js";
+ import { connectHarnessProcess } from "./process-connection.js";
+ import { ApplicationDatabaseCloseUnconfirmed } from "./storage/application-database-authority.js";
+ 
+-const P = "C:privateprojectslopstop.db";
++const P = "C:\\private\\project\\slopstop.db";
+ const bootstrap = { bootstrap: "message" };
+ const prepared = { roots: "checked" };
+ 
+diff --git a/apps/harness/src/process-fatal-diagnostics.test.ts b/apps/harness/src/process-fatal-diagnostics.test.ts
+index 42c468a..34dc66b 100644
+--- a/apps/harness/src/process-fatal-diagnostics.test.ts
++++ b/apps/harness/src/process-fatal-diagnostics.test.ts
+@@ -46,7 +46,7 @@ it("classifies null separately from objects", () => {
+   expect(exit).toHaveBeenCalledWith(1);
+ });
+ 
+-const P = "C:privateprojectslopstop.db";
++const P = "C:\\private\\project\\slopstop.db";
+ 
+ /** The shape `RegistrationCleanupUnconfirmed` has; the summary reads only `_tag` and `parts`. */
+ function cleanupUnconfirmed(parts: readonly string[], cause?: unknown) {
+diff --git a/apps/harness/src/process-fatal-diagnostics.ts b/apps/harness/src/process-fatal-diagnostics.ts
+index 504e562..e79956d 100644
+--- a/apps/harness/src/process-fatal-diagnostics.ts
++++ b/apps/harness/src/process-fatal-diagnostics.ts
+@@ -1,6 +1,7 @@
+ import {
+   type CleanupPart,
+   REGISTRATION_CLEANUP_PARTS,
++  REGISTRATION_CLEANUP_TAG,
+ } from "./registration/registration-listing.js";
+ 
+ type FatalValueKind =
+@@ -57,7 +58,6 @@ function valueKind(value: unknown): FatalValueKind {
+ /** Pino logs stay bounded: failures past this many are only counted. */
+ const MAX_SUMMARIZED_FAILURES = 16;
+ const IDENTIFIER_TAG = /^[A-Za-z][A-Za-z0-9]{0,63}$/;
+-const CLEANUP_TAG = "RegistrationCleanupUnconfirmed";
+ 
+ /** A field of an object value; any other value has none. */
+ function fieldOf(value: unknown, key: "_tag" | "parts"): unknown {
+@@ -83,7 +83,7 @@ function failureEntry(value: unknown): HarnessFailureEntry {
+   if (tag === undefined) {
+     return { kind: valueKind(value) };
+   }
+-  return tag === CLEANUP_TAG ? { tag, parts: cleanupParts(value) } : { tag };
++  return tag === REGISTRATION_CLEANUP_TAG ? { tag, parts: cleanupParts(value) } : { tag };
+ }
+ 
+ /** An aggregate with failures to flatten; an empty one is summarized as one error. */
+diff --git a/apps/harness/src/process-shutdown.test.ts b/apps/harness/src/process-shutdown.test.ts
+index 954a67a..c5a28cc 100644
+--- a/apps/harness/src/process-shutdown.test.ts
++++ b/apps/harness/src/process-shutdown.test.ts
+@@ -2,7 +2,7 @@ import { expect, it, vi } from "vitest";
+ import { HarnessRuntimeDisposeUnconfirmed } from "./process-bootstrap.js";
+ import { createHarnessPortCloseHandler } from "./process-shutdown.js";
+ 
+-const P = "C:privateprojectslopstop.db";
++const P = "C:\\private\\project\\slopstop.db";
+ 
+ function shutdownFailure() {
+   return new AggregateError(
+diff --git a/apps/harness/src/registration/registration-listing.ts b/apps/harness/src/registration/registration-listing.ts
+index f62e461..8f37aab 100644
+--- a/apps/harness/src/registration/registration-listing.ts
++++ b/apps/harness/src/registration/registration-listing.ts
+@@ -18,8 +18,11 @@ export const REGISTRATION_CLEANUP_PARTS = ["registry", "observer", "listing"] as
+ /** A registration part whose cleanup at stop was not confirmed. */
+ export type CleanupPart = (typeof REGISTRATION_CLEANUP_PARTS)[number];
+ 
++/** The tag of the failure naming the unconfirmed cleanup parts. */
++export const REGISTRATION_CLEANUP_TAG = "RegistrationCleanupUnconfirmed";
++
+ /** Stop could not confirm every part's cleanup; each unconfirmed part is named. */
+-class RegistrationCleanupUnconfirmed extends Data.TaggedError("RegistrationCleanupUnconfirmed")<{
++class RegistrationCleanupUnconfirmed extends Data.TaggedError(REGISTRATION_CLEANUP_TAG)<{
+   readonly message: string;
+   readonly parts: readonly CleanupPart[];
+   readonly cause?: unknown;
+diff --git a/stryker.project-storage.config.json b/stryker.project-storage.config.json
+index c7c51cd..d2d9ef7 100644
+--- a/stryker.project-storage.config.json
++++ b/stryker.project-storage.config.json
+@@ -41,7 +41,7 @@
+     "apps/harness/src/process-bootstrap.ts:95-100",
+     "apps/harness/src/process-bootstrap.ts:107-119",
+     "apps/harness/src/process-bootstrap.ts:126-166",
+-    "apps/harness/src/registration/registration-listing.ts:21-83",
++    "apps/harness/src/registration/registration-listing.ts:24-86",
+     "apps/harness/src/project-registration-observer.ts:96-112",
+     "apps/harness/src/project-registration-observer.ts:146-161",
+     "apps/harness/src/storage/project-storage-node-errors.ts",

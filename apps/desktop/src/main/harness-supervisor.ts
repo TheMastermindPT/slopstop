@@ -10,7 +10,7 @@ import {
   HarnessStatusSchema,
   type RetryHarnessResult,
 } from "@slopstop/protocol";
-import { Deferred, Duration, Effect, type Fiber } from "effect";
+import { Data, Deferred, Duration, Effect, type Fiber } from "effect";
 import { MessageChannelMain, type UtilityProcess, utilityProcess } from "electron";
 import type { Logger } from "pino";
 import { reportHarnessCrash } from "./crash-reporting.js";
@@ -21,8 +21,19 @@ import {
   type HarnessSessionEvent,
 } from "./harness-session.js";
 
+/** The harness did not exit within the shutdown grace and the kill wait. */
+export class HarnessShutdownTimeout extends Data.TaggedError("HarnessShutdownTimeout")<{
+  readonly message: string;
+}> {
+  constructor() {
+    super({ message: "Harness shutdown timed out." });
+  }
+}
+
 const handshakeTimeoutMs = 5_000;
 const harnessShutdownGraceMs = 5_000;
+/** How long a stop waits after `exit` for the stopped child's stdout to end (#96, D12). */
+const harnessStdoutDrainMs = 1_000;
 const maxAutomaticAttempts = 3;
 const restartBaseDelayMs = 250;
 const statusNeutralEvents: ReadonlySet<HarnessMessage["event"]> = new Set([
@@ -37,7 +48,29 @@ const statusNeutralEvents: ReadonlySet<HarnessMessage["event"]> = new Set([
 
 type StatusListener = (status: HarnessStatus) => void;
 
-type ChildObservation = Readonly<{ quiet(): void; drain(): void; remove(): void }>;
+type ChildObservation = Readonly<{
+  quiet(): void;
+  drain(): void;
+  remove(): void;
+  /** Completes when the line forwarder finishes: stdout ended or closed, or there is none. */
+  drained: Deferred.Deferred<void>;
+  /** Ends the line forwarder now. */
+  endForwarding(): void;
+}>;
+
+/**
+ * Waits for a stopped child's line forwarder to finish, at most the drain bound; at the bound the
+ * forwarder ends. A missed drain only loses log lines, so it never fails the stop (#96).
+ */
+function drainOutput(observation: ChildObservation | undefined): Effect.Effect<void> {
+  if (observation === undefined) return Effect.void;
+  return Deferred.await(observation.drained).pipe(
+    Effect.timeoutOrElse({
+      duration: Duration.millis(harnessStdoutDrainMs),
+      orElse: () => Effect.sync(observation.endForwarding),
+    }),
+  );
+}
 
 export class HarnessSupervisor {
   readonly #bootstrap: HarnessBootstrap;
@@ -141,12 +174,15 @@ export class HarnessSupervisor {
   }
 
   // Waits for the child's exit for one grace period, kills it, then waits one more grace
-  // period; still running then is a shutdown timeout. A late exit only clears the child.
+  // period; still running then is a shutdown timeout. A late exit only clears the child. After
+  // the exit, it waits up to the drain bound for stdout to end, so late output reaches the log.
   #stopChild(child: UtilityProcess): Promise<void> {
     const exited = Deferred.makeUnsafe<void>();
+    // Taken now: the exit handler forgets the observation.
+    const observation = this.#observations.get(child);
     let terminalTimedOut = false;
+    // The child observer's exit handler (registered at spawn, so it runs first) clears `#child`.
     child.once("exit", () => {
-      if (this.#child === child) this.#child = undefined;
       if (terminalTimedOut) this.#stopping = false;
       Deferred.doneUnsafe(exited, Effect.void);
     });
@@ -168,7 +204,7 @@ export class HarnessSupervisor {
           message: "Harness shutdown timed out.",
         },
       });
-      return Effect.fail(new Error("Harness shutdown timed out."));
+      return Effect.fail(new HarnessShutdownTimeout());
     });
     const graceful = Deferred.await(exited).pipe(
       Effect.timeoutOrElse({
@@ -185,6 +221,7 @@ export class HarnessSupervisor {
             ),
           ),
       }),
+      Effect.andThen(drainOutput(observation)),
       Effect.andThen(
         Effect.sync(() => {
           this.#setStatus({ state: "stopped" });
@@ -368,14 +405,17 @@ export class HarnessSupervisor {
       logging.stdout(chunk);
       lines.push(chunk);
     };
+    const drained = Deferred.makeUnsafe<void>();
     // Stdout ending only ends the line forwarder; stderr and error logging stay until exit.
     const finish = () => {
       stdout?.off("data", onStdout).off("end", finish).off("close", finish);
       lines.end();
+      Deferred.doneUnsafe(drained, Effect.void);
     };
+    // Each child is observed once, so its entry is this observation or already gone.
     const forget = () => {
       logging.silence();
-      if (this.#observations.get(child) === observation) this.#observations.delete(child);
+      this.#observations.delete(child);
     };
     const observation: ChildObservation = {
       quiet: logging.silence,
@@ -387,6 +427,8 @@ export class HarnessSupervisor {
         forget();
         finish();
       },
+      drained,
+      endForwarding: finish,
     };
     stdout?.on("data", onStdout).once("end", finish).once("close", finish);
     this.#observations.set(child, observation);

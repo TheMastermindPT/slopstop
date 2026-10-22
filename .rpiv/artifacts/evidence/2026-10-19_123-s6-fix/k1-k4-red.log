@@ -1,0 +1,44 @@
+parent: feeab30
+tree: 5158d80980b8ec8ecb06ed556dfe4e8a6e95755b
+working-tree digest: 7269144fb90193b8
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/project-registration-ipc.test.ts
+started: 2026-10-19T14:28:30+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/project-registration-ipc.test.ts (8 tests | 1 failed) 14ms
+   × answers registration unavailable after the IPC gate closes: 'chooseRepository cancelled while clos…' 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/project-registration-ipc.test.ts > answers registration unavailable after the IPC gate closes: 'chooseRepository cancelled while clos…'
+AssertionError: expected { status: 'cancelled' } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "PROJECT_REGISTRATION_UNAVAILABLE",
+-   "status": "unavailable",
++   "status": "cancelled",
+  }
+
+ ❯ closeWhileDialogOpen src/main/project-registration-ipc.test.ts:68:23
+     66|   close();
+     67|   answer(dialogAnswer);
+     68|   await expect(choice).resolves.toEqual(unavailable);
+       |                       ^
+     69|   expect(register).not.toHaveBeenCalled();
+     70| }
+ ❯ src/main/project-registration-ipc.test.ts:131:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  14:28:31
+   Duration  623ms (transform 164ms, setup 0ms, import 459ms, tests 14ms, environment 0ms)
+
+--- exit: 1

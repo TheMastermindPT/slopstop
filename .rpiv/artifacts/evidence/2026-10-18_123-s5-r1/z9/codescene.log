@@ -1,0 +1,15 @@
+HAND-WRITTEN SUMMARY of CodeScene MCP calls (code_health_score / pre_commit_code_health_safeguard), typed by the implementer from the tool answers; not tool output.
+head a17a2ac633b3f9b7c6e285b684cb2df76f947212 (working tree = HEAD for apps; CodeScene MCP code_health_score, one call per file)
+apps/harness/src/harness-runtime.ts 10
+apps/harness/src/harness-runtime.test.ts 10
+apps/harness/src/harness-runtime-shutdown.test.ts 10
+apps/harness/src/process-bootstrap.ts 10
+apps/harness/src/process-bootstrap.test.ts 10
+apps/harness/src/process-entry.ts 10
+apps/harness/src/project-registration-observer.ts 10
+apps/harness/src/project-registration-observer.test.ts 10
+apps/harness/src/registration/registration-listing.ts 10
+apps/harness/src/registration/registration-listing.test.ts 10
+apps/harness/src/registration/project-registration-flow.test.ts 10
+pre_commit_code_health_safeguard on the staged a17a2ac tree: quality_gates passed, 7 files checked, no issues
+not scored here: registration/observer-limits.ts (one constant added in 1ab1762) and the mechanically changed integration files, which the 1ab1762 safeguard (21 files) passed and a17a2ac does not change

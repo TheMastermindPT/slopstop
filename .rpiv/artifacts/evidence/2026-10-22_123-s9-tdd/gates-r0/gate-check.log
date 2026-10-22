@@ -1,0 +1,193 @@
+parent: d7a0e22
+tree: 7f65b88165dd84271e3dd2f82aa9dd6d740fa0ae
+working-tree digest: c74f25cb3da60268
+command: pnpm check
+started: 2026-10-22T21:13:30+01:00
+---
+$ pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:effect && pnpm test:unit && pnpm check:boundaries
+$ biome format .
+.rpiv\artifacts\reviews\2026-10-22_19-44-49_fdda65e-d7a0e22-123-part-a.json format ━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+      38   38 │             "path": "apps/harness/src/process-entry.ts",
+      39   39 │             "startLine": 83,
+      40      │ - ··········"quoted":·[
+      41      │ - ············"····failStartup(\"Harness·received·an·invalid·bootstrap·message.\");"
+      42      │ - ··········]
+           40 │ + ··········"quoted":·["····failStartup(\"Harness·received·an·invalid·bootstrap·message.\");"]
+      43   41 │           }
+      44   42 │         ],
+    ········· │ 
+      81   79 │             "path": "apps/harness/src/registration/registration-listing.ts",
+      82   80 │             "startLine": 64,
+      83      │ - ··········"quoted":·[
+      84      │ - ············"········duration:·REGISTRATION_SHUTDOWN_CLEANUP_BUDGET_MS,"
+      85      │ - ··········]
+           81 │ + ··········"quoted":·["········duration:·REGISTRATION_SHUTDOWN_CLEANUP_BUDGET_MS,"]
+      86   82 │           }
+      87   83 │         ],
+    ········· │ 
+     102   98 │             "path": "apps/harness/src/process-entry.ts",
+     103   99 │             "startLine": 83,
+     104      │ - ··········"quoted":·[
+     105      │ - ············"····failStartup(\"Harness·received·an·invalid·bootstrap·message.\");"
+     106      │ - ··········]
+          100 │ + ··········"quoted":·["····failStartup(\"Harness·received·an·invalid·bootstrap·message.\");"]
+     107  101 │           }
+     108  102 │         ],
+    ········· │ 
+     124  118 │             "path": "apps/harness/src/process-bootstrap.ts",
+     125  119 │             "startLine": 82,
+     126      │ - ··········"quoted":·[
+     127      │ - ············"const·HARNESS_RUNTIME_DISPOSE_DEADLINE_MS·=·500;"
+     128      │ - ··········]
+          120 │ + ··········"quoted":·["const·HARNESS_RUNTIME_DISPOSE_DEADLINE_MS·=·500;"]
+     129  121 │           }
+     130  122 │         ],
+    ········· │ 
+     190  182 │             "path": "apps/harness/tests/integration/application-database-close-fixture.ts",
+     191  183 │             "startLine": 14,
+     192      │ - ··········"quoted":·[
+     193      │ - ············"export·function·fakeClient(closeRejects·=·false)·{"
+     194      │ - ··········]
+          184 │ + ··········"quoted":·["export·function·fakeClient(closeRejects·=·false)·{"]
+     195  185 │           }
+     196  186 │         ],
+    ········· │ 
+     212  202 │             "path": "apps/harness/tests/integration/application-database-close-fixture.ts",
+     213  203 │             "startLine": 50,
+     214      │ - ··········"quoted":·[
+     215      │ - ············"··await·vi.advanceTimersByTimeAsync(milliseconds);"
+     216      │ - ··········]
+          204 │ + ··········"quoted":·["··await·vi.advanceTimersByTimeAsync(milliseconds);"]
+     217  205 │           }
+     218  206 │         ],
+    ········· │ 
+     234  222 │             "path": "apps/desktop/src/main/desktop-runtime.ts",
+     235  223 │             "startLine": 209,
+     236      │ - ··········"quoted":·[
+     237      │ - ············"··const·owners·=·Scope.forkUnsafe(runtime.scope);"
+     238      │ - ··········]
+          224 │ + ··········"quoted":·["··const·owners·=·Scope.forkUnsafe(runtime.scope);"]
+     239  225 │           }
+     240  226 │         ],
+    ········· │ 
+     256  242 │             "path": "stryker.desktop-s6.config.json",
+     257  243 │             "startLine": 12,
+     258      │ - ··········"quoted":·[
+     259      │ - ············"····\"apps/desktop/src/main/project-registration-ipc.ts:18-21\","
+     260      │ - ··········]
+          244 │ + ··········"quoted":·["····\"apps/desktop/src/main/project-registration-ipc.ts:18-21\","]
+     261  245 │           }
+     262  246 │         ],
+    ········· │ 
+     276  260 │             "path": "stryker.desktop-s6.config.json",
+     277  261 │             "startLine": 13,
+     278      │ - ··········"quoted":·[
+     279      │ - ············"····\"apps/desktop/src/main/project-registration-ipc.ts:39-39\","
+     280      │ - ··········]
+          262 │ + ··········"quoted":·["····\"apps/desktop/src/main/project-registration-ipc.ts:39-39\","]
+     281  263 │           }
+     282  264 │         ],
+    ········· │ 
+     296  278 │             "path": "stryker.desktop-s6.config.json",
+     297  279 │             "startLine": 14,
+     298      │ - ··········"quoted":·[
+     299      │ - ············"····\"apps/desktop/src/main/project-registration-ipc.ts:47-47\","
+     300      │ - ··········]
+          280 │ + ··········"quoted":·["····\"apps/desktop/src/main/project-registration-ipc.ts:47-47\","]
+     301  281 │           }
+     302  282 │         ],
+    ········· │ 
+     316  296 │             "path": "stryker.desktop-s6.config.json",
+     317  297 │             "startLine": 15,
+     318      │ - ··········"quoted":·[
+     319      │ - ············"····\"apps/desktop/src/main/project-registration-ipc.ts:66-66\","
+     320      │ - ··········]
+          298 │ + ··········"quoted":·["····\"apps/desktop/src/main/project-registration-ipc.ts:66-66\","]
+     321  299 │           }
+     322  300 │         ],
+    ········· │ 
+     336  314 │             "path": "stryker.desktop-s6.config.json",
+     337  315 │             "startLine": 17,
+     338      │ - ··········"quoted":·[
+     339      │ - ············"····\"apps/desktop/src/main/main.ts:123-139\","
+     340      │ - ··········]
+          316 │ + ··········"quoted":·["····\"apps/desktop/src/main/main.ts:123-139\","]
+     341  317 │           }
+     342  318 │         ],
+    ········· │ 
+     356  332 │             "path": "stryker.desktop-s6.config.json",
+     357  333 │             "startLine": 18,
+     358      │ - ··········"quoted":·[
+     359      │ - ············"····\"apps/desktop/src/main/main.ts:294-323\","
+     360      │ - ··········]
+          334 │ + ··········"quoted":·["····\"apps/desktop/src/main/main.ts:294-323\","]
+     361  335 │           }
+     362  336 │         ],
+    ········· │ 
+     376  350 │             "path": "stryker.desktop-s6.config.json",
+     377  351 │             "startLine": 19,
+     378      │ - ··········"quoted":·[
+     379      │ - ············"····\"apps/desktop/src/main/main.ts:441-441\","
+     380      │ - ··········]
+          352 │ + ··········"quoted":·["····\"apps/desktop/src/main/main.ts:441-441\","]
+     381  353 │           }
+     382  354 │         ],
+    ········· │ 
+     396  368 │             "path": "stryker.desktop-s6.config.json",
+     397  369 │             "startLine": 21,
+     398      │ - ··········"quoted":·[
+     399      │ - ············"····\"apps/desktop/src/main/project-entry-bridge.ts:79-79\""
+     400      │ - ··········]
+          370 │ + ··········"quoted":·["····\"apps/desktop/src/main/project-entry-bridge.ts:79-79\""]
+     401  371 │           }
+     402  372 │         ],
+    ········· │ 
+     416  386 │             "path": "stryker.desktop-s6.config.json",
+     417  387 │             "startLine": 26,
+     418      │ - ··········"quoted":·[
+     419      │ - ············"····\"configFile\":·\"apps/desktop/vitest.desktop-s6-mutation.config.ts\","
+     420      │ - ··········]
+          388 │ + ··········"quoted":·["····\"configFile\":·\"apps/desktop/vitest.desktop-s6-mutation.config.ts\","]
+     421  389 │           }
+     422  390 │         ],
+    ········· │ 
+     456  424 │             "path": "stryker.config.json",
+     457  425 │             "startLine": 33,
+     458      │ - ··········"quoted":·[
+     459      │ - ············"····\"apps/desktop/src/main/harness-bridges.ts\","
+     460      │ - ··········]
+          426 │ + ··········"quoted":·["····\"apps/desktop/src/main/harness-bridges.ts\","]
+     461  427 │           }
+     462  428 │         ],
+    ········· │ 
+     476  442 │             "path": "knip.jsonc",
+     477  443 │             "startLine": 19,
+     478      │ - ··········"quoted":·[
+     479      │ - ············"········\"vitest.desktop-s6-mutation.config.ts\","
+     480      │ - ··········]
+          444 │ + ··········"quoted":·["········\"vitest.desktop-s6-mutation.config.ts\","]
+     481  445 │           }
+     482  446 │         ],
+    ········· │ 
+     536  500 │             "path": "apps/desktop/src/main/harness-bridges.ts",
+     537  501 │             "startLine": 56,
+     538      │ - ··········"quoted":·[
+     539      │ - ············"······if·(failures.length·>·0)·throw·failures[0];"
+     540      │ - ··········]
+          502 │ + ··········"quoted":·["······if·(failures.length·>·0)·throw·failures[0];"]
+  154 more lines truncated
+  
+
+Checked 570 files in 676ms. No fixes applied.
+Found 1 error.
+format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+
+[ELIFECYCLE] Command failed with exit code 1.
+[ELIFECYCLE] Command failed with exit code 1.
+--- exit: 1

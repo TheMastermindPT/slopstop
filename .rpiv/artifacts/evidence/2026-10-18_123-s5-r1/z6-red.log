@@ -1,0 +1,62 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/registration/registration-listing.test.ts (15 tests | 1 failed | 14 skipped) 11ms
+   × the observer close is interrupted at the budget 10ms
+ ❯ |harness| src/project-registration-observer.test.ts (23 tests | 1 failed | 22 skipped) 10ms
+     × answers cleanup unconfirmed after an interrupted Effect close 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/project-registration-observer.test.ts > Project registration observer executable admission > answers cleanup unconfirmed after an interrupted Effect close
+AssertionError: expected { state: 'pending' } to deeply equal { state: 'resolved', value: { …(2) } }
+
+- Expected
++ Received
+
+  {
+-   "state": "resolved",
+-   "value": {
+-     "code": "OBSERVER_CLEANUP_UNCONFIRMED",
+-     "status": "pending-recovery",
+-   },
++   "state": "pending",
+  }
+
+ ❯ src/project-registration-observer.test.ts:296:21
+    294|       const later = track(observer.close());
+    295|       await advance(0);
+    296|       expect(later).toEqual({
+       |                     ^
+    297|         state: "resolved",
+    298|         value: { status: "pending-recovery", code: "OBSERVER_CLEANUP_U…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |harness| src/registration/registration-listing.test.ts > the observer close is interrupted at the budget
+AssertionError: expected [] to deeply equal [ 'observer-interrupted' ]
+
+- Expected
++ Received
+
+- [
+-   "observer-interrupted",
+- ]
++ []
+
+ ❯ src/registration/registration-listing.test.ts:297:19
+    295|     });
+    296|     expect(registryStop).not.toHaveBeenCalled();
+    297|     expect(calls).toEqual(["observer-interrupted"]);
+       |                   ^
+    298|   } finally {
+    299|     vi.useRealTimers();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 36 skipped (38)
+   Start at  17:41:03
+   Duration  667ms (transform 357ms, setup 0ms, import 925ms, tests 21ms, environment 0ms)
+

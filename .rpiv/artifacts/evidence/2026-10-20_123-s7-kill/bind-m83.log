@@ -1,0 +1,42 @@
+parent: 32ca10a
+tree: 988c059fb8965750fa8411c32e4b1d52483d2664
+working-tree digest: 42a12f6152519241
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-request-core.test.ts -t failure for an unknown id
+started: 2026-10-20T18:41:07+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-request-core.test.ts (11 tests | 1 failed | 10 skipped) 9ms
+     × settles each harness request once by id: 'failure for an unknown id' 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-request-core.test.ts > harness request core > settles each harness request once by id: 'failure for an unknown id'
+AssertionError: expected [Function] to not throw an error but 'TypeError: Cannot read properties of …' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"TypeError: Cannot read properties of undefined (reading 'done')"
+
+ ❯ run src/main/harness-request-core.test.ts:166:52
+    164|           { code: "HARNESS_INTERNAL_FAILURE", message: "private failur…
+    165|         );
+    166|         expect(() => session.message(failure)).not.toThrow();
+       |                                                    ^
+    167|         session.message(listReply(messageId(1)));
+    168|         expect(await request.result).toEqual(Result.succeed(listed));
+ ❯ src/main/harness-request-core.test.ts:174:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  18:41:08
+   Duration  637ms (transform 159ms, setup 0ms, import 460ms, tests 9ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-request-core.ts bound blob edafd0c2dd6483fa; restored blob 470e5c9a59bc9fb5 (backup 470e5c9a59bc9fb5) MATCH; tree before f0c7898665b905cd after f0c7898665b905cd MATCH

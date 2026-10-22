@@ -1,0 +1,9 @@
+[32m00:07:20 (9824) INFO ProjectReader[39m Found 3 of 2005 file(s) to be mutated.
+[32m00:07:21 (9824) INFO Instrumenter[39m Instrumented 3 source file(s) with 137 mutant(s)
+[32m00:07:23 (9824) INFO ConcurrencyTokenProvider[39m Creating 4 test runner process(es).
+[32m00:07:27 (9824) INFO DryRunExecutor[39m Starting initial test run (vitest test runner with "perTest" coverage analysis). This may take a while.
+[32m00:07:30 (9824) INFO DryRunExecutor[39m Initial test run succeeded. Ran 25 tests in 3 seconds (net 201.04519999999957 ms, overhead 3088.9548000000004 ms).
+[32m00:07:54 (9824) INFO MutationTestReportHelper[39m Final mutation score of 98.48 is greater than or equal to break threshold 80
+[32m00:07:54 (9824) INFO JsonReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/mutation.json
+[32m00:07:54 (9824) INFO HtmlReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/project-storage-harness.html
+[32m00:07:54 (9824) INFO MutationTestExecutor[39m Done in 34 seconds.

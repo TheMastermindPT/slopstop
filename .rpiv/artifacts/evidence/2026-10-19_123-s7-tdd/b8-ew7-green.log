@@ -1,0 +1,9 @@
+parent: 829c3cf
+tree: 2f637069d7723070a5f011070602b00f9540742c
+working-tree digest: 5e14dead748ac6a1
+command: pnpm check:effect
+started: 2026-10-19T22:46:45+01:00
+---
+$ node apps/harness/scripts/check-effect-diagnostics.mjs
+Effect diagnostics verified; 50 advisory warnings.
+--- exit: 0

@@ -1,0 +1,17 @@
+parent: 32ca10a
+tree: ecb49eba3faacfeaf5c34d47ef27f98c5775916b
+working-tree digest: 79b3c1ab3d2f014a
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-request-core.test.ts -t interrupted after its reply
+started: 2026-10-20T18:38:33+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 11 skipped (12)
+   Start at  18:38:34
+   Duration  580ms (transform 165ms, setup 0ms, import 439ms, tests 8ms, environment 0ms)
+
+--- exit: 0
+binding: source apps/desktop/src/main/harness-request-core.ts bound blob acac559aeb776dec; restored blob 470e5c9a59bc9fb5 (backup 470e5c9a59bc9fb5) MATCH; tree before b480ce404c9524e7 after b480ce404c9524e7 MATCH

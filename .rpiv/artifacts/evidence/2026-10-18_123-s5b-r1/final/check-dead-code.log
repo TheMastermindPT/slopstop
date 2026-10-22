@@ -1,0 +1,4 @@
+head 010ee05ac290b11895d3d5348171e83a2467c46b
+command: pnpm check:dead-code
+$ knip
+exit 0

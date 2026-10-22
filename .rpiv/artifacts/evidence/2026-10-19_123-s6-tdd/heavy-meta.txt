@@ -1,0 +1,4 @@
+cpu before e2e: 21.6/27.1/14.3, alone
+e2e end 2026-10-19T13:19:46+01:00
+cpu before package:smoke: 7.3/9.4/4.0, alone
+package:smoke end 2026-10-19T13:51:40+01:00

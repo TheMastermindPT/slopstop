@@ -1,0 +1,6 @@
+{"cell":"M-idle quiet","index":0,"window":null,"startIso":"2026-10-17T16:56:10.065Z","stopMs":0.2147000000004482,"outcome":"settled","inWindow":null,"stopStartMs":1792256170086.7642,"stopEndMs":1792256170086.9788}
+{"cell":"M-idle quiet","index":1,"window":null,"startIso":"2026-10-17T16:56:10.088Z","stopMs":0.044499999999970896,"outcome":"settled","inWindow":null,"stopStartMs":1792256170108.3555,"stopEndMs":1792256170108.4001}
+{"cell":"M-drain quiet","index":0,"window":null,"startIso":"2026-10-17T16:56:10.109Z","stopMs":0.5387000000000626,"outcome":"settled","inWindow":null,"stopStartMs":1792256170128.908,"stopEndMs":1792256170129.4468}
+{"cell":"M-drain quiet","index":1,"window":null,"startIso":"2026-10-17T16:56:10.130Z","stopMs":0.44470000000001164,"outcome":"settled","inWindow":null,"stopStartMs":1792256170147.2395,"stopEndMs":1792256170147.6843}
+{"cell":"M-drain burst","index":0,"window":1,"startIso":"2026-10-17T16:56:13.301Z","stopMs":0.6570000000001528,"outcome":"settled","inWindow":true,"stopStartMs":1792256173356.6692,"stopEndMs":1792256173357.3262}
+{"cell":"M-drain burst","index":1,"window":1,"startIso":"2026-10-17T16:56:13.358Z","stopMs":0.6957000000002154,"outcome":"settled","inWindow":true,"stopStartMs":1792256173390.3367,"stopEndMs":1792256173391.0325}

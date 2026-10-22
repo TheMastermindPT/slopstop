@@ -1,0 +1,700 @@
+parent: 5f1bca3
+working-tree digest: 9b320d231d943120
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-shutdown.test.ts apps/desktop/src/main/project-entry-ipc.test.ts apps/desktop/src/main/project-registration-ipc.test.ts apps/desktop/src/main/workspace-bridge.test.ts apps/desktop/src/main/desktop-runtime.test.ts
+started: 2026-10-19T02:00:53+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-shutdown.test.ts (21 tests | 13 failed) 40ms
+     × disposes the runtime before the terminal action: 'quit' 8ms
+     × disposes the runtime before the terminal action: 'requested exit' 2ms
+     × disposes the runtime before the terminal action: 'failed harness stop' 1ms
+     × disposes the runtime before the terminal action: 'dispose rejects' 2ms
+     × disposes the runtime before the terminal action: 'harness and dispose both fail' 1ms
+     × disposes the runtime before the terminal action: 'harness fails and dispose never settl…' 3ms
+     × disposes the runtime before the terminal action: 'dispose never settles' 1ms
+     × keeps stopping after a bridge stop throws: 'project storage throws' 1ms
+     × keeps stopping after a bridge stop throws: 'workspace throws' 1ms
+     × keeps stopping after a bridge stop throws: 'project entry throws' 1ms
+     × closes the IPC gate in the turn shutdown starts: 'beforeQuit then quit' 1ms
+     × closes the IPC gate in the turn shutdown starts: 'requestExit' 1ms
+     × closes the IPC gate in the turn shutdown starts: 'stop alone' 1ms
+ ❯ |desktop-main| src/main/desktop-runtime.test.ts (8 tests | 4 failed) 34ms
+     × releases every owner on dispose: 'built, never stopped' 18ms
+     × releases every owner on dispose: 'supervisor stop rejects, no program' 3ms
+     × releases every owner on dispose: 'a release throws' 1ms
+     × releases every owner on dispose: 'stop twice' 1ms
+ ❯ |desktop-main| src/main/project-registration-ipc.test.ts (5 tests | 4 failed) 15ms
+   × answers registration unavailable after the IPC gate closes: 'registerProject' 8ms
+   × answers registration unavailable after the IPC gate closes: 'chooseRepository' 2ms
+   × answers registration unavailable after the IPC gate closes: 'chooseRepository off Windows' 1ms
+   × answers registration unavailable after the IPC gate closes: 'chooseRepository while the dialog is …' 2ms
+ ❯ |desktop-main| src/main/project-entry-ipc.test.ts (9 tests | 6 failed) 22ms
+   × answers unavailable after the IPC gate closes: 'listProjects' 5ms
+   × answers unavailable after the IPC gate closes: 'activateProject' 2ms
+   × answers unavailable after the IPC gate closes: 'switchProject' 1ms
+   × answers unavailable after the IPC gate closes: 'upgradeProject' 1ms
+   × answers unavailable after the IPC gate closes: 'readConversation' 1ms
+   × answers unavailable after the IPC gate closes: 'saveConversationMessage' 1ms
+SlopStop failed to start.
+ ❯ |desktop-main| src/main/workspace-bridge.test.ts (25 tests | 2 failed) 57ms
+   × answers workspace unavailable after the IPC gate closes: 'queryWorkspace' 11ms
+   × answers workspace unavailable after the IPC gate closes: 'submitWorkspaceIntent' 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 29 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'built, never stopped'
+AssertionError: expected [] to deeply equal [ 'project-entry', …(2) ]
+
+- Expected
++ Received
+
+- [
+-   "project-entry",
+-   "project-storage",
+-   "workspace",
+- ]
++ []
+
+ ❯ run src/main/desktop-runtime.test.ts:93:47
+     91|         runtime.runSync(readDesktopServices);
+     92|         await runtime.dispose();
+     93|         expect([...stops.slice(0, 3)].sort()).toEqual([...bridges].sor…
+       |                                               ^
+     94|         expect(stops.slice(3)).toEqual(["supervisor"]);
+     95|       },
+ ❯ src/main/desktop-runtime.test.ts:192:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'supervisor stop rejects, no program'
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ run src/main/desktop-runtime.test.ts:120:40
+    118|         const runtime = makeDesktopRuntime(ports);
+    119|         runtime.runSync(readDesktopServices);
+    120|         await expect(runtime.dispose()).rejects.toBe(failure);
+       |                                        ^
+    121|         expect(stops).toHaveLength(4);
+    122|       },
+ ❯ src/main/desktop-runtime.test.ts:192:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'a release throws'
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ run src/main/desktop-runtime.test.ts:157:40
+    155|         const runtime = makeDesktopRuntime(ports);
+    156|         runtime.runSync(readDesktopServices);
+    157|         await expect(runtime.dispose()).rejects.toBe(failure);
+       |                                        ^
+    158|         expect([...stops].sort()).toEqual([...bridges, "supervisor"].s…
+    159|       },
+ ❯ src/main/desktop-runtime.test.ts:192:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'stop twice'
+AssertionError: expected "vi.fn()" to be called once, but got 2 times
+ ❯ run src/main/desktop-runtime.test.ts:186:39
+    184|         await expect(services.harness.stop()).rejects.toBe(failure);
+    185|         await expect(services.harness.stop()).rejects.toBe(failure);
+    186|         expect(ownerStops.supervisor).toHaveBeenCalledOnce();
+       |                                       ^
+    187|       },
+    188|     },
+ ❯ src/main/desktop-runtime.test.ts:192:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'quit'
+AssertionError: expected [ Array(4) ] to deeply equal [ Array(5) ]
+
+- Expected
++ Received
+
+  [
+    "project-storage",
+    "workspace",
+    "harness",
+-   "dispose",
+    "quit",
+  ]
+
+ ❯ run src/main/desktop-shutdown.test.ts:320:23
+    318|         await shutdown.stop();
+    319|         await flushMicrotasks();
+    320|         expect(order).toEqual([...bridgeOrder, "harness", "dispose", "…
+       |                       ^
+    321|       },
+    322|     },
+ ❯ src/main/desktop-shutdown.test.ts:422:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'requested exit'
+AssertionError: expected [ Array(4) ] to deeply equal [ Array(5) ]
+
+- Expected
++ Received
+
+  [
+    "project-storage",
+    "workspace",
+    "harness",
+-   "dispose",
+    "exit:0",
+  ]
+
+ ❯ run src/main/desktop-shutdown.test.ts:328:23
+    326|         const { order, shutdown } = recording();
+    327|         await shutdown.requestExit(0);
+    328|         expect(order).toEqual([...bridgeOrder, "harness", "dispose", "…
+       |                       ^
+    329|       },
+    330|     },
+ ❯ src/main/desktop-shutdown.test.ts:422:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'failed harness stop'
+AssertionError: expected [ Array(4) ] to deeply equal [ Array(5) ]
+
+- Expected
++ Received
+
+  [
+    "project-storage",
+    "workspace",
+    "harness",
+-   "dispose",
+    "exit:1",
+  ]
+
+ ❯ run src/main/desktop-shutdown.test.ts:339:23
+    337|         await expect(shutdown.stop()).rejects.toBe(harnessFailure);
+    338|         await flushMicrotasks();
+    339|         expect(order).toEqual([...bridgeOrder, "harness", "dispose", "…
+       |                       ^
+    340|       },
+    341|     },
+ ❯ src/main/desktop-shutdown.test.ts:422:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'dispose rejects'
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ run src/main/desktop-shutdown.test.ts:353:38
+    351|         });
+    352|         shutdown.beforeQuit({ preventDefault: vi.fn() });
+    353|         await expect(shutdown.stop()).rejects.toBe(disposeFailure);
+       |                                      ^
+    354|         await flushMicrotasks();
+    355|         expect(order).toEqual([...bridgeOrder, "harness", "dispose", "…
+ ❯ src/main/desktop-shutdown.test.ts:422:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'harness and dispose both fail'
+AssertionError: expected Error: private harness shutdown failure to be an instance of AggregateError
+ ❯ run src/main/desktop-shutdown.test.ts:371:25
+    369|         shutdown.beforeQuit({ preventDefault: vi.fn() });
+    370|         const failure = await settledFailure(shutdown.stop());
+    371|         expect(failure).toBeInstanceOf(AggregateError);
+       |                         ^
+    372|         expect(failure).toMatchObject({ errors: [harnessFailure, dispo…
+    373|         await flushMicrotasks();
+ ❯ src/main/desktop-shutdown.test.ts:422:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'harness fails and dispose never settl…'
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      1,
+    ]
+
+
+Number of calls: 1
+
+ ❯ run src/main/desktop-shutdown.test.ts:389:26
+    387|         const failure = settledFailure(shutdown.stop());
+    388|         await vi.advanceTimersByTimeAsync(999);
+    389|         expect(exit).not.toHaveBeenCalled();
+       |                          ^
+    390|         await vi.advanceTimersByTimeAsync(1);
+    391|         expect(exit).toHaveBeenCalledExactlyOnceWith(1);
+ ❯ src/main/desktop-shutdown.test.ts:422:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'dispose never settles'
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array []
+
+
+Number of calls: 1
+
+ ❯ run src/main/desktop-shutdown.test.ts:409:26
+    407|         await vi.advanceTimersByTimeAsync(999);
+    408|         expect(exit).not.toHaveBeenCalled();
+    409|         expect(quit).not.toHaveBeenCalled();
+       |                          ^
+    410|         await vi.advanceTimersByTimeAsync(1);
+    411|         expect(exit).toHaveBeenCalledExactlyOnceWith(1);
+ ❯ src/main/desktop-shutdown.test.ts:422:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bridge stop isolation > keeps stopping after a bridge stop throws: 'project storage throws'
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bridge stop isolation > keeps stopping after a bridge stop throws: 'workspace throws'
+AssertionError: expected [ Array(4) ] to deeply equal [ Array(6) ]
+
+- Expected
++ Received
+
+  [
+    "project-storage",
+    "workspace",
+-   "project-entry",
+    "harness",
+-   "dispose",
+    "exit:1",
+  ]
+
+ ❯ src/main/desktop-shutdown.test.ts:448:19
+    446|     await expect(shutdown.stop()).rejects.toBe(thrown);
+    447|     await flushMicrotasks();
+    448|     expect(order).toEqual([
+       |                   ^
+    449|       "project-storage",
+    450|       "workspace",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bridge stop isolation > keeps stopping after a bridge stop throws: 'project entry throws'
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ src/main/desktop-shutdown.test.ts:446:34
+    444|     });
+    445|     shutdown.beforeQuit({ preventDefault: vi.fn() });
+    446|     await expect(shutdown.stop()).rejects.toBe(thrown);
+       |                                  ^
+    447|     await flushMicrotasks();
+    448|     expect(order).toEqual([
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/29]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > IPC gate > closes the IPC gate in the turn shutdown starts: 'beforeQuit then quit'
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > IPC gate > closes the IPC gate in the turn shutdown starts: 'requestExit'
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > IPC gate > closes the IPC gate in the turn shutdown starts: 'stop alone'
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/main/desktop-shutdown.test.ts:497:34
+    495|     expect(shutdown.accepting()).toBe(true);
+    496|     row.start(shutdown);
+    497|     expect(shutdown.accepting()).toBe(false);
+       |                                  ^
+    498|     await row.finish(shutdown);
+    499|     expect(shutdown.accepting()).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/29]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-ipc.test.ts > answers unavailable after the IPC gate closes: 'listProjects'
+AssertionError: expected { Object (status, projects, ...) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "PROJECT_LIST_UNAVAILABLE",
+-   "status": "unavailable",
++   "hiddenCount": 0,
++   "projects": [],
++   "status": "listed",
+  }
+
+ ❯ src/main/project-entry-ipc.test.ts:249:30
+    247|     const { projects, handler } = gated();
+    248|     const call = handler(desktopIpcChannels[channel]);
+    249|     await expect(call(value)).resolves.toEqual(envelope);
+       |                              ^
+    250|     expect(() => call({ ...value, extra: true })).toThrow();
+    251|     expect(projects[fake]).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/29]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-ipc.test.ts > answers unavailable after the IPC gate closes: 'activateProject'
+AssertionError: expected { status: 'not-registered', …(1) } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+  {
+-   "diagnostic": {
+-     "code": "PROJECT_COORDINATOR_UNAVAILABLE",
+-     "message": "The Project connection is unavailable.",
+-     "retryable": true,
+-   },
+    "request": {
+      "projectId": "bdb3aa05-0412-481e-a664-a0786f67ca19",
+    },
+-   "status": "unavailable",
++   "status": "not-registered",
+  }
+
+ ❯ src/main/project-entry-ipc.test.ts:249:30
+    247|     const { projects, handler } = gated();
+    248|     const call = handler(desktopIpcChannels[channel]);
+    249|     await expect(call(value)).resolves.toEqual(envelope);
+       |                              ^
+    250|     expect(() => call({ ...value, extra: true })).toThrow();
+    251|     expect(projects[fake]).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/29]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-ipc.test.ts > answers unavailable after the IPC gate closes: 'switchProject'
+AssertionError: expected { status: 'target-result', …(2) } to deeply equal { …(3) }
+
+- Expected
++ Received
+
+  {
+-   "diagnostic": {
+-     "code": "PROJECT_COORDINATOR_UNAVAILABLE",
+-     "message": "The Project connection is unavailable.",
+-     "retryable": false,
+-   },
+    "request": {
+      "from": {
+        "activationId": "b148763a-3df4-47f6-ab4b-0b165e15940e",
+        "projectId": "bdb3aa05-0412-481e-a664-a0786f67ca19",
+      },
+      "to": {
+        "projectId": "aa2b4f17-e534-4878-8676-26e8f02ab3e4",
+      },
+    },
+-   "status": "coordinator-unavailable",
++   "status": "target-result",
++   "target": {
++     "request": {
++       "projectId": "aa2b4f17-e534-4878-8676-26e8f02ab3e4",
++     },
++     "status": "not-registered",
++   },
+  }
+
+ ❯ src/main/project-entry-ipc.test.ts:249:30
+    247|     const { projects, handler } = gated();
+    248|     const call = handler(desktopIpcChannels[channel]);
+    249|     await expect(call(value)).resolves.toEqual(envelope);
+       |                              ^
+    250|     expect(() => call({ ...value, extra: true })).toThrow();
+    251|     expect(projects[fake]).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/29]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-ipc.test.ts > answers unavailable after the IPC gate closes: 'upgradeProject'
+AssertionError: expected { status: 'not-required', …(1) } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+  {
+-   "diagnostic": {
+-     "code": "PROJECT_COORDINATOR_UNAVAILABLE",
+-     "message": "The Project connection is unavailable.",
+-     "retryable": true,
+-   },
+    "request": {
+      "projectId": "bdb3aa05-0412-481e-a664-a0786f67ca19",
+    },
+-   "status": "unavailable",
++   "status": "not-required",
+  }
+
+ ❯ src/main/project-entry-ipc.test.ts:249:30
+    247|     const { projects, handler } = gated();
+    248|     const call = handler(desktopIpcChannels[channel]);
+    249|     await expect(call(value)).resolves.toEqual(envelope);
+       |                              ^
+    250|     expect(() => call({ ...value, extra: true })).toThrow();
+    251|     expect(projects[fake]).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/29]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-ipc.test.ts > answers unavailable after the IPC gate closes: 'readConversation'
+AssertionError: expected { status: 'read', …(2) } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+  {
+-   "diagnostic": {
+-     "code": "PROJECT_COORDINATOR_UNAVAILABLE",
+-     "message": "The Project connection is unavailable.",
+-     "retryable": true,
+-   },
++   "conversation": null,
+    "request": {
+      "activationId": "b148763a-3df4-47f6-ab4b-0b165e15940e",
+      "after": null,
+      "projectId": "bdb3aa05-0412-481e-a664-a0786f67ca19",
+    },
+-   "status": "unavailable",
++   "status": "read",
+  }
+
+ ❯ src/main/project-entry-ipc.test.ts:249:30
+    247|     const { projects, handler } = gated();
+    248|     const call = handler(desktopIpcChannels[channel]);
+    249|     await expect(call(value)).resolves.toEqual(envelope);
+       |                              ^
+    250|     expect(() => call({ ...value, extra: true })).toThrow();
+    251|     expect(projects[fake]).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/29]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-ipc.test.ts > answers unavailable after the IPC gate closes: 'saveConversationMessage'
+AssertionError: expected { status: 'conflict', …(2) } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+  {
+-   "diagnostic": {
+-     "code": "PROJECT_COORDINATOR_UNAVAILABLE",
+-     "message": "The Project connection is unavailable.",
+-     "retryable": true,
+-   },
++   "currentRevision": 0,
+    "request": {
+      "activationId": "b148763a-3df4-47f6-ab4b-0b165e15940e",
+      "expectedRevision": 0,
+      "projectId": "bdb3aa05-0412-481e-a664-a0786f67ca19",
+      "saveId": "3cc14315-4f88-4e4c-8dcb-abe99491b88e",
+      "text": "Hello",
+    },
+-   "status": "unavailable",
++   "status": "conflict",
+  }
+
+ ❯ src/main/project-entry-ipc.test.ts:249:30
+    247|     const { projects, handler } = gated();
+    248|     const call = handler(desktopIpcChannels[channel]);
+    249|     await expect(call(value)).resolves.toEqual(envelope);
+       |                              ^
+    250|     expect(() => call({ ...value, extra: true })).toThrow();
+    251|     expect(projects[fake]).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/29]⎯
+
+ FAIL  |desktop-main| src/main/project-registration-ipc.test.ts > answers registration unavailable after the IPC gate closes: 'registerProject'
+AssertionError: expected { status: 'repository-selected', …(1) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "PROJECT_REGISTRATION_UNAVAILABLE",
+-   "status": "unavailable",
++   "repositorySelectionId": "b6a75f9b-37f0-4baa-a498-d0d8ff515879",
++   "status": "repository-selected",
+  }
+
+ ❯ run src/main/project-registration-ipc.test.ts:70:50
+     68|       const { register, handler } = registered(false);
+     69|       const call = handler(desktopIpcChannels.registerProject);
+     70|       await expect(call({ step: "prepare-git" })).resolves.toEqual(una…
+       |                                                  ^
+     71|       expect(() => call({ step: "prepare-git", extra: true })).toThrow…
+     72|       expect(register).not.toHaveBeenCalled();
+ ❯ src/main/project-registration-ipc.test.ts:123:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/29]⎯
+
+ FAIL  |desktop-main| src/main/project-registration-ipc.test.ts > answers registration unavailable after the IPC gate closes: 'chooseRepository'
+AssertionError: expected { status: 'repository-selected', …(2) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "PROJECT_REGISTRATION_UNAVAILABLE",
+-   "status": "unavailable",
++   "directory": "C:/repo",
++   "repositorySelectionId": "b463e9fe-4389-4927-aefc-14c8ba686935",
++   "status": "repository-selected",
+  }
+
+ ❯ run src/main/project-registration-ipc.test.ts:79:67
+     77|     async run() {
+     78|       const { register, handler } = registered(false);
+     79|       await expect(handler(desktopIpcChannels.chooseRepository)()).res…
+       |                                                                   ^
+     80|       expect(electronMocks.showOpenDialog).not.toHaveBeenCalled();
+     81|       expect(register).not.toHaveBeenCalled();
+ ❯ src/main/project-registration-ipc.test.ts:123:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/29]⎯
+
+ FAIL  |desktop-main| src/main/project-registration-ipc.test.ts > answers registration unavailable after the IPC gate closes: 'chooseRepository off Windows'
+AssertionError: expected { status: 'unavailable', …(1) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "PROJECT_REGISTRATION_UNAVAILABLE",
++   "code": "IDENTITY_CAPABILITY_UNAVAILABLE",
+    "status": "unavailable",
+  }
+
+ ❯ run src/main/project-registration-ipc.test.ts:89:67
+     87|       pinPlatform("linux");
+     88|       const { register, handler } = registered(false);
+     89|       await expect(handler(desktopIpcChannels.chooseRepository)()).res…
+       |                                                                   ^
+     90|       expect(electronMocks.showOpenDialog).not.toHaveBeenCalled();
+     91|       expect(register).not.toHaveBeenCalled();
+ ❯ src/main/project-registration-ipc.test.ts:123:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/29]⎯
+
+ FAIL  |desktop-main| src/main/project-registration-ipc.test.ts > answers registration unavailable after the IPC gate closes: 'chooseRepository while the dialog is …'
+AssertionError: expected { status: 'repository-selected', …(2) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "PROJECT_REGISTRATION_UNAVAILABLE",
+-   "status": "unavailable",
++   "directory": "C:/repo",
++   "repositorySelectionId": "8503a1cd-11f5-48c0-863b-f222d4ce00f5",
++   "status": "repository-selected",
+  }
+
+ ❯ run src/main/project-registration-ipc.test.ts:109:27
+    107|       close();
+    108|       answer({ canceled: false, filePaths: ["C:/repo"] });
+    109|       await expect(choice).resolves.toEqual(unavailable);
+       |                           ^
+    110|       expect(register).not.toHaveBeenCalled();
+    111|     },
+ ❯ src/main/project-registration-ipc.test.ts:123:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/29]⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > answers workspace unavailable after the IPC gate closes: 'queryWorkspace'
+AssertionError: expected { status: 'unavailable', …(2) } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+@@ -1,9 +1,9 @@
+  {
+    "diagnostic": {
+      "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+-     "message": "The workspace is unavailable while SlopStop closes.",
++     "message": "Memory producer is unavailable.",
+    },
+    "query": {
+      "cursor": null,
+      "projectId": "00000000-0000-4000-8000-000000000010",
+      "query": "memory-library.read",
+
+ ❯ src/main/workspace-bridge.test.ts:1010:39
+    1008|     ).get(desktopIpcChannels[channel]);
+    1009|
+    1010|     await expect(handler?.({}, value)).resolves.toEqual(envelope);
+       |                                       ^
+    1011|     expect(() => handler?.({}, { ...value, extra: true })).toThrow();
+    1012|     expect(bridge.query).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/29]⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > answers workspace unavailable after the IPC gate closes: 'submitWorkspaceIntent'
+AssertionError: expected { status: 'forwarded', …(1) } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+  {
+    "capability": "memory",
+-   "diagnostic": {
+-     "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+-     "message": "The workspace is unavailable while SlopStop closes.",
+-   },
+-   "status": "unavailable",
++   "status": "forwarded",
+  }
+
+ ❯ src/main/workspace-bridge.test.ts:1010:39
+    1008|     ).get(desktopIpcChannels[channel]);
+    1009|
+    1010|     await expect(handler?.({}, value)).resolves.toEqual(envelope);
+       |                                       ^
+    1011|     expect(() => handler?.({}, { ...value, extra: true })).toThrow();
+    1012|     expect(bridge.query).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/29]⎯
+
+
+ Test Files  5 failed (5)
+      Tests  29 failed | 39 passed (68)
+   Start at  02:00:54
+   Duration  1.03s (transform 967ms, setup 0ms, import 3.01s, tests 166ms, environment 1ms)
+
+--- exit: 1

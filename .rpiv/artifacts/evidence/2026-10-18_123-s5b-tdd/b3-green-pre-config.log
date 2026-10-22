@@ -1,0 +1,37 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (16 tests | 1 failed) 923ms
+   × runs the canary before any package: real canary 115ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: real canary
+AssertionError: expected { ok: false, …(1) } to match object { ok: true, canary: 'matched' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "canary": "matched",
+-   "ok": true,
++   "ok": false,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:233:84
+    231|
+    232| it("runs the canary before any package: real canary", () => {
+    233|   expect(checkEffectDiagnostics({ root: repository, projects: [], cana…
+       |                                                                                    ^
+    234|     ok: true,
+    235|     canary: "matched",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 15 passed (16)
+   Start at  20:53:26
+   Duration  1.09s (transform 22ms, setup 0ms, import 39ms, tests 923ms, environment 0ms)
+

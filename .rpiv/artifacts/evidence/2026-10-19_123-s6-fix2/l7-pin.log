@@ -1,0 +1,16 @@
+parent: b4fc9ed
+tree: 281021083de6e18607dabf70876710232028676c
+working-tree digest: 44452168be7e5f32
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-runtime.test.ts
+started: 2026-10-19T17:05:22+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  17:05:23
+   Duration  1.10s (transform 56ms, setup 0ms, import 907ms, tests 27ms, environment 0ms)
+
+--- exit: 0

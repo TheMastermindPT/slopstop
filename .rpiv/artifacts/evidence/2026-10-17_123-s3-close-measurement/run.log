@@ -1,0 +1,15 @@
+CPU 29/15/14 start 2026-10-17T17:58:34+01:00 parent fb7bde7
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/.rpiv/artifacts/evidence/2026-10-17_123-s3-close-measurement
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  17:58:35
+   Duration  367.84s (transform 270ms, setup 0ms, import 585ms, tests 367.12s, environment 0ms)
+
+
+real	6m8.834s
+user	0m0.091s
+sys	0m0.000s
+exit=0

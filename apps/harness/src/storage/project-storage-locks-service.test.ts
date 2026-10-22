@@ -1,6 +1,6 @@
 import { decodeStrict, ProjectIdSchema } from "@slopstop/protocol";
 import { Deferred, Effect, Fiber } from "effect";
-import { expect, it } from "vitest";
+import { expect, expectTypeOf, it } from "vitest";
 import { ProjectStorageLocks } from "./project-storage-locks.js";
 
 const projectA = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-0000000000a1");
@@ -55,6 +55,32 @@ it.each([
   );
   expect(result).toEqual(["one", "two"]);
   expect(events).toEqual(["one start", "one end", "two start", "two end"]);
+});
+
+it.each([
+  ["create", runCreate],
+  ["Project", runForProjectA],
+])("hands a released %s permit to the waiting fiber before a later fiber", async (_name, run) => {
+  const starts: string[] = [];
+  const started = (name: string) => Effect.sync(() => starts.push(name)).pipe(Effect.as(name));
+  const result = await withLocks((locks) =>
+    Effect.gen(function* () {
+      const gate = yield* Deferred.make<void>();
+      const held = yield* Effect.forkChild(
+        run(locks, Effect.andThen(started("held"), Deferred.await(gate)).pipe(Effect.as("held"))),
+      );
+      const waiting = yield* Effect.forkChild(run(locks, started("waiting")));
+      yield* settle;
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(held);
+      const late = yield* Effect.forkChild(run(locks, started("late")), {
+        startImmediately: true,
+      });
+      return [yield* Fiber.join(waiting), yield* Fiber.join(late)];
+    }),
+  );
+  expect(result).toEqual(["waiting", "late"]);
+  expect(starts).toEqual(["held", "waiting", "late"]);
 });
 
 it("keeps a third same-Project effect waiting while the second still holds the permit", async () => {
@@ -175,4 +201,8 @@ it("fails with the effect's own error and releases the permit", async () => {
       );
     }),
   );
+});
+
+it("exposes only the three lock operations", () => {
+  expectTypeOf<keyof Locks>().toEqualTypeOf<"forCreate" | "afterCreateDrain" | "forProject">();
 });

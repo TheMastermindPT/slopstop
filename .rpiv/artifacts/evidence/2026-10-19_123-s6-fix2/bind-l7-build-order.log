@@ -1,0 +1,45 @@
+parent: b4fc9ed
+tree: 80f13a40732a276e4c20651b87735722389e71a7
+working-tree digest: 09e6545e72d57f19
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-runtime.test.ts -t build fails after the supervisor
+started: 2026-10-19T17:10:39+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-runtime.test.ts (10 tests | 1 failed | 9 skipped) 16ms
+     × releases every owner on dispose: 'build fails after the supervisor' 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'build fails after the supervisor'
+AssertionError: expected [] to deeply equal [ 'project-entry', 'project-storage' ]
+
+- Expected
++ Received
+
+- [
+-   "project-entry",
+-   "project-storage",
+- ]
++ []
+
+ ❯ run src/main/desktop-runtime.test.ts:228:37
+    226|         await expect(runtime.dispose()).resolves.toBeUndefined();
+    227|         // The premise, exactly: the supervisor and two bridges were b…
+    228|         expect(builtBridges(ports)).toEqual(["project-entry", "project…
+       |                                     ^
+    229|         for (const factory of factories(ports)) expect(factory).toHave…
+    230|         expect([...stops.slice(0, -1)].sort()).toEqual(["project-entry…
+ ❯ src/main/desktop-runtime.test.ts:246:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  17:10:40
+   Duration  590ms (transform 38ms, setup 0ms, import 396ms, tests 16ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/desktop-runtime.ts bound blob 47c2022a07ca5240; restored blob b622497f2fa819ca (backup b622497f2fa819ca) MATCH; tree before 5b69662781cae495 after 5b69662781cae495 MATCH

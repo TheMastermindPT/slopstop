@@ -39,9 +39,9 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
-function runtime(options: ReturnType<typeof consentRegistryOptions>) {
+async function runtime(options: ReturnType<typeof consentRegistryOptions>) {
   const { port1, port2 } = new MessageChannel();
-  const stop = startHarnessProcessRuntime({
+  const stop = await startHarnessProcessRuntime({
     logger: silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",
@@ -67,7 +67,7 @@ function runtime(options: ReturnType<typeof consentRegistryOptions>) {
   };
 }
 
-async function activate(host: ReturnType<typeof runtime>, projectId: ProjectId) {
+async function activate(host: Awaited<ReturnType<typeof runtime>>, projectId: ProjectId) {
   const response = await host.send(
     createProjectActivateCommand(
       { messageId: randomUUID(), sentAt: new Date().toISOString() },
@@ -92,7 +92,7 @@ function requireActive(activation: Activation, label: string) {
 
 /** Switches `host` from its active Project to `projectId` and answers the switch result. */
 async function switchProject(
-  host: ReturnType<typeof runtime>,
+  host: Awaited<ReturnType<typeof runtime>>,
   from: Parameters<typeof createProjectSwitchCommand>[1]["from"],
   projectId: ProjectId,
 ) {
@@ -125,7 +125,10 @@ function testCommand(projectId: ProjectId, activationId: string) {
 }
 
 /** Sends one Project command through `host` and answers its raw response. */
-function sendCommand(host: ReturnType<typeof runtime>, request: ReturnType<typeof testCommand>) {
+function sendCommand(
+  host: Awaited<ReturnType<typeof runtime>>,
+  request: ReturnType<typeof testCommand>,
+) {
   return host.send(
     createProjectCommand({ messageId: randomUUID(), sentAt: new Date().toISOString() }, request),
   );
@@ -170,7 +173,7 @@ async function expectIdentityChangeRefused(f: RegisteredFixture, displace: () =>
   const before = rows(f, "SELECT * FROM storage_generations");
   await displace();
   execFileSync(installedGit, ["init", "--quiet", f.directory]);
-  const host = runtime(f.options);
+  const host = await runtime(f.options);
   try {
     expect(await activate(host, f.registered.projectId)).toMatchObject({
       status: "rejected",
@@ -254,8 +257,8 @@ it.runIf(process.platform === "win32")(
     expect(b.registered.projectId).not.toBe(a.registered.projectId);
     const before = rows(a, "SELECT * FROM storage_generations ORDER BY project_id");
     expect(before).toHaveLength(2);
-    const host = runtime(a.options);
-    const reopened = runtime(a.options);
+    const host = await runtime(a.options);
+    const reopened = await runtime(a.options);
     try {
       const activeA = requireActive(
         await activate(host, a.registered.projectId),
@@ -302,7 +305,7 @@ it.runIf(process.platform === "win32")(
   async () => {
     const f = await registeredFixture();
     await rm(f.directory, { recursive: true });
-    const host = runtime(f.options);
+    const host = await runtime(f.options);
     try {
       expect(
         await host.send(
@@ -334,7 +337,7 @@ it.runIf(process.platform === "win32")(
     } finally {
       canonical.close();
     }
-    const host = runtime(f.options);
+    const host = await runtime(f.options);
     try {
       expect(await activate(host, f.registered.projectId)).toMatchObject({
         status: "broken",
@@ -404,7 +407,7 @@ it.runIf(process.platform === "win32")(
       }),
     );
     const beforeManifest = await readFile(manifestPath);
-    const host = runtime(f.options);
+    const host = await runtime(f.options);
     try {
       expect(await activate(host, f.registered.projectId)).toMatchObject({
         status: "safe-mode",
@@ -428,7 +431,7 @@ it.runIf(process.platform === "win32")(
       f,
       "SELECT * FROM registration_identity_query_attempts ORDER BY observation_id",
     );
-    const first = runtime(f.options);
+    const first = await runtime(f.options);
     let activation: Awaited<ReturnType<typeof activate>>;
     try {
       activation = await activate(first, f.registered.projectId);
@@ -440,7 +443,7 @@ it.runIf(process.platform === "win32")(
     } finally {
       await first.stop();
     }
-    const reopened = runtime(f.options);
+    const reopened = await runtime(f.options);
     try {
       const second = await activate(reopened, f.registered.projectId);
       expect(second).toMatchObject({ status: "active", access: "read-write" });
@@ -461,7 +464,7 @@ it.runIf(process.platform === "win32")(
   "runtime preserves the old activation when the registered switch target disappears",
   async () => {
     const f = await registeredFixture();
-    const host = runtime(f.options);
+    const host = await runtime(f.options);
     try {
       const active = await activate(host, f.registered.projectId);
       if (active.status !== "active") throw missing94("Activation missing", active);
@@ -498,8 +501,8 @@ it.runIf(process.platform === "win32")(
   "runtime selects read-only when another session owns the writer and blocks commands",
   async () => {
     const f = await registeredFixture();
-    const writer = runtime(f.options);
-    const reader = runtime(f.options);
+    const writer = await runtime(f.options);
+    const reader = await runtime(f.options);
     try {
       expect(await activate(writer, f.registered.projectId)).toMatchObject({
         status: "active",

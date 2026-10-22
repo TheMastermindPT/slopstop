@@ -1,0 +1,4 @@
+      reportFailure: () => {},
+      stopHarness: () => {
+        order.push("harness");
+        return harnessStop.promise;

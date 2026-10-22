@@ -1,0 +1,48 @@
+parent: feeab30
+tree: fce192468d8c3d9641dd79be5b6b929c5cf0677c
+working-tree digest: b01f8bf938c9190f
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts -t builds no desktop runtime: 'ordinary launch without the lock'
+started: 2026-10-19T14:47:33+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts (80 tests | 1 failed | 79 skipped) 140ms
+     × builds no desktop runtime: 'ordinary launch without the lock' 138ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > builds no desktop runtime: 'ordinary launch without the lock'
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      "C:\proof\user",
+      true,
+    ]
+
+
+Number of calls: 1
+
+ ❯ noDesktopRuntime src/main/canonical-writer-package-smoke-main.test.ts:698:25
+    696|
+    697| function noDesktopRuntime() {
+    698|   expect(ports.log).not.toHaveBeenCalled();
+       |                         ^
+    699|   expect(ports.supervisorCreated).not.toHaveBeenCalled();
+    700| }
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:833:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 79 skipped (80)
+   Start at  14:47:34
+   Duration  813ms (transform 307ms, setup 0ms, import 539ms, tests 140ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/main.ts bound blob 1abe8d5f7cb339f5; restored blob db67985df87e0af5 (backup db67985df87e0af5) MATCH; tree before 9e4a48147742fa0f after 9e4a48147742fa0f MATCH

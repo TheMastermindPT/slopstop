@@ -1,0 +1,9 @@
+# CodeScene MCP code_health_score, raw answers, tree 37f29532 (candidate 3001364)
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main\harness-supervisor.ts
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main\harness-supervisor.test.ts
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\vitest.desktop-s8-mutation.config.ts
+Could not determine Code Health score.

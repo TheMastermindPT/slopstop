@@ -1,0 +1,37 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime-shutdown.test.ts (13 tests | 1 failed | 12 skipped) 12ms
+   × leaves no unhandled rejection when a stop first called after the dispose meets a failing canonical stop 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime-shutdown.test.ts > leaves no unhandled rejection when a stop first called after the dispose meets a failing canonical stop
+AssertionError: expected [ …(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   Error {
++     "message": "private canonical stop failure",
++   },
++ ]
+
+ ❯ src/harness-runtime-shutdown.test.ts:507:24
+    505|     expect(seen).toMatchObject({ state: "rejected", value: "ManagedRun…
+    506|     expect(canonicalStops).toBe(1);
+    507|     expect(rejections).toEqual([]);
+       |                        ^
+    508|   } finally {
+    509|     process.off("unhandledRejection", onRejection);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  18:31:25
+   Duration  1.07s (transform 571ms, setup 0ms, import 931ms, tests 12ms, environment 0ms)
+

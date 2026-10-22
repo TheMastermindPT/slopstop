@@ -1,0 +1,1122 @@
+{
+  "schema": 1,
+  "artifact": "2026-10-22_19-44-49_fdda65e-d7a0e22-123-part-a.md",
+  "target": "fdda65e..d7a0e22 (#123 Part A)",
+  "createdAt": "2026-10-22T19:34:03.434Z",
+  "review": {
+    "date": "2026-10-22T19:44:49+0100",
+    "author": "Pedro Mesquita",
+    "repository": "slopstop",
+    "branch": "refactor/123-effect-lifecycle-part-a",
+    "commit": "d7a0e22",
+    "review_type": "pr",
+    "scope": "fdda65e..d7a0e22 (#123 Part A, final code aabd716)",
+    "scope_strategy": "explicit-range",
+    "in_scope_files_count": 102,
+    "status": "ready",
+    "review_status": "complete",
+    "sections": [
+      "## Reconciliation Notes\n\n- **Depth:** rigorous (lane `rigorous` from `lane.mjs --range`: 3 810 lines, 102 files, the session and ipc sensitive words, a manifest change). Security ran on every shard; the interaction sweep and the gap-finder ran.\n- **Scope:** `fdda65e..d7a0e22` resolved as an explicit range (base `cb84fe8`, so the docs-only commit `fdda65e` is included; it adds no code). 102 reviewable files, 928 generated/evidence files excluded. Final code `aabd716`; later commits are docs.\n- **Read-only, nothing heavy (coordinator constraint):** typecheck, knip, jscpd and dependency-cruiser were not re-run; slice evidence records them green on the final code. Biome lint (0), ast-grep smells (1 empty catch, accepted S6-M7), ast-grep and opengrep sinks (0 in changed files) and rg risk keywords (0) ran.\n- **CodeScene `analyze_change_set` (base `fdda65e`):** the quality gate fails only on three `.rpiv/artifacts/evidence/**` measurement scripts (outside the reviewable scope, knip-ignored). Product files are stable; `project-registration-flow.ts` improved. No product Code Health finding.\n- **Orchestration deviations:** the Discovery Map was passed to Wave-2 by file path, not pasted; the 588 KB source shard and the 594 KB test shard each got two Quality agents (desktop and harness file subsets); the five small config/docs shards shared one Quality and one Security agent. Wave-2 isolation held: no raw Wave-1 output reached a lens. Dependencies and CVE lenses were not dispatched: the manifest change adds a script only (no dependency added, bumped or removed). Predicate-trace (4a) skipped: no mismatched predicate rows.\n- **Accepted residuals not re-raised** (from the brief and decisions §131-§139): Z4 and the non-Error \"ManagedRuntime disposed\" rejection (lens rows on harness-runtime-shutdown.test.ts:504 and :551), W4 canary 2 of 8 rules (tsconfig.base.json:32), the gate-script mutants and their test gaps (#139: stryker.project-storage.config.json:50, check-effect-diagnostics.test.mjs:333 and :405), Z6 test-only observer close facade (project-registration-observer.ts:85). Six lens rows dropped this way.\n- **Compound kept on accepted residuals:** I1 combines the accepted W12 and W13 with the unchanged shutdown sink and Q33; that is why it stays, at 🟡 after the verifier's Weakened.\n- **Verification:** 57 findings verified; 38 Verified, 18 Weakened (each demoted one tier), 1 Falsified (Q54, withdrawn). The InScopeFiles pre-filter dropped 0 findings (InScopeFiles = ChangedFiles).\n- **Precedent weighting:** `process-bootstrap.ts` has two precedents with 30-day follow-ups (`615df7a`, `daee118`); Q26 and Q27 carry `[precedent-weighted]` (both then Weakened).\n- **Peer mirror:** 19 stem-heuristic pairs, nearly all unrelated file kinds; no actionable Missing/Diverged row, no bump.\n- **Cascade detection:** no stranded-state, duplicate-processing or contradictory-predicate triple fired. IX-1 (masking) became I1; IX-2 (false-promise, Low) folded into Q20 and G3; IX-3 (contradictory design, Low) folded into Q30.",
+      "## Pattern Analysis\n\nThe peer comparator ran on 19 pairs chosen by file-name stem. They pair unlike kinds (mutation configs with tsconfig files, the desktop request core with the harness runtime, a producer with its consumer), so 166 rows are Intentionally-absent and 8 Mirrored. The only content-level difference worth naming is that the desktop core drops the `retryable` flag of `request.failure`; the bridges do not use it today. No peer finding.",
+      "## Impact\n\n- `apps/harness/src/storage/project-storage-node-errors.ts` has 14 production consumers (the one storage-failure guard, s2).\n- `apps/harness/src/storage/permit-lock.ts` serves the coordinator, the canonical writer, the registration flow and the locks facade (s1).\n- `apps/harness/src/registration/registry-database.ts` has 20 consumers; the standalone-authority ownership (s4) reaches all of them.\n- `apps/desktop/src/main/harness-request-core.ts` now sits under all three bridges and two failure mappers (s7).\n- Renderer → main IPC handlers keep `decodeStrict` on every input and gain the shutdown gate; no sender-frame check (pre-existing, window-level lockdown only).",
+      "## Precedents\n\n| hash | subject | 30d-follow-ups | note |\n| --- | --- | --- | --- |\n| `887804d` | drain the Project Storage owner through Effect | 1 (`f4e83c8`, same day) | a completion registered before the operation started hung stop on a synchronous throw |\n| `615df7a` | owners from Layers, Effect-owned shutdown | 2 (`7058508`, `43bc303`) | shutdown re-entry and same-turn ordering broke once |\n| `00f4a23` / `ff162f5` | Effect permit lock; #110 split | in-slice | fair hand-off regressed once; packaged load order |\n| `f810132` | desktop supervisor timing and shutdown through Effect | 2 (`c417342`, `43bc303`) | settlement timing is a tested contract |\n| `8a0658d`, `fb8e1d9` | isolate correlated request failures; define requests once | 0 | per-request isolation must hold across bridges |\n| `daee118` | application.db authority | 5 (`18d9761`, `32c52fa`, `b1e32cb`, `667bc44`, `9aab1cc`) | lazy creation, joining in-flight creation, stop last |\n| `d91833f` | Effect tsgo language service | 2 (`e7f1ba1`, `0ff211e`) | tooling additions get late config and docs follow-ups |\n\nComposite lessons: ordering keeps breaking (each slice pinned its order with bindings, and mutation closed each slice); synchronous throws inside drains hang shutdown (not reproduced here); Promise facades hide fail versus die (the range needed kill rounds for s5 to s8 and the combined run); tooling additions need docs and config follow-ups (Q9, Q13, Q16).",
+      "## Spec Conformance\n\nchecked #123 \"Effect migration remainder: dedicated pass for existing SQL bodies and the Unit 2 lifecycle (one ManagedRuntime per process)\" — 3 met · 3 partial · 4 missing · 1 contradicted · 12 extra\n\n- Met: one ManagedRuntime per harness process (`apps/harness/src/process-bootstrap.ts:135`), services at ownership boundaries, explicit shutdown sequencing.\n- Partial: a design exists but no plan file; replaced coordination removed (`harness-pending-request.ts` deleted, listing stop chain in Effect) but D4 facades kept and a hand-written fair lock added (decided D2, D4).\n- Missing (Part B by recorded decision §102-§103; no SQL body changed): the SQL-body pass, its before/after performance, the viability analysis, new SQL in Effect.\n- Contradicted: \"behaviour unchanged\" — Part A deliberately changes FIFO order, close deadlines and the stdout drain.\n- Extra: the desktop ManagedRuntime, the shared bridge core, the #96 drain, the `check:effect` gate and waiver register, the storage-failure guard, the deadlines and budgets, the mutation configs.\n\nrpiv contract conformance: run /rpiv:validate .rpiv/artifacts/designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md",
+      "## Recommendation\n\n**Verdict: no critical defect. Three important findings, all documentary or observability, none a wrong result, lost data or security exposure.** Part A composes: one ManagedRuntime per process (harness `process-bootstrap.ts:135`, desktop `desktop-runtime.ts:202`), acquireRelease and Layers for owners, the fair lock on Deferred, typed unconfirmed outcomes, no app-to-app import, one storage-failure guard (shared-vocab-union) and no new unregistered `new Promise`.\n\n| ID | Root mechanism | Choice for Pedro |\n| --- | --- | --- |\n| I1 | the harness process edge has no slot for the failure value, so every typed diagnostic Part A adds is lost (broken is still never reported clean) | (a) one small follow-up slice to log a redacted summary and split the startup code; (b) accept as a residual alongside W12/W13 |\n| Q33 | the 3 s shutdown budget runs the listing parts in sequence, so an owner close that outruns it leaves Git inspections unaborted | (a) start the observer abort independently; (b) accept as residual (the process exits right after) |\n| Q25 | process-entry.ts is TDD-exempt by the brief, so the new startup ordering has no test | (a) extract and pin it; (b) keep the exemption and name it in the acceptance record |\n\nThe 🔵 items group into four mechanisms: stale s6 mutation ranges and unwired per-slice configs (Q1-Q9, Q13, Q14); test-quality polish (Q39-Q42, Q50, Q51, Q57, Q58); small bridge consistency gaps (Q17-Q19, Q21-Q23, G3); and harness tidy-ups (Q24, Q26-Q29, Q31, Q34-Q38, G2). None blocks on its own."
+    ]
+  },
+  "findings": [
+    {
+      "id": "I1",
+      "kind": "dr",
+      "lens": "I",
+      "severity": "important",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "Part A's typed shutdown and startup diagnostics are all discarded at the harness process edge",
+      "evidence": [
+        {
+          "path": "apps/harness/src/process-entry.ts",
+          "startLine": 83,
+          "quoted": ["    failStartup(\"Harness received an invalid bootstrap message.\");"]
+        }
+      ],
+      "why": "Part A builds distinct typed failures (RegistrationCleanupUnconfirmed with named parts, ApplicationDatabaseCloseUnconfirmed, HarnessRuntimeDisposeUnconfirmed, ordered AggregateErrors), but both edges keep only a code and a fixed text: apps/harness/src/process-shutdown.ts:19 calls failed(\"Harness shutdown failed.\") without the value, and the startup catch logs every start or dispose failure as an invalid bootstrap message. Constituents Q24, Q26, Q27, Q33, Q34. A broken stop or start is never reported as clean (fatal code plus exit 1), so the core of degrade-distinguishes-broken holds; what is lost is every distinct diagnostic the slices added, and the field cannot tell a lost authority close from an unconfirmed listing cleanup.",
+      "fix": "Pass the failure value to the two fatal sinks and log a redacted summary (the failure _tag values and RegistrationCleanupUnconfirmed parts, never paths or messages), and give the startup catch a separate code for a runtime start or dispose failure versus an invalid bootstrap message. One small slice; the residuals W12 and W13 then shrink to the bound only.",
+      "verifyNote": "Narrower than critical: process-shutdown.ts and the fixed-text fatal logging are unchanged since fdda65e; Layer and start failures already reached this catch at the base; Part A adds the bounded-dispose failures and the typed shutdown aggregate; broken is never reported clean (process-entry.ts:33-34, :38-39); the startup side is recorded as residual W12 (brief :2842). Kept as a compound because the accepted residuals W12 and W13 combine with the unchanged shutdown sink and Q33 so that no Part A diagnostic is ever observable.",
+      "fp": "54ef26b41b24212d"
+    },
+    {
+      "id": "Q25",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "title": "The new async harness startup path has no test",
+      "evidence": [
+        {
+          "path": "apps/harness/src/process-entry.ts",
+          "startLine": 74,
+          "quoted": [
+            "async function connect(port: UtilityMessagePort, bootstrap: unknown): Promise<void> {"
+          ]
+        }
+      ],
+      "why": "connect now awaits startHarnessProcessRuntime and reports a failed start only after its bounded dispose settled, but no test imports process-entry.ts (only apps/desktop/vite.harness.config.ts and forge.config.ts reference it). The brief marks the file TDD-exempt and checked by static review only (brief :878, :955), so this is a recorded choice; it still leaves the order 'dispose settles before failStartup exits' unproven by any test.",
+      "fix": "Either extract connect's ordering into a small exported function and pin it with a fake port, or keep the exemption and name this gap explicitly in the Part A acceptance record.",
+      "fp": "5276919945512d10"
+    },
+    {
+      "id": "Q33",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "important",
+      "status": "open",
+      "verify": "Verified",
+      "title": "When the owner close outruns the 3 s shutdown budget, the observer's active Git inspections are never aborted",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/registration-listing.ts",
+          "startLine": 64,
+          "quoted": ["        duration: REGISTRATION_SHUTDOWN_CLEANUP_BUDGET_MS,"]
+        }
+      ],
+      "why": "The owner close drains preparations under its own 5 000 ms budget (apps/harness/src/registration/project-registration-preparation.ts:274-278), longer than REGISTRATION_SHUTDOWN_CLEANUP_BUDGET_MS = 3 000. The chain timeout then interrupts at :53, before observer.closeEffect (:54) starts, so apps/harness/src/project-registration-observer.ts:150 never aborts the running inspections, and the owner's distinct pendingCreation, pendingListing and pendingCleanup outcomes are folded into a bare 'listing' part. The brief pins the sequential order on purpose (brief :891), but not this consequence.",
+      "fix": "Start the observer close (or at least its abort signal) independently of the owner close, for example Effect.all over the three parts with explicit concurrency inside the one budget, or abort inspections first; keep the named parts from whatever finished.",
+      "fp": "0aabc38f530dcc53"
+    },
+    {
+      "id": "Q24",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "[subsumed-by I1] The startup catch labels a runtime start or dispose failure as an invalid bootstrap message",
+      "evidence": [
+        {
+          "path": "apps/harness/src/process-entry.ts",
+          "startLine": 83,
+          "quoted": ["    failStartup(\"Harness received an invalid bootstrap message.\");"]
+        }
+      ],
+      "why": "The bare catch around the awaited start also receives the bounded-dispose AggregateError and HarnessRuntimeDisposeUnconfirmed from apps/harness/src/process-bootstrap.ts:155-158 and logs them as invalid input.",
+      "fix": "Fold into the I1 fix: a separate fatal code for a runtime start or dispose failure.",
+      "verifyNote": "Layer and start failures already reached this catch at fdda65e; only the dispose half is new; still fatal plus exit 1; accepted residual W12 (brief :2842).",
+      "fp": "e873b3e417a56904"
+    },
+    {
+      "id": "Q26",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "[precedent-weighted] [subsumed-by I1] The 500 ms dispose bound hides the 1 000 ms authority safety-net diagnostic",
+      "evidence": [
+        {
+          "path": "apps/harness/src/process-bootstrap.ts",
+          "startLine": 82,
+          "quoted": ["const HARNESS_RUNTIME_DISPOSE_DEADLINE_MS = 500;"]
+        }
+      ],
+      "why": "boundedDispose ends before closeIfNeverStopped's APPLICATION_DATABASE_CLOSE_DEADLINE_MS, so on the bootstrap-failure path HarnessRuntimeDisposeUnconfirmed always wins over the more specific ApplicationDatabaseCloseUnconfirmed.",
+      "fix": "No change needed beyond I1 while W13 stands; revisit if the dispose bound or the authority deadline changes.",
+      "verifyNote": "Chosen knowingly (P-S5-1, brief :2774, :2799) and accepted as residual W13 (brief :2843); on that path no lease can be held because port.start() (process-entry.ts:94) runs only after a successful start.",
+      "fp": "0dab1f8ce508fc7c"
+    },
+    {
+      "id": "Q27",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "[precedent-weighted] [subsumed-by I1] The ordered typed shutdown aggregate reaches a sink that drops it",
+      "evidence": [
+        {
+          "path": "apps/harness/src/process-bootstrap.ts",
+          "startLine": 146,
+          "quoted": [
+            "        return yield* Effect.fail(combinedFailure(failures, \"Harness process shutdown failed.\"));"
+          ]
+        }
+      ],
+      "why": "R16 (.rpiv/decisions/degrade-distinguishes-broken.md:5): the aggregate reaches only apps/harness/src/process-shutdown.ts:19.",
+      "fix": "Fold into the I1 fix.",
+      "verifyNote": "The sink is unchanged since fdda65e and logs a distinct fatal HARNESS_SHUTDOWN_FAILED with exit 1, so broken is never reported clean; only the typed detail is lost.",
+      "fp": "551bf4cf292f80f0"
+    },
+    {
+      "id": "Q34",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "The owner close is wrapped with Effect.promise while its sibling registry stop uses Effect.tryPromise",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/registration-listing.ts",
+          "startLine": 53,
+          "quoted": [
+            "      progress.listing = yield* Effect.promise(() => registration.owner.close());"
+          ]
+        }
+      ],
+      "why": "A rejected owner close would become a defect that skips the observer close and the registry stop and bypasses RegistrationCleanupUnconfirmed's named parts.",
+      "fix": "Use Effect.tryPromise with the same untypedRejection mapping as :56, so a future rejecting owner close stays a named part.",
+      "verifyNote": "The real owner close cannot reject today: drainPreparations wraps every item in Effect.result/tryPromise under timeoutOrElse (apps/harness/src/registration/project-registration-preparation.ts:264-279), and a defect is still reported as a failure by startEffectStop (apps/harness/src/harness-runtime.ts:116).",
+      "fp": "250d19c738459f1f"
+    },
+    {
+      "id": "Q37",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "A disk-free unit-test fixture lives under tests/integration and is imported by six unit tests under src",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/application-database-close-fixture.ts",
+          "startLine": 14,
+          "quoted": ["export function fakeClient(closeRejects = false) {"]
+        }
+      ],
+      "why": "R12 (AGENTS.md:87) places tests by kind; this shared helper serves only unit tests.",
+      "fix": "Move it beside source (for example apps/harness/src/storage/application-database-close-fixture.ts) the next time those tests change.",
+      "verifyNote": "It is a helper, not a test, and the brief chose this location explicitly (brief :552, :2633).",
+      "fp": "f5fcb3c8eef1f3ec"
+    },
+    {
+      "id": "Q38",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "Effect deadline tests drive time with Vitest fake timers instead of TestClock",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/application-database-close-fixture.ts",
+          "startLine": 50,
+          "quoted": ["  await vi.advanceTimersByTimeAsync(milliseconds);"]
+        }
+      ],
+      "why": "R10 (AGENTS.md:76) asks time-based tests to use TestClock.",
+      "fix": "When the Promise facades and setTimeout-based fakes leave (Part B), move these rows to TestClock.",
+      "verifyNote": "Fake timers are not real sleeps, and the brief records why TestClock could not drive these rows (T16 §114, brief :433, :901, :1589).",
+      "fp": "0bb694c054d25273"
+    },
+    {
+      "id": "G2",
+      "kind": "dr",
+      "lens": "G",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "Desktop owner release relies on the effect-internal runtime.scope",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/desktop-runtime.ts",
+          "startLine": 209,
+          "quoted": ["  const owners = Scope.forkUnsafe(runtime.scope);"]
+        }
+      ],
+      "why": "Only the owners-versus-layer/fiber scope order rests on effect internals (comment :205-208).",
+      "fix": "Re-check this line on every effect upgrade; the order inside the owners scope is pinned by apps/desktop/src/main/desktop-runtime.test.ts:154-155.",
+      "verifyNote": "Bridges-before-supervisor comes from reverse acquisition inside the one owners scope and is pinned by a test, so a reorder there would not be silent.",
+      "fp": "1aa63f9278f4869b"
+    },
+    {
+      "id": "Q1",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "Stale s6 mutate range: project-registration-ipc.ts:18-21 covers only a blank line, TSDoc, the signature and one condition",
+      "evidence": [
+        {
+          "path": "stryker.desktop-s6.config.json",
+          "startLine": 12,
+          "quoted": ["    \"apps/desktop/src/main/project-registration-ipc.ts:18-21\","]
+        }
+      ],
+      "fix": "Re-anchor the s6 ranges to the gate reads at apps/desktop/src/main/project-registration-ipc.ts:35, :43 and :62, or retire the s6 config now that s6 is accepted.",
+      "fp": "54658827ba6744d1"
+    },
+    {
+      "id": "Q2",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "Stale s6 mutate range: :39 is the dialog ternary, not a gate check",
+      "evidence": [
+        {
+          "path": "stryker.desktop-s6.config.json",
+          "startLine": 13,
+          "quoted": ["    \"apps/desktop/src/main/project-registration-ipc.ts:39-39\","]
+        }
+      ],
+      "fix": "Same fix as Q1.",
+      "fp": "9da3fb1144924ec1"
+    },
+    {
+      "id": "Q3",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "Stale s6 mutate range: :47 is the selection decode",
+      "evidence": [
+        {
+          "path": "stryker.desktop-s6.config.json",
+          "startLine": 14,
+          "quoted": ["    \"apps/desktop/src/main/project-registration-ipc.ts:47-47\","]
+        }
+      ],
+      "fix": "Same fix as Q1.",
+      "fp": "2a2022cd41292fa6"
+    },
+    {
+      "id": "Q4",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "Stale s6 mutate range: project-registration-ipc.ts:66 is past the end of the file",
+      "evidence": [
+        {
+          "path": "stryker.desktop-s6.config.json",
+          "startLine": 15,
+          "quoted": ["    \"apps/desktop/src/main/project-registration-ipc.ts:66-66\","]
+        }
+      ],
+      "fix": "Same fix as Q1.",
+      "fp": "d68c07808ca167df"
+    },
+    {
+      "id": "Q5",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "Stale s6 mutate range: main.ts:123-139 splits reportUnconfirmedWriterProof",
+      "evidence": [
+        {
+          "path": "stryker.desktop-s6.config.json",
+          "startLine": 17,
+          "quoted": ["    \"apps/desktop/src/main/main.ts:123-139\","]
+        }
+      ],
+      "fix": "Same fix as Q1.",
+      "fp": "b34a6525b4077bcd"
+    },
+    {
+      "id": "Q6",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "Stale s6 mutate range: main.ts:294-323 runs past registerWorkspaceIpc into the window options",
+      "evidence": [
+        {
+          "path": "stryker.desktop-s6.config.json",
+          "startLine": 18,
+          "quoted": ["    \"apps/desktop/src/main/main.ts:294-323\","]
+        }
+      ],
+      "fix": "Same fix as Q1.",
+      "fp": "c4f76ce165e6ec0e"
+    },
+    {
+      "id": "Q7",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "Stale s6 mutate range: main.ts:441 is a blank line, and the quit-before-ready gate at :423 is in no range",
+      "evidence": [
+        {
+          "path": "stryker.desktop-s6.config.json",
+          "startLine": 19,
+          "quoted": ["    \"apps/desktop/src/main/main.ts:441-441\","]
+        }
+      ],
+      "fix": "Same fix as Q1.",
+      "fp": "8adb3b1d9dd36b07"
+    },
+    {
+      "id": "Q8",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "Stale s6 mutate range: project-entry-bridge.ts:79 is TSDoc; the default config was re-anchored to :80",
+      "evidence": [
+        {
+          "path": "stryker.desktop-s6.config.json",
+          "startLine": 21,
+          "quoted": ["    \"apps/desktop/src/main/project-entry-bridge.ts:79-79\""]
+        }
+      ],
+      "fix": "Same fix as Q1.",
+      "fp": "2515716ed25f8456"
+    },
+    {
+      "id": "Q9",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "The s6, s7 and s8 Stryker configs have no root script",
+      "evidence": [
+        {
+          "path": "stryker.desktop-s6.config.json",
+          "startLine": 26,
+          "quoted": ["    \"configFile\": \"apps/desktop/vitest.desktop-s6-mutation.config.ts\","]
+        }
+      ],
+      "fix": "Add test:mutation:desktop-s6/s7/s8 scripts, or delete the per-slice configs once Part A merges.",
+      "fp": "3ef11d5a77b30c3f"
+    },
+    {
+      "id": "Q11",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "Nothing proves the test-file override keeps the other error-level Effect rules blocking",
+      "evidence": [
+        {
+          "path": "tsconfig.base.json",
+          "startLine": 51,
+          "quoted": [
+            "            \"options\": { \"diagnosticSeverity\": { \"newPromise\": \"off\" } }"
+          ]
+        }
+      ],
+      "fix": "Add one planted unknownInEffectCatch (or another error rule) to the canary's test-file plant, so a replace-semantics override shows up as a canary mismatch.",
+      "fp": "f7926c7f98d84f11"
+    },
+    {
+      "id": "Q13",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "project-storage-bridge.ts is in no script-wired mutation config",
+      "evidence": [
+        {
+          "path": "stryker.config.json",
+          "startLine": 33,
+          "quoted": ["    \"apps/desktop/src/main/harness-bridges.ts\","]
+        }
+      ],
+      "fix": "Add apps/desktop/src/main/project-storage-bridge.ts next to its peers in stryker.config.json.",
+      "fp": "dc4783f6834ba4ee"
+    },
+    {
+      "id": "Q14",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "[advisory] One vitest.*-mutation.config.ts glob replaces four knip entry lines",
+      "evidence": [
+        {
+          "path": "knip.jsonc",
+          "startLine": 19,
+          "quoted": ["        \"vitest.desktop-s6-mutation.config.ts\","]
+        }
+      ],
+      "fix": "Replace knip.jsonc:18-21 with one glob, as vite.*.config.ts already does at :22.",
+      "fp": "9c78ed19b35181fe"
+    },
+    {
+      "id": "Q16",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "AGENTS.md does not document the waiver register rules the Effect gate blocks on",
+      "evidence": [
+        {
+          "path": "AGENTS.md",
+          "startLine": 78,
+          "quoted": [
+            "- Type checking authority: `pnpm typecheck` (the project's TypeScript, currently 6.0.2) is the type-checking authority. The editor and agent LSP is Effect tsgo (TypeScript-Go 7 plus the Effect language service, enabled by the `@effect/language-service` plugin in `tsconfig.base.json`). In the editor, an error that only the LSP reports is advisory: investigate it. `pnpm check:effect`, which runs inside `pnpm check`, runs the same Effect build in tsc mode and blocks on every error it reports: each `error`-level Effect diagnostic, and any other error, including a type error that only TypeScript-Go reports, which the gate reports as a broken run and never as clean. Effect `warning` diagnostics stay advice unless a reviewer and the user promote one to a rule."
+          ]
+        }
+      ],
+      "fix": "Add one sentence: a suppression needs a `// Effect waiver EW<n>: <reason>.` line above the directive and a matching entry in apps/harness/scripts/effect-diagnostics-waivers.json.",
+      "fp": "eb875bdff0c531cb"
+    },
+    {
+      "id": "Q17",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "A shutdown failure after a failed services build is not logged",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/main.ts",
+          "startLine": 102,
+          "quoted": [
+            "    servicesAtShutdown()?.logger.error({ err: error }, \"SlopStop shutdown failed.\"),"
+          ]
+        }
+      ],
+      "fix": "Keep a reference to the logger as soon as DesktopLogger is built, or log through a fallback logger when servicesAtShutdown() is undefined.",
+      "fp": "f7a62a6655c50971"
+    },
+    {
+      "id": "Q18",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "The bridges release rethrows only its first failure while its siblings aggregate",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/harness-bridges.ts",
+          "startLine": 56,
+          "quoted": ["      if (failures.length > 0) throw failures[0];"]
+        }
+      ],
+      "fix": "Throw an AggregateError when there are several failures, as apps/desktop/src/main/desktop-shutdown.ts:90 does (the brief chose first-failure in S7-R10; confirm or revise).",
+      "fp": "811f55012b9f00aa"
+    },
+    {
+      "id": "Q19",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "The workspace bridge compares the echo with the caller's object, unlike its two peers",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/workspace-bridge.ts",
+          "startLine": 224,
+          "quoted": [
+            "          isDeepStrictEqual(result.query, query) ? acceptQueryResult(result) : undefined,"
+          ]
+        }
+      ],
+      "fix": "Compare with the command's validated payload, as apps/desktop/src/main/project-storage-bridge.ts:121 does.",
+      "fp": "c0fe986461587288"
+    },
+    {
+      "id": "Q21",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "No test sends an invalid Project Storage request",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-storage-bridge.ts",
+          "startLine": 117,
+          "quoted": ["    return answerRequest("]
+        }
+      ],
+      "fix": "Add one row with an invalid request and pin the answer (see Q20 and G3).",
+      "fp": "eb7e6e2915fa8b52"
+    },
+    {
+      "id": "Q22",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "[advisory] The invalid-command text builder is duplicated in two bridges",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-storage-bridge.ts",
+          "startLine": 41,
+          "quoted": ["  \"invalid-command\": harnessSendFailureMessage({"]
+        }
+      ],
+      "fix": "Move it into bridgeNeutralText.desktop (apps/desktop/src/main/harness-request-core.ts:44).",
+      "fp": "522c91a0ea320f09"
+    },
+    {
+      "id": "Q23",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "RecordingHarnessSession claims to rethrow as the real session does, but differs from it",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/harness-session-test-peers.ts",
+          "startLine": 166,
+          "quoted": ["    if (failures.length > 0) throw failures[0];"]
+        }
+      ],
+      "fix": "Aggregate and queue nested emits like apps/desktop/src/main/harness-session.ts:105-118, or correct the TSDoc at :141-143.",
+      "fp": "811f55012b9f00aa"
+    },
+    {
+      "id": "Q28",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "[advisory] combinedFailure duplicates runtimeShutdownFailure",
+      "evidence": [
+        {
+          "path": "apps/harness/src/process-bootstrap.ts",
+          "startLine": 99,
+          "quoted": [
+            "function combinedFailure(failures: readonly unknown[], message: CombinedFailureMessage): unknown {"
+          ]
+        }
+      ],
+      "fix": "Share one helper with apps/harness/src/harness-runtime.ts:77-81 that takes the message.",
+      "fp": "a7009af6b64c44c5"
+    },
+    {
+      "id": "Q29",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "The authority stop now rejects after 1 s; its three consumers inherit that",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/application-database-authority.ts",
+          "startLine": 510,
+          "quoted": ["      stopping ??= Effect.runPromise(close);"]
+        }
+      ],
+      "fix": "No change needed (D5); keep the standalone Storage registry.stop (project-storage-node-adapters.ts:348) in mind when Part B migrates it.",
+      "fp": "b8713f8ed8253603"
+    },
+    {
+      "id": "Q31",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "registry.stop is a Promise facade whose only production caller is an Effect",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/registration-registry.ts",
+          "startLine": 184,
+          "quoted": ["      const results = await Effect.runPromise("]
+        }
+      ],
+      "fix": "R9 (AGENTS.md:74): expose the stop as an Effect for registration-listing.ts:56 and keep the Promise wrapper for tests only, or record it with the D4 facades.",
+      "fp": "876c5e73700e7504"
+    },
+    {
+      "id": "Q35",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "Waiver matching is any-to-any, so duplicate ids or directives are not rejected",
+      "evidence": [
+        {
+          "path": "apps/harness/scripts/check-effect-diagnostics.mjs",
+          "startLine": 286,
+          "quoted": ["  const matches = (entry, found) =>"]
+        }
+      ],
+      "fix": "Reject duplicate register ids and count directive-to-entry matches one to one; add a row. Fits the #139 gate-script slice.",
+      "fp": "cb6abe7b2296f18e"
+    },
+    {
+      "id": "Q36",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "The two effect-rejection twins have already drifted",
+      "evidence": [
+        {
+          "path": "apps/harness/src/effect-rejection.ts",
+          "startLine": 20,
+          "quoted": ["export function unwrapRejection(failure: unknown): unknown {"]
+        }
+      ],
+      "fix": "Keep the twins identical (or document unwrapRejection as harness-only) so the accepted shared-vocab-union exception stays honest.",
+      "fp": "5d634127d353a08b"
+    },
+    {
+      "id": "Q39",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "A test asserts the internal stop call order through spies",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/harness-bridges.test.ts",
+          "startLine": 209,
+          "quoted": [
+            "        expect(pending.order).toEqual([\"project-storage\", \"workspace\", \"project-entry\"]);"
+          ]
+        }
+      ],
+      "fix": "Assert an observable consequence of the order, or drop the order assertion.",
+      "fp": "9a595f7c535e2797"
+    },
+    {
+      "id": "Q40",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "The bridge-isolation half of a desktop runtime row exercises the fake's own loop",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/desktop-runtime.test.ts",
+          "startLine": 211,
+          "quoted": [
+            "        expect([...stops].sort()).toEqual([...bridges, \"supervisor\"].sort());"
+          ]
+        }
+      ],
+      "fix": "Build the row with createHarnessBridges so the production release is under test.",
+      "fp": "1a6ebcb7bf8c99bf"
+    },
+    {
+      "id": "Q41",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "An assertion checks the test double's own delivery rule",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/workspace-bridge.test.ts",
+          "startLine": 1095,
+          "quoted": ["  expect(received).toHaveLength(1);"]
+        }
+      ],
+      "fix": "Drop it or move it to a test of the double.",
+      "fp": "c4bae0c366e6bb61"
+    },
+    {
+      "id": "Q42",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "The storage bridge tests keep a local fake that duplicates the shared peer",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-storage-bridge.test.ts",
+          "startLine": 398,
+          "quoted": ["  const session = new FakeHarnessSession();"]
+        }
+      ],
+      "fix": "Use RecordingHarnessSession from apps/desktop/src/main/harness-session-test-peers.ts, as the workspace tests now do.",
+      "fp": "871f7c58132fb5ee"
+    },
+    {
+      "id": "Q45",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "An integration-shaped gate test runs in the unit lane",
+      "evidence": [
+        {
+          "path": "apps/harness/scripts/check-effect-diagnostics.test.mjs",
+          "startLine": 84,
+          "quoted": [
+            "  const cli = spawnSync(process.execPath, [checker, \".\"], { cwd: root, encoding: \"utf8\" });"
+          ]
+        }
+      ],
+      "fix": "R12 (AGENTS.md:87): move the real-binary rows to an integration config when the TS 7 slice (#139) touches this file.",
+      "fp": "87699942c6b089d0"
+    },
+    {
+      "id": "Q50",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "A test pins Effect's library interrupt text",
+      "evidence": [
+        {
+          "path": "apps/harness/src/harness-runtime-shutdown.test.ts",
+          "startLine": 404,
+          "quoted": [
+            "  expect(seen.value).toMatchObject({ message: \"All fibers interrupted without error\" });"
+          ]
+        }
+      ],
+      "fix": "Assert Cause.hasInterruptsOnly on the exit instead of the message text.",
+      "fp": "62145ec8d03b6821"
+    },
+    {
+      "id": "Q51",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "A test pins Effect's library interrupt text",
+      "evidence": [
+        {
+          "path": "apps/harness/src/harness-runtime.test.ts",
+          "startLine": 339,
+          "quoted": [
+            "    expect(error).toMatchObject({ message: \"All fibers interrupted without error\" });"
+          ]
+        }
+      ],
+      "fix": "Same fix as Q50.",
+      "fp": "2b5290aae8d36a82"
+    },
+    {
+      "id": "Q52",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "[subsumed-by Q26] No test composes the real safety net with the 500 ms bounded edge",
+      "evidence": [
+        {
+          "path": "apps/harness/src/process-bootstrap.test.ts",
+          "startLine": 73,
+          "quoted": [
+            "  { name: \"never stopped, lease held\", disposesAfter: 1_000, rejects: true, admitsAfter: false },"
+          ]
+        }
+      ],
+      "fix": "Covered by residual W13; no action unless the bounds change.",
+      "fp": "e77dc2570f4bef84"
+    },
+    {
+      "id": "Q57",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "A test shadows the module projectId and repeats the new helper inline",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade-node-adapter.test.ts",
+          "startLine": 48,
+          "quoted": [
+            "  const projectId = decodeStrict(ProjectIdSchema, \"00000000-0000-4000-8000-000000000010\");"
+          ]
+        }
+      ],
+      "fix": "Use the module constant and stepsFailingWith.",
+      "fp": "d4df6fce2cab38a3"
+    },
+    {
+      "id": "Q58",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "The cleanup close deadline equals the 15 s test timeout, so it can never fire first",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/application-database-authority-cases.integration.test.ts",
+          "startLine": 25,
+          "quoted": ["    closeDeadlineMs: 15_000,"]
+        }
+      ],
+      "fix": "Lower closeDeadlineMs below the test timeout (for example 5 000 ms) so a leaked lease reports ApplicationDatabaseCloseUnconfirmed.",
+      "fp": "2e3a4deddb1df05b"
+    },
+    {
+      "id": "G3",
+      "kind": "dr",
+      "lens": "G",
+      "severity": "suggestion",
+      "status": "open",
+      "verify": "Verified",
+      "title": "answerRequest rejects when a bridge's fault renderer throws, contrary to its TSDoc",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/harness-request-core.ts",
+          "startLine": 189,
+          "quoted": [
+            "  return Effect.runPromise(request.pipe(Effect.catch((fault) => Effect.succeed(onFault(fault)))));"
+          ]
+        }
+      ],
+      "fix": "Catch a throwing onFault and map it to a fixed broken envelope, or make the TSDoc say it rejects on a renderer defect; pin with the Q21 row.",
+      "fp": "02ba29d57c2ad656"
+    },
+    {
+      "id": "Q20",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "The invalid-command arm cannot render for an invalid request (IX-2)",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-storage-bridge.ts",
+          "startLine": 76,
+          "quoted": ["  return decodeStrict(schema, {"]
+        }
+      ],
+      "why": "broken() re-decodes the invalid request into the strict result schema and throws inside answerRequest's handler, so the promise rejects; apps/desktop/src/main/workspace-bridge.ts:60 does the same. Unreachable from the renderer, because IPC decodes first (apps/desktop/src/main/main.ts:295).",
+      "verifyNote": "The invalid-command arm does render for invalid metadata with a valid request (project-storage-bridge.test.ts:373-379); only the invalid-request case fails.",
+      "fp": "f78038592b6fcac8"
+    },
+    {
+      "id": "Q30",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "After an unconfirmed standalone stop, the next owner of the same options gets a second authority over the same file (IX-3)",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/registry-database.ts",
+          "startLine": 87,
+          "quoted": ["      Effect.sync(() => standaloneAuthorities.delete(options)),"]
+        }
+      ],
+      "why": "The WeakMap entry is released on settlement while accepted work may still drain, so two admission lanes can meet the one application.db. Standalone owners only (integration fixtures); the harness injects its authority.",
+      "verifyNote": "Matches the TSDoc ('releases its entry whatever the outcome', :73-74) and the brief's U2B-SA-B2 pin after an unconfirmed stop (brief :618).",
+      "fp": "55cf1245a83369a2"
+    },
+    {
+      "id": "Q43",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "[subsumed-by Q38] Desktop dispose-deadline rows use Vitest fake timers",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/desktop-shutdown.test.ts",
+          "startLine": 387,
+          "quoted": ["        vi.useFakeTimers({ toFake: [\"setTimeout\", \"clearTimeout\"] });"]
+        }
+      ],
+      "why": "Same class as Q38.",
+      "verifyNote": "Follows the recorded s5 fake-timer precedent (brief :1589); no real sleeps.",
+      "fp": "b1a90935706d0cb5"
+    },
+    {
+      "id": "Q44",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "[subsumed-by Q38] s8 drain rows use Vitest fake timers",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/harness-supervisor.test.ts",
+          "startLine": 1116,
+          "quoted": ["    vi.useFakeTimers();"]
+        }
+      ],
+      "why": "Same class as Q38.",
+      "verifyNote": "Follows the file's existing fake-timer pattern and the recorded precedent (brief :1589).",
+      "fp": "cad7dac707ee07f1"
+    },
+    {
+      "id": "Q53",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "The permit-lock unit tests do not import the Promise withPermit facade",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/permit-lock.test.ts",
+          "startLine": 3,
+          "quoted": [
+            "import { createPermitLock, type PermitLock, withPermitEffect } from \"./permit-lock.js\";"
+          ]
+        }
+      ],
+      "why": "The facade is exercised through its production caller instead.",
+      "verifyNote": "Covered via createProjectStorageLocksFacade in apps/harness/src/storage/project-storage-locks.test.ts:51-215.",
+      "fp": "f73aa35b70c008b7"
+    },
+    {
+      "id": "Q55",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "[subsumed-by Q34] No row covers a rejecting owner close",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/registration-listing.test.ts",
+          "startLine": 20,
+          "quoted": ["      close: vi.fn(async () => ports.listing),"]
+        }
+      ],
+      "why": "Only a fake can reject today.",
+      "verifyNote": "The real owner close cannot reject (project-registration-preparation.ts:264-279).",
+      "fp": "9de571b062033102"
+    },
+    {
+      "id": "Q56",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "[subsumed-by Q38] The listing budget row uses Vitest fake timers",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/registration-listing.test.ts",
+          "startLine": 235,
+          "quoted": ["  vi.useFakeTimers({ toFake: [\"setTimeout\", \"clearTimeout\"] });"]
+        }
+      ],
+      "why": "Same class as Q38.",
+      "verifyNote": "Its fakes resolve through real setTimeout, which TestClock does not drive (brief :901).",
+      "fp": "b1a90935706d0cb5"
+    },
+    {
+      "id": "G1",
+      "kind": "dr",
+      "lens": "G",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "Gap row: the list handler's shutdown gate had no lens row",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-entry-ipc.ts",
+          "startLine": 43,
+          "quoted": ["    if (!gate.accepting()) return Promise.resolve(projectListClosing);"]
+        }
+      ],
+      "why": "No defect; the gate is pinned by apps/desktop/src/main/project-entry-ipc.test.ts:173-176.",
+      "verifyNote": "A missing review row, not a defect.",
+      "fp": "3e8a551603bfd132"
+    },
+    {
+      "id": "G4",
+      "kind": "dr",
+      "lens": "G",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "Gap row: stop completion is observed on the global runtime",
+      "evidence": [
+        {
+          "path": "apps/harness/src/harness-runtime.ts",
+          "startLine": 444,
+          "quoted": [
+            "    Effect.runFork(Effect.flatMap(Fiber.await(program), (exit) => Deferred.done(completion, exit)));"
+          ]
+        }
+      ],
+      "why": "Deliberate per the comment at :441-442; no defect shown.",
+      "verifyNote": "Documented design.",
+      "fp": "1be346d6a371afc4"
+    },
+    {
+      "id": "G5",
+      "kind": "dr",
+      "lens": "G",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Weakened",
+      "title": "Gap row: inline fair-lock hand-off",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/permit-lock.ts",
+          "startLine": 49,
+          "quoted": ["      Deferred.doneUnsafe(next, Effect.void);"]
+        }
+      ],
+      "why": "Documented design (:11-13); nested hand-offs yield once (:35).",
+      "verifyNote": "Citation corrected from :55 to :49; no defect shown.",
+      "fp": "647b9912a6e96908"
+    },
+    {
+      "id": "Q15",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "discuss",
+      "status": "open",
+      "verify": "Verified",
+      "title": "The fast gate now spawns the native tsgo binary that Defender flagged on the dev host",
+      "evidence": [
+        {
+          "path": "./package.json",
+          "startLine": 14,
+          "quoted": [
+            "    \"check\": \"pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:effect && pnpm test:unit && pnpm check:boundaries\","
+          ]
+        }
+      ],
+      "why": "If Defender kills it, pnpm check fails with EFFECT_GATE_BINARY_FAILED (never clean) and every push is blocked until the exclusion is restored. The exclusion is in place (brief :1181).",
+      "fp": "45da8c6aa8b71dc8"
+    },
+    {
+      "id": "Q54",
+      "kind": "dr",
+      "lens": "Q",
+      "severity": "suggestion",
+      "status": "withdrawn",
+      "verify": "Falsified",
+      "title": "Lock hand-off rows run only through the Layer",
+      "fix": "None.",
+      "verifyNote": "The production facade is covered by apps/harness/src/storage/project-storage-locks.test.ts:69-93 through freshLocks().",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-locks-service.test.ts",
+          "startLine": 60,
+          "quoted": ["it.each(["]
+        }
+      ],
+      "fp": "b46163c42ccf3d68"
+    }
+  ]
+}

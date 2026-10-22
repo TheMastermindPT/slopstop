@@ -1,0 +1,1 @@
+            if (entries.get(id)?.done === done) entries.delete(id);

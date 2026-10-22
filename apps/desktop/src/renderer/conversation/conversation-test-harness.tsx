@@ -25,6 +25,8 @@ export const note = "No model is connected yet. Messages are saved on this compu
 export function gate<T>() {
   let open: (value: T) => void = () => undefined;
   let fail: (error: Error) => void = () => undefined;
+  // Effect waiver EW9: renderer test support that lives in src.
+  // @effect-diagnostics-next-line newPromise:off
   const promise = new Promise<T>((resolve, reject) => {
     open = resolve;
     fail = reject;

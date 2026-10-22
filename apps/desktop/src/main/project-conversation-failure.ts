@@ -7,7 +7,7 @@ import {
   projectConversationDiagnostics,
 } from "@slopstop/protocol";
 import { Match } from "effect";
-import type { ProjectRequestFault } from "./project-upgrade-failure.js";
+import type { ProjectRequestFault } from "./harness-request-core.js";
 
 const rows = projectConversationDiagnostics;
 const harnessRows = {
@@ -26,15 +26,17 @@ type FaultMeaning =
 
 /**
  * The shared fault table (G25). Not sent: a call after stop or a refused send. Sent, then lost: a
- * disconnect or a stop while pending. A malformed reply arrives as a session protocol error. A
- * decodable wrong reply, an unbuildable command, a colliding id or a send refused as an invalid
- * message points to a defect.
+ * disconnect or a stop while pending. A malformed reply is a `protocol` fault, whatever its
+ * reason: `invalid-message`, `uncorrelated`, `system-failure` or `undecodable`. A decodable wrong
+ * reply, an unbuildable command, a colliding id or a send refused as an invalid message points to
+ * a defect.
  */
 function faultMeaning(fault: ProjectRequestFault): FaultMeaning {
   return Match.value(fault).pipe(
     Match.discriminatorsExhaustive("kind")({
       unsent: (): FaultMeaning => ({ meaning: "not-sent" }),
       transport: (): FaultMeaning => ({ meaning: "sent-then-lost" }),
+      stopped: (): FaultMeaning => ({ meaning: "sent-then-lost" }),
       protocol: (): FaultMeaning => ({ meaning: "malformed-reply" }),
       desktop: (): FaultMeaning => ({ meaning: "defect" }),
       harness: ({ code }): FaultMeaning => ({ meaning: "harness", code }),

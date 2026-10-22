@@ -1,0 +1,10 @@
+CodeScene code_health_score / code_health_review (MCP), working tree f6d08d3572281592, 2026-10-22
+apps/harness/src/process-fatal-diagnostics.ts: first 9.53 at tree 7f65b881 (Bumpy Road summarizeHarnessFailure bumps=2; Complex Conditional identifierTag:63) -> after refactor review {"score":10.0,"review":[]}
+apps/harness/src/process-connection.ts: Code Health score: 10
+apps/harness/src/process-shutdown.ts: Code Health score: 10
+apps/harness/src/process-entry.ts: Code Health score: 10
+apps/harness/src/process-bootstrap.ts: Code Health score: 10
+apps/harness/src/registration/registration-listing.ts: Code Health score: 10
+apps/harness/src/process-fatal-diagnostics.test.ts: Code Health score: 10
+apps/harness/src/process-shutdown.test.ts: Code Health score: 10
+apps/harness/src/process-connection.test.ts: Code Health score: 10

@@ -18,10 +18,7 @@ import {
   withDatabase,
 } from "./local-libsql-worker-client.js";
 import { type DatabaseSpec, databaseSpecs } from "./project-storage-database-specs.js";
-import {
-  ProjectStorageBrokenError,
-  ProjectStorageUnavailableError,
-} from "./project-storage-errors.js";
+import { ProjectStorageBrokenError } from "./project-storage-errors.js";
 import { upgradeOutputIsProven } from "./project-storage-filesystem-authority.js";
 import {
   canonicalDatabaseFilename,
@@ -30,7 +27,11 @@ import {
   runtimeDatabaseFilename,
   serializeProjectStorageBackupManifest,
 } from "./project-storage-manifest.js";
-import { isBusyStorageError, normalizeStorageError } from "./project-storage-node-errors.js";
+import {
+  isBusyStorageError,
+  isKnownStorageFailure,
+  normalizeStorageError,
+} from "./project-storage-node-errors.js";
 import {
   type GenerationRow,
   generationRowColumns,
@@ -555,8 +556,7 @@ async function unfinishedUpgradeRows(
  * broken; never "none".
  */
 function markerQueryFailure(error: unknown): Error {
-  if (error instanceof ProjectStorageBrokenError) return error;
-  if (error instanceof ProjectStorageUnavailableError) return error;
+  if (isKnownStorageFailure(error)) return error;
   if (isBusyStorageError({ error })) return new ProjectStorageUpgradeBusyError({ cause: error });
   return new ProjectStorageBrokenError("Project Storage upgrade marker could not be read.", {
     cause: error,

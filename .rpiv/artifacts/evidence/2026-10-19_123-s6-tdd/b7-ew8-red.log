@@ -1,0 +1,10 @@
+parent: 5f1bca3
+working-tree digest: 5bcf8a5344240b9d
+command: pnpm check:effect
+started: 2026-10-19T12:45:05+01:00
+---
+$ node apps/harness/scripts/check-effect-diagnostics.mjs
+EFFECT_GATE_WAIVER_STALE
+EW8 apps/desktop/src/main/main.ts has no directive
+[ELIFECYCLE] Command failed with exit code 1.
+--- exit: 1

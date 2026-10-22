@@ -1,6 +1,6 @@
 import { mkdir, readdir, unlink } from "node:fs/promises";
 import path from "node:path";
-import { Deferred, Effect, Semaphore } from "effect";
+import { Data, Deferred, Duration, Effect, type Scope, Semaphore } from "effect";
 import {
   ApplicationDatabaseFault,
   type ApplicationDatabaseMigrationFailures,
@@ -44,7 +44,24 @@ export type ApplicationDatabaseAuthority = Readonly<{
     input: Readonly<{ createIfMissing: boolean }>,
   ): Promise<LocalLibsqlClient | undefined>;
   stop(): Promise<void>;
+  /** Records that the shutdown keeps this authority alive on purpose; it refuses no work. */
+  withhold(): void;
 }>;
+
+/** How long a stop waits for accepted work to drain before it reports the close unconfirmed. */
+const APPLICATION_DATABASE_CLOSE_DEADLINE_MS = 1_000;
+
+/** A stop whose drain was not confirmed by its deadline; it is never reported as closed later. */
+export class ApplicationDatabaseCloseUnconfirmed extends Data.TaggedError(
+  "ApplicationDatabaseCloseUnconfirmed",
+)<{
+  readonly message: string;
+  readonly deadlineMs: number;
+}> {
+  constructor(deadlineMs: number) {
+    super({ message: "Project Storage application database close is unconfirmed.", deadlineMs });
+  }
+}
 
 // Whether a missing database under a root that already holds entries is refused as a
 // witness of lost state (the registry's path) or left to the caller's own checks (Storage's).
@@ -113,21 +130,58 @@ function admittedTransaction(
   };
 }
 
+type AuthorityInput = Readonly<{
+  applicationStorageRoot: string;
+  migrationResourcesRoot: string;
+  failures?: ApplicationDatabaseMigrationFailures | undefined;
+  // Opens a raw client for the authority's own initialization; defaults to the worker.
+  openClient?: ((databasePath: string) => LocalLibsqlClient) | undefined;
+  /** How long `stop` waits for the drain; defaults to APPLICATION_DATABASE_CLOSE_DEADLINE_MS. */
+  closeDeadlineMs?: number | undefined;
+}>;
+
+// The authority and its safety net, which reads only the authority's own state.
+type AuthorityParts = Readonly<{
+  authority: ApplicationDatabaseAuthority;
+  closeIfNeverStopped: Effect.Effect<void>;
+}>;
+
 export function createApplicationDatabaseAuthority(
-  input: Readonly<{
-    applicationStorageRoot: string;
-    migrationResourcesRoot: string;
-    failures?: ApplicationDatabaseMigrationFailures | undefined;
-    // Opens a raw client for the authority's own initialization; defaults to the worker.
-    openClient?: ((databasePath: string) => LocalLibsqlClient) | undefined;
-  }>,
+  input: AuthorityInput,
 ): ApplicationDatabaseAuthority {
+  return createAuthorityParts(input).authority;
+}
+
+/**
+ * The authority as a scoped resource. The acquire is synchronous. Closing the scope runs the
+ * bounded close for an authority that was neither stopped nor withheld, and an unconfirmed
+ * close becomes a defect of the release, so it is reported, never swallowed.
+ */
+export function acquireApplicationDatabaseAuthority(
+  input: AuthorityInput,
+): Effect.Effect<ApplicationDatabaseAuthority, never, Scope.Scope> {
+  return Effect.map(
+    Effect.acquireRelease(
+      Effect.sync(() => createAuthorityParts(input)),
+      (parts) => parts.closeIfNeverStopped,
+    ),
+    (parts) => parts.authority,
+  );
+}
+
+function createAuthorityParts(input: AuthorityInput): AuthorityParts {
   const applicationStorageRoot = path.resolve(input.applicationStorageRoot);
   const applicationDatabasePath = path.join(applicationStorageRoot, "application.db");
   const permits = Semaphore.makeUnsafe(1);
   const deciding = Semaphore.makeUnsafe(1);
-  // Completed once, after stop, when no accepted work remains; every stop awaits it.
+  // Completed once, after stop, when no accepted work remains; the bounded close awaits it.
   const closed = Deferred.makeUnsafe<void>();
+  const closeDeadlineMs = input.closeDeadlineMs ?? APPLICATION_DATABASE_CLOSE_DEADLINE_MS;
+  // The one outcome of the bounded close: confirmed, or unconfirmed at the deadline.
+  const closeOutcome = Deferred.makeUnsafe<void, ApplicationDatabaseCloseUnconfirmed>();
+  let closeStarted = false;
+  let withheld = false;
+  let stopping: Promise<void> | undefined;
   let stopped = false;
   let accepted = 0;
   let createdEmpty = false;
@@ -196,6 +250,22 @@ export function createApplicationDatabaseAuthority(
       },
     };
   };
+
+  // Refuses new work at once and waits for the drain until the deadline. The first caller runs
+  // it; every later caller awaits the same outcome, which a late drain never changes.
+  const close: Effect.Effect<void, ApplicationDatabaseCloseUnconfirmed> = Effect.suspend(() => {
+    if (closeStarted) return Deferred.await(closeOutcome);
+    closeStarted = true;
+    stopped = true;
+    if (accepted === 0) Deferred.doneUnsafe(closed, Effect.void);
+    const bounded = Effect.timeoutOrElse(Deferred.await(closed), {
+      duration: Duration.millis(closeDeadlineMs),
+      orElse: () => Effect.fail(new ApplicationDatabaseCloseUnconfirmed(closeDeadlineMs)),
+    });
+    return Effect.flatMap(Effect.exit(bounded), (exit) =>
+      Effect.andThen(Deferred.done(closeOutcome, exit), Deferred.await(closeOutcome)),
+    );
+  });
 
   const openRawClient =
     input.openClient ??
@@ -408,7 +478,12 @@ export function createApplicationDatabaseAuthority(
     }
   };
 
-  return {
+  // After stop or withhold it does nothing; otherwise it awaits the same bounded close as stop.
+  const closeIfNeverStopped = Effect.suspend(() =>
+    stopping !== undefined || withheld ? Effect.void : Effect.orDie(close),
+  );
+
+  const authority: ApplicationDatabaseAuthority = {
     applicationDatabasePath,
     admitClient,
     ensureCurrent: async ({ createIfMissing }) => {
@@ -431,10 +506,13 @@ export function createApplicationDatabaseAuthority(
         end();
       }
     },
-    stop: async () => {
-      stopped = true;
-      if (accepted === 0) Deferred.doneUnsafe(closed, Effect.void);
-      await Effect.runPromise(Deferred.await(closed));
+    stop: () => {
+      stopping ??= Effect.runPromise(close);
+      return stopping;
+    },
+    withhold: () => {
+      withheld = true;
     },
   };
+  return { authority, closeIfNeverStopped };
 }

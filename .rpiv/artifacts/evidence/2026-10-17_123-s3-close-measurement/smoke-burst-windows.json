@@ -1,0 +1,11 @@
+[
+  {
+    "index": 1,
+    "spawned": "2026-10-17T16:56:10.148Z",
+    "start": "2026-10-17T16:56:13.197Z",
+    "end": "2026-10-17T16:56:40.000Z",
+    "exited": "2026-10-17T16:56:40.504Z",
+    "exitCode": 0,
+    "preflight": "preflight files 1400 under-node_modules 0"
+  }
+]

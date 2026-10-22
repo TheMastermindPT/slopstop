@@ -1,0 +1,31 @@
+preflight: clean
+diagnostic: the candidate's parent is not the base; reprove-red re-proves against the parent
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/harness-request-core.test.ts::settles each harness request once by id: $name
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/project-entry-bridge.test.ts::answers its own envelope when send throws
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/workspace-bridge.test.ts::answers its own envelope when send throws
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/project-entry-bridge.test.ts::fails all pending work as protocol on $case
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/project-storage-bridge.test.ts::fails all pending work as protocol on $case
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/workspace-bridge.test.ts::fails all pending work on %s
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/harness-request-core.test.ts::ignores non-reply events whatever their correlation: $event
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/project-storage-bridge.test.ts::settles an undecodable reply as protocol
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/workspace-bridge.test.ts::settles an undecodable reply as protocol
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/project-entry-bridge.test.ts::settles an undecodable reply as protocol: $operation
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/harness-supervisor.test.ts::answers broken for a read during $failure
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/harness-session.test.ts::delivers a nested emit after the outer event reached every listener
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/harness-session.test.ts::drains queued emits before rethrowing a listener failure
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/harness-supervisor.test.ts::keeps request failure status-neutral and reserves recovery for system failure
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/harness-supervisor.test.ts::queues a protocol-failed child retry until confirmed exit
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/harness-supervisor.test.ts::blocks automatic recovery for malformed and explicit protocol failures
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/project-entry-bridge.test.ts::settles pending work even when session unsubscribe throws
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/workspace-bridge.test.ts::settles pending work even when session unsubscribe throws
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/project-storage-bridge.test.ts::settles pending operations even when session unsubscribe throws
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/desktop-runtime.test.ts::releases every owner on dispose: $name
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/desktop-runtime.test.ts::passes the bridges their session, id and clock
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/harness/scripts/check-effect-diagnostics.test.mjs::keeps exactly the registered waivers
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/harness/scripts/check-effect-diagnostics.test.mjs::passes on the repository
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/project-entry-bridge.test.ts::answers the closing envelope for work in flight at stop: $operation
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/workspace-bridge.test.ts::answers the closing envelope for work in flight at stop: $operation
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/project-entry-ipc.test.ts::answers unavailable after the IPC gate closes: $channel
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/project-registration-ipc.test.ts::answers registration unavailable after the IPC gate closes: $channel
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/harness-bridges.test.ts::shares one core across the three bridges: $name
+reprove: --commit 4b376298ab9248b68662ad735c27c9569068dc5d --test apps/desktop/src/main/workspace-bridge.test.ts::throws an undecodable notification after every listener received it

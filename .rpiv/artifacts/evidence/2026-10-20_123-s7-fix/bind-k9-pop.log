@@ -1,0 +1,45 @@
+parent: 2cf479d
+tree: 701fbcc55bd05f653c4867e1657b698f982e26f3
+working-tree digest: 0bea7bad40af37d1
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-session.test.ts -t delivers queued emits in the order they were queued
+started: 2026-10-20T11:19:55+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-session.test.ts (8 tests | 1 failed | 7 skipped) 15ms
+     × delivers queued emits in the order they were queued 13ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > delivers queued emits in the order they were queued
+AssertionError: expected [ 'protocol-error', 'message', …(1) ] to deeply equal [ 'protocol-error', …(2) ]
+
+- Expected
++ Received
+
+  [
+    "protocol-error",
+-   "disconnected",
+    "message",
++   "disconnected",
+  ]
+
+ ❯ src/main/harness-session.test.ts:209:20
+    207|     port.emit("message", { data: { event: "not-valid" } });
+    208|
+    209|     expect(second).toEqual(["protocol-error", "disconnected", "message…
+       |                    ^
+    210|   });
+    211| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  11:19:57
+   Duration  834ms (transform 201ms, setup 0ms, import 629ms, tests 15ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-session.ts bound blob b48e01527987aabf; restored blob e0c616d55aec0e10 (backup e0c616d55aec0e10) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

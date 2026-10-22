@@ -1,0 +1,8 @@
+      ({ latch }) =>
+        latch.called()
+          ? Effect.void
+          : Effect.promise(async () => {
+              await latch.call();
+            }),
+    ),
+    ({ owner, latch }): Owned<Owner, Stop> => ({ owner, stop: latch.call }),

@@ -1,0 +1,30 @@
+$ pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm check:boundaries
+$ biome format .
+Checked 533 files in 250ms. No fixes applied.
+$ biome lint .
+Checked 535 files in 1318ms. No fixes applied.
+$ pnpm -r --if-present typecheck
+Scope: 4 of 5 workspace projects
+packages/kernel typecheck$ tsc --noEmit -p tsconfig.json
+packages/kernel typecheck: Done
+packages/protocol typecheck$ tsc --noEmit -p tsconfig.json
+packages/protocol typecheck: Done
+apps/desktop typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck$ tsc --noEmit -p tsconfig.json
+apps/desktop typecheck: Done
+apps/harness typecheck: Done
+$ vitest run
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+
+ Test Files  88 passed (88)
+      Tests  3072 passed (3072)
+   Start at  00:11:09
+   Duration  29.01s (transform 11.58s, setup 4.27s, import 120.33s, tests 82.71s, environment 23.94s)
+
+$ depcruise --config dependency-cruiser.config.cjs apps packages
+
+✔ no dependency violations found (498 modules, 2110 dependencies cruised)
+

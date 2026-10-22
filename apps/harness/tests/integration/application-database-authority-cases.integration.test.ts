@@ -18,9 +18,11 @@ async function withAuthority(
   ) => Promise<void>,
 ) {
   const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-application-authority-unit-"));
+  // A generous close deadline, so these drain pins do not depend on load (s3 design point 8).
   const authority = createApplicationDatabaseAuthority({
     applicationStorageRoot: root,
     migrationResourcesRoot,
+    closeDeadlineMs: 15_000,
   });
   try {
     await run(authority, root);

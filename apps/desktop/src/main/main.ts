@@ -13,11 +13,20 @@ import {
   type WorkspaceQuery,
   WorkspaceQuerySchema,
 } from "@slopstop/protocol";
+import { Data, Effect } from "effect";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
 import { runCanonicalWriterPackageSmoke } from "./canonical-writer-package-smoke.js";
 import { initializeCrashReporting } from "./crash-reporting.js";
+import {
+  builtDesktopServices,
+  type DesktopServices,
+  type DesktopSupervisor,
+  makeDesktopRuntime,
+  readDesktopServices,
+} from "./desktop-runtime.js";
 import { createDesktopShutdown } from "./desktop-shutdown.js";
+import { createHarnessBridges } from "./harness-bridges.js";
 import { HarnessSupervisor, harnessEntryPath } from "./harness-supervisor.js";
 import { createMainLogger } from "./logger.js";
 import {
@@ -31,37 +40,66 @@ import {
   packageSmokeRendererScript,
   validatePackageSmokeResult,
 } from "./package-smoke-verifier.js";
-import { createProjectEntryBridge, type ProjectEntryBridge } from "./project-entry-bridge.js";
 import { registerProjectEntryIpc } from "./project-entry-ipc.js";
 import { registerProjectRegistrationIpc } from "./project-registration-ipc.js";
 import {
   createProjectStorageHarnessBootstrap,
   projectStorageMigrationResourcesRoot,
 } from "./project-storage-bootstrap.js";
-import {
-  createProjectStorageBridge,
-  type ProjectStorageBridgeClient,
-} from "./project-storage-bridge.js";
+import type { ProjectStorageBridgeClient } from "./project-storage-bridge.js";
 import {
   projectStoragePackageSmokeFailureStage,
   runProjectStoragePackageSmoke,
 } from "./project-storage-package-smoke.js";
 import { runRegistrationPackageSmoke } from "./registration-package-smoke.js";
 import { configureSessionSecurity, lockNavigation } from "./security.js";
-import { createWorkspaceBridge, type WorkspaceBridgeClient } from "./workspace-bridge.js";
+import {
+  capabilityForIntent,
+  type WorkspaceBridgeClient,
+  workspaceIntentClosing,
+  workspaceQueryClosing,
+} from "./workspace-bridge.js";
 
-let supervisor: HarnessSupervisor | undefined;
-let projectStorageBridge: ProjectStorageBridgeClient | undefined;
-let workspaceBridge: WorkspaceBridgeClient | undefined;
-let projectEntryBridge: ProjectEntryBridge | undefined;
+/** The main logger, which logs the start and crash reporting before any other owner exists. */
+function startMainLogger() {
+  const logger = createMainLogger(app.getPath("logs"), app.isPackaged);
+  logger.info({ crashReporting: initializeCrashReporting() }, "SlopStop desktop starting.");
+  return logger;
+}
+
+// Built lazily: the first read of its services, in `bootstrap()`, builds the owners.
+const runtime = makeDesktopRuntime({
+  createLogger: () => startMainLogger(),
+  harnessEntryPath: () => harnessEntryPath(__dirname),
+  harnessBootstrap: () =>
+    createProjectStorageHarnessBootstrap({
+      userDataRoot: app.getPath("userData"),
+      migrationResourcesRoot: projectStorageMigrationResourcesRoot({
+        isPackaged: app.isPackaged,
+        resourcesPath: process.resourcesPath,
+        mainBundleDirectory: __dirname,
+      }),
+    }),
+  createId: randomUUID,
+  now: () => new Date().toISOString(),
+  createSupervisor: (logger, entryPath, bootstrap) =>
+    new HarnessSupervisor(entryPath, logger, bootstrap),
+  createHarnessBridges,
+});
 let packageSmokeState: "inactive" | "pending" | "passed" = "inactive";
+// The services as the shutdown program first found them: undefined if never built. Dispose
+// clears the runtime's cache, so the failure report reads this snapshot.
+let shutdownServices: DesktopServices | undefined;
+const servicesAtShutdown = () => (shutdownServices ??= builtDesktopServices(runtime));
+// The stops read the services only if they were built; before that they stop nothing.
 const desktopShutdown = createDesktopShutdown({
-  stopProjectStorageBridge: () => projectStorageBridge?.stop(),
-  stopWorkspaceBridge: () => {
-    workspaceBridge?.stop();
-    projectEntryBridge?.stop();
-  },
-  stopHarness: () => supervisor?.stop() ?? Promise.resolve(),
+  stopProjectStorageBridge: () => servicesAtShutdown()?.projectStorage.stop(),
+  stopWorkspaceBridge: () => servicesAtShutdown()?.workspace.stop(),
+  stopProjectEntryBridge: () => servicesAtShutdown()?.projectEntry.stop(),
+  stopHarness: () => servicesAtShutdown()?.harness.stop() ?? Promise.resolve(),
+  dispose: () => runtime.dispose(),
+  reportFailure: (error) =>
+    servicesAtShutdown()?.logger.error({ err: error }, "SlopStop shutdown failed."),
   requestedExitCodeOnQuit: () => (packageSmokeState === "pending" ? 1 : undefined),
   quit: () => app.quit(),
   exit: (code) => app.exit(code),
@@ -77,11 +115,21 @@ const writerProofUnconfirmedMessage = "Package smoke writer process exit unconfi
 const packageSmokeLockHeldMessage =
   "Package smoke single-instance lock is held by another instance.";
 
-function writeWriterProofReport(text: string): Promise<void> {
-  return new Promise((resolve, reject) => {
+/** The Writer proof's terminal report could not be written. */
+class WriterProofReportFailed extends Data.TaggedError("WriterProofReportFailed")<{
+  readonly message: string;
+}> {}
+
+function writeWriterProofReport(text: string): Effect.Effect<void, WriterProofReportFailed> {
+  return Effect.callback<void, WriterProofReportFailed>((resume) => {
     process.stderr.write(text, (error) => {
-      if (error) reject(new Error("Writer proof terminal reporting failed."));
-      else resolve();
+      resume(
+        error
+          ? Effect.fail(
+              new WriterProofReportFailed({ message: "Writer proof terminal reporting failed." }),
+            )
+          : Effect.void,
+      );
     });
   });
 }
@@ -119,7 +167,7 @@ async function runPrivateWriterProof(
     result.status === "passed"
       ? "Package smoke writer proof passed."
       : `Package smoke proof failed at writer-${result.stage}.`;
-  await writeWriterProofReport(`${terminal}\n${completion}\n`);
+  await Effect.runPromise(writeWriterProofReport(`${terminal}\n${completion}\n`));
   if (result.status === "passed") packageSmokeState = "passed";
   app.exit(result.status === "passed" ? 0 : 1);
 }
@@ -131,7 +179,7 @@ function readyPackageSmokeContext():
       window: BrowserWindow;
     }>
   | undefined {
-  const bridge = projectStorageBridge;
+  const bridge = builtDesktopServices(runtime)?.projectStorage.owner;
   const authorization = packageSmokeAuthorization;
   const window = smokeWindow;
   if (!packageSmoke) {
@@ -157,7 +205,7 @@ function readyPackageSmokeContext():
 
 // The registration scenario proves add-and-list; the others prove Project Storage.
 function scenarioProof(context: NonNullable<ReturnType<typeof readyPackageSmokeContext>>) {
-  const entries = projectEntryBridge;
+  const entries = builtDesktopServices(runtime)?.projectEntry.owner;
   if (context.authorization.scenario !== "registration")
     return runProjectStoragePackageSmoke({
       bridge: context.bridge,
@@ -223,7 +271,7 @@ function broadcastHarnessStatus(status: HarnessStatus): void {
   }
 }
 
-function registerHarnessIpc(harnessSupervisor: HarnessSupervisor): void {
+function registerHarnessIpc(harnessSupervisor: DesktopSupervisor): void {
   ipcMain.handle(desktopIpcChannels.getHarnessStatus, () => harnessSupervisor.getStatus());
   ipcMain.handle(desktopIpcChannels.retryHarness, () => {
     return decodeStrict(RetryHarnessResultSchema, harnessSupervisor.retry());
@@ -239,12 +287,20 @@ export function broadcastWorkspaceNotification(notification: WorkspaceNotificati
   }
 }
 
-export function registerWorkspaceIpc(bridge: WorkspaceBridgeClient): void {
+export function registerWorkspaceIpc(
+  bridge: WorkspaceBridgeClient,
+  gate: Readonly<{ accepting(): boolean }>,
+): void {
   ipcMain.handle(desktopIpcChannels.queryWorkspace, (_event, value: unknown) => {
-    return bridge.query(decodeStrict(WorkspaceQuerySchema, value) satisfies WorkspaceQuery);
+    const query = decodeStrict(WorkspaceQuerySchema, value) satisfies WorkspaceQuery;
+    if (!gate.accepting()) return Promise.resolve(workspaceQueryClosing(query));
+    return bridge.query(query);
   });
   ipcMain.handle(desktopIpcChannels.submitWorkspaceIntent, (_event, value: unknown) => {
-    return bridge.submit(decodeStrict(WorkspaceIntentSchema, value) satisfies WorkspaceIntent);
+    const intent = decodeStrict(WorkspaceIntentSchema, value) satisfies WorkspaceIntent;
+    if (!gate.accepting())
+      return Promise.resolve(workspaceIntentClosing(capabilityForIntent(intent)));
+    return bridge.submit(intent);
   });
 }
 
@@ -323,6 +379,17 @@ function armPackageSmoke(authorization: NonNullable<ReturnType<typeof authorizeP
   if (authorization.scenario === "writer-proof") writerProofAbort = new AbortController();
 }
 
+/**
+ * One instance per userData: a second launch quits before any window, logger, harness or
+ * package-smoke state, so nothing holds its quit back.
+ */
+function holdsSingleInstanceLock(authorization: ReturnType<typeof authorizePackageSmoke>): boolean {
+  if (app.requestSingleInstanceLock()) return true;
+  if (authorization === undefined) app.quit();
+  else refuseSecondPackageSmoke();
+  return false;
+}
+
 /** A package smoke that finds its root locked fails visibly instead of passing as quit. */
 function refuseSecondPackageSmoke(): void {
   try {
@@ -343,13 +410,7 @@ function focusExistingWindow(): void {
 async function bootstrap(): Promise<void> {
   // The package-smoke userData is set first: the single-instance lock belongs to it.
   const authorization = authorizePackageSmoke();
-  // One instance per userData: a second launch quits before any window, logger, harness or
-  // package-smoke state, so nothing holds its quit back.
-  if (!app.requestSingleInstanceLock()) {
-    if (authorization === undefined) app.quit();
-    else refuseSecondPackageSmoke();
-    return;
-  }
+  if (!holdsSingleInstanceLock(authorization)) return;
   if (authorization !== undefined) armPackageSmoke(authorization);
   app.on("second-instance", focusExistingWindow);
   await app.whenReady();
@@ -358,66 +419,46 @@ async function bootstrap(): Promise<void> {
     await packageSmokeTask;
     return;
   }
+  // A quit that came before readiness already disposed the unbuilt runtime: start nothing.
+  if (!desktopShutdown.accepting()) return;
   app.setAppUserModelId("dev.slopstop.desktop");
   app.setAppLogsPath();
 
   configureSessionSecurity();
 
-  const logger = createMainLogger(app.getPath("logs"), app.isPackaged);
-  logger.info({ crashReporting: initializeCrashReporting() }, "SlopStop desktop starting.");
+  // The one read of the services builds every owner, after the logs and userData paths are set.
+  const { harness, projectEntry, workspace } = runtime.runSync(readDesktopServices);
 
-  const migrationResourcesRoot = projectStorageMigrationResourcesRoot({
-    isPackaged: app.isPackaged,
-    resourcesPath: process.resourcesPath,
-    mainBundleDirectory: __dirname,
-  });
-  const harnessBootstrap = createProjectStorageHarnessBootstrap({
-    userDataRoot: app.getPath("userData"),
-    migrationResourcesRoot,
-  });
-  supervisor = new HarnessSupervisor(harnessEntryPath(__dirname), logger, harnessBootstrap);
-  const harnessSession = supervisor.getSession();
-  projectEntryBridge = createProjectEntryBridge({
-    session: harnessSession,
-    createId: randomUUID,
-    now: () => new Date().toISOString(),
-  });
-  const projects = projectEntryBridge;
-  registerProjectEntryIpc(projects);
-  projectStorageBridge = createProjectStorageBridge({
-    session: harnessSession,
-    createId: randomUUID,
-    now: () => new Date().toISOString(),
-  });
-  workspaceBridge = createWorkspaceBridge({
-    session: harnessSession,
-    createId: randomUUID,
-    now: () => new Date().toISOString(),
-  });
+  const supervisor = harness.owner;
+  registerProjectEntryIpc(projectEntry.owner, desktopShutdown);
   registerHarnessIpc(supervisor);
-  registerProjectRegistrationIpc(projects);
-  registerWorkspaceIpc(workspaceBridge);
+  registerProjectRegistrationIpc(projectEntry.owner, desktopShutdown);
+  registerWorkspaceIpc(workspace.owner, desktopShutdown);
   supervisor.subscribe(broadcastHarnessStatus);
-  workspaceBridge.subscribe(broadcastWorkspaceNotification);
-  if (packageSmoke) {
-    const stopSmokeListener = supervisor.subscribe((status) => {
-      if (status.state === "ready") {
-        stopSmokeListener();
-        smokeHarnessReady = true;
-        runPackageSmokeIfReady();
-      }
-    });
-  }
+  workspace.owner.subscribe(broadcastWorkspaceNotification);
+  if (packageSmoke) awaitSmokeHarnessReady(supervisor);
   supervisor.start();
 
   smokeWindow = await createActiveWindow();
   runPackageSmokeIfReady();
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      void createActiveWindow();
-    }
+  app.on("activate", reopenWindowWhenNoneIsOpen);
+}
+
+/** In package-smoke mode, runs the proof once the harness first reports ready. */
+function awaitSmokeHarnessReady(supervisor: DesktopSupervisor): void {
+  const stopSmokeListener = supervisor.subscribe((status) => {
+    if (status.state !== "ready") return;
+    stopSmokeListener();
+    smokeHarnessReady = true;
+    runPackageSmokeIfReady();
   });
+}
+
+function reopenWindowWhenNoneIsOpen(): void {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    void createActiveWindow();
+  }
 }
 
 app.on("before-quit", (event) => {

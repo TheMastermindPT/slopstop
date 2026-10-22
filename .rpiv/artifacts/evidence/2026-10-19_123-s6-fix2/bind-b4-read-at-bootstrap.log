@@ -1,0 +1,48 @@
+parent: b4fc9ed
+tree: cfba17f3a276c7141a35f62666af78585721748a
+working-tree digest: 467c9ec5441d2f88
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts -t builds no desktop runtime: 'writer proof'
+started: 2026-10-19T17:10:49+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts (80 tests | 1 failed | 79 skipped) 186ms
+     × builds no desktop runtime: 'writer proof' 185ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > builds no desktop runtime: 'writer proof'
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      "C:\proof\user",
+      true,
+    ]
+
+
+Number of calls: 1
+
+ ❯ noDesktopRuntime src/main/canonical-writer-package-smoke-main.test.ts:707:25
+    705|
+    706| function noDesktopRuntime() {
+    707|   expect(ports.log).not.toHaveBeenCalled();
+       |                         ^
+    708|   expect(ports.supervisorCreated).not.toHaveBeenCalled();
+    709| }
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:857:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 79 skipped (80)
+   Start at  17:10:50
+   Duration  984ms (transform 348ms, setup 0ms, import 622ms, tests 186ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/main.ts bound blob b875189362d4e264; restored blob db67985df87e0af5 (backup db67985df87e0af5) MATCH; tree before 5b69662781cae495 after 5b69662781cae495 MATCH

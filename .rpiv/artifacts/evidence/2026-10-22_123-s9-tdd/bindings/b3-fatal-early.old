@@ -1,0 +1,1 @@
+    stop = await options.launch(prepared);

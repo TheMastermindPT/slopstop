@@ -1,0 +1,3 @@
+cpu before: 9.4/9.8/9.3, alone; candidate 5ed89e5 (tree b67f0d2f); HEAD e0b97ca (evidence only on top)
+start 2026-10-19T18:04:27+01:00
+end 2026-10-19T18:05:46+01:00

@@ -1,0 +1,16 @@
+parent: aabd716
+tree: 123094d2f10b972f91d3296b6b75deaef2dca2da
+working-tree digest: e3b0c44298fc1c14
+command: pnpm exec stryker run stryker.project-storage.config.json --mutate apps/harness/src/storage/project-storage-node-errors.ts,apps/harness/src/storage/project-storage-upgrade-node-adapter.ts:558-564,apps/harness/src/registration/registry-database.ts:79-90,apps/harness/src/registration/registration-registry.ts:182-200
+started: 2026-10-22T19:37:13+01:00
+---
+[32m19:37:15 (14776) INFO ProjectReader[39m Found 4 of 1921 file(s) to be mutated.
+[32m19:37:15 (14776) INFO Instrumenter[39m Instrumented 4 source file(s) with 105 mutant(s)
+[32m19:37:17 (14776) INFO ConcurrencyTokenProvider[39m Creating 4 test runner process(es).
+[32m19:37:19 (14776) INFO DryRunExecutor[39m Starting initial test run (vitest test runner with "perTest" coverage analysis). This may take a while.
+[32m19:39:15 (14776) INFO DryRunExecutor[39m Initial test run succeeded. Ran 469 tests in 1 minute and 56 seconds (net 105857.21619999992 ms, overhead 10305.783800000077 ms).
+[32m19:43:38 (14776) INFO MutationTestReportHelper[39m Final mutation score of 98.02 is greater than or equal to break threshold 80
+[32m19:43:38 (14776) INFO JsonReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/mutation.json
+[32m19:43:38 (14776) INFO HtmlReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/project-storage-harness.html
+[32m19:43:38 (14776) INFO MutationTestExecutor[39m Done in 6 minutes and 24 seconds.
+--- exit: 0

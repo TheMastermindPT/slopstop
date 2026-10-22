@@ -1,0 +1,6 @@
+apps/desktop/src/main/harness-supervisor.ts MATCH
+stryker.desktop-s8.config.json MATCH
+apps/desktop/vitest.desktop-s8-mutation.config.ts MATCH
+code diff vs 3001364 outside .rpiv: []
+git status:
+?? .rpiv/artifacts/evidence/2026-10-22_123-s8-mutation/

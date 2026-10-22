@@ -1,0 +1,481 @@
+B2 re-observation (S5B-R1-1, Pedro (a), §134)
+head 7270a5a2e916e6dd81cdb4891434c85e3c5626eb
+command (repo root): pnpm exec vitest run --project harness apps/harness/scripts/check-effect-diagnostics.test.mjs -t "distinguishes a broken binary run"
+scaffold copy of apps/harness/scripts/check-effect-diagnostics.mjs, sha256 c25e48bdc8c5a852777f6727d0c02c0d53e894ed57365287dbd1ff2977529cd3; full text:
+----- scaffold begin
+import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+/** The packages the gate checks, from the repository root. */
+const defaultProjects = ["packages/kernel", "packages/protocol", "apps/harness", "apps/desktop"];
+
+// `file(line,col): error|warning TSnnnn: message`; an Effect message ends with `effect(<rule>)`,
+// possibly on a later line.
+const diagnosticHeader = /^(.+)\((\d+),(\d+)\): (error|warning) TS\d+: /;
+const effectRule = /effect\((\w+)\)\s*$/;
+
+// The binary belongs to the repository that holds this script, not to the checked root.
+const resolveFromScript = createRequire(import.meta.url).resolve;
+
+/** The Effect build's `lib/tsc`, or undefined when its package or executable is missing. */
+function binaryPath(resolveModule, exists) {
+  // SCAFFOLD (B2 re-observation): the ports are consumed; a resolve failure is not caught and
+  // a missing executable is not classified.
+  const manifest = resolveModule(`@effect/tsgo-${process.platform}-${process.arch}/package.json`);
+  const binary = join(dirname(manifest), "lib", process.platform === "win32" ? "tsc.exe" : "tsc");
+  exists(binary);
+  return binary;
+}
+
+/** The diagnostic a header line opens, or undefined for a continuation line. */
+function diagnosticAt(line) {
+  const header = diagnosticHeader.exec(line);
+  if (!header) return undefined;
+  const [, file = "", lineNumber = "", column = "", severity = ""] = header;
+  return { file, line: Number(lineNumber), column: Number(column), severity };
+}
+
+/** The rule ends a diagnostic's last line; the first one found after its header is its rule. */
+function attachRule(current, line) {
+  const rule = effectRule.exec(line)?.[1];
+  if (current?.rule === undefined && rule) current.rule = rule;
+}
+
+/** Every diagnostic in the output, each with its Effect rule when it has one. */
+function parseDiagnostics(output) {
+  const diagnostics = [];
+  for (const line of output.split(/\r?\n/)) {
+    const opened = diagnosticAt(line);
+    if (opened) diagnostics.push(opened);
+    if (diagnostics.length > 0) attachRule(diagnostics.at(-1), line);
+  }
+  return diagnostics;
+}
+
+/** The binary was not started, was killed, or ended without an exit status. */
+const didNotFinish = (run) => Boolean(run.error ?? run.signal) || run.status === null;
+const isTscExit = (status) => status === 0 || status === 1;
+
+/** One run of the binary on a project: a run that did not finish, or exited 2+, is a code. */
+function spawnProject({ root, binary, spawn }, project) {
+  const run = spawn(
+    binary,
+    ["--noEmit", "--pretty", "false", "-p", join(project, "tsconfig.json")],
+    {
+      cwd: root,
+      encoding: "utf8",
+    },
+  );
+  // SCAFFOLD: no classification of the run.
+  didNotFinish(run);
+  isTscExit(run.status);
+  const output = [run.stdout ?? "", run.stderr ?? ""].join("\n");
+  return { status: run.status, diagnostics: parseDiagnostics(output) };
+}
+
+/**
+ * One package run, classified: a run that did not finish, or whose output cannot be trusted, is
+ * a failure code and never a clean result.
+ */
+function runProject(context, project) {
+  const run = spawnProject(context, project);
+  if (run.code) return run;
+  const { diagnostics } = run;
+  const errors = diagnostics.filter((entry) => entry.severity === "error");
+  // Exit 1 names its errors and exit 0 has none; anything else is an untrustworthy run. An error
+  // that is not an Effect diagnostic is one too: the gate cannot report that tree as clean.
+  // SCAFFOLD: no EFFECT_GATE_BROKEN check.
+  errors.length;
+  return { diagnostics };
+}
+
+/** The canary project, from the repository root; its tsconfig inherits the real plugin block. */
+const canaryProject = "apps/harness/scripts/effect-diagnostics-canary";
+
+/**
+ * Every diagnostic the canary must produce, relative to the canary folder, and nothing else: the
+ * planted `newPromise` and `unknownInEffectCatch` errors with their advisory warnings. The waived
+ * line and the two planted test-file lines must be absent.
+ */
+const expectedCanary = [
+  "src/canary.ts(3,24) error newPromise",
+  "src/canary.ts(4,14) warning anyUnknownInErrorContext",
+  "src/canary.ts(4,24) error unknownInEffectCatch",
+  "src/canary.ts(4,24) warning anyUnknownInErrorContext",
+];
+
+function canaryKey({ file, line, column, severity, rule }) {
+  const relative = file.split("\\").join("/").replace(`${canaryProject}/`, "");
+  return `${relative}(${line},${column}) ${severity} ${rule ?? "-"}`;
+}
+
+const byText = (first, second) => first.localeCompare(second);
+
+/**
+ * Runs the canary; any added, missing or moved diagnostic is a mismatch, never a pass. The
+ * Effect build carries the plugin itself, so a removed or changed plugin block shows up here as
+ * the defaults' diagnostics and exit code, which differ from the expected set.
+ */
+function checkCanary(context) {
+  const run = spawnProject(context, canaryProject);
+  if (run.code) return run.code;
+  const actual = run.diagnostics.map(canaryKey).sort(byText);
+  const expected = [...expectedCanary].sort(byText);
+  const matched =
+    run.status === 1 &&
+    actual.length === expected.length &&
+    actual.every((key, index) => key === expected[index]);
+  return matched ? undefined : "EFFECT_GATE_CANARY_MISMATCH";
+}
+
+/**
+ * Runs each package and blocks on every `error`-level Effect diagnostic, listed across all the
+ * packages. A run that cannot be trusted stops the gate at once, before any later package.
+ */
+function checkProjects(context, projects) {
+  let warnings = 0;
+  const errors = [];
+  for (const project of projects) {
+    const run = runProject(context, project);
+    if (run.code) return { ok: false, code: run.code };
+    warnings += run.diagnostics.filter((entry) => entry.severity === "warning").length;
+    errors.push(...run.diagnostics.filter((entry) => entry.severity === "error"));
+  }
+  if (errors.length === 0) return { ok: true, warnings };
+  return {
+    ok: false,
+    code: "EFFECT_GATE_VIOLATIONS",
+    violations: errors.map(({ file, line, rule }) => ({ file, line, rule })),
+    lines: errors.map(({ file, line, column, rule }) => `${file}(${line},${column}) ${rule}`),
+  };
+}
+
+/** The register's entries, or undefined when it cannot be read as a JSON list. */
+function readRegister(root) {
+  try {
+    const entries = JSON.parse(readFileSync(join(root, waiverRegister), "utf8"));
+    return Array.isArray(entries) ? entries : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The register of waived Effect diagnostics, from the repository root. */
+const waiverRegister = "apps/harness/scripts/effect-diagnostics-waivers.json";
+const directive = /@effect-diagnostics/;
+const nextLineDirective = /^\s*\/\/ @effect-diagnostics-next-line (\w+):off\s*$/;
+const waiverLine = /^\s*\/\/ Effect waiver (EW\d+): .+\.\s*$/;
+
+/** The `src` folder of every package under `apps` and `packages`. */
+function sourceRoots(root) {
+  return ["apps", "packages"]
+    .map((area) => join(root, area))
+    .filter((areaRoot) => existsSync(areaRoot))
+    .flatMap((areaRoot) =>
+      readdirSync(areaRoot, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => join(areaRoot, entry.name, "src")),
+    )
+    .filter((source) => existsSync(source));
+}
+
+/** Source files under `apps/*\/src` and `packages/*\/src`, relative to the root, `/`-separated. */
+function sourceFiles(root) {
+  const files = sourceRoots(root).flatMap((source) =>
+    readdirSync(source, { recursive: true, withFileTypes: true })
+      .filter((file) => file.isFile())
+      .map((file) => relative(root, join(file.parentPath, file.name))),
+  );
+  return files.map((file) => file.split("\\").join("/"));
+}
+
+/** Each `@effect-diagnostics` directive with the waiver id on the line above it, if any. */
+function directivesIn(root, file) {
+  const lines = readFileSync(join(root, file), "utf8").split(/\r?\n/);
+  return lines.flatMap((line, index) => {
+    if (!directive.test(line)) return [];
+    const rule = nextLineDirective.exec(line)?.[1];
+    const id = waiverLine.exec(lines[index - 1] ?? "")?.[1];
+    return [{ file, line: index + 1, rule, id }];
+  });
+}
+
+/**
+ * Every directive in the sources has its register entry and its waiver line, and every entry
+ * has its directive.
+ */
+function checkWaivers(root) {
+  const entries = readRegister(root);
+  if (entries === undefined) {
+    return { ok: false, code: "EFFECT_GATE_BROKEN", lines: [`${waiverRegister} is unreadable`] };
+  }
+  const directives = sourceFiles(root).flatMap((file) => directivesIn(root, file));
+  const matches = (entry, found) =>
+    entry.id === found.id && entry.file === found.file && entry.rule === found.rule;
+  const unregistered = directives.filter(
+    (found) => found.rule === undefined || !entries.some((entry) => matches(entry, found)),
+  );
+  if (unregistered.length > 0) {
+    const lines = unregistered.map(({ file, line }) => `${file}(${line}) unregistered directive`);
+    return { ok: false, code: "EFFECT_GATE_WAIVER_UNREGISTERED", lines };
+  }
+  const stale = entries.filter((entry) => !directives.some((found) => matches(entry, found)));
+  if (stale.length > 0) {
+    const lines = stale.map(({ id, file }) => `${id} ${file} has no directive`);
+    return { ok: false, code: "EFFECT_GATE_WAIVER_STALE", lines };
+  }
+  return undefined;
+}
+
+/**
+ * Runs the Effect build of TypeScript-Go, in tsc mode, over each project and blocks on every
+ * `error`-level Effect diagnostic. Warnings are counted, never blocking. The full gate (no
+ * `projects` given) first proves on the canary that the real configuration is active, then
+ * checks the waiver register against the sources; a call that names its projects checks only
+ * those, unless `canary` or `register` asks for those steps too.
+ */
+export function checkEffectDiagnostics({
+  root = process.cwd(),
+  projects,
+  canary = projects === undefined,
+  register = projects === undefined,
+  resolve: resolveModule = resolveFromScript,
+  exists = existsSync,
+  spawn = spawnSync,
+} = {}) {
+  const binary = binaryPath(resolveModule, exists);
+  const context = { root, binary, spawn };
+  if (canary) {
+    const code = checkCanary(context);
+    if (code) return { ok: false, code };
+  }
+  const waivers = register ? checkWaivers(root) : undefined;
+  if (waivers) return waivers;
+  const result = checkProjects(context, projects ?? defaultProjects);
+  return result.ok && canary ? { ...result, canary: "matched" } : result;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  const projects = process.argv.slice(2);
+  const result = checkEffectDiagnostics(projects.length > 0 ? { projects } : {});
+  if (result.ok) {
+    process.stdout.write(`Effect diagnostics verified; ${result.warnings} advisory warnings.\n`);
+  } else {
+    process.stderr.write(`${[result.code, ...(result.lines ?? [])].join("\n")}\n`);
+    process.exitCode = 1;
+  }
+}
+----- scaffold end
+----- run
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'unknownInEffectCatch'
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'newPromise'
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'clean'
+ × |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'missing package' 5ms
+   → Cannot find module
+ × |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'missing executable' 5ms
+   → expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+ × |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'spawn error' 1ms
+   → expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+ × |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'killed' 1ms
+   → expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+ × |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 2' 1ms
+   → expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+ × |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 1, no diagnostic line' 1ms
+   → expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+ × |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 1 with a non-Effect error' 2ms
+   → expected { ok: false, …(3) } to deeply equal { ok: false, …(1) }
+ × |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 0 with an error line' 1ms
+   → expected { ok: false, …(3) } to deeply equal { ok: false, …(1) }
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: real canary
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: plugin removed
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'extra diagnostic'
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'missing diagnostic'
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'override not applied'
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'registered'
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive without entry'
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive without waiver line'
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'entry without directive'
+ ↓ |harness| scripts/check-effect-diagnostics.test.mjs > passes on the repository
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'missing package'
+Error: Cannot find module
+ ❯ resolve scripts/check-effect-diagnostics.test.mjs:111:27
+    109|     name: "missing package",
+    110|     resolve: () => {
+    111|       throw Object.assign(new Error("Cannot find module"), { code: "MO…
+       |                           ^
+    112|     },
+    113|     exists: () => true,
+ ❯ binaryPath scripts/check-effect-diagnostics.mjs:22:20
+ ❯ checkEffectDiagnostics scripts/check-effect-diagnostics.mjs:244:18
+ ❯ scripts/check-effect-diagnostics.test.mjs:168:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'MODULE_NOT_FOUND' }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'missing executable'
+AssertionError: expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BINARY_MISSING",
+-   "ok": false,
++   "ok": true,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:175:18
+    173|     spawn,
+    174|   });
+    175|   expect(result).toEqual({ ok: false, code: row.code });
+       |                  ^
+    176|   expect(calls).toHaveLength(row.spawns);
+    177| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'spawn error'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'killed'
+AssertionError: expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BINARY_FAILED",
+-   "ok": false,
++   "ok": true,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:175:18
+    173|     spawn,
+    174|   });
+    175|   expect(result).toEqual({ ok: false, code: row.code });
+       |                  ^
+    176|   expect(calls).toHaveLength(row.spawns);
+    177| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 2'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 1, no diagnostic line'
+AssertionError: expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "ok": false,
++   "ok": true,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:175:18
+    173|     spawn,
+    174|   });
+    175|   expect(result).toEqual({ ok: false, code: row.code });
+       |                  ^
+    176|   expect(calls).toHaveLength(row.spawns);
+    177| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 1 with a non-Effect error'
+AssertionError: expected { ok: false, …(3) } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
++   "code": "EFFECT_GATE_VIOLATIONS",
++   "lines": [
++     "src/a.ts(1,7) undefined",
++     "src/a.ts(1,7) undefined",
++   ],
+    "ok": false,
++   "violations": [
++     {
++       "file": "src/a.ts",
++       "line": 1,
++       "rule": undefined,
++     },
++     {
++       "file": "src/a.ts",
++       "line": 1,
++       "rule": undefined,
++     },
++   ],
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:175:18
+    173|     spawn,
+    174|   });
+    175|   expect(result).toEqual({ ok: false, code: row.code });
+       |                  ^
+    176|   expect(calls).toHaveLength(row.spawns);
+    177| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 0 with an error line'
+AssertionError: expected { ok: false, …(3) } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
++   "code": "EFFECT_GATE_VIOLATIONS",
++   "lines": [
++     "src/a.ts(3,18) newPromise",
++     "src/a.ts(3,18) newPromise",
++   ],
+    "ok": false,
++   "violations": [
++     {
++       "file": "src/a.ts",
++       "line": 3,
++       "rule": "newPromise",
++     },
++     {
++       "file": "src/a.ts",
++       "line": 3,
++       "rule": "newPromise",
++     },
++   ],
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:175:18
+    173|     spawn,
+    174|   });
+    175|   expect(result).toEqual({ ok: false, code: row.code });
+       |                  ^
+    176|   expect(calls).toHaveLength(row.spawns);
+    177| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 13 skipped (21)
+   Start at  22:34:11
+   Duration  219ms (transform 26ms, setup 0ms, import 44ms, tests 18ms, environment 0ms)
+
+----- restore: blob b90540d1a4ee246ce950803ab28eca887e15ee1c (54d2e12 blob b90540d1a4ee246ce950803ab28eca887e15ee1c) equal=yes
+----- git status after restore:
+ M .rpiv/artifacts/designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md
+?? .rpiv/artifacts/evidence/2026-10-18_123-s5b-tdd/b2-red-reobserved.log

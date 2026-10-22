@@ -1,0 +1,16 @@
+parent: 347c0fd
+tree: b0fda6f05bbb8c1206060b8ef83360e06841875a
+working-tree digest: 594c1d9cee4410b2
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-supervisor.test.ts
+started: 2026-10-22T18:15:46+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  1 passed (1)
+      Tests  37 passed (37)
+   Start at  18:15:47
+   Duration  677ms (transform 214ms, setup 0ms, import 499ms, tests 49ms, environment 0ms)
+
+--- exit: 0

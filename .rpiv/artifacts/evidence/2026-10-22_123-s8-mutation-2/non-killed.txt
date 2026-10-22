@@ -1,0 +1,2 @@
+counts: {'Killed': 62, 'Survived': 1}
+harness-supervisor.ts:418:7 | Survived | CallExpression | ';' | this.#observations.delete(child);

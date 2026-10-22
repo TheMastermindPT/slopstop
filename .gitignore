@@ -33,6 +33,7 @@ projects/
 .rpiv/*
 !.rpiv/artifacts/
 !.rpiv/artifacts/**
+.rpiv/artifacts/**/node_modules/
 !.rpiv/decisions/
 !.rpiv/decisions/**
 !.rpiv/guidance/

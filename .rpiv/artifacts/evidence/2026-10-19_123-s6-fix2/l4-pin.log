@@ -1,0 +1,16 @@
+parent: b4fc9ed
+tree: f08c94eb000569ea2c6388931dc2268d6a4a0f1a
+working-tree digest: 3e64a4b53f788709
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts
+started: 2026-10-19T17:02:44+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  1 passed (1)
+      Tests  80 passed (80)
+   Start at  17:02:46
+   Duration  1.47s (transform 302ms, setup 0ms, import 615ms, tests 676ms, environment 0ms)
+
+--- exit: 0

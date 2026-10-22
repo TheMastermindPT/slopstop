@@ -1,0 +1,64 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (3 tests | 3 failed) 14ms
+   × fails on a planted Effect error: 'unknownInEffectCatch' 7ms
+   × fails on a planted Effect error: 'newPromise' 4ms
+   × fails on a planted Effect error: 'clean' 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'unknownInEffectCatch'
+Error: Cannot find module '@effect/tsgo-win32-x64/package.json'
+Require stack:
+- C:\Users\pedro\AppData\Local\Temp\slopstop-effect-gate-njg7KL\package.json
+ ❯ binaryPath scripts/check-effect-diagnostics.mjs:16:28
+     14| function binaryPath(root) {
+     15|   const require = createRequire(join(root, "package.json"));
+     16|   const manifest = require.resolve(`@effect/tsgo-${process.platform}-$…
+       |                            ^
+     17|   return join(dirname(manifest), "lib", process.platform === "win32" ?…
+     18| }
+ ❯ checkEffectDiagnostics scripts/check-effect-diagnostics.mjs:53:18
+ ❯ scripts/check-effect-diagnostics.test.mjs:83:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'newPromise'
+Error: Cannot find module '@effect/tsgo-win32-x64/package.json'
+Require stack:
+- C:\Users\pedro\AppData\Local\Temp\slopstop-effect-gate-6MneJb\package.json
+ ❯ binaryPath scripts/check-effect-diagnostics.mjs:16:28
+     14| function binaryPath(root) {
+     15|   const require = createRequire(join(root, "package.json"));
+     16|   const manifest = require.resolve(`@effect/tsgo-${process.platform}-$…
+       |                            ^
+     17|   return join(dirname(manifest), "lib", process.platform === "win32" ?…
+     18| }
+ ❯ checkEffectDiagnostics scripts/check-effect-diagnostics.mjs:53:18
+ ❯ scripts/check-effect-diagnostics.test.mjs:83:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'clean'
+Error: Cannot find module '@effect/tsgo-win32-x64/package.json'
+Require stack:
+- C:\Users\pedro\AppData\Local\Temp\slopstop-effect-gate-6P8irk\package.json
+ ❯ binaryPath scripts/check-effect-diagnostics.mjs:16:28
+     14| function binaryPath(root) {
+     15|   const require = createRequire(join(root, "package.json"));
+     16|   const manifest = require.resolve(`@effect/tsgo-${process.platform}-$…
+       |                            ^
+     17|   return join(dirname(manifest), "lib", process.platform === "win32" ?…
+     18| }
+ ❯ checkEffectDiagnostics scripts/check-effect-diagnostics.mjs:53:18
+ ❯ scripts/check-effect-diagnostics.test.mjs:83:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  20:45:49
+   Duration  187ms (transform 20ms, setup 0ms, import 36ms, tests 14ms, environment 0ms)
+

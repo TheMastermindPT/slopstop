@@ -1,0 +1,57 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (3 tests | 2 failed) 689ms
+   × fails on a planted Effect error: 'unknownInEffectCatch' 242ms
+   × fails on a planted Effect error: 'newPromise' 227ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'unknownInEffectCatch'
+AssertionError: expected 'EFFECT_GATE_VIOLATIONS\nsrc/a.ts(4) u…' to contain 'src/a.ts(4,'
+
+- Expected
++ Received
+
+- src/a.ts(4,
++ EFFECT_GATE_VIOLATIONS
++ src/a.ts(4) unknownInEffectCatch
++
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:93:22
+     91|   expect(result.violations).toEqual([violation]);
+     92|   expect(cli.status).toBe(1);
+     93|   expect(cli.stderr).toContain(`${violation.file}(${violation.line},`);
+       |                      ^
+     94|   expect(cli.stderr).toContain(violation.rule);
+     95| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'newPromise'
+AssertionError: expected 'EFFECT_GATE_VIOLATIONS\nsrc/a.ts(3) n…' to contain 'src/a.ts(3,'
+
+- Expected
++ Received
+
+- src/a.ts(3,
++ EFFECT_GATE_VIOLATIONS
++ src/a.ts(3) newPromise
++
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:93:22
+     91|   expect(result.violations).toEqual([violation]);
+     92|   expect(cli.status).toBe(1);
+     93|   expect(cli.stderr).toContain(`${violation.file}(${violation.line},`);
+       |                      ^
+     94|   expect(cli.stderr).toContain(violation.rule);
+     95| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  20:46:07
+   Duration  870ms (transform 32ms, setup 0ms, import 49ms, tests 689ms, environment 0ms)
+

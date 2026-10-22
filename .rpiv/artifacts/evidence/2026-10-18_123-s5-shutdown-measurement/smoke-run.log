@@ -1,0 +1,15 @@
+CPU 3/14/1 start 2026-10-18T16:08:56+01:00 parent df16fb7 smoke
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/.rpiv/artifacts/evidence/2026-10-18_123-s5-shutdown-measurement
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  16:08:57
+   Duration  31.98s (transform 788ms, setup 0ms, import 1.18s, tests 30.67s, environment 0ms)
+
+
+real	0m32.898s
+user	0m0.106s
+sys	0m0.061s
+exit 0

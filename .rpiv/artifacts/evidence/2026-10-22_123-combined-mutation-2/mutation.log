@@ -1,0 +1,30 @@
+parent: dfeec6e
+tree: 8ea73f9e2e11dbad519003185db120545f734e29
+working-tree digest: e3b0c44298fc1c14
+command: pnpm exec stryker run stryker.project-storage.config.json --mutate apps/harness/src/storage/project-storage-node-errors.ts,apps/harness/src/storage/project-storage-upgrade-node-adapter.ts:558-564,apps/harness/src/registration/registry-database.ts:79-90,apps/harness/src/registration/registration-registry.ts:182-200,apps/harness/scripts/check-effect-diagnostics.mjs:19-22,apps/harness/scripts/check-effect-diagnostics.mjs:41-63,apps/harness/scripts/check-effect-diagnostics.mjs:157-175,apps/harness/scripts/check-effect-diagnostics.mjs:191-191,apps/harness/scripts/check-effect-diagnostics.mjs:215-253,apps/harness/scripts/check-effect-diagnostics.mjs:256-262
+started: 2026-10-22T19:06:40+01:00
+---
+[32m19:06:42 (9848) INFO ProjectReader[39m Found 5 of 1858 file(s) to be mutated.
+[32m19:06:42 (9848) INFO Instrumenter[39m Instrumented 5 source file(s) with 258 mutant(s)
+[32m19:06:43 (9848) INFO ConcurrencyTokenProvider[39m Creating 4 test runner process(es).
+[32m19:06:46 (9848) INFO DryRunExecutor[39m Starting initial test run (vitest test runner with "perTest" coverage analysis). This may take a while.
+[91m19:08:01 (9848) ERROR DryRunExecutor[39m One or more tests failed in the initial test run:
+	passes on the repository
+		expected { ok: false, …(2) } to match object { ok: true, canary: 'matched' }
+(2 matching properties omitted from actual)
+[91m19:08:01 (9848) ERROR Stryker[39m There were failed tests in the initial test run.
+file:///C:/Users/pedro/Documents/GitHub/slopstop-123/node_modules/@stryker-mutator/core/dist/src/process/3-dry-run-executor.js:65
+                    throw new ConfigError('There were failed tests in the initial test run.');
+                          ^
+
+ConfigError: There were failed tests in the initial test run.
+    at DryRunExecutor.validateResultCompleted (file:///C:/Users/pedro/Documents/GitHub/slopstop-123/node_modules/@stryker-mutator/core/dist/src/process/3-dry-run-executor.js:65:27)
+    at DryRunExecutor.executeDryRun (file:///C:/Users/pedro/Documents/GitHub/slopstop-123/node_modules/@stryker-mutator/core/dist/src/process/3-dry-run-executor.js:100:14)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async WorkItem.execute (file:///C:/Users/pedro/Documents/GitHub/slopstop-123/node_modules/@stryker-mutator/core/dist/src/concurrent/pool.js:32:28)
+    at async file:///C:/Users/pedro/Documents/GitHub/slopstop-123/node_modules/@stryker-mutator/core/dist/src/concurrent/pool.js:69:13 {
+  innerError: undefined
+}
+
+Node.js v24.20.0
+--- exit: 1

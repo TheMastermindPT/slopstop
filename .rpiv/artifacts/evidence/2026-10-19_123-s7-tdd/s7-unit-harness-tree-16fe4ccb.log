@@ -1,0 +1,16 @@
+parent: 829c3cf
+tree: 16fe4ccb1c7cb4337b7876632737c7377a6968dd
+working-tree digest: bbf2286a08623a96
+command: pnpm exec vitest run --project harness apps/harness/scripts/check-effect-diagnostics.test.mjs
+started: 2026-10-19T22:57:36+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  1 passed (1)
+      Tests  31 passed (31)
+   Start at  22:57:37
+   Duration  7.68s (transform 48ms, setup 0ms, import 86ms, tests 7.33s, environment 0ms)
+
+--- exit: 0

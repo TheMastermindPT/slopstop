@@ -1,0 +1,28 @@
+parent: ee852b9
+tree: a62cdef1176e1a24f6a091ffac55c811d413a683
+working-tree digest: 0ed428c71cd4131c
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/workspace-bridge.test.ts -t answers the stopped text for a request made after stop
+started: 2026-10-20T19:00:42+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+ ❯ |desktop-main| src/main/workspace-bridge.test.ts (32 tests | 1 failed | 31 skipped) 7ms
+   × answers the stopped text for a request made after stop 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > answers the stopped text for a request made after stop
+SchemaError: Expected a value with a length of at least 1
+  at ["diagnostic"]["message"]
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 31 skipped (32)
+   Start at  19:00:43
+   Duration  964ms (transform 356ms, setup 0ms, import 772ms, tests 7ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/workspace-bridge.ts bound blob dc673f70c49adeb8; restored blob 8d1f5a9f612235c7 (backup 8d1f5a9f612235c7) MATCH; tree before f5e91866dfe0e6f6 after f5e91866dfe0e6f6 MATCH

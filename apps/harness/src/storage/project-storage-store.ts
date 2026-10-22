@@ -13,6 +13,7 @@ import type {
   StorageId,
 } from "@slopstop/protocol";
 import { Deferred, Effect, Result } from "effect";
+import { untypedRejection, unwrapRejection } from "../effect-rejection.js";
 import type {
   ProjectStorageActivationOutcome,
   ProjectStorageActivationSession,
@@ -155,8 +156,8 @@ function failureOf<A>(result: Result.Result<A, unknown>): unknown[] {
 
 function attempt(operation: () => Promise<void>): Effect.Effect<unknown[]> {
   return Effect.map(
-    Effect.result(Effect.tryPromise({ try: operation, catch: (error) => error })),
-    failureOf,
+    Effect.result(Effect.tryPromise({ try: operation, catch: untypedRejection })),
+    (result) => failureOf(result).map(unwrapRejection),
   );
 }
 

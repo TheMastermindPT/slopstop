@@ -1,0 +1,64 @@
+{
+  "parent": "df16fb7",
+  "smoke": true,
+  "elapsedMs": 30665.8999,
+  "bounds": {
+    "samplesPerCell": 2,
+    "sampleBoundMs": 15000,
+    "runBoundMs": 1800000,
+    "burstSeconds": 30,
+    "halfBoundMs": {
+      "M-listing": 1500,
+      "M-listing-drain": 1500,
+      "M-dispose": 250
+    }
+  },
+  "overlaps": [],
+  "failedBursts": [],
+  "summary": {
+    "M-listing quiet": {
+      "samples": 2,
+      "bound": 0,
+      "p50": 0.26289999999994507,
+      "p95": 1.3051000000000386,
+      "p99": 1.3051000000000386,
+      "max": 1.3051000000000386,
+      "halfBoundMs": 1500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-listing-drain quiet": {
+      "samples": 2,
+      "bound": 0,
+      "p50": 16.659200000000055,
+      "p95": 17.53690000000006,
+      "p99": 17.53690000000006,
+      "max": 17.53690000000006,
+      "halfBoundMs": 1500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-dispose quiet": {
+      "samples": 2,
+      "bound": 0,
+      "p50": 0.05999999999994543,
+      "p95": 0.06579999999985375,
+      "p99": 0.06579999999985375,
+      "max": 0.06579999999985375,
+      "halfBoundMs": 250,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-listing-drain burst": {
+      "samples": 2,
+      "bound": 0,
+      "p50": 28.525399999999536,
+      "p95": 37.64040000000023,
+      "p99": 37.64040000000023,
+      "max": 37.64040000000023,
+      "halfBoundMs": 1500,
+      "withinHalfBound": true,
+      "broken": []
+    }
+  }
+}

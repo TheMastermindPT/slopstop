@@ -1,0 +1,4 @@
+    Layer.effect(
+      WorkspaceBridge,
+      bridgeLayer(ports, owners, () => ports.createWorkspaceBridge({} as DesktopBridgeInput)),
+    ),

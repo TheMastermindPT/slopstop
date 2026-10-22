@@ -1,0 +1,5 @@
+HAND-WRITTEN SUMMARY of CodeScene MCP calls, typed by the implementer from the tool answers; not tool output.
+head 54d2e121397ff4fc654c2738e98117215bfdeb23 (the apps tree scored is identical to HEAD)
+pre_commit_code_health_safeguard on the staged 54d2e12 tree: quality_gates passed, 27 files checked, status no-issues-found
+code_health_review apps/harness/scripts/check-effect-diagnostics.mjs: 10.0 (8.15 before the refactor)
+code_health_review apps/harness/scripts/check-effect-diagnostics.test.mjs: 10.0

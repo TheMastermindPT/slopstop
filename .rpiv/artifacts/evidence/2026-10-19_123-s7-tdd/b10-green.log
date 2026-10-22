@@ -1,0 +1,173 @@
+parent: 829c3cf
+tree: aa743649eaaa60adb6a170c39ad68320468856d7
+working-tree digest: baccba18c65df0ba
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-request-core.test.ts apps/desktop/src/main/harness-bridges.test.ts apps/desktop/src/main/project-entry-bridge.test.ts apps/desktop/src/main/project-storage-bridge.test.ts apps/desktop/src/main/workspace-bridge.test.ts apps/desktop/src/main/harness-session.test.ts apps/desktop/src/main/harness-supervisor.test.ts apps/desktop/src/main/desktop-runtime.test.ts apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts apps/desktop/src/main/project-entry-ipc.test.ts apps/desktop/src/main/project-registration-ipc.test.ts
+started: 2026-10-19T22:44:31+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-runtime.test.ts (10 tests | 4 failed) 47ms
+     × releases every owner on dispose: 'built, never stopped' 16ms
+     × releases every owner on dispose: 'program then dispose' 6ms
+     × releases every owner on dispose: 'build fails after the supervisor' 5ms
+   × passes the bridges their session, id and clock 3ms
+ ❯ |desktop-main| src/main/harness-session.test.ts (6 tests | 2 failed) 28ms
+     × delivers a nested emit after the outer event reached every listener 8ms
+     × drains queued emits before rethrowing a listener failure 2ms
+SlopStop failed to start.
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (30 tests | 2 failed) 141ms
+   × answers broken for a read during a protocol error 15ms
+   × answers broken for a read during a system failure 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'built, never stopped'
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ run src/main/desktop-runtime.test.ts:166:25
+    164|         expect([...stops.slice(0, 3)].sort()).toEqual([...bridges].sor…
+    165|         expect(stops.slice(3)).toEqual(["supervisor"]);
+    166|         expect(release).toHaveBeenCalledOnce();
+       |                         ^
+    167|       },
+    168|     },
+ ❯ src/main/desktop-runtime.test.ts:263:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'program then dispose'
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ run src/main/desktop-runtime.test.ts:181:25
+    179|         await expect(runtime.dispose()).resolves.toBeUndefined();
+    180|         expect(stops).toEqual(["project-storage", "workspace", "projec…
+    181|         expect(release).toHaveBeenCalledOnce();
+       |                         ^
+    182|       },
+    183|     },
+ ❯ src/main/desktop-runtime.test.ts:263:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'build fails after the supervisor'
+AssertionError: expected undefined to be Error: private harness bridges constructi… // Object.is equality
+
+- Expected:
+Error {
+  "message": "private harness bridges construction failure",
+}
+
++ Received:
+undefined
+
+ ❯ run src/main/desktop-runtime.test.ts:244:38
+    242|         const { ports, stops } = fakes({}, { bridges: failure });
+    243|         const runtime = makeDesktopRuntime(ports);
+    244|         expect(readFailure(runtime)).toBe(failure);
+       |                                      ^
+    245|         await expect(runtime.dispose()).resolves.toBeUndefined();
+    246|         expect(stops).toEqual(["supervisor"]);
+ ❯ src/main/desktop-runtime.test.ts:263:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > passes the bridges their session, id and clock
+AssertionError: expected "vi.fn()" to be called once with arguments: [ { session: { …(2) }, …(2) } ]
+
+Number of calls: 0
+
+ ❯ src/main/desktop-runtime.test.ts:270:38
+    268|   const { ports } = fakes();
+    269|   makeDesktopRuntime(ports).runSync(readDesktopServices);
+    270|   expect(ports.createHarnessBridges).toHaveBeenCalledExactlyOnceWith({
+       |                                      ^
+    271|     session,
+    272|     createId: ports.createId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > delivers a nested emit after the outer event reached every listener
+AssertionError: expected [ 'disconnected', 'protocol-error' ] to deeply equal [ 'protocol-error', 'disconnected' ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:129:20
+    127|
+    128|     expect(first).toEqual(["protocol-error", "disconnected"]);
+    129|     expect(second).toEqual(["protocol-error", "disconnected"]);
+       |                    ^
+    130|   });
+    131|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > drains queued emits before rethrowing a listener failure
+AssertionError: expected [ 'disconnected', 'protocol-error' ] to deeply equal [ 'protocol-error', 'disconnected' ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:149:20
+    147|     expect(() => port.emit("message", { data: { event: "not-valid" } }…
+    148|     expect(first).toEqual(["protocol-error", "disconnected"]);
+    149|     expect(second).toEqual(["protocol-error", "disconnected"]);
+       |                    ^
+    150|
+    151|     // The delivering flag was reset: a later event on the same sessio…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > answers broken for a read during a protocol error
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > answers broken for a read during a system failure
+AssertionError: expected { status: 'unavailable', …(2) } to deeply equal { status: 'broken', …(2) }
+
+- Expected
++ Received
+
+  {
+    "diagnostic": {
+-     "code": "PROTOCOL_MESSAGE_INVALID",
+-     "message": "Harness received an invalid protocol message.",
+-     "retryable": false,
++     "code": "PROJECT_COORDINATOR_UNAVAILABLE",
++     "message": "The Project connection is unavailable.",
++     "retryable": true,
+    },
+    "request": {
+      "activationId": "00000000-0000-4000-8000-000000000011",
+      "after": null,
+      "projectId": "00000000-0000-4000-8000-000000000010",
+    },
+-   "status": "broken",
++   "status": "unavailable",
+  }
+
+ ❯ src/main/harness-supervisor.test.ts:1183:23
+    1181|     });
+    1182|
+    1183|     await expect(read).resolves.toEqual({
+       |                       ^
+    1184|       status: "broken",
+    1185|       request,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+
+ Test Files  3 failed | 8 passed (11)
+      Tests  8 failed | 307 passed (315)
+   Start at  22:44:32
+   Duration  2.49s (transform 4.51s, setup 0ms, import 14.76s, tests 1.40s, environment 1ms)
+
+--- exit: 1

@@ -1,0 +1,43 @@
+parent: 347c0fd
+tree: 62d033c5226acdbdb446599163489ed95c6b022b
+working-tree digest: 94033c99598fb3ab
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-supervisor.test.ts -t waits after exit until stdout
+started: 2026-10-22T18:18:52+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (37 tests | 2 failed | 35 skipped) 17ms
+     × waits after exit until stdout 'end' before the stop resolves 11ms
+     × waits after exit until stdout 'close' before the stop resolves 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > waits after exit until stdout 'end' before the stop resolves
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > waits after exit until stdout 'close' before the stop resolves
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/main/harness-supervisor.test.ts:1144:31
+    1142|       child.emit("exit", 0);
+    1143|       await vi.advanceTimersByTimeAsync(500);
+    1144|       expect(outcome.settled).toBe(false);
+       |                               ^
+    1145|       expect(supervisor.getStatus()).not.toEqual({ state: "stopped" });
+    1146|       supervisor.start();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 35 skipped (37)
+   Start at  18:18:53
+   Duration  638ms (transform 209ms, setup 0ms, import 490ms, tests 17ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-supervisor.ts bound blob f3022d9d030d01e0; restored blob aeea8dc71c011094 (backup aeea8dc71c011094) MATCH; tree before 37f295329be4dba4 after 37f295329be4dba4 MATCH

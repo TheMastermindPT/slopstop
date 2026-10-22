@@ -1,0 +1,35 @@
+head 54d2e121397ff4fc654c2738e98117215bfdeb23
+command: pnpm check
+$ pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:effect && pnpm test:unit && pnpm check:boundaries
+$ biome format .
+Checked 549 files in 263ms. No fixes applied.
+$ biome lint .
+Checked 551 files in 1181ms. No fixes applied.
+$ pnpm -r --if-present typecheck
+Scope: 4 of 5 workspace projects
+packages/kernel typecheck$ tsc --noEmit -p tsconfig.json
+packages/kernel typecheck: Done
+packages/protocol typecheck$ tsc --noEmit -p tsconfig.json
+packages/protocol typecheck: Done
+apps/desktop typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck$ tsc --noEmit -p tsconfig.json
+apps/desktop typecheck: Done
+apps/harness typecheck: Done
+$ node apps/harness/scripts/check-effect-diagnostics.mjs
+Effect diagnostics verified; 50 advisory warnings.
+$ vitest run
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+
+ Test Files  90 passed (90)
+      Tests  3140 passed (3140)
+   Start at  21:17:29
+   Duration  27.60s (transform 9.86s, setup 4.03s, import 110.71s, tests 89.73s, environment 21.78s)
+
+$ depcruise --config dependency-cruiser.config.cjs apps packages
+
+✔ no dependency violations found (523 modules, 2204 dependencies cruised)
+
+exit 0

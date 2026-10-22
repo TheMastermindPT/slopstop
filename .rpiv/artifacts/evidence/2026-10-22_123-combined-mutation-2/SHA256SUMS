@@ -1,0 +1,6 @@
+# sha256 of the blobs Git stores (LF)
+626adc3b57659e6f32b6cb8b9bbd8732a3b874f7b052760715ca19534c9b0697  README.md
+1d994a4ab8e7fa2416b68edef4e61b3769b9f13f4be8031b065e968a7d6aaf05  after-run.txt
+8acbb8da0dde44a16047f8afe2b5a4c93caea4a44c345c5d22eb632d147234ff  mutation.log
+8980d5db1e2861c4f89307237a512f938f1172b40284f713e1e8205cd9aede6f  run-meta.txt
+3b7e413b396b3fcbf39b3b0283f8cf62997331ba3fd1cf9b9a8c49ef6e79a8c3  tdd-run.sh

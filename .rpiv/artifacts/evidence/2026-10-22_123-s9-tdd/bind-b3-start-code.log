@@ -1,0 +1,79 @@
+parent: d7a0e22
+tree: 341cc9dcf5f98a5a8df8e6cfbae7d6a41f657e7a
+working-tree digest: 4ab7eb3c563c050b
+command: pnpm exec vitest run --project harness apps/harness/src/process-fatal-diagnostics.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-connection.test.ts
+started: 2026-10-22T21:18:48+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/process-connection.test.ts (5 tests | 2 failed) 17ms
+   × reports a startup failure with its code and summary: 'runtime start and dispose fail' 6ms
+   × reports a startup failure with its code and summary: 'runtime start fails alone' 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a startup failure with its code and summary: 'runtime start and dispose fail'
+AssertionError: expected [ [ { …(3) }, …(1) ] ] to deeply equal [ [ { …(3) }, …(1) ] ]
+
+- Expected
++ Received
+
+@@ -1,9 +1,9 @@
+  [
+    [
+      {
+-       "code": "HARNESS_RUNTIME_START_FAILED",
++       "code": "HARNESS_START_FAILED",
+        "failures": [
+          {
+            "kind": "error",
+          },
+          {
+
+ ❯ src/process-connection.test.ts:78:33
+     76|   expect(launch.mock.calls[0]?.[0]).toBe(prepared);
+     77|   expect(attach).not.toHaveBeenCalled();
+     78|   expect(sink.fatal.mock.calls).toEqual([
+       |                                 ^
+     79|     [
+     80|       { code: "HARNESS_RUNTIME_START_FAILED", failures, omittedFailure…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a startup failure with its code and summary: 'runtime start fails alone'
+AssertionError: expected [ [ { …(3) }, …(1) ] ] to deeply equal [ [ { …(3) }, …(1) ] ]
+
+- Expected
++ Received
+
+@@ -1,9 +1,9 @@
+  [
+    [
+      {
+-       "code": "HARNESS_RUNTIME_START_FAILED",
++       "code": "HARNESS_START_FAILED",
+        "failures": [
+          {
+            "tag": "ApplicationDatabaseCloseUnconfirmed",
+          },
+        ],
+
+ ❯ src/process-connection.test.ts:78:33
+     76|   expect(launch.mock.calls[0]?.[0]).toBe(prepared);
+     77|   expect(attach).not.toHaveBeenCalled();
+     78|   expect(sink.fatal.mock.calls).toEqual([
+       |                                 ^
+     79|     [
+     80|       { code: "HARNESS_RUNTIME_START_FAILED", failures, omittedFailure…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  2 failed | 23 passed (25)
+   Start at  21:18:49
+   Duration  2.58s (transform 3.88s, setup 0ms, import 6.43s, tests 215ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/process-connection.ts bound blob 852c3e8864ebb2de; restored blob e3f801d7d01eee60 (backup e3f801d7d01eee60) MATCH; tree before f6d08d3572281592 after f6d08d3572281592 MATCH

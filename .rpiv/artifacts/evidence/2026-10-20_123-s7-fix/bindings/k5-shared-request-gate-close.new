@@ -1,0 +1,4 @@
+    failBridge: (bridge, fault) => {
+      gateClosed = true;
+      failWhere((entry) => entry.bridge === bridge, fault);
+    },

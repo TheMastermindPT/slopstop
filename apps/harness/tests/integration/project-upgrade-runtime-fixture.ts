@@ -13,6 +13,7 @@ import {
   ProjectListResultSchema,
   ProjectUpgradeRequestSchema,
 } from "@slopstop/protocol";
+import { Effect } from "effect";
 import { createCanonicalProjectApplication } from "../../src/canonical-project-application.js";
 import { startHarnessRuntime } from "../../src/harness-runtime.js";
 import { createNodeActiveProjectCoordinator } from "../../src/node-active-project-coordinator.js";
@@ -100,12 +101,12 @@ function projectCommands(send: ReturnType<typeof causationTransport>["send"]) {
 }
 
 /** Seam (a): the real process runtime over a temporary application root. */
-export function startRealUpgradeRuntime(
+export async function startRealUpgradeRuntime(
   root: string,
   logger: UpgradeEventLogger = silentHarnessLogger,
 ) {
   const transport = causationTransport();
-  const stop = startHarnessProcessRuntime({
+  const stop = await startHarnessProcessRuntime({
     logger,
     bootstrap: {
       kind: "harness.connect",
@@ -195,7 +196,7 @@ export function startTestUpgradeRuntime(
           ProjectListResultSchema,
           await listRegisteredProjects(listingOptions, new AbortController().signal),
         ),
-      stop: async () => undefined,
+      stop: Effect.void,
     },
     harnessVersion: "0.0.0",
     createId: randomUUID,

@@ -1,0 +1,9 @@
+parent: d7a0e22
+tree: f6d08d35722815925a05c736a32e9d307dcd208e
+working-tree digest: 8e51d16cd8e8f8ee
+command: pnpm lint
+started: 2026-10-22T21:19:09+01:00
+---
+$ biome lint .
+Checked 572 files in 2s. No fixes applied.
+--- exit: 0

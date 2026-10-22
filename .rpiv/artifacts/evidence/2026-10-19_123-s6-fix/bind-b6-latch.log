@@ -1,0 +1,83 @@
+parent: feeab30
+tree: 61a306b2ab6a348c58c709b8da95d33cd8ed4c69
+working-tree digest: ce0b329864cf7e8d
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-runtime.test.ts -t releases every owner on dispose
+started: 2026-10-19T14:47:25+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-runtime.test.ts (10 tests | 3 failed | 1 skipped) 23ms
+     × releases every owner on dispose: 'program then dispose' 6ms
+     × releases every owner on dispose: 'supervisor stop rejects, program first' 2ms
+     × releases every owner on dispose: 'stop twice' 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'program then dispose'
+AssertionError: expected [ Array(8) ] to deeply equal [ Array(4) ]
+
+- Expected
++ Received
+
+  [
+    "project-storage",
+    "workspace",
+    "project-entry",
+    "supervisor",
++   "workspace",
++   "project-storage",
++   "project-entry",
++   "supervisor",
+  ]
+
+ ❯ run src/main/desktop-runtime.test.ts:160:23
+    158|         await services.harness.stop();
+    159|         await expect(runtime.dispose()).resolves.toBeUndefined();
+    160|         expect(stops).toEqual(["project-storage", "workspace", "projec…
+       |                       ^
+    161|       },
+    162|     },
+ ❯ src/main/desktop-runtime.test.ts:246:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'supervisor stop rejects, program first'
+AssertionError: promise rejected "Error: private supervisor stop failure" instead of resolving
+ ❯ run src/main/desktop-runtime.test.ts:176:40
+    174|         const { runtime, services, ownerStops, failure } = builtWithFa…
+    175|         await expect(services.harness.stop()).rejects.toBe(failure);
+    176|         await expect(runtime.dispose()).resolves.toBeUndefined();
+       |                                        ^
+    177|         expect(ownerStops.supervisor).toHaveBeenCalledOnce();
+    178|       },
+ ❯ src/main/desktop-runtime.test.ts:246:5
+
+Caused by: Error: private supervisor stop failure
+ ❯ builtWithFailingSupervisor src/main/desktop-runtime.test.ts:132:19
+ ❯ run src/main/desktop-runtime.test.ts:174:60
+ ❯ src/main/desktop-runtime.test.ts:246:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'stop twice'
+AssertionError: expected "vi.fn()" to be called once, but got 2 times
+ ❯ run src/main/desktop-runtime.test.ts:240:39
+    238|         await expect(services.harness.stop()).rejects.toBe(failure);
+    239|         await expect(services.harness.stop()).rejects.toBe(failure);
+    240|         expect(ownerStops.supervisor).toHaveBeenCalledOnce();
+       |                                       ^
+    241|       },
+    242|     },
+ ❯ src/main/desktop-runtime.test.ts:246:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 6 passed | 1 skipped (10)
+   Start at  14:47:26
+   Duration  448ms (transform 35ms, setup 0ms, import 292ms, tests 23ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/desktop-runtime.ts bound blob d7a3206ffab62317; restored blob 330d0d80e8f68cb0 (backup 330d0d80e8f68cb0) MATCH; tree before 9e4a48147742fa0f after 9e4a48147742fa0f MATCH

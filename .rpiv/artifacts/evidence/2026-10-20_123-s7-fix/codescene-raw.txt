@@ -1,0 +1,81 @@
+# CodeScene MCP code_health_score, raw answers, on the working tree 43713afa (fix candidate), every source and test file changed in 829c3cf..candidate.
+# Every answer began with the same banner, kept once here verbatim:
+#   ⚠️  VERSION UPDATE AVAILABLE: MCP-1.5.10 → MCP-1.5.11 (followed by update instructions)
+# harness-pending-request.ts is deleted (not scored).
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\src\main$f
+Code Health score: 10
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\vitest.desktop-s7-mutation.config.ts
+Could not determine Code Health score.
+
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\harness\scripts\check-effect-diagnostics.test.mjs
+Code Health score: 10
+
+# During the fix round, code_health_review on harness-bridges.test.ts before its refactor answered:
+{"score":9.38,"review":[{"category":"Code Duplication","functions":[{"title":"run","details":null,"start-line":281,"end-line":308,"url":""},{"title":"run","details":null,"start-line":312,"end-line":337,"url":""}],"function-groups":[[{"title":"run","details":null,"start-line":312,"end-line":337,"url":""},{"title":"run","details":null,"start-line":281,"end-line":308,"url":""}]],"description":"Duplicated code often leads to code that's harder to change since the same logical change has to be done in multiple functions. More duplication gives lower code health.","indication":2}]}
+# after expectCrossBridgeMismatch was extracted:
+{"score":10.0,"review":[]}

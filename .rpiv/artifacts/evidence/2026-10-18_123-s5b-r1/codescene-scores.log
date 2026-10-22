@@ -1,0 +1,28 @@
+CodeScene MCP code_health_score, one call per file, on the working tree before the round-1 fix commit (identical to it for these files). Each line: path, then the tool's answer verbatim.
+apps/desktop/src/main/canonical-writer-package-smoke.ts -> Code Health score: 10
+apps/desktop/src/main/desktop-shutdown.ts -> Code Health score: 10
+apps/desktop/src/main/effect-rejection.ts -> Code Health score: 10
+apps/desktop/src/main/harness-pending-request.ts -> Code Health score: 10
+apps/desktop/src/main/harness-supervisor.test.ts -> Code Health score: 10
+apps/desktop/src/main/harness-supervisor.ts -> Code Health score: 10
+apps/desktop/src/main/main.ts -> Code Health score: 10
+apps/desktop/src/renderer/conversation/conversation-test-harness.tsx -> Code Health score: 10
+apps/harness/scripts/check-effect-diagnostics.mjs -> Code Health score: 10
+apps/harness/scripts/check-effect-diagnostics.test.mjs -> Code Health score: 10
+apps/harness/src/canonical-project-writer.ts -> Code Health score: 10
+apps/harness/src/effect-rejection.ts -> Code Health score: 10
+apps/harness/src/process-bootstrap.ts -> Code Health score: 10
+apps/harness/src/registration/project-registration-preparation.ts -> Code Health score: 8.03
+apps/harness/src/registration/registration-listing.ts -> Code Health score: 10
+apps/harness/src/registration/registration-registry.ts -> Code Health score: 10
+apps/harness/src/registration/registry-database.ts -> Code Health score: 10
+apps/harness/src/registration/repository-identity-query-owner.ts -> Code Health score: 10
+apps/harness/src/registration/repository-physical-observation.ts -> Code Health score: 10
+apps/harness/src/registration/windows-version-child.ts -> Code Health score: 10
+apps/harness/src/storage/local-libsql-worker-client.ts -> Code Health score: 10
+apps/harness/src/storage/project-storage-node-registry.test.ts -> Code Health score: 10
+apps/harness/src/storage/project-storage-node-registry.ts -> Code Health score: 10
+apps/harness/src/storage/project-storage-store.ts -> Code Health score: 10
+apps/harness/scripts/effect-diagnostics-canary/src/canary.ts -> Code Health score: 10
+apps/harness/scripts/effect-diagnostics-canary/src/planted.test.ts -> Could not determine Code Health score.
+apps/harness/scripts/effect-diagnostics-canary/tests/planted.ts -> Could not determine Code Health score.

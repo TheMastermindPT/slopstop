@@ -1,0 +1,11 @@
+parent: 829c3cf
+tree: 8bb60b1eb17590628af34302b43977d0b1c8ca22
+working-tree digest: 5a691e146c2573ec
+command: pnpm check:dead-code
+started: 2026-10-19T22:51:11+01:00
+---
+$ knip
+Unused exported types (1)
+HarnessBridgeTag  type  apps/desktop/src/main/harness-request-core.ts:32:13
+[ELIFECYCLE] Command failed with exit code 1.
+--- exit: 1

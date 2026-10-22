@@ -1,0 +1,29 @@
+[
+  {
+    "index": 1,
+    "spawned": "2026-10-18T15:10:07.769Z",
+    "start": "2026-10-18T15:10:10.789Z",
+    "end": "2026-10-18T15:13:08.000Z",
+    "exited": "2026-10-18T15:13:07.678Z",
+    "exitCode": 0,
+    "preflight": "preflight files 1400 under-node_modules 0"
+  },
+  {
+    "index": 2,
+    "spawned": "2026-10-18T15:13:07.679Z",
+    "start": "2026-10-18T15:13:10.736Z",
+    "end": "2026-10-18T15:16:07.000Z",
+    "exited": "2026-10-18T15:16:07.488Z",
+    "exitCode": 0,
+    "preflight": "preflight files 1400 under-node_modules 0"
+  },
+  {
+    "index": 3,
+    "spawned": "2026-10-18T15:16:07.488Z",
+    "start": "2026-10-18T15:16:10.504Z",
+    "end": "2026-10-18T15:19:07.000Z",
+    "exited": "2026-10-18T15:19:07.146Z",
+    "exitCode": 0,
+    "preflight": "preflight files 1400 under-node_modules 0"
+  }
+]

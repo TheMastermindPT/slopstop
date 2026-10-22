@@ -26,7 +26,7 @@ import {
   readMessageId,
   WorkspaceNotificationSchema,
 } from "@slopstop/protocol";
-import { Deferred, Effect } from "effect";
+import { Cause, Deferred, Effect, Exit, Fiber } from "effect";
 import type { CanonicalProjectApplication } from "./canonical-project-application.js";
 import type { ProjectStorageApplication } from "./project-storage-application.js";
 import type { ProjectRegistrationFlow } from "./registration/project-registration-flow.js";
@@ -39,11 +39,22 @@ export interface HarnessTransport {
 
 export type StopHarnessRuntime = () => Promise<void>;
 
+/** The part of a process `ManagedRuntime` that runs the harness's edges. */
+type HarnessEdgeRunner = Readonly<{
+  runFork<A, E>(effect: Effect.Effect<A, E>): Fiber.Fiber<A, E>;
+  runPromiseExit<A, E>(effect: Effect.Effect<A, E>): Promise<Exit.Exit<A, E>>;
+}>;
+
 type HarnessRuntimeOptions = Readonly<{
-  projectListing?: Readonly<{ list(): Promise<ProjectListResult>; stop(): Promise<void> }>;
+  projectListing?: Readonly<{
+    list(): Promise<ProjectListResult>;
+    stop: Effect.Effect<void, unknown>;
+  }>;
+  /** Runs the shutdown program and the registration edge; the global runtime by default. */
+  runtime?: HarnessEdgeRunner;
   projectRegistration?: ProjectRegistrationFlow;
   // The harness's shared application database authority, stopped last when Storage stopped.
-  applicationDatabase?: Readonly<{ stop(): Promise<void> }>;
+  applicationDatabase?: Readonly<{ stop(): Promise<void>; withhold(): void }>;
   transport: HarnessTransport;
   canonicalProjectApplication: CanonicalProjectApplication;
   projectStorageApplication: ProjectStorageApplication;
@@ -72,7 +83,8 @@ function runtimeShutdownFailure(failures: readonly unknown[]): unknown {
 type StopFailures = readonly unknown[];
 
 // Invokes a cleanup in the caller's turn (same-turn admission is part of the shutdown
-// contract) and exposes its settlement as an Effect that never fails.
+// contract) and exposes its settlement as an Effect that never fails. The settlement is
+// attached in that turn too, so a failed cleanup whose program never runs is still handled.
 function startStop(stop: () => Promise<void> | undefined): Effect.Effect<StopFailures> {
   let started: Promise<void> | undefined;
   try {
@@ -80,12 +92,29 @@ function startStop(stop: () => Promise<void> | undefined): Effect.Effect<StopFai
   } catch (error) {
     return Effect.succeed([error]);
   }
-  return Effect.promise(() =>
-    Promise.resolve(started).then(
-      () => [],
-      (error: unknown) => [error],
-    ),
+  const settled = Promise.resolve(started).then(
+    (): StopFailures => [],
+    (error: unknown) => [error],
   );
+  return Effect.promise(() => settled);
+}
+
+/**
+ * Forks an Effect cleanup on `runtime` in the caller's turn and exposes its settlement as an
+ * Effect: a failure or defect becomes a reported failure, and an interruption interrupts the
+ * caller, so an interrupted cleanup is never reported as clean.
+ */
+function startEffectStop(
+  runtime: HarnessEdgeRunner,
+  stop: Effect.Effect<void, unknown> | undefined,
+): Effect.Effect<StopFailures> {
+  if (stop === undefined) return Effect.succeed([]);
+  const fiber = runtime.runFork(stop);
+  return Effect.flatMap(Fiber.await(fiber), (exit) => {
+    if (Exit.isSuccess(exit)) return Effect.succeed([]);
+    if (Cause.hasInterruptsOnly(exit.cause)) return Effect.interrupt;
+    return Effect.succeed([Cause.squash(exit.cause)]);
+  });
 }
 
 // While a Project is held, Storage stops only after canonical release succeeds (a failed
@@ -142,14 +171,17 @@ function stopCanonicalThenStorage(
 
 function shutdownAfterIntake(
   options: HarnessRuntimeOptions,
+  runtime: HarnessEdgeRunner,
   intakeFailures: StopFailures,
 ): Effect.Effect<void, unknown> {
   const storage = stopCanonicalThenStorage(options);
-  const listing = startStop(() => options.projectListing?.stop());
+  const listing = startEffectStop(runtime, options.projectListing?.stop);
   return Effect.gen(function* () {
     const [storageOutcome, listingFailures] = yield* Effect.all([storage, listing], {
       concurrency: "unbounded",
     });
+    // A withheld Storage keeps the shared database alive; it is told so and never stopped.
+    if (storageOutcome.withheld) options.applicationDatabase?.withhold();
     const databaseFailures = storageOutcome.withheld
       ? []
       : yield* Effect.suspend(() => startStop(() => options.applicationDatabase?.stop()));
@@ -206,6 +238,12 @@ function isProjectStorageMessage(message: DesktopMessage): message is ProjectSto
 
 export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarnessRuntime {
   let sequence = 0;
+  const runtime: HarnessEdgeRunner = options.runtime ?? {
+    runFork: Effect.runFork,
+    runPromiseExit: Effect.runPromiseExit,
+  };
+  // Set once stop begins; an interruption after that is the dispose ending a request.
+  let stopPromise: Promise<void> | undefined;
 
   const nextMetadata = <CausationId extends MessageId | null>(causationId: CausationId) => {
     sequence += 1;
@@ -294,13 +332,22 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
       options.transport.send(createProjectListResultEvent(nextMetadata(message.messageId), result));
       return;
     }
-    const result =
-      options.projectRegistration === undefined
-        ? ({ status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" } as const)
-        : await Effect.runPromise(options.projectRegistration.handle(message.payload));
-    options.transport.send(
-      createProjectRegistrationResultEvent(nextMetadata(message.messageId), result),
-    );
+    const sendResult = (result: Parameters<typeof createProjectRegistrationResultEvent>[1]) =>
+      options.transport.send(
+        createProjectRegistrationResultEvent(nextMetadata(message.messageId), result),
+      );
+    if (options.projectRegistration === undefined) {
+      sendResult({ status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" });
+      return;
+    }
+    const exit = await runtime.runPromiseExit(options.projectRegistration.handle(message.payload));
+    if (Exit.isSuccess(exit)) {
+      sendResult(exit.value);
+      return;
+    }
+    // Once stop began, an interruption is the dispose ending this request: it gets no reply.
+    if (stopPromise !== undefined && Cause.hasInterruptsOnly(exit.cause)) return;
+    sendInternalFailure(message.messageId);
   };
 
   const handleConversationMessage = async (message: ConversationMessage): Promise<void> => {
@@ -375,7 +422,6 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
   // One completion shared by every stop request, published before any cleanup callback
   // runs so a callback that re-enters stop receives the same promise.
   const completion = Deferred.makeUnsafe<void, unknown>();
-  let stopPromise: Promise<void> | undefined;
   return () => {
     if (stopPromise !== undefined) {
       return stopPromise;
@@ -392,11 +438,10 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     } catch (error) {
       intakeFailures.push(error);
     }
-    Effect.runFork(
-      Effect.exit(shutdownAfterIntake(options, intakeFailures)).pipe(
-        Effect.flatMap((exit) => Deferred.done(completion, exit)),
-      ),
-    );
+    // The program's exit is observed on the global runtime, so the stop settles even when a
+    // dispose interrupts the program, or when a disposed runtime never runs it.
+    const program = runtime.runFork(shutdownAfterIntake(options, runtime, intakeFailures));
+    Effect.runFork(Effect.flatMap(Fiber.await(program), (exit) => Deferred.done(completion, exit)));
     return stopPromise;
   };
 }

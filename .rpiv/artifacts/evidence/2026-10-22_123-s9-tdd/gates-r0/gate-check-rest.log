@@ -1,0 +1,57 @@
+parent: d7a0e22
+tree: 7f65b88165dd84271e3dd2f82aa9dd6d740fa0ae
+working-tree digest: c74f25cb3da60268
+command: sh -c pnpm lint && pnpm typecheck && pnpm check:effect && pnpm test:unit && pnpm check:boundaries
+started: 2026-10-22T21:13:56+01:00
+---
+$ biome lint .
+Checked 572 files in 2s. No fixes applied.
+$ pnpm -r --if-present typecheck
+Scope: 4 of 5 workspace projects
+packages/kernel typecheck$ tsc --noEmit -p tsconfig.json
+packages/kernel typecheck: Done
+packages/protocol typecheck$ tsc --noEmit -p tsconfig.json
+packages/protocol typecheck: Done
+apps/desktop typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck: Done
+apps/desktop typecheck: Done
+$ node apps/harness/scripts/check-effect-diagnostics.mjs
+Effect diagnostics verified; 50 advisory warnings.
+$ vitest run
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+ ❯ |desktop-main| src/main/package-smoke-launcher.test.ts (101 tests | 1 failed) 13883ms
+   × rejects missing ASAR entry harness.cjs 1538ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/package-smoke-launcher.test.ts > rejects missing ASAR entry harness.cjs
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/main/package-smoke-launcher.test.ts:452:81
+    450|     completed = true;
+    451|   });
+    452|   await vi.waitFor(() => expect(completed || ports.spawn.mock.calls.le…
+       |                                                                                 ^
+    453|   await vi.runAllTimersAsync();
+    454|   await pending;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 94 passed (95)
+      Tests  1 failed | 3302 passed (3303)
+   Start at  21:14:23
+   Duration  153.19s (transform 19.66s, setup 58.03s, import 956.06s, tests 100.97s, environment 289.43s)
+
+[ELIFECYCLE] Command failed with exit code 1.
+--- exit: 1

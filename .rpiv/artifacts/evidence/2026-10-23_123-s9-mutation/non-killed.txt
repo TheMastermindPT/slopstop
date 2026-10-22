@@ -1,0 +1,8 @@
+{"NoCoverage":1,"Ignored":5,"Killed":123,"Survived":1,"Timeout":7}
+process-fatal-diagnostics.ts:78:63 NoCoverage ArrayDeclaration => "[\"Stryker was here\"]"
+process-fatal-diagnostics.ts:60:24 Ignored Regex => "/[A-Za-z][A-Za-z0-9]{0,63}$/"
+process-fatal-diagnostics.ts:60:24 Ignored Regex => "/^[A-Za-z][A-Za-z0-9]{0,63}/"
+process-fatal-diagnostics.ts:60:24 Ignored Regex => "/^[^A-Za-z][A-Za-z0-9]{0,63}$/"
+process-fatal-diagnostics.ts:60:24 Ignored Regex => "/^[A-Za-z][A-Za-z0-9]$/"
+process-fatal-diagnostics.ts:60:24 Ignored Regex => "/^[A-Za-z][^A-Za-z0-9]{0,63}$/"
+process-fatal-diagnostics.ts:69:10 Survived ConditionalExpression => "true"

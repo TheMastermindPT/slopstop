@@ -5,8 +5,6 @@ import {
   createWorkspaceIntentResultEvent,
   createWorkspaceProjectionInvalidatedEvent,
   createWorkspaceQueryResultEvent,
-  type DesktopMessage,
-  DesktopMessageSchema,
   decodeStrict,
   MessageIdSchema,
   type WorkspaceIntent,
@@ -20,15 +18,18 @@ import {
   WorkspaceQueryResultSchema,
   WorkspaceQuerySchema,
 } from "@slopstop/protocol";
+import { Schema } from "effect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
-import type {
-  HarnessSessionClient,
-  HarnessSessionEvent,
-  HarnessSessionSendResult,
-} from "./harness-session.js";
+import type { HarnessSessionEvent } from "./harness-session.js";
+import { RecordingHarnessSession, undecodableReply } from "./harness-session-test-peers.js";
 import { broadcastWorkspaceNotification, registerWorkspaceIpc } from "./main.js";
-import { createWorkspaceBridge, type WorkspaceBridgeClient } from "./workspace-bridge.js";
+import {
+  createWorkspaceBridge,
+  type WorkspaceBridgeClient,
+  workspaceIntentClosing,
+  workspaceQueryClosing,
+} from "./workspace-bridge.js";
 
 const mainMocks = vi.hoisted(() => ({
   getAllWindows: vi.fn(),
@@ -55,37 +56,8 @@ vi.mock("./harness-supervisor.js", () => ({
 vi.mock("./logger.js", () => ({ createMainLogger: vi.fn() }));
 vi.mock("./security.js", () => ({ configureSessionSecurity: vi.fn(), lockNavigation: vi.fn() }));
 
-class FakeSession implements HarnessSessionClient {
-  readonly sent: DesktopMessage[] = [];
-  readonly #listeners = new Set<(event: HarnessSessionEvent) => void>();
-  sendResult: HarnessSessionSendResult = { ok: true };
-  unsubscribeCalls = 0;
-
-  get listenerCount(): number {
-    return this.#listeners.size;
-  }
-
-  emit(event: HarnessSessionEvent): void {
-    for (const listener of this.#listeners) {
-      listener(event);
-    }
-  }
-
-  send(message: unknown): HarnessSessionSendResult {
-    if (this.sendResult.ok) {
-      this.sent.push(decodeStrict(DesktopMessageSchema, message));
-    }
-    return this.sendResult;
-  }
-
-  subscribe(listener: (event: HarnessSessionEvent) => void): () => void {
-    this.#listeners.add(listener);
-    return () => {
-      this.unsubscribeCalls += 1;
-      this.#listeners.delete(listener);
-    };
-  }
-}
+/** The workspace tests' session: the shared recording session. */
+class FakeSession extends RecordingHarnessSession {}
 
 function id(value: number): string {
   return decodeStrict(
@@ -346,6 +318,8 @@ describe("WorkspaceBridge", () => {
         ),
       });
       await Promise.resolve();
+      // One more step: the Effect facade settles a microtask later (R7, §137).
+      await Promise.resolve();
       expect(queryResult).toEqual({
         status: "broken",
         query: {
@@ -583,12 +557,28 @@ describe("WorkspaceBridge", () => {
     });
   });
 
+  // Each row: the event, the payload text a system failure carries, and the expected answer.
+  // The payload and the expected text differ, so forwarding the raw text is caught (S7-R9).
+  const transportFailed = (message: string) => ({
+    status: "broken",
+    diagnostic: { code: "WORKSPACE_TRANSPORT_FAILED", message },
+  });
   it.each([
-    ["disconnect", "Harness session disconnected."],
-    ["protocol", "Harness session received an invalid protocol message."],
-    ["failure", "Harness failed pending work."],
-    ["stop", "Workspace bridge is stopped."],
-  ] as const)("fails all pending work on %s", async (failure, message) => {
+    ["disconnect", "", transportFailed("Harness session disconnected.")],
+    ["protocol", "", transportFailed("Harness session received an invalid protocol message.")],
+    ["failure", "Harness failed pending work.", transportFailed("Harness reported a failure.")],
+    [
+      "stop",
+      "",
+      {
+        status: "unavailable",
+        diagnostic: {
+          code: "WORKSPACE_CAPABILITY_UNAVAILABLE",
+          message: "The workspace is unavailable while SlopStop closes.",
+        },
+      },
+    ],
+  ] as const)("fails all pending work on %s", async (failure, message, expected) => {
     const session = new FakeSession();
     const bridge = bridgeWith(session);
     const pending = [
@@ -627,11 +617,16 @@ describe("WorkspaceBridge", () => {
     const results = await Promise.all(pending);
     expect(results).toHaveLength(3);
     for (const result of results) {
-      expect(result).toMatchObject({
-        status: "broken",
-        diagnostic: { code: "WORKSPACE_TRANSPORT_FAILED", message },
-      });
+      expect(result).toMatchObject(expected);
     }
+    if (failure === "stop") {
+      expect(results).toEqual([
+        workspaceQueryClosing(memoryQuery(10)),
+        workspaceQueryClosing(memoryQuery(11)),
+        workspaceIntentClosing("memory"),
+      ]);
+    }
+    if (failure === "failure") expect(JSON.stringify(results)).not.toContain(message);
     bridge.stop();
     emitQueryResult(session, id(1), unavailableQueryResult(memoryQuery(10)));
     await Promise.resolve();
@@ -925,7 +920,7 @@ describe("WorkspaceBridge", () => {
       submit: vi.fn().mockResolvedValue({ status: "forwarded", capability: "memory" }),
       subscribe: vi.fn(),
     } satisfies WorkspaceBridgeClient;
-    registerWorkspaceIpc(bridge);
+    registerWorkspaceIpc(bridge, { accepting: () => true });
     const handlers = new Map(
       mainMocks.handle.mock.calls.map(([channel, handler]) => [channel as string, handler]),
     );
@@ -969,4 +964,147 @@ describe("WorkspaceBridge", () => {
     ).toThrow();
     expect(liveSend).toHaveBeenCalledTimes(1);
   });
+});
+
+const closingMessage = "The workspace is unavailable while SlopStop closes.";
+
+it.each([
+  {
+    channel: "queryWorkspace",
+    value: memoryQuery(),
+    envelope: {
+      status: "unavailable",
+      query: memoryQuery(),
+      diagnostic: { code: "WORKSPACE_CAPABILITY_UNAVAILABLE", message: closingMessage },
+    },
+  },
+  {
+    channel: "submitWorkspaceIntent",
+    value: memoryIntent(),
+    envelope: {
+      status: "unavailable",
+      capability: "memory",
+      diagnostic: { code: "WORKSPACE_CAPABILITY_UNAVAILABLE", message: closingMessage },
+    },
+  },
+] as const)("answers workspace unavailable after the IPC gate closes: $channel", async (row) => {
+  mainMocks.handle.mockReset();
+  const bridge = {
+    query: vi.fn().mockResolvedValue(readyResult(memoryQuery(), 1)),
+    stop: vi.fn(),
+    submit: vi.fn().mockResolvedValue({ status: "forwarded", capability: "memory" }),
+    subscribe: vi.fn(),
+  } satisfies WorkspaceBridgeClient;
+  registerWorkspaceIpc(bridge, { accepting: () => false });
+  const handler = new Map(
+    mainMocks.handle.mock.calls.map(([name, registered]) => [name as string, registered]),
+  ).get(desktopIpcChannels[row.channel]);
+
+  await expect(handler?.({}, row.value)).resolves.toEqual(row.envelope);
+  expect(() => handler?.({}, { ...row.value, extra: true })).toThrow();
+  expect(bridge.query).not.toHaveBeenCalled();
+  expect(bridge.submit).not.toHaveBeenCalled();
+});
+
+it("answers its own envelope when send throws", async () => {
+  const session = new FakeSession();
+  session.sendError = new Error("private send failure");
+  const bridge = bridgeWith(session);
+  await expect(bridge.query(memoryQuery())).resolves.toEqual({
+    status: "broken",
+    query: memoryQuery(),
+    diagnostic: { code: "WORKSPACE_TRANSPORT_FAILED", message: "Harness session send failed." },
+  });
+});
+
+it("settles an undecodable reply as protocol", async () => {
+  const session = new FakeSession();
+  const bridge = bridgeWith(session);
+  const target = bridge.query(memoryQuery(10));
+  const other = bridge.query(memoryQuery(11));
+  expect(() =>
+    session.emit({ type: "message", message: undecodableReply("workspace.query.result", id(1)) }),
+  ).not.toThrow();
+  await expect(target).resolves.toEqual({
+    status: "broken",
+    query: memoryQuery(10),
+    diagnostic: {
+      code: "WORKSPACE_TRANSPORT_FAILED",
+      message: "Harness returned an invalid workspace response.",
+    },
+  });
+  emitQueryResult(session, id(2), unavailableQueryResult(memoryQuery(11)));
+  await expect(other).resolves.toEqual(unavailableQueryResult(memoryQuery(11)));
+});
+
+it("settles pending work even when session unsubscribe throws", async () => {
+  const session = new FakeSession();
+  const failure = new Error("private unsubscribe failure");
+  session.unsubscribeError = failure;
+  const bridge = bridgeWith(session);
+  let settled: unknown;
+  void bridge.query(memoryQuery()).then((result) => {
+    settled = result;
+  });
+  expect(() => bridge.stop()).toThrow(failure);
+  for (let index = 0; index < 20; index++) await Promise.resolve();
+  expect(settled).toEqual(workspaceQueryClosing(memoryQuery()));
+  expect(() => bridge.stop()).not.toThrow();
+  expect(session.unsubscribeCalls).toBe(1);
+});
+
+it.each([
+  {
+    operation: "query",
+    start: (bridge: WorkspaceBridgeClient) => bridge.query(memoryQuery()),
+    closing: workspaceQueryClosing(memoryQuery()),
+  },
+  {
+    operation: "intent",
+    start: (bridge: WorkspaceBridgeClient) => bridge.submit(memoryIntent()),
+    closing: workspaceIntentClosing("memory"),
+  },
+] as const)("answers the closing envelope for work in flight at stop: $operation", async (row) => {
+  const bridge = bridgeWith(new FakeSession());
+  const pending = row.start(bridge);
+  bridge.stop();
+  await expect(pending).resolves.toEqual(row.closing);
+});
+
+/**
+ * Delivery to every listener before the throw is this fake's behaviour (`RecordingHarnessSession`);
+ * the real session's is pinned in `harness-session.test.ts`.
+ */
+it("throws an undecodable notification after every listener received it", async () => {
+  const session = new FakeSession();
+  const bridge = bridgeWith(session);
+  const pending = bridge.query(memoryQuery());
+  const received: HarnessSessionEvent[] = [];
+  session.subscribe((event) => received.push(event));
+  const valid = createWorkspaceProjectionInvalidatedEvent(
+    { messageId: id(903), sentAt: "2026-08-14T12:00:01.000Z", sequence: 1, causationId: null },
+    decodeStrict(WorkspaceNotificationSchema, {
+      capability: "memory",
+      scope: { kind: "project", projectId: id(10) },
+      revision: 1,
+    }),
+  );
+  const undecodable = Object.assign(valid, { payload: { ...valid.payload, revision: -1 } });
+  // `decodeStrict` throws Effect's `SchemaError` (effect 4.0.0 `Schema.ts`: `decodeUnknownSync`).
+  expect(() => session.emit({ type: "message", message: undecodable })).toThrow(Schema.SchemaError);
+  expect(received).toHaveLength(1);
+  emitQueryResult(session, id(1), unavailableQueryResult(memoryQuery()));
+  await expect(pending).resolves.toEqual(unavailableQueryResult(memoryQuery()));
+});
+
+it("answers the stopped text for a request made after stop", async () => {
+  const session = new FakeSession();
+  const bridge = bridgeWith(session);
+  bridge.stop();
+  await expect(bridge.query(memoryQuery())).resolves.toEqual({
+    status: "broken",
+    query: memoryQuery(),
+    diagnostic: { code: "WORKSPACE_TRANSPORT_FAILED", message: "Workspace bridge is stopped." },
+  });
+  expect(session.sent).toEqual([]);
 });

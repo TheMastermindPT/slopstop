@@ -1,0 +1,7 @@
+preflight: clean
+diagnostic: the candidate's parent is not the base; reprove-red re-proves against the parent
+reprove: --commit cef7554cdcf8266451870708f3f3cffb3622b134 --test apps/harness/src/harness-runtime-shutdown.test.ts::settles the stop when the process runtime is disposed during the program
+reprove: --commit cef7554cdcf8266451870708f3f3cffb3622b134 --test apps/harness/src/process-bootstrap.test.ts::aggregates the program and the dispose: $name
+reprove: --commit cef7554cdcf8266451870708f3f3cffb3622b134 --test apps/harness/src/process-bootstrap.test.ts::reports a startup failure after a bounded dispose: $name
+reprove: --commit cef7554cdcf8266451870708f3f3cffb3622b134 --test apps/harness/src/harness-runtime.test.ts::interrupts an in-flight registration request at dispose without a reply
+reprove: --commit cef7554cdcf8266451870708f3f3cffb3622b134 --test apps/harness/src/registration/registration-listing.test.ts::bounds the shutdown cleanup by its budget: $name

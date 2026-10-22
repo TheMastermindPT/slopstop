@@ -1,0 +1,9 @@
+cpu before e2e: 16.4/7.7/3.8, alone
+e2e end 2026-10-20T09:07:07+01:00
+e2e result: 25 passed, 2 failed (conversation-accessibility :215 hover colour; :518 a-save-faults screenshot timeout 30000ms) -> STOP, no rerun, package:smoke not run
+cpu before A/B base: 12.5/7.6/6.0, alone
+cpu before A/B candidate: 10.5/19.8/16.2, alone
+A/B: base 829c3cf 8/8 passed (1.5m, ab-base-829c3cf.log); candidate a838bb4 8/8 passed (1.5m, ab-candidate-a838bb4.log)
+cpu before package:smoke: 22.9/22.5/20.6, alone
+package:smoke end 2026-10-20T09:24:22+01:00
+package:smoke result: exit 0, validated renderer isolation, Project Storage, and Writer proof

@@ -1,0 +1,51 @@
+parent: 2944137
+tree: b515078664793fe48409fe3bfc39ce2f9bc0bfdc
+working-tree digest: e3b0c44298fc1c14
+command: pnpm package:smoke
+started: 2026-10-20T09:23:31+01:00
+---
+$ pnpm --filter @slopstop/desktop package:smoke
+$ electron-forge package && node tests/e2e/package-smoke.mjs
+[33m❯[39m Checking your system
+[33m❯[39m Checking package manager version
+[32m✔[39m Found pnpm@11.5.1
+[32m✔[39m Checking your system
+[?25h[33m❯[39m Preparing to package application
+[32m✔[39m Preparing to package application
+[33m❯[39m Running packaging hooks
+[33m❯[39m Running generateAssets hook
+[32m✔[39m Running generateAssets hook
+[33m❯[39m Running prePackage hook
+[33m❯[39m [plugin-vite] Building production Vite bundles
+[33m❯[39m Building main and preload targets...
+[33m❯[39m Building renderer targets...
+[33m❯[39m Building src/main/main.ts target
+[33m❯[39m Building src/preload/preload.ts target
+
+[43m[30m WARN [39m[49m [36minlineDynamicImports[39m option is deprecated, please use [36mcodeSplitting: false[39m instead.
+
+[32m✔[39m Building src/preload/preload.ts target
+[33m❯[39m Building harness writer-proof-fixture target
+[32m✔[39m Building src/main/main.ts target
+[32m✔[39m Built target main_window
+[32m✔[39m Building renderer targets...
+[32m✔[39m Building harness writer-proof-fixture target
+[32m✔[39m Building main and preload targets...
+[32m✔[39m [plugin-vite] Building production Vite bundles
+[32m✔[39m Running prePackage hook
+[32m✔[39m Running packaging hooks
+[33m❯[39m Packaging application
+› Determining targets...
+[33m❯[39m Packaging for x64 on win32
+[33m❯[39m Copying files
+[33m❯[39m Preparing native dependencies
+[33m❯[39m Finalizing package
+[32m✔[39m Copying files
+[32m✔[39m Preparing native dependencies
+[32m✔[39m Finalizing package
+[32m✔[39m Packaging for x64 on win32
+[32m✔[39m Packaging application
+[33m❯[39m Running postPackage hook
+[32m✔[39m Running postPackage hook
+[?25hPackaged SlopStop validated renderer isolation, Project Storage, and Writer proof.
+--- exit: 0

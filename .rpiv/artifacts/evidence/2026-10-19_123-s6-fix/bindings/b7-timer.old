@@ -1,0 +1,4 @@
+        settled = true;
+        clearTimeout(timer);
+        this.proof.changes.delete(check);
+        resume(

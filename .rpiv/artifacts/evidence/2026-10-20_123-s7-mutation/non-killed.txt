@@ -1,0 +1,20 @@
+counts: {'Ignored': 1, 'Killed': 429, 'Survived': 17}
+per file: {'project-storage-bridge.ts': 53, 'desktop-runtime.ts': 9, 'harness-bridges.ts': 25, 'harness-request-core.ts': 119, 'harness-session.ts': 27, 'project-conversation-failure.ts': 29, 'project-entry-bridge.ts': 59, 'project-upgrade-failure.ts': 15, 'workspace-bridge.ts': 111}
+harness-request-core.ts:151:17 | Survived | ConditionalExpression | 'true' | src: if (entries.get(id)?.done === done) entries.delete(id);
+harness-request-core.ts:151:17 | Survived | OptionalChaining | 'entries.get(id).done' | src: if (entries.get(id)?.done === done) entries.delete(id);
+harness-request-core.ts:83:9 | Survived | ConditionalExpression | 'false' | src: if (entry === undefined) return;
+harness-session.ts:117:11 | Survived | EqualityOperator | 'failures.length >= 1' | src: if (failures.length > 1)
+project-conversation-failure.ts:40:38 | Survived | ObjectLiteral | '{}' | src: protocol: (): FaultMeaning => ({ meaning: "malformed-reply" }),
+project-conversation-failure.ts:40:49 | Survived | StringLiteral | '""' | src: protocol: (): FaultMeaning => ({ meaning: "malformed-reply" }),
+project-entry-bridge.ts:157:9 | Survived | StringLiteral | '""' | src: "project.registration.result",
+project-entry-bridge.ts:158:9 | Survived | ArrowFunction | '() => undefined' | src: (value) => decodeReply(ProjectRegistrationResultSchema, value),
+project-entry-bridge.ts:172:14 | Survived | StringLiteral | '""' | src: event: "project.activate.result",
+project-entry-bridge.ts:179:14 | Survived | StringLiteral | '""' | src: event: "project.switch.result",
+project-storage-bridge.ts:121:45 | Survived | OptionalChaining | 'command.payload' | src: isDeepStrictEqual(result.request, command?.payload)
+project-storage-bridge.ts:38:21 | Ignored | StringLiteral | '""' | src: const stoppedText = "Project Storage bridge is stopped.";
+project-storage-bridge.ts:63:59 | Survived | BooleanLiteral | 'true' | src: send: ({ code }) => harnessSendFailureMessage({ ok: false, error: { code } }),
+workspace-bridge.ts:101:21 | Survived | StringLiteral | '""' | src: const stoppedText = "Workspace bridge is stopped.";
+workspace-bridge.ts:143:59 | Survived | BooleanLiteral | 'true' | src: send: ({ code }) => harnessSendFailureMessage({ ok: false, error: { code } }),
+workspace-bridge.ts:171:9 | Survived | ConditionalExpression | 'true' | src: if (previous !== undefined && parsed.revision <= previous) return;
+workspace-bridge.ts:182:9 | Survived | ConditionalExpression | 'true' | src: if (previous !== undefined && result.projection.revision < previous) {
+workspace-bridge.ts:262:7 | Survived | CallExpression | ';' | src: notificationListeners.clear();

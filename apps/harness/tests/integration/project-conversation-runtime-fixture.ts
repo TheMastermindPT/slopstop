@@ -145,9 +145,9 @@ function conversationCommands(send: Send) {
 }
 
 /** Seam (a): the real process runtime over `root`, with Project and conversation commands. */
-export function startConversationProcessRuntime(root: string) {
+export async function startConversationProcessRuntime(root: string) {
   const transport = causationTransport();
-  const stop = startHarnessProcessRuntime({
+  const stop = await startHarnessProcessRuntime({
     logger: silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",
@@ -163,7 +163,7 @@ export function startConversationProcessRuntime(root: string) {
 }
 
 export type ConversationProcessRuntime = Pick<
-  ReturnType<typeof startConversationProcessRuntime>,
+  Awaited<ReturnType<typeof startConversationProcessRuntime>>,
   "activate" | "switchTo" | "read" | "save" | "note" | "stop"
 >;
 

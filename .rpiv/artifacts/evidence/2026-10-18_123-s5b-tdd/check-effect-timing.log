@@ -1,0 +1,4 @@
+$ node apps/harness/scripts/check-effect-diagnostics.mjs
+EFFECT_GATE_BROKEN
+apps/harness/scripts/effect-diagnostics-waivers.json is unreadable
+[ELIFECYCLE] Command failed with exit code 1.

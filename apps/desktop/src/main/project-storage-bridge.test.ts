@@ -24,6 +24,7 @@ import type {
   HarnessSessionEvent,
   HarnessSessionSendResult,
 } from "./harness-session.js";
+import { systemFailure, undecodableReply } from "./harness-session-test-peers.js";
 import { createProjectStorageBridge } from "./project-storage-bridge.js";
 
 function messageId(value: number): string {
@@ -210,6 +211,8 @@ it("request failure settles only its correlated Project Storage operation", asyn
       ),
     });
     await Promise.resolve();
+    // One more step: the Effect facade settles a microtask later (R7, §137).
+    await Promise.resolve();
     expect(createResult).toEqual({
       status: "broken",
       request: {
@@ -383,4 +386,65 @@ it("rejects invalid local metadata and identity collision without losing the ori
   );
   collisionSession.emitProjectResult(messageId(40), { kind: "open", result: notRegisteredResult });
   await expect(original).resolves.toEqual(notRegisteredResult);
+});
+
+it.each([
+  {
+    case: "uncorrelated result",
+    text: "Harness returned an uncorrelated Project Storage response.",
+  },
+  { case: "system failure", text: "Harness reported a failure." },
+] as const)("fails all pending work as protocol on $case", async ({ case: failure, text }) => {
+  const session = new FakeHarnessSession();
+  const bridge = bridgeWith(session);
+  const pending = [bridge.open(openRequest), bridge.close(closeRequest)];
+  if (failure === "system failure") {
+    session.emit({ type: "message", message: systemFailure("Harness failed pending work.") });
+  } else {
+    session.emitProjectResult(null, {
+      kind: "open",
+      result: notRegisteredResult,
+    });
+  }
+  // Each answer is exact, with its own request echoed (S7-K17).
+  expect(await Promise.all(pending)).toEqual([
+    transportBrokenOpenResult(text),
+    transportBrokenCloseResult(text),
+  ]);
+});
+
+it("settles an undecodable reply as protocol", async () => {
+  const session = new FakeHarnessSession();
+  const bridge = bridgeWith(session);
+  let settled = false;
+  const target = bridge.open(openRequest).then((result) => {
+    settled = true;
+    return result;
+  });
+  const other = bridge.close(closeRequest);
+  let threw = false;
+  try {
+    session.emit({
+      type: "message",
+      message: undecodableReply("project.open.result", messageId(1)),
+    });
+  } catch {
+    threw = true;
+  }
+  for (let index = 0; index < 20; index++) await Promise.resolve();
+  expect(threw).toBe(false);
+  expect(settled).toBe(true);
+  await expect(target).resolves.toEqual({
+    status: "broken",
+    request: openRequest,
+    diagnostic: {
+      code: "PROJECT_STORAGE_TRANSPORT_FAILED",
+      message: "Harness returned an invalid Project Storage response.",
+    },
+  });
+  session.emitProjectResult(messageId(2), {
+    kind: "close",
+    result: closedResult,
+  });
+  await expect(other).resolves.toEqual(closedResult);
 });

@@ -1,0 +1,5 @@
+HAND-WRITTEN SUMMARY of CodeScene MCP calls, typed by the implementer from the tool answers; not tool output.
+head cef7554cdcf8266451870708f3f3cffb3622b134 (the two test files scored are identical to HEAD)
+code_health_score apps/harness/src/harness-runtime-shutdown.test.ts: 10
+code_health_score apps/harness/src/harness-runtime.test.ts: 10
+pre_commit_code_health_safeguard on the staged cef7554 tree: quality_gates passed, 2 files checked, status no-issues-found

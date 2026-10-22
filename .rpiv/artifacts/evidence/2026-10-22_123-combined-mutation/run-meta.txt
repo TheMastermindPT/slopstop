@@ -1,0 +1,4 @@
+cpu before: 3.7/3.8/2.3, alone; code 3f9fcfe (tree d7e58aa2)
+mutate: apps/harness/src/storage/project-storage-node-errors.ts,apps/harness/src/storage/project-storage-upgrade-node-adapter.ts:558-564,apps/harness/src/registration/registry-database.ts:79-90,apps/harness/src/registration/registration-registry.ts:182-200,apps/harness/scripts/check-effect-diagnostics.mjs:19-22,apps/harness/scripts/check-effect-diagnostics.mjs:41-63,apps/harness/scripts/check-effect-diagnostics.mjs:157-175,apps/harness/scripts/check-effect-diagnostics.mjs:191-191,apps/harness/scripts/check-effect-diagnostics.mjs:215-253,apps/harness/scripts/check-effect-diagnostics.mjs:256-262
+start 2026-10-22T19:00:50+01:00
+end 2026-10-22T19:02:22+01:00

@@ -1,0 +1,5 @@
+        try {
+          bridge.stop();
+        } catch (error) {
+          failures.push(error);
+        }

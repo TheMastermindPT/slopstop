@@ -1,0 +1,16 @@
+parent: f747bca
+tree: 336a339fefe66553f59bc366813b0459b1e19ffe
+working-tree digest: e3b0c44298fc1c14
+command: pnpm exec stryker run stryker.desktop-s7.config.json
+started: 2026-10-20T18:17:10+01:00
+---
+[32m18:17:27 (118468) INFO ProjectReader[39m Found 9 of 1703 file(s) to be mutated.
+[32m18:17:28 (118468) INFO Instrumenter[39m Instrumented 9 source file(s) with 447 mutant(s)
+[32m18:17:31 (118468) INFO ConcurrencyTokenProvider[39m Creating 4 test runner process(es).
+[32m18:17:34 (118468) INFO DryRunExecutor[39m Starting initial test run (vitest test runner with "perTest" coverage analysis). This may take a while.
+[32m18:17:44 (118468) INFO DryRunExecutor[39m Initial test run succeeded. Ran 322 tests in 9 seconds (net 815.3674000000028 ms, overhead 9115.632599999997 ms).
+[32m18:19:30 (118468) INFO MutationTestReportHelper[39m Final mutation score of 96.19 is greater than or equal to break threshold 80
+[32m18:19:30 (118468) INFO JsonReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/mutation.json
+[32m18:19:30 (118468) INFO HtmlReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/desktop-s7.html
+[32m18:19:30 (118468) INFO MutationTestExecutor[39m Done in 2 minutes and 5 seconds.
+--- exit: 0

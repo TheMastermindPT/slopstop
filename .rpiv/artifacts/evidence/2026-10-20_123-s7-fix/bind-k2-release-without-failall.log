@@ -1,0 +1,53 @@
+parent: 2cf479d
+tree: 5c6f51475c5953b3d31abc23fbd1a402b1d5e920
+working-tree digest: 0ddd9a5b1e1d0630
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-bridges.test.ts -t a throwing shared stop
+started: 2026-10-20T11:20:24+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-bridges.test.ts (13 tests | 1 failed | 12 skipped) 11ms
+     × shares one core across the three bridges: 'a throwing shared stop' 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'a throwing shared stop'
+AssertionError: expected undefined to deeply equal { status: 'broken', …(2) }
+
+- Expected:
+{
+  "diagnostic": {
+    "code": "WORKSPACE_TRANSPORT_FAILED",
+    "message": "Harness session disconnected.",
+  },
+  "query": {
+    "cursor": null,
+    "projectId": "a6f27c91-f905-4ae4-960f-32d6c76e3fb0",
+    "query": "memory-library.read",
+  },
+  "status": "broken",
+}
+
++ Received:
+undefined
+
+ ❯ run src/main/harness-bridges.test.ts:225:37
+    223|         expect(session.subscriptions).toBe(0);
+    224|         // The query its stop never settled ends with the release's tr…
+    225|         expect(pending.query.value).toEqual(queryTransport);
+       |                                     ^
+    226|       },
+    227|     },
+ ❯ src/main/harness-bridges.test.ts:364:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  11:20:25
+   Duration  793ms (transform 213ms, setup 0ms, import 600ms, tests 11ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-bridges.ts bound blob 82ee3bd2db56de37; restored blob a3d852adf4e3d0c7 (backup a3d852adf4e3d0c7) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

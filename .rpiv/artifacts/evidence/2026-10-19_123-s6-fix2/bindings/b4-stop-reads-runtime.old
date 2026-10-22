@@ -1,0 +1,1 @@
+  stopProjectStorageBridge: () => servicesAtShutdown()?.projectStorage.stop(),

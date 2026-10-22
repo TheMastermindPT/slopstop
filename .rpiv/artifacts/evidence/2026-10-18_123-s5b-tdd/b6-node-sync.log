@@ -1,0 +1,33 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/storage/project-storage-node-registry.test.ts (5 tests | 1 failed) 11ms
+   × keeps a typed storage failure from the synchronous witness step 5ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  21:02:52
+   Duration  762ms (transform 311ms, setup 0ms, import 620ms, tests 11ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/storage/project-storage-node-registry.test.ts > keeps a typed storage failure from the synchronous witness step
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/storage/project-storage-node-registry.test.ts:94:31
+     92|   });
+     93|   const exit = await Effect.runPromiseExit(operations.registryWitnesse…
+     94|   expect(Exit.hasFails(exit)).toBe(true);
+       |                               ^
+     95|   expect(Exit.hasDies(exit)).toBe(false);
+     96|   const failure = Exit.isFailure(exit) && Cause.squash(exit.cause);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

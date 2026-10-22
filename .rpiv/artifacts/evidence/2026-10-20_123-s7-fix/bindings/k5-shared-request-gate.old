@@ -1,0 +1,3 @@
+  return {
+    request: (bridge, createCommand, expected) =>
+      Effect.suspend(() => {

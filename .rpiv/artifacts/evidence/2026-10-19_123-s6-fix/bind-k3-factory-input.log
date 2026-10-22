@@ -1,0 +1,54 @@
+parent: feeab30
+tree: 46d9be137f8afe9d107a10da894d299645952dcc
+working-tree digest: 538ba5a0a5e9014f
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-runtime.test.ts -t passes each bridge its session, id and clock
+started: 2026-10-19T14:48:01+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-runtime.test.ts (10 tests | 1 failed | 9 skipped) 12ms
+   × passes each bridge its session, id and clock 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > passes each bridge its session, id and clock
+AssertionError: expected "vi.fn()" to be called once with arguments: [ { session: { …(2) }, …(2) } ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+-   {
+-     "createId": [Function Mock],
+-     "now": [Function Mock],
+-     "session": {
+-       "send": [Function send],
+-       "subscribe": [Function subscribe],
+-     },
+-   },
++   {},
+  ]
+
+
+Number of calls: 1
+
+ ❯ src/main/desktop-runtime.test.ts:259:21
+    257|     ports.createWorkspaceBridge,
+    258|   ])
+    259|     expect(factory).toHaveBeenCalledExactlyOnceWith(input);
+       |                     ^
+    260| });
+    261|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 skipped (10)
+   Start at  14:48:02
+   Duration  452ms (transform 33ms, setup 0ms, import 301ms, tests 12ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/desktop-runtime.ts bound blob 1bd203bd9aa89665; restored blob 330d0d80e8f68cb0 (backup 330d0d80e8f68cb0) MATCH; tree before 9e4a48147742fa0f after 9e4a48147742fa0f MATCH

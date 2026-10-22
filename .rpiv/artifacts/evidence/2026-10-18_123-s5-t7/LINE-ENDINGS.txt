@@ -1,0 +1,8 @@
+Line endings: launch-smoke.log, launch-smoke-ci.log and package-smoke.log were written with CRLF and reported with these sha256 values:
+  launch-smoke.log CRLF 9caf172dd2f11f319c02dc56bf09c5e618d6d989e27c3a0ecdd913bd7c7484a7
+  launch-smoke-ci.log CRLF 3032d251d879f2549abffbf22baa7a47e57e524710bb0b3503720340495098ce
+  package-smoke.log CRLF 2d185cc7b98e2e3f1ebfdf9137705a46386a63ff6e1655d16f219c6ea34a0bf0
+They were normalized to LF before the commit (git stores LF); SHA256SUMS holds the LF values:
+  launch-smoke.log LF e91838d1612336e192bfcae1f583e88bc83dc0f6ed2003a002b40a1a93291879
+  launch-smoke-ci.log LF 12fc6b1734d120082953c2a870fd88a1ad8dc2cc58c1f6be6874a0d093c76b42
+  package-smoke.log LF ab090b801cd470e6e784de684fe13e38001030fba73558efe51da0b261fedde2

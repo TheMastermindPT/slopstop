@@ -1,0 +1,51 @@
+parent: 829c3cf
+tree: 6d66152f2fda30628d124a41d0ec7c7c7fb0fabb
+working-tree digest: 32ccca33d03eece1
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-bridges.test.ts -t stop scoped to its bridge
+started: 2026-10-19T22:59:51+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-bridges.test.ts (8 tests | 1 failed | 7 skipped) 19ms
+     × shares one core across the three bridges: 'stop scoped to its bridge' 17ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'stop scoped to its bridge'
+AssertionError: expected { status: 'unavailable', …(2) } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+@@ -1,9 +1,9 @@
+  {
+    "diagnostic": {
+      "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+-     "message": "Memory producer is down.",
++     "message": "The workspace is unavailable while SlopStop closes.",
+    },
+    "query": {
+      "cursor": null,
+      "projectId": "b870e2e4-8e4c-468e-9068-fc5b783c1c86",
+      "query": "memory-library.read",
+
+ ❯ run src/main/harness-bridges.test.ts:113:37
+    111|         });
+    112|         session.message(createWorkspaceQueryResultEvent(replyMetadata(…
+    113|         await expect(workspaceQuery).resolves.toEqual(queryAnswer);
+       |                                     ^
+    114|         const sent = session.sent.length;
+    115|         await expect(bridges.projectEntry.list()).resolves.toEqual({
+ ❯ src/main/harness-bridges.test.ts:216:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  22:59:52
+   Duration  1.23s (transform 314ms, setup 0ms, import 972ms, tests 19ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/project-entry-bridge.ts bound blob 274658c105da310d; restored blob bec39a0ef4a19df6 (backup bec39a0ef4a19df6) MATCH; tree before 68732e761ea8ccd6 after 68732e761ea8ccd6 MATCH

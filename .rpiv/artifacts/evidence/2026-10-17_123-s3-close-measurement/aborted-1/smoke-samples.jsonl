@@ -1,0 +1,4 @@
+{"cell":"M-idle quiet","index":0,"window":null,"startIso":"2026-10-17T16:33:05.543Z","stopMs":0.20129999999994652,"outcome":"settled","inWindow":null}
+{"cell":"M-idle quiet","index":1,"window":null,"startIso":"2026-10-17T16:33:05.565Z","stopMs":0.04869999999993979,"outcome":"settled","inWindow":null}
+{"cell":"M-drain quiet","index":0,"window":null,"startIso":"2026-10-17T16:33:05.585Z","stopMs":0.5290999999999713,"outcome":"settled","inWindow":null}
+{"cell":"M-drain quiet","index":1,"window":null,"startIso":"2026-10-17T16:33:05.606Z","stopMs":0.4681000000000495,"outcome":"settled","inWindow":null}

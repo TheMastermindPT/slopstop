@@ -1,0 +1,37 @@
+parent: b4fc9ed
+tree: 947ff76049f2b9cfc20ec1b2c100f707344877f2
+working-tree digest: 46650ffe682c826c
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts -t stops every bridge when the workspace stop throws
+started: 2026-10-19T17:10:29+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts (80 tests | 1 failed | 79 skipped) 218ms
+     × stops every bridge when the workspace stop throws 216ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > stops every bridge when the workspace stop throws
+AssertionError: expected "vi.fn()" to be called once with arguments: [ { …(1) }, …(1) ]
+
+Number of calls: 0
+
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:754:28
+    752|     expect(ports.app.exit).toHaveBeenCalledExactlyOnceWith(1);
+    753|     expect(ports.app.quit).not.toHaveBeenCalled();
+    754|     expect(ports.logError).toHaveBeenCalledExactlyOnceWith(
+       |                            ^
+    755|       { err: failure },
+    756|       "SlopStop shutdown failed.",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 79 skipped (80)
+   Start at  17:10:30
+   Duration  1.03s (transform 371ms, setup 0ms, import 634ms, tests 218ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/main.ts bound blob a862752614979e01; restored blob db67985df87e0af5 (backup db67985df87e0af5) MATCH; tree before 5b69662781cae495 after 5b69662781cae495 MATCH

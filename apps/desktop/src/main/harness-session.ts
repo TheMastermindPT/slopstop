@@ -35,6 +35,8 @@ export interface HarnessSessionClient {
 export class HarnessSession implements HarnessSessionClient {
   readonly #listeners = new Set<(event: HarnessSessionEvent) => void>();
   #port: HarnessMessagePort | undefined;
+  #delivering = false;
+  readonly #queued: HarnessSessionEvent[] = [];
 
   readonly #receive = (event: Readonly<{ data: unknown }>): void => {
     const parsed = parseHarnessMessage(event.data);
@@ -95,8 +97,33 @@ export class HarnessSession implements HarnessSessionClient {
     };
   }
 
+  /**
+   * Delivers an event to every listener. An emit made while another is delivering (a listener
+   * that detaches) is queued and delivered after it, in order and in the same turn; listener
+   * failures are thrown once, after the queue has drained.
+   */
   #emit(event: HarnessSessionEvent): void {
+    if (this.#delivering) {
+      this.#queued.push(event);
+      return;
+    }
+    this.#delivering = true;
     const failures: unknown[] = [];
+    try {
+      for (let next: HarnessSessionEvent | undefined = event; next; next = this.#queued.shift()) {
+        this.#deliver(next, failures);
+      }
+      if (failures.length > 1)
+        throw new AggregateError(failures, "Harness session subscribers failed.");
+      if (failures.length === 1) throw failures[0];
+    } finally {
+      // Reset even when the failures are thrown, so a later emit is delivered at once.
+      this.#delivering = false;
+    }
+  }
+
+  /** Delivers one event to every listener, collecting their failures. */
+  #deliver(event: HarnessSessionEvent, failures: unknown[]): void {
     for (const listener of this.#listeners) {
       try {
         listener(event);
@@ -104,8 +131,5 @@ export class HarnessSession implements HarnessSessionClient {
         failures.push(error);
       }
     }
-    if (failures.length === 1) throw failures[0];
-    if (failures.length > 1)
-      throw new AggregateError(failures, "Harness session subscribers failed.");
   }
 }

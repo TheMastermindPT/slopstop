@@ -1,0 +1,67 @@
+counts: {'NoCoverage': 15, 'Ignored': 9, 'Killed': 191, 'Survived': 37, 'Timeout': 6}
+file: check-effect-diagnostics.mjs {'NoCoverage': 13, 'Ignored': 5, 'Killed': 105, 'Survived': 26}
+file: project-storage-node-errors.ts {'NoCoverage': 2, 'Ignored': 4, 'Killed': 58, 'Survived': 9, 'Timeout': 6}
+file: project-storage-upgrade-node-adapter.ts {'Killed': 7, 'Survived': 2}
+file: registration-registry.ts {'Killed': 13}
+file: registry-database.ts {'Killed': 8}
+check-effect-diagnostics.mjs:159:7 | Survived | ConditionalExpression | 'false' | if (run.code) return run;
+check-effect-diagnostics.mjs:160:18 | Survived | MethodExpression | 'run.diagnostics.map(canaryKey)' | const actual = run.diagnostics.map(canaryKey).sort(byText);
+check-effect-diagnostics.mjs:161:20 | Survived | MethodExpression | '[...expectedCanary]' | const expected = [...expectedCanary].sort(byText);
+check-effect-diagnostics.mjs:163:5 | Survived | ConditionalExpression | 'false' | run.status === 1 &&
+check-effect-diagnostics.mjs:165:18 | NoCoverage | ArrowFunction | '() => undefined' | actual.every((key, index) => key === expected[index]);
+check-effect-diagnostics.mjs:165:34 | NoCoverage | ConditionalExpression | 'false' | actual.every((key, index) => key === expected[index]);
+check-effect-diagnostics.mjs:165:34 | NoCoverage | ConditionalExpression | 'true' | actual.every((key, index) => key === expected[index]);
+check-effect-diagnostics.mjs:165:34 | NoCoverage | EqualityOperator | 'key !== expected[index]' | actual.every((key, index) => key === expected[index]);
+check-effect-diagnostics.mjs:165:5 | NoCoverage | MethodExpression | 'actual.some((key, index) => key === expected[index])' | actual.every((key, index) => key === expected[index]);
+check-effect-diagnostics.mjs:171:17 | Survived | MethodExpression | 'actual' | const extra = actual.filter((key) => !expected.includes(key)).map((key) => `extr
+check-effect-diagnostics.mjs:172:19 | Survived | MethodExpression | 'expected' | const missing = expected.filter((key) => !actual.includes(key)).map((key) => `mi
+check-effect-diagnostics.mjs:173:16 | Survived | ConditionalExpression | 'false' | const exit = status === 1 ? [] : [`canary exit ${status}`];
+check-effect-diagnostics.mjs:173:31 | Survived | ArrayDeclaration | '["Stryker was here"]' | const exit = status === 1 ? [] : [`canary exit ${status}`];
+check-effect-diagnostics.mjs:191:67 | Survived | ArrayDeclaration | '[]' | if (errors.length === 0) return { ok: true, warnings, projects: [...projects] };
+check-effect-diagnostics.mjs:20:17 | Survived | ConditionalExpression | 'false' | const shown = lines.length > 20 ? [...lines.slice(0, 19), `… ${lines.length - 19
+check-effect-diagnostics.mjs:20:17 | Survived | ConditionalExpression | 'true' | const shown = lines.length > 20 ? [...lines.slice(0, 19), `… ${lines.length - 19
+check-effect-diagnostics.mjs:20:17 | Survived | EqualityOperator | 'lines.length <= 20' | const shown = lines.length > 20 ? [...lines.slice(0, 19), `… ${lines.length - 19
+check-effect-diagnostics.mjs:20:17 | Survived | EqualityOperator | 'lines.length >= 20' | const shown = lines.length > 20 ? [...lines.slice(0, 19), `… ${lines.length - 19
+check-effect-diagnostics.mjs:20:37 | NoCoverage | ArrayDeclaration | '[]' | const shown = lines.length > 20 ? [...lines.slice(0, 19), `… ${lines.length - 19
+check-effect-diagnostics.mjs:20:41 | NoCoverage | MethodExpression | 'lines' | const shown = lines.length > 20 ? [...lines.slice(0, 19), `… ${lines.length - 19
+check-effect-diagnostics.mjs:20:61 | NoCoverage | StringLiteral | '``' | const shown = lines.length > 20 ? [...lines.slice(0, 19), `… ${lines.length - 19
+check-effect-diagnostics.mjs:20:66 | NoCoverage | ArithmeticOperator | 'lines.length + 19' | const shown = lines.length > 20 ? [...lines.slice(0, 19), `… ${lines.length - 19
+check-effect-diagnostics.mjs:220:24 | Ignored | ArrayDeclaration | '[]' | const scannedFolders = ["src", "tests", "build"];
+check-effect-diagnostics.mjs:220:25 | Ignored | StringLiteral | '""' | const scannedFolders = ["src", "tests", "build"];
+check-effect-diagnostics.mjs:220:32 | Ignored | StringLiteral | '""' | const scannedFolders = ["src", "tests", "build"];
+check-effect-diagnostics.mjs:220:41 | Ignored | StringLiteral | '""' | const scannedFolders = ["src", "tests", "build"];
+check-effect-diagnostics.mjs:221:21 | Ignored | Regex | '/\\.(?:ts|tsx|mts|cts|mjs)/' | const scannedFile = /\.(?:ts|tsx|mts|cts|mjs)$/;
+check-effect-diagnostics.mjs:225:19 | Survived | StringLiteral | '""' | return ["apps", "packages"]
+check-effect-diagnostics.mjs:229:7 | Survived | MethodExpression | 'readdirSync(areaRoot, {\n  withFileTypes: true\n})' | readdirSync(areaRoot, { withFileTypes: true })
+check-effect-diagnostics.mjs:237:21 | Survived | MethodExpression | 'readdirSync(folder, {\n  withFileTypes: true\n})' | const rootFiles = readdirSync(folder, { withFileTypes: true }).filter((entry) =>
+check-effect-diagnostics.mjs:241:55 | Survived | BooleanLiteral | 'false' | .flatMap((path) => readdirSync(path, { recursive: true, withFileTypes: true }))
+check-effect-diagnostics.mjs:243:10 | Survived | MethodExpression | '[...rootFiles, ...nested]' | return [...rootFiles, ...nested]
+check-effect-diagnostics.mjs:259:62 | Survived | ConditionalExpression | 'false' | .filter((field) => typeof entry[field] !== "string" || entry[field].trim() === "
+check-effect-diagnostics.mjs:259:62 | Survived | MethodExpression | 'entry[field]' | .filter((field) => typeof entry[field] !== "string" || entry[field].trim() === "
+check-effect-diagnostics.mjs:259:86 | Survived | StringLiteral | '"Stryker was here!"' | .filter((field) => typeof entry[field] !== "string" || entry[field].trim() === "
+check-effect-diagnostics.mjs:44:19 | NoCoverage | StringLiteral | '"Stryker was here!"' | const [, file = "", lineNumber = "", column = "", severity = ""] = header;
+check-effect-diagnostics.mjs:44:36 | NoCoverage | StringLiteral | '"Stryker was here!"' | const [, file = "", lineNumber = "", column = "", severity = ""] = header;
+check-effect-diagnostics.mjs:44:49 | NoCoverage | StringLiteral | '"Stryker was here!"' | const [, file = "", lineNumber = "", column = "", severity = ""] = header;
+check-effect-diagnostics.mjs:44:64 | NoCoverage | StringLiteral | '"Stryker was here!"' | const [, file = "", lineNumber = "", column = "", severity = ""] = header;
+check-effect-diagnostics.mjs:51:7 | Survived | ConditionalExpression | 'true' | if (current?.rule === undefined && rule) current.rule = rule;
+check-effect-diagnostics.mjs:51:7 | Survived | LogicalOperator | 'current?.rule === undefined || rule' | if (current?.rule === undefined && rule) current.rule = rule;
+check-effect-diagnostics.mjs:51:7 | Survived | OptionalChaining | 'current.rule' | if (current?.rule === undefined && rule) current.rule = rule;
+check-effect-diagnostics.mjs:60:9 | Survived | ConditionalExpression | 'true' | if (diagnostics.length > 0) attachRule(diagnostics.at(-1), line);
+check-effect-diagnostics.mjs:60:9 | Survived | EqualityOperator | 'diagnostics.length >= 0' | if (diagnostics.length > 0) attachRule(diagnostics.at(-1), line);
+project-storage-node-errors.ts:11:11 | NoCoverage | BlockStatement | '{}' | } catch {
+project-storage-node-errors.ts:21:39 | Ignored | ArrayDeclaration | '[]' | const unavailableExactCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
+project-storage-node-errors.ts:21:40 | Ignored | StringLiteral | '""' | const unavailableExactCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
+project-storage-node-errors.ts:21:50 | Ignored | StringLiteral | '""' | const unavailableExactCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
+project-storage-node-errors.ts:21:59 | Ignored | StringLiteral | '""' | const unavailableExactCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
+project-storage-node-errors.ts:57:69 | NoCoverage | BooleanLiteral | 'false' | if (input.error instanceof ProjectStorageUnavailableError) return true;
+project-storage-node-errors.ts:57:7 | Survived | ConditionalExpression | 'false' | if (input.error instanceof ProjectStorageUnavailableError) return true;
+project-storage-node-errors.ts:61:5 | Survived | ConditionalExpression | 'false' | error instanceof Error &&
+project-storage-node-errors.ts:62:5 | Survived | ConditionalExpression | 'true' | error.cause !== undefined &&
+project-storage-node-errors.ts:62:5 | Survived | EqualityOperator | 'error.cause === undefined' | error.cause !== undefined &&
+project-storage-node-errors.ts:63:24 | Survived | ObjectLiteral | '{}' | isBusyStorageError({ error: error.cause })
+project-storage-node-errors.ts:7:42 | Survived | ConditionalExpression | 'false' | if (typeof input.error !== "object" || input.error === null) return undefined;
+project-storage-node-errors.ts:7:7 | Survived | ConditionalExpression | 'false' | if (typeof input.error !== "object" || input.error === null) return undefined;
+project-storage-node-errors.ts:7:7 | Survived | ConditionalExpression | 'false' | if (typeof input.error !== "object" || input.error === null) return undefined;
+project-storage-node-errors.ts:7:7 | Survived | LogicalOperator | 'typeof input.error !== "object" && input.error === null' | if (typeof input.error !== "object" || input.error === null) return undefined;
+project-storage-upgrade-node-adapter.ts:560:80 | Survived | ObjectLiteral | '{}' | if (isBusyStorageError({ error })) return new ProjectStorageUpgradeBusyError({ c
+project-storage-upgrade-node-adapter.ts:561:93 | Survived | ObjectLiteral | '{}' | return new ProjectStorageBrokenError("Project Storage upgrade marker could not b

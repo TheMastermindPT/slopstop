@@ -49,11 +49,15 @@ async function inRuntime(
     target: ConversationTarget,
     root: string,
   ) => Promise<void>,
-  start: (root: string) => ConversationProcessRuntime = startConversationProcessRuntime,
+  start: (
+    root: string,
+  ) =>
+    | ConversationProcessRuntime
+    | Promise<ConversationProcessRuntime> = startConversationProcessRuntime,
 ) {
   const root = await createTemporaryApplicationRoot();
   await createCurrentProject({ root });
-  const runtime = start(root);
+  const runtime = await start(root);
   await runThenCleanUp(async () => {
     const target = await activeTarget(runtime, projectId);
     expect(target.access).toBe("read-write");
@@ -165,7 +169,7 @@ it("maps the refusals through the harness for save and read (CNV-B13)", timeout,
 it("maps inactive through the harness for save and read (CNV-B13)", timeout, async () => {
   const root = await createTemporaryApplicationRoot();
   await createCurrentProject({ root });
-  const runtime = startConversationProcessRuntime(root);
+  const runtime = await startConversationProcessRuntime(root);
   await runThenCleanUp(async () => {
     const target = { projectId, activationId: randomUUID() };
     const text = message("refused");
@@ -214,7 +218,7 @@ it.runIf(process.platform === "win32")(
   () =>
     inRuntime(async (writer, writerTarget, root) => {
       await writer.save(writerTarget, message("before the reader"));
-      const reader = startConversationProcessRuntime(root);
+      const reader = await startConversationProcessRuntime(root);
       await runThenCleanUp(async () => {
         const selected = await activeTarget(reader, projectId);
         expect(selected.access).toBe("read-only");
@@ -303,7 +307,7 @@ it("keeps message identity after a switch and after a new runtime (CNV-B30)", ti
   const root = await createTemporaryApplicationRoot();
   await createCurrentProject({ root });
   let original: unknown;
-  const runtime = startConversationProcessRuntime(root);
+  const runtime = await startConversationProcessRuntime(root);
   await runThenCleanUp(async () => {
     const target = await activeTarget(runtime, projectId);
     const at = { projectId, activationId: target.activationId };
@@ -318,7 +322,7 @@ it("keeps message identity after a switch and after a new runtime (CNV-B30)", ti
     const reopened = { projectId, activationId: switched.target.activationId };
     expect(Object((await runtime.read(reopened)).payload).conversation).toEqual(original);
   }, runtime.stop);
-  const next = startConversationProcessRuntime(root);
+  const next = await startConversationProcessRuntime(root);
   await runThenCleanUp(async () => {
     const target = await activeTarget(next, projectId);
     const at = { projectId, activationId: target.activationId };
@@ -409,7 +413,7 @@ it.runIf(process.platform === "win32").each(drainLifecycles)(
   async (lifecycle) => {
     const root = await createTemporaryApplicationRoot();
     await createCurrentProject({ root });
-    const writer = startConversationProcessRuntime(root);
+    const writer = await startConversationProcessRuntime(root);
     const composed = startComposedConversationRuntime(root);
     let held: ReturnType<typeof holdNextReadOnlyRead> | undefined;
     // An assertion failure must not leave the read held: teardown would wait on it.

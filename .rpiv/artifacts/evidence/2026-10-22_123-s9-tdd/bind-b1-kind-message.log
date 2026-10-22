@@ -1,0 +1,272 @@
+parent: d7a0e22
+tree: 80deb40a3d7688753cef7b84dcd69e6057d8e5d9
+working-tree digest: 9559ae3825b5da78
+command: pnpm exec vitest run --project harness apps/harness/src/process-fatal-diagnostics.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-connection.test.ts
+started: 2026-10-22T21:18:13+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/process-connection.test.ts (5 tests | 3 failed) 22ms
+   × reports a startup failure with its code and summary: invalid bootstrap 13ms
+   × reports a startup failure with its code and summary: 'runtime start and dispose fail' 2ms
+   × reports a runtime start failure only after the launch settled 3ms
+ ❯ |harness| src/process-fatal-diagnostics.test.ts (17 tests | 7 failed) 20ms
+   × summarizes a fatal failure as metadata only: 'untagged values: an error' 6ms
+   × summarizes a fatal failure as metadata only: 'untagged values: a string' 1ms
+   × summarizes a fatal failure as metadata only: 'untagged values: null' 1ms
+   × summarizes a fatal failure as metadata only: 'untagged values: an object' 1ms
+   × summarizes a fatal failure as metadata only: 'a non-identifier tag: private' 1ms
+   × summarizes a fatal failure as metadata only: 'a non-identifier tag: 65 characters' 1ms
+   × summarizes a fatal failure as metadata only: 'an empty aggregate' 1ms
+ ❯ |harness| src/process-shutdown.test.ts (3 tests | 2 failed) 193ms
+   × reports a failed shutdown with its summary, then exits: 'rejects' 73ms
+   × reports a failed shutdown with its summary, then exits: 'throws' 57ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a startup failure with its code and summary: invalid bootstrap
+AssertionError: expected [ [ { …(3) }, …(1) ] ] to deeply equal [ [ { …(3) }, …(1) ] ]
+
+- Expected
++ Received
+
+@@ -3,10 +3,11 @@
+      {
+        "code": "HARNESS_START_FAILED",
+        "failures": [
+          {
+            "kind": "error",
++           "message": "C:privateprojectslopstop.db",
+          },
+        ],
+        "omittedFailures": 0,
+      },
+      "Harness received an invalid bootstrap message.",
+
+ ❯ src/process-connection.test.ts:41:33
+     39|   expect(launch).not.toHaveBeenCalled();
+     40|   expect(attach).not.toHaveBeenCalled();
+     41|   expect(sink.fatal.mock.calls).toEqual([
+       |                                 ^
+     42|     [
+     43|       { code: "HARNESS_START_FAILED", failures: [{ kind: "error" }], o…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a startup failure with its code and summary: 'runtime start and dispose fail'
+AssertionError: expected [ [ { …(3) }, …(1) ] ] to deeply equal [ [ { …(3) }, …(1) ] ]
+
+- Expected
++ Received
+
+@@ -3,10 +3,11 @@
+      {
+        "code": "HARNESS_RUNTIME_START_FAILED",
+        "failures": [
+          {
+            "kind": "error",
++           "message": "C:privateprojectslopstop.db",
+          },
+          {
+            "tag": "HarnessRuntimeDisposeUnconfirmed",
+          },
+        ],
+
+ ❯ src/process-connection.test.ts:78:33
+     76|   expect(launch.mock.calls[0]?.[0]).toBe(prepared);
+     77|   expect(attach).not.toHaveBeenCalled();
+     78|   expect(sink.fatal.mock.calls).toEqual([
+       |                                 ^
+     79|     [
+     80|       { code: "HARNESS_RUNTIME_START_FAILED", failures, omittedFailure…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a runtime start failure only after the launch settled
+AssertionError: expected '[[{"code":"HARNESS_RUNTIME_START_FAIL…' not to contain 'private'
+
+Expected: "private"
+Received: "[[{"code":"HARNESS_RUNTIME_START_FAILED","failures":[{"kind":"error","message":"C:privateprojectslopstop.db"}],"omittedFailures":0},"Harness runtime failed to start."]]"
+
+ ❯ expectFatalThenExit src/process-connection.test.ts:21:26
+     19|   );
+     20|   const serialized = JSON.stringify(sink.fatal.mock.calls);
+     21|   expect(serialized).not.toContain("private");
+       |                          ^
+     22|   expect(serialized).not.toContain("is unconfirmed");
+     23|   expect(serialized).not.toContain("Harness startup failed");
+ ❯ src/process-connection.test.ts:114:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'untagged values: an error'
+AssertionError: expected { failures: [ { …(2) } ], …(1) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "failures": [
+      {
+        "kind": "error",
++       "message": "C:privateprojectslopstop.db",
+      },
+    ],
+    "omittedFailures": 0,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'untagged values: a string'
+AssertionError: expected { failures: [ { …(2) } ], …(1) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "failures": [
+      {
+        "kind": "string",
++       "message": "C:privateprojectslopstop.db",
+      },
+    ],
+    "omittedFailures": 0,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'untagged values: null'
+AssertionError: expected { failures: [ { …(2) } ], …(1) } to deeply equal { Object (failures, omittedFailures) }
+
+- Expected
++ Received
+
+  {
+    "failures": [
+      {
+        "kind": "null",
++       "message": "null",
+      },
+    ],
+    "omittedFailures": 0,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'untagged values: an object'
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'a non-identifier tag: private'
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'a non-identifier tag: 65 characters'
+AssertionError: expected { failures: [ { …(2) } ], …(1) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "failures": [
+      {
+        "kind": "object",
++       "message": "[object Object]",
+      },
+    ],
+    "omittedFailures": 0,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/12]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'an empty aggregate'
+AssertionError: expected { failures: [ { …(2) } ], …(1) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "failures": [
+      {
+        "kind": "error",
++       "message": "",
+      },
+    ],
+    "omittedFailures": 0,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/12]⎯
+
+ FAIL  |harness| src/process-shutdown.test.ts > reports a failed shutdown with its summary, then exits: 'rejects'
+ FAIL  |harness| src/process-shutdown.test.ts > reports a failed shutdown with its summary, then exits: 'throws'
+AssertionError: expected [ [ { …(3) }, …(1) ] ] to deeply equal [ [ { …(3) }, …(1) ] ]
+
+- Expected
++ Received
+
+@@ -3,10 +3,11 @@
+      {
+        "code": "HARNESS_SHUTDOWN_FAILED",
+        "failures": [
+          {
+            "kind": "error",
++           "message": "C:privateprojectslopstop.db",
+          },
+          {
+            "tag": "HarnessRuntimeDisposeUnconfirmed",
+          },
+        ],
+
+ ❯ src/process-shutdown.test.ts:40:33
+     38|   expect(stopRuntime).toHaveBeenCalledOnce();
+     39|   expect(succeeded).not.toHaveBeenCalled();
+     40|   expect(sink.fatal.mock.calls).toEqual([
+       |                                 ^
+     41|     [
+     42|       {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/12]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  12 failed | 13 passed (25)
+   Start at  21:18:14
+   Duration  2.63s (transform 4.05s, setup 0ms, import 6.59s, tests 235ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/process-fatal-diagnostics.ts bound blob dc86526c1d5d4c8a; restored blob 569f54e967ec84a5 (backup 569f54e967ec84a5) MATCH; tree before f6d08d3572281592 after f6d08d3572281592 MATCH

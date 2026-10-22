@@ -1,0 +1,1 @@
+  createLogger: ((logger) => () => logger)(startMainLogger()),

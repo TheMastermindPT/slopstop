@@ -1,0 +1,6 @@
+      ({ owner }) =>
+        Effect.promise(async () => {
+          await stopOwner(owner);
+        }),
+    ),
+    ({ owner }): Owned<Owner, Stop> => ({ owner, stop: () => stopOwner(owner) }),

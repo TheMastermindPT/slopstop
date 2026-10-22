@@ -5,11 +5,12 @@ import {
   type ProjectRegistrationResult,
   ProjectRegistrationResultSchema,
 } from "@slopstop/protocol";
-import { Effect, Result, Semaphore } from "effect";
+import { Effect, Result } from "effect";
 import {
   GitVersionInspectionRequestSchema,
   type ProjectRegistrationObserver,
 } from "../project-registration-observer.js";
+import { createPermitLock, withPermitEffect } from "../storage/permit-lock.js";
 import { IdentityQueryConsentRequestSchema } from "./identity-query-consent.js";
 import { createProposalSteps, type ProposalOwner } from "./registration-proposal-steps.js";
 import type { RegistrationRegistry } from "./registration-registry.js";
@@ -49,7 +50,14 @@ export interface ProjectRegistrationFlow {
 
 export function createProjectRegistrationFlow(
   dependencies: Readonly<{
-    registry: RegistrationRegistry;
+    registry: Pick<
+      RegistrationRegistry,
+      | "selectRepository"
+      | "decideRepositoryTrust"
+      | "prepareExecutable"
+      | "decideVersion"
+      | "decideIdentityQueries"
+    >;
     observer: ProjectRegistrationObserver;
     selection: DirectoryHandoff;
     discoverGit: () => Effect.Effect<string | undefined>;
@@ -157,9 +165,26 @@ export function createProjectRegistrationFlow(
       },
     );
 
-  const dispatch = (
-    request: ProjectRegistrationRequest,
-  ): Effect.Effect<ProjectRegistrationResult, RegistrationStepDefect> => {
+  type StepResult = Effect.Effect<ProjectRegistrationResult, RegistrationStepDefect>;
+
+  const dispatchProposal = (
+    request: Extract<
+      ProjectRegistrationRequest,
+      { step: "prepare" | "confirm" | "remove-from-list" }
+    >,
+  ): StepResult => {
+    switch (request.step) {
+      case "prepare":
+        return proposals.prepare(request);
+      case "confirm":
+        return proposals.confirm(request);
+      case "remove-from-list":
+        // Answered by the list removal owner wrapped around this flow (withListRemoval).
+        return Effect.succeed({ status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" });
+    }
+  };
+
+  const dispatch = (request: ProjectRegistrationRequest): StepResult => {
     switch (request.step) {
       case "select-repository":
         return selectRepository(request.directory);
@@ -171,18 +196,13 @@ export function createProjectRegistrationFlow(
         return decideGitVersion(request);
       case "decide-identity-queries":
         return decideIdentityQueries(request);
-      case "prepare":
-        return proposals.prepare(request);
-      case "confirm":
-        return proposals.confirm(request);
-      case "remove-from-list":
-        // Answered by the list removal owner wrapped around this flow (withListRemoval).
-        return Effect.succeed({ status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" });
+      default:
+        return dispatchProposal(request);
     }
   };
 
   // One step at a time: the selection handoff and the consent stages are sequential.
-  const steps = Semaphore.makeUnsafe(1);
+  const steps = createPermitLock();
   return {
     handle: (request) =>
       dispatch(request).pipe(
@@ -191,7 +211,7 @@ export function createProjectRegistrationFlow(
           const decoded = decodeStrictResult(ProjectRegistrationResultSchema, result);
           return Result.isSuccess(decoded) ? decoded.success : internalFailure;
         }),
-        Semaphore.withPermit(steps),
+        withPermitEffect(steps),
       ),
   };
 }

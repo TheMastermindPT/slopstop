@@ -1,0 +1,13 @@
+head 54d2e121397ff4fc654c2738e98117215bfdeb23
+command: pnpm typecheck
+$ pnpm -r --if-present typecheck
+Scope: 4 of 5 workspace projects
+packages/kernel typecheck$ tsc --noEmit -p tsconfig.json
+packages/kernel typecheck: Done
+packages/protocol typecheck$ tsc --noEmit -p tsconfig.json
+packages/protocol typecheck: Done
+apps/harness typecheck$ tsc --noEmit -p tsconfig.json
+apps/desktop typecheck$ tsc --noEmit -p tsconfig.json
+apps/desktop typecheck: Done
+apps/harness typecheck: Done
+exit 0

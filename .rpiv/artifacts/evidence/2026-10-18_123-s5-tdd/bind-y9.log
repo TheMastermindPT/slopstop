@@ -1,0 +1,26 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime.test.ts (104 tests | 1 failed | 103 skipped) 11ms
+     × the listing stop dies 9ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 103 skipped (104)
+   Start at  16:44:13
+   Duration  1.42s (transform 837ms, setup 0ms, import 1.28s, tests 11ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime.test.ts > shutdown failures while no Project is held > the listing stop dies
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/harness-runtime.test.ts:331:40
+    329|     const error = await f.stop().catch((caught: unknown) => caught);
+    330|     expect(error).toBe(defect);
+    331|     expect(f.applicationDatabase.stop).toHaveBeenCalledOnce();
+       |                                        ^
+    332|     expect(f.applicationDatabase.withhold).not.toHaveBeenCalled();
+    333|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

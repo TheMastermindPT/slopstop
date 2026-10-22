@@ -1,0 +1,3 @@
+        settled = true;
+        this.proof.changes.delete(check);
+        resume(

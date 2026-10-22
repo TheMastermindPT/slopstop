@@ -1,0 +1,37 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (11 tests | 1 failed | 3 skipped) 15ms
+   × distinguishes a broken binary run: 'exit 1 with a non-Effect error' 6ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed | 3 skipped (11)
+   Start at  20:48:54
+   Duration  199ms (transform 34ms, setup 0ms, import 50ms, tests 15ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 1 with a non-Effect error'
+AssertionError: expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "ok": false,
++   "ok": true,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:175:18
+    173|     spawn,
+    174|   });
+    175|   expect(result).toEqual({ ok: false, code: row.code });
+       |                  ^
+    176|   expect(calls).toHaveLength(row.spawns);
+    177| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

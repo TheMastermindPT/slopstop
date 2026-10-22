@@ -390,6 +390,25 @@ describe("scripted full sequence", () => {
     expect(process.kill).toHaveBeenCalledTimes(2);
     expect(children).toHaveLength(2);
   });
+  it.each([
+    { outcome: "passed proof", expected: { status: "passed", cleanupSafe: true } },
+    { outcome: "failed wait", expected: { status: "failed", stage: "process-exit" } },
+  ])("leaves no timer after a wait: $outcome", async ({ outcome, expected }) => {
+    fullSequence((label, response) => {
+      if (outcome !== "failed wait" || label !== "1:system.handshake") return response;
+      children[0]?.emit("error", "FatalError", "private", "private");
+      return undefined;
+    });
+    let settled = false;
+    const result = run().finally(() => {
+      settled = true;
+    });
+    // Bounded steps, never runAllTimers: that would fire a leaked timer and hide it.
+    for (let step = 0; step < 2_000 && !settled; step++) await vi.advanceTimersByTimeAsync(50);
+    expect(settled).toBe(true);
+    await expect(result).resolves.toMatchObject(expected);
+    expect(vi.getTimerCount()).toBe(0);
+  });
   it("attempts other cleanup while one child has not exited", async () => {
     fullSequence((label, response) => {
       if (label === "1:system.handshake") {

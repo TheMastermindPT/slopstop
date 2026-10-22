@@ -1,0 +1,4 @@
+cpu before: 11.4/18.0/22.1, alone; code aabd716 (tree 123094d2)
+mutate: apps/harness/src/storage/project-storage-node-errors.ts,apps/harness/src/storage/project-storage-upgrade-node-adapter.ts:558-564,apps/harness/src/registration/registry-database.ts:79-90,apps/harness/src/registration/registration-registry.ts:182-200
+start 2026-10-22T19:37:13+01:00
+end 2026-10-22T19:43:39+01:00

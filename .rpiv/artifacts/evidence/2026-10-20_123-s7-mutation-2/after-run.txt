@@ -1,0 +1,12 @@
+harness-request-core.ts MATCH
+harness-bridges.ts MATCH
+project-entry-bridge.ts MATCH
+project-storage-bridge.ts MATCH
+workspace-bridge.ts MATCH
+project-upgrade-failure.ts MATCH
+project-conversation-failure.ts MATCH
+harness-session.ts MATCH
+desktop-runtime.ts MATCH
+git status:
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-mutation-2/

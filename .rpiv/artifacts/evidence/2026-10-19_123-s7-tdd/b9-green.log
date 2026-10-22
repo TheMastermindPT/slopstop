@@ -1,0 +1,325 @@
+parent: 829c3cf
+tree: 91c762c840126f1a27bd5b4c7ba5f3eb8b68ebb3
+working-tree digest: ea3d0de40684cc40
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-request-core.test.ts apps/desktop/src/main/harness-bridges.test.ts apps/desktop/src/main/project-entry-bridge.test.ts apps/desktop/src/main/project-storage-bridge.test.ts apps/desktop/src/main/workspace-bridge.test.ts apps/desktop/src/main/harness-session.test.ts apps/desktop/src/main/harness-supervisor.test.ts apps/desktop/src/main/desktop-runtime.test.ts apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts apps/desktop/src/main/project-entry-ipc.test.ts apps/desktop/src/main/project-registration-ipc.test.ts
+started: 2026-10-19T22:43:29+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-runtime.test.ts (10 tests | 4 failed) 68ms
+     × releases every owner on dispose: 'built, never stopped' 29ms
+     × releases every owner on dispose: 'program then dispose' 4ms
+     × releases every owner on dispose: 'build fails after the supervisor' 12ms
+   × passes the bridges their session, id and clock 3ms
+ ❯ |desktop-main| src/main/harness-session.test.ts (6 tests | 2 failed) 24ms
+     × delivers a nested emit after the outer event reached every listener 7ms
+     × drains queued emits before rethrowing a listener failure 2ms
+ ❯ |desktop-main| src/main/harness-bridges.test.ts (8 tests | 4 failed) 33ms
+     × shares one core across the three bridges: 'one subscription' 9ms
+     × shares one core across the three bridges: 'release answers and order' 7ms
+     × shares one core across the three bridges: 'a throwing shared stop' 1ms
+     × shares one core across the three bridges: 'release settles before unsubscribe fa…' 1ms
+SlopStop failed to start.
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (30 tests | 2 failed) 94ms
+   × answers broken for a read during a protocol error 14ms
+   × answers broken for a read during a system failure 3ms
+ ❯ |desktop-main| src/main/project-entry-bridge.test.ts (108 tests | 1 failed) 92ms
+   × settles pending work even when session unsubscribe throws 9ms
+ ❯ |desktop-main| src/main/workspace-bridge.test.ts (31 tests | 1 failed) 68ms
+   × settles pending work even when session unsubscribe throws 4ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 14 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'built, never stopped'
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ run src/main/desktop-runtime.test.ts:166:25
+    164|         expect([...stops.slice(0, 3)].sort()).toEqual([...bridges].sor…
+    165|         expect(stops.slice(3)).toEqual(["supervisor"]);
+    166|         expect(release).toHaveBeenCalledOnce();
+       |                         ^
+    167|       },
+    168|     },
+ ❯ src/main/desktop-runtime.test.ts:263:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'program then dispose'
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ run src/main/desktop-runtime.test.ts:181:25
+    179|         await expect(runtime.dispose()).resolves.toBeUndefined();
+    180|         expect(stops).toEqual(["project-storage", "workspace", "projec…
+    181|         expect(release).toHaveBeenCalledOnce();
+       |                         ^
+    182|       },
+    183|     },
+ ❯ src/main/desktop-runtime.test.ts:263:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'build fails after the supervisor'
+AssertionError: expected undefined to be Error: private harness bridges constructi… // Object.is equality
+
+- Expected:
+Error {
+  "message": "private harness bridges construction failure",
+}
+
++ Received:
+undefined
+
+ ❯ run src/main/desktop-runtime.test.ts:244:38
+    242|         const { ports, stops } = fakes({}, { bridges: failure });
+    243|         const runtime = makeDesktopRuntime(ports);
+    244|         expect(readFailure(runtime)).toBe(failure);
+       |                                      ^
+    245|         await expect(runtime.dispose()).resolves.toBeUndefined();
+    246|         expect(stops).toEqual(["supervisor"]);
+ ❯ src/main/desktop-runtime.test.ts:263:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > passes the bridges their session, id and clock
+AssertionError: expected "vi.fn()" to be called once with arguments: [ { session: { …(2) }, …(2) } ]
+
+Number of calls: 0
+
+ ❯ src/main/desktop-runtime.test.ts:270:38
+    268|   const { ports } = fakes();
+    269|   makeDesktopRuntime(ports).runSync(readDesktopServices);
+    270|   expect(ports.createHarnessBridges).toHaveBeenCalledExactlyOnceWith({
+       |                                      ^
+    271|     session,
+    272|     createId: ports.createId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'one subscription'
+AssertionError: expected 3 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 3
+
+ ❯ run src/main/harness-bridges.test.ts:103:40
+    101|       async run() {
+    102|         const { session } = shared();
+    103|         expect(session.subscribeCalls).toBe(1);
+       |                                        ^
+    104|         expect(session.subscriptions).toBe(1);
+    105|       },
+ ❯ src/main/harness-bridges.test.ts:224:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'release answers and order'
+AssertionError: expected [ undefined, undefined, undefined ] to deeply equal [ …(3) ]
+
+- Expected
++ Received
+
+  [
+-   {
+-     "code": "PROJECT_LIST_UNAVAILABLE",
+-     "status": "unavailable",
+-   },
+-   {
+-     "diagnostic": {
+-       "code": "PROJECT_STORAGE_TRANSPORT_FAILED",
+-       "message": "Project Storage bridge is stopped.",
+-     },
+-     "request": {
+-       "projectId": "7efcfa14-fdc8-4ff9-ba40-ab8050f9303c",
+-     },
+-     "status": "broken",
+-   },
+-   {
+-     "diagnostic": {
+-       "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+-       "message": "The workspace is unavailable while SlopStop closes.",
+-     },
+-     "query": {
+-       "cursor": null,
+-       "projectId": "7efcfa14-fdc8-4ff9-ba40-ab8050f9303c",
+-       "query": "memory-library.read",
+-     },
+-     "status": "unavailable",
+-   },
++   undefined,
++   undefined,
++   undefined,
+  ]
+
+ ❯ run src/main/harness-bridges.test.ts:137:93
+    135|         bridges.release();
+    136|         await flush();
+    137|         expect([pending.list, pending.open, pending.query].map((reques…
+       |                                                                                             ^
+    138|           [listClosing, storageStopped, queryClosing],
+    139|         );
+ ❯ src/main/harness-bridges.test.ts:224:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'a throwing shared stop'
+AssertionError: expected function to throw an error, but it didn't
+ ❯ run src/main/harness-bridges.test.ts:153:41
+    151|           throw failure;
+    152|         });
+    153|         expect(() => bridges.release()).toThrow(failure);
+       |                                         ^
+    154|         await flush();
+    155|         expect([pending.list.value, pending.open.value]).toEqual([list…
+ ❯ src/main/harness-bridges.test.ts:224:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'release settles before unsubscribe fa…'
+AssertionError: expected function to throw an error, but it didn't
+ ❯ run src/main/harness-bridges.test.ts:166:41
+    164|         });
+    165|         const pending = pendingForRelease(bridges);
+    166|         expect(() => bridges.release()).toThrow(session.unsubscribeErr…
+       |                                         ^
+    167|         await flush();
+    168|         expect([pending.list, pending.open, pending.query].map((reques…
+ ❯ src/main/harness-bridges.test.ts:224:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > delivers a nested emit after the outer event reached every listener
+AssertionError: expected [ 'disconnected', 'protocol-error' ] to deeply equal [ 'protocol-error', 'disconnected' ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:129:20
+    127|
+    128|     expect(first).toEqual(["protocol-error", "disconnected"]);
+    129|     expect(second).toEqual(["protocol-error", "disconnected"]);
+       |                    ^
+    130|   });
+    131|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > drains queued emits before rethrowing a listener failure
+AssertionError: expected [ 'disconnected', 'protocol-error' ] to deeply equal [ 'protocol-error', 'disconnected' ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:149:20
+    147|     expect(() => port.emit("message", { data: { event: "not-valid" } }…
+    148|     expect(first).toEqual(["protocol-error", "disconnected"]);
+    149|     expect(second).toEqual(["protocol-error", "disconnected"]);
+       |                    ^
+    150|
+    151|     // The delivering flag was reset: a later event on the same sessio…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > answers broken for a read during a protocol error
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > answers broken for a read during a system failure
+AssertionError: expected { status: 'unavailable', …(2) } to deeply equal { status: 'broken', …(2) }
+
+- Expected
++ Received
+
+  {
+    "diagnostic": {
+-     "code": "PROTOCOL_MESSAGE_INVALID",
+-     "message": "Harness received an invalid protocol message.",
+-     "retryable": false,
++     "code": "PROJECT_COORDINATOR_UNAVAILABLE",
++     "message": "The Project connection is unavailable.",
++     "retryable": true,
+    },
+    "request": {
+      "activationId": "00000000-0000-4000-8000-000000000011",
+      "after": null,
+      "projectId": "00000000-0000-4000-8000-000000000010",
+    },
+-   "status": "broken",
++   "status": "unavailable",
+  }
+
+ ❯ src/main/harness-supervisor.test.ts:1183:23
+    1181|     });
+    1182|
+    1183|     await expect(read).resolves.toEqual({
+       |                       ^
+    1184|       status: "broken",
+    1185|       request,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/14]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-bridge.test.ts > settles pending work even when session unsubscribe throws
+AssertionError: expected [ false, false ] to deeply equal [ true, true ]
+
+- Expected
++ Received
+
+  [
+-   true,
+-   true,
++   false,
++   false,
+  ]
+
+ ❯ src/main/project-entry-bridge.test.ts:769:40
+    767|   expect(() => bridge.stop()).toThrow(session.unsubscribeError as Erro…
+    768|   await flushAll();
+    769|   expect([read.settled, list.settled]).toEqual([true, true]);
+       |                                        ^
+    770|   expect(read.value).toEqual(readLost);
+    771|   expect(list.value).toEqual({ status: "unavailable", code: "PROJECT_L…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/14]⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > settles pending work even when session unsubscribe throws
+AssertionError: expected undefined to match object { status: 'unavailable', …(1) }
+
+- Expected:
+{
+  "diagnostic": {
+    "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+    "message": "The workspace is unavailable while SlopStop closes.",
+  },
+  "status": "unavailable",
+}
+
++ Received:
+undefined
+
+ ❯ src/main/workspace-bridge.test.ts:1092:19
+    1090|   expect(() => bridge.stop()).toThrow(failure);
+    1091|   for (let index = 0; index < 20; index++) await Promise.resolve();
+    1092|   expect(settled).toMatchObject(s7Closing);
+       |                   ^
+    1093|   expect(() => bridge.stop()).not.toThrow();
+    1094|   expect(session.unsubscribeCalls).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/14]⎯
+
+
+ Test Files  6 failed | 5 passed (11)
+      Tests  14 failed | 301 passed (315)
+   Start at  22:43:30
+   Duration  2.66s (transform 4.55s, setup 0ms, import 15.17s, tests 1.34s, environment 2ms)
+
+--- exit: 1

@@ -5,30 +5,29 @@ import {
   createProjectOpenCommand,
   type DesktopMessage,
   decodeStrict,
+  type HarnessMessage,
   type ProjectStorageCloseRequest,
-  ProjectStorageCloseRequestSchema,
   type ProjectStorageCloseResult,
   ProjectStorageCloseResultSchema,
   type ProjectStorageCreateRequest,
-  ProjectStorageCreateRequestSchema,
   type ProjectStorageCreateResult,
   ProjectStorageCreateResultSchema,
   type ProjectStorageOpenRequest,
-  ProjectStorageOpenRequestSchema,
   type ProjectStorageOpenResult,
   ProjectStorageOpenResultSchema,
 } from "@slopstop/protocol";
-import type { Schema } from "effect";
-import { dispatchPendingHarnessEvent, requestHarness } from "./harness-pending-request.js";
+import { Effect, Match, type Schema } from "effect";
+import {
+  answerRequest,
+  bridgeNeutralText,
+  type Clock,
+  decodeReply,
+  type HarnessRequestCore,
+  makeHarnessRequestCore,
+  type ProjectRequestFault,
+} from "./harness-request-core.js";
 import { harnessSendFailureMessage } from "./harness-send-failure.js";
-import type { HarnessSessionClient, HarnessSessionEvent } from "./harness-session.js";
-
-type OperationKind = "open" | "create" | "close";
-type PendingOperation = Readonly<{
-  kind: OperationKind;
-  settle(value: unknown): void;
-  fail(message: string): void;
-}>;
+import type { HarnessSessionClient } from "./harness-session.js";
 
 type ProjectStorageBridgeOptions = Readonly<{
   session: HarnessSessionClient;
@@ -36,11 +35,41 @@ type ProjectStorageBridgeOptions = Readonly<{
   now(): string;
 }>;
 
-type ResultSchema<Result> = Schema.Decoder<Result>;
-type RequestSchema<Request> = Schema.Decoder<Request>;
+const stoppedText = "Project Storage bridge is stopped.";
+
+const desktopText = {
+  "invalid-command": harnessSendFailureMessage({
+    ok: false,
+    error: { code: "HARNESS_SESSION_MESSAGE_INVALID" },
+  }),
+  ...bridgeNeutralText.desktop,
+  "mismatched-event": "Harness returned a mismatched Project Storage response.",
+  "mismatched-echo": "Harness returned a mismatched Project Storage request.",
+} as const;
+
+const protocolText = {
+  ...bridgeNeutralText.protocol,
+  uncorrelated: "Harness returned an uncorrelated Project Storage response.",
+  undecodable: "Harness returned an invalid Project Storage response.",
+} as const;
+
+/** The fixed text a Project Storage request answers for each fault. */
+function faultText(fault: ProjectRequestFault): string {
+  return Match.value(fault).pipe(
+    Match.discriminatorsExhaustive("kind")({
+      transport: () => bridgeNeutralText.transport,
+      protocol: ({ reason }) => protocolText[reason],
+      harness: ({ message }) => message,
+      send: ({ code }) => harnessSendFailureMessage({ ok: false, error: { code } }),
+      unsent: () => stoppedText,
+      stopped: () => stoppedText,
+      desktop: ({ reason }) => desktopText[reason],
+    }),
+  );
+}
 
 function brokenResult<Request, Result>(
-  schema: ResultSchema<Result>,
+  schema: Schema.Decoder<Result>,
   request: Request,
   message: string,
 ): Result {
@@ -51,30 +80,6 @@ function brokenResult<Request, Result>(
   });
 }
 
-function pendingOperation<
-  Kind extends OperationKind,
-  Request,
-  Result extends Readonly<{ request: Request }>,
->(
-  kind: Kind,
-  request: Request,
-  schema: ResultSchema<Result>,
-  resolve: (result: Result) => void,
-): PendingOperation {
-  return {
-    kind,
-    settle(value) {
-      const result = decodeStrict(schema, value);
-      resolve(
-        isDeepStrictEqual(result.request, request)
-          ? result
-          : brokenResult(schema, request, "Harness returned a mismatched Project Storage request."),
-      );
-    },
-    fail: (message) => resolve(brokenResult(schema, request, message)),
-  };
-}
-
 export interface ProjectStorageBridgeClient {
   open(request: ProjectStorageOpenRequest): Promise<ProjectStorageOpenResult>;
   create(request: ProjectStorageCreateRequest): Promise<ProjectStorageCreateResult>;
@@ -82,179 +87,81 @@ export interface ProjectStorageBridgeClient {
   stop(): void;
 }
 
-class ProjectStorageBridge implements ProjectStorageBridgeClient {
-  readonly #createId: () => string;
-  readonly #now: () => string;
-  readonly #pending = new Map<string, PendingOperation>();
-  readonly #session: HarnessSessionClient;
-  readonly #stopSessionSubscription: () => void;
-  #stopped = false;
-
-  constructor(options: ProjectStorageBridgeOptions) {
-    this.#createId = options.createId;
-    this.#now = options.now;
-    this.#session = options.session;
-    this.#stopSessionSubscription = this.#session.subscribe((event) => {
-      dispatchPendingHarnessEvent(event, {
-        failAll: (message) => this.#failAll(message),
-        failRequest: (causationId, message) => this.#failRequest(causationId, message),
-        message: (message) => this.#handleHarnessMessage(message),
-      });
-    });
-  }
-
-  open(request: ProjectStorageOpenRequest): Promise<ProjectStorageOpenResult> {
-    return this.#operation(
-      "open",
-      request,
-      ProjectStorageOpenRequestSchema,
-      ProjectStorageOpenResultSchema,
-      () => createProjectOpenCommand(this.#metadata(), request),
-    );
-  }
-
-  create(request: ProjectStorageCreateRequest): Promise<ProjectStorageCreateResult> {
-    return this.#operation(
-      "create",
-      request,
-      ProjectStorageCreateRequestSchema,
-      ProjectStorageCreateResultSchema,
-      () => createProjectCreateCommand(this.#metadata(), request),
-    );
-  }
-
-  close(request: ProjectStorageCloseRequest): Promise<ProjectStorageCloseResult> {
-    return this.#operation(
-      "close",
-      request,
-      ProjectStorageCloseRequestSchema,
-      ProjectStorageCloseResultSchema,
-      () => createProjectCloseCommand(this.#metadata(), request),
-    );
-  }
-
-  stop(): void {
-    if (this.#stopped) return;
-    this.#stopped = true;
-    try {
-      this.#stopSessionSubscription();
-    } finally {
-      this.#failAll("Project Storage bridge is stopped.");
-    }
-  }
-
-  #metadata(): Readonly<{ messageId: string; sentAt: string }> {
-    return { messageId: this.#createId(), sentAt: this.#now() };
-  }
-
-  #operation<Request, Result extends Readonly<{ request: Request }>>(
-    kind: OperationKind,
+/**
+ * The Project Storage bridge over a request core. `afterStop` runs once, inside the bridge's own
+ * stop: the standalone bridge ends its private core there; a shared one leaves the core alone.
+ */
+export function projectStorageBridgeOver(
+  core: HarnessRequestCore,
+  clock: Clock,
+  afterStop: () => void,
+): ProjectStorageBridgeClient {
+  let stopped = false;
+  const metadata = () => ({ messageId: clock.createId(), sentAt: clock.now() });
+  function operation<Request, Result extends Readonly<{ request: Request }>>(
     request: Request,
-    requestSchema: RequestSchema<Request>,
-    resultSchema: ResultSchema<Result>,
-    createCommand: () => DesktopMessage,
+    resultSchema: Schema.Decoder<Result>,
+    createCommand: (request: Request) => DesktopMessage,
+    event: HarnessMessage["event"],
   ): Promise<Result> {
-    return this.#request(
-      createCommand,
-      (resolve) =>
-        pendingOperation(kind, decodeStrict(requestSchema, request), resultSchema, resolve),
-      (message) => brokenResult(resultSchema, request, message),
+    const broken = (fault: ProjectRequestFault) =>
+      brokenResult(resultSchema, request, faultText(fault));
+    if (stopped) return Promise.resolve(broken({ kind: "unsent" }));
+    // An invalid request fails in the command builder, as `desktop` `invalid-command`. The echo
+    // is checked against the command's validated payload, never the caller's object.
+    let command: DesktopMessage | undefined;
+    const build = () => {
+      command = createCommand(request);
+      return command;
+    };
+    return answerRequest(
+      core.request("project-storage", build, event).pipe(
+        Effect.flatMap((value) => decodeReply(resultSchema, value)),
+        Effect.flatMap((result) =>
+          isDeepStrictEqual(result.request, command?.payload)
+            ? Effect.succeed(result)
+            : Effect.fail({ kind: "desktop", reason: "mismatched-echo" } as const),
+        ),
+      ),
+      broken,
     );
   }
-
-  #request<Result>(
-    createCommand: () => DesktopMessage,
-    createPending: (resolve: (result: Result) => void) => PendingOperation,
-    broken: (message: string) => Result,
-  ): Promise<Result> {
-    if (this.#stopped) return Promise.resolve(broken("Project Storage bridge is stopped."));
-    return requestHarness({
-      pending: this.#pending,
-      createCommand,
-      createPending,
-      broken,
-      send: (command, resolve) => {
-        try {
-          const sent = this.#session.send(command);
-          if (sent.ok) return;
-          this.#pending.delete(command.messageId);
-          resolve(broken(harnessSendFailureMessage(sent)));
-        } catch {
-          this.#pending.delete(command.messageId);
-          resolve(broken("Harness session send failed."));
-        }
-      },
-    });
-  }
-
-  #handleHarnessMessage(
-    message: Extract<HarnessSessionEvent, { type: "message" }>["message"],
-  ): void {
-    switch (message.event) {
-      case "request.failure":
-        return;
-      case "system.failure":
-        this.#failAll("Harness reported a failure.");
-        return;
-      case "project.open.result":
-        this.#settle(message.causationId, "open", message.payload);
-        return;
-      case "project.create.result":
-        this.#settle(message.causationId, "create", message.payload);
-        return;
-      case "project.close.result":
-        this.#settle(message.causationId, "close", message.payload);
-        return;
-      case "system.ready":
-      case "workspace.intent.result":
-      case "workspace.projection.invalidated":
-      case "workspace.query.result":
-        return;
-    }
-  }
-
-  #failRequest(causationId: string, message: string): void {
-    const pending = this.#pending.get(causationId);
-    if (pending === undefined) return;
-    this.#pending.delete(causationId);
-    this.#fail(pending, message);
-  }
-
-  #settle(causationId: string | null, expected: OperationKind, value: unknown): void {
-    this.#take(causationId, expected)?.settle(value);
-  }
-
-  #take(
-    causationId: string | null,
-    expected: PendingOperation["kind"],
-  ): PendingOperation | undefined {
-    if (causationId === null) {
-      this.#failAll("Harness returned an uncorrelated Project Storage response.");
-      return undefined;
-    }
-    const pending = this.#pending.get(causationId);
-    if (pending === undefined) return undefined;
-    this.#pending.delete(causationId);
-    if (pending.kind !== expected) {
-      this.#fail(pending, "Harness returned a mismatched Project Storage response.");
-      return undefined;
-    }
-    return pending;
-  }
-
-  #failAll(message: string): void {
-    const pending = [...this.#pending.values()];
-    this.#pending.clear();
-    for (const operation of pending) this.#fail(operation, message);
-  }
-
-  #fail(operation: PendingOperation, message: string): void {
-    operation.fail(message);
-  }
+  return {
+    open: (request) =>
+      operation(
+        request,
+        ProjectStorageOpenResultSchema,
+        (decoded) => createProjectOpenCommand(metadata(), decoded),
+        "project.open.result",
+      ),
+    create: (request) =>
+      operation(
+        request,
+        ProjectStorageCreateResultSchema,
+        (decoded) => createProjectCreateCommand(metadata(), decoded),
+        "project.create.result",
+      ),
+    close: (request) =>
+      operation(
+        request,
+        ProjectStorageCloseResultSchema,
+        (decoded) => createProjectCloseCommand(metadata(), decoded),
+        "project.close.result",
+      ),
+    stop: () => {
+      if (stopped) return;
+      stopped = true;
+      // Settle first: an unsubscribe failure in `afterStop` surfaces only after.
+      core.failBridge("project-storage", { kind: "stopped" });
+      afterStop();
+    },
+  };
 }
 
+/** A standalone Project Storage bridge, with its own core over `session`. */
 export function createProjectStorageBridge(
   options: ProjectStorageBridgeOptions,
 ): ProjectStorageBridgeClient {
-  return new ProjectStorageBridge(options);
+  const core = makeHarnessRequestCore(options.session);
+  return projectStorageBridgeOver(core, options, core.unsubscribe);
 }

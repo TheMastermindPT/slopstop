@@ -1,0 +1,16 @@
+parent: d7a0e22
+tree: f6d08d35722815925a05c736a32e9d307dcd208e
+working-tree digest: 8e51d16cd8e8f8ee
+command: pnpm exec vitest run --project harness apps/harness/src/process-fatal-diagnostics.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-connection.test.ts apps/harness/src/process-bootstrap.test.ts apps/harness/src/registration/registration-listing.test.ts
+started: 2026-10-22T21:17:48+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  5 passed (5)
+      Tests  54 passed (54)
+   Start at  21:17:50
+   Duration  2.82s (transform 5.60s, setup 0ms, import 10.18s, tests 354ms, environment 1ms)
+
+--- exit: 0

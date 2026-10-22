@@ -1,0 +1,254 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/canonical-project-writer.test.ts (41 tests | 15 failed) 41ms
+     × preserves the original error for every exact joiner (regression) 6ms
+     × blocks subsequent exact before repository or snapshot work 1ms
+     × blocks subsequent distinct before repository or snapshot work 1ms
+     × blocks subsequent unreadable payload before repository or snapshot work 1ms
+     × preserves the original error for every exact joiner (regression) 1ms
+     × blocks subsequent exact before repository or snapshot work 1ms
+     × blocks subsequent distinct before repository or snapshot work 1ms
+     × blocks subsequent unreadable payload before repository or snapshot work 1ms
+   × G12 close drains accepted failure and joiners before any release stage 2ms
+     × answers writer-unavailable for a save queued behind a failing settlement 1ms
+     × answers writer-unavailable without the repository after close() and after a failure 1ms
+     × keeps the S1 retry-at-release after a thrown settlement (U3) 1ms
+     × abandons the client when a defect's transaction also leaves it unfinished 1ms
+     × refuses Conversation work arriving at any point after the settlement failure 1ms
+     × rethrows a non-busy repository rejection on save and read 1ms
+
+ Test Files  1 failed (1)
+      Tests  15 failed | 26 passed (41)
+   Start at  21:02:40
+   Duration  753ms (transform 246ms, setup 0ms, import 541ms, tests 41ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 15 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/canonical-project-writer.test.ts > G12 failure synchronous throw > preserves the original error for every exact joiner (regression)
+ FAIL  |harness| src/canonical-project-writer.test.ts > G12 failure asynchronous rejection > preserves the original error for every exact joiner (regression)
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private settlement failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private settlement failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ src/canonical-project-writer.test.ts:224:26
+    222|       const joined = pendingResult(writer.settle(submission().command)…
+    223|       expect(joined).toBe(first);
+    224|       await expect(first).rejects.toBe(sentinel);
+       |                          ^
+    225|       await expect(joined).rejects.toBe(sentinel);
+    226|       expect(repository.settle).toHaveBeenCalledExactlyOnceWith(comman…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/15]⎯
+
+ FAIL  |harness| src/canonical-project-writer.test.ts > G12 failure synchronous throw > blocks subsequent exact before repository or snapshot work
+ FAIL  |harness| src/canonical-project-writer.test.ts > G12 failure synchronous throw > blocks subsequent distinct before repository or snapshot work
+ FAIL  |harness| src/canonical-project-writer.test.ts > G12 failure synchronous throw > blocks subsequent unreadable payload before repository or snapshot work
+ FAIL  |harness| src/canonical-project-writer.test.ts > G12 failure asynchronous rejection > blocks subsequent exact before repository or snapshot work
+ FAIL  |harness| src/canonical-project-writer.test.ts > G12 failure asynchronous rejection > blocks subsequent distinct before repository or snapshot work
+ FAIL  |harness| src/canonical-project-writer.test.ts > G12 failure asynchronous rejection > blocks subsequent unreadable payload before repository or snapshot work
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private settlement failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private settlement failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ src/canonical-project-writer.test.ts:232:73
+    230|       async (change) => {
+    231|         const { writer, sentinel, repository, lease } = failedWriter();
+    232|         await expect(pendingResult(writer.settle(submission().command)…
+       |                                                                         ^
+    233|         const next = submission().command;
+    234|         if (change === "distinct")
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/15]⎯
+
+ FAIL  |harness| src/canonical-project-writer.test.ts > G12 close drains accepted failure and joiners before any release stage
+AssertionError: expected [ { status: 'rejected', …(1) }, …(1) ] to deeply equal [ { status: 'rejected', …(1) }, …(1) ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "reason": Error {
++     "reason": UntypedRejection {
++       "message": "",
++       "cause": Error {
+          "message": "private cleanup failure",
++       },
++       "_tag": "UntypedRejection",
+      },
+      "status": "rejected",
+    },
+    {
+-     "reason": Error {
++     "reason": UntypedRejection {
++       "message": "",
++       "cause": Error {
+          "message": "private cleanup failure",
++       },
++       "_tag": "UntypedRejection",
+      },
+      "status": "rejected",
+    },
+  ]
+
+ ❯ src/canonical-project-writer.test.ts:336:21
+    334|         ? { status: "fulfilled", value: expectedResult("settled") }
+    335|         : { status: "rejected", reason: sentinel };
+    336|     expect(results).toEqual([expected, expected]);
+       |                     ^
+    337|     if (outcome === "failure") {
+    338|       await expect(first).rejects.toBe(sentinel);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/15]⎯
+
+ FAIL  |harness| src/canonical-project-writer.test.ts > Conversation work queued behind a failure that closed admission > answers writer-unavailable for a save queued behind a failing settlement
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private settlement failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private settlement failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ src/canonical-project-writer.test.ts:528:27
+    526|     const failure = new Error("private settlement failure");
+    527|     hold.reject(failure);
+    528|     await expect(settling).rejects.toBe(failure);
+       |                           ^
+    529|     await expect(queued).resolves.toEqual({ status: "writer-unavailabl…
+    530|     expect(conversationTransaction).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/15]⎯
+
+ FAIL  |harness| src/canonical-project-writer.test.ts > Conversation admission > answers writer-unavailable without the repository after close() and after a failure
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private settlement failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private settlement failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ src/canonical-project-writer.test.ts:578:76
+    576|       );
+    577|       if (closing === "close") await writer.close("2026-09-05T12:00:04…
+    578|       else await expect(pendingResult(writer.settle(submission().comma…
+       |                                                                            ^
+    579|       await expect(writer.conversation(() => Effect.succeed("unreached…
+    580|         status: "writer-unavailable",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/15]⎯
+
+ FAIL  |harness| src/canonical-project-writer.test.ts > Conversation admission > keeps the S1 retry-at-release after a thrown settlement (U3)
+AssertionError: expected [Function] to throw error including 'private settlement failure' but got ''
+
+- Expected
++ Received
+
+- private settlement failure
+
+ ❯ src/canonical-project-writer.test.ts:693:69
+    691|       calls.push("lease");
+    692|     });
+    693|     await expect(pendingResult(writer.settle(submission().command))).r…
+       |                                                                     ^
+    694|       "private settlement failure",
+    695|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/15]⎯
+
+ FAIL  |harness| src/canonical-project-writer.test.ts > Conversation abandonment > abandons the client when a defect's transaction also leaves it unfinished
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: Conversation work defect. // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "Conversation work defect.",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ src/canonical-project-writer.test.ts:738:61
+    736|     });
+    737|     const bug = new Error("Conversation work defect.");
+    738|     await expect(writer.conversation(() => Effect.die(bug))).rejects.t…
+       |                                                             ^
+    739|     await expect(writer.conversation(() => Effect.succeed("unreached")…
+    740|       status: "writer-unavailable",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/15]⎯
+
+ FAIL  |harness| src/canonical-project-writer.test.ts > Admission after a failed settlement > refuses Conversation work arriving at any point after the settlement failure
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private settlement failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private settlement failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ src/canonical-project-writer.test.ts:774:69
+    772|       { conversationTransaction },
+    773|     );
+    774|     await expect(pendingResult(writer.settle(submission().command))).r…
+       |                                                                     ^
+    775|     const answers = await Promise.allSettled(probes);
+    776|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/15]⎯
+
+ FAIL  |harness| src/canonical-project-writer.test.ts > Repository rejections on the Conversation path > rethrows a non-busy repository rejection on save and read
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private repository failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private repository failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ src/canonical-project-writer.test.ts:793:73
+    791|       conversationRead: reject,
+    792|     });
+    793|     await expect(writer.conversation(() => Effect.succeed("unreached")…
+       |                                                                         ^
+    794|     await expect(writer.conversationRead(() => Effect.succeed("unreach…
+    795|       rejection,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/15]⎯
+

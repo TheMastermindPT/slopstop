@@ -1,0 +1,9 @@
+# sha256 of the blobs Git stores (LF); logs written with CRLF hash differently in a Windows working copy.
+6bfb9727dd22ccc9fb1873f4aa7a4a92d90da5d2dd9ab7ddf984aa26281aa4ad  README.md
+f8cb2623fb57e8fffd3eb5d689eb72ee7c27699552e5a0a229e2bc2918f79040  after-run.txt
+30cf9e015b7d9cab39baab63eefd74ab9458e0eaea96381aaf30a6081fe7fd54  desktop-s7.html.txt
+ad8d7e22a7efd6570f63910eaf81f5190f326d483aefc5065160ae6a351a0cba  mutation.json.txt
+767dcc708586254f7a95ceb047681daee92b95674e3a6bd1a0c0c372f3eee97c  mutation.log
+cc1e3ceb86d54d6300dc8cd67574a8f337632907481124ad8bf23654152c3923  non-killed.txt
+4cb622a7d6c6997f21785f4704d4ee56701980e6dfa54ab52c09e1658ff02481  run-meta.txt
+3b7e413b396b3fcbf39b3b0283f8cf62997331ba3fd1cf9b9a8c49ef6e79a8c3  tdd-run.sh

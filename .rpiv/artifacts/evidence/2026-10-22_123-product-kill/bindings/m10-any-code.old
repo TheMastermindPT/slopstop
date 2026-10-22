@@ -1,0 +1,1 @@
+    return typeof code === "string" ? code : undefined;

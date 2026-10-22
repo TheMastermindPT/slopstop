@@ -1,0 +1,971 @@
+diff --git a/.rpiv/artifacts/designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md b/.rpiv/artifacts/designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md
+index 6db30e5..49531f0 100644
+--- a/.rpiv/artifacts/designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md
++++ b/.rpiv/artifacts/designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md
+@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/research/2026-10-16_23-40-39_effect-unit2b-runtime-lifec
+ lane: normal
+ lane_reasons: ["slices: 6 > 1", "files: 16 > 5", "diagnostic: lines unknown", "diagnostic: hub signal unavailable", "design: 8 slices"]
+ status: in-review
+-last_updated: 2026-10-22T18:10:00+0100
++last_updated: 2026-10-22T21:45:00+0100
+ last_updated_by: Pedro Mesquita
+-last_updated_note: "s8 detailed just in time (§138): U2B-SD-B1..B4, lane normal proposed, Q1-Q4 for Pedro; awaits Pedro approval. Earlier: s7 candidate round 2 closed (§137): K12 c8a72d1-intent mapping ratified by Pedro, L2/L3 residuals, records only; next scoped mutation, Manual Windows check, acceptance. Earlier: s7 candidate round-1 fix round (§137, D1 (a) ratified): S7-K1 records, K2-K18 rows, bindings, refactors and the default Stryker cleanup, step 10; awaits Pedro approval. Earlier: s7 intent cap (§137): S1-S11 applied without a third round (unreviewed residual), S1 (a) core observer; awaits Pedro approval. Earlier: s7 intent round-1 fixes S7-R1..R29 applied (§137, R7 accepted): BC-B1..B10; intent round 2 (last). Earlier: s7 decisions recorded (§137): P-S7-1 (b), P-S7-2 (a) B9 in, P-S7-3 (a), P-S7-4 (a); intent review round 1. Earlier: s7 detailed just in time (§136), BC-B1..B9, lane rigorous. Earlier: s6 mutation closed (§135): 94.23, 3 killed by restructure, 10 declared equivalents, post-review delta residual; awaiting Manual checks and Pedro acceptance. Earlier: s6 short review decisions (§135, b051fa3): F1 ratified, M1 (b) reportFailure required, K16 reading, M4/M5 residuals, step 10. Earlier: s6 candidate round-2 cap (§135): fix round 2 for L1-L11, L3 (a), short confirming review scope (step 9); awaits Pedro approval. Earlier: s6 candidate round-1 fix round (§135): K1-K6, K8-K12 rows, K13 check, step 8; K7/K14/K15 records; awaits Pedro approval. Earlier: s6 intent cap (§135): J1-J22 applied without a third round (unreviewed delta), J7 mutation exception, candidate review = round 1 + one fix round + round 2; awaits Pedro approval. Earlier: s6 intent round-1 fixes S6-I1..I28 applied (§135: I12 (a), I15 (a), I10 (a)); intent round 2 (last). Earlier: s6 decisions folded in (§135): P-S6-1..5, measure-first dispose bound (opening step 0), Architecture correction; intent review round 1. Earlier: s6 detailed just in time, DR-B1..B7, lane raised to rigorous (ipc). Earlier: s5b round 2 closed at the cap (§134, accept with risks): R2-3 B12 red, R2-4 CodeScene debt, R2-6 mutation scope, residuals R2-1/R2-2/R2-7; awaits Pedro approval. Earlier: s5b candidate round 1 (§134): B2 re-observation, B10-B13, AGENTS.md:78 wording, R1-10, round-1 order of work; awaits Pedro approval. Earlier: s5b Test lines for U2B-EG-B6, B7, B9 added (format only, slice-preflight no-test-line); awaits Pedro re-approval. Earlier: s5b u2b-s5b-effect-gate added just in time (§134: curated Effect config, tsc-mode gate in pnpm check with canary and waiver register, 13 error-level fixes, 9 newPromise waivers); awaits Pedro approval. Earlier: s5 mutation rows M1 (kill harness-runtime.ts:344 survivor) and M2 (throwing workspace unsubscribe, NoCoverage :438-439) added, test-only, scoped rerun (§132 follow-up); awaits Pedro approval. Earlier: s5 candidate round-2 triage applied (§132: V1 settleClose without concurrency + exception, V2/V5/V6 test pins, V3 eager startStop settle, V4 residual; no third round, unreviewed delta residual); awaits Pedro approval. Earlier: candidate round-1 triage (17:35); document fixes (17:05)."
+-content_hash: 315e45b64c714bc668581fe50e595034d56b07a93002b3aff28c9b272791cf77
++last_updated_note: "s9 built (Q1 (a), harness-only; forwarding deferred to #133), evidence linked. Earlier: s9 u2b-s9-harness-fatal-diagnostics added after the Part A deep review (§140: I1 (a) with Q24/Q27, Q25 cheap ordering pin, Q33 (b)): U2B-FD-B1..B3, lane normal, Q1 visibility for Pedro; awaits Pedro approval. Earlier: s8 detailed just in time (§138): U2B-SD-B1..B4, lane normal proposed, Q1-Q4 for Pedro; awaits Pedro approval. Earlier: s7 candidate round 2 closed (§137): K12 c8a72d1-intent mapping ratified by Pedro, L2/L3 residuals, records only; next scoped mutation, Manual Windows check, acceptance. Earlier: s7 candidate round-1 fix round (§137, D1 (a) ratified): S7-K1 records, K2-K18 rows, bindings, refactors and the default Stryker cleanup, step 10; awaits Pedro approval. Earlier: s7 intent cap (§137): S1-S11 applied without a third round (unreviewed residual), S1 (a) core observer; awaits Pedro approval. Earlier: s7 intent round-1 fixes S7-R1..R29 applied (§137, R7 accepted): BC-B1..B10; intent round 2 (last). Earlier: s7 decisions recorded (§137): P-S7-1 (b), P-S7-2 (a) B9 in, P-S7-3 (a), P-S7-4 (a); intent review round 1. Earlier: s7 detailed just in time (§136), BC-B1..B9, lane rigorous. Earlier: s6 mutation closed (§135): 94.23, 3 killed by restructure, 10 declared equivalents, post-review delta residual; awaiting Manual checks and Pedro acceptance. Earlier: s6 short review decisions (§135, b051fa3): F1 ratified, M1 (b) reportFailure required, K16 reading, M4/M5 residuals, step 10. Earlier: s6 candidate round-2 cap (§135): fix round 2 for L1-L11, L3 (a), short confirming review scope (step 9); awaits Pedro approval. Earlier: s6 candidate round-1 fix round (§135): K1-K6, K8-K12 rows, K13 check, step 8; K7/K14/K15 records; awaits Pedro approval. Earlier: s6 intent cap (§135): J1-J22 applied without a third round (unreviewed delta), J7 mutation exception, candidate review = round 1 + one fix round + round 2; awaits Pedro approval. Earlier: s6 intent round-1 fixes S6-I1..I28 applied (§135: I12 (a), I15 (a), I10 (a)); intent round 2 (last). Earlier: s6 decisions folded in (§135): P-S6-1..5, measure-first dispose bound (opening step 0), Architecture correction; intent review round 1. Earlier: s6 detailed just in time, DR-B1..B7, lane raised to rigorous (ipc). Earlier: s5b round 2 closed at the cap (§134, accept with risks): R2-3 B12 red, R2-4 CodeScene debt, R2-6 mutation scope, residuals R2-1/R2-2/R2-7; awaits Pedro approval. Earlier: s5b candidate round 1 (§134): B2 re-observation, B10-B13, AGENTS.md:78 wording, R1-10, round-1 order of work; awaits Pedro approval. Earlier: s5b Test lines for U2B-EG-B6, B7, B9 added (format only, slice-preflight no-test-line); awaits Pedro re-approval. Earlier: s5b u2b-s5b-effect-gate added just in time (§134: curated Effect config, tsc-mode gate in pnpm check with canary and waiver register, 13 error-level fixes, 9 newPromise waivers); awaits Pedro approval. Earlier: s5 mutation rows M1 (kill harness-runtime.ts:344 survivor) and M2 (throwing workspace unsubscribe, NoCoverage :438-439) added, test-only, scoped rerun (§132 follow-up); awaits Pedro approval. Earlier: s5 candidate round-2 triage applied (§132: V1 settleClose without concurrency + exception, V2/V5/V6 test pins, V3 eager startStop settle, V4 residual; no third round, unreviewed delta residual); awaits Pedro approval. Earlier: candidate round-1 triage (17:35); document fixes (17:05)."
++content_hash: e0cf6effc94a0d6e65425dd4fa5652bd0f4e811173c786d3b42458207ac4c299
+ ---
+ 
+ # Design: #123 Part A — Effect Unit 2b runtime and lifecycle
+@@ -2412,6 +2412,98 @@ These facts come from small commands only: the Windows binary, a temporary tscon
+ **Manual:**
+ - On Windows, outside the agent, once, on the **packaged** build (`pnpm dev` renders a blank window, #137): open a Project, then quit. The app closes without a visible extra delay; reopen it and the Project and its conversation are intact; the main log of that run shows the harness shutdown with no new error.
+ 
++### Slice u2b-s9-harness-fatal-diagnostics (detailed 2026-10-22)
++
++- **slice_id:** `u2b-s9-harness-fatal-diagnostics`
++- **Lane:** normal (coordinator, from Pedro's §140 decision). `lane.mjs --paths` over the planned source files answers `normal` ("files: 6 > 5"), equal to the feature lane. So: linked worktree (`slopstop-123`), no intent review, slice-verifier at candidate review, full deep-review, and Pedro's acceptance of the combined Part A result.
++- **Parent:** the Part A candidate under deep review, `d7a0e22` on `refactor/123-effect-lifecycle-part-a` (review `.rpiv/artifacts/reviews/2026-10-22_19-44-49_fdda65e-d7a0e22-123-part-a.md`, base `fdda65e`). s8 is gate-passed there.
++- **Behaviour IDs:** U2B-FD-B1 … U2B-FD-B3.
++- **Source of scope:** deep-review finding I1, option (a), with Q24 and Q27 folded in; Q25 option (b) except the cheap ordering pin; Q33 option (b). Pedro's decisions, decisions log §140. Standing decision `degrade-distinguishes-broken`: a broken stop or start already exits 1 with a fatal code; s9 keeps the distinct diagnostic the earlier slices built.
++- **Affected source:**
++  - `apps/harness/src/process-fatal-diagnostics.ts`: the redacted failure summary (exported) and the shared fatal sink type.
++  - `apps/harness/src/process-shutdown.ts`: the port-close handler reports through the sink with the summary.
++  - `apps/harness/src/process-connection.ts` (new): the startup exit paths, extracted from `process-entry.ts` `connect`.
++  - `apps/harness/src/process-bootstrap.ts`: `startHarnessProcessRuntime` is split into a synchronous bootstrap check and the launch; `startHarnessProcessRuntime` stays as their composition, so its integration callers do not change.
++  - `apps/harness/src/registration/registration-listing.ts`: exports its cleanup-part names as one constant list (the summary's only allowed part values; `shared-vocab-union`, one owner).
++  - `apps/harness/src/process-entry.ts`: wiring only, to the functions above.
++  - Mutation scope: `stryker.project-storage.config.json` and `apps/harness/vitest.project-storage-mutation.config.ts` (s5 precedent).
++- **Affected tests:** `apps/harness/src/process-fatal-diagnostics.test.ts`, `apps/harness/src/process-shutdown.test.ts`, `apps/harness/src/process-connection.test.ts` (new).
++- **Deliverable:** both harness fatal sinks log, beside their code, a redacted summary of the failure value. A runtime start or dispose failure at startup has its own fatal code, `HARNESS_RUNTIME_START_FAILED`, distinct from `HARNESS_START_FAILED` (invalid bootstrap message, kept). The startup and shutdown exit paths are small exported functions tested through a fake sink.
++- **Measured facts (2026-10-22, at `d7a0e22`; read, not run):**
++  - `process-shutdown.ts:15-20`: a rejected or thrown `stopRuntime` calls `failed("Harness shutdown failed.")` without the value; `process-entry.ts:37-40` logs `{ code: "HARNESS_SHUTDOWN_FAILED" }` and exits 1.
++  - `process-entry.ts:74-84`: `connect` awaits `startHarnessProcessRuntime`; its `catch` drops the value and calls `failStartup("Harness received an invalid bootstrap message.")` (`{ code: "HARNESS_START_FAILED" }`, exit 1) for every failure: decode, root checks, layer build, start and dispose alike (Q24).
++  - `process-bootstrap.ts:178-186` throws, before any runtime exists, for an invalid bootstrap (strict decode, `trustedRoot`, overlapping roots). `launchOnProcessRuntime` (:127-168) rejects with the start failure alone, or `AggregateError("Harness startup failed.", [start, ...dispose])`, only after its bounded dispose settled (pinned by `reports a startup failure after a bounded dispose: $name`, `process-bootstrap.test.ts:355`).
++  - The shutdown value can nest: `AggregateError("Harness process shutdown failed.", [program, dispose])` (:99-101, :146), where the program failure can itself be `AggregateError("Harness runtime shutdown failed.", …)` (`harness-runtime.ts:77-81`) holding `RegistrationCleanupUnconfirmed` (`registration-listing.ts:19-23`, `parts` ⊆ `registry`, `observer`, `listing`, optional `cause`), `ApplicationDatabaseCloseUnconfirmed` (`application-database-authority.ts:55`), `HarnessRuntimeDisposeUnconfirmed` (`process-bootstrap.ts:85`) or an untyped value.
++  - `process-fatal-diagnostics.ts` already reports uncaught values as `{ code, valueKind }` only; its `FatalValueKind` is reused for untagged values.
++  - **Where the line goes:** the harness logs JSON lines on its stdout (`harness-logger.ts:4-14`). The desktop logs only each stdout chunk's byte size (`harness-supervisor.ts:437-443`) and forwards only valid upgrade lines (`harness-log-lines.ts:17-46`). So the s9 summary is written to the harness's own stdout and does **not** reach the desktop main log today. See Q1.
++- **Protocol vocabulary:** the new fatal code does **not** touch `packages/protocol`. Harness fatal codes are harness log metadata, not a protocol value: no schema decodes them. `HarnessDiagnosticCodeSchema` (`protocol.ts:347-354`) holds a `HARNESS_START_FAILED` too, but that literal is the desktop supervisor's own status diagnostic (`harness-supervisor.ts:370`, `:378`, `:514`), a separate vocabulary that only shares the spelling; s9 neither adds to nor changes it. Forwarding harness fatal lines into the desktop log (Q1 (b)) would need a protocol line schema like `HarnessUpgradeLogLineSchema`, and so would touch the protocol.
++- **Design points:**
++  1. **One summary, metadata only.** `summarizeHarnessFailure(value)` is a pure function that answers `{ failures, omittedFailures }`. It walks an `AggregateError`'s `errors` in order, depth first, and flattens nested aggregates. Each other value becomes one entry: `{ tag }` when it has a string `_tag` that is an identifier (`/^[A-Za-z][A-Za-z0-9]{0,63}$/`); for `RegistrationCleanupUnconfirmed`, `{ tag, parts }`, where `parts` keeps only the names in the listing's constant list, in their order; otherwise `{ kind }` with the existing `FatalValueKind`. No message, path, `cause`, stack or other field is ever read into the summary. An aggregate with no `errors` counts as one `{ kind: "error" }` entry, so a failure never summarizes as empty.
++  2. **Bounded.** At most 16 entries; the rest, and any aggregate met again (a cycle), are counted in `omittedFailures`. Pino logs stay bounded (AGENTS.md Safety And Privacy).
++  3. **One sink type.** `HarnessFatalSink = { fatal(metadata, message): void; exit(code: 1): void }`, the shape `createHarnessFatalHandlers` already takes. Each exported exit path calls `fatal` once, then `exit(1)` once.
++  4. **Shutdown.** `createHarnessPortCloseHandler({ stopRuntime, succeeded, sink })`: a failed stop reports `{ code: "HARNESS_SHUTDOWN_FAILED", failures, omittedFailures }` with "Harness shutdown failed.". The one-observation-per-handler behaviour is unchanged.
++  5. **Startup.** `connectHarnessProcess({ bootstrap, prepare, launch, attach, sink })` in `process-connection.ts`. `prepare` throwing: `{ code: "HARNESS_START_FAILED", … }`, "Harness received an invalid bootstrap message.", and `launch` is not called. `launch` rejecting: `{ code: "HARNESS_RUNTIME_START_FAILED", … }`, "Harness runtime failed to start.", reported only after that rejection, so after `launchOnProcessRuntime`'s bounded dispose settled; `attach` is not called. Success: `attach(stop)` once, no fatal. `process-entry.ts` wires `prepare`/`launch` to the two `process-bootstrap.ts` exports and `attach` to today's port-close wiring, `port.start()` and the "connected" log.
++  6. **Unchanged.** The missing-parent-port and missing-port exits in `process-entry.ts` keep `HARNESS_START_FAILED` with no summary (no failure value exists). The uncaught and unhandled handlers. `launchOnProcessRuntime`, the dispose deadline, the 3 s registration budget and its sequential order (Q33 (b)). The desktop supervisor and the protocol.
++  7. **Effect.** The summary is pure (a plain function, AGENTS.md Effect Usage). `connectHarnessProcess` stays a Promise function at the process edge, as `connect` is today; no new `new Promise`, no new waiver; `pnpm check:effect` stays green.
++- **Non-goals:** Q33 (observer inspections not aborted when the owner close outruns 3 s; accepted residual, §140); the rest of Q25 (`process-entry.ts` stays TDD-exempt for its wiring, named at acceptance); Q26 (the 500 ms dispose bound still hides the 1 000 ms authority safety-net diagnostic, W13); all other blue and discussion findings of the deep review; forwarding harness fatal lines to the desktop log (Q1).
++- **Open question for Pedro:**
++  - Q1 visibility: (a) keep s9 harness-only, as the coordinator scoped it; the summary is written on harness stdout, which the desktop drops today, so I1 is fixed at the harness edge but the main log still shows only exit code 1 and the desktop's own diagnostic; record forwarding as Deferred Work (recommended for this slice, because (b) touches the protocol and the desktop); (b) also forward harness fatal lines in s9 through a new protocol line schema and `harness-log-lines.ts`.
++
++### Test Contract: u2b-s9-harness-fatal-diagnostics
++
++- **Fixtures:** fake sinks `{ fatal: vi.fn(), exit: vi.fn() }`; real failure classes `ApplicationDatabaseCloseUnconfirmed` and `HarnessRuntimeDisposeUnconfirmed`; `RCU(parts)` is a plain object `{ _tag: "RegistrationCleanupUnconfirmed", name: "RegistrationCleanupUnconfirmed", message: P, parts }` (the class is not exported; `registration-listing.test.ts:90` builds the same shape), which the summary reads only by `_tag` and `parts`; `ADCU` is `new ApplicationDatabaseCloseUnconfirmed(1000)`; private strings `P = "C:\\private\\project\\slopstop.db"` used as messages, causes and `_tag`/part values where a row says so. Every row also asserts `JSON.stringify` of all `fatal` calls (or of the summary) contains neither `P` nor any fixture message.
++- **Order of work:** scaffold with today's behaviour (the summary answers `{ failures: [], omittedFailures: 0 }`; the handler and `connectHarnessProcess` report today's codes and texts without the summary; every startup failure is `HARNESS_START_FAILED` with the invalid-bootstrap text); observe the B1, B2 and B3 reds; make them green; then the review/refactor gate.
++- **Behavior U2B-FD-B1**: a failure value is summarized as tags, cleanup part names and value kinds only, in order, bounded.
++  - Seam: `summarizeHarnessFailure` from `process-fatal-diagnostics.ts`.
++  - Test: `summarizes a fatal failure as metadata only: $name` -> `apps/harness/src/process-fatal-diagnostics.test.ts` (`it.each`). Rows (`omittedFailures` is 0 unless stated):
++    - `one tagged failure`: `new ApplicationDatabaseCloseUnconfirmed(1000)` → `failures` `[{ tag: "ApplicationDatabaseCloseUnconfirmed" }]`;
++    - `cleanup parts`: `RegistrationCleanupUnconfirmed` with `parts` `["observer", "listing"]` and `cause` `new Error(P)` → `[{ tag: "RegistrationCleanupUnconfirmed", parts: ["observer", "listing"] }]`;
++    - `unknown parts dropped`: `parts` `["registry", P]` → `parts: ["registry"]`;
++    - `nested aggregates in order`: `AggregateError([AggregateError([RCU(["registry"]), ADCU]), new HarnessRuntimeDisposeUnconfirmed(500)])` → `[{ tag: "RegistrationCleanupUnconfirmed", parts: ["registry"] }, { tag: "ApplicationDatabaseCloseUnconfirmed" }, { tag: "HarnessRuntimeDisposeUnconfirmed" }]`;
++    - `untagged values`: `new Error(P)` → `[{ kind: "error" }]`; `P` → `[{ kind: "string" }]`; `null` → `[{ kind: "null" }]`; `{ token: P }` → `[{ kind: "object" }]`;
++    - `a non-identifier tag`: `{ _tag: P }` → `[{ kind: "object" }]`; `{ _tag: "A".repeat(65) }` → `[{ kind: "object" }]`; `{ _tag: "A".repeat(64) }` → `[{ tag: "A".repeat(64) }]`;
++    - `an empty aggregate`: `new AggregateError([])` → `[{ kind: "error" }]`;
++    - `the bound`: an aggregate of 16 tagged failures → 16 entries, `omittedFailures` 0; of 17 → the first 16 in order, `omittedFailures` 1;
++    - `a cycle`: an aggregate whose `errors` are `[ADCU, itself]` → `[{ tag: "ApplicationDatabaseCloseUnconfirmed" }]`, `omittedFailures` 1, and the call returns.
++  - Expected red: against the scaffold (`{ failures: [], omittedFailures: 0 }`), every row fails on `failures`; the 17-entry and cycle rows also fail on `omittedFailures`.
++- **Behavior U2B-FD-B2**: a failed shutdown is logged once with its code and summary, then exits 1; a clean one is not.
++  - Seam: `createHarnessPortCloseHandler({ stopRuntime, succeeded, sink })`.
++  - Test: `reports a failed shutdown with its summary, then exits: $name` -> `apps/harness/src/process-shutdown.test.ts` (`it.each`). Rows `rejects` (`stopRuntime` returns `Promise.reject(F)`) and `throws` (`stopRuntime` throws `F`), with `F = AggregateError([new Error(P), new HarnessRuntimeDisposeUnconfirmed(500)], "Harness process shutdown failed.")`. The handler is called twice. Then: `stopRuntime` once; `succeeded` never; `sink.fatal` exactly once with `({ code: "HARNESS_SHUTDOWN_FAILED", failures: [{ kind: "error" }, { tag: "HarnessRuntimeDisposeUnconfirmed" }], omittedFailures: 0 }, "Harness shutdown failed.")`; `sink.exit` exactly once with `1`, after `fatal` (`invocationCallOrder`); no `P`.
++  - Test: `logs a clean shutdown without a fatal` -> `apps/harness/src/process-shutdown.test.ts`. Oracle: `stopRuntime` resolves; `succeeded` once with "Harness message port closed."; `sink.fatal` and `sink.exit` never.
++  - The two existing rows (`observes one runtime shutdown rejection without forwarding its cause`, `converts a synchronous runtime shutdown throw once`) are replaced by the `rejects` and `throws` rows, which keep their once-only and no-cause assertions.
++  - Expected red: against the scaffold, `fatal` is called without `failures` and `omittedFailures`.
++- **Behavior U2B-FD-B3**: at startup, an invalid bootstrap and a runtime start or dispose failure exit with distinct codes and a summary, the latter only after the launch settled; a good start attaches.
++  - Seam: `connectHarnessProcess({ bootstrap, prepare, launch, attach, sink })` from `process-connection.ts`.
++  - Test: `reports a startup failure with its code and summary: $name` -> `apps/harness/src/process-connection.test.ts` (`it.each`). Rows:
++    - `invalid bootstrap`: `prepare` throws `new Error(P)` → `launch` and `attach` never called; `sink.fatal` once with `({ code: "HARNESS_START_FAILED", failures: [{ kind: "error" }], omittedFailures: 0 }, "Harness received an invalid bootstrap message.")`; then `sink.exit(1)` once;
++    - `runtime start and dispose fail`: `prepare` returns `R`; `launch` is called once with `R` (`toBe`) and rejects with `AggregateError([new Error(P), new HarnessRuntimeDisposeUnconfirmed(500)], "Harness startup failed.")` → `attach` never; `sink.fatal` once with `({ code: "HARNESS_RUNTIME_START_FAILED", failures: [{ kind: "error" }, { tag: "HarnessRuntimeDisposeUnconfirmed" }], omittedFailures: 0 }, "Harness runtime failed to start.")`; then `sink.exit(1)` once;
++    - `runtime start fails alone`: `launch` rejects with `new ApplicationDatabaseCloseUnconfirmed(1000)` → code `HARNESS_RUNTIME_START_FAILED`, `failures` `[{ tag: "ApplicationDatabaseCloseUnconfirmed" }]`.
++    - Every row: `exit` after `fatal` (`invocationCallOrder`); no `P` in the `fatal` calls; the returned promise resolves.
++  - Test: `reports a runtime start failure only after the launch settled` -> `apps/harness/src/process-connection.test.ts`. Oracle: `launch` returns a promise the test rejects later; after `connectHarnessProcess` is called and pending callbacks are flushed (test-side `await new Promise(setImmediate)`, which the Effect rules allow in tests), `sink.fatal` and `sink.exit` have not been called; after the test rejects it with `E`, `fatal` then `exit(1)` are called once each. With `launchOnProcessRuntime`'s existing pin (`process-bootstrap.test.ts:355`, the rejection comes only after the bounded dispose), this pins "the bounded dispose settles before the startup exit" (Q25, the cheap part).
++  - Test: `attaches the stop of a good start` -> `apps/harness/src/process-connection.test.ts`. Oracle: `launch` resolves with `stop` → `attach` once with `stop` (`toBe`), after `launch` resolved; `sink.fatal` and `sink.exit` never.
++  - Expected red: against the scaffold, the two runtime rows fail on the code (`HARNESS_START_FAILED`) and the message, and every failure row fails on `failures`. `reports … only after the launch settled` and `attaches the stop of a good start`: Expected red: none — pin (today's `connect` already awaits and attaches; s9 moves it).
++- **TDD-exempt:**
++  - `apps/harness/src/process-entry.ts` wiring (Y14, Pedro §126; Q25 (b), §140): the parent-port listener, the transport, the `prepare`/`launch`/`attach` wiring and the fatal sink built on the process logger and `process.exit`. Static check at candidate review; packaged path covered by `package:launch-smoke`.
++  - The split of `startHarnessProcessRuntime` into the bootstrap check and the launch, with `startHarnessProcessRuntime` kept as their composition: no reachable behaviour changes; proven by `pnpm typecheck`, the unchanged `process-bootstrap.test.ts` rows and the harness integration tests that call `startHarnessProcessRuntime`.
++  - Exporting the cleanup-part list from `registration-listing.ts` (type and value move, no behaviour change; the listing's existing rows guard it).
++  - The mutation scope entries — gate configuration, checked by the scoped run and `pnpm check:dead-code`.
++
++### Success Criteria: u2b-s9-harness-fatal-diagnostics
++
++**Automated:**
++- Red then green per behaviour: `pnpm exec vitest run --project harness apps/harness/src/process-fatal-diagnostics.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-connection.test.ts [-t <name>]`.
++- Pins unchanged: `pnpm exec vitest run --project harness apps/harness/src/process-bootstrap.test.ts apps/harness/src/registration/registration-listing.test.ts`.
++- Bindings, each restored by digest:
++  - B1: reading `message` (or `cause`) into an entry makes the `cleanup parts` and `untagged values` rows fail (`P` found); not flattening nested aggregates makes `nested aggregates in order` fail; a bound of 15 or 17 makes `the bound` fail;
++  - B2: calling `exit` before `fatal` makes the B2 rows fail on call order;
++  - B3: mapping a `launch` rejection to `HARNESS_START_FAILED` makes the runtime rows fail; calling `fatal` before awaiting `launch` makes `reports … only after the launch settled` fail.
++- On the final candidate: `pnpm check`, `pnpm typecheck`, `pnpm check:effect`, `pnpm check:dead-code`, `pnpm check:duplicates`; CodeScene `code_health_score` on every changed file with the raw tool output saved (target 10, AGENTS.md); the designer's preflight.
++- Heavy runs, each with the coordinator's GO and the CPU rule: `package:smoke` (it starts and stops the packaged harness, so it covers the `process-entry.ts` wiring).
++- **Scoped mutation** on the final candidate, once, with the coordinator's GO: add the s9 ranges of `process-fatal-diagnostics.ts` (already listed whole), `process-shutdown.ts` and `process-connection.ts` to `stryker.project-storage.config.json`, and `process-shutdown.test.ts` and `process-connection.test.ts` to `apps/harness/vitest.project-storage-mutation.config.ts`; run limited with `--mutate` to those files; pass rule as in s7 (every counted mutant killed, a `Timeout` counts as killed; survivors to Pedro's triage).
++
++**Manual:**
++- None beyond the combined Part A acceptance. The fatal summary is visible only on harness stdout (Q1); a manual check of the desktop log would show no change.
++
+ ## Deferred Work
+ These are later slices, in order. Their behaviour IDs are stable. Seams, oracles and Expected red reasons are provisional; they are refined just in time and re-checked against the predecessor.
+ 
+@@ -3563,6 +3655,18 @@ Intent approval of this brief is not build authority. The workspace, branch and
+ - **Identities:** prior approved copy `approved-9f11fb36….md`; the new identity is the frontmatter `content_hash`. New contract lines, so approval reopens: Pedro approves the new hash before s8 is built.
+ - **Invalidated:** none. s1-s7 are untouched.
+ 
++**Follow-up (2026-10-22T20:58, /rpiv:revise, s9 added after the Part A deep review, decisions §140):**
++- **Context:** the Part A deep review (`.rpiv/artifacts/reviews/2026-10-22_19-44-49_fdda65e-d7a0e22-123-part-a.md`, candidate `d7a0e22`, base `fdda65e`) raised I1, Q25 and Q33. Pedro decided (decisions log §140, via the coordinator): I1 (a), Q33 (b), Q25 (b).
++- **What changed (lines added only against `approved-315e45b6…`):** the sections `### Slice u2b-s9-harness-fatal-diagnostics`, `### Test Contract: u2b-s9-harness-fatal-diagnostics` and `### Success Criteria: u2b-s9-harness-fatal-diagnostics`, before Deferred Work; frontmatter; this entry. No earlier line changed.
++- **Finding → intent mapping:** I1 (a) with Q24 and Q27 folded in → U2B-FD-B1 (summary), U2B-FD-B2 (shutdown sink), U2B-FD-B3 (startup codes and sink). Q25: the cheap ordering pin → U2B-FD-B3 `reports a runtime start failure only after the launch settled`; the rest stays the Y14 exemption, named at acceptance. Q33 (b) and Q26: accepted residuals, s9 non-goals.
++- **Protocol vocabulary:** the new fatal code `HARNESS_RUNTIME_START_FAILED` is harness log metadata and does not touch `packages/protocol` (details in the slice's "Protocol vocabulary" point).
++- **New fact found while detailing:** the desktop drops harness stdout except upgrade lines, so the summary does not reach the desktop main log. Open question Q1 for Pedro (recommended (a): harness-only now, forwarding deferred).
++- **Dependencies:** s9 builds on `d7a0e22`. It changes no s1-s8 contract line; the s5 process-entry exemption (Y14) narrows to wiring. The s5 rows in `process-shutdown.test.ts` are replaced by U2B-FD-B2 rows that keep their assertions.
++- **Identities:** prior approved copy `approved-315e45b6….md`; the new identity is the frontmatter `content_hash`. New contract lines, so approval reopens: Pedro approves the new hash before s9 is built.
++- **Invalidated:** the combined Part A deep review and the product mutation runs stay history for `d7a0e22`; the combined acceptance and final validation will need the s9 candidate. s1-s8 slice evidence is untouched.
++
++**Implementation (u2b-s9-harness-fatal-diagnostics, 2026-10-22):** built in the worktree `slopstop-123` on `refactor/123-effect-lifecycle-part-a` (parent `d7a0e22`), against the approved brief `a62c7079…` (Pedro, decisions log §140-§141, via the coordinator). Q1: (a), harness-only; no protocol or desktop change; forwarding harness fatal lines to the desktop main log is deferred to #133. The red and green evidence is in `.rpiv/artifacts/evidence/2026-10-22_123-s9-tdd-evidence.md`.
++
+ ## References
+ - Research: `.rpiv/artifacts/research/2026-10-16_23-40-39_effect-unit2b-runtime-lifecycle-part-a.md`
+ - Decisions log: `.rpiv/artifacts/evidence/2026-10-05_conversation-decisions.md` (§46 :490-491, §73 :677, §81-82 :729-736, §102-§103 :890-908)
+diff --git a/apps/harness/src/process-bootstrap.ts b/apps/harness/src/process-bootstrap.ts
+index 83d4bd3..d6a8760 100644
+--- a/apps/harness/src/process-bootstrap.ts
++++ b/apps/harness/src/process-bootstrap.ts
+@@ -167,15 +167,21 @@ export function launchOnProcessRuntime<Services, LayerError>(
+   });
+ }
+ 
++type HarnessRuntimeIo = Readonly<{
++  transport: HarnessTransport;
++  /** The process log; upgrade diagnostics of the coordinator's Storage owner go here. */
++  logger: UpgradeEventLogger;
++}>;
++
+ export async function startHarnessProcessRuntime(
+-  input: Readonly<{
+-    bootstrap: unknown;
+-    transport: HarnessTransport;
+-    /** The process log; upgrade diagnostics of the coordinator's Storage owner go here. */
+-    logger: UpgradeEventLogger;
+-  }>,
++  input: HarnessRuntimeIo & Readonly<{ bootstrap: unknown }>,
+ ): Promise<StopHarnessRuntime> {
+-  const bootstrap = decodeStrict(HarnessBootstrapSchema, input.bootstrap);
++  return launchHarnessProcessRuntime(checkHarnessBootstrap(input.bootstrap), input);
++}
++
++/** Decodes the bootstrap message and checks its roots; it throws before any runtime exists. */
++export function checkHarnessBootstrap(message: unknown): HarnessRootPaths {
++  const bootstrap = decodeStrict(HarnessBootstrapSchema, message);
+   const applicationStorageRoot = trustedRoot(bootstrap.applicationStorageRootUrl);
+   const migrationResourcesRoot = trustedRoot(bootstrap.migrationResourcesRootUrl);
+   if (
+@@ -184,10 +190,17 @@ export async function startHarnessProcessRuntime(
+   ) {
+     throw new Error("Harness bootstrap roots must not overlap.");
+   }
++  return { applicationStorageRoot, migrationResourcesRoot };
++}
++
++export function launchHarnessProcessRuntime(
++  roots: HarnessRootPaths,
++  input: HarnessRuntimeIo,
++): Promise<StopHarnessRuntime> {
+   // One runtime per harness process builds the owners once, sharing one application
+   // database authority. Their shutdown order stays explicit in the harness runtime.
+   return launchOnProcessRuntime({
+-    layer: harnessServicesLayer({ applicationStorageRoot, migrationResourcesRoot }, input.logger),
++    layer: harnessServicesLayer(roots, input.logger),
+     start: (runtime) => {
+       const services = runtime.runSync(
+         Effect.gen(function* () {
+diff --git a/apps/harness/src/process-connection.test.ts b/apps/harness/src/process-connection.test.ts
+new file mode 100644
+index 0000000..aa693ee
+--- /dev/null
++++ b/apps/harness/src/process-connection.test.ts
+@@ -0,0 +1,136 @@
++import { expect, it, vi } from "vitest";
++import type { StopHarnessRuntime } from "./harness-runtime.js";
++import { HarnessRuntimeDisposeUnconfirmed } from "./process-bootstrap.js";
++import { connectHarnessProcess } from "./process-connection.js";
++import { ApplicationDatabaseCloseUnconfirmed } from "./storage/application-database-authority.js";
++
++const P = "C:privateprojectslopstop.db";
++const bootstrap = { bootstrap: "message" };
++const prepared = { roots: "checked" };
++
++function fakeSink() {
++  return { fatal: vi.fn(), exit: vi.fn() };
++}
++
++function expectFatalThenExit(sink: ReturnType<typeof fakeSink>) {
++  expect(sink.exit.mock.calls).toEqual([[1]]);
++  expect(sink.fatal.mock.invocationCallOrder[0]).toBeLessThan(
++    sink.exit.mock.invocationCallOrder[0] ?? 0,
++  );
++  const serialized = JSON.stringify(sink.fatal.mock.calls);
++  expect(serialized).not.toContain("private");
++  expect(serialized).not.toContain("is unconfirmed");
++  expect(serialized).not.toContain("Harness startup failed");
++}
++
++it("reports a startup failure with its code and summary: invalid bootstrap", async () => {
++  const prepare = vi.fn((): typeof prepared => {
++    throw new Error(P);
++  });
++  const launch = vi.fn();
++  const attach = vi.fn();
++  const sink = fakeSink();
++
++  await expect(
++    connectHarnessProcess({ bootstrap, prepare, launch, attach, sink }),
++  ).resolves.toBeUndefined();
++
++  expect(prepare).toHaveBeenCalledWith(bootstrap);
++  expect(launch).not.toHaveBeenCalled();
++  expect(attach).not.toHaveBeenCalled();
++  expect(sink.fatal.mock.calls).toEqual([
++    [
++      { code: "HARNESS_START_FAILED", failures: [{ kind: "error" }], omittedFailures: 0 },
++      "Harness received an invalid bootstrap message.",
++    ],
++  ]);
++  expectFatalThenExit(sink);
++});
++
++it.each([
++  {
++    name: "runtime start and dispose fail",
++    failure: () =>
++      new AggregateError(
++        [new Error(P), new HarnessRuntimeDisposeUnconfirmed(500)],
++        "Harness startup failed.",
++      ),
++    failures: [{ kind: "error" }, { tag: "HarnessRuntimeDisposeUnconfirmed" }],
++  },
++  {
++    name: "runtime start fails alone",
++    failure: () => new ApplicationDatabaseCloseUnconfirmed(1000),
++    failures: [{ tag: "ApplicationDatabaseCloseUnconfirmed" }],
++  },
++])("reports a startup failure with its code and summary: $name", async ({ failure, failures }) => {
++  const prepare = vi.fn(() => prepared);
++  const launch = vi.fn((_prepared: typeof prepared) => Promise.reject(failure()));
++  const attach = vi.fn();
++  const sink = fakeSink();
++
++  await expect(
++    connectHarnessProcess({ bootstrap, prepare, launch, attach, sink }),
++  ).resolves.toBeUndefined();
++
++  expect(launch).toHaveBeenCalledOnce();
++  expect(launch.mock.calls[0]?.[0]).toBe(prepared);
++  expect(attach).not.toHaveBeenCalled();
++  expect(sink.fatal.mock.calls).toEqual([
++    [
++      { code: "HARNESS_RUNTIME_START_FAILED", failures, omittedFailures: 0 },
++      "Harness runtime failed to start.",
++    ],
++  ]);
++  expectFatalThenExit(sink);
++});
++
++it("reports a runtime start failure only after the launch settled", async () => {
++  let rejectLaunch: (reason: unknown) => void = () => undefined;
++  const launch = vi.fn(
++    () =>
++      new Promise<StopHarnessRuntime>((_resolve, reject) => {
++        rejectLaunch = reject;
++      }),
++  );
++  const sink = fakeSink();
++
++  const connection = connectHarnessProcess({
++    bootstrap,
++    prepare: () => prepared,
++    launch,
++    attach: vi.fn(),
++    sink,
++  });
++  await new Promise(setImmediate);
++
++  expect(launch).toHaveBeenCalledOnce();
++  expect(sink.fatal).not.toHaveBeenCalled();
++  expect(sink.exit).not.toHaveBeenCalled();
++
++  rejectLaunch(new Error(P));
++  await connection;
++
++  expect(sink.fatal).toHaveBeenCalledOnce();
++  expectFatalThenExit(sink);
++});
++
++it("attaches the stop of a good start", async () => {
++  const stop: StopHarnessRuntime = () => Promise.resolve();
++  let launched = false;
++  const launch = vi.fn(async () => {
++    await Promise.resolve();
++    launched = true;
++    return stop;
++  });
++  const attach = vi.fn((_stop: StopHarnessRuntime) => {
++    expect(launched).toBe(true);
++  });
++  const sink = fakeSink();
++
++  await connectHarnessProcess({ bootstrap, prepare: () => prepared, launch, attach, sink });
++
++  expect(attach).toHaveBeenCalledOnce();
++  expect(attach.mock.calls[0]?.[0]).toBe(stop);
++  expect(sink.fatal).not.toHaveBeenCalled();
++  expect(sink.exit).not.toHaveBeenCalled();
++});
+diff --git a/apps/harness/src/process-connection.ts b/apps/harness/src/process-connection.ts
+new file mode 100644
+index 0000000..3b07c7d
+--- /dev/null
++++ b/apps/harness/src/process-connection.ts
+@@ -0,0 +1,43 @@
++import type { StopHarnessRuntime } from "./harness-runtime.js";
++import { type HarnessFatalSink, reportHarnessFailure } from "./process-fatal-diagnostics.js";
++
++type HarnessConnectionOptions<Prepared> = Readonly<{
++  bootstrap: unknown;
++  /** Checks the bootstrap message synchronously; it throws before any runtime exists. */
++  prepare(bootstrap: unknown): Prepared;
++  /** Starts the runtime; it rejects only after a failed start's bounded dispose settled. */
++  launch(prepared: Prepared): Promise<StopHarnessRuntime>;
++  attach(stop: StopHarnessRuntime): void;
++  sink: HarnessFatalSink;
++}>;
++
++/** Starts the harness for one bootstrap message; a failed start is reported once, then exits. */
++export async function connectHarnessProcess<Prepared>(
++  options: HarnessConnectionOptions<Prepared>,
++): Promise<void> {
++  let prepared: Prepared;
++  try {
++    prepared = options.prepare(options.bootstrap);
++  } catch (failure: unknown) {
++    reportHarnessFailure(
++      options.sink,
++      "HARNESS_START_FAILED",
++      "Harness received an invalid bootstrap message.",
++      failure,
++    );
++    return;
++  }
++  let stop: StopHarnessRuntime;
++  try {
++    stop = await options.launch(prepared);
++  } catch (failure: unknown) {
++    reportHarnessFailure(
++      options.sink,
++      "HARNESS_RUNTIME_START_FAILED",
++      "Harness runtime failed to start.",
++      failure,
++    );
++    return;
++  }
++  options.attach(stop);
++}
+diff --git a/apps/harness/src/process-entry.ts b/apps/harness/src/process-entry.ts
+index 41c03ec..f687958 100644
+--- a/apps/harness/src/process-entry.ts
++++ b/apps/harness/src/process-entry.ts
+@@ -1,7 +1,8 @@
+ import { createHarnessLogger } from "./harness-logger.js";
+ import type { HarnessTransport, StopHarnessRuntime } from "./harness-runtime.js";
+-import { startHarnessProcessRuntime } from "./process-bootstrap.js";
+-import { createHarnessFatalHandlers } from "./process-fatal-diagnostics.js";
++import { checkHarnessBootstrap, launchHarnessProcessRuntime } from "./process-bootstrap.js";
++import { connectHarnessProcess } from "./process-connection.js";
++import { createHarnessFatalHandlers, type HarnessFatalSink } from "./process-fatal-diagnostics.js";
+ import { createHarnessPortCloseHandler } from "./process-shutdown.js";
+ 
+ type UtilityMessageEvent = Readonly<{
+@@ -29,16 +30,18 @@ type UtilityProcess = NodeJS.Process & {
+ 
+ const logger = createHarnessLogger();
+ 
++const fatalSink: HarnessFatalSink = {
++  fatal: (metadata, message) => logger.fatal(metadata, message),
++  exit: (code) => {
++    process.exit(code);
++  },
++};
++
+ function failStartup(message: string): never {
+   logger.fatal({ code: "HARNESS_START_FAILED" }, message);
+   process.exit(1);
+ }
+ 
+-function failShutdown(message: "Harness shutdown failed."): never {
+-  logger.fatal({ code: "HARNESS_SHUTDOWN_FAILED" }, message);
+-  process.exit(1);
+-}
+-
+ function createTransport(port: UtilityMessagePort): HarnessTransport {
+   return {
+     send: (message) => {
+@@ -56,12 +59,7 @@ function createTransport(port: UtilityMessagePort): HarnessTransport {
+   };
+ }
+ 
+-const fatalHandlers = createHarnessFatalHandlers({
+-  fatal: (metadata, message) => logger.fatal(metadata, message),
+-  exit: (code) => {
+-    process.exit(code);
+-  },
+-});
++const fatalHandlers = createHarnessFatalHandlers(fatalSink);
+ 
+ const utilityProcess = process as UtilityProcess;
+ const parentPort = utilityProcess.parentPort;
+@@ -70,29 +68,27 @@ if (parentPort === undefined) {
+   failStartup("Harness utility process has no parent port.");
+ }
+ 
+-/** Awaits the startup, so a failed start is reported only after its bounded dispose settled. */
+-async function connect(port: UtilityMessagePort, bootstrap: unknown): Promise<void> {
+-  let stopRuntime: StopHarnessRuntime;
+-  try {
+-    stopRuntime = await startHarnessProcessRuntime({
+-      bootstrap,
+-      transport: createTransport(port),
+-      logger,
+-    });
+-  } catch {
+-    failStartup("Harness received an invalid bootstrap message.");
+-  }
+-
+-  port.on(
+-    "close",
+-    createHarnessPortCloseHandler({
+-      stopRuntime,
+-      succeeded: (message) => logger.info(message),
+-      failed: failShutdown,
+-    }),
+-  );
+-  port.start();
+-  logger.info("Harness message port connected.");
++/** Starts the harness on `port`; a failed start is reported only after its bounded dispose settled. */
++function connect(port: UtilityMessagePort, bootstrap: unknown): Promise<void> {
++  return connectHarnessProcess({
++    bootstrap,
++    prepare: checkHarnessBootstrap,
++    launch: (roots) =>
++      launchHarnessProcessRuntime(roots, { transport: createTransport(port), logger }),
++    attach: (stopRuntime: StopHarnessRuntime) => {
++      port.on(
++        "close",
++        createHarnessPortCloseHandler({
++          stopRuntime,
++          succeeded: (message) => logger.info(message),
++          sink: fatalSink,
++        }),
++      );
++      port.start();
++      logger.info("Harness message port connected.");
++    },
++    sink: fatalSink,
++  });
+ }
+ 
+ parentPort.once("message", (event) => {
+diff --git a/apps/harness/src/process-fatal-diagnostics.test.ts b/apps/harness/src/process-fatal-diagnostics.test.ts
+index ebe41ca..42c468a 100644
+--- a/apps/harness/src/process-fatal-diagnostics.test.ts
++++ b/apps/harness/src/process-fatal-diagnostics.test.ts
+@@ -1,5 +1,10 @@
+ import { expect, it, vi } from "vitest";
+-import { createHarnessFatalHandlers } from "./process-fatal-diagnostics.js";
++import { HarnessRuntimeDisposeUnconfirmed } from "./process-bootstrap.js";
++import {
++  createHarnessFatalHandlers,
++  summarizeHarnessFailure,
++} from "./process-fatal-diagnostics.js";
++import { ApplicationDatabaseCloseUnconfirmed } from "./storage/application-database-authority.js";
+ 
+ it("reports process fatal values as metadata only", () => {
+   const fatal = vi.fn();
+@@ -40,3 +45,129 @@ it("classifies null separately from objects", () => {
+   );
+   expect(exit).toHaveBeenCalledWith(1);
+ });
++
++const P = "C:privateprojectslopstop.db";
++
++/** The shape `RegistrationCleanupUnconfirmed` has; the summary reads only `_tag` and `parts`. */
++function cleanupUnconfirmed(parts: readonly string[], cause?: unknown) {
++  return {
++    _tag: "RegistrationCleanupUnconfirmed",
++    name: "RegistrationCleanupUnconfirmed",
++    message: P,
++    parts,
++    cause,
++  };
++}
++
++const tagged = (index: number) => ({ _tag: `Failure${index}` });
++
++function cyclicAggregate() {
++  const aggregate = new AggregateError([], "cycle");
++  aggregate.errors = [new ApplicationDatabaseCloseUnconfirmed(1000), aggregate];
++  return aggregate;
++}
++
++it.each([
++  {
++    name: "one tagged failure",
++    value: new ApplicationDatabaseCloseUnconfirmed(1000),
++    failures: [{ tag: "ApplicationDatabaseCloseUnconfirmed" }],
++    omittedFailures: 0,
++  },
++  {
++    name: "cleanup parts",
++    value: cleanupUnconfirmed(["observer", "listing"], new Error(P)),
++    failures: [{ tag: "RegistrationCleanupUnconfirmed", parts: ["observer", "listing"] }],
++    omittedFailures: 0,
++  },
++  {
++    name: "unknown parts dropped",
++    value: cleanupUnconfirmed(["registry", P]),
++    failures: [{ tag: "RegistrationCleanupUnconfirmed", parts: ["registry"] }],
++    omittedFailures: 0,
++  },
++  {
++    name: "nested aggregates in order",
++    value: new AggregateError([
++      new AggregateError([
++        cleanupUnconfirmed(["registry"]),
++        new ApplicationDatabaseCloseUnconfirmed(1000),
++      ]),
++      new HarnessRuntimeDisposeUnconfirmed(500),
++    ]),
++    failures: [
++      { tag: "RegistrationCleanupUnconfirmed", parts: ["registry"] },
++      { tag: "ApplicationDatabaseCloseUnconfirmed" },
++      { tag: "HarnessRuntimeDisposeUnconfirmed" },
++    ],
++    omittedFailures: 0,
++  },
++  {
++    name: "untagged values: an error",
++    value: new Error(P),
++    failures: [{ kind: "error" }],
++    omittedFailures: 0,
++  },
++  {
++    name: "untagged values: a string",
++    value: P,
++    failures: [{ kind: "string" }],
++    omittedFailures: 0,
++  },
++  { name: "untagged values: null", value: null, failures: [{ kind: "null" }], omittedFailures: 0 },
++  {
++    name: "untagged values: an object",
++    value: { token: P },
++    failures: [{ kind: "object" }],
++    omittedFailures: 0,
++  },
++  {
++    name: "a non-identifier tag: private",
++    value: { _tag: P },
++    failures: [{ kind: "object" }],
++    omittedFailures: 0,
++  },
++  {
++    name: "a non-identifier tag: 65 characters",
++    value: { _tag: "A".repeat(65) },
++    failures: [{ kind: "object" }],
++    omittedFailures: 0,
++  },
++  {
++    name: "a non-identifier tag: 64 characters is one",
++    value: { _tag: "A".repeat(64) },
++    failures: [{ tag: "A".repeat(64) }],
++    omittedFailures: 0,
++  },
++  {
++    name: "an empty aggregate",
++    value: new AggregateError([]),
++    failures: [{ kind: "error" }],
++    omittedFailures: 0,
++  },
++  {
++    name: "the bound: 16",
++    value: new AggregateError(Array.from({ length: 16 }, (_, index) => tagged(index))),
++    failures: Array.from({ length: 16 }, (_, index) => ({ tag: `Failure${index}` })),
++    omittedFailures: 0,
++  },
++  {
++    name: "the bound: 17",
++    value: new AggregateError(Array.from({ length: 17 }, (_, index) => tagged(index))),
++    failures: Array.from({ length: 16 }, (_, index) => ({ tag: `Failure${index}` })),
++    omittedFailures: 1,
++  },
++  {
++    name: "a cycle",
++    value: cyclicAggregate(),
++    failures: [{ tag: "ApplicationDatabaseCloseUnconfirmed" }],
++    omittedFailures: 1,
++  },
++])("summarizes a fatal failure as metadata only: $name", ({ value, failures, omittedFailures }) => {
++  const summary = summarizeHarnessFailure(value);
++
++  expect(summary).toEqual({ failures, omittedFailures });
++  const serialized = JSON.stringify(summary);
++  expect(serialized).not.toContain("private");
++  expect(serialized).not.toContain("is unconfirmed");
++});
+diff --git a/apps/harness/src/process-fatal-diagnostics.ts b/apps/harness/src/process-fatal-diagnostics.ts
+index 815f67e..504e562 100644
+--- a/apps/harness/src/process-fatal-diagnostics.ts
++++ b/apps/harness/src/process-fatal-diagnostics.ts
+@@ -1,3 +1,8 @@
++import {
++  type CleanupPart,
++  REGISTRATION_CLEANUP_PARTS,
++} from "./registration/registration-listing.js";
++
+ type FatalValueKind =
+   | "error"
+   | "string"
+@@ -10,12 +15,31 @@ type FatalValueKind =
+   | "null"
+   | "undefined";
+ 
+-type FatalMetadata = Readonly<{
+-  code: "HARNESS_UNCAUGHT_EXCEPTION" | "HARNESS_UNHANDLED_REJECTION";
+-  valueKind: FatalValueKind;
++/** One failure in a summary: its tag (with the unconfirmed cleanup parts) or its value kind. */
++type HarnessFailureEntry =
++  | Readonly<{ tag: string; parts?: readonly CleanupPart[] }>
++  | Readonly<{ kind: FatalValueKind }>;
++
++/** A failure value as metadata only: no message, path, cause or stack. */
++type HarnessFailureSummary = Readonly<{
++  failures: readonly HarnessFailureEntry[];
++  omittedFailures: number;
+ }>;
+ 
+-type HarnessFatalHandlerOptions = Readonly<{
++type HarnessExitCode =
++  | "HARNESS_START_FAILED"
++  | "HARNESS_RUNTIME_START_FAILED"
++  | "HARNESS_SHUTDOWN_FAILED";
++
++type FatalMetadata =
++  | Readonly<{
++      code: "HARNESS_UNCAUGHT_EXCEPTION" | "HARNESS_UNHANDLED_REJECTION";
++      valueKind: FatalValueKind;
++    }>
++  | (Readonly<{ code: HarnessExitCode }> & HarnessFailureSummary);
++
++/** Where a harness fatal exit is reported: one `fatal` line, then `exit(1)`. */
++export type HarnessFatalSink = Readonly<{
+   fatal(metadata: FatalMetadata, message: string): void;
+   exit(code: 1): void;
+ }>;
+@@ -30,7 +54,99 @@ function valueKind(value: unknown): FatalValueKind {
+   return typeof value;
+ }
+ 
+-export function createHarnessFatalHandlers(options: HarnessFatalHandlerOptions) {
++/** Pino logs stay bounded: failures past this many are only counted. */
++const MAX_SUMMARIZED_FAILURES = 16;
++const IDENTIFIER_TAG = /^[A-Za-z][A-Za-z0-9]{0,63}$/;
++const CLEANUP_TAG = "RegistrationCleanupUnconfirmed";
++
++/** A field of an object value; any other value has none. */
++function fieldOf(value: unknown, key: "_tag" | "parts"): unknown {
++  return typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
++}
++
++function identifierTag(value: unknown): string | undefined {
++  const tag = fieldOf(value, "_tag");
++  return typeof tag === "string" && IDENTIFIER_TAG.test(tag) ? tag : undefined;
++}
++
++function isCleanupPart(part: unknown): part is CleanupPart {
++  return REGISTRATION_CLEANUP_PARTS.some((name) => name === part);
++}
++
++function cleanupParts(value: unknown): CleanupPart[] {
++  const parts = fieldOf(value, "parts");
++  return Array.isArray(parts) ? parts.filter(isCleanupPart) : [];
++}
++
++function failureEntry(value: unknown): HarnessFailureEntry {
++  const tag = identifierTag(value);
++  if (tag === undefined) {
++    return { kind: valueKind(value) };
++  }
++  return tag === CLEANUP_TAG ? { tag, parts: cleanupParts(value) } : { tag };
++}
++
++/** An aggregate with failures to flatten; an empty one is summarized as one error. */
++function nestedFailures(value: unknown): readonly unknown[] | undefined {
++  if (!(value instanceof AggregateError) || !Array.isArray(value.errors)) {
++    return undefined;
++  }
++  return value.errors.length > 0 ? value.errors : undefined;
++}
++
++type SummaryWalk = {
++  readonly failures: HarnessFailureEntry[];
++  omittedFailures: number;
++  readonly seen: Set<unknown>;
++  readonly pending: unknown[];
++};
++
++/** Queues an aggregate's failures in order; an aggregate met again is only counted. */
++function expandAggregate(walk: SummaryWalk, aggregate: unknown, nested: readonly unknown[]): void {
++  if (walk.seen.has(aggregate)) {
++    walk.omittedFailures += 1;
++    return;
++  }
++  walk.seen.add(aggregate);
++  for (let index = nested.length - 1; index >= 0; index -= 1) walk.pending.push(nested[index]);
++}
++
++function visitFailure(walk: SummaryWalk, value: unknown): void {
++  const nested = nestedFailures(value);
++  if (nested !== undefined) {
++    expandAggregate(walk, value, nested);
++  } else if (walk.failures.length < MAX_SUMMARIZED_FAILURES) {
++    walk.failures.push(failureEntry(value));
++  } else {
++    walk.omittedFailures += 1;
++  }
++}
++
++/**
++ * Summarizes a failure value as tags, cleanup part names and value kinds, depth first and in
++ * order, flattening aggregates. No message, path, cause or stack is read. Entries past the
++ * bound and aggregates met again are only counted.
++ */
++export function summarizeHarnessFailure(value: unknown): HarnessFailureSummary {
++  const walk: SummaryWalk = { failures: [], omittedFailures: 0, seen: new Set(), pending: [value] };
++  while (walk.pending.length > 0) {
++    visitFailure(walk, walk.pending.pop());
++  }
++  return { failures: walk.failures, omittedFailures: walk.omittedFailures };
++}
++
++/** Reports `failure` once on `sink` with its code and summary, then exits 1. */
++export function reportHarnessFailure(
++  sink: HarnessFatalSink,
++  code: HarnessExitCode,
++  message: string,
++  failure: unknown,
++): void {
++  sink.fatal({ code, ...summarizeHarnessFailure(failure) }, message);
++  sink.exit(1);
++}
++
++export function createHarnessFatalHandlers(options: HarnessFatalSink) {
+   return {
+     uncaughtException(value: unknown): void {
+       options.fatal(
+diff --git a/apps/harness/src/process-shutdown.test.ts b/apps/harness/src/process-shutdown.test.ts
+index f870ccc..954a67a 100644
+--- a/apps/harness/src/process-shutdown.test.ts
++++ b/apps/harness/src/process-shutdown.test.ts
+@@ -1,40 +1,71 @@
+ import { expect, it, vi } from "vitest";
++import { HarnessRuntimeDisposeUnconfirmed } from "./process-bootstrap.js";
+ import { createHarnessPortCloseHandler } from "./process-shutdown.js";
+ 
+-it("observes one runtime shutdown rejection without forwarding its cause", async () => {
+-  const privateFailure = new Error("C:\\private\\project\\slopstop.db");
+-  const stopRuntime = vi.fn(() => Promise.reject(privateFailure));
+-  const succeeded = vi.fn();
+-  const failed = vi.fn();
+-  const close = createHarnessPortCloseHandler({ stopRuntime, succeeded, failed });
++const P = "C:privateprojectslopstop.db";
+ 
+-  close();
+-  close();
++function shutdownFailure() {
++  return new AggregateError(
++    [new Error(P), new HarnessRuntimeDisposeUnconfirmed(500)],
++    "Harness process shutdown failed.",
++  );
++}
+ 
+-  await vi.waitFor(() => expect(failed).toHaveBeenCalledOnce());
+-  expect(stopRuntime).toHaveBeenCalledOnce();
+-  expect(succeeded).not.toHaveBeenCalled();
+-  expect(failed).toHaveBeenCalledWith("Harness shutdown failed.");
+-  expect(JSON.stringify(failed.mock.calls)).not.toContain(privateFailure.message);
+-});
++function fakeSink() {
++  return { fatal: vi.fn(), exit: vi.fn() };
++}
+ 
+-it("converts a synchronous runtime shutdown throw once", async () => {
+-  const privateFailure = new Error("C:\\private\\project\\synchronous.db");
+-  const stopRuntime = vi.fn(() => {
+-    throw privateFailure;
+-  });
++it.each([
++  { name: "rejects", stop: (failure: unknown) => () => Promise.reject(failure) },
++  {
++    name: "throws",
++    stop: (failure: unknown) => () => {
++      throw failure;
++    },
++  },
++])("reports a failed shutdown with its summary, then exits: $name", async ({ stop }) => {
++  const stopRuntime = vi.fn(stop(shutdownFailure()));
+   const succeeded = vi.fn();
+-  const failed = vi.fn();
+-  const close = createHarnessPortCloseHandler({ stopRuntime, succeeded, failed });
++  const sink = fakeSink();
++  const close = createHarnessPortCloseHandler({ stopRuntime, succeeded, sink });
+ 
+   expect(() => {
+     close();
+     close();
+   }).not.toThrow();
+ 
+-  await vi.waitFor(() => expect(failed).toHaveBeenCalledOnce());
++  await vi.waitFor(() => expect(sink.exit).toHaveBeenCalledOnce());
+   expect(stopRuntime).toHaveBeenCalledOnce();
+   expect(succeeded).not.toHaveBeenCalled();
+-  expect(failed).toHaveBeenCalledWith("Harness shutdown failed.");
+-  expect(JSON.stringify(failed.mock.calls)).not.toContain(privateFailure.message);
++  expect(sink.fatal.mock.calls).toEqual([
++    [
++      {
++        code: "HARNESS_SHUTDOWN_FAILED",
++        failures: [{ kind: "error" }, { tag: "HarnessRuntimeDisposeUnconfirmed" }],
++        omittedFailures: 0,
++      },
++      "Harness shutdown failed.",
++    ],
++  ]);
++  expect(sink.exit.mock.calls).toEqual([[1]]);
++  expect(sink.fatal.mock.invocationCallOrder[0]).toBeLessThan(
++    sink.exit.mock.invocationCallOrder[0] ?? 0,
++  );
++  const serialized = JSON.stringify(sink.fatal.mock.calls);
++  expect(serialized).not.toContain("private");
++  expect(serialized).not.toContain("is unconfirmed");
++});
++
++it("logs a clean shutdown without a fatal", async () => {
++  const stopRuntime = vi.fn(() => Promise.resolve());
++  const succeeded = vi.fn();
++  const sink = fakeSink();
++  const close = createHarnessPortCloseHandler({ stopRuntime, succeeded, sink });
++
++  close();
++
++  await vi.waitFor(() => expect(succeeded).toHaveBeenCalledOnce());
++  expect(succeeded).toHaveBeenCalledWith("Harness message port closed.");
++  expect(sink.fatal).not.toHaveBeenCalled();
++  expect(sink.exit).not.toHaveBeenCalled();
+ });
+diff --git a/apps/harness/src/process-shutdown.ts b/apps/harness/src/process-shutdown.ts
+index 589c38b..6ff80ec 100644
+--- a/apps/harness/src/process-shutdown.ts
++++ b/apps/harness/src/process-shutdown.ts
+@@ -1,9 +1,10 @@
+ import type { StopHarnessRuntime } from "./harness-runtime.js";
++import { type HarnessFatalSink, reportHarnessFailure } from "./process-fatal-diagnostics.js";
+ 
+ type HarnessShutdownObserverOptions = Readonly<{
+   stopRuntime: StopHarnessRuntime;
+   succeeded(message: "Harness message port closed."): void;
+-  failed(message: "Harness shutdown failed."): void;
++  sink: HarnessFatalSink;
+ }>;
+ 
+ export function createHarnessPortCloseHandler(options: HarnessShutdownObserverOptions): () => void {
+@@ -16,7 +17,13 @@ export function createHarnessPortCloseHandler(options: HarnessShutdownObserverOp
+       .then(() => options.stopRuntime())
+       .then(
+         () => options.succeeded("Harness message port closed."),
+-        () => options.failed("Harness shutdown failed."),
++        (failure: unknown) =>
++          reportHarnessFailure(
++            options.sink,
++            "HARNESS_SHUTDOWN_FAILED",
++            "Harness shutdown failed.",
++            failure,
++          ),
+       );
+   };
+ }
+diff --git a/apps/harness/src/registration/registration-listing.ts b/apps/harness/src/registration/registration-listing.ts
+index a919b80..f62e461 100644
+--- a/apps/harness/src/registration/registration-listing.ts
++++ b/apps/harness/src/registration/registration-listing.ts
+@@ -12,8 +12,11 @@ export type RegistrationListingPorts = Readonly<{
+   registry: Readonly<{ stop(): Promise<void> }>;
+ }>;
+ 
++/** The registration parts whose cleanup at stop can be unconfirmed, in reporting order. */
++export const REGISTRATION_CLEANUP_PARTS = ["registry", "observer", "listing"] as const;
++
+ /** A registration part whose cleanup at stop was not confirmed. */
+-type CleanupPart = "registry" | "observer" | "listing";
++export type CleanupPart = (typeof REGISTRATION_CLEANUP_PARTS)[number];
+ 
+ /** Stop could not confirm every part's cleanup; each unconfirmed part is named. */
+ class RegistrationCleanupUnconfirmed extends Data.TaggedError("RegistrationCleanupUnconfirmed")<{
+diff --git a/apps/harness/vitest.project-storage-mutation.config.ts b/apps/harness/vitest.project-storage-mutation.config.ts
+index 49f89c2..e9aeed1 100644
+--- a/apps/harness/vitest.project-storage-mutation.config.ts
++++ b/apps/harness/vitest.project-storage-mutation.config.ts
+@@ -13,6 +13,8 @@ export default defineConfig({
+     include: [
+       "packages/protocol/src/project-storage-protocol.test.ts",
+       "apps/harness/src/process-fatal-diagnostics.test.ts",
++      "apps/harness/src/process-shutdown.test.ts",
++      "apps/harness/src/process-connection.test.ts",
+       "apps/harness/src/storage/sqlite-schema-expression.test.ts",
+       "apps/harness/src/storage/project-storage-node-adapters.test.ts",
+       "apps/harness/tests/integration/project-storage-create.integration.test.ts",
+diff --git a/stryker.project-storage.config.json b/stryker.project-storage.config.json
+index 94230a5..c7c51cd 100644
+--- a/stryker.project-storage.config.json
++++ b/stryker.project-storage.config.json
+@@ -3,6 +3,8 @@
+   "mutate": [
+     "packages/protocol/src/project-storage-protocol.ts",
+     "apps/harness/src/process-fatal-diagnostics.ts",
++    "apps/harness/src/process-shutdown.ts",
++    "apps/harness/src/process-connection.ts",
+     "apps/harness/src/storage/sqlite-schema-expression.ts",
+     "apps/harness/src/storage/project-storage-database-specs.ts",
+     "apps/harness/src/storage/project-storage-spec-builders.ts",
+@@ -28,7 +30,7 @@
+     "apps/harness/src/storage/application-database-authority.ts:481-484",
+     "apps/harness/src/storage/application-database-authority.ts:509-515",
+     "apps/harness/src/harness-runtime.ts:184-187",
+-    "apps/harness/src/process-bootstrap.ts:262-268",
++    "apps/harness/src/process-bootstrap.ts:275-281",
+     "apps/harness/src/harness-runtime.ts:88-100",
+     "apps/harness/src/harness-runtime.ts:107-118",
+     "apps/harness/src/harness-runtime.ts:178-178",
+@@ -39,7 +41,7 @@
+     "apps/harness/src/process-bootstrap.ts:95-100",
+     "apps/harness/src/process-bootstrap.ts:107-119",
+     "apps/harness/src/process-bootstrap.ts:126-166",
+-    "apps/harness/src/registration/registration-listing.ts:18-80",
++    "apps/harness/src/registration/registration-listing.ts:21-83",
+     "apps/harness/src/project-registration-observer.ts:96-112",
+     "apps/harness/src/project-registration-observer.ts:146-161",
+     "apps/harness/src/storage/project-storage-node-errors.ts",

@@ -1,0 +1,93 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (10 tests | 7 failed | 3 skipped) 190ms
+   × distinguishes a broken binary run: 'missing package' 36ms
+   × distinguishes a broken binary run: 'missing executable' 27ms
+   × distinguishes a broken binary run: 'spawn error' 25ms
+   × distinguishes a broken binary run: 'killed' 25ms
+   × distinguishes a broken binary run: 'exit 2' 27ms
+   × distinguishes a broken binary run: 'exit 1, no diagnostic line' 24ms
+   × distinguishes a broken binary run: 'exit 0 with an error line' 25ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'missing package'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'missing executable'
+AssertionError: expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BINARY_MISSING",
+-   "ok": false,
++   "ok": true,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:166:18
+    164|     spawn,
+    165|   });
+    166|   expect(result).toEqual({ ok: false, code: row.code });
+       |                  ^
+    167|   expect(calls).toHaveLength(row.spawns);
+    168| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'spawn error'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'killed'
+AssertionError: expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BINARY_FAILED",
+-   "ok": false,
++   "ok": true,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:166:18
+    164|     spawn,
+    165|   });
+    166|   expect(result).toEqual({ ok: false, code: row.code });
+       |                  ^
+    167|   expect(calls).toHaveLength(row.spawns);
+    168| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 2'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 1, no diagnostic line'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 0 with an error line'
+AssertionError: expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "ok": false,
++   "ok": true,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:166:18
+    164|     spawn,
+    165|   });
+    166|   expect(result).toEqual({ ok: false, code: row.code });
+       |                  ^
+    167|   expect(calls).toHaveLength(row.spawns);
+    168| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed | 3 skipped (10)
+   Start at  20:47:11
+   Duration  366ms (transform 23ms, setup 0ms, import 40ms, tests 190ms, environment 0ms)
+

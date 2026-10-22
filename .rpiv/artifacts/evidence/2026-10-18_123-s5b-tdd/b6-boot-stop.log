@@ -1,0 +1,90 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/process-bootstrap.test.ts (14 tests | 3 failed | 8 skipped) 19ms
+   × aggregates the program and the dispose: 'both fail' 13ms
+   × aggregates the program and the dispose: 'only the program fails' 1ms
+   × aggregates the program and the dispose: 'the dispose never ends, the program f…' 1ms
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 3 passed | 8 skipped (14)
+   Start at  21:02:42
+   Duration  1.39s (transform 804ms, setup 0ms, import 1.22s, tests 19ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'both fail'
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private program stop failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private program stop failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ expectAggregate src/process-bootstrap.test.ts:158:21
+    156|   const errors = (error as AggregateError).errors;
+    157|   expect(errors).toHaveLength(2);
+    158|   expect(errors[0]).toBe(first);
+       |                     ^
+    159|   return errors[1];
+    160| }
+ ❯ check src/process-bootstrap.test.ts:203:24
+ ❯ src/process-bootstrap.test.ts:287:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'only the program fails'
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private program stop failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private program stop failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ src/process-bootstrap.test.ts:191:25
+    189| const rejectsWith = (value: unknown) => (settled: Settled) => {
+    190|   expect(settled.state).toBe("rejected");
+    191|   expect(settled.value).toBe(value);
+       |                         ^
+    192| };
+    193|
+ ❯ src/process-bootstrap.test.ts:287:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > aggregates the program and the dispose: 'the dispose never ends, the program f…'
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private program stop failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private program stop failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ expectAggregate src/process-bootstrap.test.ts:158:21
+    156|   const errors = (error as AggregateError).errors;
+    157|   expect(errors).toHaveLength(2);
+    158|   expect(errors[0]).toBe(first);
+       |                     ^
+    159|   return errors[1];
+    160| }
+ ❯ check src/process-bootstrap.test.ts:239:24
+ ❯ src/process-bootstrap.test.ts:287:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+

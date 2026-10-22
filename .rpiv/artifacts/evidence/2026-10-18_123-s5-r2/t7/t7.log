@@ -1,0 +1,6 @@
+head 616ba41 cpu 8/4/6 start 2026-10-18T18:39:47+01:00
+== registration start 2026-10-18T18:39:47+01:00 command: pnpm exec vitest run --config vitest.registration.config.ts
+== registration exit 0 end 2026-10-18T18:42:49+01:00
+== package-smoke start 2026-10-18T18:42:49+01:00 command: pnpm package:smoke
+== package-smoke exit 0 end 2026-10-18T18:43:54+01:00
+done 2026-10-18T18:43:54+01:00 head 616ba41 tracked-changes []

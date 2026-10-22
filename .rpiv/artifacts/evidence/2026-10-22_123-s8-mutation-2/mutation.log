@@ -1,0 +1,16 @@
+parent: 4d22a65
+tree: 61833a8ca990de0866a7b3970b902dbaa6c5e433
+working-tree digest: e3b0c44298fc1c14
+command: pnpm exec stryker run stryker.desktop-s8.config.json
+started: 2026-10-22T18:53:05+01:00
+---
+[32m18:53:07 (26332) INFO ProjectReader[39m Found 1 of 1836 file(s) to be mutated.
+[32m18:53:07 (26332) INFO Instrumenter[39m Instrumented 1 source file(s) with 63 mutant(s)
+[32m18:53:08 (26332) INFO ConcurrencyTokenProvider[39m Creating 4 test runner process(es).
+[32m18:53:11 (26332) INFO DryRunExecutor[39m Starting initial test run (vitest test runner with "perTest" coverage analysis). This may take a while.
+[32m18:53:12 (26332) INFO DryRunExecutor[39m Initial test run succeeded. Ran 39 tests in 0 seconds (net 46.26239999999984 ms, overhead 815.7376000000002 ms).
+[32m18:53:27 (26332) INFO MutationTestReportHelper[39m Final mutation score of 98.41 is greater than or equal to break threshold 80
+[32m18:53:27 (26332) INFO JsonReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/mutation.json
+[32m18:53:27 (26332) INFO HtmlReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/desktop-s8.html
+[32m18:53:27 (26332) INFO MutationTestExecutor[39m Done in 21 seconds.
+--- exit: 0

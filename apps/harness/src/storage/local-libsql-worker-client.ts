@@ -519,6 +519,8 @@ class LocalLibsqlWorkerBroker {
   #failure: unknown;
 
   constructor(private readonly onFailure: () => void) {
+    // Effect waiver EW4: the libSQL worker client's ready signal.
+    // @effect-diagnostics-next-line newPromise:off
     this.#ready = new Promise<void>((resolve, reject) => {
       this.#resolveReady = resolve;
       this.#rejectReady = reject;
@@ -539,6 +541,8 @@ class LocalLibsqlWorkerBroker {
     await this.#ready;
     if (this.#failure !== undefined) throw this.#failure;
     const requestId = this.#nextRequestId++;
+    // Effect waiver EW5: the libSQL worker client's per-request response.
+    // @effect-diagnostics-next-line newPromise:off
     const response = new Promise<unknown>((resolve, reject) => {
       this.#pending.set(requestId, { resolve, reject });
     });

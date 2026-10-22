@@ -1,0 +1,43 @@
+parent: 5f1bca3
+working-tree digest: f7456355d2286825
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-shutdown.test.ts
+started: 2026-10-19T02:47:40+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-shutdown.test.ts (21 tests | 3 failed) 24ms
+     × closes the IPC gate in the turn shutdown starts: 'beforeQuit then quit' 3ms
+     × closes the IPC gate in the turn shutdown starts: 'requestExit' 1ms
+     × closes the IPC gate in the turn shutdown starts: 'stop alone' 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > IPC gate > closes the IPC gate in the turn shutdown starts: 'beforeQuit then quit'
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > IPC gate > closes the IPC gate in the turn shutdown starts: 'requestExit'
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > IPC gate > closes the IPC gate in the turn shutdown starts: 'stop alone'
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/main/desktop-shutdown.test.ts:497:34
+    495|     expect(shutdown.accepting()).toBe(true);
+    496|     row.start(shutdown);
+    497|     expect(shutdown.accepting()).toBe(false);
+       |                                  ^
+    498|     await row.finish(shutdown);
+    499|     expect(shutdown.accepting()).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 18 passed (21)
+   Start at  02:47:41
+   Duration  469ms (transform 43ms, setup 0ms, import 293ms, tests 24ms, environment 0ms)
+
+--- exit: 1

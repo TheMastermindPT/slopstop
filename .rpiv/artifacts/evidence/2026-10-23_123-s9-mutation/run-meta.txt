@@ -1,0 +1,5 @@
+cpu before: 2/16/14, no League/TFT/overwolf process, alone; code 271b418 (tree 35a2ba24); backup scratchpad s9-mutation-backup (558 files, SHA256SUMS)
+command: pnpm exec stryker run stryker.project-storage.config.json --mutate apps/harness/src/process-fatal-diagnostics.ts,apps/harness/src/process-shutdown.ts,apps/harness/src/process-connection.ts
+start 2026-10-23T00:07:07+01:00
+exit 0
+end 2026-10-23T00:07:54+01:00

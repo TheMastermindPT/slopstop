@@ -1,0 +1,46 @@
+parent: 4516f61
+tree: 42c7891deb540495b734127c9740c4fb58192f3e
+working-tree digest: 65ca7c465049bb25
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-shutdown.test.ts -t dispose never settles
+started: 2026-10-19T18:17:09+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-shutdown.test.ts (25 tests | 1 failed | 24 skipped) 13ms
+     × disposes the runtime before the terminal action: 'dispose never settles' 12ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'dispose never settles'
+AssertionError: expected  { deadlineMs: 1000, _tag: '' } to match object { …(2) }
+
+- Expected
++ Received
+
+- {
+-   "_tag": "DesktopRuntimeDisposeUnconfirmed",
++ DesktopRuntimeDisposeUnconfirmed {
++   "_tag": "",
+    "deadlineMs": 1000,
+  }
+
+ ❯ run src/main/desktop-shutdown.test.ts:427:31
+    425|         expect(exit).toHaveBeenCalledExactlyOnceWith(1);
+    426|         expect(quit).not.toHaveBeenCalled();
+    427|         expect(await failure).toMatchObject({
+       |                               ^
+    428|           _tag: "DesktopRuntimeDisposeUnconfirmed",
+    429|           deadlineMs: 1000,
+ ❯ src/main/desktop-shutdown.test.ts:504:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 24 skipped (25)
+   Start at  18:17:10
+   Duration  442ms (transform 47ms, setup 0ms, import 293ms, tests 13ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/desktop-shutdown.ts bound blob 47972673aa00cdf4; restored blob c6bd23e911374de8 (backup c6bd23e911374de8) MATCH; tree before f93999ff5eca9169 after f93999ff5eca9169 MATCH

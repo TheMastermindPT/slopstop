@@ -1,0 +1,2 @@
+    if (entry === undefined) return;
+    entries.delete(id);

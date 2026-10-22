@@ -6,9 +6,15 @@ export default defineConfig({
     environment: "node",
     // registration-bootstrap-guards spawns Git and harness children; its usual limit (decisions log §75).
     testTimeout: 15_000,
+    // The two rows that run the real canary on the real tree fail only inside Stryker's sandbox;
+    // the mutation run skips them, `pnpm check` keeps them (coordinator, decisions log §139).
+    testNamePattern:
+      /^(?!.*(?:runs the canary before any package: real canary|passes on the repository)$)/,
     include: [
       "packages/protocol/src/project-storage-protocol.test.ts",
       "apps/harness/src/process-fatal-diagnostics.test.ts",
+      "apps/harness/src/process-shutdown.test.ts",
+      "apps/harness/src/process-connection.test.ts",
       "apps/harness/src/storage/sqlite-schema-expression.test.ts",
       "apps/harness/src/storage/project-storage-node-adapters.test.ts",
       "apps/harness/tests/integration/project-storage-create.integration.test.ts",
@@ -23,9 +29,24 @@ export default defineConfig({
       "apps/harness/src/storage/application-database-migration.test.ts",
       "apps/harness/src/storage/project-storage-locks.test.ts",
       "apps/harness/src/storage/project-storage-locks-service.test.ts",
+      "apps/harness/src/storage/permit-lock.test.ts",
+      "apps/harness/src/registration/project-registration-flow.test.ts",
       "apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts",
       "apps/harness/tests/integration/registry-witness-race.integration.test.ts",
       "apps/harness/tests/integration/project-storage-node-adapters.integration.test.ts",
+      "apps/harness/src/storage/application-database-authority.test.ts",
+      "apps/harness/src/harness-runtime-shutdown.test.ts",
+      "apps/harness/src/harness-runtime.test.ts",
+      "apps/harness/src/process-bootstrap.test.ts",
+      "apps/harness/tests/integration/application-database-authority-cases.integration.test.ts",
+      "apps/harness/src/registration/registration-listing.test.ts",
+      "apps/harness/src/project-registration-observer.test.ts",
+      "apps/harness/src/storage/project-storage-node-registry.test.ts",
+      "apps/harness/src/storage/project-storage-node-errors.test.ts",
+      "apps/harness/src/storage/project-storage-upgrade-node-adapter.test.ts",
+      "apps/harness/tests/integration/project-storage-upgrade-steps.integration.test.ts",
+      "apps/harness/src/registration/registration-registry.test.ts",
+      "apps/harness/scripts/check-effect-diagnostics.test.mjs",
     ],
   },
 });

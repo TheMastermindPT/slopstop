@@ -189,6 +189,8 @@ async function withinPhysicalDeadline<Result>(
   try {
     return await Promise.race([
       operation(),
+      // Effect waiver EW2: a per-request deadline race in the physical repository observation.
+      // @effect-diagnostics-next-line newPromise:off
       new Promise<PhysicalFailure>((resolve) => {
         abort = () => resolve(identityQueryInterruption(control) ?? { status: "cancelled" });
         control.signal.addEventListener("abort", abort, { once: true });

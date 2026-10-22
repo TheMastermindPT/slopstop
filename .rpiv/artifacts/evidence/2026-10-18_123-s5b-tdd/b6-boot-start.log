@@ -1,0 +1,90 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/process-bootstrap.test.ts (14 tests | 3 failed | 11 skipped) 16ms
+   × reports a startup failure after a bounded dispose: 'the dispose dies with ApplicationData…' 12ms
+   × reports a startup failure after a bounded dispose: 'the dispose takes 10 ms' 2ms
+   × reports a startup failure after a bounded dispose: 'the dispose never ends' 1ms
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 11 skipped (14)
+   Start at  21:02:44
+   Duration  1.49s (transform 870ms, setup 0ms, import 1.34s, tests 16ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > reports a startup failure after a bounded dispose: 'the dispose dies with ApplicationData…'
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private startup failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private startup failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ expectAggregate src/process-bootstrap.test.ts:158:21
+    156|   const errors = (error as AggregateError).errors;
+    157|   expect(errors).toHaveLength(2);
+    158|   expect(errors[0]).toBe(first);
+       |                     ^
+    159|   return errors[1];
+    160| }
+ ❯ check src/process-bootstrap.test.ts:323:18
+ ❯ src/process-bootstrap.test.ts:371:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > reports a startup failure after a bounded dispose: 'the dispose takes 10 ms'
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private startup failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private startup failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ check src/process-bootstrap.test.ts:337:41
+    335|         release,
+    336|         released: () => seen.released,
+    337|         check: (error) => expect(error).toBe(startupFailure),
+       |                                         ^
+    338|       };
+    339|     },
+ ❯ src/process-bootstrap.test.ts:371:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > reports a startup failure after a bounded dispose: 'the dispose never ends'
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: private startup failure // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "private startup failure",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ expectAggregate src/process-bootstrap.test.ts:158:21
+    156|   const errors = (error as AggregateError).errors;
+    157|   expect(errors).toHaveLength(2);
+    158|   expect(errors[0]).toBe(first);
+       |                     ^
+    159|   return errors[1];
+    160| }
+ ❯ check src/process-bootstrap.test.ts:348:11
+ ❯ src/process-bootstrap.test.ts:371:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+

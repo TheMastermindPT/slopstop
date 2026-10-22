@@ -1,0 +1,50 @@
+{
+  "parent": "010ee05",
+  "smoke": true,
+  "electron": "43.4.0",
+  "elapsedMs": 29846.5163,
+  "bounds": {
+    "samplesPerCell": 2,
+    "sampleBoundMs": 15000,
+    "runBoundMs": 1800000,
+    "burstSeconds": 30,
+    "halfBoundMs": 500
+  },
+  "overlaps": [],
+  "failedBursts": [],
+  "summary": {
+    "M-dispose-after-program quiet": {
+      "samples": 2,
+      "bound": 0,
+      "p50": 0.06330000000002656,
+      "p95": 0.8229999999999791,
+      "p99": 0.8229999999999791,
+      "max": 0.8229999999999791,
+      "halfBoundMs": 500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-dispose-safety-net quiet": {
+      "samples": 2,
+      "bound": 0,
+      "p50": 0.10390000000006694,
+      "p95": 0.19690000000002783,
+      "p99": 0.19690000000002783,
+      "max": 0.19690000000002783,
+      "halfBoundMs": 500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-dispose-safety-net burst": {
+      "samples": 2,
+      "bound": 0,
+      "p50": 0.16449999999986176,
+      "p95": 0.23289999999997235,
+      "p99": 0.23289999999997235,
+      "max": 0.23289999999997235,
+      "halfBoundMs": 500,
+      "withinHalfBound": true,
+      "broken": []
+    }
+  }
+}

@@ -1,0 +1,28 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime-shutdown.test.ts (10 tests | 2 failed | 8 skipped) 7ms
+   × starts the listing stop in the caller's turn: 'default' 5ms
+   × starts the listing stop in the caller's turn: 'process runtime' 1ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 8 skipped (10)
+   Start at  16:43:54
+   Duration  1.06s (transform 567ms, setup 0ms, import 917ms, tests 7ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime-shutdown.test.ts > starts the listing stop in the caller's turn: 'default'
+ FAIL  |harness| src/harness-runtime-shutdown.test.ts > starts the listing stop in the caller's turn: 'process runtime'
+AssertionError: expected [] to include 'listing-started'
+ ❯ src/harness-runtime-shutdown.test.ts:386:17
+    384|   );
+    385|   const stopping = stop();
+    386|   expect(calls).toContain("listing-started");
+       |                 ^
+    387|   await stopping;
+    388|   await processRuntime?.dispose();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+

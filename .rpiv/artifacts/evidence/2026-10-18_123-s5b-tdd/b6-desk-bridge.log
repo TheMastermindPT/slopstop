@@ -1,0 +1,52 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-shutdown.test.ts (8 tests | 1 failed) 14ms
+     × attempts every cleanup and preserves failures in order 5ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  21:03:06
+   Duration  439ms (transform 48ms, setup 0ms, import 291ms, tests 14ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > desktop shutdown > attempts every cleanup and preserves failures in order
+AssertionError: expected [ …(3) ] to deeply equal [ …(3) ]
+
+- Expected
++ Received
+
+  [
+-   Error {
++   UntypedRejection {
++     "message": "",
++     "cause": Error {
+        "message": "private Project Storage shutdown failure",
+      },
+-   Error {
++     "_tag": "UntypedRejection",
++   },
++   UntypedRejection {
++     "message": "",
++     "cause": Error {
+        "message": "private Workspace shutdown failure",
++     },
++     "_tag": "UntypedRejection",
+    },
+    Error {
+      "message": "private harness shutdown failure",
+    },
+  ]
+
+ ❯ src/main/desktop-shutdown.test.ts:129:28
+    127|     }
+    128|     expect(failure).toMatchObject({ message: "Desktop shutdown failed.…
+    129|     expect(failure.errors).toEqual([projectStorageFailure, workspaceFa…
+       |                            ^
+    130|   });
+    131|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

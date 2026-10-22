@@ -1,0 +1,13 @@
+counts: {'Ignored': 1, 'Killed': 435, 'Survived': 11}
+harness-request-core.ts:151:17 | Survived | ConditionalExpression | 'true' | if (entries.get(id)?.done === done) entries.delete(id);
+harness-request-core.ts:151:17 | Survived | OptionalChaining | 'entries.get(id).done' | if (entries.get(id)?.done === done) entries.delete(id);
+project-conversation-failure.ts:40:38 | Survived | ObjectLiteral | '{}' | protocol: (): FaultMeaning => ({ meaning: "malformed-reply" }),
+project-conversation-failure.ts:40:49 | Survived | StringLiteral | '""' | protocol: (): FaultMeaning => ({ meaning: "malformed-reply" }),
+project-storage-bridge.ts:121:45 | Survived | OptionalChaining | 'command.payload' | isDeepStrictEqual(result.request, command?.payload)
+project-storage-bridge.ts:38:21 | Ignored | StringLiteral | '""' | const stoppedText = "Project Storage bridge is stopped.";
+project-storage-bridge.ts:63:59 | Survived | BooleanLiteral | 'true' | send: ({ code }) => harnessSendFailureMessage({ ok: false, error: { code } }),
+workspace-bridge.ts:101:21 | Survived | StringLiteral | '""' | const stoppedText = "Workspace bridge is stopped.";
+workspace-bridge.ts:143:59 | Survived | BooleanLiteral | 'true' | send: ({ code }) => harnessSendFailureMessage({ ok: false, error: { code } }),
+workspace-bridge.ts:171:9 | Survived | ConditionalExpression | 'true' | if (previous !== undefined && parsed.revision <= previous) return;
+workspace-bridge.ts:182:9 | Survived | ConditionalExpression | 'true' | if (previous !== undefined && result.projection.revision < previous) {
+workspace-bridge.ts:262:7 | Survived | CallExpression | ';' | notificationListeners.clear();

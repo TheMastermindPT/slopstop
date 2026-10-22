@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "pnpm package",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm check:boundaries",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:effect && pnpm test:unit && pnpm check:boundaries",
+    "check:effect": "node apps/harness/scripts/check-effect-diagnostics.mjs",
     "check:architecture": "likec4 validate --json --no-layout docs/architecture",
     "check:boundaries": "depcruise --config dependency-cruiser.config.cjs apps packages",
     "check:dead-code": "knip",

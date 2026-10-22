@@ -1,0 +1,44 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/process-bootstrap.test.ts (14 tests | 1 failed | 13 skipped) 86ms
+   × routes the process runtime through its edges: unsubscribe throws 85ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-bootstrap.test.ts > routes the process runtime through its edges: unsubscribe throws
+AssertionError: expected [ { protocolVersion: 8, …(7) } ] to match object [ { event: 'request.failure', …(2) } ]
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  [
+    {
+      "causationId": "00000000-0000-4000-8000-000000000051",
+-     "event": "request.failure",
++     "event": "project.registration.result",
+      "payload": {
+-       "code": "HARNESS_INTERNAL_FAILURE",
+-       "retryable": false,
++       "code": "INTERNAL_FAILURE",
+      },
+    },
+  ]
+
+ ❯ src/process-bootstrap.test.ts:404:16
+    402|   listener?.(request);
+    403|   await vi.waitFor(() => expect(sent).toHaveLength(1));
+    404|   expect(sent).toMatchObject([
+       |                ^
+    405|     {
+    406|       event: "request.failure",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 skipped (14)
+   Start at  16:51:37
+   Duration  1.41s (transform 801ms, setup 0ms, import 1.20s, tests 86ms, environment 0ms)
+

@@ -1,0 +1,17 @@
+parent: 829c3cf
+tree: 876968eb46749c2082480a4338955ba1e9d6922d
+working-tree digest: 60f768bbf189012d
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-request-core.test.ts apps/desktop/src/main/harness-bridges.test.ts apps/desktop/src/main/project-entry-bridge.test.ts apps/desktop/src/main/project-storage-bridge.test.ts apps/desktop/src/main/workspace-bridge.test.ts apps/desktop/src/main/harness-session.test.ts apps/desktop/src/main/harness-supervisor.test.ts apps/desktop/src/main/desktop-runtime.test.ts apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts apps/desktop/src/main/project-entry-ipc.test.ts apps/desktop/src/main/project-registration-ipc.test.ts
+started: 2026-10-19T22:46:15+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+
+ Test Files  11 passed (11)
+      Tests  315 passed (315)
+   Start at  22:46:16
+   Duration  2.48s (transform 3.55s, setup 0ms, import 14.45s, tests 1.42s, environment 2ms)
+
+--- exit: 0

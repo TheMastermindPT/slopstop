@@ -1,0 +1,83 @@
+parent: d7a0e22
+tree: 1bfa05d2718120bf935c5f30da27a32ad17a1896
+working-tree digest: abeff60446fa0d70
+command: pnpm exec vitest run --project harness apps/harness/src/process-fatal-diagnostics.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-connection.test.ts
+started: 2026-10-22T21:18:26+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/process-fatal-diagnostics.test.ts (17 tests | 2 failed) 22ms
+   × summarizes a fatal failure as metadata only: 'the bound: 16' 8ms
+   × summarizes a fatal failure as metadata only: 'the bound: 17' 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'the bound: 16'
+AssertionError: expected { failures: [ …(15) ], …(1) } to deeply equal { failures: [ …(16) ], …(1) }
+
+- Expected
++ Received
+
+@@ -43,11 +43,8 @@
+        "tag": "Failure13",
+      },
+      {
+        "tag": "Failure14",
+      },
+-     {
+-       "tag": "Failure15",
+-     },
+    ],
+-   "omittedFailures": 0,
++   "omittedFailures": 1,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'the bound: 17'
+AssertionError: expected { failures: [ …(15) ], …(1) } to deeply equal { failures: [ …(16) ], …(1) }
+
+- Expected
++ Received
+
+@@ -43,11 +43,8 @@
+        "tag": "Failure13",
+      },
+      {
+        "tag": "Failure14",
+      },
+-     {
+-       "tag": "Failure15",
+-     },
+    ],
+-   "omittedFailures": 1,
++   "omittedFailures": 2,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  2 failed | 23 passed (25)
+   Start at  21:18:28
+   Duration  2.52s (transform 3.77s, setup 0ms, import 6.24s, tests 216ms, environment 1ms)
+
+--- exit: 1
+binding: source apps/harness/src/process-fatal-diagnostics.ts bound blob abe3411c67ef0393; restored blob 569f54e967ec84a5 (backup 569f54e967ec84a5) MATCH; tree before f6d08d3572281592 after f6d08d3572281592 MATCH

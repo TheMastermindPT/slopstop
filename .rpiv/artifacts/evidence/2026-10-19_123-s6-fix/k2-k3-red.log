@@ -1,0 +1,94 @@
+parent: feeab30
+tree: d6f79afc4edfc60b7db6d0c7cce12ce2ac2155c5
+working-tree digest: 7d4ce2ab99da4f13
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-runtime.test.ts
+started: 2026-10-19T14:36:35+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-runtime.test.ts (10 tests | 1 failed) 25ms
+     × releases every owner on dispose: 'build fails after the supervisor' 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'build fails after the supervisor'
+AssertionError: expected AsyncFiberError: An asynchronous Effect w… { …(3) } to be Error: private workspace bridge construct… // Object.is equality
+
+- Expected
++ Received
+
+- Error {
++ AsyncFiberError {
++   "message": "An asynchronous Effect was executed with Effect.runSync",
++   "fiber": FiberImpl {
++     "_children": undefined,
++     "_deferredInterrupt": false,
++     "_dispatcher": undefined,
++     "_exit": {
++       "_id": "Exit",
++       "_tag": "Failure",
++       "cause": {
++         "_id": "Cause",
++         "failures": [
++           {
++             "_tag": "Die",
++             "defect": Error {
+                "message": "private workspace bridge construction failure",
++             },
++           },
++         ],
++       },
++     },
++     "_interruptedCause": undefined,
++     "_observers": undefined,
++     "_parent": undefined,
++     "_running": false,
++     "_stack": [],
++     "_yielded": undefined,
++     "cache": {
++       "logLevel": "Info",
++       "maxOpsBeforeYield": 2048,
++       "minimumLogLevel": "Info",
++       "preventYield": false,
++       "runtimeMetrics": undefined,
++       "scheduler": MixedScheduler {
++         "executionMode": "sync",
++         "setImmediate": [Function setMicrotask],
++       },
++       "span": undefined,
++       "stackFrame": undefined,
++       "tracer": undefined,
++       "tracerContext": undefined,
++       "tracerEnabled": true,
++     },
++     "context": {
++       "_id": "Context",
++       "services": [],
++     },
++     "currentOpCount": 2,
++     "id": 50,
++     "interruptible": true,
++   },
++   "_tag": "AsyncFiberError",
++   "~effect/Cause/AsyncFiberError": "~effect/Cause/AsyncFiberError",
+  }
+
+ ❯ run src/main/desktop-runtime.test.ts:225:38
+    223|         const { ports, stops } = fakes({}, { workspace: failure });
+    224|         const runtime = makeDesktopRuntime(ports);
+    225|         expect(readFailure(runtime)).toBe(failure);
+       |                                      ^
+    226|         await expect(runtime.dispose()).resolves.toBeUndefined();
+    227|         const built = builtBridges(ports);
+ ❯ src/main/desktop-runtime.test.ts:246:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 9 passed (10)
+   Start at  14:36:35
+   Duration  466ms (transform 35ms, setup 0ms, import 289ms, tests 25ms, environment 0ms)
+
+--- exit: 1

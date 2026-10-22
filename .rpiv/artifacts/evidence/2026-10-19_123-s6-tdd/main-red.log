@@ -1,0 +1,158 @@
+parent: 5f1bca3
+working-tree digest: 04c55d0ca31eeb3a
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts
+started: 2026-10-19T12:38:35+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts (79 tests | 6 failed) 606ms
+     × disposes the main runtime before quit 8ms
+     × stops every bridge when the workspace stop throws 5ms
+     × answers unavailable after quit starts: 'listProjects' 6ms
+     × answers unavailable after quit starts: 'registerProject' 5ms
+     × answers unavailable after quit starts: 'queryWorkspace' 5ms
+     × builds no desktop runtime: 'before-quit before ready' 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > disposes the main runtime before quit
+AssertionError: expected [ 'harness' ] to deeply equal [ 'harness', 'dispose' ]
+
+- Expected
++ Received
+
+  [
+    "harness",
+-   "dispose",
+  ]
+
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:707:84
+    705|     event("before-quit");
+    706|     await flush();
+    707|     expect(ports.order.filter((step) => step === "harness" || step ===…
+       |                                                                                    ^
+    708|       "harness",
+    709|       "dispose",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > stops every bridge when the workspace stop throws
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:725:29
+    723|     event("before-quit");
+    724|     await flush();
+    725|     expect(ports.entryStop).toHaveBeenCalledOnce();
+       |                             ^
+    726|     expect(ports.stop).toHaveBeenCalledOnce();
+    727|     expect(ports.app.exit).toHaveBeenCalledExactlyOnceWith(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > answers unavailable after quit starts: 'listProjects'
+AssertionError: expected { status: 'open-path' } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "PROJECT_LIST_UNAVAILABLE",
+-   "status": "unavailable",
++   "status": "open-path",
+  }
+
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:766:34
+    764|     const call = ipcHandler(desktopIpcChannels[row.channel]);
+    765|     event("before-quit");
+    766|     await expect(call(row.value)).resolves.toEqual(row.envelope);
+       |                                  ^
+    767|     await flush();
+    768|     expect(ports.order).toContain("dispose");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > answers unavailable after quit starts: 'registerProject'
+AssertionError: expected { status: 'open-path' } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "PROJECT_REGISTRATION_UNAVAILABLE",
+-   "status": "unavailable",
++   "status": "open-path",
+  }
+
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:766:34
+    764|     const call = ipcHandler(desktopIpcChannels[row.channel]);
+    765|     event("before-quit");
+    766|     await expect(call(row.value)).resolves.toEqual(row.envelope);
+       |                                  ^
+    767|     await flush();
+    768|     expect(ports.order).toContain("dispose");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > answers unavailable after quit starts: 'queryWorkspace'
+AssertionError: expected { status: 'open-path' } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+  {
+-   "diagnostic": {
+-     "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+-     "message": "The workspace is unavailable while SlopStop closes.",
+-   },
+-   "query": {
+-     "cursor": null,
+-     "projectId": "00000000-0000-4000-8000-000000000010",
+-     "query": "memory-library.read",
+-   },
+-   "status": "unavailable",
++   "status": "open-path",
+  }
+
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:766:34
+    764|     const call = ipcHandler(desktopIpcChannels[row.channel]);
+    765|     event("before-quit");
+    766|     await expect(call(row.value)).resolves.toEqual(row.envelope);
+       |                                  ^
+    767|     await flush();
+    768|     expect(ports.order).toContain("dispose");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > builds no desktop runtime: 'before-quit before ready'
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      "C:\proof\user",
+      true,
+    ]
+
+
+Number of calls: 1
+
+ ❯ noDesktopRuntime src/main/canonical-writer-package-smoke-main.test.ts:694:25
+    692|
+    693| function noDesktopRuntime() {
+    694|   expect(ports.log).not.toHaveBeenCalled();
+       |                         ^
+    695|   expect(ports.supervisorCreated).not.toHaveBeenCalled();
+    696| }
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:827:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 73 passed (79)
+   Start at  12:38:36
+   Duration  1.22s (transform 275ms, setup 0ms, import 468ms, tests 606ms, environment 0ms)
+
+--- exit: 1

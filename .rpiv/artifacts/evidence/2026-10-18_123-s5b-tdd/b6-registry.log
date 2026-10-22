@@ -1,0 +1,67 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/registration/registration-registry.test.ts (10 tests | 2 failed) 22ms
+   × stops the standalone authority of its options: 'lease held' 6ms
+   × waits for an in-flight admission before the database 2ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 8 passed (10)
+   Start at  21:02:48
+   Duration  821ms (transform 344ms, setup 0ms, import 655ms, tests 22ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/registration/registration-registry.test.ts > stops the standalone authority of its options: 'lease held'
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be ApplicationDatabaseCloseUnconfirmed: Proj… { …(2) } // Object.is equality
+
+- Expected
++ Received
+
+- ApplicationDatabaseCloseUnconfirmed {
+-   "message": "Project Storage application database close is unconfirmed.",
+-   "deadlineMs": 1000,
+-   "_tag": "ApplicationDatabaseCloseUnconfirmed",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ expectUnconfirmedAggregate src/registration/registration-registry.test.ts:88:21
+     86|   const errors = (stopping.value as AggregateError).errors;
+     87|   expect(errors).toHaveLength(1);
+     88|   expect(errors[0]).toBe(unconfirmed);
+       |                     ^
+     89| }
+     90|
+ ❯ check src/registration/registration-registry.test.ts:114:7
+ ❯ src/registration/registration-registry.test.ts:138:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |harness| src/registration/registration-registry.test.ts > waits for an in-flight admission before the database
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be ApplicationDatabaseCloseUnconfirmed: Proj… { …(2) } // Object.is equality
+
+- Expected
++ Received
+
+- ApplicationDatabaseCloseUnconfirmed {
+-   "message": "Project Storage application database close is unconfirmed.",
+-   "deadlineMs": 1000,
+-   "_tag": "ApplicationDatabaseCloseUnconfirmed",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ src/registration/registration-registry.test.ts:236:21
+    234|   expect(errors).toHaveLength(2);
+    235|   expect(errors[0]).toBe(refusal);
+    236|   expect(errors[1]).toBe(unconfirmed);
+       |                     ^
+    237|   await release();
+    238|   expect(existsSync(base)).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

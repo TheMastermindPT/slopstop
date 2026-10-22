@@ -1,0 +1,35 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime-shutdown.test.ts (14 tests | 1 failed | 13 skipped) 8ms
+   × retains a throwing workspace unsubscribe as a stop failure while attempting every cleanup 7ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 13 skipped (14)
+   Start at  19:39:42
+   Duration  1.01s (transform 532ms, setup 0ms, import 872ms, tests 8ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime-shutdown.test.ts > retains a throwing workspace unsubscribe as a stop failure while attempting every cleanup
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ src/harness-runtime-shutdown.test.ts:234:25
+    232|     stopping = stop();
+    233|   }).not.toThrow();
+    234|   await expect(stopping).rejects.toBe(notificationsFailure);
+       |                         ^
+    235|   expect(calls).toEqual([
+    236|     "stopMessages",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

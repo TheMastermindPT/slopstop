@@ -1,0 +1,13 @@
+B5 binding re-observation (S5B-R2-5 (a), decisions §134)
+head a3ac687e89cdfb063b9ae7825e292ce1052fe7f2 (code identical to 010ee05: yes)
+planted: apps/harness/src/storage/project-storage-store.ts:767 export const planted = Effect.tryPromise({ try: async () => 1, catch: (cause) => cause });
+file blob before f73a91f6bc555883b7826a81e316d919f8501601, planted cab8e4e6976045b430c422a3b2574eb62501e709; working-tree digest before a51bb3097be29d1d
+command (repo root): pnpm check:effect
+-----
+$ node apps/harness/scripts/check-effect-diagnostics.mjs
+EFFECT_GATE_VIOLATIONS
+apps/harness/src/storage/project-storage-store.ts(767,24) unknownInEffectCatch
+[ELIFECYCLE] Command failed with exit code 1.
+exit 1
+----- restore by copy: blob f73a91f6bc555883b7826a81e316d919f8501601 equal-to-before=yes; working-tree digest after (log file excluded) 1 tracked changes
+(that one tracked change is the brief, which the designer is editing; apps/ has none: [])

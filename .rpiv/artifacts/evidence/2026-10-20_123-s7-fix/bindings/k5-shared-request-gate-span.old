@@ -1,0 +1,24 @@
+  return {
+    request: (bridge, createCommand, expected) =>
+      Effect.suspend(() => {
+        let command: DesktopMessage;
+        try {
+          command = createCommand();
+        } catch {
+          return Effect.fail({ kind: "desktop", reason: "invalid-command" } as const);
+        }
+        const id = command.messageId;
+        if (entries.has(id))
+          return Effect.fail({ kind: "desktop", reason: "identity-collision" } as const);
+        const done = Deferred.makeUnsafe<unknown, ProjectRequestFault>();
+        entries.set(id, { bridge, expected, done });
+        const sent = sendGuarded(command);
+        if (!sent.ok) settle(id, Effect.fail({ kind: "send", code: sent.error.code }));
+        // An interrupted request frees its id, so the same id can be sent again.
+        return Effect.onInterrupt(Deferred.await(done), () =>
+          Effect.sync(() => {
+            if (entries.get(id)?.done === done) entries.delete(id);
+          }),
+        );
+      }),
+    failBridge: (bridge, fault) => failWhere((entry) => entry.bridge === bridge, fault),

@@ -810,6 +810,37 @@ describe("Repository rejections on the Conversation path", () => {
     );
   });
 
+  it("runs Conversation work queued behind a settlement before work that arrives after it", async () => {
+    const hold = deferred<CanonicalCommandSettlementResult>();
+    const started = deferred<void>();
+    const order: string[] = [];
+    const { writer } = writerFixture(
+      () => {
+        order.push("S");
+        started.resolve();
+        return hold.promise;
+      },
+      { conversationTransaction: acknowledgedTransaction() },
+    );
+    const save = (name: string) =>
+      writer.conversation(() =>
+        Effect.sync(() => {
+          order.push(name);
+          return name;
+        }),
+      );
+    const settled = pendingResult(writer.settle(submission().command));
+    await started.promise;
+    const a = save("A");
+    const b = settled.then(() => save("B"));
+    hold.resolve({ status: "settled", receipt });
+    await expect(settled).resolves.toEqual(expectedResult("settled"));
+    await expect(a).resolves.toMatchObject(completedWith("A"));
+    await expect(b).resolves.toMatchObject(completedWith("B"));
+    expect(order).toEqual(["S", "A", "B"]);
+    await writer.close("2026-09-05T12:00:04.000Z");
+  });
+
   it("answers a command after an abandonment synchronously, without the repository", async () => {
     const { writer, repository } = writerFixture(unexpectedSettlement, {
       conversationTransaction: acknowledgedTransaction(),

@@ -330,6 +330,8 @@ async function drain(
           return { status: "closed" } as const;
         })
         .catch(() => pending),
+      // Effect waiver EW1: a per-request deadline race in the registration identity query.
+      // @effect-diagnostics-next-line newPromise:off
       new Promise<typeof pending>((resolve) => {
         timer = setTimeout(() => resolve(pending), REGISTRATION_CLEANUP_BUDGET_MS);
       }),

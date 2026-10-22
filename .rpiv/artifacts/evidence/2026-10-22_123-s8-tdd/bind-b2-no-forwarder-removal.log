@@ -1,0 +1,41 @@
+parent: 347c0fd
+tree: e747009fa000139284a2794dfa2cef3ead984e52
+working-tree digest: bb09103bfa1d2310
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-supervisor.test.ts -t resolves the stop at the drain bound
+started: 2026-10-22T18:19:04+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (37 tests | 1 failed | 36 skipped) 13ms
+     × resolves the stop at the drain bound when stdout never ends 12ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > resolves the stop at the drain bound when stdout never ends
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/main/harness-supervisor.test.ts:1168:49
+    1166|     expect(outcome).toEqual({ settled: true });
+    1167|     expect(supervisor.getStatus()).toEqual({ state: "stopped" });
+    1168|     expect(child.stdout?.listenerCount("data")).toBe(0);
+       |                                                 ^
+    1169|     child.stdout?.emit("data", upgradeLine());
+    1170|     expect(upgradeEvents(recorded)).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 36 skipped (37)
+   Start at  18:19:04
+   Duration  630ms (transform 210ms, setup 0ms, import 481ms, tests 13ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-supervisor.ts bound blob 5ece7159afd59355; restored blob aeea8dc71c011094 (backup aeea8dc71c011094) MATCH; tree before 37f295329be4dba4 after 37f295329be4dba4 MATCH

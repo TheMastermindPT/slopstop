@@ -1,0 +1,30 @@
+parent: b4fc9ed
+tree: 594b7ec8bc76527b7a3b57969df9bcaa07253076
+working-tree digest: 14232b705cad8123
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-shutdown.test.ts
+started: 2026-10-19T17:01:34+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: private report failure
+ ❯ Object.reportFailure apps/desktop/src/main/desktop-shutdown.test.ts:465:19
+ ❯ apps/desktop/src/main/desktop-shutdown.ts:111:19
+
+This error originated in "apps/desktop/src/main/desktop-shutdown.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 passed (1)
+      Tests  25 passed (25)
+     Errors  1 error
+   Start at  17:01:35
+   Duration  601ms (transform 60ms, setup 0ms, import 407ms, tests 22ms, environment 0ms)
+
+--- exit: 1

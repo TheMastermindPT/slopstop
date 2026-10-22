@@ -1,0 +1,156 @@
+parent: a838bb4
+tree: 5d1c213fdedeab33a9c886f3bad61db78af53704
+working-tree digest: e3b0c44298fc1c14
+command: pnpm test:e2e
+started: 2026-10-20T09:00:54+01:00
+---
+$ pnpm --filter @slopstop/desktop test:e2e
+$ electron-forge package && playwright test --config playwright.config.ts
+[33m❯[39m Checking your system
+[33m❯[39m Checking package manager version
+[32m✔[39m Found pnpm@11.5.1
+[32m✔[39m Checking your system
+[?25h[33m❯[39m Preparing to package application
+[32m✔[39m Preparing to package application
+[33m❯[39m Running packaging hooks
+[33m❯[39m Running generateAssets hook
+[32m✔[39m Running generateAssets hook
+[33m❯[39m Running prePackage hook
+[33m❯[39m [plugin-vite] Building production Vite bundles
+[33m❯[39m Building main and preload targets...
+[33m❯[39m Building renderer targets...
+[33m❯[39m Building src/main/main.ts target
+[33m❯[39m Building src/preload/preload.ts target
+
+[43m[30m WARN [39m[49m [36minlineDynamicImports[39m option is deprecated, please use [36mcodeSplitting: false[39m instead.
+
+[32m✔[39m Building src/preload/preload.ts target
+[33m❯[39m Building harness writer-proof-fixture target
+[32m✔[39m Built target main_window
+[32m✔[39m Building renderer targets...
+[32m✔[39m Building src/main/main.ts target
+[32m✔[39m Building harness writer-proof-fixture target
+[32m✔[39m Building main and preload targets...
+[32m✔[39m [plugin-vite] Building production Vite bundles
+[32m✔[39m Running prePackage hook
+[32m✔[39m Running packaging hooks
+[33m❯[39m Packaging application
+› Determining targets...
+[33m❯[39m Packaging for x64 on win32
+[33m❯[39m Copying files
+[33m❯[39m Preparing native dependencies
+[33m❯[39m Finalizing package
+[32m✔[39m Copying files
+[32m✔[39m Preparing native dependencies
+[32m✔[39m Finalizing package
+[32m✔[39m Packaging for x64 on win32
+[32m✔[39m Packaging application
+[33m❯[39m Running postPackage hook
+[32m✔[39m Running postPackage hook
+[?25h
+Running 27 tests using 1 worker
+
+  x   1 tests\e2e\conversation-accessibility.test.ts:215:1 › meets the accessibility checklist in the real window (20.2s)
+  x   2 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows a-save-faults accessibly (42.4s)
+  ok  3 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows b-read-unavailable accessibly (8.3s)
+  ok  4 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows c-read-broken accessibly (7.7s)
+  ok  5 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows d-read-rejected accessibly (7.5s)
+  ok  6 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows e-read-stale accessibly (7.3s)
+  ok  7 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows g-try-again-unavailable accessibly (7.8s)
+  ok  8 tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows f-read-only accessibly (7.2s)
+  ok  9 tests\e2e\conversation.test.ts:140:1 › saves, switches, restarts and reopens (16.7s)
+  ok 10 tests\e2e\project-upgrade.test.ts:10:1 › updates an older Project in the window (10.8s)
+Project entry Electron proof: C:\Users\pedro\AppData\Local\Temp\opencode\pc-ui-proof-XvzZT1
+  ok 11 tests\e2e\projects.test.ts:8:1 › lists and switches real saved Projects through the sandboxed Electron preload (15.8s)
+
+  ok 12 tests\e2e\registration.test.ts:87:1 › registers a repository chosen in the main-process dialog through the preload API (9.0s)
+
+  ok 13 tests\e2e\registration.test.ts:114:1 › refuses a renderer-supplied directory without reaching the harness (5.9s)
+
+  ok 14 tests\e2e\registration.test.ts:141:1 › adds a repository through the add flow in the real window and opens it (11.4s)
+
+  ok 15 tests\e2e\registration.test.ts:179:1 › removes a Project from the list in the real window and brings it back by re-adding (11.1s)
+  ok 16 tests\e2e\renderer-foundation.test.ts:70:1 › loads the bundled fonts under the unchanged CSP (5.6s)
+  ok 17 tests\e2e\renderer-foundation.test.ts:108:1 › enforces the main-window CSP on the file:// renderer (5.6s)
+  ok 18 tests\e2e\renderer-foundation.test.ts:134:1 › writes the CSP meta into the built page (2ms)
+  ok 19 tests\e2e\renderer-foundation.test.ts:146:1 › never inlines a font in the built styles (1ms)
+  ok 20 tests\e2e\renderer-foundation.test.ts:235:1 › gives the region frame its Seixo look (14.9s)
+  ok 21 tests\e2e\renderer-foundation.test.ts:260:1 › passes the accessibility harness on the region frame (15.7s)
+  ok 22 tests\e2e\renderer-foundation.test.ts:361:1 › keeps the old shell's look (15.6s)
+S4a visual review screenshots: C:\Users\pedro\AppData\Local\Temp\opencode\s4a-foundation-lLqffg\s4a-visual
+  ok 23 tests\e2e\renderer-foundation.test.ts:445:1 › captures the region frame for the visual review (15.3s)
+  ok 24 tests\e2e\shell.test.ts:54:3 › built desktop shell › shows a real harness connection behind the strict renderer boundary (5.7s)
+  ok 25 tests\e2e\shell.test.ts:93:3 › built desktop shell › returns truthful unavailable workspace results through Electron (5.6s)
+  ok 26 tests\e2e\shell.test.ts:126:3 › built desktop shell › keeps the shell visible within the minimum window (5.7s)
+  ok 27 tests\e2e\single-instance.test.ts:41:1 › quits a second launch and keeps the first usable (15.9s)
+
+
+  1) tests\e2e\conversation-accessibility.test.ts:215:1 › meets the accessibility checklist in the real window 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "rgb(178, 214, 232)"
+    Received: "rgb(156, 201, 224)"
+
+      84 |   expect(shadowLayers(ring.boxShadow)).toEqual(frostRing);
+      85 |   await save.hover();
+    > 86 |   expect((await focusFacts(save)).backgroundColor).toBe("rgb(178, 214, 232)");
+         |                                                    ^
+      87 |   await page.emulateMedia({ forcedColors: "active" });
+      88 |   expect(await focusFacts(save)).toMatchObject({
+      89 |     outlineStyle: "solid",
+        at expectFocusRings (C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\tests\e2e\conversation-accessibility.test.ts:86:52)
+        at stepsOneAndTwo (C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\tests\e2e\conversation-accessibility.test.ts:160:3)
+        at C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\tests\e2e\conversation-accessibility.test.ts:226:5
+
+    Error Context: test-results\conversation-accessibility-88fdb-hecklist-in-the-real-window\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\conversation-accessibility-88fdb-hecklist-in-the-real-window\trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results\conversation-accessibility-88fdb-hecklist-in-the-real-window\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows a-save-faults accessibly 
+
+    TimeoutError: page.screenshot: Timeout 30000ms exceeded.
+    Call log:
+      - taking page screenshot
+      - waiting for fonts to load...
+      - fonts loaded
+
+
+       at conversation-window.ts:197
+
+      195 |   expect(forcedText.checked).toBeGreaterThan(0);
+      196 |   expect(forcedText.failures).toEqual([]);
+    > 197 |   await page.screenshot({ path: path.join(shots, `${name}-forced.png`) });
+          |              ^
+      198 |   await page.emulateMedia({ forcedColors: "none" });
+      199 | }
+      200 |
+        at expectAccessibleState (C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\tests\e2e\conversation-window.ts:197:14)
+        at Object.act (C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\tests\e2e\conversation-accessibility.test.ts:374:7)
+        at C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop\tests\e2e\conversation-accessibility.test.ts:526:9
+
+    Error Context: test-results\conversation-accessibility-e2b8f-ws-a-save-faults-accessibly\error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\conversation-accessibility-e2b8f-ws-a-save-faults-accessibly\trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results\conversation-accessibility-e2b8f-ws-a-save-faults-accessibly\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    tests\e2e\conversation-accessibility.test.ts:215:1 › meets the accessibility checklist in the real window 
+    tests\e2e\conversation-accessibility.test.ts:518:5 › reaches the states the seed cannot › shows a-save-faults accessibly 
+  25 passed (5.5m)
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @slopstop/desktop@0.0.0 test:e2e: `electron-forge package && playwright test --config playwright.config.ts`
+Exit status 1
+[ELIFECYCLE] Command failed with exit code 1.
+--- exit: 1

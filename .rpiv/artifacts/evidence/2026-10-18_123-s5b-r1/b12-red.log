@@ -1,0 +1,90 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (30 tests | 6 failed | 20 skipped) 65ms
+   × keeps the waiver register exact: 'directive under tests without entry' 11ms
+   × keeps the waiver register exact: 'directive under build without entry' 6ms
+   × keeps the waiver register exact: 'directive in a root config without en…' 5ms
+   × keeps the waiver register exact: 'registered under tests' 6ms
+   × keeps the waiver register exact: 'entry without reason' 5ms
+   × keeps the waiver register exact: 'entry without removeWhen' 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive under tests without entry'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive under build without entry'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive in a root config without en…'
+AssertionError: expected { ok: true, warnings: +0 } to match object { ok: false, …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_WAIVER_UNREGISTERED",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:401:23
+    399|   const result = checkEffectDiagnostics({ root, projects: [], register…
+    400|   if (row.code === undefined) expect(result).toMatchObject({ ok: true …
+    401|   else expect(result).toMatchObject({ ok: false, code: row.code });
+       |                       ^
+    402|   if (row.fragments) expectNamedCause(result, row.fragments);
+    403| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'registered under tests'
+AssertionError: expected { ok: false, …(2) } to match object { ok: true }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "ok": true,
++   "ok": false,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:400:46
+    398|   const root = waiverTree(row.source, row.entries, row.path);
+    399|   const result = checkEffectDiagnostics({ root, projects: [], register…
+    400|   if (row.code === undefined) expect(result).toMatchObject({ ok: true …
+       |                                              ^
+    401|   else expect(result).toMatchObject({ ok: false, code: row.code });
+    402|   if (row.fragments) expectNamedCause(result, row.fragments);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'entry without reason'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'entry without removeWhen'
+AssertionError: expected { ok: true, warnings: +0 } to match object { ok: false, …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:401:23
+    399|   const result = checkEffectDiagnostics({ root, projects: [], register…
+    400|   if (row.code === undefined) expect(result).toMatchObject({ ok: true …
+    401|   else expect(result).toMatchObject({ ok: false, code: row.code });
+       |                       ^
+    402|   if (row.fragments) expectNamedCause(result, row.fragments);
+    403| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 4 passed | 20 skipped (30)
+   Start at  22:38:25
+   Duration  264ms (transform 31ms, setup 0ms, import 50ms, tests 65ms, environment 0ms)
+

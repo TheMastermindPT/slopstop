@@ -1,4 +1,6 @@
 import path from "node:path";
+import { Effect } from "effect";
+import { type UntypedRejection, untypedRejection } from "../effect-rejection.js";
 import {
   type ApplicationDatabaseAuthority,
   createApplicationDatabaseAuthority,
@@ -65,6 +67,26 @@ export function applicationDatabaseFor(
   });
   standaloneAuthorities.set(options, created);
   return created;
+}
+
+/**
+ * Stops the standalone authority kept for `options`, with its bounded close, then releases its
+ * entry whatever the outcome, so the next owner of `options` gets a fresh authority. During
+ * the stop, owners still get the stopped one, never a second authority over the same file.
+ * It never creates one. An injected authority is the harness's and is never in the map, so it
+ * is left alone.
+ */
+export function stopStandaloneAuthority(
+  options: RegistrationDatabaseOptions,
+): Effect.Effect<void, UntypedRejection> {
+  return Effect.suspend(() => {
+    const authority = standaloneAuthorities.get(options);
+    if (authority === undefined) return Effect.void;
+    return Effect.ensuring(
+      Effect.tryPromise({ try: () => authority.stop(), catch: untypedRejection }),
+      Effect.sync(() => standaloneAuthorities.delete(options)),
+    );
+  });
 }
 
 type RegistryOpenMode = "initialize-or-open" | "existing-only";

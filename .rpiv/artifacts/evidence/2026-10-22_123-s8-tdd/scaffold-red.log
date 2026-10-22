@@ -1,0 +1,82 @@
+parent: 347c0fd
+tree: 3f5c8f7391ebafb7ae95aba580b256420f0b78ab
+working-tree digest: 02c4e5656cffbad1
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-supervisor.test.ts
+started: 2026-10-22T18:10:52+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (37 tests | 4 failed) 54ms
+     × waits after exit until stdout 'end' before the stop resolves 4ms
+     × waits after exit until stdout 'close' before the stop resolves 1ms
+     × resolves the stop at the drain bound when stdout never ends 1ms
+     × bounds the worst-case quit at the kill grace plus the drain 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > waits after exit until stdout 'end' before the stop resolves
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > waits after exit until stdout 'close' before the stop resolves
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/main/harness-supervisor.test.ts:1138:31
+    1136|       child.emit("exit", 0);
+    1137|       await vi.advanceTimersByTimeAsync(500);
+    1138|       expect(outcome.settled).toBe(false);
+       |                               ^
+    1139|       expect(supervisor.getStatus()).not.toEqual({ state: "stopped" });
+    1140|       supervisor.start();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > resolves the stop at the drain bound when stdout never ends
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/main/harness-supervisor.test.ts:1157:29
+    1155|     child.emit("exit", 0);
+    1156|     await vi.advanceTimersByTimeAsync(999);
+    1157|     expect(outcome.settled).toBe(false);
+       |                             ^
+    1158|     expect(child.stdout?.listenerCount("data")).toBe(1);
+    1159|     await vi.advanceTimersByTimeAsync(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > bounds the worst-case quit at the kill grace plus the drain
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/main/harness-supervisor.test.ts:1187:29
+    1185|     child.emit("exit", 0);
+    1186|     await vi.advanceTimersByTimeAsync(999);
+    1187|     expect(outcome.settled).toBe(false);
+       |                             ^
+    1188|     await vi.advanceTimersByTimeAsync(1);
+    1189|     expect(outcome).toEqual({ settled: true });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 33 passed (37)
+   Start at  18:10:54
+   Duration  1.17s (transform 220ms, setup 0ms, import 521ms, tests 54ms, environment 0ms)
+
+--- exit: 1

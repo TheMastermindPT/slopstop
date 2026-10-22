@@ -9,10 +9,12 @@ import {
 } from "@slopstop/protocol";
 import { BrowserWindow, dialog, ipcMain } from "electron";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
+import { projectRegistrationClosing } from "./project-entry-bridge.js";
 
 type RegistrationBridge = Readonly<{
   register(request: ProjectRegistrationRequest): Promise<ProjectRegistrationResult>;
 }>;
+type IpcGate = Readonly<{ accepting(): boolean }>;
 
 /** PC-S1 adds repositories on Windows only (B4); the platform is known before any dialog. */
 function registrationCapability(platform: NodeJS.Platform): RegistrationCapability {
@@ -27,14 +29,18 @@ function registrationCapability(platform: NodeJS.Platform): RegistrationCapabili
  */
 async function chooseRepository(
   bridge: RegistrationBridge,
+  gate: IpcGate,
   owner: BrowserWindow | undefined,
 ): Promise<RepositoryChoiceResult> {
+  if (!gate.accepting()) return projectRegistrationClosing;
   const capability = registrationCapability(process.platform);
   if (capability.status !== "available") return capability;
   const options = { properties: ["openDirectory" as const] };
   const answer = await (owner === undefined
     ? dialog.showOpenDialog(options)
     : dialog.showOpenDialog(owner, options));
+  // Shutdown may have started while the dialog was open, whatever the dialog answered.
+  if (!gate.accepting()) return projectRegistrationClosing;
   const directory = answer.filePaths[0];
   if (answer.canceled || directory === undefined) return { status: "cancelled" };
   const selected = await bridge.register({ step: "select-repository", directory });
@@ -44,14 +50,16 @@ async function chooseRepository(
   );
 }
 
-export function registerProjectRegistrationIpc(bridge: RegistrationBridge): void {
+export function registerProjectRegistrationIpc(bridge: RegistrationBridge, gate: IpcGate): void {
   ipcMain.handle(desktopIpcChannels.getRegistrationCapability, () =>
     registrationCapability(process.platform),
   );
   ipcMain.handle(desktopIpcChannels.chooseRepository, (event) =>
-    chooseRepository(bridge, BrowserWindow.fromWebContents(event.sender) ?? undefined),
+    chooseRepository(bridge, gate, BrowserWindow.fromWebContents(event.sender) ?? undefined),
   );
-  ipcMain.handle(desktopIpcChannels.registerProject, (_event, value: unknown) =>
-    bridge.register(decodeStrict(RendererRegistrationRequestSchema, value)),
-  );
+  ipcMain.handle(desktopIpcChannels.registerProject, (_event, value: unknown) => {
+    const request = decodeStrict(RendererRegistrationRequestSchema, value);
+    if (!gate.accepting()) return Promise.resolve(projectRegistrationClosing);
+    return bridge.register(request);
+  });
 }

@@ -1,0 +1,16 @@
+parent: 829c3cf
+tree: 69eb3c9169749d586c5e65f929ce83e6038be566
+working-tree digest: 0d1900c8811aa690
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-request-core.test.ts
+started: 2026-10-19T22:37:11+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  22:37:12
+   Duration  831ms (transform 215ms, setup 0ms, import 621ms, tests 15ms, environment 0ms)
+
+--- exit: 0

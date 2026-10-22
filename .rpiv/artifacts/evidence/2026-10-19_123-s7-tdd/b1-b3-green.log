@@ -1,0 +1,591 @@
+parent: 829c3cf
+tree: 2c10a16a51e4b8a61ae012c93ae4e6a09ea8117e
+working-tree digest: a0fc111f174d59ad
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-request-core.test.ts apps/desktop/src/main/harness-bridges.test.ts apps/desktop/src/main/project-entry-bridge.test.ts apps/desktop/src/main/project-storage-bridge.test.ts apps/desktop/src/main/workspace-bridge.test.ts apps/desktop/src/main/harness-session.test.ts apps/desktop/src/main/harness-supervisor.test.ts apps/desktop/src/main/desktop-runtime.test.ts apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts apps/desktop/src/main/project-entry-ipc.test.ts apps/desktop/src/main/project-registration-ipc.test.ts
+started: 2026-10-19T22:42:11+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-runtime.test.ts (10 tests | 4 failed) 129ms
+     × releases every owner on dispose: 'built, never stopped' 30ms
+     × releases every owner on dispose: 'program then dispose' 35ms
+     × releases every owner on dispose: 'build fails after the supervisor' 5ms
+   × passes the bridges their session, id and clock 3ms
+ ❯ |desktop-main| src/main/harness-session.test.ts (6 tests | 2 failed) 26ms
+     × delivers a nested emit after the outer event reached every listener 8ms
+     × drains queued emits before rethrowing a listener failure 2ms
+SlopStop failed to start.
+ ❯ |desktop-main| src/main/harness-bridges.test.ts (8 tests | 5 failed) 35ms
+     × shares one core across the three bridges: 'one subscription' 9ms
+     × shares one core across the three bridges: 'release answers and order' 7ms
+     × shares one core across the three bridges: 'a throwing shared stop' 2ms
+     × shares one core across the three bridges: 'release settles before unsubscribe fa…' 1ms
+     × shares one core across the three bridges: 'cross-bridge uncorrelated result' 1ms
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (30 tests | 2 failed) 100ms
+   × answers broken for a read during a protocol error 13ms
+   × answers broken for a read during a system failure 2ms
+ ❯ |desktop-main| src/main/project-entry-bridge.test.ts (108 tests | 5 failed) 97ms
+   × fails all pending work as protocol on uncorrelated result 8ms
+   × fails all pending work as protocol on system failure 2ms
+   × settles pending work even when session unsubscribe throws 1ms
+   × answers the closing envelope for work in flight at stop: 'list' 2ms
+   × answers the closing envelope for work in flight at stop: 'registration' 1ms
+ ❯ |desktop-main| src/main/workspace-bridge.test.ts (31 tests | 6 failed) 10079ms
+     × fails all pending work on failure 5018ms
+     × fails all pending work on stop 4ms
+     × rejects invalid response correlation 5003ms
+   × settles pending work even when session unsubscribe throws 1ms
+   × answers the closing envelope for work in flight at stop: 'query' 1ms
+   × answers the closing envelope for work in flight at stop: 'intent' 1ms
+ ❯ |desktop-main| src/main/project-storage-bridge.test.ts (15 tests | 4 failed) 20060ms
+   × rejects mismatched, uncorrelated, disconnected, and stopped requests 5013ms
+   × fails pending operations once for 'message' 5009ms
+   × fails all pending work as protocol on uncorrelated result 5002ms
+   × fails all pending work as protocol on system failure 5012ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 28 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'built, never stopped'
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ run src/main/desktop-runtime.test.ts:166:25
+    164|         expect([...stops.slice(0, 3)].sort()).toEqual([...bridges].sor…
+    165|         expect(stops.slice(3)).toEqual(["supervisor"]);
+    166|         expect(release).toHaveBeenCalledOnce();
+       |                         ^
+    167|       },
+    168|     },
+ ❯ src/main/desktop-runtime.test.ts:263:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/28]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'program then dispose'
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ run src/main/desktop-runtime.test.ts:181:25
+    179|         await expect(runtime.dispose()).resolves.toBeUndefined();
+    180|         expect(stops).toEqual(["project-storage", "workspace", "projec…
+    181|         expect(release).toHaveBeenCalledOnce();
+       |                         ^
+    182|       },
+    183|     },
+ ❯ src/main/desktop-runtime.test.ts:263:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/28]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'build fails after the supervisor'
+AssertionError: expected undefined to be Error: private harness bridges constructi… // Object.is equality
+
+- Expected:
+Error {
+  "message": "private harness bridges construction failure",
+}
+
++ Received:
+undefined
+
+ ❯ run src/main/desktop-runtime.test.ts:244:38
+    242|         const { ports, stops } = fakes({}, { bridges: failure });
+    243|         const runtime = makeDesktopRuntime(ports);
+    244|         expect(readFailure(runtime)).toBe(failure);
+       |                                      ^
+    245|         await expect(runtime.dispose()).resolves.toBeUndefined();
+    246|         expect(stops).toEqual(["supervisor"]);
+ ❯ src/main/desktop-runtime.test.ts:263:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/28]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > passes the bridges their session, id and clock
+AssertionError: expected "vi.fn()" to be called once with arguments: [ { session: { …(2) }, …(2) } ]
+
+Number of calls: 0
+
+ ❯ src/main/desktop-runtime.test.ts:270:38
+    268|   const { ports } = fakes();
+    269|   makeDesktopRuntime(ports).runSync(readDesktopServices);
+    270|   expect(ports.createHarnessBridges).toHaveBeenCalledExactlyOnceWith({
+       |                                      ^
+    271|     session,
+    272|     createId: ports.createId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/28]⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'one subscription'
+AssertionError: expected 3 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 3
+
+ ❯ run src/main/harness-bridges.test.ts:103:40
+    101|       async run() {
+    102|         const { session } = shared();
+    103|         expect(session.subscribeCalls).toBe(1);
+       |                                        ^
+    104|         expect(session.subscriptions).toBe(1);
+    105|       },
+ ❯ src/main/harness-bridges.test.ts:224:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/28]⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'release answers and order'
+AssertionError: expected [ undefined, undefined, undefined ] to deeply equal [ …(3) ]
+
+- Expected
++ Received
+
+  [
+-   {
+-     "code": "PROJECT_LIST_UNAVAILABLE",
+-     "status": "unavailable",
+-   },
+-   {
+-     "diagnostic": {
+-       "code": "PROJECT_STORAGE_TRANSPORT_FAILED",
+-       "message": "Project Storage bridge is stopped.",
+-     },
+-     "request": {
+-       "projectId": "7b67631a-8f41-49ea-aadd-5fa87ffc47b9",
+-     },
+-     "status": "broken",
+-   },
+-   {
+-     "diagnostic": {
+-       "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+-       "message": "The workspace is unavailable while SlopStop closes.",
+-     },
+-     "query": {
+-       "cursor": null,
+-       "projectId": "7b67631a-8f41-49ea-aadd-5fa87ffc47b9",
+-       "query": "memory-library.read",
+-     },
+-     "status": "unavailable",
+-   },
++   undefined,
++   undefined,
++   undefined,
+  ]
+
+ ❯ run src/main/harness-bridges.test.ts:137:93
+    135|         bridges.release();
+    136|         await flush();
+    137|         expect([pending.list, pending.open, pending.query].map((reques…
+       |                                                                                             ^
+    138|           [listClosing, storageStopped, queryClosing],
+    139|         );
+ ❯ src/main/harness-bridges.test.ts:224:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/28]⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'a throwing shared stop'
+AssertionError: expected function to throw an error, but it didn't
+ ❯ run src/main/harness-bridges.test.ts:153:41
+    151|           throw failure;
+    152|         });
+    153|         expect(() => bridges.release()).toThrow(failure);
+       |                                         ^
+    154|         await flush();
+    155|         expect([pending.list.value, pending.open.value]).toEqual([list…
+ ❯ src/main/harness-bridges.test.ts:224:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/28]⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'release settles before unsubscribe fa…'
+AssertionError: expected function to throw an error, but it didn't
+ ❯ run src/main/harness-bridges.test.ts:166:41
+    164|         });
+    165|         const pending = pendingForRelease(bridges);
+    166|         expect(() => bridges.release()).toThrow(session.unsubscribeErr…
+       |                                         ^
+    167|         await flush();
+    168|         expect([pending.list, pending.open, pending.query].map((reques…
+ ❯ src/main/harness-bridges.test.ts:224:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/28]⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'cross-bridge uncorrelated result'
+AssertionError: expected undefined to deeply equal { status: 'broken', …(2) }
+
+- Expected:
+{
+  "diagnostic": {
+    "code": "PROJECT_STORAGE_TRANSPORT_FAILED",
+    "message": "Harness returned an uncorrelated Project Storage response.",
+  },
+  "request": {
+    "projectId": "7b67631a-8f41-49ea-aadd-5fa87ffc47b9",
+  },
+  "status": "broken",
+}
+
++ Received:
+undefined
+
+ ❯ run src/main/harness-bridges.test.ts:192:35
+    190|         session.message(createWorkspaceQueryResultEvent(replyMetadata(…
+    191|         await flush();
+    192|         expect(storageOpen.value).toEqual({
+       |                                   ^
+    193|           ...storageStopped,
+    194|           diagnostic: {
+ ❯ src/main/harness-bridges.test.ts:224:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/28]⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > delivers a nested emit after the outer event reached every listener
+AssertionError: expected [ 'disconnected', 'protocol-error' ] to deeply equal [ 'protocol-error', 'disconnected' ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:129:20
+    127|
+    128|     expect(first).toEqual(["protocol-error", "disconnected"]);
+    129|     expect(second).toEqual(["protocol-error", "disconnected"]);
+       |                    ^
+    130|   });
+    131|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/28]⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > drains queued emits before rethrowing a listener failure
+AssertionError: expected [ 'disconnected', 'protocol-error' ] to deeply equal [ 'protocol-error', 'disconnected' ]
+
+- Expected
++ Received
+
+  [
+-   "protocol-error",
+    "disconnected",
++   "protocol-error",
+  ]
+
+ ❯ src/main/harness-session.test.ts:149:20
+    147|     expect(() => port.emit("message", { data: { event: "not-valid" } }…
+    148|     expect(first).toEqual(["protocol-error", "disconnected"]);
+    149|     expect(second).toEqual(["protocol-error", "disconnected"]);
+       |                    ^
+    150|
+    151|     // The delivering flag was reset: a later event on the same sessio…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/28]⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > answers broken for a read during a protocol error
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > answers broken for a read during a system failure
+AssertionError: expected { status: 'unavailable', …(2) } to deeply equal { status: 'broken', …(2) }
+
+- Expected
++ Received
+
+  {
+    "diagnostic": {
+-     "code": "PROTOCOL_MESSAGE_INVALID",
+-     "message": "Harness received an invalid protocol message.",
+-     "retryable": false,
++     "code": "PROJECT_COORDINATOR_UNAVAILABLE",
++     "message": "The Project connection is unavailable.",
++     "retryable": true,
+    },
+    "request": {
+      "activationId": "00000000-0000-4000-8000-000000000011",
+      "after": null,
+      "projectId": "00000000-0000-4000-8000-000000000010",
+    },
+-   "status": "broken",
++   "status": "unavailable",
+  }
+
+ ❯ src/main/harness-supervisor.test.ts:1183:23
+    1181|     });
+    1182|
+    1183|     await expect(read).resolves.toEqual({
+       |                       ^
+    1184|       status: "broken",
+    1185|       request,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/28]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-bridge.test.ts > fails all pending work as protocol on uncorrelated result
+ FAIL  |desktop-main| src/main/project-entry-bridge.test.ts > fails all pending work as protocol on system failure
+AssertionError: expected [ false, false, false ] to deeply equal [ true, true, true ]
+
+- Expected
++ Received
+
+  [
+-   true,
+-   true,
+-   true,
++   false,
++   false,
++   false,
+  ]
+
+ ❯ src/main/project-entry-bridge.test.ts:723:56
+    721|     );
+    722|     await flushAll();
+    723|     expect([read.settled, save.settled, list.settled]).toEqual([true, …
+       |                                                        ^
+    724|     expect(read.value).toEqual(readInvalid);
+    725|     expect(save.value).toEqual(saveUncertain);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/28]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-bridge.test.ts > settles pending work even when session unsubscribe throws
+AssertionError: expected [ false, false ] to deeply equal [ true, true ]
+
+- Expected
++ Received
+
+  [
+-   true,
+-   true,
++   false,
++   false,
+  ]
+
+ ❯ src/main/project-entry-bridge.test.ts:769:40
+    767|   expect(() => bridge.stop()).toThrow(session.unsubscribeError as Erro…
+    768|   await flushAll();
+    769|   expect([read.settled, list.settled]).toEqual([true, true]);
+       |                                        ^
+    770|   expect(read.value).toEqual(readLost);
+    771|   expect(list.value).toEqual({ status: "unavailable", code: "PROJECT_L…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/28]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-bridge.test.ts > answers the closing envelope for work in flight at stop: 'list'
+AssertionError: expected { status: 'broken', …(1) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "PROJECT_LIST_UNAVAILABLE",
+-   "status": "unavailable",
++   "code": "PROJECT_LIST_TRANSPORT_FAILED",
++   "status": "broken",
+  }
+
+ ❯ src/main/project-entry-bridge.test.ts:838:24
+    836|   const pending = row.start(bridge);
+    837|   bridge.stop();
+    838|   await expect(pending).resolves.toEqual(row.expected);
+       |                        ^
+    839| });
+    840|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/28]⎯
+
+ FAIL  |desktop-main| src/main/project-entry-bridge.test.ts > answers the closing envelope for work in flight at stop: 'registration'
+AssertionError: expected { status: 'broken', …(1) } to deeply equal { status: 'unavailable', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "PROJECT_REGISTRATION_UNAVAILABLE",
+-   "status": "unavailable",
++   "code": "PROJECT_REGISTRATION_TRANSPORT_FAILED",
++   "status": "broken",
+  }
+
+ ❯ src/main/project-entry-bridge.test.ts:838:24
+    836|   const pending = row.start(bridge);
+    837|   bridge.stop();
+    838|   await expect(pending).resolves.toEqual(row.expected);
+       |                        ^
+    839| });
+    840|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/28]⎯
+
+ FAIL  |desktop-main| src/main/project-storage-bridge.test.ts > rejects mismatched, uncorrelated, disconnected, and stopped requests
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/project-storage-bridge.test.ts:312:1
+    310| });
+    311|
+    312| it("rejects mismatched, uncorrelated, disconnected, and stopped reques…
+       | ^
+    313|   const mismatchSession = new FakeHarnessSession();
+    314|   const mismatchBridge = bridgeWith(mismatchSession, [messageId(1)]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/28]⎯
+
+ FAIL  |desktop-main| src/main/project-storage-bridge.test.ts > fails pending operations once for 'message'
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/project-storage-bridge.test.ts:362:12
+    360|     "Harness reported a failure.",
+    361|   ],
+    362| ] as const)("fails pending operations once for $type", async (event, m…
+       |            ^
+    363|   const session = new FakeHarnessSession();
+    364|   const bridge = bridgeWith(session, [messageId(30)]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/28]⎯
+
+ FAIL  |desktop-main| src/main/project-storage-bridge.test.ts > fails all pending work as protocol on uncorrelated result
+ FAIL  |desktop-main| src/main/project-storage-bridge.test.ts > fails all pending work as protocol on system failure
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/project-storage-bridge.test.ts:394:12
+    392|   ["uncorrelated result", "Harness returned an uncorrelated Project St…
+    393|   ["system failure", "Harness reported a failure."],
+    394| ] as const)("fails all pending work as protocol on %s", async (failure…
+       |            ^
+    395|   const session = new FakeHarnessSession();
+    396|   const bridge = bridgeWith(session);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/28]⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > WorkspaceBridge > fails all pending work on failure
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/workspace-bridge.test.ts:621:14
+    619|       },
+    620|     ],
+    621|   ] as const)("fails all pending work on %s", async (failure, message,…
+       |              ^
+    622|     const session = new FakeSession();
+    623|     const bridge = bridgeWith(session);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/28]⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > WorkspaceBridge > fails all pending work on stop
+AssertionError: expected { status: 'broken', …(2) } to match object { status: 'unavailable', …(1) }
+(4 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "diagnostic": {
+-     "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+-     "message": "The workspace is unavailable while SlopStop closes.",
++     "code": "WORKSPACE_TRANSPORT_FAILED",
++     "message": "Workspace bridge is stopped.",
+    },
+-   "status": "unavailable",
++   "status": "broken",
+  }
+
+ ❯ src/main/workspace-bridge.test.ts:660:22
+    658|     expect(results).toHaveLength(3);
+    659|     for (const result of results) {
+    660|       expect(result).toMatchObject(expected);
+       |                      ^
+    661|     }
+    662|     if (failure === "failure") expect(JSON.stringify(results)).not.toC…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/28]⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > WorkspaceBridge > rejects invalid response correlation
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/workspace-bridge.test.ts:669:3
+    667|   });
+    668|
+    669|   it("rejects invalid response correlation", async () => {
+       |   ^
+    670|     const nullSession = new FakeSession();
+    671|     const nullBridge = bridgeWith(nullSession);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/28]⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > settles pending work even when session unsubscribe throws
+AssertionError: expected undefined to match object { status: 'unavailable', …(1) }
+
+- Expected:
+{
+  "diagnostic": {
+    "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+    "message": "The workspace is unavailable while SlopStop closes.",
+  },
+  "status": "unavailable",
+}
+
++ Received:
+undefined
+
+ ❯ src/main/workspace-bridge.test.ts:1092:19
+    1090|   expect(() => bridge.stop()).toThrow(failure);
+    1091|   for (let index = 0; index < 20; index++) await Promise.resolve();
+    1092|   expect(settled).toMatchObject(s7Closing);
+       |                   ^
+    1093|   expect(() => bridge.stop()).not.toThrow();
+    1094|   expect(session.unsubscribeCalls).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/28]⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > answers the closing envelope for work in flight at stop: 'query'
+AssertionError: expected { status: 'broken', …(2) } to match object { status: 'unavailable', …(1) }
+(4 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "diagnostic": {
+-     "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+-     "message": "The workspace is unavailable while SlopStop closes.",
++     "code": "WORKSPACE_TRANSPORT_FAILED",
++     "message": "Workspace bridge is stopped.",
+    },
+-   "status": "unavailable",
++   "status": "broken",
+  }
+
+ ❯ src/main/workspace-bridge.test.ts:1104:24
+    1102|   const pending = row.start(bridge);
+    1103|   bridge.stop();
+    1104|   await expect(pending).resolves.toMatchObject(s7Closing);
+       |                        ^
+    1105| });
+    1106|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/28]⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > answers the closing envelope for work in flight at stop: 'intent'
+AssertionError: expected { status: 'broken', …(2) } to match object { status: 'unavailable', …(1) }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "diagnostic": {
+-     "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+-     "message": "The workspace is unavailable while SlopStop closes.",
++     "code": "WORKSPACE_TRANSPORT_FAILED",
++     "message": "Workspace bridge is stopped.",
+    },
+-   "status": "unavailable",
++   "status": "broken",
+  }
+
+ ❯ src/main/workspace-bridge.test.ts:1104:24
+    1102|   const pending = row.start(bridge);
+    1103|   bridge.stop();
+    1104|   await expect(pending).resolves.toMatchObject(s7Closing);
+       |                        ^
+    1105| });
+    1106|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/28]⎯
+
+
+ Test Files  7 failed | 4 passed (11)
+      Tests  28 failed | 287 passed (315)
+   Start at  22:42:12
+   Duration  22.20s (transform 5.48s, setup 0ms, import 17.09s, tests 31.35s, environment 2ms)
+
+--- exit: 1

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "EW1",
+    "file": "apps/harness/src/registration/repository-identity-query-owner.ts",
+    "rule": "newPromise",
+    "reason": "a per-request deadline race in the registration identity query",
+    "removeWhen": "the Part B migration of the registration per-request races (Deferred beyond Part A)"
+  },
+  {
+    "id": "EW2",
+    "file": "apps/harness/src/registration/repository-physical-observation.ts",
+    "rule": "newPromise",
+    "reason": "a per-request deadline race in the physical repository observation",
+    "removeWhen": "the Part B migration of the registration per-request races (Deferred beyond Part A)"
+  },
+  {
+    "id": "EW3",
+    "file": "apps/harness/src/registration/windows-version-child.ts",
+    "rule": "newPromise",
+    "reason": "a per-request deadline race in the Windows version child",
+    "removeWhen": "the Part B migration of the registration per-request races (Deferred beyond Part A)"
+  },
+  {
+    "id": "EW4",
+    "file": "apps/harness/src/storage/local-libsql-worker-client.ts",
+    "rule": "newPromise",
+    "reason": "the libSQL worker client's ready signal",
+    "removeWhen": "the SQL-to-Effect pass, when the libSQL worker client becomes an Effect service"
+  },
+  {
+    "id": "EW5",
+    "file": "apps/harness/src/storage/local-libsql-worker-client.ts",
+    "rule": "newPromise",
+    "reason": "the libSQL worker client's per-request response",
+    "removeWhen": "the SQL-to-Effect pass, when the libSQL worker client becomes an Effect service"
+  },
+  {
+    "id": "EW9",
+    "file": "apps/desktop/src/renderer/conversation/conversation-test-harness.tsx",
+    "rule": "newPromise",
+    "reason": "renderer test support that lives in src",
+    "removeWhen": "the React port moving renderer test support out of src"
+  }
+]

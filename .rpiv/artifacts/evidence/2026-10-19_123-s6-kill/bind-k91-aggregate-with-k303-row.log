@@ -1,0 +1,226 @@
+parent: 4516f61
+tree: 5beb8eb65d3daf9aac92388f5ce506239cc17287
+working-tree digest: 7dd727cda7cff3df
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-shutdown.test.ts
+started: 2026-10-19T18:16:31+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-shutdown.test.ts (25 tests | 9 failed) 34ms
+     × falls back exactly once when quit shutdown fails 7ms
+     × disposes the runtime before the terminal action: 'failed harness stop' 1ms
+     × disposes the runtime before the terminal action: 'dispose rejects' 1ms
+     × disposes the runtime before the terminal action: 'dispose never settles' 2ms
+     × disposes the runtime before the terminal action: 'reports a failure once before exit' 1ms
+     × disposes the runtime before the terminal action: 'reports an unconfirmed dispose' 1ms
+     × keeps stopping after a bridge stop throws: 'project storage throws' 1ms
+     × keeps stopping after a bridge stop throws: 'workspace throws' 1ms
+     × keeps stopping after a bridge stop throws: 'project entry throws' 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > desktop shutdown > falls back exactly once when quit shutdown fails
+AssertionError: expected AggregateError: Desktop shutdown failed. { errors: [ Error: … ] } to be Error: private harness shutdown failure // Object.is equality
+
+- Expected
++ Received
+
++ AggregateError {
++   "message": "Desktop shutdown failed.",
++   "errors": [
+      Error {
+        "message": "private harness shutdown failure",
++     },
++   ],
+  }
+
+ ❯ src/main/desktop-shutdown.test.ts:162:34
+    160|     shutdown.beforeQuit(firstEvent);
+    161|     shutdown.beforeQuit(repeatedEvent);
+    162|     await expect(shutdown.stop()).rejects.toBe(shutdownFailure);
+       |                                  ^
+    163|     await Promise.resolve();
+    164|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'failed harness stop'
+AssertionError: expected AggregateError: Desktop shutdown failed. { errors: [ Error: … ] } to be Error: private harness shutdown failure // Object.is equality
+
+- Expected
++ Received
+
++ AggregateError {
++   "message": "Desktop shutdown failed.",
++   "errors": [
+      Error {
+        "message": "private harness shutdown failure",
++     },
++   ],
+  }
+
+ ❯ run src/main/desktop-shutdown.test.ts:344:38
+    342|         const { shutdown } = recording(order, { stopHarness: failingHa…
+    343|         shutdown.beforeQuit({ preventDefault: vi.fn() });
+    344|         await expect(shutdown.stop()).rejects.toBe(harnessFailure);
+       |                                      ^
+    345|         await flushMicrotasks();
+    346|         expect(order).toEqual([...bridgeOrder, "harness", "dispose", "…
+ ❯ src/main/desktop-shutdown.test.ts:504:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'dispose rejects'
+AssertionError: expected AggregateError: Desktop shutdown failed. { errors: [ Error: … ] } to be Error: private runtime dispose failure // Object.is equality
+
+- Expected
++ Received
+
++ AggregateError {
++   "message": "Desktop shutdown failed.",
++   "errors": [
+      Error {
+        "message": "private runtime dispose failure",
++     },
++   ],
+  }
+
+ ❯ run src/main/desktop-shutdown.test.ts:360:38
+    358|         });
+    359|         shutdown.beforeQuit({ preventDefault: vi.fn() });
+    360|         await expect(shutdown.stop()).rejects.toBe(disposeFailure);
+       |                                      ^
+    361|         await flushMicrotasks();
+    362|         expect(order).toEqual([...bridgeOrder, "harness", "dispose", "…
+ ❯ src/main/desktop-shutdown.test.ts:504:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'dispose never settles'
+AssertionError: expected AggregateError: Desktop shutdown failed. { errors: [ DesktopRuntimeDisposeUnconfirmed { …(2) } ] } to match object { …(2) }
+
+- Expected
++ Received
+
+- {
+-   "_tag": "DesktopRuntimeDisposeUnconfirmed",
++ AggregateError {
++   "message": "Desktop shutdown failed.",
++   "errors": [
++     DesktopRuntimeDisposeUnconfirmed {
++       "message": "",
+        "deadlineMs": 1000,
++       "_tag": "DesktopRuntimeDisposeUnconfirmed",
++     },
++   ],
+  }
+
+ ❯ run src/main/desktop-shutdown.test.ts:427:31
+    425|         expect(exit).toHaveBeenCalledExactlyOnceWith(1);
+    426|         expect(quit).not.toHaveBeenCalled();
+    427|         expect(await failure).toMatchObject({
+       |                               ^
+    428|           _tag: "DesktopRuntimeDisposeUnconfirmed",
+    429|           deadlineMs: 1000,
+ ❯ src/main/desktop-shutdown.test.ts:504:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'reports a failure once before exit'
+AssertionError: expected "vi.fn()" to be called once with arguments: [ …(1) ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
++   AggregateError {
++     "message": "Desktop shutdown failed.",
++     "errors": [
+        Error {
+          "message": "private harness shutdown failure",
++       },
++     ],
+    },
+  ]
+
+
+Number of calls: 1
+
+ ❯ run src/main/desktop-shutdown.test.ts:447:31
+    445|         await settledFailure(shutdown.stop());
+    446|         await flushMicrotasks();
+    447|         expect(reportFailure).toHaveBeenCalledExactlyOnceWith(harnessF…
+       |                               ^
+    448|         expect(order.slice(-2)).toEqual(["report", "exit:1"]);
+    449|       },
+ ❯ src/main/desktop-shutdown.test.ts:504:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'reports an unconfirmed dispose'
+AssertionError: expected AggregateError: Desktop shutdown failed. { errors: [ DesktopRuntimeDisposeUnconfirmed { …(2) } ] } to match object { …(2) }
+
+- Expected
++ Received
+
+- {
+-   "_tag": "DesktopRuntimeDisposeUnconfirmed",
++ AggregateError {
++   "message": "Desktop shutdown failed.",
++   "errors": [
++     DesktopRuntimeDisposeUnconfirmed {
++       "message": "",
+        "deadlineMs": 1000,
++       "_tag": "DesktopRuntimeDisposeUnconfirmed",
++     },
++   ],
+  }
+
+ ❯ run src/main/desktop-shutdown.test.ts:465:50
+    463|         await vi.advanceTimersByTimeAsync(1);
+    464|         expect(reportFailure).toHaveBeenCalledOnce();
+    465|         expect(reportFailure.mock.calls[0]?.[0]).toMatchObject({
+       |                                                  ^
+    466|           _tag: "DesktopRuntimeDisposeUnconfirmed",
+    467|           deadlineMs: 1000,
+ ❯ src/main/desktop-shutdown.test.ts:504:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bridge stop isolation > keeps stopping after a bridge stop throws: 'project storage throws'
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bridge stop isolation > keeps stopping after a bridge stop throws: 'workspace throws'
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bridge stop isolation > keeps stopping after a bridge stop throws: 'project entry throws'
+AssertionError: expected AggregateError: Desktop shutdown failed. { errors: [ Error: … ] } to be Error: private bridge stop failure // Object.is equality
+
+- Expected
++ Received
+
++ AggregateError {
++   "message": "Desktop shutdown failed.",
++   "errors": [
+      Error {
+        "message": "private bridge stop failure",
++     },
++   ],
+  }
+
+ ❯ src/main/desktop-shutdown.test.ts:528:34
+    526|     });
+    527|     shutdown.beforeQuit({ preventDefault: vi.fn() });
+    528|     await expect(shutdown.stop()).rejects.toBe(thrown);
+       |                                  ^
+    529|     await flushMicrotasks();
+    530|     expect(order).toEqual([
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  9 failed | 16 passed (25)
+   Start at  18:16:32
+   Duration  517ms (transform 47ms, setup 0ms, import 299ms, tests 34ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/desktop-shutdown.ts bound blob 1b86c8a875299014; restored blob c6bd23e911374de8 (backup c6bd23e911374de8) MATCH; tree before 0a6a346cc1362adf after 0a6a346cc1362adf MATCH

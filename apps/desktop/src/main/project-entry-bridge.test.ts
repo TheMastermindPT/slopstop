@@ -4,10 +4,13 @@ import {
   CanonicalProjectActivationRequestSchema,
   CanonicalProjectActivationResultSchema,
   CanonicalProjectSwitchRequestSchema,
+  CanonicalProjectSwitchResultSchema,
   createProjectActivateResultEvent,
   createProjectConversationReadResultEvent,
   createProjectConversationSaveResultEvent,
   createProjectListResultEvent,
+  createProjectRegistrationResultEvent,
+  createProjectSwitchResultEvent,
   createProjectUpgradeResultEvent,
   createRequestFailureEvent,
   type DesktopMessage,
@@ -18,15 +21,26 @@ import {
   ProjectConversationReadResultSchema,
   ProjectConversationSaveRequestSchema,
   ProjectConversationSaveResultSchema,
+  ProjectRegistrationResultSchema,
   ProjectUpgradeRequestSchema,
   type ProjectUpgradeResult,
   ProjectUpgradeResultSchema,
+  projectAvailabilityMessages,
   projectConversationDiagnostics,
   projectUpgradeDiagnostics,
 } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { upgradeResultForRow } from "../shared/upgrade-result-fixtures.js";
 import { HarnessSession } from "./harness-session.js";
+import {
+  flushMicrotasks,
+  listReply,
+  messageId,
+  ScriptedHarnessSession,
+  systemFailure,
+  undecodableReply,
+  watch,
+} from "./harness-session-test-peers.js";
 import {
   readConversationFailure,
   saveConversationFailure,
@@ -635,4 +649,231 @@ it("maps a send refused as an invalid message to broken for both operations", ()
   const fault = { kind: "send", code: "HARNESS_SESSION_MESSAGE_INVALID" } as const;
   expect(readConversationFailure(readRequest, fault)).toEqual({ ...invalid, request: readRequest });
   expect(saveConversationFailure(saveRequest, fault)).toEqual({ ...invalid, request: saveRequest });
+});
+
+/** A project-entry bridge over the scripted session (s7 rows). */
+function scripted() {
+  const session = new ScriptedHarnessSession();
+  let next = 100;
+  const bridge = createProjectEntryBridge({ session, createId: () => messageId(next++), now });
+  return { session, bridge };
+}
+
+const s7Activation = { projectId: randomUUID(), activationId: randomUUID() };
+const s7Read = decodeStrict(ProjectConversationReadRequestSchema, { ...s7Activation, after: null });
+const s7Save = decodeStrict(ProjectConversationSaveRequestSchema, {
+  ...s7Activation,
+  saveId: randomUUID(),
+  expectedRevision: 0,
+  text: "Hello",
+});
+const s7Upgrade = decodeStrict(ProjectUpgradeRequestSchema, { projectId: s7Activation.projectId });
+const s7Activate = decodeStrict(CanonicalProjectActivationRequestSchema, {
+  projectId: s7Activation.projectId,
+});
+const s7Switch = decodeStrict(CanonicalProjectSwitchRequestSchema, {
+  from: s7Activation,
+  to: { projectId: s7Activation.projectId },
+});
+const readLost = {
+  status: "unavailable",
+  request: s7Read,
+  diagnostic: projectConversationDiagnostics.connectionLost,
+};
+const readInvalid = {
+  status: "broken",
+  request: s7Read,
+  diagnostic: projectConversationDiagnostics.protocolMessageInvalid,
+};
+const saveUncertain = {
+  status: "uncertain",
+  request: s7Save,
+  diagnostic: projectConversationDiagnostics.saveUnconfirmed,
+};
+const listBroken = { status: "broken", code: "PROJECT_LIST_TRANSPORT_FAILED" };
+
+it("answers its own envelope when send throws", async () => {
+  const { session, bridge } = scripted();
+  session.sendError = new Error("private send failure");
+  await expect(bridge.list()).resolves.toEqual(listBroken);
+  await expect(bridge.readConversation(s7Read)).resolves.toEqual(readLost);
+});
+
+it.each([{ case: "uncorrelated result" }, { case: "system failure" }] as const)(
+  "fails all pending work as protocol on $case",
+  async ({ case: failure }) => {
+    const { session, bridge } = scripted();
+    const read = watch(bridge.readConversation(s7Read));
+    const save = watch(bridge.saveConversationMessage(s7Save));
+    const list = watch(bridge.list());
+    session.message(
+      failure === "system failure"
+        ? systemFailure("Harness failed pending work.")
+        : listReply(null),
+    );
+    await flushMicrotasks();
+    expect([read.settled, save.settled, list.settled]).toEqual([true, true, true]);
+    expect(read.value).toEqual(readInvalid);
+    expect(save.value).toEqual(saveUncertain);
+    expect(list.value).toEqual(listBroken);
+  },
+);
+
+it.each([
+  {
+    operation: "read",
+    start: (bridge: ReturnType<typeof scripted>["bridge"]) => bridge.readConversation(s7Read),
+    event: "project.conversation.read.result",
+    expected: readInvalid,
+  },
+  {
+    operation: "save",
+    start: (bridge: ReturnType<typeof scripted>["bridge"]) =>
+      bridge.saveConversationMessage(s7Save),
+    event: "project.conversation.save.result",
+    expected: saveUncertain,
+  },
+  {
+    operation: "list",
+    start: (bridge: ReturnType<typeof scripted>["bridge"]) => bridge.list(),
+    event: "project.list.result",
+    expected: listBroken,
+  },
+] as const)("settles an undecodable reply as protocol: $operation", async (row) => {
+  const { session, bridge } = scripted();
+  const target = row.start(bridge);
+  const targetId = session.lastId();
+  const other = bridge.list();
+  const otherId = session.lastId();
+  expect(() => session.message(undecodableReply(row.event, targetId))).not.toThrow();
+  await expect(target).resolves.toEqual(row.expected);
+  session.message(listReply(otherId));
+  await expect(other).resolves.toEqual({ status: "listed", projects: [], hiddenCount: 0 });
+});
+
+it("settles pending work even when session unsubscribe throws", async () => {
+  const { session, bridge } = scripted();
+  session.failUnsubscribe = 1;
+  const read = watch(bridge.readConversation(s7Read));
+  const list = watch(bridge.list());
+  expect(() => bridge.stop()).toThrow(session.unsubscribeError as Error);
+  await flushMicrotasks();
+  expect([read.settled, list.settled]).toEqual([true, true]);
+  expect(read.value).toEqual(readLost);
+  expect(list.value).toEqual({ status: "unavailable", code: "PROJECT_LIST_UNAVAILABLE" });
+  expect(() => bridge.stop()).not.toThrow();
+  expect(session.unsubscribeCalls).toBe(1);
+});
+
+it.each([
+  {
+    operation: "list",
+    start: (bridge: ReturnType<typeof scripted>["bridge"]) => bridge.list(),
+    expected: { status: "unavailable", code: "PROJECT_LIST_UNAVAILABLE" },
+  },
+  {
+    operation: "registration",
+    start: (bridge: ReturnType<typeof scripted>["bridge"]) =>
+      bridge.register({ step: "prepare-git" }),
+    expected: { status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" },
+  },
+  {
+    operation: "read",
+    start: (bridge: ReturnType<typeof scripted>["bridge"]) => bridge.readConversation(s7Read),
+    expected: readLost,
+  },
+  {
+    operation: "upgrade",
+    start: (bridge: ReturnType<typeof scripted>["bridge"]) => bridge.upgrade(s7Upgrade),
+    expected: {
+      status: "unavailable",
+      request: s7Upgrade,
+      diagnostic: projectUpgradeDiagnostics.connectionLost,
+    },
+  },
+  {
+    operation: "activate",
+    start: (bridge: ReturnType<typeof scripted>["bridge"]) => bridge.activate(s7Activate),
+    expected: {
+      status: "unavailable",
+      request: s7Activate,
+      diagnostic: {
+        code: "PROJECT_COORDINATOR_UNAVAILABLE",
+        message: projectAvailabilityMessages.connectionLost,
+        retryable: true,
+      },
+    },
+  },
+  {
+    operation: "switch",
+    start: (bridge: ReturnType<typeof scripted>["bridge"]) => bridge.switchProject(s7Switch),
+    expected: {
+      status: "coordinator-unavailable",
+      request: s7Switch,
+      diagnostic: {
+        code: "PROJECT_COORDINATOR_UNAVAILABLE",
+        message: projectAvailabilityMessages.connectionLost,
+        retryable: false,
+      },
+    },
+  },
+  {
+    operation: "save",
+    start: (bridge: ReturnType<typeof scripted>["bridge"]) =>
+      bridge.saveConversationMessage(s7Save),
+    expected: saveUncertain,
+  },
+] as const)("answers the closing envelope for work in flight at stop: $operation", async (row) => {
+  const { bridge } = scripted();
+  const pending = row.start(bridge);
+  bridge.stop();
+  await expect(pending).resolves.toEqual(row.expected);
+});
+
+const replyProject = decodeStrict(CanonicalProjectActivationRequestSchema, {
+  projectId: randomUUID(),
+});
+const replySwitch = decodeStrict(CanonicalProjectSwitchRequestSchema, {
+  from: { projectId: randomUUID(), activationId: randomUUID() },
+  to: replyProject,
+});
+const replyActivated = decodeStrict(CanonicalProjectActivationResultSchema, {
+  status: "not-registered",
+  request: replyProject,
+});
+const replyRegistered = decodeStrict(ProjectRegistrationResultSchema, { status: "trust-recorded" });
+const replySwitched = decodeStrict(CanonicalProjectSwitchResultSchema, {
+  status: "target-result",
+  request: replySwitch,
+  target: replyActivated,
+});
+type ReplyMetadata = ReturnType<Port["metadata"]>;
+
+it.each([
+  {
+    operation: "register",
+    start: (bridge: ReturnType<typeof setup>["bridge"]) =>
+      bridge.register({ step: "select-repository", directory: "C:/repo" }),
+    result: replyRegistered,
+    reply: (metadata: ReplyMetadata) =>
+      createProjectRegistrationResultEvent(metadata, replyRegistered),
+  },
+  {
+    operation: "activate",
+    start: (bridge: ReturnType<typeof setup>["bridge"]) => bridge.activate(replyProject),
+    result: replyActivated,
+    reply: (metadata: ReplyMetadata) => createProjectActivateResultEvent(metadata, replyActivated),
+  },
+  {
+    operation: "switch",
+    start: (bridge: ReturnType<typeof setup>["bridge"]) => bridge.switchProject(replySwitch),
+    result: replySwitched,
+    reply: (metadata: ReplyMetadata) => createProjectSwitchResultEvent(metadata, replySwitched),
+  },
+] as const)("answers its own decoded reply: $operation", async (row) => {
+  const { port, bridge } = setup();
+  const pending = row.start(bridge);
+  port.emit("message", { data: row.reply(port.metadata()) });
+  await expect(pending).resolves.toEqual(row.result);
+  bridge.stop();
 });

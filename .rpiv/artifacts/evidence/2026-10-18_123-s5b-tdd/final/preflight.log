@@ -1,0 +1,12 @@
+preflight: findings
+finding: no-test-line: U2B-EG-B6
+finding: no-test-line: U2B-EG-B7
+finding: no-test-line: U2B-EG-B9
+unchecked: U2B-EG-B5 line 1312: the canary matched
+unchecked: U2B-EG-B5 line 1312: all four packages exited 0.
+unchecked: U2B-EG-B8 line 1332: the row at `apps/desktop/src/main/harness-supervisor.test.ts:615-640`. Its outcome assertion changes by decision P-S5B-1 from `toEqual(new Error("Harness shutdown timed out."))` to:
+reprove: --commit 54d2e121397ff4fc654c2738e98117215bfdeb23 --test apps/harness/scripts/check-effect-diagnostics.test.mjs::fails on a planted Effect error: $name
+reprove: --commit 54d2e121397ff4fc654c2738e98117215bfdeb23 --test apps/harness/scripts/check-effect-diagnostics.test.mjs::distinguishes a broken binary run: $name
+reprove: --commit 54d2e121397ff4fc654c2738e98117215bfdeb23 --test apps/harness/scripts/check-effect-diagnostics.test.mjs::runs the canary before any package: $name
+reprove: --commit 54d2e121397ff4fc654c2738e98117215bfdeb23 --test apps/harness/scripts/check-effect-diagnostics.test.mjs::keeps the waiver register exact: $name
+reprove: --commit 54d2e121397ff4fc654c2738e98117215bfdeb23 --test apps/harness/scripts/check-effect-diagnostics.test.mjs::passes on the repository

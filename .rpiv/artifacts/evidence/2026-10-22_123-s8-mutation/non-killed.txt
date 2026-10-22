@@ -1,0 +1,10 @@
+counts: {'Killed': 60, 'Survived': 9}
+harness-supervisor.ts:185:11 | Survived | ConditionalExpression | 'false' | if (this.#child === child) this.#child = undefined;
+harness-supervisor.ts:185:11 | Survived | ConditionalExpression | 'true' | if (this.#child === child) this.#child = undefined;
+harness-supervisor.ts:185:11 | Survived | EqualityOperator | 'this.#child !== child' | if (this.#child === child) this.#child = undefined;
+harness-supervisor.ts:411:41 | Survived | StringLiteral | '""' | stdout?.off("data", onStdout).off("end", finish).off("close", finish);
+harness-supervisor.ts:411:60 | Survived | StringLiteral | '""' | stdout?.off("data", onStdout).off("end", finish).off("close", finish);
+harness-supervisor.ts:417:11 | Survived | ConditionalExpression | 'false' | if (this.#observations.get(child) === observation) this.#observations.delete(child);
+harness-supervisor.ts:417:11 | Survived | ConditionalExpression | 'true' | if (this.#observations.get(child) === observation) this.#observations.delete(child);
+harness-supervisor.ts:417:11 | Survived | EqualityOperator | 'this.#observations.get(child) !== observation' | if (this.#observations.get(child) === observation) this.#observations.delete(child);
+harness-supervisor.ts:417:58 | Survived | CallExpression | ';' | if (this.#observations.get(child) === observation) this.#observations.delete(child);

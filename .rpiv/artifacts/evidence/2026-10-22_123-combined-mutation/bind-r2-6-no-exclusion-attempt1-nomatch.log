@@ -1,0 +1,17 @@
+parent: 624c559
+tree: 3ce9e5fd934bc0b30d21aa1601921a02c35506a4
+working-tree digest: 2155d69eb33cb4d6
+command: pnpm exec vitest run --project harness apps/harness/scripts/check-effect-diagnostics.test.mjs -t directive under node_modules is ignored
+started: 2026-10-22T18:59:24+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  1 skipped (1)
+      Tests  32 skipped (32)
+   Start at  18:59:25
+   Duration  172ms (transform 29ms, setup 0ms, import 46ms, tests 0ms, environment 0ms)
+
+--- exit: 0
+binding: source apps/harness/scripts/check-effect-diagnostics.mjs bound blob 7f3ce772c13b9a78; restored blob fa274d1b1fd8cf6e (backup fa274d1b1fd8cf6e) MATCH; tree before 0ebe059298d00e83 after 0ebe059298d00e83 MATCH

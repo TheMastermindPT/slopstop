@@ -1,0 +1,17 @@
+parent: ee852b9
+tree: f5e91866dfe0e6f6e6ff67edca2cc4b8462619da
+working-tree digest: d7b95f4045927c09
+command: pnpm typecheck
+started: 2026-10-20T22:18:08+01:00
+---
+$ pnpm -r --if-present typecheck
+Scope: 4 of 5 workspace projects
+packages/kernel typecheck$ tsc --noEmit -p tsconfig.json
+packages/kernel typecheck: Done
+packages/protocol typecheck$ tsc --noEmit -p tsconfig.json
+packages/protocol typecheck: Done
+apps/desktop typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck$ tsc --noEmit -p tsconfig.json
+apps/desktop typecheck: Done
+apps/harness typecheck: Done
+--- exit: 0

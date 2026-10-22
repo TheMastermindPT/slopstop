@@ -1,0 +1,10 @@
+parent: 5f1bca3
+working-tree digest: ec64a58c28ceaf3d
+command: pnpm check:effect
+started: 2026-10-19T12:48:57+01:00
+---
+$ node apps/harness/scripts/check-effect-diagnostics.mjs
+EFFECT_GATE_WAIVER_STALE
+EW6 apps/desktop/src/main/canonical-writer-package-smoke.ts has no directive
+[ELIFECYCLE] Command failed with exit code 1.
+--- exit: 1

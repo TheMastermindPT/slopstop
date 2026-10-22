@@ -1,0 +1,19 @@
+NOT KILLED NoCoverage apps/harness/src/harness-runtime.ts:438:21 BlockStatement "{}" 
+NOT KILLED NoCoverage apps/harness/src/harness-runtime.ts:439:7 CallExpression ";" 
+NOT KILLED Survived apps/harness/src/harness-runtime.ts:344:9 ConditionalExpression "true" 
+apps/harness/src/harness-runtime.ts:184-187 {"Killed":7}
+apps/harness/src/process-bootstrap.ts:262-268 {"Killed":1}
+apps/harness/src/harness-runtime.ts:88-100 {"Killed":9}
+apps/harness/src/harness-runtime.ts:107-118 {"Killed":12}
+apps/harness/src/harness-runtime.ts:178-178 {"Killed":1}
+apps/harness/src/harness-runtime.ts:241-244 {"Killed":2}
+apps/harness/src/harness-runtime.ts:335-351 {"Killed":17,"Survived":1}
+apps/harness/src/harness-runtime.ts:425-446 {"NoCoverage":2,"Killed":13}
+apps/harness/src/process-bootstrap.ts:81-93 {"Ignored":1,"Killed":3}
+apps/harness/src/process-bootstrap.ts:95-100 {"Killed":4}
+apps/harness/src/process-bootstrap.ts:107-119 {"Killed":7}
+apps/harness/src/process-bootstrap.ts:126-166 {"Killed":27}
+apps/harness/src/registration/registration-listing.ts:18-80 {"Ignored":1,"Killed":47}
+apps/harness/src/project-registration-observer.ts:96-112 {"Killed":14}
+apps/harness/src/project-registration-observer.ts:146-161 {"Killed":9}
+outside ranges: 0 

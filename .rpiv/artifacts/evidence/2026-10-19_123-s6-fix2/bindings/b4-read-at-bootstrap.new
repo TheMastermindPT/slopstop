@@ -1,0 +1,2 @@
+async function bootstrap(): Promise<void> {
+  runtime.runSync(readDesktopServices);

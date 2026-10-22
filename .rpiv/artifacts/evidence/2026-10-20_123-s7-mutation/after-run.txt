@@ -1,0 +1,38 @@
+# after the run: each mutated source and config vs its pre-run backup (sha256)
+harness-request-core.ts 470e5c9a59bc9fb5 MATCH
+harness-bridges.ts a3d852adf4e3d0c7 MATCH
+project-entry-bridge.ts bf8ea0760a1c6a49 MATCH
+project-storage-bridge.ts 569e4ae4e4be3df2 MATCH
+workspace-bridge.ts 9b04fbea542fc73e MATCH
+project-upgrade-failure.ts 82e78c184f201b02 MATCH
+project-conversation-failure.ts 45107f80be4b0e58 MATCH
+harness-session.ts e0c616d55aec0e10 MATCH
+desktop-runtime.ts 92ef5bec9ccbe7bf MATCH
+stryker.desktop-s7.config.json 36dd64e59a262f50 MATCH
+apps/desktop/vitest.desktop-s7-mutation.config.ts 5b81f7e387a78463 MATCH
+# git status --short
+ M .rpiv/artifacts/designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-mutation/
+# git diff --stat cf95b0a (tracked changes)
+ ...35-29_effect-unit2b-runtime-lifecycle-part-a.md | 27 ++++++-
+ .../evidence/2026-10-20_123-s7-fix-evidence.md     | 17 +++++
+ .../evidence/2026-10-20_123-s7-fix/SHA256SUMS      | 24 ++++--
+ .../2026-10-20_123-s7-fix/gate-check-4b37629.log   | 39 ++++++++++
+ .../gate-check-dead-code-4b37629.log               |  8 ++
+ .../2026-10-20_123-s7-fix/gate-check-dead-code.log |  8 +-
+ .../gate-check-duplicates-4b37629.log              | 42 ++++++++++
+ .../gate-check-duplicates.log                      | 10 +--
+ .../evidence/2026-10-20_123-s7-fix/gate-check.log  | 16 ++--
+ .../gate-typecheck-4b37629.log                     | 17 +++++
+ .../2026-10-20_123-s7-fix/gate-typecheck.log       | 10 +--
+ .../evidence/2026-10-20_123-s7-fix/heavy-e2e.log   | 89 ++++++++++++++++++++++
+ .../evidence/2026-10-20_123-s7-fix/heavy-meta.txt  |  6 ++
+ .../2026-10-20_123-s7-fix/heavy-package-smoke.log  | 51 +++++++++++++
+ .../2026-10-20_123-s7-fix/k12-check-4b37629.log    | 50 ++++++++++++
+ .../evidence/2026-10-20_123-s7-fix/k12-check.log   | 17 +++--
+ .../2026-10-20_123-s7-fix/s7-unit-4b37629.log      | 17 +++++
+ .../s7-unit-harness-4b37629.log                    | 16 ++++
+ .../2026-10-20_123-s7-fix/s7-unit-harness.log      | 12 +--
+ .../evidence/2026-10-20_123-s7-fix/s7-unit.log     | 12 +--
+ 20 files changed, 437 insertions(+), 51 deletions(-)
+code diff vs cf95b0a outside .rpiv: []

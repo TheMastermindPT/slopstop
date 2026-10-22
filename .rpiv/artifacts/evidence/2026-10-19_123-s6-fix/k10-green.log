@@ -1,0 +1,17 @@
+parent: feeab30
+tree: b68f033764b3de4a8477d9c5c1291cd14a80f818
+working-tree digest: 9320e6b7fa3dadaf
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-shutdown.test.ts apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts apps/desktop/src/main/workspace-bridge.test.ts
+started: 2026-10-19T14:27:57+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+
+ Test Files  3 passed (3)
+      Tests  128 passed (128)
+   Start at  14:27:58
+   Duration  1.23s (transform 643ms, setup 0ms, import 1.50s, tests 635ms, environment 0ms)
+
+--- exit: 0

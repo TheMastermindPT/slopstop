@@ -1,0 +1,40 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/registration/registration-listing.test.ts (14 tests | 8 failed | 6 skipped) 9ms
+   × bounds the shutdown cleanup by its budget: 'the owner close never settles' 5ms
+   × bounds the shutdown cleanup by its budget: 'the observer close never settles' 1ms
+   × bounds the shutdown cleanup by its budget: 'the registry stop never settles' 1ms
+   × bounds the shutdown cleanup by its budget: 'the registry stop fails at 2 999 ms' 0ms
+   × bounds the shutdown cleanup by its budget: 'the owner closes at 2 000 ms, the obs…' 0ms
+   × bounds the shutdown cleanup by its budget: 'the observer closes "closed" at 3 500…' 0ms
+   × bounds the shutdown cleanup by its budget: 'the owner is pending recovery, the ob…' 0ms
+   × bounds the shutdown cleanup by its budget: 'the observer is pending recovery, the…' 0ms
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 6 skipped (14)
+   Start at  17:37:25
+   Duration  600ms (transform 169ms, setup 0ms, import 440ms, tests 9ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the owner close never settles'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the observer close never settles'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the registry stop never settles'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the registry stop fails at 2 999 ms'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the owner closes at 2 000 ms, the obs…'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the observer closes "closed" at 3 500…'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the owner is pending recovery, the ob…'
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the observer is pending recovery, the…'
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/registration/registration-listing.test.ts:250:24
+    248|     const stopping = track(Effect.runPromiseExit(adapter.stop));
+    249|     // The owner close starts in the caller's turn, before any await.
+    250|     expect(ownerClose).toHaveBeenCalledOnce();
+       |                        ^
+    251|     await advance(row.settlesAt - 1);
+    252|     expect(stopping.state).toBe("pending");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+

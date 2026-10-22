@@ -1,0 +1,43 @@
+parent: e011d6e
+tree: 816b82bc93e7fd6dadb330a14d1ab9a04d7dfb67
+working-tree digest: 2a3a158de27f022a
+command: pnpm exec vitest run --project harness apps/harness/src/storage/project-storage-upgrade-node-adapter.test.ts -t anything else is broken
+started: 2026-10-22T19:20:09+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/storage/project-storage-upgrade-node-adapter.test.ts (3 tests | 1 failed | 2 skipped) 5ms
+   × keeps the marker failure's cause: 'anything else is broken' 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/storage/project-storage-upgrade-node-adapter.test.ts > keeps the marker failure's cause: 'anything else is broken'
+AssertionError: expected ProjectStorageBrokenError: Project Storag… to have property "cause" with value Error: disk I/O
+
+- Expected:
+Error {
+  "message": "disk I/O",
+}
+
++ Received:
+undefined
+
+ ❯ src/storage/project-storage-upgrade-node-adapter.test.ts:68:19
+     66|     .catch((error: unknown) => error);
+     67|   expect(outcome).toBeInstanceOf(kind);
+     68|   expect(outcome).toHaveProperty("cause", failure);
+       |                   ^
+     69| });
+     70|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+   Start at  19:20:10
+   Duration  710ms (transform 271ms, setup 0ms, import 569ms, tests 5ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/storage/project-storage-upgrade-node-adapter.ts bound blob abcab8607b0f4209; restored blob 123d0af76543a191 (backup 123d0af76543a191) MATCH; tree before 826d7f2e67e666c0 after 826d7f2e67e666c0 MATCH

@@ -25,7 +25,7 @@ const projectId = createRequest.projectId;
 
 /** A schema-4 Project on a fresh root, a runtime over it, and its read-write target. */
 async function inRuntime(
-  start: (root: string) => ConversationProcessRuntime,
+  start: (root: string) => ConversationProcessRuntime | Promise<ConversationProcessRuntime>,
   body: (
     runtime: ConversationProcessRuntime,
     target: Readonly<{ projectId: string; activationId: string }>,
@@ -34,7 +34,7 @@ async function inRuntime(
 ) {
   const root = await createTemporaryApplicationRoot();
   await createCurrentProject({ root });
-  const runtime = start(root);
+  const runtime = await start(root);
   await runThenCleanUp(async () => {
     const target = await activeTarget(runtime, projectId);
     await body(runtime, { projectId, activationId: target.activationId }, root);

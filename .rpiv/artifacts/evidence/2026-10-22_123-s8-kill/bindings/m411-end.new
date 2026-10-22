@@ -1,0 +1,1 @@
+      stdout?.off("data", onStdout).off("", finish).off("close", finish);

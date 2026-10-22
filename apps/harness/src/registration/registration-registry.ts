@@ -1,4 +1,5 @@
 import { Deferred, Effect, Result } from "effect";
+import { unwrapRejection } from "../effect-rejection.js";
 import type {
   GitVersionInspectionRequest,
   GitVersionInspectionResult,
@@ -17,6 +18,7 @@ import {
   type PreparedRegistryRunner,
   type RegistrationDatabaseOptions,
   type RegistryRunner,
+  stopStandaloneAuthority,
   withRegistrationDatabase,
 } from "./registry-database.js";
 import { RegistryFault, registryFailure } from "./registry-failure.js";
@@ -180,15 +182,19 @@ export function createRegistrationRegistry(
     stop: async () => {
       stopped = true;
       const results = await Effect.runPromise(
-        Effect.forEach(
-          [...pending.values()],
-          (completion) => Effect.result(Deferred.await(completion)),
-          {
-            concurrency: "unbounded",
-          },
-        ),
+        Effect.gen(function* () {
+          // Only awaits admissions already running and starts no work, so no `concurrency`.
+          const admissions = yield* Effect.forEach([...pending.values()], (completion) =>
+            Effect.result(Deferred.await(completion)),
+          );
+          // Only after the admissions drain; it runs even when one of them failed.
+          const database = yield* Effect.result(stopStandaloneAuthority(options));
+          return [...admissions, database];
+        }),
       );
-      const failed = results.filter(Result.isFailure).map((result) => result.failure);
+      const failed = results
+        .filter(Result.isFailure)
+        .map((result) => unwrapRejection(result.failure));
       if (failed.length > 0)
         throw new AggregateError(failed, "Registration registry did not stop cleanly.");
     },

@@ -1,0 +1,1 @@
+      for (const bridge of [projectStorage, workspace, projectEntry]) {

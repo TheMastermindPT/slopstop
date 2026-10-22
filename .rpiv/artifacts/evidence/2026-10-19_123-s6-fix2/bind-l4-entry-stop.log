@@ -1,0 +1,46 @@
+parent: b4fc9ed
+tree: 52eee0f648f25d584ab320a8fd2f680290647f43
+working-tree digest: 45818a383f0e89ea
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts -t disposes the main runtime before quit
+started: 2026-10-19T17:10:24+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts (80 tests | 1 failed | 79 skipped) 181ms
+     × disposes the main runtime before quit 180ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > disposes the main runtime before quit
+AssertionError: expected [ Array(4) ] to deeply equal [ Array(5) ]
+
+- Expected
++ Received
+
+  [
+    "project-storage",
+    "workspace",
+-   "project-entry",
+    "harness",
+    "dispose",
+  ]
+
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:727:67
+    725|       "dispose",
+    726|     ]);
+    727|     expect(ports.order.filter((step) => shutdownSteps.has(step))).toEq…
+       |                                                                   ^
+    728|       "project-storage",
+    729|       "workspace",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 79 skipped (80)
+   Start at  17:10:25
+   Duration  1.19s (transform 400ms, setup 0ms, import 830ms, tests 181ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/main.ts bound blob 54039887be5532ce; restored blob db67985df87e0af5 (backup db67985df87e0af5) MATCH; tree before 5b69662781cae495 after 5b69662781cae495 MATCH

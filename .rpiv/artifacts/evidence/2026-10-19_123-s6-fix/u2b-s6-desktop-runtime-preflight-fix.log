@@ -1,0 +1,24 @@
+preflight: clean
+diagnostic: the candidate's parent is not the base; reprove-red re-proves against the parent
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/desktop-shutdown.test.ts::disposes the runtime before the terminal action: $name
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts::disposes the main runtime before quit
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/desktop-shutdown.test.ts::keeps stopping after a bridge stop throws: $name
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts::stops every bridge when the workspace stop throws
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/desktop-shutdown.test.ts::closes the IPC gate in the turn shutdown starts: $name
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/project-entry-ipc.test.ts::answers unavailable after the IPC gate closes: $channel
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/project-registration-ipc.test.ts::answers registration unavailable after the IPC gate closes: $channel
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/workspace-bridge.test.ts::answers workspace unavailable after the IPC gate closes: $channel
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts::answers unavailable after quit starts: $channel
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/project-registration-ipc.test.ts::forwards registration while the IPC gate is open: $channel
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/desktop-runtime.test.ts::releases every owner on dispose: $name
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/desktop-runtime.test.ts::passes each bridge its session, id and clock
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/harness/scripts/check-effect-diagnostics.test.mjs::passes on the repository
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/harness/scripts/check-effect-diagnostics.test.mjs::keeps exactly the registered waivers
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke.test.ts::fails an active wait when another owned process fails
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke.test.ts::bounds spawn completion at %sms
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke.test.ts::bounds actual handshake response at %sms
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke.test.ts::bounds whole proof at monotonic %sms
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke.test.ts::leaves no timer after a wait: $outcome
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts::owns quit during %s
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts::uses unconfirmed fallback for %s exception
+reprove: --commit 34641bccd6679a7cec33aa528b9a77bd91c4343b --test apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts::flushes exact %s terminal result before exit

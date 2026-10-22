@@ -1,0 +1,61 @@
+{
+  "parent": "010ee05",
+  "smoke": false,
+  "electron": "43.4.0",
+  "elapsedMs": 360897.1468,
+  "bounds": {
+    "samplesPerCell": 200,
+    "sampleBoundMs": 15000,
+    "runBoundMs": 1800000,
+    "burstSeconds": 180,
+    "halfBoundMs": 500
+  },
+  "overlaps": [],
+  "failedBursts": [],
+  "summary": {
+    "M-dispose-after-program quiet": {
+      "samples": 200,
+      "bound": 0,
+      "p50": 0.021900000000016462,
+      "p95": 0.05189999999998918,
+      "p99": 0.07500000000001705,
+      "max": 0.6132000000000062,
+      "halfBoundMs": 500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-dispose-safety-net quiet": {
+      "samples": 200,
+      "bound": 0,
+      "p50": 0.03890000000001237,
+      "p95": 0.07850000000001955,
+      "p99": 0.19130000000001246,
+      "max": 0.31730000000004566,
+      "halfBoundMs": 500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-dispose-after-program burst": {
+      "samples": 200,
+      "bound": 0,
+      "p50": 0.025099999999838474,
+      "p95": 0.08820000000014261,
+      "p99": 0.26890000000003056,
+      "max": 0.5144000000000233,
+      "halfBoundMs": 500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-dispose-safety-net burst": {
+      "samples": 200,
+      "bound": 0,
+      "p50": 0.083199999993667,
+      "p95": 0.13880000001518056,
+      "p99": 0.21319999999832362,
+      "max": 0.5407000000122935,
+      "halfBoundMs": 500,
+      "withinHalfBound": true,
+      "broken": []
+    }
+  }
+}

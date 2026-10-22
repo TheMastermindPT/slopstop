@@ -1,0 +1,25 @@
+harness-request-core.ts MATCH
+harness-bridges.ts MATCH
+project-entry-bridge.ts MATCH
+project-storage-bridge.ts MATCH
+workspace-bridge.ts MATCH
+project-upgrade-failure.ts MATCH
+project-conversation-failure.ts MATCH
+harness-session.ts MATCH
+desktop-runtime.ts MATCH
+git status:
+ M .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/gate-check-dead-code.log
+ M .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/gate-check-duplicates.log
+ M .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/gate-check.log
+ M .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/gate-typecheck.log
+ M .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/s7-unit.log
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/bind-m101b.log
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/bindings/m101b.new
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/bindings/m101b.old
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/gate-check-dead-code-f88f3a3.log
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/gate-check-duplicates-f88f3a3.log
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/gate-check-f88f3a3.log
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/gate-typecheck-f88f3a3.log
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/k12-check-101.log
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-kill/s7-unit-f88f3a3.log
+?? .rpiv/artifacts/evidence/2026-10-20_123-s7-mutation-3/

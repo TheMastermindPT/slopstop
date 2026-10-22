@@ -1,0 +1,53 @@
+parent: 2cf479d
+tree: 57bc676a91345f2ef7f633a058e941bc6efd292b
+working-tree digest: 8ddb640890901ad6
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/workspace-bridge.test.ts -t settles pending work even when session unsubscribe throws
+started: 2026-10-20T11:18:59+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+ ❯ |desktop-main| src/main/workspace-bridge.test.ts (31 tests | 1 failed | 30 skipped) 8ms
+   × settles pending work even when session unsubscribe throws 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > settles pending work even when session unsubscribe throws
+AssertionError: expected undefined to deeply equal { status: 'unavailable', …(2) }
+
+- Expected:
+{
+  "diagnostic": {
+    "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+    "message": "The workspace is unavailable while SlopStop closes.",
+  },
+  "query": {
+    "cursor": null,
+    "projectId": "00000000-0000-4000-8000-000000000010",
+    "query": "memory-library.read",
+  },
+  "status": "unavailable",
+}
+
++ Received:
+undefined
+
+ ❯ src/main/workspace-bridge.test.ts:1051:19
+    1049|   expect(() => bridge.stop()).toThrow(failure);
+    1050|   for (let index = 0; index < 20; index++) await Promise.resolve();
+    1051|   expect(settled).toEqual(workspaceQueryClosing(memoryQuery()));
+       |                   ^
+    1052|   expect(() => bridge.stop()).not.toThrow();
+    1053|   expect(session.unsubscribeCalls).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 30 skipped (31)
+   Start at  11:19:00
+   Duration  1.05s (transform 374ms, setup 0ms, import 874ms, tests 8ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/workspace-bridge.ts bound blob 1c95efa06c711ad0; restored blob 9b04fbea542fc73e (backup 9b04fbea542fc73e) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

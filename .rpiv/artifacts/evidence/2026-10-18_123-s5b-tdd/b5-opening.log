@@ -1,0 +1,24 @@
+EFFECT_GATE_VIOLATIONS undefined
+{"unknownInEffectCatch":11,"runEffectInsideEffect":1,"newPromise":9,"globalErrorInEffectFailure":1}
+apps/harness/src/canonical-project-writer.ts(115,28) unknownInEffectCatch
+apps/harness/src/process-bootstrap.ts(138,9) unknownInEffectCatch
+apps/harness/src/process-bootstrap.ts(151,9) unknownInEffectCatch
+apps/harness/src/process-bootstrap.ts(156,24) runEffectInsideEffect
+apps/harness/src/registration/project-registration-preparation.ts(267,23) unknownInEffectCatch
+apps/harness/src/registration/registration-listing.ts(55,9) unknownInEffectCatch
+apps/harness/src/registration/registry-database.ts(85,7) unknownInEffectCatch
+apps/harness/src/registration/repository-identity-query-owner.ts(333,7) newPromise
+apps/harness/src/registration/repository-physical-observation.ts(192,7) newPromise
+apps/harness/src/registration/windows-version-child.ts(92,7) newPromise
+apps/harness/src/storage/local-libsql-worker-client.ts(522,19) newPromise
+apps/harness/src/storage/local-libsql-worker-client.ts(542,22) newPromise
+apps/harness/src/storage/project-storage-node-registry.ts(71,10) unknownInEffectCatch
+apps/harness/src/storage/project-storage-node-registry.ts(78,10) unknownInEffectCatch
+apps/harness/src/storage/project-storage-store.ts(158,19) unknownInEffectCatch
+apps/desktop/src/main/canonical-writer-package-smoke.ts(298,11) newPromise
+apps/desktop/src/main/desktop-shutdown.ts(32,9) unknownInEffectCatch
+apps/desktop/src/main/desktop-shutdown.ts(37,7) unknownInEffectCatch
+apps/desktop/src/main/harness-pending-request.ts(68,10) newPromise
+apps/desktop/src/main/harness-supervisor.ts(171,26) globalErrorInEffectFailure
+apps/desktop/src/main/main.ts(81,10) newPromise
+apps/desktop/src/renderer/conversation/conversation-test-harness.tsx(28,19) newPromise

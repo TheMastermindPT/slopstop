@@ -1,0 +1,51 @@
+parent: 2cf479d
+tree: f7c9b1d2ead4c2f65933db8539766d2b541f9ac9
+working-tree digest: f1f9851e7dfbf716
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-bridges.test.ts -t stop scoped to its bridge
+started: 2026-10-20T11:19:19+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-bridges.test.ts (13 tests | 1 failed | 12 skipped) 15ms
+     × shares one core across the three bridges: 'stop scoped to its bridge' 14ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'stop scoped to its bridge'
+AssertionError: expected { status: 'unavailable', …(2) } to deeply equal { status: 'unavailable', …(2) }
+
+- Expected
++ Received
+
+@@ -1,9 +1,9 @@
+  {
+    "diagnostic": {
+      "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+-     "message": "Memory producer is down.",
++     "message": "The workspace is unavailable while SlopStop closes.",
+    },
+    "query": {
+      "cursor": null,
+      "projectId": "73118e1a-be91-40ea-a8fb-945339e296bd",
+      "query": "memory-library.read",
+
+ ❯ run src/main/harness-bridges.test.ts:180:37
+    178|         });
+    179|         session.message(createWorkspaceQueryResultEvent(replyMetadata(…
+    180|         await expect(workspaceQuery).resolves.toEqual(queryAnswer);
+       |                                     ^
+    181|         const sent = session.sent.length;
+    182|         await expect(bridges.projectEntry.list()).resolves.toEqual({
+ ❯ src/main/harness-bridges.test.ts:364:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  11:19:20
+   Duration  900ms (transform 232ms, setup 0ms, import 688ms, tests 15ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/project-entry-bridge.ts bound blob 5cd4e47d27ecaa3e; restored blob bf8ea0760a1c6a49 (backup bf8ea0760a1c6a49) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

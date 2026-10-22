@@ -1,0 +1,13 @@
+head cef7554cdcf8266451870708f3f3cffb3622b134
+cwd apps/harness
+command: pnpm exec vitest run --project harness src/harness-runtime.test.ts src/harness-runtime-shutdown.test.ts src/process-bootstrap.test.ts src/registration/registration-listing.test.ts src/project-registration-observer.test.ts src/process-shutdown.test.ts
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+
+ Test Files  6 passed (6)
+      Tests  173 passed (173)
+   Start at  19:41:23
+   Duration  2.77s (transform 2.36s, setup 0ms, import 4.56s, tests 1.80s, environment 1ms)
+
+exit 0

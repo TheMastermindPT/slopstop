@@ -1,0 +1,44 @@
+parent: 32ca10a
+tree: bd35b402f2862c1e944353f1a17cf1967b922e08
+working-tree digest: 7d0bdcfe3ec36be3
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/project-entry-bridge.test.ts -t register
+started: 2026-10-20T18:41:15+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/project-entry-bridge.test.ts (111 tests | 1 failed | 109 skipped) 14ms
+   × answers its own decoded reply: 'register' 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/project-entry-bridge.test.ts > answers its own decoded reply: 'register'
+AssertionError: expected { status: 'broken', …(1) } to deeply equal { status: 'trust-recorded' }
+
+- Expected
++ Received
+
+  {
+-   "status": "trust-recorded",
++   "code": "PROJECT_REGISTRATION_TRANSPORT_FAILED",
++   "status": "broken",
+  }
+
+ ❯ src/main/project-entry-bridge.test.ts:877:24
+    875|   const pending = row.start(bridge);
+    876|   port.emit("message", { data: row.reply(port.metadata()) });
+    877|   await expect(pending).resolves.toEqual(row.result);
+       |                        ^
+    878|   bridge.stop();
+    879| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 109 skipped (111)
+   Start at  18:41:16
+   Duration  627ms (transform 188ms, setup 0ms, import 473ms, tests 14ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/project-entry-bridge.ts bound blob 23d046322a0c8607; restored blob bf8ea0760a1c6a49 (backup bf8ea0760a1c6a49) MATCH; tree before f0c7898665b905cd after f0c7898665b905cd MATCH

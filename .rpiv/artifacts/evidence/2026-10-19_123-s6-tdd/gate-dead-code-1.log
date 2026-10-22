@@ -1,0 +1,20 @@
+parent: 5f1bca3
+working-tree digest: 289f7f94d09de776
+command: pnpm check:dead-code
+started: 2026-10-19T12:56:27+01:00
+---
+$ knip
+Unused files (1)
+apps/desktop/vitest.desktop-s6-mutation.config.ts
+Unused exports (7)
+DesktopLogger                        class  apps/desktop/src/main/desktop-runtime.ts:46:14
+HarnessSupervision                   class  apps/desktop/src/main/desktop-runtime.ts:49:14
+ProjectEntryBridge                   class  apps/desktop/src/main/desktop-runtime.ts:53:14
+ProjectStorageBridge                 class  apps/desktop/src/main/desktop-runtime.ts:57:14
+WorkspaceBridge                      class  apps/desktop/src/main/desktop-runtime.ts:61:14
+DESKTOP_RUNTIME_DISPOSE_DEADLINE_MS         apps/desktop/src/main/desktop-shutdown.ts:5:14
+DesktopRuntimeDisposeUnconfirmed     class  apps/desktop/src/main/desktop-shutdown.ts:8:14
+Unused exported types (1)
+DesktopBridgeInput  type  apps/desktop/src/main/desktop-runtime.ts:17:13
+[ELIFECYCLE] Command failed with exit code 1.
+--- exit: 1

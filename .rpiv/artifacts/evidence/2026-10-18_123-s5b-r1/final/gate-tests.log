@@ -1,0 +1,12 @@
+head 010ee05ac290b11895d3d5348171e83a2467c46b
+command: pnpm exec vitest run --project harness apps/harness/scripts/check-effect-diagnostics.test.mjs
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  1 passed (1)
+      Tests  30 passed (30)
+   Start at  22:44:18
+   Duration  4.41s (transform 37ms, setup 0ms, import 62ms, tests 4.20s, environment 0ms)
+
+exit 0

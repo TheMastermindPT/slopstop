@@ -1,0 +1,16 @@
+parent: 5f1bca3
+working-tree digest: 265325a6f1b4970d
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-shutdown.test.ts apps/desktop/src/main/project-entry-ipc.test.ts apps/desktop/src/main/project-registration-ipc.test.ts apps/desktop/src/main/workspace-bridge.test.ts apps/desktop/src/main/project-entry-bridge.test.ts
+started: 2026-10-19T02:48:43+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+
+ Test Files  5 passed (5)
+      Tests  154 passed (154)
+   Start at  02:48:43
+   Duration  890ms (transform 1.03s, setup 0ms, import 2.87s, tests 151ms, environment 0ms)
+
+--- exit: 0

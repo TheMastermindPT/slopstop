@@ -1,0 +1,23 @@
+# S7-K11 identity proof, before the change (sources as at f3d2c8f; git diff f3d2c8f on these two files is empty):
+## Harness session disconnected.
+apps/desktop/src\main\project-storage-bridge.ts:56:      transport: () => "Harness session disconnected.",
+apps/desktop/src\main\workspace-bridge.ts:133:      transport: () => "Harness session disconnected.",
+## Harness session received an invalid protocol message.
+apps/desktop/src\main\workspace-bridge.ts:123:  "invalid-message": "Harness session received an invalid protocol message.",
+apps/desktop/src\main\project-storage-bridge.ts:46:  "invalid-message": "Harness session received an invalid protocol message.",
+## Harness reported a failure.
+apps/desktop/src\main\project-storage-bridge.ts:48:  "system-failure": "Harness reported a failure.",
+apps/desktop/src\main\workspace-bridge.ts:125:  "system-failure": "Harness reported a failure.",
+## Harness request identity collided.
+apps/desktop/src\main\project-storage-bridge.ts:40:  "identity-collision": "Harness request identity collided.",
+apps/desktop/src\main\workspace-bridge.ts:118:  "identity-collision": "Harness request identity collided.",
+## Desktop created an invalid harness message.
+apps/desktop/src\main\harness-send-failure.ts:10:      return "Desktop created an invalid harness message.";
+apps/desktop/src\main\project-storage-bridge.ts:39:  "invalid-command": "Desktop created an invalid harness message.",
+apps/desktop/src\main\workspace-bridge.ts:117:  "invalid-command": "Desktop created an invalid harness message.",
+## byte identity of the four neutral strings and invalid-command across storage and workspace
+'Harness session disconnected.' storage 1 workspace 1
+'Harness session received an invalid protocol message.' storage 1 workspace 1
+'Harness reported a failure.' storage 1 workspace 1
+'Harness request identity collided.' storage 1 workspace 1
+'Desktop created an invalid harness message.' storage 1 workspace 1

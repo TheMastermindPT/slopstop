@@ -62,7 +62,7 @@ export async function registrationSession(existing?: Readonly<{ root: string }>)
     execFileSync(installedGit, ["init", "--quiet", directory]);
   }
   const { port1, port2 } = new MessageChannel();
-  const stop = startHarnessProcessRuntime({
+  const stop = await startHarnessProcessRuntime({
     logger: silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",

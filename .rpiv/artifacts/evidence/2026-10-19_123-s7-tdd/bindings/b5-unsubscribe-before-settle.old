@@ -1,0 +1,4 @@
+      core.failBridge("workspace", { kind: "stopped" });
+      removeObserver();
+      notificationListeners.clear();
+      afterStop();

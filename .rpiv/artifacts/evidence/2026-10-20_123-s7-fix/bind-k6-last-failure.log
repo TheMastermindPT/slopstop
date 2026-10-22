@@ -1,0 +1,44 @@
+parent: 2cf479d
+tree: 995e3d2b9e816e52f4196f919cd8b67dabb7c294
+working-tree digest: 292159b079a3a48a
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-bridges.test.ts -t release with two failures
+started: 2026-10-20T11:20:38+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-bridges.test.ts (13 tests | 1 failed | 12 skipped) 14ms
+     × shares one core across the three bridges: 'release with two failures' 13ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'release with two failures'
+AssertionError: expected a thrown error to be Error: private workspace stop failure
+
+- Expected
++ Received
+
+  Error {
+-   "message": "private workspace stop failure",
++   "message": "private unsubscribe failure",
+  }
+
+ ❯ run src/main/harness-bridges.test.ts:237:41
+    235|         const failure = new Error("private workspace stop failure");
+    236|         failWorkspaceStop(bridges, failure);
+    237|         expect(() => bridges.release()).toThrow(failure);
+       |                                         ^
+    238|         await flushMicrotasks();
+    239|         expect(answers(pending)).toEqual([listClosing, storageStopped,…
+ ❯ src/main/harness-bridges.test.ts:364:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  11:20:40
+   Duration  838ms (transform 240ms, setup 0ms, import 638ms, tests 14ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-bridges.ts bound blob e8dd8d69ea17d5b9; restored blob a3d852adf4e3d0c7 (backup a3d852adf4e3d0c7) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

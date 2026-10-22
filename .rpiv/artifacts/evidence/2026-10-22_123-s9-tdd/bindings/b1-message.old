@@ -1,0 +1,1 @@
+  return tag === CLEANUP_TAG ? { tag, parts: cleanupParts(value) } : { tag };

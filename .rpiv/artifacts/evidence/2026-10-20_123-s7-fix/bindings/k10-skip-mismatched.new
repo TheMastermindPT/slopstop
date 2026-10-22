@@ -1,0 +1,2 @@
+    if (entry.expected !== message.event) return;
+    settle(message.causationId, Effect.succeed(message.payload));

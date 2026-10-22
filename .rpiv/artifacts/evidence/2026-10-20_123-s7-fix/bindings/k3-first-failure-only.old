@@ -1,0 +1,2 @@
+      if (failures.length > 1)
+        throw new AggregateError(failures, "Harness session subscribers failed.");

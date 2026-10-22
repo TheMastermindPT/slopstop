@@ -1,0 +1,76 @@
+parent: 347c0fd
+tree: 3395ccaed1648e3591e08252f60849dccfab2d9a
+working-tree digest: 4d3d0ba45e56a48d
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-supervisor.test.ts
+started: 2026-10-22T18:11:23+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (37 tests | 4 failed) 21107ms
+     × detaches once and stops cleanly after natural child exit 5015ms
+     × kills after grace and rejects after the terminal exit deadline 5009ms
+     × cancels pending handshake and restart timers when stopped 5016ms
+     × reports handshake timeout and restarts safely after completed stop 5011ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > detaches once and stops cleanly after natural child exit
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/harness-supervisor.test.ts:571:3
+    569|   });
+    570|
+    571|   it("detaches once and stops cleanly after natural child exit", async…
+       |   ^
+    572|     vi.useFakeTimers();
+    573|     const child = new FakeChild();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > kills after grace and rejects after the terminal exit deadline
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/harness-supervisor.test.ts:614:3
+    612|   });
+    613|
+    614|   it("kills after grace and rejects after the terminal exit deadline",…
+       |   ^
+    615|     vi.useFakeTimers();
+    616|     const child = new FakeChild();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > cancels pending handshake and restart timers when stopped
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/harness-supervisor.test.ts:833:3
+    831|   });
+    832|
+    833|   it("cancels pending handshake and restart timers when stopped", asyn…
+       |   ^
+    834|     vi.useFakeTimers();
+    835|     const handshakeChild = new FakeChild();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > HarnessSupervisor > reports handshake timeout and restarts safely after completed stop
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/main/harness-supervisor.test.ts:864:3
+    862|   });
+    863|
+    864|   it("reports handshake timeout and restarts safely after completed st…
+       |   ^
+    865|     vi.useFakeTimers();
+    866|     const firstChild = new FakeChild();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 33 passed (37)
+   Start at  18:11:24
+   Duration  21.77s (transform 224ms, setup 0ms, import 524ms, tests 21.11s, environment 0ms)
+
+--- exit: 1

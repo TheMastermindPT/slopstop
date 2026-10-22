@@ -1,0 +1,36 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (24 tests | 1 failed | 16 skipped) 337ms
+   × runs the canary before any package: 'exit 0 with the expected set' 69ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed | 16 skipped (24)
+   Start at  22:35:25
+   Duration  528ms (transform 40ms, setup 0ms, import 58ms, tests 337ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'exit 0 with the expected set'
+AssertionError: expected { ok: false, …(1) } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_CANARY_MISMATCH",
++   "code": "EFFECT_GATE_BROKEN",
+    "ok": false,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:261:18
+    259|     spawn,
+    260|   });
+    261|   expect(result).toEqual({ ok: false, code: "EFFECT_GATE_CANARY_MISMAT…
+       |                  ^
+    262|   expect(calls).toHaveLength(1);
+    263| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

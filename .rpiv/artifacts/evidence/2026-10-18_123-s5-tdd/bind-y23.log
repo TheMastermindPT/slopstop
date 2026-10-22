@@ -1,0 +1,33 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime.test.ts (104 tests | 1 failed | 101 skipped) 1138ms
+     × answers registration exits on the process runtime: 'handle interrupts itself before any s…' 1007ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed | 101 skipped (104)
+   Start at  16:44:19
+   Duration  2.95s (transform 998ms, setup 0ms, import 1.51s, tests 1.14s, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime.test.ts > registration requests on the process runtime > answers registration exits on the process runtime: 'handle interrupts itself before any s…'
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/harness-runtime.test.ts:1345:51
+    1343|     const stop = registrationRuntime(transport, handle, runtime);
+    1344|     transport.emit(registrationRequest);
+    1345|     await vi.waitFor(() => expect(transport.sent).toHaveLength(1));
+       |                                                   ^
+    1346|     expect(transport.sent).toMatchObject([reply]);
+    1347|     await stop();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

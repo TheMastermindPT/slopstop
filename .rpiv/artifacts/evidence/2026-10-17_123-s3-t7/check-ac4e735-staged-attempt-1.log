@@ -1,0 +1,589 @@
+$ pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:unit && pnpm check:boundaries
+$ biome format .
+Checked 533 files in 313ms. No fixes applied.
+$ biome lint .
+Checked 535 files in 1414ms. No fixes applied.
+$ pnpm -r --if-present typecheck
+Scope: 4 of 5 workspace projects
+packages/kernel typecheck$ tsc --noEmit -p tsconfig.json
+packages/kernel typecheck: Done
+packages/protocol typecheck$ tsc --noEmit -p tsconfig.json
+packages/protocol typecheck: Done
+apps/desktop typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck$ tsc --noEmit -p tsconfig.json
+apps/desktop typecheck: Done
+apps/harness typecheck: Done
+$ vitest run
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+ ❯ |desktop-renderer| src/renderer/conversation/conversation-details.test.tsx (18 tests | 1 failed) 6961ms
+     × does not save on Ctrl with any other key 1163ms
+ ❯ |desktop-renderer| src/renderer/add-repository/add-repository.test.tsx (23 tests | 1 failed) 12589ms
+     × walks trust, both Git stages and confirmation, focusing each step heading 1556ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-renderer| src/renderer/add-repository/add-repository.test.tsx > Add existing repository > walks trust, both Git stages and confirmation, focusing each step heading
+AssertionError: expected <body><div>…(1)</div></body> to be <h2 id="ws-heading" tabindex="-1"></h2> // Object.is equality
+
+- Expected
++ Received
+
++ <body>
++   <div>
++     <main
++       class="_shell_d7993b"
++     >
++       <nav
++         aria-label="Workspace"
++         class="_rail_d7993b"
++       >
++         <span
++           aria-hidden="true"
++           class="_mark_d7993b"
++         >
++           R
++         </span>
++         <button
++           aria-label="Projects"
++           aria-pressed="true"
++           type="button"
++         >
++           <svg
++             fill="currentColor"
++             height="23"
++             viewBox="0 0 256 256"
++             width="23"
++             xmlns="http://www.w3.org/2000/svg"
++           >
++             <path
++               d="M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47l28.49-85.47A16.05,16.05,0,0,0,245,110.64ZM93.34,64,123.2,86.4A8,8,0,0,0,128,88h72v16H69.77a16,16,0,0,0-15.18,10.94L40,158.7V64Zm112,136H43.1l26.67-80H232Z"
++             />
++           </svg>
++         </button>
++       </nav>
++       <header
++         class="_header_d7993b"
++       >
++         <h1>
++           Ragnarok
++         </h1>
++         <div
++           aria-live="polite"
++           role="status"
++         >
++           <strong>
++             Harness ready
++           </strong>
++           <span>
++             Protocol link established with harness 0.0.0.
++           </span>
++         </div>
++       </header>
++       <aside
++         aria-label="Projects"
++         class="_sidebar_d7993b"
++       >
++         <div
++           class="_listHeader_d7993b"
++         >
++           <h2
++             id="projects-heading"
++             tabindex="-1"
++           >
++             Projects
++           </h2>
++           <button
++             type="button"
++           >
++             Refresh
++           </button>
++         </div>
++         <div
++           class="_add_d7993b"
++         >
++           <button
++             aria-describedby="add-hint"
++             id="add-repository"
++             type="button"
++           >
++             <svg
++               aria-hidden="true"
++               fill="currentColor"
++               height="18"
++               viewBox="0 0 256 256"
++               width="18"
++               xmlns="http://www.w3.org/2000/svg"
++             >
++               <path
++                 d="M216,72H131.31L104,44.69A15.86,15.86,0,0,0,92.69,40H40A16,16,0,0,0,24,56V200.62A15.4,15.4,0,0,0,39.38,216H216.89A15.13,15.13,0,0,0,232,200.89V88A16,16,0,0,0,216,72ZM92.69,56l16,16H40V56ZM216,200H40V88H216Zm-88-88a8,8,0,0,1,8,8v16h16a8,8,0,0,1,0,16H136v16a8,8,0,0,1-16,0V152H104a8,8,0,0,1,0-16h16V120A8,8,0,0,1,128,112Z"
++               />
++             </svg>
++             Add existing repository
++           </button>
++           <p
++             id="add-hint"
++           >
++             Choose a Git repository folder on this computer.
++           </p>
++         </div>
++         <div
++           aria-busy="false"
++         >
++           <p>
++             No saved Projects yet. Add an existing repository to start.
++           </p>
++         </div>
++         <p
++           class="_asideNote_d7993b"
++         >
++           Local Projects. No repository commands run while listing.
++         </p>
++       </aside>
++       <p
++         aria-live="polite"
++         class="_srOnly_d7993b"
++       />
++       <p
++         aria-live="polite"
++         class="_progress_d7993b"
++         id="ws-progress"
++       />
++       <section
++         aria-busy="false"
++         aria-label="Project workspace"
++         class="_workspace_d7993b"
++       >
++         <div
++           class="_step_d7993b"
++         >
++           <p
++             class="_flowTitle_d7993b"
++           >
++             Add existing repository
++           </p>
++           <ol
++             aria-label="Progress"
++             class="_steps_d7993b"
++           >
++             <li>
++               Folder
++               <span
++                 class="_srOnly_d7993b"
++               >
++                  (done)
++               </span>
++             </li>
++             <li>
++               Trust
++               <span
++                 class="_srOnly_d7993b"
++               >
++                  (done)
++               </span>
++             </li>
++             <li
++               aria-current="step"
++             >
++               Git version
++               <span
++                 class="_srOnly_d7993b"
++               >
++                  (current, step 
++                 3
++                  of 5)
++               </span>
++             </li>
++             <li>
++               Git access
++             </li>
++             <li>
++               Confirm
++             </li>
++           </ol>
+            <h2
+              id="ws-heading"
+              tabindex="-1"
+            >
+              Check the Git program
+            </h2>
++           <p>
++             Ragnarok will run this Git program once, only to read its version.
++           </p>
++           <div
++             class="_target_d7993b"
++           >
++             <span>
++               Git program
++             </span>
++             <strong>
++               <svg
++                 aria-hidden="true"
++                 fill="currentColor"
++                 height="16"
++                 viewBox="0 0 256 256"
++                 width="16"
++                 xmlns="http://www.w3.org/2000/svg"
++               >
++                 <path
++                   d="M117.31,134l-72,64a8,8,0,1,1-10.63-12L100,128,34.69,70A8,8,0,1,1,45.32,58l72,64a8,8,0,0,1,0,12ZM216,184H120a8,8,0,0,0,0,16h96a8,8,0,0,0,0-16Z"
++                 />
++               </svg>
++                
++               git.exe
++             </strong>
++             <code>
++               C:\Program Files\Git\cmd\git.exe
++             </code>
++           </div>
++           <p>
++             Command: 
++             <code>
++               git --version
++             </code>
++           </p>
++           <p>
++             It runs outside the repository, so nothing in 
++             <strong>
++               repository
++             </strong>
++              is read yet.
++           </p>
++           <div
++             class="_actions_d7993b"
++           >
++             <button
++               type="button"
++             >
++               Run version check
++             </button>
++             <button
++               type="button"
++             >
++               Cancel
++             </button>
++             <span>
++               Esc cancels
++             </span>
++           </div>
++         </div>
++       </section>
++     </main>
++   </div>
++ </body>
+
+ ❯ src/renderer/add-repository/add-repository.test.tsx:47:36
+     45|
+     46|     await press(user, "Trust and continue");
+     47|     expect(document.activeElement).toBe(await heading("Check the Git p…
+       |                                    ^
+     48|     expect(screen.getByText(gitPath)).toBeTruthy();
+     49|     expect(screen.queryByText(/Choose a different Git program/)).toBeN…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |desktop-renderer| src/renderer/conversation/conversation-details.test.tsx > CNV-B46 saves only with Ctrl+Enter > does not save on Ctrl with any other key
+TestingLibraryElementError: Unable to find role="button" and name "Open Project repo-a"
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"_shell_d7993b"[39m
+    [36m>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Workspace"[39m
+        [33mclass[39m=[32m"_rail_d7993b"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33maria-hidden[39m=[32m"true"[39m
+          [33mclass[39m=[32m"_mark_d7993b"[39m
+        [36m>[39m
+          [0mR[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"Projects"[39m
+          [33maria-pressed[39m=[32m"true"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mfill[39m=[32m"currentColor"[39m
+            [33mheight[39m=[32m"23"[39m
+            [33mviewBox[39m=[32m"0 0 256 256"[39m
+            [33mwidth[39m=[32m"23"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47l28.49-85.47A16.05,16.05,0,0,0,245,110.64ZM93.34,64,123.2,86.4A8,8,0,0,0,128,88h72v16H69.77a16,16,0,0,0-15.18,10.94L40,158.7V64Zm112,136H43.1l26.67-80H232Z"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"_header_d7993b"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0mRagnarok[0m
+        [36m</h1>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m>[39m
+          [36m<strong>[39m
+            [0mHarness ready[0m
+          [36m</strong>[39m
+          [36m<span>[39m
+            [0mProtocol link established with harness 0.0.0.[0m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"Projects"[39m
+        [33mclass[39m=[32m"_sidebar_d7993b"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_listHeader_d7993b"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-heading"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+          [36m>[39m
+            [0mProjects[0m
+          [36m</h2>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mRefresh[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_add_d7993b"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-describedby[39m=[32m"add-hint"[39m
+            [33mid[39m=[32m"add-repository"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mfill[39m=[32m"currentColor"[39m
+              [33mheight[39m=[32m"18"[39m
+              [33mviewBox[39m=[32m"0 0 256 256"[39m
+              [33mwidth[39m=[32m"18"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M216,72H131.31L104,44.69A15.86,15.86,0,0,0,92.69,40H40A16,16,0,0,0,24,56V200.62A15.4,15.4,0,0,0,39.38,216H216.89A15.13,15.13,0,0,0,232,200.89V88A16,16,0,0,0,216,72ZM92.69,56l16,16H40V56ZM216,200H40V88H216Zm-88-88a8,8,0,0,1,8,8v16h16a8,8,0,0,1,0,16H136v16a8,8,0,0,1-16,0V152H104a8,8,0,0,1,0-16h16V120A8,8,0,0,1,128,112Z"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mAdd existing repository[0m
+          [36m</button>[39m
+          [36m<p[39m
+            [33mid[39m=[32m"add-hint"[39m
+          [36m>[39m
+            [0mChoose a Git repository folder on this computer.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33maria-busy[39m=[32m"false"[39m
+        [36m>[39m
+          [36m<p>[39m
+            [0mConnect to the harness to read saved Projects.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"_asideNote_d7993b"[39m
+        [36m>[39m
+          [0mLocal Projects. No repository commands run while listing.[0m
+        [36m</p>[39m
+      [36m</aside>[39m
+      [36m<p[39m
+        [33maria-live[39m=[32m"polite"[39m
+        [33mclass[39m=[32m"_srOnly_d7993b"[39m
+      [36m/>[39m
+      [36m<p[39m
+        [33maria-live[39m=[32m"polite"[39m
+        [33mclass[39m=[32m"_progress_d7993b"[39m
+        [33mid[39m=[32m"ws-progress"[39m
+      [36m/>[39m
+      [36m<section[39m
+        [33maria-busy[39m=[32m"false"[39m
+        [33maria-label[39m=[32m"Project workspace"[39m
+        [33mclass[39m=[32m"_workspace_d7993b"[39m
+      [36m>[39m
+        [36m<h2[39m
+          [33mid[39m=[32m"ws-heading"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+        [36m>[39m
+          [0mNo Project selected[0m
+        [36m</h2>[39m
+        [36m<p>[39m
+          [0mChoose a saved Project to open it, or add an existing repository. Access is checked when you open a Project.[0m
+        [36m</p>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"_shell_d7993b"[39m
+    [36m>[39m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Workspace"[39m
+        [33mclass[39m=[32m"_rail_d7993b"[39m
+      [36m>[39m
+        [36m<span[39m
+          [33maria-hidden[39m=[32m"true"[39m
+          [33mclass[39m=[32m"_mark_d7993b"[39m
+        [36m>[39m
+          [0mR[0m
+        [36m</span>[39m
+        [36m<button[39m
+          [33maria-label[39m=[32m"Projects"[39m
+          [33maria-pressed[39m=[32m"true"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mfill[39m=[32m"currentColor"[39m
+            [33mheight[39m=[32m"23"[39m
+            [33mviewBox[39m=[32m"0 0 256 256"[39m
+            [33mwidth[39m=[32m"23"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47l28.49-85.47A16.05,16.05,0,0,0,245,110.64ZM93.34,64,123.2,86.4A8,8,0,0,0,128,88h72v16H69.77a16,16,0,0,0-15.18,10.94L40,158.7V64Zm112,136H43.1l26.67-80H232Z"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"_header_d7993b"[39m
+      [36m>[39m
+        [36m<h1>[39m
+          [0mRagnarok[0m
+        [36m</h1>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m>[39m
+          [36m<strong>[39m
+            [0mHarness ready[0m
+          [36m</strong>[39m
+          [36m<span>[39m
+            [0mProtocol link established with harness 0.0.0.[0m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [36m<aside[39m
+        [33maria-label[39m=[32m"Projects"[39m
+        [33mclass[39m=[32m"_sidebar_d7993b"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_listHeader_d7993b"[39m
+        [36m>[39m
+          [36m<h2[39m
+            [33mid[39m=[32m"projects-heading"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+          [36m>[39m
+            [0mProjects[0m
+          [36m</h2>[39m
+          [36m<button[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mRefresh[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_add_d7993b"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-describedby[39m=[32m"add-hint"[39m
+            [33mid[39m=[32m"add-repository"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mfill[39m=[32m"currentColor"[39m
+              [33mheight[39m=[32m"18"[39m
+              [33mviewBox[39m=[32m"0 0 256 256"[39m
+              [33mwidth[39m=[32m"18"[39m
+              [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+            [36m>[39m
+              [36m<path[39m
+                [33md[39m=[32m"M216,72H131.31L104,44.69A15.86,15.86,0,0,0,92.69,40H40A16,16,0,0,0,24,56V200.62A15.4,15.4,0,0,0,39.38,216H216.89A15.13,15.13,0,0,0,232,200.89V88A16,16,0,0,0,216,72ZM92.69,56l16,16H40V56ZM216,200H40V88H216Zm-88-88a8,8,0,0,1,8,8v16h16a8,8,0,0,1,0,16H136v16a8,8,0,0,1-16,0V152H104a8,8,0,0,1,0-16h16V120A8,8,0,0,1,128,112Z"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [0mAdd existing repository[0m
+          [36m</button>[39m
+          [36m<p[39m
+            [33mid[39m=[32m"add-hint"[39m
+          [36m>[39m
+            [0mChoose a Git repository folder on this computer.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33maria-busy[39m=[32m"false"[39m
+        [36m>[39m
+          [36m<p>[39m
+            [0mConnect to the harness to read saved Projects.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"_asideNote_d7993b"[39m
+        [36m>[39m
+          [0mLocal Projects. No repository commands run while listing.[0m
+        [36m</p>[39m
+      [36m</aside>[39m
+      [36m<p[39m
+        [33maria-live[39m=[32m"polite"[39m
+        [33mclass[39m=[32m"_srOnly_d7993b"[39m
+      [36m/>[39m
+      [36m<p[39m
+        [33maria-live[39m=[32m"polite"[39m
+        [33mclass[39m=[32m"_progress_d7993b"[39m
+        [33mid[39m=[32m"ws-progress"[39m
+      [36m/>[39m
+      [36m<section[39m
+        [33maria-busy[39m=[32m"false"[39m
+        [33maria-label[39m=[32m"Project workspace"[39m
+        [33mclass[39m=[32m"_workspace_d7993b"[39m
+      [36m>[39m
+        [36m<h2[39m
+          [33mid[39m=[32m"ws-heading"[39m
+          [33mtabindex[39m=[32m"-1"[39m
+        [36m>[39m
+          [0mNo Project selected[0m
+        [36m</h2>[39m
+        [36m<p>[39m
+          [0mChoose a saved Project to open it, or add an existing repository. Access is checked when you open a Project.[0m
+        [36m</p>[39m
+      [36m</section>[39m
+    [36m</main>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ waitForWrapper ../../node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ ../../node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ openProject src/renderer/conversation/conversation-test-harness.tsx:172:33
+    170|   name: "repo-a" | "repo-b" = "repo-a",
+    171| ) {
+    172|   await user.click(await screen.findByRole("button", { name: `Open Pro…
+       |                                 ^
+    173|   return controls();
+    174| }
+ ❯ src/renderer/conversation/conversation-details.test.tsx:63:24
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 86 passed (88)
+      Tests  2 failed | 3070 passed (3072)
+   Start at  00:07:42
+   Duration  49.70s (transform 21.06s, setup 9.75s, import 250.08s, tests 117.22s, environment 37.14s)
+
+[ELIFECYCLE] Command failed with exit code 1.
+[ELIFECYCLE] Command failed with exit code 1.

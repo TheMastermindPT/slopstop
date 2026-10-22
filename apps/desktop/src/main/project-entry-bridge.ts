@@ -1,8 +1,12 @@
 import { isDeepStrictEqual } from "node:util";
 import {
+  type CanonicalProjectActivationRequest,
   CanonicalProjectActivationRequestSchema,
+  type CanonicalProjectActivationResult,
   CanonicalProjectActivationResultSchema,
+  type CanonicalProjectSwitchRequest,
   CanonicalProjectSwitchRequestSchema,
+  type CanonicalProjectSwitchResult,
   CanonicalProjectSwitchResultSchema,
   createProjectActivateCommand,
   createProjectConversationReadCommand,
@@ -26,99 +30,83 @@ import {
   ProjectUpgradeResultSchema,
   projectAvailabilityMessages,
 } from "@slopstop/protocol";
-import type { Schema } from "effect";
-import { dispatchPendingHarnessEvent, requestHarness } from "./harness-pending-request.js";
+import { Effect, type Schema } from "effect";
+import {
+  answerRequest,
+  type Clock,
+  decodeReply,
+  type HarnessRequestCore,
+  makeHarnessRequestCore,
+  type ProjectRequestFault,
+} from "./harness-request-core.js";
 import type { HarnessSessionClient } from "./harness-session.js";
 import {
   readConversationFailure,
   saveConversationFailure,
 } from "./project-conversation-failure.js";
-import { type ProjectRequestFault, projectUpgradeFailure } from "./project-upgrade-failure.js";
+import { projectUpgradeFailure } from "./project-upgrade-failure.js";
 
-type Pending = {
-  event: HarnessMessage["event"];
-  settle(value: unknown): void;
-  fail(fault: ProjectRequestFault): void;
-};
-const transport = { kind: "transport" } as const;
-const unsent = { kind: "unsent" } as const;
-const desktop = { kind: "desktop" } as const;
-export function createProjectEntryBridge(options: {
-  session: HarnessSessionClient;
-  createId(): string;
-  now(): string;
-}) {
-  const pending = new Map<string, Pending>();
-  let stopped = false;
-  const fail = (id: string, fault: ProjectRequestFault) => {
-    const item = pending.get(id);
-    pending.delete(id);
-    item?.fail(fault);
-  };
-  const failAll = (fault: ProjectRequestFault) => {
-    for (const id of [...pending.keys()]) fail(id, fault);
-  };
-  const unsubscribe = options.session.subscribe((event) =>
-    dispatchPendingHarnessEvent(event, {
-      failAll: (_message, failure) => failAll(failure),
-      failRequest: (causationId, _message, failure) => fail(causationId, failure),
-      message: (message) => {
-        if (message.causationId === null) return;
-        const item = pending.get(message.causationId);
-        if (item === undefined) return;
-        pending.delete(message.causationId);
-        if (message.event !== item.event) item.fail(desktop);
-        else item.settle(message.payload);
+// Activation and switch answer their coordinator-unavailable result for every fault.
+function unavailable<Request, Result>(
+  resultSchema: Schema.Decoder<Result>,
+  status: string,
+  retryable: boolean,
+) {
+  return (request: Request): Result =>
+    decodeStrict(resultSchema, {
+      status,
+      request,
+      diagnostic: {
+        code: "PROJECT_COORDINATOR_UNAVAILABLE",
+        message: projectAvailabilityMessages.connectionLost,
+        retryable,
       },
-    }),
-  );
-  const metadata = () => ({ messageId: options.createId(), sentAt: options.now() });
+    });
+}
+
+/** The activation result while the Project coordinator is unreachable. */
+export const projectActivationUnavailable = unavailable<
+  CanonicalProjectActivationRequest,
+  CanonicalProjectActivationResult
+>(CanonicalProjectActivationResultSchema, "unavailable", true);
+
+/** The switch result while the Project coordinator is unreachable. */
+export const projectSwitchUnavailable = unavailable<
+  CanonicalProjectSwitchRequest,
+  CanonicalProjectSwitchResult
+>(CanonicalProjectSwitchResultSchema, "coordinator-unavailable", false);
+
+/** The fault of a request made after the bridge stopped: it was never sent. */
+export const unsent = { kind: "unsent" } as const;
+
+/** The list answer while SlopStop closes (D11): at the IPC gate and for work in flight at stop. */
+export const projectListClosing = {
+  status: "unavailable",
+  code: "PROJECT_LIST_UNAVAILABLE",
+} as const;
+
+/** The registration answer while SlopStop closes (D11). */
+export const projectRegistrationClosing = {
+  status: "unavailable",
+  code: "PROJECT_REGISTRATION_UNAVAILABLE",
+} as const;
+
+/** The request helpers of one project-entry bridge, over its core and its stopped flag. */
+function entryRequests(core: HarnessRequestCore, clock: Clock, isStopped: () => boolean) {
+  const metadata = () => ({ messageId: clock.createId(), sentAt: clock.now() });
   function request<Result>(
     createCommand: () => DesktopMessage,
     event: HarnessMessage["event"],
-    parse: (value: unknown) => Result,
+    decode: (value: unknown) => Effect.Effect<Result, ProjectRequestFault>,
     broken: (fault: ProjectRequestFault) => Result,
   ): Promise<Result> {
-    if (stopped) return Promise.resolve(broken(unsent));
-    return requestHarness({
-      pending,
-      createCommand,
-      broken: () => broken(desktop),
-      createPending: (resolve) => ({
-        event,
-        settle: (value) => {
-          try {
-            resolve(parse(value));
-          } catch {
-            resolve(broken(desktop));
-          }
-        },
-        fail: (fault) => resolve(broken(fault)),
-      }),
-      send: (command) => {
-        const sent = options.session.send(command);
-        if (!sent.ok) fail(command.messageId, { kind: "send", code: sent.error.code });
-      },
-    });
+    if (isStopped()) return Promise.resolve(broken(unsent));
+    return answerRequest(
+      core.request("project-entry", createCommand, event).pipe(Effect.flatMap(decode)),
+      broken,
+    );
   }
-  // Activation and switch answer their coordinator-unavailable result for every fault.
-  function unavailable<Request, Result>(
-    resultSchema: Schema.Decoder<Result>,
-    status: string,
-    retryable: boolean,
-  ) {
-    return (request: Request): Result =>
-      decodeStrict(resultSchema, {
-        status,
-        request,
-        diagnostic: {
-          code: "PROJECT_COORDINATOR_UNAVAILABLE",
-          message: projectAvailabilityMessages.connectionLost,
-          retryable,
-        },
-      });
-  }
-  // These results echo their request: a mismatched echo is a fault, answered by `broken`.
+  // These results echo their request: a mismatched echo is a `desktop` fault.
   function echoing<Request, Result extends Readonly<{ request: Request }>>(
     operation: Readonly<{
       requestSchema: Schema.Decoder<Request>;
@@ -133,38 +121,48 @@ export function createProjectEntryBridge(options: {
   ) {
     return (input: Request): Promise<Result> => {
       const inputRequest = decodeStrict(operation.requestSchema, input);
-      const broken = (fault: ProjectRequestFault) => operation.broken(inputRequest, fault);
       return request(
         () => operation.command(metadata(), inputRequest),
         operation.event,
-        (value) => {
-          const result = decodeStrict(operation.resultSchema, value);
-          if (!isDeepStrictEqual(result.request, inputRequest))
-            throw new Error("Mismatched Project response");
-          return result;
-        },
-        broken,
+        (value) =>
+          Effect.flatMap(decodeReply(operation.resultSchema, value), (result) =>
+            isDeepStrictEqual(result.request, inputRequest)
+              ? Effect.succeed(result)
+              : Effect.fail({ kind: "desktop", reason: "mismatched-echo" } as const),
+          ),
+        (fault) => operation.broken(inputRequest, fault),
       );
     };
   }
+  return { metadata, request, echoing };
+}
+
+/** The project-entry operations over one bridge's request helpers. */
+function entryOperations({ metadata, request, echoing }: ReturnType<typeof entryRequests>) {
   return {
     list: () =>
       request(
         () => createProjectListCommand(metadata()),
         "project.list.result",
-        (value) => decodeStrict(ProjectListResultSchema, value),
-        () => ({ status: "broken" as const, code: "PROJECT_LIST_TRANSPORT_FAILED" as const }),
+        (value) => decodeReply(ProjectListResultSchema, value),
+        (fault) =>
+          fault.kind === "stopped"
+            ? projectListClosing
+            : { status: "broken" as const, code: "PROJECT_LIST_TRANSPORT_FAILED" as const },
       ),
     register: (input: ProjectRegistrationRequest) => {
       const step = decodeStrict(ProjectRegistrationRequestSchema, input);
       return request(
         () => createProjectRegistrationCommand(metadata(), step),
         "project.registration.result",
-        (value) => decodeStrict(ProjectRegistrationResultSchema, value),
-        () => ({
-          status: "broken" as const,
-          code: "PROJECT_REGISTRATION_TRANSPORT_FAILED" as const,
-        }),
+        (value) => decodeReply(ProjectRegistrationResultSchema, value),
+        (fault) =>
+          fault.kind === "stopped"
+            ? projectRegistrationClosing
+            : {
+                status: "broken" as const,
+                code: "PROJECT_REGISTRATION_TRANSPORT_FAILED" as const,
+              },
       );
     },
     activate: echoing({
@@ -172,14 +170,14 @@ export function createProjectEntryBridge(options: {
       resultSchema: CanonicalProjectActivationResultSchema,
       command: createProjectActivateCommand,
       event: "project.activate.result",
-      broken: unavailable(CanonicalProjectActivationResultSchema, "unavailable", true),
+      broken: projectActivationUnavailable,
     }),
     switchProject: echoing({
       requestSchema: CanonicalProjectSwitchRequestSchema,
       resultSchema: CanonicalProjectSwitchResultSchema,
       command: createProjectSwitchCommand,
       event: "project.switch.result",
-      broken: unavailable(CanonicalProjectSwitchResultSchema, "coordinator-unavailable", false),
+      broken: projectSwitchUnavailable,
     }),
     upgrade: echoing({
       requestSchema: ProjectUpgradeRequestSchema,
@@ -202,12 +200,36 @@ export function createProjectEntryBridge(options: {
       event: "project.conversation.save.result",
       broken: saveConversationFailure,
     }),
+  };
+}
+
+/**
+ * The project-entry bridge over a request core. `afterStop` runs once, after the bridge's own
+ * stop: the standalone bridge ends its private core there; a shared one leaves the core alone.
+ */
+export function projectEntryBridgeOver(
+  core: HarnessRequestCore,
+  clock: Clock,
+  afterStop: () => void,
+) {
+  let stopped = false;
+  return {
+    ...entryOperations(entryRequests(core, clock, () => stopped)),
     stop: () => {
       if (stopped) return;
       stopped = true;
-      unsubscribe();
-      failAll(transport);
+      // Settle first: an unsubscribe failure in `afterStop` surfaces only after.
+      core.failBridge("project-entry", { kind: "stopped" });
+      afterStop();
     },
   };
 }
-export type ProjectEntryBridge = ReturnType<typeof createProjectEntryBridge>;
+export type ProjectEntryBridge = ReturnType<typeof projectEntryBridgeOver>;
+
+/** A standalone project-entry bridge, with its own core over `session`. */
+export function createProjectEntryBridge(
+  options: Readonly<{ session: HarnessSessionClient } & Clock>,
+): ProjectEntryBridge {
+  const core = makeHarnessRequestCore(options.session);
+  return projectEntryBridgeOver(core, options, core.unsubscribe);
+}

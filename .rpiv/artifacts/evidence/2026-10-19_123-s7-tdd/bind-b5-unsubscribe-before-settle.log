@@ -1,0 +1,48 @@
+parent: 829c3cf
+tree: ae1bd5062cc7ccaf78d67852b9c3a33fbd684917
+working-tree digest: 829680e9706737e9
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/workspace-bridge.test.ts -t settles pending work even when session unsubscribe throws
+started: 2026-10-19T22:59:16+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+ ❯ |desktop-main| src/main/workspace-bridge.test.ts (31 tests | 1 failed | 30 skipped) 24ms
+   × settles pending work even when session unsubscribe throws 20ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/workspace-bridge.test.ts > settles pending work even when session unsubscribe throws
+AssertionError: expected undefined to match object { status: 'unavailable', …(1) }
+
+- Expected:
+{
+  "diagnostic": {
+    "code": "WORKSPACE_CAPABILITY_UNAVAILABLE",
+    "message": "The workspace is unavailable while SlopStop closes.",
+  },
+  "status": "unavailable",
+}
+
++ Received:
+undefined
+
+ ❯ src/main/workspace-bridge.test.ts:1046:19
+    1044|   expect(() => bridge.stop()).toThrow(failure);
+    1045|   for (let index = 0; index < 20; index++) await Promise.resolve();
+    1046|   expect(settled).toMatchObject(s7Closing);
+       |                   ^
+    1047|   expect(() => bridge.stop()).not.toThrow();
+    1048|   expect(session.unsubscribeCalls).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 30 skipped (31)
+   Start at  22:59:17
+   Duration  1.26s (transform 480ms, setup 0ms, import 1.01s, tests 24ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/workspace-bridge.ts bound blob ee760c9e90ee5e24; restored blob 6946e5387245fa0f (backup 6946e5387245fa0f) MATCH; tree before 68732e761ea8ccd6 after 68732e761ea8ccd6 MATCH

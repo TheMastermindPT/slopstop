@@ -1,0 +1,6 @@
+head 54d2e121397ff4fc654c2738e98117215bfdeb23 planted: apps/harness/src/storage/project-storage-store.ts catch: (cause) => cause
+command: pnpm check:effect
+$ node apps/harness/scripts/check-effect-diagnostics.mjs
+EFFECT_GATE_BROKEN
+[ELIFECYCLE] Command failed with exit code 1.
+exit 1

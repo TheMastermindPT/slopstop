@@ -1,0 +1,3 @@
+    const launching = options.launch(prepared);
+    options.sink.fatal({ code: "HARNESS_RUNTIME_START_FAILED", failures: [], omittedFailures: 0 }, "early");
+    stop = await launching;

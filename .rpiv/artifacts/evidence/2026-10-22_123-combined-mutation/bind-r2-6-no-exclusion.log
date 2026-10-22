@@ -1,0 +1,44 @@
+parent: 624c559
+tree: 3ce9e5fd934bc0b30d21aa1601921a02c35506a4
+working-tree digest: 2155d69eb33cb4d6
+command: pnpm exec vitest run --project harness apps/harness/scripts/check-effect-diagnostics.test.mjs -t directive under node_modules is ignor
+started: 2026-10-22T18:59:47+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (32 tests | 1 failed | 31 skipped) 17ms
+   × keeps the waiver register exact: 'directive under node_modules is ignor…' 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive under node_modules is ignor…'
+AssertionError: expected { ok: false, …(2) } to match object { ok: true }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "ok": true,
++   "ok": false,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:408:46
+    406|   const root = waiverTree(row.source, row.entries, row.path);
+    407|   const result = checkEffectDiagnostics({ root, projects: [], register…
+    408|   if (row.code === undefined) expect(result).toMatchObject({ ok: true …
+       |                                              ^
+    409|   else expect(result).toMatchObject({ ok: false, code: row.code });
+    410|   if (row.fragments) expectNamedCause(result, row.fragments);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 31 skipped (32)
+   Start at  18:59:48
+   Duration  196ms (transform 28ms, setup 0ms, import 46ms, tests 17ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/scripts/check-effect-diagnostics.mjs bound blob 7f3ce772c13b9a78; restored blob fa274d1b1fd8cf6e (backup fa274d1b1fd8cf6e) MATCH; tree before 0ebe059298d00e83 after 0ebe059298d00e83 MATCH

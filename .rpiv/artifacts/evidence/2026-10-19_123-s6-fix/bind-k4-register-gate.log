@@ -1,0 +1,46 @@
+parent: feeab30
+tree: aa3e55767ef18db7a9a0957053e9caa521c8bbcf
+working-tree digest: 91cd8c8d1f88ec48
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/project-registration-ipc.test.ts -t forwards registration while the IPC gate is open
+started: 2026-10-19T14:47:46+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/project-registration-ipc.test.ts (8 tests | 1 failed | 6 skipped) 10ms
+   × forwards registration while the IPC gate is open: 'registerProject' 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/project-registration-ipc.test.ts > forwards registration while the IPC gate is open: 'registerProject'
+AssertionError: expected { status: 'unavailable', …(1) } to deeply equal { status: 'repository-selected', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "repositorySelectionId": "5f3ec343-9367-425a-8d95-eefafa502e64",
+-   "status": "repository-selected",
++   "code": "PROJECT_REGISTRATION_UNAVAILABLE",
++   "status": "unavailable",
+  }
+
+ ❯ run src/main/project-registration-ipc.test.ts:141:8
+    139|       await expect(
+    140|         handler(desktopIpcChannels.registerProject)({ step: "prepare-g…
+    141|       ).resolves.toEqual({
+       |        ^
+    142|         status: "repository-selected",
+    143|         repositorySelectionId: selectionId,
+ ❯ src/main/project-registration-ipc.test.ts:164:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 6 skipped (8)
+   Start at  14:47:46
+   Duration  633ms (transform 169ms, setup 0ms, import 458ms, tests 10ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/project-registration-ipc.ts bound blob 16aefb0824bead07; restored blob effad0a07fb57047 (backup effad0a07fb57047) MATCH; tree before 9e4a48147742fa0f after 9e4a48147742fa0f MATCH

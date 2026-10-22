@@ -1,4 +1,9 @@
 import { randomUUID } from "node:crypto";
+import {
+  projectAvailabilityMessages,
+  projectConversationDiagnostics,
+  projectUpgradeDiagnostics,
+} from "@slopstop/protocol";
 import { beforeEach, expect, it, vi } from "vitest";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
 import { registerProjectEntryIpc } from "./project-entry-ipc.js";
@@ -16,19 +21,18 @@ const connectionUnavailable = {
   retryable: false,
 } as const;
 
-/** Bridge fakes that answer each forwarded request with a result echoing it. */
-function registered() {
+/**
+ * Bridge fakes that answer each forwarded request with a result echoing it, registered behind a
+ * gate that stays open or closed.
+ */
+function registeredWith(switchProject: Projects["switchProject"], accepting: boolean) {
   const projects = {
     list: vi.fn<Projects["list"]>(async () => listed),
     activate: vi.fn<Projects["activate"]>(async (request) => ({
       status: "not-registered",
       request,
     })),
-    switchProject: vi.fn<Projects["switchProject"]>(async (request) => ({
-      status: "coordinator-unavailable",
-      request,
-      diagnostic: connectionUnavailable,
-    })),
+    switchProject: vi.fn<Projects["switchProject"]>(switchProject),
     upgrade: vi.fn<Projects["upgrade"]>(async (request) => ({ status: "not-required", request })),
     readConversation: vi.fn<Projects["readConversation"]>(async (request) => ({
       status: "read",
@@ -41,7 +45,7 @@ function registered() {
       currentRevision: 0,
     })),
   } satisfies Projects;
-  registerProjectEntryIpc(projects);
+  registerProjectEntryIpc(projects, { accepting: () => accepting });
   const handlers = new Map(
     electronMocks.handle.mock.calls.map(([channel, handler]) => [channel as string, handler]),
   );
@@ -51,6 +55,18 @@ function registered() {
     return (value: unknown) => found({}, value);
   };
   return { projects, handler };
+}
+
+/** The open-gate fakes the existing rows use. */
+function registered() {
+  return registeredWith(
+    async (request) => ({
+      status: "coordinator-unavailable",
+      request,
+      diagnostic: connectionUnavailable,
+    }),
+    true,
+  );
 }
 
 beforeEach(() => {
@@ -129,3 +145,95 @@ it("registers strict conversation IPC handlers", async () => {
   ).toThrow();
   expect(projects.saveConversationMessage).toHaveBeenCalledTimes(1);
 });
+
+/** Gated fakes: each answers its open path, which differs from the gated envelope. */
+function gated() {
+  return registeredWith(
+    async (request) => ({
+      status: "target-result",
+      request,
+      target: { status: "not-registered", request: { projectId: request.to.projectId } },
+    }),
+    false,
+  );
+}
+
+const activation = { projectId, activationId: randomUUID() };
+const switchRequest = { from: activation, to: { projectId: randomUUID() } };
+const readRequest = { ...activation, after: null };
+const saveRequest = { ...activation, saveId: randomUUID(), expectedRevision: 0, text: "Hello" };
+const coordinatorDiagnostic = (retryable: boolean) => ({
+  code: "PROJECT_COORDINATOR_UNAVAILABLE",
+  message: projectAvailabilityMessages.connectionLost,
+  retryable,
+});
+
+const gatedRows = [
+  {
+    channel: "listProjects",
+    fake: "list",
+    value: {},
+    envelope: { status: "unavailable", code: "PROJECT_LIST_UNAVAILABLE" },
+  },
+  {
+    channel: "activateProject",
+    fake: "activate",
+    value: { projectId },
+    envelope: {
+      status: "unavailable",
+      request: { projectId },
+      diagnostic: coordinatorDiagnostic(true),
+    },
+  },
+  {
+    channel: "switchProject",
+    fake: "switchProject",
+    value: switchRequest,
+    envelope: {
+      status: "coordinator-unavailable",
+      request: switchRequest,
+      diagnostic: coordinatorDiagnostic(false),
+    },
+  },
+  {
+    channel: "upgradeProject",
+    fake: "upgrade",
+    value: { projectId },
+    envelope: {
+      status: "unavailable",
+      request: { projectId },
+      diagnostic: projectUpgradeDiagnostics.connectionLost,
+    },
+  },
+  {
+    channel: "readConversation",
+    fake: "readConversation",
+    value: readRequest,
+    envelope: {
+      status: "unavailable",
+      request: readRequest,
+      diagnostic: projectConversationDiagnostics.connectionLost,
+    },
+  },
+  {
+    channel: "saveConversationMessage",
+    fake: "saveConversationMessage",
+    value: saveRequest,
+    envelope: {
+      status: "unavailable",
+      request: saveRequest,
+      diagnostic: projectConversationDiagnostics.connectionLost,
+    },
+  },
+] as const;
+
+it.each(gatedRows)(
+  "answers unavailable after the IPC gate closes: $channel",
+  async ({ channel, fake, value, envelope }) => {
+    const { projects, handler } = gated();
+    const call = handler(desktopIpcChannels[channel]);
+    await expect(call(value)).resolves.toEqual(envelope);
+    expect(() => call({ ...value, extra: true })).toThrow();
+    expect(projects[fake]).not.toHaveBeenCalled();
+  },
+);

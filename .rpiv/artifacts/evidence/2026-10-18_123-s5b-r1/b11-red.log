@@ -1,0 +1,100 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (24 tests | 15 failed | 8 skipped) 232ms
+   × distinguishes a broken binary run: 'missing package' 8ms
+   × distinguishes a broken binary run: 'missing executable' 1ms
+   × distinguishes a broken binary run: 'spawn error' 1ms
+   × distinguishes a broken binary run: 'killed' 1ms
+   × distinguishes a broken binary run: 'exit 2' 1ms
+   × distinguishes a broken binary run: 'exit 1, no diagnostic line' 1ms
+   × distinguishes a broken binary run: 'exit 1 with a non-Effect error' 1ms
+   × distinguishes a broken binary run: 'exit 0 with an error line' 1ms
+   × runs the canary before any package: plugin removed 105ms
+   × runs the canary before any package: 'extra diagnostic' 1ms
+   × runs the canary before any package: 'missing diagnostic' 0ms
+   × runs the canary before any package: 'override not applied' 0ms
+   × runs the canary before any package: 'exit 0 with the expected set' 0ms
+   × runs the canary before any package: 'missing the last expected diagnostic' 0ms
+   × runs the canary before any package: 'inactive language service' 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 15 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'missing package'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'missing executable'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'spawn error'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'killed'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 2'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 1, no diagnostic line'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 1 with a non-Effect error'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > distinguishes a broken binary run: 'exit 0 with an error line'
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectNamedCause scripts/check-effect-diagnostics.test.mjs:166:39
+    164| /** Every failure carries `lines` (at most 20) that name its cause (S5…
+    165| function expectNamedCause(result, fragments) {
+    166|   expect(Array.isArray(result.lines)).toBe(true);
+       |                                       ^
+    167|   expect(result.lines.length).toBeGreaterThan(0);
+    168|   expect(result.lines.length).toBeLessThanOrEqual(20);
+ ❯ scripts/check-effect-diagnostics.test.mjs:198:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/15]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: plugin removed
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectNamedCause scripts/check-effect-diagnostics.test.mjs:166:39
+    164| /** Every failure carries `lines` (at most 20) that name its cause (S5…
+    165| function expectNamedCause(result, fragments) {
+    166|   expect(Array.isArray(result.lines)).toBe(true);
+       |                                       ^
+    167|   expect(result.lines.length).toBeGreaterThan(0);
+    168|   expect(result.lines.length).toBeLessThanOrEqual(20);
+ ❯ scripts/check-effect-diagnostics.test.mjs:273:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/15]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'extra diagnostic'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'missing diagnostic'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'override not applied'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'exit 0 with the expected set'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'missing the last expected diagnostic'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'inactive language service'
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ expectNamedCause scripts/check-effect-diagnostics.test.mjs:166:39
+    164| /** Every failure carries `lines` (at most 20) that name its cause (S5…
+    165| function expectNamedCause(result, fragments) {
+    166|   expect(Array.isArray(result.lines)).toBe(true);
+       |                                       ^
+    167|   expect(result.lines.length).toBeGreaterThan(0);
+    168|   expect(result.lines.length).toBeLessThanOrEqual(20);
+ ❯ scripts/check-effect-diagnostics.test.mjs:303:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/15]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  15 failed | 1 passed | 8 skipped (24)
+   Start at  22:36:20
+   Duration  431ms (transform 25ms, setup 0ms, import 43ms, tests 232ms, environment 0ms)
+

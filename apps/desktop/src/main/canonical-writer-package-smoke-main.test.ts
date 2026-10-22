@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { desktopIpcChannels } from "../shared/desktop-api.js";
 import { bootstrap } from "./canonical-writer-package-smoke-test-peers.js";
 
 const ports = vi.hoisted(() => ({
@@ -35,6 +36,17 @@ const ports = vi.hoisted(() => ({
   stop: vi.fn(),
   storageStop: vi.fn(),
   workspaceStop: vi.fn(),
+  entryStop: vi.fn(),
+  entryList: vi.fn(),
+  entryRegister: vi.fn(),
+  workspaceQuery: vi.fn(),
+  supervisorCreated: vi.fn(),
+  logInfo: vi.fn(),
+  logError: vi.fn(),
+  bootstrapArgs: vi.fn(),
+  order: [] as string[],
+  /** While set, the real runtime dispose waits for it (B1 main row). */
+  disposeHold: undefined as Promise<void> | undefined,
   subscribe: vi.fn(),
   open: vi.fn(),
   lstat: vi.fn(),
@@ -64,12 +76,19 @@ vi.mock("./security.js", () => ({
   lockNavigation: vi.fn(),
 }));
 vi.mock("./project-storage-bootstrap.js", () => ({
-  createProjectStorageHarnessBootstrap: () => bootstrap,
+  createProjectStorageHarnessBootstrap: (input: unknown) => {
+    ports.order.push("createProjectStorageHarnessBootstrap");
+    ports.bootstrapArgs(input);
+    return bootstrap;
+  },
   projectStorageMigrationResourcesRoot: () => "C:/proof/migrations",
 }));
 vi.mock("./harness-supervisor.js", () => ({
   harnessEntryPath: () => "harness.cjs",
   HarnessSupervisor: class {
+    constructor() {
+      ports.supervisorCreated();
+    }
     start = ports.start;
     stop = ports.stop;
     subscribe = ports.subscribe;
@@ -78,21 +97,47 @@ vi.mock("./harness-supervisor.js", () => ({
     }
   },
 }));
-vi.mock("./project-storage-bridge.js", () => ({
-  createProjectStorageBridge: () => ({ stop: ports.storageStop }),
-}));
-vi.mock("./project-entry-bridge.js", () => ({
-  createProjectEntryBridge: () => ({
-    list: vi.fn(),
-    activate: vi.fn(),
-    switchProject: vi.fn(),
-    upgrade: vi.fn(),
-    stop: vi.fn(),
+// The shared bridges (s7): the same port-backed bridges, and a no-op release, so the latched
+// s6 stop ports are never called twice (S7-R11, S7-S4).
+vi.mock("./harness-bridges.js", () => ({
+  createHarnessBridges: () => ({
+    projectEntry: {
+      list: ports.entryList,
+      register: ports.entryRegister,
+      activate: vi.fn(),
+      switchProject: vi.fn(),
+      upgrade: vi.fn(),
+      readConversation: vi.fn(),
+      saveConversationMessage: vi.fn(),
+      stop: ports.entryStop,
+    },
+    projectStorage: { open: vi.fn(), create: vi.fn(), close: vi.fn(), stop: ports.storageStop },
+    workspace: {
+      stop: ports.workspaceStop,
+      subscribe: vi.fn(),
+      query: ports.workspaceQuery,
+      submit: vi.fn(),
+    },
+    release: vi.fn(),
   }),
 }));
-vi.mock("./workspace-bridge.js", () => ({
-  createWorkspaceBridge: () => ({ stop: ports.workspaceStop, subscribe: vi.fn() }),
-}));
+// The real runtime, with its dispose recorded in the shared order and held on demand.
+vi.mock("./desktop-runtime.js", async (original) => {
+  const actual = await original<typeof import("./desktop-runtime.js")>();
+  return {
+    ...actual,
+    makeDesktopRuntime: (runtimePorts: Parameters<typeof actual.makeDesktopRuntime>[0]) => {
+      const runtime = actual.makeDesktopRuntime(runtimePorts);
+      const dispose = runtime.dispose.bind(runtime);
+      vi.spyOn(runtime, "dispose").mockImplementation(async () => {
+        ports.order.push("dispose");
+        await ports.disposeHold;
+        return dispose();
+      });
+      return runtime;
+    },
+  };
+});
 vi.mock("./project-storage-package-smoke.js", () => ({
   runProjectStoragePackageSmoke: ports.storageSmoke,
   projectStoragePackageSmokeFailureStage: () => undefined,
@@ -292,8 +337,30 @@ beforeEach(() => {
     return { root: runtimeRoot, scenario: input.scenario };
   });
   ports.runner.mockReset().mockResolvedValue({ status: "passed", cleanupSafe: true });
-  ports.log.mockReturnValue({ info: vi.fn() });
-  ports.stop.mockResolvedValue(undefined);
+  ports.order.length = 0;
+  ports.disposeHold = undefined;
+  // Open-path answers that differ from every gated envelope.
+  for (const bridge of [ports.entryList, ports.entryRegister, ports.workspaceQuery])
+    bridge.mockResolvedValue({ status: "open-path" });
+  ports.log.mockImplementation(() => {
+    ports.order.push("createMainLogger");
+    return { info: ports.logInfo, error: ports.logError };
+  });
+  ports.app.setAppLogsPath.mockImplementation(() => {
+    ports.order.push("setAppLogsPath");
+  });
+  ports.stop.mockImplementation(async () => {
+    ports.order.push("harness");
+  });
+  // The bridge stops record their names, so the program's order is observable (S6-L4).
+  for (const [stop, name] of [
+    [ports.storageStop, "project-storage"],
+    [ports.workspaceStop, "workspace"],
+    [ports.entryStop, "project-entry"],
+  ] as const)
+    stop.mockImplementation(() => {
+      ports.order.push(name);
+    });
   ports.storageSmoke.mockResolvedValue(undefined);
   ports.subscribe.mockImplementation((listener) => {
     statusListeners.push(listener);
@@ -616,5 +683,218 @@ describe("private main composition", () => {
     expect(ports.runner).not.toHaveBeenCalled();
     expect(writes).toEqual(["Package smoke authorization failed.\n"]);
     expect(ports.app.exit).toHaveBeenCalledWith(1);
+  });
+});
+
+/** An ordinary launch (not a package smoke) that reaches its window. */
+async function ordinaryLaunch() {
+  vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE", "0");
+  await load();
+  ready();
+  await flush();
+}
+
+/** The handler main registered for the row's channel, called as the renderer would. */
+function ipcHandler(row: Readonly<{ channel: keyof typeof desktopIpcChannels }>) {
+  const channel = desktopIpcChannels[row.channel];
+  const handler = ports.ipc.mock.calls.find((call) => call[0] === channel)?.[1];
+  if (typeof handler !== "function") throw new Error(`Missing IPC handler: ${channel}`);
+  return (value: unknown) => handler({ sender: {} }, value);
+}
+
+function noDesktopRuntime() {
+  expect(ports.log).not.toHaveBeenCalled();
+  expect(ports.supervisorCreated).not.toHaveBeenCalled();
+}
+
+describe("desktop runtime in main", () => {
+  it("disposes the main runtime before quit", async () => {
+    let release = () => {};
+    ports.disposeHold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await ordinaryLaunch();
+    event("before-quit");
+    await flush();
+    const shutdownSteps = new Set([
+      "project-storage",
+      "workspace",
+      "project-entry",
+      "harness",
+      "dispose",
+    ]);
+    expect(ports.order.filter((step) => shutdownSteps.has(step))).toEqual([
+      "project-storage",
+      "workspace",
+      "project-entry",
+      "harness",
+      "dispose",
+    ]);
+    expect(ports.app.quit).not.toHaveBeenCalled();
+    release();
+    await flush();
+    expect(ports.order.filter((step) => step === "dispose")).toHaveLength(1);
+    expect(ports.app.quit).toHaveBeenCalledOnce();
+  });
+
+  it("stops every bridge when the workspace stop throws", async () => {
+    // Once: the latch calls it once, and a lasting throw would leak into later tests.
+    const failure = new Error("private workspace stop failure");
+    ports.workspaceStop.mockImplementationOnce(() => {
+      throw failure;
+    });
+    await ordinaryLaunch();
+    event("before-quit");
+    await flush();
+    expect(ports.entryStop).toHaveBeenCalledOnce();
+    expect(ports.stop).toHaveBeenCalledOnce();
+    expect(ports.app.exit).toHaveBeenCalledExactlyOnceWith(1);
+    expect(ports.app.quit).not.toHaveBeenCalled();
+    expect(ports.logError).toHaveBeenCalledExactlyOnceWith(
+      { err: failure },
+      "SlopStop shutdown failed.",
+    );
+  });
+
+  const memoryQuery = {
+    query: "memory-library.read",
+    projectId: "00000000-0000-4000-8000-000000000010",
+    cursor: null,
+  };
+  it.each([
+    {
+      channel: "listProjects",
+      value: {},
+      bridge: ports.entryList,
+      envelope: { status: "unavailable", code: "PROJECT_LIST_UNAVAILABLE" },
+    },
+    {
+      channel: "registerProject",
+      value: { step: "prepare-git" },
+      bridge: ports.entryRegister,
+      envelope: { status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" },
+    },
+    {
+      channel: "queryWorkspace",
+      value: memoryQuery,
+      bridge: ports.workspaceQuery,
+      envelope: {
+        status: "unavailable",
+        query: memoryQuery,
+        diagnostic: {
+          code: "WORKSPACE_CAPABILITY_UNAVAILABLE",
+          message: "The workspace is unavailable while SlopStop closes.",
+        },
+      },
+    },
+  ] as const)("answers unavailable after quit starts: $channel", async (row) => {
+    await ordinaryLaunch();
+    const call = ipcHandler(row);
+    event("before-quit");
+    await expect(call(row.value)).resolves.toEqual(row.envelope);
+    await flush();
+    expect(ports.order).toContain("dispose");
+    expect(ports.app.quit).toHaveBeenCalledOnce();
+    await expect(call(row.value)).resolves.toEqual(row.envelope);
+    expect(row.bridge).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      path: "writer proof",
+      async run() {
+        await load();
+        ready();
+        await flush();
+      },
+    },
+    {
+      path: "package smoke without the lock",
+      async run() {
+        ports.app.requestSingleInstanceLock.mockReturnValueOnce(false);
+        await load();
+        await flush();
+      },
+    },
+    {
+      path: "ordinary launch without the lock",
+      async run() {
+        vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE", "0");
+        ports.app.requestSingleInstanceLock.mockReturnValueOnce(false);
+        await load();
+        event("before-quit");
+        await flush();
+        expect(ports.app.quit).toHaveBeenCalledTimes(2);
+        expect(ports.app.exit).not.toHaveBeenCalled();
+      },
+    },
+    {
+      path: "authorization refused",
+      async run() {
+        const { PackageSmokeAuthorizationError } = await import("./package-smoke-authorization.js");
+        ports.authorize.mockImplementation(() => {
+          throw new PackageSmokeAuthorizationError();
+        });
+        await load();
+        await flush();
+      },
+    },
+    {
+      path: "before-quit before ready",
+      async run() {
+        vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE", "0");
+        await load();
+        event("before-quit");
+        await flush();
+        ready();
+        await flush();
+        expect(writes).toEqual([]);
+      },
+    },
+  ])("builds no desktop runtime: $path", async ({ run }) => {
+    await run();
+    noDesktopRuntime();
+  });
+
+  it("logs the desktop start before building the owners", async () => {
+    vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_SCENARIO", "bootstrap");
+    await load();
+    ready();
+    await flush();
+    // The first info line is the start log, emitted as soon as the logger exists.
+    expect(ports.logInfo.mock.calls[0]?.[1]).toBe("SlopStop desktop starting.");
+    expect(ports.logInfo.mock.invocationCallOrder[0]).toBeLessThan(
+      ports.supervisorCreated.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(ports.sentry).toHaveBeenCalledOnce();
+    expect(ports.sentry.mock.invocationCallOrder[0]).toBeLessThan(
+      ports.supervisorCreated.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it("reads the desktop services after their paths are set", async () => {
+    const logsPath = path.join(runtimeRoot, "logs");
+    let logsSet = false;
+    ports.app.setAppLogsPath.mockImplementation(() => {
+      ports.order.push("setAppLogsPath");
+      logsSet = true;
+    });
+    // userData is the root `setPath("userData", root)` set, or a sentinel before it.
+    const userData = () =>
+      ports.app.setPath.mock.calls.filter((call) => call[0] === "userData").at(-1)?.[1] ??
+      "user-data-sentinel";
+    ports.app.getPath.mockImplementation((name: string) => {
+      if (name === "logs") return logsSet ? logsPath : "logs-sentinel";
+      if (name === "userData") return userData();
+      return runtimeRoot;
+    });
+    vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_SCENARIO", "bootstrap");
+    await load();
+    ready();
+    await flush();
+    expect(ports.log.mock.calls[0]?.[0]).toBe(logsPath);
+    expect(ports.bootstrapArgs).toHaveBeenCalledWith(
+      expect.objectContaining({ userDataRoot: runtimeRoot }),
+    );
   });
 });

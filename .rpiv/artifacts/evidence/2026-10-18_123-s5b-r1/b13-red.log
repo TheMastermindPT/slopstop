@@ -1,0 +1,38 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (30 tests | 1 failed | 29 skipped) 3192ms
+   × passes on the repository 3191ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > passes on the repository
+AssertionError: expected undefined to deeply equal [ 'packages/kernel', …(3) ]
+
+- Expected:
+[
+  "packages/kernel",
+  "packages/protocol",
+  "apps/harness",
+  "apps/desktop",
+]
+
++ Received:
+undefined
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:409:27
+    407|   const result = checkEffectDiagnostics({ root: repository });
+    408|   expect(result).toMatchObject({ ok: true, canary: "matched" });
+    409|   expect(result.projects).toEqual([
+       |                           ^
+    410|     "packages/kernel",
+    411|     "packages/protocol",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 29 skipped (30)
+   Start at  22:39:20
+   Duration  3.39s (transform 29ms, setup 0ms, import 47ms, tests 3.19s, environment 0ms)
+

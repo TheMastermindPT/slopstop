@@ -1,0 +1,17 @@
+parent: 2cf479d
+tree: 46c4e74994ee9a9d39df071648ffde7d482bc137
+working-tree digest: fca3983f51ae0e89
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-bridges.test.ts -t shares one core across the three bridges: notifications after stop
+started: 2026-10-20T11:19:35+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  1 skipped (1)
+      Tests  13 skipped (13)
+   Start at  11:19:36
+   Duration  779ms (transform 237ms, setup 0ms, import 611ms, tests 0ms, environment 0ms)
+
+--- exit: 0
+binding: source apps/desktop/src/main/workspace-bridge.ts bound blob 626d68370786b2e8; restored blob 9b04fbea542fc73e (backup 9b04fbea542fc73e) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

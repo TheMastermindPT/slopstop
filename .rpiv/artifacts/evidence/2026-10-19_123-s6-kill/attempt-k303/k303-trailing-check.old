@@ -1,0 +1,2 @@
+    if (Result.isFailure(waited)) throw waited.failure.cause;
+    this.checkWait(options);

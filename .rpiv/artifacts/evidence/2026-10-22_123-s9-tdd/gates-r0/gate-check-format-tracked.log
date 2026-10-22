@@ -1,0 +1,9 @@
+parent: d7a0e22
+tree: 7f65b88165dd84271e3dd2f82aa9dd6d740fa0ae
+working-tree digest: c74f25cb3da60268
+command: sh -c pnpm exec biome format $(git ls-files) apps/harness/src/process-connection.ts apps/harness/src/process-connection.test.ts
+started: 2026-10-22T21:13:54+01:00
+---
+/c/Users/pedro/AppData/Roaming/npm/pnpm: line 11: /c/Program Files/nodejs/node: Argument list too long
+/c/Users/pedro/AppData/Roaming/npm/pnpm: line 11: /c/Program Files/nodejs/node: No error
+--- exit: 126

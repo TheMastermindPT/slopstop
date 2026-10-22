@@ -1,0 +1,3 @@
+  return new ProjectStorageBrokenError("Project Storage upgrade marker could not be read.", {
+    cause: error,
+  });

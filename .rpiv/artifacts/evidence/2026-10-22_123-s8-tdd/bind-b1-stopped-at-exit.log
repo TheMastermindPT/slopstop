@@ -1,0 +1,39 @@
+parent: 347c0fd
+tree: 607b6ba4624fd37df4627d57f2444c45e86d94aa
+working-tree digest: 44bf24bee91bccda
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-supervisor.test.ts -t waits after exit until stdout
+started: 2026-10-22T18:19:07+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-supervisor.test.ts (37 tests | 2 failed | 35 skipped) 17ms
+     × waits after exit until stdout 'end' before the stop resolves 12ms
+     × waits after exit until stdout 'close' before the stop resolves 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > waits after exit until stdout 'end' before the stop resolves
+ FAIL  |desktop-main| src/main/harness-supervisor.test.ts > harness upgrade log lines > waits after exit until stdout 'close' before the stop resolves
+AssertionError: expected { state: 'stopped' } to not deeply equal { state: 'stopped' }
+
+Compared values have no visual difference.
+
+ ❯ src/main/harness-supervisor.test.ts:1145:42
+    1143|       await vi.advanceTimersByTimeAsync(500);
+    1144|       expect(outcome.settled).toBe(false);
+    1145|       expect(supervisor.getStatus()).not.toEqual({ state: "stopped" });
+       |                                          ^
+    1146|       supervisor.start();
+    1147|       expect(electronMocks.fork).toHaveBeenCalledOnce();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 35 skipped (37)
+   Start at  18:19:08
+   Duration  636ms (transform 209ms, setup 0ms, import 485ms, tests 17ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-supervisor.ts bound blob 9828a0e4af552bd3; restored blob aeea8dc71c011094 (backup aeea8dc71c011094) MATCH; tree before 37f295329be4dba4 after 37f295329be4dba4 MATCH

@@ -1,0 +1,37 @@
+parent: 5f1bca3
+working-tree digest: 31bf6db30191ba65
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts -t reads the desktop services after their paths are set
+started: 2026-10-19T13:01:15+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts (79 tests | 1 failed | 78 skipped) 163ms
+     × reads the desktop services after their paths are set 162ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > reads the desktop services after their paths are set
+AssertionError: expected 'logs-sentinel' to be 'C:\proof\user\logs' // Object.is equality
+
+Expected: "C:\proof\user\logs"
+Received: "logs-sentinel"
+
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:850:42
+    848|     ready();
+    849|     await flush();
+    850|     expect(ports.log.mock.calls[0]?.[0]).toBe(logsPath);
+       |                                          ^
+    851|     expect(ports.bootstrapArgs).toHaveBeenCalledWith(
+    852|       expect.objectContaining({ userDataRoot: runtimeRoot }),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 78 skipped (79)
+   Start at  13:01:16
+   Duration  872ms (transform 307ms, setup 0ms, import 563ms, tests 163ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/main.ts bound blob 611f33e593aae0f2; restored blob 8148667068ff08a9 (backup 8148667068ff08a9) MATCH; digest before 2e499324f4df0389 after 2e499324f4df0389 MATCH

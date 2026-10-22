@@ -1,0 +1,79 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime.test.ts (104 tests | 3 failed | 100 skipped) 201ms
+     × interrupts an in-flight registration request at dispose without a reply 12ms
+     × answers registration exits on the process runtime: 'handle dies' 63ms
+     × answers registration exits on the process runtime: 'handle interrupts itself before any s…' 60ms
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 1 passed | 100 skipped (104)
+   Start at  19:33:09
+   Duration  1.30s (transform 606ms, setup 0ms, import 966ms, tests 201ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime.test.ts > registration requests on the process runtime > interrupts an in-flight registration request at dispose without a reply
+AssertionError: expected [ { protocolVersion: 8, …(7) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "causationId": "00000000-0000-4000-8000-000000000041",
++     "event": "request.failure",
++     "messageId": "00000000-0000-4000-8000-000000000003",
++     "messageType": "event",
++     "payload": {
++       "code": "HARNESS_INTERNAL_FAILURE",
++       "message": "Harness failed while handling a message.",
++       "retryable": false,
++     },
++     "protocolVersion": 8,
++     "sentAt": "2026-10-18T12:00:01.000Z",
++     "sequence": 2,
++   },
++ ]
+
+ ❯ src/harness-runtime.test.ts:1305:30
+    1303|       await nextTurn();
+    1304|       // A late reply to the interrupted request would arrive by now.
+    1305|       expect(transport.sent).toEqual([]);
+       |                              ^
+    1306|       expect(rejections).toEqual([]);
+    1307|     } finally {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |harness| src/harness-runtime.test.ts > registration requests on the process runtime > answers registration exits on the process runtime: 'handle dies'
+ FAIL  |harness| src/harness-runtime.test.ts > registration requests on the process runtime > answers registration exits on the process runtime: 'handle interrupts itself before any s…'
+AssertionError: expected [ { protocolVersion: 8, …(7) } ] to match object [ { event: 'request.failure', …(3) } ]
+(4 matching properties omitted from actual)
+
+- Expected
++ Received
+
+@@ -5,8 +5,8 @@
+      "payload": {
+        "code": "HARNESS_INTERNAL_FAILURE",
+        "message": "Harness failed while handling a message.",
+        "retryable": false,
+      },
+-     "sequence": 1,
++     "sequence": 2,
+    },
+  ]
+
+ ❯ src/harness-runtime.test.ts:1350:28
+    1348|     transport.emit(registrationRequest);
+    1349|     await vi.waitFor(() => expect(transport.sent).toHaveLength(1));
+    1350|     expect(transport.sent).toMatchObject([reply]);
+       |                            ^
+    1351|     await stop();
+    1352|     await runtime.dispose();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+

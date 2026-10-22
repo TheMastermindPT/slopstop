@@ -1,0 +1,44 @@
+parent: 2cf479d
+tree: dc9e953eb383211aea472a56be627ca26f24abe9
+working-tree digest: 04aae846e564931d
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-session.test.ts -t drains queued emits before rethrowing a listener failure
+started: 2026-10-20T11:18:54+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-session.test.ts (8 tests | 1 failed | 7 skipped) 11ms
+     × drains queued emits before rethrowing a listener failure 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-session.test.ts > HarnessSession > drains queued emits before rethrowing a listener failure
+AssertionError: expected [ 'protocol-error', 'disconnected' ] to deeply equal [ 'protocol-error', …(2) ]
+
+- Expected
++ Received
+
+  [
+    "protocol-error",
+    "disconnected",
+-   "message",
+  ]
+
+ ❯ src/main/harness-session.test.ts:155:20
+    153|     session.attach(later);
+    154|     later.emit("message", { data: createReadyEvent(eventMetadata, "0.0…
+    155|     expect(second).toEqual(["protocol-error", "disconnected", "message…
+       |                    ^
+    156|   });
+    157|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  11:18:55
+   Duration  842ms (transform 233ms, setup 0ms, import 641ms, tests 11ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-session.ts bound blob b4803397609db78e; restored blob e0c616d55aec0e10 (backup e0c616d55aec0e10) MATCH; tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

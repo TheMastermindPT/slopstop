@@ -1,0 +1,106 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/storage/project-storage-node-registry.test.ts (5 tests | 4 failed) 13ms
+   × keeps a typed storage failure and leaves anything else a defect: 'broken' 7ms
+   × keeps a typed storage failure and leaves anything else a defect: 'client initialization' 1ms
+   × keeps a typed storage failure and leaves anything else a defect: 'unavailable' 1ms
+   × keeps a typed storage failure and leaves anything else a defect: 'plain error' 2ms
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 1 passed (5)
+   Start at  21:02:50
+   Duration  768ms (transform 315ms, setup 0ms, import 619ms, tests 13ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/storage/project-storage-node-registry.test.ts > keeps a typed storage failure and leaves anything else a defect: 'broken'
+AssertionError: expected undefined to be ProjectStorageBrokenError: broken // Object.is equality
+
+- Expected:
+ProjectStorageBrokenError {
+  "message": "broken",
+  "name": "ProjectStorageBrokenError",
+}
+
++ Received:
+undefined
+
+ ❯ src/storage/project-storage-node-registry.test.ts:48:63
+     46|       registryRejectingWith(error).registryWitnesses(projectId, "/unus…
+     47|     );
+     48|     expect(Option.getOrUndefined(Exit.findErrorOption(exit))).toBe(kep…
+       |                                                               ^
+     49|     expect(Exit.hasFails(exit)).toBe(kept);
+     50|     expect(Exit.hasDies(exit)).toBe(!kept);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |harness| src/storage/project-storage-node-registry.test.ts > keeps a typed storage failure and leaves anything else a defect: 'client initialization'
+AssertionError: expected undefined to be ProjectStorageBrokenError: initialization // Object.is equality
+
+- Expected:
+ProjectStorageBrokenError {
+  "message": "initialization",
+  "name": "ProjectStorageBrokenError",
+}
+
++ Received:
+undefined
+
+ ❯ src/storage/project-storage-node-registry.test.ts:48:63
+     46|       registryRejectingWith(error).registryWitnesses(projectId, "/unus…
+     47|     );
+     48|     expect(Option.getOrUndefined(Exit.findErrorOption(exit))).toBe(kep…
+       |                                                               ^
+     49|     expect(Exit.hasFails(exit)).toBe(kept);
+     50|     expect(Exit.hasDies(exit)).toBe(!kept);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |harness| src/storage/project-storage-node-registry.test.ts > keeps a typed storage failure and leaves anything else a defect: 'unavailable'
+AssertionError: expected undefined to be ProjectStorageUnavailableError: unavailab… // Object.is equality
+
+- Expected:
+ProjectStorageUnavailableError {
+  "message": "unavailable",
+  "name": "ProjectStorageUnavailableError",
+}
+
++ Received:
+undefined
+
+ ❯ src/storage/project-storage-node-registry.test.ts:48:63
+     46|       registryRejectingWith(error).registryWitnesses(projectId, "/unus…
+     47|     );
+     48|     expect(Option.getOrUndefined(Exit.findErrorOption(exit))).toBe(kep…
+       |                                                               ^
+     49|     expect(Exit.hasFails(exit)).toBe(kept);
+     50|     expect(Exit.hasDies(exit)).toBe(!kept);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |harness| src/storage/project-storage-node-registry.test.ts > keeps a typed storage failure and leaves anything else a defect: 'plain error'
+AssertionError: expected UntypedRejection { _tag: 'UntypedRej…' } to be Error: plain // Object.is equality
+
+- Expected
++ Received
+
+- Error {
+-   "message": "plain",
++ UntypedRejection {
++   "message": "",
++   "_tag": "UntypedRejection",
+  }
+
+ ❯ src/storage/project-storage-node-registry.test.ts:51:62
+     49|     expect(Exit.hasFails(exit)).toBe(kept);
+     50|     expect(Exit.hasDies(exit)).toBe(!kept);
+     51|     expect(Exit.isFailure(exit) && Cause.squash(exit.cause)).toBe(erro…
+       |                                                              ^
+     52|   },
+     53| );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+

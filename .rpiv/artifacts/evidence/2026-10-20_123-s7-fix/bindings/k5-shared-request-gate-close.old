@@ -1,0 +1,1 @@
+    failBridge: (bridge, fault) => failWhere((entry) => entry.bridge === bridge, fault),

@@ -1,0 +1,30 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime-shutdown.test.ts (12 tests | 1 failed | 11 skipped) 9ms
+   × rejects a stop first called after the process runtime is disposed 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime-shutdown.test.ts > rejects a stop first called after the process runtime is disposed
+AssertionError: expected 'pending' to be 'rejected' // Object.is equality
+
+Expected: "rejected"
+Received: "pending"
+
+ ❯ src/harness-runtime-shutdown.test.ts:453:24
+    451|     const seen = track(stopping);
+    452|     await advance(0);
+    453|     expect(seen.state).toBe("rejected");
+       |                        ^
+    454|     const reason = seen.value instanceof Error ? seen.value.message : …
+    455|     expect(reason).toContain("ManagedRuntime disposed");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 skipped (12)
+   Start at  17:38:28
+   Duration  1.05s (transform 556ms, setup 0ms, import 916ms, tests 9ms, environment 0ms)
+

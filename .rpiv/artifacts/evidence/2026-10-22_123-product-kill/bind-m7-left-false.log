@@ -1,0 +1,41 @@
+parent: e011d6e
+tree: ea5f746a8e238732dcd58f51945620dacae1d7ff
+working-tree digest: 7a93121ebae5ba29
+command: pnpm exec vitest run --project harness apps/harness/src/storage/project-storage-node-errors.test.ts -t never from a function
+started: 2026-10-22T19:19:43+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/storage/project-storage-node-errors.test.ts (37 tests | 1 failed | 36 skipped) 5ms
+     × reads an error code only from an object, never from a function 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/storage/project-storage-node-errors.test.ts > Project Storage Node error classification > reads an error code only from an object, never from a function
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/storage/project-storage-node-errors.test.ts:83:64
+     81|   it("reads an error code only from an object, never from a function",…
+     82|     const busyFunction = Object.assign(() => undefined, { code: "SQLIT…
+     83|     expect(isUnavailableStorageError({ error: busyFunction })).toBe(fa…
+       |                                                                ^
+     84|   });
+     85|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 36 skipped (37)
+   Start at  19:19:44
+   Duration  546ms (transform 144ms, setup 0ms, import 405ms, tests 5ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/storage/project-storage-node-errors.ts bound blob 57dd77933d72088d; restored blob 7f180253195f7038 (backup 7f180253195f7038) MATCH; tree before 826d7f2e67e666c0 after 826d7f2e67e666c0 MATCH

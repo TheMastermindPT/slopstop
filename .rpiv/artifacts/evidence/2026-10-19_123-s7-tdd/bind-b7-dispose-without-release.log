@@ -1,0 +1,104 @@
+parent: 829c3cf
+tree: e04a9c2d9b5dac9cbdaa8aff2383a12980e8af1c
+working-tree digest: 9a206163d430f308
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-runtime.test.ts -t releases every owner on dispose
+started: 2026-10-19T22:59:24+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-runtime.test.ts (10 tests | 4 failed | 1 skipped) 30ms
+     × releases every owner on dispose: 'built, never stopped' 15ms
+     × releases every owner on dispose: 'program then dispose' 2ms
+     × releases every owner on dispose: 'supervisor stop rejects, no program' 3ms
+     × releases every owner on dispose: 'a release throws' 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'built, never stopped'
+AssertionError: expected [ 'supervisor' ] to deeply equal [ 'project-entry', …(2) ]
+
+- Expected
++ Received
+
+  [
+-   "project-entry",
+-   "project-storage",
+-   "workspace",
++   "supervisor",
+  ]
+
+ ❯ run src/main/desktop-runtime.test.ts:154:47
+    152|         runtime.runSync(readDesktopServices);
+    153|         await runtime.dispose();
+    154|         expect([...stops.slice(0, 3)].sort()).toEqual([...bridges].sor…
+       |                                               ^
+    155|         expect(stops.slice(3)).toEqual(["supervisor"]);
+    156|         expect(release).toHaveBeenCalledOnce();
+ ❯ src/main/desktop-runtime.test.ts:253:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'program then dispose'
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ run src/main/desktop-runtime.test.ts:171:25
+    169|         await expect(runtime.dispose()).resolves.toBeUndefined();
+    170|         expect(stops).toEqual(["project-storage", "workspace", "projec…
+    171|         expect(release).toHaveBeenCalledOnce();
+       |                         ^
+    172|       },
+    173|     },
+ ❯ src/main/desktop-runtime.test.ts:253:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'supervisor stop rejects, no program'
+AssertionError: expected [ 'supervisor' ] to have a length of 4 but got 1
+
+- Expected
++ Received
+
+- 4
++ 1
+
+ ❯ run src/main/desktop-runtime.test.ts:179:23
+    177|         const { runtime, stops, failure } = builtWithFailingSupervisor…
+    178|         await expect(runtime.dispose()).rejects.toBe(failure);
+    179|         expect(stops).toHaveLength(4);
+       |                       ^
+    180|       },
+    181|     },
+ ❯ src/main/desktop-runtime.test.ts:253:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |desktop-main| src/main/desktop-runtime.test.ts > desktop runtime > releases every owner on dispose: 'a release throws'
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ run src/main/desktop-runtime.test.ts:210:40
+    208|           },
+    209|         });
+    210|         await expect(runtime.dispose()).rejects.toBe(failure);
+       |                                        ^
+    211|         expect([...stops].sort()).toEqual([...bridges, "supervisor"].s…
+    212|       },
+ ❯ src/main/desktop-runtime.test.ts:253:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 5 passed | 1 skipped (10)
+   Start at  22:59:26
+   Duration  813ms (transform 53ms, setup 0ms, import 561ms, tests 30ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/desktop-runtime.ts bound blob 26f8aba0ecf8648e; restored blob 772f32664227f81d (backup 772f32664227f81d) MATCH; tree before 68732e761ea8ccd6 after 68732e761ea8ccd6 MATCH

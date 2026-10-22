@@ -1,0 +1,2 @@
+  const read = value as { message?: unknown };
+  return tag === CLEANUP_TAG ? { tag, parts: cleanupParts(value), message: String(read.message) } : { tag };

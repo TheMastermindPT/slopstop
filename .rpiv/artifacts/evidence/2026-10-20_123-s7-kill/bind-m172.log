@@ -1,0 +1,51 @@
+parent: 32ca10a
+tree: 2b77a1de49013afa9a937f34c011e79c5a36a5b8
+working-tree digest: ace38e22ce4e3098
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/project-entry-bridge.test.ts -t activate
+started: 2026-10-20T18:41:23+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/project-entry-bridge.test.ts (111 tests | 1 failed | 109 skipped) 13ms
+   × answers its own decoded reply: 'activate' 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/project-entry-bridge.test.ts > answers its own decoded reply: 'activate'
+AssertionError: expected { status: 'unavailable', …(2) } to deeply equal { status: 'not-registered', …(1) }
+
+- Expected
++ Received
+
+  {
++   "diagnostic": {
++     "code": "PROJECT_COORDINATOR_UNAVAILABLE",
++     "message": "The Project connection is unavailable.",
++     "retryable": true,
++   },
+    "request": {
+      "projectId": "da4abe94-b054-4b70-ade6-89a4e7d4f515",
+    },
+-   "status": "not-registered",
++   "status": "unavailable",
+  }
+
+ ❯ src/main/project-entry-bridge.test.ts:877:24
+    875|   const pending = row.start(bridge);
+    876|   port.emit("message", { data: row.reply(port.metadata()) });
+    877|   await expect(pending).resolves.toEqual(row.result);
+       |                        ^
+    878|   bridge.stop();
+    879| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 109 skipped (111)
+   Start at  18:41:24
+   Duration  633ms (transform 202ms, setup 0ms, import 482ms, tests 13ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/project-entry-bridge.ts bound blob 2827c5ae9395f650; restored blob bf8ea0760a1c6a49 (backup bf8ea0760a1c6a49) MATCH; tree before f0c7898665b905cd after f0c7898665b905cd MATCH

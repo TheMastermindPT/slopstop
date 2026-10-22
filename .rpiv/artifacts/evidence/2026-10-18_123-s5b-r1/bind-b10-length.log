@@ -1,0 +1,88 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (24 tests | 1 failed | 16 skipped) 253ms
+   × runs the canary before any package: 'missing the last expected diagnostic' 48ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed | 16 skipped (24)
+   Start at  22:35:27
+   Duration  446ms (transform 38ms, setup 0ms, import 56ms, tests 253ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'missing the last expected diagnostic'
+AssertionError: expected { ok: false, …(3) } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_CANARY_MISMATCH",
++   "code": "EFFECT_GATE_VIOLATIONS",
++   "lines": [
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(3,24) newPromise",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(4,24) unknownInEffectCatch",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(3,24) newPromise",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(4,24) unknownInEffectCatch",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(3,24) newPromise",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(4,24) unknownInEffectCatch",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(3,24) newPromise",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(4,24) unknownInEffectCatch",
++   ],
+    "ok": false,
++   "violations": [
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 3,
++       "rule": "newPromise",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 4,
++       "rule": "unknownInEffectCatch",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 3,
++       "rule": "newPromise",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 4,
++       "rule": "unknownInEffectCatch",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 3,
++       "rule": "newPromise",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 4,
++       "rule": "unknownInEffectCatch",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 3,
++       "rule": "newPromise",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 4,
++       "rule": "unknownInEffectCatch",
++     },
++   ],
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:261:18
+    259|     spawn,
+    260|   });
+    261|   expect(result).toEqual({ ok: false, code: "EFFECT_GATE_CANARY_MISMAT…
+       |                  ^
+    262|   expect(calls).toHaveLength(1);
+    263| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

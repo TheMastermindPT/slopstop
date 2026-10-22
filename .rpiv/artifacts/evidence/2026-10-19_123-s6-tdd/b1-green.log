@@ -1,0 +1,93 @@
+parent: 5f1bca3
+working-tree digest: 38fcf7101d8cf30d
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-shutdown.test.ts
+started: 2026-10-19T02:46:44+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-shutdown.test.ts (21 tests | 6 failed) 24ms
+     × keeps stopping after a bridge stop throws: 'project storage throws' 4ms
+     × keeps stopping after a bridge stop throws: 'workspace throws' 1ms
+     × keeps stopping after a bridge stop throws: 'project entry throws' 1ms
+     × closes the IPC gate in the turn shutdown starts: 'beforeQuit then quit' 1ms
+     × closes the IPC gate in the turn shutdown starts: 'requestExit' 0ms
+     × closes the IPC gate in the turn shutdown starts: 'stop alone' 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bridge stop isolation > keeps stopping after a bridge stop throws: 'project storage throws'
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bridge stop isolation > keeps stopping after a bridge stop throws: 'workspace throws'
+AssertionError: expected [ Array(5) ] to deeply equal [ Array(6) ]
+
+- Expected
++ Received
+
+  [
+    "project-storage",
+    "workspace",
+-   "project-entry",
+    "harness",
+    "dispose",
+    "exit:1",
+  ]
+
+ ❯ src/main/desktop-shutdown.test.ts:448:19
+    446|     await expect(shutdown.stop()).rejects.toBe(thrown);
+    447|     await flushMicrotasks();
+    448|     expect(order).toEqual([
+       |                   ^
+    449|       "project-storage",
+    450|       "workspace",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bridge stop isolation > keeps stopping after a bridge stop throws: 'project entry throws'
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ src/main/desktop-shutdown.test.ts:446:34
+    444|     });
+    445|     shutdown.beforeQuit({ preventDefault: vi.fn() });
+    446|     await expect(shutdown.stop()).rejects.toBe(thrown);
+       |                                  ^
+    447|     await flushMicrotasks();
+    448|     expect(order).toEqual([
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > IPC gate > closes the IPC gate in the turn shutdown starts: 'beforeQuit then quit'
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > IPC gate > closes the IPC gate in the turn shutdown starts: 'requestExit'
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > IPC gate > closes the IPC gate in the turn shutdown starts: 'stop alone'
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/main/desktop-shutdown.test.ts:497:34
+    495|     expect(shutdown.accepting()).toBe(true);
+    496|     row.start(shutdown);
+    497|     expect(shutdown.accepting()).toBe(false);
+       |                                  ^
+    498|     await row.finish(shutdown);
+    499|     expect(shutdown.accepting()).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 15 passed (21)
+   Start at  02:46:45
+   Duration  474ms (transform 43ms, setup 0ms, import 305ms, tests 24ms, environment 0ms)
+
+--- exit: 1

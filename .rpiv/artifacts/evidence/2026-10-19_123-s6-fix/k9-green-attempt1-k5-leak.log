@@ -1,0 +1,38 @@
+parent: feeab30
+tree: e2099e1800736e81585bd41eef447f8d6239471e
+working-tree digest: ad2b8b012fc83020
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts apps/desktop/src/main/workspace-bridge.test.ts
+started: 2026-10-19T14:35:18+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+SlopStop failed to start.
+ ❯ |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts (80 tests | 3 failed) 588ms
+     × answers unavailable after quit starts: 'listProjects' 8ms
+     × answers unavailable after quit starts: 'registerProject' 5ms
+     × answers unavailable after quit starts: 'queryWorkspace' 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > answers unavailable after quit starts: 'listProjects'
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > answers unavailable after quit starts: 'registerProject'
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > answers unavailable after quit starts: 'queryWorkspace'
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:771:28
+    769|     await flush();
+    770|     expect(ports.order).toContain("dispose");
+    771|     expect(ports.app.quit).toHaveBeenCalledOnce();
+       |                            ^
+    772|     await expect(call(row.value)).resolves.toEqual(row.envelope);
+    773|     expect(row.bridge).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  3 failed | 102 passed (105)
+   Start at  14:35:19
+   Duration  1.23s (transform 596ms, setup 0ms, import 1.13s, tests 634ms, environment 0ms)
+
+--- exit: 1

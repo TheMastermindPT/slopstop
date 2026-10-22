@@ -1,0 +1,23 @@
+# s6 scoped mutation, candidate 5ed89e5 (tree b67f0d2f): non-killed mutants
+counts {"Ignored":4,"Killed":198,"Survived":15}
+files with mutants: apps/desktop/src/main/canonical-writer-package-smoke.ts 35; apps/desktop/src/main/desktop-runtime.ts 51; apps/desktop/src/main/desktop-shutdown.ts 68; apps/desktop/src/main/main.ts 36; apps/desktop/src/main/project-entry-ipc.ts 18; apps/desktop/src/main/project-registration-ipc.ts 9
+
+Ignored	apps/desktop/src/main/canonical-writer-package-smoke.ts:334:32-338:8	BlockStatement	"{}"	S6-J7: defensive interruption canceler, unreachable through the facade
+Ignored	apps/desktop/src/main/canonical-writer-package-smoke.ts:335:19-335:23	BooleanLiteral	"false"	S6-J7: defensive interruption canceler, unreachable through the facade
+Ignored	apps/desktop/src/main/canonical-writer-package-smoke.ts:336:9-336:29	CallExpression	";"	S6-J7: defensive interruption canceler, unreachable through the facade
+Ignored	apps/desktop/src/main/canonical-writer-package-smoke.ts:337:9-337:42	CallExpression	";"	S6-J7: defensive interruption canceler, unreachable through the facade
+Survived	apps/desktop/src/main/canonical-writer-package-smoke.ts:303:5-303:29	CallExpression	";"	
+Survived	apps/desktop/src/main/canonical-writer-package-smoke.ts:302:9-302:33	ConditionalExpression	"false"	
+Survived	apps/desktop/src/main/canonical-writer-package-smoke.ts:316:16-316:35	ConditionalExpression	"true"	
+Survived	apps/desktop/src/main/desktop-runtime.ts:47:3-47:35	StringLiteral	"\"\""	
+Survived	apps/desktop/src/main/desktop-runtime.ts:52:5-52:42	StringLiteral	"\"\""	
+Survived	apps/desktop/src/main/desktop-runtime.ts:56:5-56:42	StringLiteral	"\"\""	
+Survived	apps/desktop/src/main/desktop-runtime.ts:60:5-60:44	StringLiteral	"\"\""	
+Survived	apps/desktop/src/main/desktop-runtime.ts:64:5-64:39	StringLiteral	"\"\""	
+Survived	apps/desktop/src/main/desktop-shutdown.ts:132:11-132:33	ConditionalExpression	"true"	
+Survived	apps/desktop/src/main/desktop-shutdown.ts:9:3-9:37	StringLiteral	"\"\""	
+Survived	apps/desktop/src/main/desktop-shutdown.ts:91:13-91:32	EqualityOperator	"failures.length >= 1"	
+Survived	apps/desktop/src/main/main.ts:106:5-106:33	OptionalChaining	"servicesAtShutdown().logger"	
+Survived	apps/desktop/src/main/main.ts:133:43-133:97	ObjectLiteral	"{}"	
+Survived	apps/desktop/src/main/main.ts:133:54-133:95	StringLiteral	"\"\""	
+Survived	apps/desktop/src/main/main.ts:123:56-123:81	StringLiteral	"\"\""	

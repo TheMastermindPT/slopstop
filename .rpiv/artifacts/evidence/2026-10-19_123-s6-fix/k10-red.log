@@ -1,0 +1,51 @@
+parent: feeab30
+tree: ecfe9e3b6e8db8504a9767491e45cadb8d734c78
+working-tree digest: 8a7d0382d664a60a
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-shutdown.test.ts
+started: 2026-10-19T14:27:12+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-shutdown.test.ts (24 tests | 2 failed) 23ms
+     × disposes the runtime before the terminal action: 'reports a failure once before exit' 2ms
+     × disposes the runtime before the terminal action: 'reports an unconfirmed dispose' 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'reports a failure once before exit'
+AssertionError: expected "vi.fn()" to be called once with arguments: [ …(1) ]
+
+Number of calls: 0
+
+ ❯ run src/main/desktop-shutdown.test.ts:433:31
+    431|         await settledFailure(shutdown.stop());
+    432|         await flushMicrotasks();
+    433|         expect(reportFailure).toHaveBeenCalledExactlyOnceWith(harnessF…
+       |                               ^
+    434|         expect(order.slice(-2)).toEqual(["report", "exit:1"]);
+    435|       },
+ ❯ src/main/desktop-shutdown.test.ts:473:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'reports an unconfirmed dispose'
+AssertionError: expected "vi.fn()" to be called once, but got 0 times
+ ❯ run src/main/desktop-shutdown.test.ts:450:31
+    448|         expect(reportFailure).not.toHaveBeenCalled();
+    449|         await vi.advanceTimersByTimeAsync(1);
+    450|         expect(reportFailure).toHaveBeenCalledOnce();
+       |                               ^
+    451|         expect(reportFailure.mock.calls[0]?.[0]).toMatchObject({
+    452|           _tag: "DesktopRuntimeDisposeUnconfirmed",
+ ❯ src/main/desktop-shutdown.test.ts:473:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 22 passed (24)
+   Start at  14:27:13
+   Duration  478ms (transform 42ms, setup 0ms, import 320ms, tests 23ms, environment 0ms)
+
+--- exit: 1

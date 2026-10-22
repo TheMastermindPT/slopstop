@@ -1,0 +1,11 @@
+# S7-K11 after the change: each neutral string once in apps/desktop/src outside tests
+## Harness session disconnected.
+apps/desktop/src\main\harness-request-core.ts:39:  transport: "Harness session disconnected.",
+## Harness session received an invalid protocol message.
+apps/desktop/src\main\harness-request-core.ts:41:    "invalid-message": "Harness session received an invalid protocol message.",
+## Harness reported a failure.
+apps/desktop/src\main\harness-request-core.ts:42:    "system-failure": "Harness reported a failure.",
+## Harness request identity collided.
+apps/desktop/src\main\harness-request-core.ts:44:  desktop: { "identity-collision": "Harness request identity collided." },
+## Desktop created an invalid harness message.
+apps/desktop/src\main\harness-send-failure.ts:10:      return "Desktop created an invalid harness message.";

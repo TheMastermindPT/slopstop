@@ -1,0 +1,195 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (16 tests | 5 failed | 11 skipped) 24ms
+   × runs the canary before any package: real canary 8ms
+   × runs the canary before any package: plugin removed 11ms
+   × runs the canary before any package: 'extra diagnostic' 2ms
+   × runs the canary before any package: 'missing diagnostic' 1ms
+   × runs the canary before any package: 'override not applied' 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: real canary
+AssertionError: expected { ok: true, warnings: +0 } to match object { ok: true, canary: 'matched' }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "canary": "matched",
+    "ok": true,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:233:84
+    231|
+    232| it("runs the canary before any package: real canary", () => {
+    233|   expect(checkEffectDiagnostics({ root: repository, projects: [], cana…
+       |                                                                                    ^
+    234|     ok: true,
+    235|     canary: "matched",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: plugin removed
+AssertionError: expected { ok: true, warnings: +0 } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_CANARY_MISMATCH",
+-   "ok": false,
++   "ok": true,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:241:72
+    239| it("runs the canary before any package: plugin removed", () => {
+    240|   const root = canaryWithoutPlugin();
+    241|   expect(checkEffectDiagnostics({ root, projects: [], canary: true }))…
+       |                                                                        ^
+    242|     ok: false,
+    243|     code: "EFFECT_GATE_CANARY_MISMATCH",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'extra diagnostic'
+AssertionError: expected { ok: false, …(3) } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_CANARY_MISMATCH",
++   "code": "EFFECT_GATE_VIOLATIONS",
++   "lines": [
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(3,18) newPromise",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(4,24) unknownInEffectCatch",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(1,1) newPromise",
++   ],
+    "ok": false,
++   "violations": [
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 3,
++       "rule": "newPromise",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 4,
++       "rule": "unknownInEffectCatch",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 1,
++       "rule": "newPromise",
++     },
++   ],
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:255:18
+    253|     spawn,
+    254|   });
+    255|   expect(result).toEqual({ ok: false, code: "EFFECT_GATE_CANARY_MISMAT…
+       |                  ^
+    256|   expect(calls).toHaveLength(1);
+    257| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'missing diagnostic'
+AssertionError: expected { ok: false, …(3) } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_CANARY_MISMATCH",
++   "code": "EFFECT_GATE_VIOLATIONS",
++   "lines": [
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(3,18) newPromise",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(4,24) unknownInEffectCatch",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(7,23) newPromise",
++   ],
+    "ok": false,
++   "violations": [
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 3,
++       "rule": "newPromise",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 4,
++       "rule": "unknownInEffectCatch",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 7,
++       "rule": "newPromise",
++     },
++   ],
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:255:18
+    253|     spawn,
+    254|   });
+    255|   expect(result).toEqual({ ok: false, code: "EFFECT_GATE_CANARY_MISMAT…
+       |                  ^
+    256|   expect(calls).toHaveLength(1);
+    257| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'override not applied'
+AssertionError: expected { ok: false, …(3) } to deeply equal { ok: false, …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_CANARY_MISMATCH",
++   "code": "EFFECT_GATE_VIOLATIONS",
++   "lines": [
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(3,18) newPromise",
++     "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts(4,24) unknownInEffectCatch",
++     "apps/harness/scripts/effect-diagnostics-canary/src/planted.test.ts(1,30) newPromise",
++   ],
+    "ok": false,
++   "violations": [
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 3,
++       "rule": "newPromise",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
++       "line": 4,
++       "rule": "unknownInEffectCatch",
++     },
++     {
++       "file": "apps/harness/scripts/effect-diagnostics-canary/src/planted.test.ts",
++       "line": 1,
++       "rule": "newPromise",
++     },
++   ],
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:255:18
+    253|     spawn,
+    254|   });
+    255|   expect(result).toEqual({ ok: false, code: "EFFECT_GATE_CANARY_MISMAT…
+       |                  ^
+    256|   expect(calls).toHaveLength(1);
+    257| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 11 skipped (16)
+   Start at  20:51:39
+   Duration  205ms (transform 23ms, setup 0ms, import 40ms, tests 24ms, environment 0ms)
+

@@ -1,0 +1,17 @@
+parent: 1a2d2ce
+tree: 706d2c277e43498be4c3da48f6ca6a77079af430
+working-tree digest: e3b0c44298fc1c14
+command: pnpm exec stryker run stryker.project-storage.config.json --mutate apps/harness/src/storage/project-storage-node-errors.ts,apps/harness/src/storage/project-storage-upgrade-node-adapter.ts:558-564,apps/harness/src/registration/registry-database.ts:79-90,apps/harness/src/registration/registration-registry.ts:182-200,apps/harness/scripts/check-effect-diagnostics.mjs:19-22,apps/harness/scripts/check-effect-diagnostics.mjs:41-63,apps/harness/scripts/check-effect-diagnostics.mjs:157-175,apps/harness/scripts/check-effect-diagnostics.mjs:191-191,apps/harness/scripts/check-effect-diagnostics.mjs:215-253,apps/harness/scripts/check-effect-diagnostics.mjs:256-262
+started: 2026-10-22T19:09:29+01:00
+---
+[32m19:09:31 (19068) INFO ProjectReader[39m Found 5 of 1864 file(s) to be mutated.
+[32m19:09:31 (19068) INFO Instrumenter[39m Instrumented 5 source file(s) with 258 mutant(s)
+[32m19:09:33 (19068) INFO ConcurrencyTokenProvider[39m Creating 4 test runner process(es).
+[32m19:09:35 (19068) INFO DryRunExecutor[39m Starting initial test run (vitest test runner with "perTest" coverage analysis). This may take a while.
+[32m19:11:06 (19068) INFO DryRunExecutor[39m Initial test run succeeded. Ran 491 tests in 1 minute and 30 seconds (net 80609.87830000013 ms, overhead 10204.121699999872 ms).
+[91m19:16:41 (19068) ERROR MutationTestReportHelper[39m Final mutation score 79.12 under breaking threshold 80, setting exit code to 1 (failure).
+[32m19:16:41 (19068) INFO MutationTestReportHelper[39m (improve mutation score or set `thresholds.break = null` to prevent this error in the future)
+[32m19:16:41 (19068) INFO JsonReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/mutation.json
+[32m19:16:41 (19068) INFO HtmlReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/project-storage-harness.html
+[32m19:16:41 (19068) INFO MutationTestExecutor[39m Done in 7 minutes and 11 seconds.
+--- exit: 1

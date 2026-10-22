@@ -1,0 +1,7 @@
+head 54d2e121397ff4fc654c2738e98117215bfdeb23 planted: apps/harness/src/storage/project-storage-store.ts:767 export const planted = Effect.tryPromise({ try: async () => 1, catch: (cause) => cause });
+command: pnpm check:effect
+$ node apps/harness/scripts/check-effect-diagnostics.mjs
+EFFECT_GATE_VIOLATIONS
+apps/harness/src/storage/project-storage-store.ts(767,24) unknownInEffectCatch
+[ELIFECYCLE] Command failed with exit code 1.
+exit 1

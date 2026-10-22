@@ -1,0 +1,51 @@
+parent: b4fc9ed
+tree: 5775a5003e8ae484861dffa8e2bac5b63b679ebc
+working-tree digest: a97b54779595bf19
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/desktop-shutdown.test.ts
+started: 2026-10-19T17:01:13+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/desktop-shutdown.test.ts (25 tests | 1 failed) 23ms
+     × disposes the runtime before the terminal action: 'a throwing report still exits 1' 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/desktop-shutdown.test.ts > bounded runtime dispose > disposes the runtime before the terminal action: 'a throwing report still exits 1'
+AssertionError: expected "vi.fn()" to be called once with arguments: [ 1 ]
+
+Number of calls: 0
+
+ ❯ run src/main/desktop-shutdown.test.ts:471:22
+    469|         await settledFailure(shutdown.stop());
+    470|         await flushMicrotasks();
+    471|         expect(exit).toHaveBeenCalledExactlyOnceWith(1);
+       |                      ^
+    472|         expect(quit).not.toHaveBeenCalled();
+    473|       },
+ ❯ src/main/desktop-shutdown.test.ts:490:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: private report failure
+ ❯ Object.reportFailure apps/desktop/src/main/desktop-shutdown.test.ts:465:19
+ ❯ apps/desktop/src/main/desktop-shutdown.ts:109:17
+
+This error originated in "apps/desktop/src/main/desktop-shutdown.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 24 passed (25)
+     Errors  1 error
+   Start at  17:01:16
+   Duration  4.63s (transform 63ms, setup 0ms, import 3.88s, tests 23ms, environment 0ms)
+
+--- exit: 1

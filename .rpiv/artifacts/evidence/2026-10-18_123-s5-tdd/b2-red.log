@@ -1,0 +1,121 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/registration/registration-listing.test.ts (6 tests | 4 failed) 12ms
+   × names every unconfirmed part: 'observer and listing' (CNV-B37) 7ms
+   × names every unconfirmed part: 'a failed registry stop with the other…' (CNV-B37) 1ms
+   × names every unconfirmed part: 'only the listing' (CNV-B37) 1ms
+   × names every unconfirmed part: 'only the registry' (CNV-B37) 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/registration/registration-listing.test.ts > names every unconfirmed part: 'observer and listing' (CNV-B37)
+AssertionError: expected { _tag: undefined, …(5) } to deeply equal { …(6) }
+
+- Expected
++ Received
+
+@@ -1,7 +1,7 @@
+  {
+-   "_tag": "RegistrationCleanupUnconfirmed",
++   "_tag": undefined,
+    "cause": undefined,
+    "hasCause": false,
+    "message": "Project registration cleanup is unconfirmed: observer, listing.",
+    "name": "RegistrationCleanupUnconfirmed",
+    "parts": [
+
+ ❯ src/registration/registration-listing.test.ts:88:38
+     86|         }),
+     87|   });
+     88|   expect(await stopFailure(adapter)).toEqual({
+       |                                      ^
+     89|     _tag: "RegistrationCleanupUnconfirmed",
+     90|     name: "RegistrationCleanupUnconfirmed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |harness| src/registration/registration-listing.test.ts > names every unconfirmed part: 'a failed registry stop with the other…' (CNV-B37)
+AssertionError: expected { _tag: undefined, …(5) } to deeply equal { …(6) }
+
+- Expected
++ Received
+
+@@ -1,7 +1,7 @@
+  {
+-   "_tag": "RegistrationCleanupUnconfirmed",
++   "_tag": undefined,
+    "cause": Error {
+      "message": "private registry stop failure",
+    },
+    "hasCause": true,
+    "message": "Project registration cleanup is unconfirmed: registry, observer, listing.",
+
+ ❯ src/registration/registration-listing.test.ts:88:38
+     86|         }),
+     87|   });
+     88|   expect(await stopFailure(adapter)).toEqual({
+       |                                      ^
+     89|     _tag: "RegistrationCleanupUnconfirmed",
+     90|     name: "RegistrationCleanupUnconfirmed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |harness| src/registration/registration-listing.test.ts > names every unconfirmed part: 'only the listing' (CNV-B37)
+AssertionError: expected { _tag: undefined, …(5) } to deeply equal { …(6) }
+
+- Expected
++ Received
+
+@@ -1,7 +1,7 @@
+  {
+-   "_tag": "RegistrationCleanupUnconfirmed",
++   "_tag": undefined,
+    "cause": undefined,
+    "hasCause": false,
+    "message": "Project registration cleanup is unconfirmed: listing.",
+    "name": "RegistrationCleanupUnconfirmed",
+    "parts": [
+
+ ❯ src/registration/registration-listing.test.ts:88:38
+     86|         }),
+     87|   });
+     88|   expect(await stopFailure(adapter)).toEqual({
+       |                                      ^
+     89|     _tag: "RegistrationCleanupUnconfirmed",
+     90|     name: "RegistrationCleanupUnconfirmed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |harness| src/registration/registration-listing.test.ts > names every unconfirmed part: 'only the registry' (CNV-B37)
+AssertionError: expected { _tag: undefined, …(5) } to deeply equal { …(6) }
+
+- Expected
++ Received
+
+@@ -1,7 +1,7 @@
+  {
+-   "_tag": "RegistrationCleanupUnconfirmed",
++   "_tag": undefined,
+    "cause": Error {
+      "message": "private registry stop failure",
+    },
+    "hasCause": true,
+    "message": "Project registration cleanup is unconfirmed: registry.",
+
+ ❯ src/registration/registration-listing.test.ts:88:38
+     86|         }),
+     87|   });
+     88|   expect(await stopFailure(adapter)).toEqual({
+       |                                      ^
+     89|     _tag: "RegistrationCleanupUnconfirmed",
+     90|     name: "RegistrationCleanupUnconfirmed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 2 passed (6)
+   Start at  16:35:19
+   Duration  535ms (transform 136ms, setup 0ms, import 394ms, tests 12ms, environment 0ms)
+

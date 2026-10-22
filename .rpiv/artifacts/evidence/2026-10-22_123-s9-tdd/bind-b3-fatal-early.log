@@ -1,0 +1,153 @@
+parent: d7a0e22
+tree: fd6b67615b682386f0da5b2c85d522a2a08e0c51
+working-tree digest: 46aed75592de029a
+command: pnpm exec vitest run --project harness apps/harness/src/process-fatal-diagnostics.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-connection.test.ts
+started: 2026-10-22T21:18:55+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/process-connection.test.ts (5 tests | 4 failed) 18ms
+   × reports a startup failure with its code and summary: 'runtime start and dispose fail' 9ms
+   × reports a startup failure with its code and summary: 'runtime start fails alone' 2ms
+   × reports a runtime start failure only after the launch settled 1ms
+   × attaches the stop of a good start 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a startup failure with its code and summary: 'runtime start and dispose fail'
+AssertionError: expected [ [ { …(3) }, 'early' ], …(1) ] to deeply equal [ [ { …(3) }, …(1) ] ]
+
+- Expected
++ Received
+
+@@ -1,9 +1,17 @@
+  [
+    [
+      {
+        "code": "HARNESS_RUNTIME_START_FAILED",
++       "failures": [],
++       "omittedFailures": 0,
++     },
++     "early",
++   ],
++   [
++     {
++       "code": "HARNESS_RUNTIME_START_FAILED",
+        "failures": [
+          {
+            "kind": "error",
+          },
+          {
+
+ ❯ src/process-connection.test.ts:78:33
+     76|   expect(launch.mock.calls[0]?.[0]).toBe(prepared);
+     77|   expect(attach).not.toHaveBeenCalled();
+     78|   expect(sink.fatal.mock.calls).toEqual([
+       |                                 ^
+     79|     [
+     80|       { code: "HARNESS_RUNTIME_START_FAILED", failures, omittedFailure…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a startup failure with its code and summary: 'runtime start fails alone'
+AssertionError: expected [ [ { …(3) }, 'early' ], …(1) ] to deeply equal [ [ { …(3) }, …(1) ] ]
+
+- Expected
++ Received
+
+@@ -1,9 +1,17 @@
+  [
+    [
+      {
+        "code": "HARNESS_RUNTIME_START_FAILED",
++       "failures": [],
++       "omittedFailures": 0,
++     },
++     "early",
++   ],
++   [
++     {
++       "code": "HARNESS_RUNTIME_START_FAILED",
+        "failures": [
+          {
+            "tag": "ApplicationDatabaseCloseUnconfirmed",
+          },
+        ],
+
+ ❯ src/process-connection.test.ts:78:33
+     76|   expect(launch.mock.calls[0]?.[0]).toBe(prepared);
+     77|   expect(attach).not.toHaveBeenCalled();
+     78|   expect(sink.fatal.mock.calls).toEqual([
+       |                                 ^
+     79|     [
+     80|       { code: "HARNESS_RUNTIME_START_FAILED", failures, omittedFailure…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a runtime start failure only after the launch settled
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "code": "HARNESS_RUNTIME_START_FAILED",
+        "failures": Array [],
+        "omittedFailures": 0,
+      },
+      "early",
+    ]
+
+
+Number of calls: 1
+
+ ❯ src/process-connection.test.ts:107:26
+    105|
+    106|   expect(launch).toHaveBeenCalledOnce();
+    107|   expect(sink.fatal).not.toHaveBeenCalled();
+       |                          ^
+    108|   expect(sink.exit).not.toHaveBeenCalled();
+    109|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |harness| src/process-connection.test.ts > attaches the stop of a good start
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "code": "HARNESS_RUNTIME_START_FAILED",
+        "failures": Array [],
+        "omittedFailures": 0,
+      },
+      "early",
+    ]
+
+
+Number of calls: 1
+
+ ❯ src/process-connection.test.ts:134:26
+    132|   expect(attach).toHaveBeenCalledOnce();
+    133|   expect(attach.mock.calls[0]?.[0]).toBe(stop);
+    134|   expect(sink.fatal).not.toHaveBeenCalled();
+       |                          ^
+    135|   expect(sink.exit).not.toHaveBeenCalled();
+    136| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  4 failed | 21 passed (25)
+   Start at  21:18:56
+   Duration  2.41s (transform 3.57s, setup 0ms, import 5.93s, tests 224ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/process-connection.ts bound blob 4710a159e8017bac; restored blob e3f801d7d01eee60 (backup e3f801d7d01eee60) MATCH; tree before f6d08d3572281592 after f6d08d3572281592 MATCH

@@ -1,0 +1,9 @@
+parent: d7a0e22
+tree: 6f5c8b94f312ba66ae2061f72a5483e00651d991
+working-tree digest: b00f4277582780d5
+command: pnpm format:check
+started: 2026-10-22T23:24:52+01:00
+---
+$ biome format .
+Checked 570 files in 380ms. No fixes applied.
+--- exit: 0

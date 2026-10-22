@@ -1,0 +1,2 @@
+Command line of unit-set.log (run from apps/harness on a17a2ac):
+pnpm exec vitest run --project harness src/harness-runtime.test.ts src/harness-runtime-shutdown.test.ts src/process-bootstrap.test.ts src/registration/registration-listing.test.ts src/project-registration-observer.test.ts src/process-shutdown.test.ts

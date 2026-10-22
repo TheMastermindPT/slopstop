@@ -1,0 +1,2 @@
+  sink.exit(1);
+  sink.fatal({ code, ...summarizeHarnessFailure(failure) }, message);

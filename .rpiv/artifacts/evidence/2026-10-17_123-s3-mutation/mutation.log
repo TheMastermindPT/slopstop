@@ -1,0 +1,14 @@
+$ pnpm exec stryker run stryker.project-storage.config.json "--mutate" "apps/harness/src/storage/application-database-authority.ts:51-64,apps/harness/src/storage/application-database-authority.ts:155-170,apps/harness/src/storage/application-database-authority.ts:179-185,apps/harness/src/storage/application-database-authority.ts:254-268,apps/harness/src/storage/application-database-authority.ts:481-484,apps/harness/src/storage/application-database-authority.ts:509-515,apps/harness/src/harness-runtime.ts:154-157,apps/harness/src/process-bootstrap.ts:182-188"
+[32m00:35:13 (18048) INFO ProjectReader[39m Found 3 of 830 file(s) to be mutated.
+[32m00:35:13 (18048) INFO Instrumenter[39m Instrumented 3 source file(s) with 42 mutant(s)
+[32m00:35:14 (18048) INFO ConcurrencyTokenProvider[39m Creating 4 test runner process(es).
+[32m00:35:16 (18048) INFO DryRunExecutor[39m Starting initial test run (vitest test runner with "perTest" coverage analysis). This may take a while.
+[32m00:37:19 (18048) INFO DryRunExecutor[39m Initial test run succeeded. Ran 323 tests in 2 minutes and 2 seconds (net 112914.63050000009 ms, overhead 9611.369499999913 ms).
+[32m00:39:25 (18048) INFO MutationTestReportHelper[39m Final mutation score of 100.00 is greater than or equal to break threshold 80
+[32m00:39:25 (18048) INFO JsonReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/mutation.json
+[32m00:39:25 (18048) INFO HtmlReporter[39m Your report can be found at: file:///C:/Users/pedro/Documents/GitHub/slopstop-123/reports/mutation/project-storage-harness.html
+[32m00:39:25 (18048) INFO MutationTestExecutor[39m Done in 4 minutes and 12 seconds.
+
+real	4m26.022s
+user	0m0.075s
+sys	0m0.045s

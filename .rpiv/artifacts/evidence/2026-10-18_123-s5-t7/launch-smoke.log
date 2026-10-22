@@ -1,0 +1,11 @@
+$ pnpm --filter @slopstop/desktop package:launch-smoke
+$ node tests/e2e/package-smoke.mjs
+Packaged SlopStop smoke failed.
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @slopstop/desktop@0.0.0 package:launch-smoke: `node tests/e2e/package-smoke.mjs`
+Exit status 1
+[ELIFECYCLE] Command failed with exit code 1.
+
+real	0m1.187s
+user	0m0.045s
+sys	0m0.045s

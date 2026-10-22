@@ -1,0 +1,105 @@
+parent: d7a0e22
+tree: ab92ba41690dc00f9b6f310abb49c25e0c3d672b
+working-tree digest: fb2c7526b7b8dfae
+command: pnpm exec vitest run --project harness apps/harness/src/process-fatal-diagnostics.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-connection.test.ts
+started: 2026-10-22T21:09:56+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/process-fatal-diagnostics.test.ts (17 tests | 3 failed) 18ms
+   × summarizes a fatal failure as metadata only: 'cleanup parts' 6ms
+   × summarizes a fatal failure as metadata only: 'unknown parts dropped' 1ms
+   × summarizes a fatal failure as metadata only: 'nested aggregates in order' 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'cleanup parts'
+AssertionError: expected { failures: [ { …(3) } ], …(1) } to deeply equal { failures: [ { …(2) } ], …(1) }
+
+- Expected
++ Received
+
+@@ -1,8 +1,9 @@
+  {
+    "failures": [
+      {
++       "message": "C:privateprojectslopstop.db",
+        "parts": [
+          "observer",
+          "listing",
+        ],
+        "tag": "RegistrationCleanupUnconfirmed",
+
+ ❯ src/process-fatal-diagnostics.test.ts:135:19
+    133|   const summary = summarizeHarnessFailure(value);
+    134|
+    135|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    136|   const serialized = JSON.stringify(summary);
+    137|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'unknown parts dropped'
+AssertionError: expected { failures: [ { …(3) } ], …(1) } to deeply equal { failures: [ { …(2) } ], …(1) }
+
+- Expected
++ Received
+
+@@ -1,8 +1,9 @@
+  {
+    "failures": [
+      {
++       "message": "C:privateprojectslopstop.db",
+        "parts": [
+          "registry",
+        ],
+        "tag": "RegistrationCleanupUnconfirmed",
+      },
+
+ ❯ src/process-fatal-diagnostics.test.ts:135:19
+    133|   const summary = summarizeHarnessFailure(value);
+    134|
+    135|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    136|   const serialized = JSON.stringify(summary);
+    137|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'nested aggregates in order'
+AssertionError: expected { failures: [ { …(3) }, …(2) ], …(1) } to deeply equal { failures: [ { …(2) }, …(2) ], …(1) }
+
+- Expected
++ Received
+
+@@ -1,8 +1,9 @@
+  {
+    "failures": [
+      {
++       "message": "C:privateprojectslopstop.db",
+        "parts": [
+          "registry",
+        ],
+        "tag": "RegistrationCleanupUnconfirmed",
+      },
+
+ ❯ src/process-fatal-diagnostics.test.ts:135:19
+    133|   const summary = summarizeHarnessFailure(value);
+    134|
+    135|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    136|   const serialized = JSON.stringify(summary);
+    137|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  3 failed | 22 passed (25)
+   Start at  21:09:57
+   Duration  2.50s (transform 3.69s, setup 0ms, import 6.10s, tests 215ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/process-fatal-diagnostics.ts bound blob 87fd05168d3114ab; restored blob 7164433ad1cd93ed (backup 7164433ad1cd93ed) MATCH; tree before 0af92becd134ccb6 after 0af92becd134ccb6 MATCH

@@ -1,0 +1,9 @@
+# S7-K1: b8-register-red.log ran at tree 2bdad823 (scaffold attempt 1), not a6d50f87.
+# The register file and its test are the same blobs in both trees:
+2bdad823dbef72cc76f34718387af5c1c93cdf4b apps/harness/scripts/effect-diagnostics-waivers.json b475312aa8c196c6ebf5072a736f5f6673cfde35
+2bdad823dbef72cc76f34718387af5c1c93cdf4b apps/harness/scripts/check-effect-diagnostics.test.mjs 915b5806b1793ad075346c06096952bd4bf70af4
+a6d50f87047dbc8266913760f8e38a18378bb381 apps/harness/scripts/effect-diagnostics-waivers.json b475312aa8c196c6ebf5072a736f5f6673cfde35
+a6d50f87047dbc8266913760f8e38a18378bb381 apps/harness/scripts/check-effect-diagnostics.test.mjs 915b5806b1793ad075346c06096952bd4bf70af4
+# The two trees differ only in:
+ apps/desktop/src/main/harness-bridges.test.ts | 38 ++++++++++++++++++---------
+ 1 file changed, 25 insertions(+), 13 deletions(-)

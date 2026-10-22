@@ -1,0 +1,72 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/storage/project-storage-store.test.ts (36 tests | 2 failed) 50ms
+   × retains a late activation release across shutdown (2 failures) 5ms
+   × retains delayed asynchronous registry failure in the shared stop promise 3ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 34 passed (36)
+   Start at  21:02:54
+   Duration  699ms (transform 225ms, setup 0ms, import 508ms, tests 50ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/storage/project-storage-store.test.ts > retains a late activation release across shutdown (2 failures)
+AssertionError: expected [ Error: session close failed, …(1) ] to deeply equal [ Error: session close failed, …(1) ]
+
+- Expected
++ Received
+
+  [
+    Error {
+      "message": "session close failed",
+    },
+-   Error {
++   UntypedRejection {
++     "message": "",
++     "cause": Error {
+        "message": "shutdown release failed",
++     },
++     "_tag": "UntypedRejection",
+    },
+  ]
+
+ ❯ src/storage/project-storage-store.test.ts:732:26
+    730|     if (!(error instanceof AggregateError)) throw new Error("Expected …
+    731|     expect(error.message).toBe("Project Storage shutdown failed.");
+    732|     expect(error.errors).toEqual(failures === 1 ? [f.failure] : [f.fai…
+       |                          ^
+    733|     expect(f.registryStop).toHaveBeenCalledTimes(1);
+    734|     if (failures === 2) {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |harness| src/storage/project-storage-store.test.ts > retains delayed asynchronous registry failure in the shared stop promise
+AssertionError: expected [ Array(1) ] to deeply equal [ Error: registry close failed ]
+
+- Expected
++ Received
+
+  [
+-   Error {
++   UntypedRejection {
++     "message": "",
++     "cause": Error {
+        "message": "registry close failed",
++     },
++     "_tag": "UntypedRejection",
+    },
+  ]
+
+ ❯ src/storage/project-storage-store.test.ts:805:31
+    803|   }
+    804|   expect(result.error.message).toBe("Project Storage shutdown failed."…
+    805|   expect(result.error.errors).toEqual([registryFailure]);
+       |                               ^
+    806| });
+    807|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

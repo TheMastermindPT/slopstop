@@ -1,0 +1,16 @@
+parent: b4fc9ed
+tree: 05e3dec630e00445df66b3872874255d22d19b35
+working-tree digest: 46eaaf79564f3ca5
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts -t stops every bridge when the workspace stop throws
+started: 2026-10-19T17:03:19+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 79 skipped (80)
+   Start at  17:03:20
+   Duration  910ms (transform 296ms, setup 0ms, import 573ms, tests 144ms, environment 0ms)
+
+--- exit: 0

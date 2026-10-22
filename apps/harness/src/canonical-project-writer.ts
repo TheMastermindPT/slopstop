@@ -6,7 +6,7 @@ import type {
   WriterGeneration,
 } from "@slopstop/protocol";
 import { CanonicalProjectCommandResultSchema, decodeStrict } from "@slopstop/protocol";
-import { Cause, Effect, Exit, Semaphore } from "effect";
+import { Cause, Effect, Exit } from "effect";
 import { snapshotCanonicalCommand } from "./canonical-json.js";
 import {
   type ConversationWork,
@@ -15,6 +15,7 @@ import {
   runConversationRead,
   runConversationWork,
 } from "./canonical-writer-conversation.js";
+import { untypedRejection, unwrapRejection } from "./effect-rejection.js";
 import {
   type CanonicalCommandRepository,
   WriterOwnerBusy,
@@ -24,6 +25,7 @@ import type {
   CanonicalWriterLeaseFailureCode,
 } from "./storage/canonical-writer-lease.js";
 import { CanonicalWriterLeaseError } from "./storage/canonical-writer-lease.js";
+import { createPermitLock, type PermitLock, withPermitEffect } from "./storage/permit-lock.js";
 import { retryableAttempt } from "./storage/retryable-attempt.js";
 export type CanonicalProjectWriterReleaseFailureCode =
   | "WRITER_FENCE_STALE"
@@ -109,12 +111,12 @@ function writerFailure(
 }
 
 /** Runs a Promise in the slot and settles exactly as the Promise did. */
-async function inSlot<Value>(slot: Semaphore.Semaphore, run: () => Promise<Value>): Promise<Value> {
+async function inSlot<Value>(slot: PermitLock, run: () => Promise<Value>): Promise<Value> {
   const exit = await Effect.runPromiseExit(
-    Semaphore.withPermit(slot)(Effect.tryPromise({ try: run, catch: (cause) => cause })),
+    withPermitEffect(slot)(Effect.tryPromise({ try: run, catch: untypedRejection })),
   );
   if (Exit.isSuccess(exit)) return exit.value;
-  throw Cause.squash(exit.cause);
+  throw unwrapRejection(Cause.squash(exit.cause));
 }
 
 export function createCanonicalProjectWriter(
@@ -127,7 +129,7 @@ export function createCanonicalProjectWriter(
   const refusesQueued = () => abandoned || failed;
   const release = stagedWriterRelease(input, () => abandoned);
   // One FIFO slot for canonical settlement and Conversation work.
-  const slot = Semaphore.makeUnsafe(1);
+  const slot = createPermitLock();
   const conversations = new Set<Promise<unknown>>();
   let admissionClosed = false;
   let inFlight:

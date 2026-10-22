@@ -1,0 +1,37 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (21 tests | 1 failed | 20 skipped) 115ms
+   × passes on the repository 114ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > passes on the repository
+AssertionError: expected { ok: false, …(2) } to match object { ok: true, canary: 'matched' }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "canary": "matched",
+-   "ok": true,
++   "ok": false,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:315:56
+    313|
+    314| it("passes on the repository", () => {
+    315|   expect(checkEffectDiagnostics({ root: repository })).toMatchObject({
+       |                                                        ^
+    316|     ok: true,
+    317|     canary: "matched",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 20 skipped (21)
+   Start at  20:56:18
+   Duration  293ms (transform 26ms, setup 0ms, import 43ms, tests 115ms, environment 0ms)
+

@@ -1,0 +1,43 @@
+parent: 2cf479d
+tree: 600e7ad11e31fbb598fed50bdafee1e0aef6f091
+working-tree digest: f3a29dee8637533d
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-bridges.test.ts -t stop scoped to its bridge
+started: 2026-10-20T11:20:33+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-bridges.test.ts (13 tests | 1 failed | 12 skipped) 16ms
+     × shares one core across the three bridges: 'stop scoped to its bridge' 15ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'stop scoped to its bridge'
+AssertionError: expected [ { protocolVersion: 8, …(5) }, …(1) ] to have a length of 4 but got 2
+
+- Expected
++ Received
+
+- 4
++ 2
+
+ ❯ run src/main/harness-bridges.test.ts:192:30
+    190|         const laterOpen = bridges.projectStorage.open(open);
+    191|         const laterOpenId = session.lastId();
+    192|         expect(session.sent).toHaveLength(sent + 2);
+       |                              ^
+    193|         session.message(createWorkspaceQueryResultEvent(replyMetadata(…
+    194|         session.message(createProjectOpenResultEvent(replyMetadata(lat…
+ ❯ src/main/harness-bridges.test.ts:364:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 skipped (13)
+   Start at  11:20:35
+   Duration  907ms (transform 243ms, setup 0ms, import 674ms, tests 16ms, environment 0ms)
+
+--- exit: 1
+binding k5-shared-request-gate-span: source apps/desktop/src/main/harness-request-core.ts bound blob 55b10446293168f7; restored blob 470e5c9a59bc9fb5 (backup 470e5c9a59bc9fb5) MATCH
+tree before 43713afa3f69ade0 after 43713afa3f69ade0 MATCH

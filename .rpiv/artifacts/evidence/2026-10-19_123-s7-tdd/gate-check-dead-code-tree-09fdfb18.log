@@ -1,0 +1,8 @@
+parent: 829c3cf
+tree: 09fdfb18d615e42be09f2b0d16b4dd2e75f86bae
+working-tree digest: 92b1cc3f2b3c567a
+command: pnpm check:dead-code
+started: 2026-10-20T00:18:30+01:00
+---
+$ knip
+--- exit: 0

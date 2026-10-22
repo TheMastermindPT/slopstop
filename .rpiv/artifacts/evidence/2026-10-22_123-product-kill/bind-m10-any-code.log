@@ -1,0 +1,37 @@
+parent: a9099c1
+tree: 13102f3bd7e2b1678b301126ed904d3c81afbb33
+working-tree digest: d0c0a9aafbd5335a
+command: pnpm exec vitest run --project harness apps/harness/src/storage/project-storage-node-errors.test.ts -t treats a non-string error code
+started: 2026-10-22T19:30:32+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/storage/project-storage-node-errors.test.ts (38 tests | 1 failed | 37 skipped) 3ms
+     × treats a non-string error code as no code 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/storage/project-storage-node-errors.test.ts > Project Storage Node error classification > treats a non-string error code as no code
+TypeError: code?.startsWith is not a function
+ ❯ belongsToErrorCodeFamily src/storage/project-storage-node-errors.ts:34:16
+     32| function belongsToErrorCodeFamily(code: string | undefined, family: st…
+     33|   if (code === family) return true;
+     34|   return code?.startsWith(`${family}_`) === true;
+       |                ^
+     35| }
+     36|
+ ❯ src/storage/project-storage-node-errors.ts:52:57
+ ❯ isUnavailableStorageError src/storage/project-storage-node-errors.ts:52:40
+ ❯ src/storage/project-storage-node-errors.test.ts:82:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 37 skipped (38)
+   Start at  19:30:33
+   Duration  547ms (transform 139ms, setup 0ms, import 405ms, tests 3ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/storage/project-storage-node-errors.ts bound blob 3ce3b0eefcefa660; restored blob 7f180253195f7038 (backup 7f180253195f7038) MATCH; tree before 123094d2f10b972f after 123094d2f10b972f MATCH

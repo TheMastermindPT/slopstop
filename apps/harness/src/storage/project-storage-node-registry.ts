@@ -1,13 +1,11 @@
 import path from "node:path";
 import { decodeStrict, type InitialRepositoryBinding, type ProjectId } from "@slopstop/protocol";
 import { Effect } from "effect";
+import { untypedRejection } from "../effect-rejection.js";
 import type { LocalLibsqlResultSet } from "./local-libsql-worker-client.js";
 import { type CreateInspection, inspectCreateRows } from "./project-storage-create-inspection.js";
-import {
-  ProjectStorageBrokenError,
-  ProjectStorageUnavailableError,
-} from "./project-storage-errors.js";
-import { storageFailureFor } from "./project-storage-node-errors.js";
+import { ProjectStorageBrokenError } from "./project-storage-errors.js";
+import { isKnownStorageFailure, storageFailureFor } from "./project-storage-node-errors.js";
 import {
   type Activation,
   activationSchema,
@@ -38,7 +36,6 @@ import type {
 } from "./project-storage-store.js";
 import { withWriteTransaction } from "./project-storage-transaction.js";
 
-type StorageFailure = ProjectStorageBrokenError | ProjectStorageUnavailableError;
 type CreationPaths = Parameters<ProjectStorageStoreDependencies["registry"]["activate"]>[1];
 
 /** What the registry operations need from the composition; read at call time. */
@@ -57,12 +54,6 @@ type NodeRegistryInput = Readonly<{
   options: Readonly<{ initialRepositoryBinding?: InitialRepositoryBinding }>;
 }>;
 
-function isStorageFailure(error: unknown): error is StorageFailure {
-  return (
-    error instanceof ProjectStorageBrokenError || error instanceof ProjectStorageUnavailableError
-  );
-}
-
 /** A Promise step whose every failure becomes the operation's storage failure. */
 function normalizedStep<A>(message: string, step: () => Promise<A>) {
   return Effect.tryPromise({
@@ -73,19 +64,21 @@ function normalizedStep<A>(message: string, step: () => Promise<A>) {
 
 /** Keeps a storage failure on the error channel and leaves anything else a defect. */
 function keepStorageFailure(error: unknown) {
-  return isStorageFailure(error) ? Effect.fail(error) : Effect.die(error);
+  return isKnownStorageFailure(error) ? Effect.fail(error) : Effect.die(error);
 }
 
 /** A Promise step that keeps a storage failure and leaves anything else a defect. */
 function storageStep<A>(step: () => Promise<A>) {
-  return Effect.tryPromise({ try: step, catch: (error) => error }).pipe(
-    Effect.catch(keepStorageFailure),
+  return Effect.tryPromise({ try: step, catch: untypedRejection }).pipe(
+    Effect.catch((rejection) => keepStorageFailure(rejection.cause)),
   );
 }
 
 /** A synchronous step that keeps a storage failure and leaves anything else a defect. */
 function storageSyncStep<A>(step: () => A) {
-  return Effect.try({ try: step, catch: (error) => error }).pipe(Effect.catch(keepStorageFailure));
+  return Effect.try({ try: step, catch: untypedRejection }).pipe(
+    Effect.catch((rejection) => keepStorageFailure(rejection.cause)),
+  );
 }
 
 function isSeededReservation(

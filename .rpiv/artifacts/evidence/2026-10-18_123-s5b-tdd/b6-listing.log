@@ -1,0 +1,108 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/registration/registration-listing.test.ts (15 tests | 3 failed) 21ms
+   × names every unconfirmed part: 'a failed registry stop with the other…' (CNV-B37) 5ms
+   × names every unconfirmed part: 'only the registry' (CNV-B37) 1ms
+   × bounds the shutdown cleanup by its budget: 'the registry stop fails at 2 999 ms' 1ms
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 12 passed (15)
+   Start at  21:02:47
+   Duration  616ms (transform 166ms, setup 0ms, import 448ms, tests 21ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/registration/registration-listing.test.ts > names every unconfirmed part: 'a failed registry stop with the other…' (CNV-B37)
+AssertionError: expected { …(6) } to deeply equal { …(6) }
+
+- Expected
++ Received
+
+@@ -1,9 +1,13 @@
+  {
+    "_tag": "RegistrationCleanupUnconfirmed",
++   "cause": UntypedRejection {
++     "message": "",
+      "cause": Error {
+        "message": "private registry stop failure",
++     },
++     "_tag": "UntypedRejection",
+    },
+    "hasCause": true,
+    "message": "Project registration cleanup is unconfirmed: registry, observer, listing.",
+    "name": "RegistrationCleanupUnconfirmed",
+    "parts": [
+
+ ❯ src/registration/registration-listing.test.ts:89:38
+     87|         }),
+     88|   });
+     89|   expect(await stopFailure(adapter)).toEqual({
+       |                                      ^
+     90|     _tag: "RegistrationCleanupUnconfirmed",
+     91|     name: "RegistrationCleanupUnconfirmed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |harness| src/registration/registration-listing.test.ts > names every unconfirmed part: 'only the registry' (CNV-B37)
+AssertionError: expected { …(6) } to deeply equal { …(6) }
+
+- Expected
++ Received
+
+@@ -1,9 +1,13 @@
+  {
+    "_tag": "RegistrationCleanupUnconfirmed",
++   "cause": UntypedRejection {
++     "message": "",
+      "cause": Error {
+        "message": "private registry stop failure",
++     },
++     "_tag": "UntypedRejection",
+    },
+    "hasCause": true,
+    "message": "Project registration cleanup is unconfirmed: registry.",
+    "name": "RegistrationCleanupUnconfirmed",
+    "parts": [
+
+ ❯ src/registration/registration-listing.test.ts:89:38
+     87|         }),
+     88|   });
+     89|   expect(await stopFailure(adapter)).toEqual({
+       |                                      ^
+     90|     _tag: "RegistrationCleanupUnconfirmed",
+     91|     name: "RegistrationCleanupUnconfirmed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |harness| src/registration/registration-listing.test.ts > bounds the shutdown cleanup by its budget: 'the registry stop fails at 2 999 ms'
+AssertionError: expected { parts: [ 'registry' ], …(2) } to deeply equal { parts: [ 'registry' ], …(2) }
+
+- Expected
++ Received
+
+@@ -1,8 +1,12 @@
+  {
++   "cause": UntypedRejection {
++     "message": "",
+      "cause": Error {
+        "message": "private registry stop failure at the budget edge",
++     },
++     "_tag": "UntypedRejection",
+    },
+    "hasCause": true,
+    "parts": [
+      "registry",
+    ],
+
+ ❯ src/registration/registration-listing.test.ts:256:43
+    254|     expect(stopping.state).toBe("resolved");
+    255|     const expected = { parts: row.parts, cause: row.cause, hasCause: r…
+    256|     expect(budgetFailure(stopping.value)).toEqual(expected);
+       |                                           ^
+    257|     if (row.lateUntil !== undefined) {
+    258|       await advance(row.lateUntil - row.settlesAt);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+

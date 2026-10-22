@@ -1,0 +1,6 @@
+cpu before e2e: 5.4/5.5/3.8, alone (HEAD 09d7faf, code 3001364)
+e2e end 2026-10-22T18:26:37+01:00
+e2e result: 27 passed (4.9m), no #138 repeat
+cpu before package:smoke: 5.7/4.7/3.3, alone
+package:smoke end 2026-10-22T18:29:56+01:00
+package:smoke result: exit 0, validated renderer isolation, Project Storage, and Writer proof

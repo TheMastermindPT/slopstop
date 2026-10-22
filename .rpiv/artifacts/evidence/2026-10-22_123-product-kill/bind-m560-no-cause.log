@@ -1,0 +1,44 @@
+parent: e011d6e
+tree: ccd3452439e5272ffebd385f7319539078f6e61b
+working-tree digest: 393ba64b25110964
+command: pnpm exec vitest run --project harness apps/harness/src/storage/project-storage-upgrade-node-adapter.test.ts -t raw busy
+started: 2026-10-22T19:20:05+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/storage/project-storage-upgrade-node-adapter.test.ts (3 tests | 1 failed | 2 skipped) 6ms
+   × keeps the marker failure's cause: 'a raw busy error is busy' 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/storage/project-storage-upgrade-node-adapter.test.ts > keeps the marker failure's cause: 'a raw busy error is busy'
+AssertionError: expected ProjectStorageUnavailableError: Project S… to have property "cause" with value Error: database is locked { code: 'S…' }
+
+- Expected:
+Error {
+  "message": "database is locked",
+  "code": "SQLITE_BUSY",
+}
+
++ Received:
+undefined
+
+ ❯ src/storage/project-storage-upgrade-node-adapter.test.ts:68:19
+     66|     .catch((error: unknown) => error);
+     67|   expect(outcome).toBeInstanceOf(kind);
+     68|   expect(outcome).toHaveProperty("cause", failure);
+       |                   ^
+     69| });
+     70|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 skipped (3)
+   Start at  19:20:06
+   Duration  696ms (transform 267ms, setup 0ms, import 555ms, tests 6ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/storage/project-storage-upgrade-node-adapter.ts bound blob d08fb393785a0d30; restored blob 123d0af76543a191 (backup 123d0af76543a191) MATCH; tree before 826d7f2e67e666c0 after 826d7f2e67e666c0 MATCH

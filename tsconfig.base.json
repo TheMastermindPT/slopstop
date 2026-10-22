@@ -26,7 +26,31 @@
     "verbatimModuleSyntax": true,
     "plugins": [
       {
-        "name": "@effect/language-service"
+        "name": "@effect/language-service",
+        "diagnosticSeverity": {
+          "unknownInEffectCatch": "error",
+          "globalErrorInEffectFailure": "error",
+          "runEffectInsideEffect": "error",
+          "tryCatchInEffectGen": "error",
+          "multipleEffectProvide": "error",
+          "leakingRequirements": "error",
+          "scopeInLayerEffect": "error",
+          "newPromise": "error",
+          "anyUnknownInErrorContext": "warning",
+          "schemaNumber": "warning",
+          "unnecessaryFailYieldableError": "warning",
+          "extendsNativeError": "warning"
+        },
+        "includeSuggestionsInTsc": false,
+        "ignoreEffectSuggestionsInTscExitCode": true,
+        "ignoreEffectWarningsInTscExitCode": true,
+        "ignoreEffectErrorsInTscExitCode": false,
+        "overrides": [
+          {
+            "include": ["**/*.test.ts", "**/*.test.tsx", "**/tests/**/*.ts", "**/tests/**/*.tsx"],
+            "options": { "diagnosticSeverity": { "newPromise": "off" } }
+          }
+        ]
       }
     ]
   }

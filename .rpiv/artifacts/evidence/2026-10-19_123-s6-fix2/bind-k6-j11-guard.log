@@ -1,0 +1,45 @@
+parent: b4fc9ed
+tree: e09891877145fe4d0dfce476524e5a972d2da021
+working-tree digest: fc3507d059f30b27
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts -t builds no desktop runtime: 'before-quit before ready'
+started: 2026-10-19T17:11:26+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts (80 tests | 1 failed | 79 skipped) 167ms
+     × builds no desktop runtime: 'before-quit before ready' 166ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/canonical-writer-package-smoke-main.test.ts > desktop runtime in main > builds no desktop runtime: 'before-quit before ready'
+AssertionError: expected [ 'SlopStop failed to start.\n' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "SlopStop failed to start.
++ ",
++ ]
+
+ ❯ run src/main/canonical-writer-package-smoke-main.test.ts:852:24
+    850|         ready();
+    851|         await flush();
+    852|         expect(writes).toEqual([]);
+       |                        ^
+    853|       },
+    854|     },
+ ❯ src/main/canonical-writer-package-smoke-main.test.ts:856:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 79 skipped (80)
+   Start at  17:11:27
+   Duration  994ms (transform 334ms, setup 0ms, import 660ms, tests 167ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/main.ts bound blob 0c63a6e857b306c2; restored blob db67985df87e0af5 (backup db67985df87e0af5) MATCH; tree before 5b69662781cae495 after 5b69662781cae495 MATCH

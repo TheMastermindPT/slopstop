@@ -22,6 +22,7 @@ import {
   WorkspaceQueryResultSchema,
   WorkspaceQuerySchema,
 } from "@slopstop/protocol";
+import { Effect, Layer, ManagedRuntime } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import {
   createCanonicalRuntimeApplicationFixture,
@@ -37,6 +38,7 @@ import {
   startHarnessRuntime,
   type WorkspaceApplication,
 } from "./index.js";
+import type { ProjectRegistrationFlow } from "./registration/project-registration-flow.js";
 
 const handshake = {
   protocolVersion,
@@ -94,7 +96,11 @@ const memoryNotification = decodeStrict(WorkspaceNotificationSchema, {
   revision: 1,
 });
 
-function canonicalRuntimeFixture(holdsProject?: () => boolean) {
+function canonicalRuntimeFixture(
+  holdsProject?: () => boolean,
+  // A listing owner that does not write to `calls`, so the exact `calls` pins stay unchanged.
+  projectListing?: Readonly<{ list(): Promise<never>; stop: Effect.Effect<void, unknown> }>,
+) {
   const transport = new TestTransport();
   const calls: string[] = [];
   const { request, activationResult, commandResult, application } =
@@ -114,11 +120,13 @@ function canonicalRuntimeFixture(holdsProject?: () => boolean) {
     stop: vi.fn(async () => {
       calls.push("application-database");
     }),
+    withhold: vi.fn(),
   };
   let sequence = 900;
   const options = {
     transport,
     applicationDatabase,
+    ...(projectListing === undefined ? {} : { projectListing }),
     canonicalProjectApplication:
       holdsProject === undefined ? application : { ...application, holdsProject },
     projectStorageApplication: storage,
@@ -254,29 +262,83 @@ it("stops Storage together with the canonical application while no Project is he
 describe("shutdown failures while no Project is held", () => {
   const canonicalFailure = new Error("canonical stop failed");
   const storageFailure = new Error("storage stop failed");
+  const listingFailure = new Error("listing stop failed");
 
   // Rule: the shared application database stops whenever Storage stopped; a canonical failure
   // is reported but, with no Project held, does not keep it alive.
-  it.for([
-    { name: "canonical fails", canonical: true, storage: false, databaseStops: true },
-    { name: "Storage fails", canonical: false, storage: true, databaseStops: false },
-    { name: "both fail", canonical: true, storage: true, databaseStops: false },
-  ])("$name", async (row) => {
-    const f = canonicalRuntimeFixture(() => false);
-    if (row.canonical) f.application.stop.mockRejectedValueOnce(canonicalFailure);
-    if (row.storage) f.storage.stop.mockRejectedValueOnce(storageFailure);
-    const failures = [
-      ...(row.canonical ? [canonicalFailure] : []),
-      ...(row.storage ? [storageFailure] : []),
-    ];
-    const error = await f.stop().catch((caught: unknown) => caught);
+  const failureOf = {
+    canonical: canonicalFailure,
+    storage: storageFailure,
+    listing: listingFailure,
+  } as const;
+  type Failing = keyof typeof failureOf;
+
+  /** A runtime whose owners named in `failing` fail their stop. */
+  function failingRuntime(failing: readonly Failing[]) {
+    const listing = {
+      list: () => Promise.reject(new Error("Listing is not used by this test.")),
+      stop: Effect.fail(listingFailure),
+    };
+    const f = canonicalRuntimeFixture(
+      () => false,
+      failing.includes("listing") ? listing : undefined,
+    );
+    if (failing.includes("canonical")) f.application.stop.mockRejectedValueOnce(canonicalFailure);
+    if (failing.includes("storage")) f.storage.stop.mockRejectedValueOnce(storageFailure);
+    return f;
+  }
+
+  /** One failure is reported as is; several are reported as one aggregate, in order. */
+  function expectShutdownError(error: unknown, failures: readonly Error[]) {
     if (failures.length === 1) expect(error).toBe(failures[0]);
     else {
       expect(error).toBeInstanceOf(AggregateError);
       expect((error as AggregateError).errors).toEqual(failures);
     }
+  }
+
+  it.for<{ name: string; failing: readonly Failing[]; databaseStops: boolean }>([
+    { name: "canonical fails", failing: ["canonical"], databaseStops: true },
+    { name: "Storage fails", failing: ["storage"], databaseStops: false },
+    { name: "both fail", failing: ["canonical", "storage"], databaseStops: false },
+    { name: "listing fails", failing: ["listing"], databaseStops: true },
+  ])("$name", async (row) => {
+    const f = failingRuntime(row.failing);
+    const error = await f.stop().catch((caught: unknown) => caught);
+    expectShutdownError(
+      error,
+      row.failing.map((owner) => failureOf[owner]),
+    );
     expect(f.storage.stop).toHaveBeenCalledOnce();
     expect(f.applicationDatabase.stop).toHaveBeenCalledTimes(row.databaseStops ? 1 : 0);
+    // Storage was withheld exactly when the database does not stop.
+    expect(f.applicationDatabase.withhold).toHaveBeenCalledTimes(row.databaseStops ? 0 : 1);
+  });
+
+  /** A runtime with no Project held whose listing stop is `stop`. */
+  function listingStopRuntime(stop: Effect.Effect<void, unknown>) {
+    return canonicalRuntimeFixture(() => false, {
+      list: () => Promise.reject(new Error("Listing is not used by this test.")),
+      stop,
+    });
+  }
+
+  it("the listing stop dies", async () => {
+    const defect = new Error("listing stop defect");
+    const f = listingStopRuntime(Effect.die(defect));
+    const error = await f.stop().catch((caught: unknown) => caught);
+    expect(error).toBe(defect);
+    expect(f.applicationDatabase.stop).toHaveBeenCalledOnce();
+    expect(f.applicationDatabase.withhold).not.toHaveBeenCalled();
+  });
+
+  it("the listing stop interrupts itself", async () => {
+    const f = listingStopRuntime(Effect.interrupt);
+    const error = await f.stop().catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toMatchObject({ message: "All fibers interrupted without error" });
+    expect(f.applicationDatabase.stop).not.toHaveBeenCalled();
+    expect(f.applicationDatabase.withhold).not.toHaveBeenCalled();
   });
 });
 
@@ -1181,4 +1243,113 @@ it("dispatches conversation commands to the coordinator (CNV-B39)", async () => 
   } finally {
     await stop();
   }
+});
+
+describe("registration requests on the process runtime", () => {
+  const registrationRequest = createProjectRegistrationCommand(
+    { messageId: "00000000-0000-4000-8000-000000000041", sentAt: "2026-10-18T12:00:00.000Z" },
+    { step: "prepare-git" },
+  );
+
+  /** A process runtime over an empty Layer, built before the behaviour under test. */
+  function builtProcessRuntime() {
+    const runtime = ManagedRuntime.make(Layer.empty);
+    runtime.runSync(Effect.void);
+    return runtime;
+  }
+
+  function registrationRuntime(
+    transport: TestTransport,
+    handle: ProjectRegistrationFlow["handle"],
+    runtime: ManagedRuntime.ManagedRuntime<never, never>,
+  ) {
+    let generatedId = 2;
+    return startHarnessRuntime({
+      transport,
+      projectRegistration: { handle },
+      runtime,
+      canonicalProjectApplication: unusedCanonicalApplication(),
+      projectStorageApplication: createUnavailableProjectStorageApplication(),
+      workspaceApplication: createUnavailableWorkspaceApplication(),
+      harnessVersion: "0.0.0",
+      createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
+      now: () => "2026-10-18T12:00:01.000Z",
+    });
+  }
+
+  it("interrupts an in-flight registration request at dispose without a reply", async () => {
+    const calls: string[] = [];
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown) => rejections.push(reason);
+    process.on("unhandledRejection", onRejection);
+    try {
+      const runtime = builtProcessRuntime();
+      const transport = new TestTransport();
+      const stop = registrationRuntime(
+        transport,
+        () =>
+          Effect.sync(() => calls.push("handle-started")).pipe(
+            Effect.andThen(Effect.never),
+            Effect.onInterrupt(() => Effect.sync(() => calls.push("handle-interrupted"))),
+          ),
+        runtime,
+      );
+      transport.emit(registrationRequest);
+      await vi.waitFor(() => expect(calls).toEqual(["handle-started"]));
+      await stop();
+      await runtime.dispose();
+      expect(calls).toEqual(["handle-started", "handle-interrupted"]);
+      expect(transport.sent).toEqual([]);
+      await nextTurn();
+      // A late reply to the interrupted request would arrive by now.
+      expect(transport.sent).toEqual([]);
+      expect(rejections).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onRejection);
+    }
+  });
+
+  // `sequence: 1`: the one reply, with no registration result attempted before it.
+  const internalFailure = {
+    event: "request.failure",
+    sequence: 1,
+    causationId: registrationRequest.messageId,
+    payload: {
+      code: "HARNESS_INTERNAL_FAILURE",
+      message: "Harness failed while handling a message.",
+      retryable: false,
+    },
+  };
+
+  it.each<{ name: string; handle: ProjectRegistrationFlow["handle"]; reply: unknown }>([
+    {
+      name: "handle succeeds",
+      handle: () => Effect.succeed({ status: "trust-recorded" }),
+      reply: {
+        event: "project.registration.result",
+        causationId: registrationRequest.messageId,
+        payload: { status: "trust-recorded" },
+      },
+    },
+    {
+      name: "handle dies",
+      handle: () => Effect.die(new Error("private registration defect")),
+      reply: internalFailure,
+    },
+    {
+      name: "handle interrupts itself before any stop",
+      handle: () => Effect.interrupt,
+      reply: internalFailure,
+    },
+  ])("answers registration exits on the process runtime: $name", async ({ handle, reply }) => {
+    const runtime = builtProcessRuntime();
+    const transport = new TestTransport();
+    const stop = registrationRuntime(transport, handle, runtime);
+    transport.emit(registrationRequest);
+    await vi.waitFor(() => expect(transport.sent).toHaveLength(1));
+    expect(transport.sent).toMatchObject([reply]);
+    await stop();
+    await runtime.dispose();
+    expect(transport.sent).toHaveLength(1);
+  });
 });

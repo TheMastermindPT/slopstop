@@ -1,0 +1,50 @@
+== stryker.config.json: parses; 55 mutate entries
+ok  packages/protocol/src/canonical-project-protocol.ts:156-156 (file 456 lines)
+ok  packages/protocol/src/canonical-project-protocol.ts:252-252 (file 456 lines)
+ok  packages/protocol/src/canonical-project-protocol.ts:419-419 (file 456 lines)
+ok  apps/harness/src/active-project-coordinator.ts:513-539 (file 735 lines)
+ok  apps/harness/src/active-project-coordinator.ts:705-708 (file 735 lines)
+ok  apps/harness/src/active-project-coordinator.ts:715-724 (file 735 lines)
+ok  apps/harness/src/canonical-project-application.ts:90-101 (file 128 lines)
+ok  apps/harness/src/canonical-project-application.ts:107-118 (file 128 lines)
+ok  apps/harness/src/registration/project-registration-preparation.ts:225-279 (file 385 lines)
+ok  apps/harness/src/registration/project-registration-preparation.ts:294-307 (file 385 lines)
+ok  apps/harness/src/registration/project-registration-preparation.ts:367-383 (file 385 lines)
+ok  apps/desktop/src/main/project-entry-bridge.ts:171-184 (file 235 lines)
+    171: command: createProjectActivateCommand,
+    184: resultSchema: ProjectUpgradeResultSchema,
+ok  apps/desktop/src/main/project-entry-bridge.ts:231-231 (file 235 lines)
+    231: options: Readonly<{ session: HarnessSessionClient } & Clock>,
+    231: options: Readonly<{ session: HarnessSessionClient } & Clock>,
+ok  apps/desktop/src/renderer/projects-list.tsx:50-56 (file 114 lines)
+ok  apps/desktop/src/renderer/projects-workspace.tsx:44-44 (file 320 lines)
+ok  apps/desktop/src/renderer/projects-workspace.tsx:81-81 (file 320 lines)
+ok  apps/desktop/src/renderer/projects-workspace.tsx:94-94 (file 320 lines)
+ok  apps/desktop/src/renderer/projects-workspace.tsx:106-107 (file 320 lines)
+ok  apps/desktop/src/renderer/projects-workspace.tsx:307-317 (file 320 lines)
+ok  apps/desktop/src/renderer/workspace-view.tsx:46-58 (file 178 lines)
+ok  apps/desktop/src/renderer/workspace-view.tsx:82-116 (file 178 lines)
+ok  apps/desktop/src/renderer/workspace-view.tsx:122-178 (file 178 lines)
+== stryker.desktop-s7.config.json: parses; 9 mutate entries
+ok  apps/desktop/src/main/project-entry-bridge.ts:80-235 (file 235 lines)
+    80: export const unsent = { kind: "unsent" } as const;
+    235: }
+ok  apps/desktop/src/main/project-storage-bridge.ts:38-167 (file 167 lines)
+    38: const stoppedText = "Project Storage bridge is stopped.";
+    167: }
+ok  apps/desktop/src/main/workspace-bridge.ts:101-272 (file 272 lines)
+    101: const stoppedText = "Workspace bridge is stopped.";
+    272: }
+ok  apps/desktop/src/main/project-upgrade-failure.ts:36-53 (file 54 lines)
+    36: return Match.value(fault).pipe(
+    53: );
+ok  apps/desktop/src/main/project-conversation-failure.ts:35-48 (file 81 lines)
+    35: return Match.value(fault).pipe(
+    48: );
+ok  apps/desktop/src/main/harness-session.ts:105-134 (file 135 lines)
+    105: #emit(event: HarnessSessionEvent): void {
+    134: }
+ok  apps/desktop/src/main/desktop-runtime.ts:166-189 (file 211 lines)
+    166: const bridgesLayer = Layer.effect(
+    189: );
+k12-check: OK

@@ -1,0 +1,10 @@
+head 1ab1762 cpu 24/20/15 start 2026-10-18T16:59:42+01:00
+== integration start 2026-10-18T16:59:42+01:00
+== integration exit 0 end 2026-10-18T17:00:56+01:00
+== registration start 2026-10-18T17:00:56+01:00
+== registration exit 0 end 2026-10-18T17:04:13+01:00
+== native-long start 2026-10-18T17:04:13+01:00
+== native-long exit 0 end 2026-10-18T17:06:00+01:00
+== launch-smoke start 2026-10-18T17:06:00+01:00
+== launch-smoke exit 1 end 2026-10-18T17:06:01+01:00
+done 2026-10-18T17:06:01+01:00 head 1ab1762 status []

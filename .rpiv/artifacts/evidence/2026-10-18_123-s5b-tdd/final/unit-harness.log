@@ -1,0 +1,12 @@
+head 54d2e121397ff4fc654c2738e98117215bfdeb23
+command: pnpm exec vitest run --project harness apps/harness/scripts/check-effect-diagnostics.test.mjs apps/harness/src/canonical-project-writer.test.ts apps/harness/src/process-bootstrap.test.ts apps/harness/src/registration/project-registration-preparation.test.ts apps/harness/src/registration/registration-listing.test.ts apps/harness/src/registration/registration-registry.test.ts apps/harness/src/storage/project-storage-node-registry.test.ts apps/harness/src/storage/project-storage-store.test.ts
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+
+ Test Files  8 passed (8)
+      Tests  150 passed (150)
+   Start at  21:17:05
+   Duration  4.86s (transform 3.22s, setup 0ms, import 7.65s, tests 4.89s, environment 1ms)
+
+exit 0

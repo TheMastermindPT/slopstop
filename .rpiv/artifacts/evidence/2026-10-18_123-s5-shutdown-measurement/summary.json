@@ -1,0 +1,86 @@
+{
+  "parent": "df16fb7",
+  "smoke": false,
+  "elapsedMs": 551489.3926,
+  "bounds": {
+    "samplesPerCell": 200,
+    "sampleBoundMs": 15000,
+    "runBoundMs": 1800000,
+    "burstSeconds": 180,
+    "halfBoundMs": {
+      "M-listing": 1500,
+      "M-listing-drain": 1500,
+      "M-dispose": 250
+    }
+  },
+  "overlaps": [],
+  "failedBursts": [],
+  "summary": {
+    "M-listing quiet": {
+      "samples": 200,
+      "bound": 0,
+      "p50": 0.10860000000002401,
+      "p95": 0.20980000000008658,
+      "p99": 0.3046999999996842,
+      "max": 1.0947999999998501,
+      "halfBoundMs": 1500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-listing-drain quiet": {
+      "samples": 200,
+      "bound": 0,
+      "p50": 13.52009999999973,
+      "p95": 17.344900000000052,
+      "p99": 20.341700000000856,
+      "max": 20.997400000000198,
+      "halfBoundMs": 1500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-dispose quiet": {
+      "samples": 200,
+      "bound": 0,
+      "p50": 0.028799999998227577,
+      "p95": 0.04219999999986612,
+      "p99": 0.0738999999994121,
+      "max": 0.08960000000115542,
+      "halfBoundMs": 250,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-listing burst": {
+      "samples": 200,
+      "bound": 0,
+      "p50": 0.1448999999993248,
+      "p95": 0.7438000000038301,
+      "p99": 3.089400000000751,
+      "max": 11.42450000000099,
+      "halfBoundMs": 1500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-listing-drain burst": {
+      "samples": 200,
+      "bound": 0,
+      "p50": 40.75260000000708,
+      "p95": 327.7164000000048,
+      "p99": 397.11899999997695,
+      "max": 418.8287999999884,
+      "halfBoundMs": 1500,
+      "withinHalfBound": true,
+      "broken": []
+    },
+    "M-dispose burst": {
+      "samples": 200,
+      "bound": 0,
+      "p50": 0.07130000001052395,
+      "p95": 0.16889999998966232,
+      "p99": 0.5793999999877997,
+      "max": 1.608600000035949,
+      "halfBoundMs": 250,
+      "withinHalfBound": true,
+      "broken": []
+    }
+  }
+}

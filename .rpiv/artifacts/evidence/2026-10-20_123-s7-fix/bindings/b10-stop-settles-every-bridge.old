@@ -1,0 +1,1 @@
+      core.failBridge("project-entry", { kind: "stopped" });

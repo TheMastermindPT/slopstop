@@ -1,0 +1,52 @@
+parent: 829c3cf
+tree: ce49713128a044255818e81fdb24b00265454315
+working-tree digest: cce000d4737255cd
+command: pnpm exec vitest run --project desktop-main apps/desktop/src/main/harness-bridges.test.ts -t a throwing shared stop
+started: 2026-10-19T22:59:42+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |desktop-main| src/main/harness-bridges.test.ts (8 tests | 1 failed | 7 skipped) 30ms
+     × shares one core across the three bridges: 'a throwing shared stop' 28ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |desktop-main| src/main/harness-bridges.test.ts > harness bridges > shares one core across the three bridges: 'a throwing shared stop'
+AssertionError: expected [ undefined, …(1) ] to deeply equal [ …(2) ]
+
+- Expected
++ Received
+
+@@ -1,10 +1,7 @@
+  [
+-   {
+-     "code": "PROJECT_LIST_UNAVAILABLE",
+-     "status": "unavailable",
+-   },
++   undefined,
+    {
+      "diagnostic": {
+        "code": "PROJECT_STORAGE_TRANSPORT_FAILED",
+        "message": "Project Storage bridge is stopped.",
+      },
+
+ ❯ run src/main/harness-bridges.test.ts:147:58
+    145|         expect(() => bridges.release()).toThrow(failure);
+    146|         await flushMicrotasks();
+    147|         expect([pending.list.value, pending.open.value]).toEqual([list…
+       |                                                          ^
+    148|         expect(session.subscriptions).toBe(0);
+    149|       },
+ ❯ src/main/harness-bridges.test.ts:216:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 skipped (8)
+   Start at  22:59:44
+   Duration  1.13s (transform 335ms, setup 0ms, import 859ms, tests 30ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/desktop/src/main/harness-bridges.ts bound blob 9a138740e45f4eee; restored blob 5b681d0f5ae53fab (backup 5b681d0f5ae53fab) MATCH; tree before 68732e761ea8ccd6 after 68732e761ea8ccd6 MATCH

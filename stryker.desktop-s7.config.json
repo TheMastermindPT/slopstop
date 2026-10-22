@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": [
+    "apps/desktop/src/main/harness-request-core.ts",
+    "apps/desktop/src/main/harness-bridges.ts",
+    "apps/desktop/src/main/project-entry-bridge.ts:80-235",
+    "apps/desktop/src/main/project-storage-bridge.ts:38-167",
+    "apps/desktop/src/main/workspace-bridge.ts:101-271",
+    "apps/desktop/src/main/project-upgrade-failure.ts:36-53",
+    "apps/desktop/src/main/project-conversation-failure.ts:35-48",
+    "apps/desktop/src/main/harness-session.ts:105-134",
+    "apps/desktop/src/main/desktop-runtime.ts:166-189"
+  ],
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "apps/desktop/vitest.desktop-s7-mutation.config.ts",
+    "related": false
+  },
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
+  "incremental": false,
+  "concurrency": 4,
+  "reporters": ["json", "html"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/desktop-s7.html"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  }
+}

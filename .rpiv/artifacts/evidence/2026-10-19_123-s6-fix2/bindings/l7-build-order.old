@@ -1,0 +1,6 @@
+    Layer.effect(ProjectEntryBridge, bridgeLayer(ports, owners, ports.createProjectEntryBridge)),
+    Layer.effect(
+      ProjectStorageBridge,
+      bridgeLayer(ports, owners, ports.createProjectStorageBridge),
+    ),
+    Layer.effect(WorkspaceBridge, bridgeLayer(ports, owners, ports.createWorkspaceBridge)),

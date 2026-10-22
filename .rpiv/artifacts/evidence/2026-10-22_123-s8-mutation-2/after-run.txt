@@ -1,0 +1,4 @@
+apps/desktop/src/main/harness-supervisor.ts MATCH
+stryker.desktop-s8.config.json MATCH
+apps/desktop/vitest.desktop-s8-mutation.config.ts MATCH
+code diff vs 4d22a65 outside .rpiv: []

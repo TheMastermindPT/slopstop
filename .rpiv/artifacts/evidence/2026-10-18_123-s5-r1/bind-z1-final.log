@@ -1,0 +1,31 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime-shutdown.test.ts (12 tests | 1 failed | 9 skipped) 14ms
+   × settles the stop when the process runtime is disposed while Storage stops 4ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed | 9 skipped (12)
+   Start at  17:44:23
+   Duration  1.03s (transform 536ms, setup 0ms, import 885ms, tests 14ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime-shutdown.test.ts > settles the stop when the process runtime is disposed while Storage stops
+AssertionError: expected 'pending' to be 'rejected' // Object.is equality
+
+Expected: "rejected"
+Received: "pending"
+
+ ❯ expectStopInterruptedByDispose src/harness-runtime-shutdown.test.ts:356:22
+    354|   expect(disposing.state).toBe("resolved");
+    355|   afterDispose();
+    356|   expect(seen.state).toBe("rejected");
+       |                      ^
+    357|   expect(seen.value).toBeInstanceOf(Error);
+    358|   expect(seen.value).toMatchObject({ message: "All fibers interrupted …
+ ❯ src/harness-runtime-shutdown.test.ts:422:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

@@ -1,0 +1,16 @@
+CPU 8/9/1 start 2026-10-18T16:09:53+01:00 parent df16fb7
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/.rpiv/artifacts/evidence/2026-10-18_123-s5-shutdown-measurement
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  16:09:54
+   Duration  552.91s (transform 879ms, setup 0ms, import 1.28s, tests 551.49s, environment 0ms)
+
+
+real	9m13.836s
+user	0m0.061s
+sys	0m0.015s
+exit 0
+end 2026-10-18T16:19:07+01:00

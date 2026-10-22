@@ -110,4 +110,102 @@ describe("HarnessSession", () => {
       error: { code: "HARNESS_SESSION_SEND_FAILED" },
     });
   });
+
+  it("delivers a nested emit after the outer event reached every listener", () => {
+    const session = new HarnessSession();
+    const port = new FakePort();
+    const first: HarnessSessionEvent["type"][] = [];
+    const second: HarnessSessionEvent["type"][] = [];
+    session.subscribe((event) => {
+      first.push(event.type);
+      if (event.type === "protocol-error") session.detach();
+    });
+    session.subscribe((event) => second.push(event.type));
+    session.attach(port);
+
+    port.emit("message", { data: { event: "not-valid" } });
+
+    expect(first).toEqual(["protocol-error", "disconnected"]);
+    expect(second).toEqual(["protocol-error", "disconnected"]);
+  });
+
+  it("drains queued emits before rethrowing a listener failure", () => {
+    const session = new HarnessSession();
+    const port = new FakePort();
+    const failure = new Error("private listener failure");
+    const first: HarnessSessionEvent["type"][] = [];
+    const second: HarnessSessionEvent["type"][] = [];
+    session.subscribe((event) => {
+      first.push(event.type);
+      if (event.type !== "protocol-error") return;
+      session.detach();
+      throw failure;
+    });
+    session.subscribe((event) => second.push(event.type));
+    session.attach(port);
+
+    expect(() => port.emit("message", { data: { event: "not-valid" } })).toThrow(failure);
+    expect(first).toEqual(["protocol-error", "disconnected"]);
+    expect(second).toEqual(["protocol-error", "disconnected"]);
+
+    // The delivering flag was reset: a later event on the same session arrives at once.
+    const later = new FakePort();
+    session.attach(later);
+    later.emit("message", { data: createReadyEvent(eventMetadata, "0.0.0") });
+    expect(second).toEqual(["protocol-error", "disconnected", "message"]);
+  });
+
+  it("throws every listener failure at once after the drain", () => {
+    const session = new HarnessSession();
+    const port = new FakePort();
+    const failureA = new Error("private listener failure A");
+    const failureB = new Error("private listener failure B");
+    const first: HarnessSessionEvent["type"][] = [];
+    const second: HarnessSessionEvent["type"][] = [];
+    session.subscribe((event) => {
+      first.push(event.type);
+      if (event.type !== "protocol-error") return;
+      session.detach();
+      throw failureA;
+    });
+    session.subscribe((event) => {
+      second.push(event.type);
+      if (event.type === "disconnected") throw failureB;
+    });
+    session.attach(port);
+
+    let thrown: unknown;
+    try {
+      port.emit("message", { data: { event: "not-valid" } });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(AggregateError);
+    expect(thrown).toMatchObject({
+      message: "Harness session subscribers failed.",
+      errors: [failureA, failureB],
+    });
+    expect(first).toEqual(["protocol-error", "disconnected"]);
+    expect(second).toEqual(["protocol-error", "disconnected"]);
+  });
+
+  it("delivers queued emits in the order they were queued", () => {
+    const session = new HarnessSession();
+    const port = new FakePort();
+    const next = new FakePort();
+    // The new port delivers one valid message as soon as it starts, inside the attach.
+    next.start.mockImplementation(() => {
+      next.emit("message", { data: createReadyEvent(eventMetadata, "0.0.0") });
+    });
+    const second: HarnessSessionEvent["type"][] = [];
+    session.subscribe((event) => {
+      if (event.type === "protocol-error") session.attach(next);
+    });
+    session.subscribe((event) => second.push(event.type));
+    session.attach(port);
+
+    port.emit("message", { data: { event: "not-valid" } });
+
+    expect(second).toEqual(["protocol-error", "disconnected", "message"]);
+  });
 });

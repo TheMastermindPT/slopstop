@@ -1,0 +1,6 @@
+
+refused: C:\Users\pedro\Documents\GitHub\slopstop-123\.rpiv\artifacts\evidence\2026-10-18_123-s6-dispose-measurement\smoke exists and is not empty
+undefined
+C:\Users\pedro\Documents\GitHub\slopstop-123\apps\desktop:
+[ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL] Command failed with exit code 3: electron "C:/Users/pedro/Documents/GitHub/slopstop-123/.rpiv/artifacts/evidence/2026-10-18_123-s6-dispose-measurement/dispose-measurement.bundle.cjs" "C:/Users/pedro/Documents/GitHub/slopstop-123/.rpiv/artifacts/evidence/2026-10-18_123-s6-dispose-measurement/smoke"
+exit=1

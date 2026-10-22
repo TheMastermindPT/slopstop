@@ -1,0 +1,1 @@
+    servicesAtShutdown()?.logger.error({ err: error }, "SlopStop shutdown failed."),

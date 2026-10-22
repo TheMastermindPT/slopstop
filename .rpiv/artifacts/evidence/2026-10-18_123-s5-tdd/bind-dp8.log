@@ -1,0 +1,48 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123/apps/harness
+
+ ❯ |harness| src/harness-runtime.test.ts (104 tests | 1 failed | 103 skipped) 14ms
+     × interrupts an in-flight registration request at dispose without a reply 12ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 103 skipped (104)
+   Start at  16:44:16
+   Duration  1.68s (transform 837ms, setup 0ms, import 1.43s, tests 14ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/harness-runtime.test.ts > registration requests on the process runtime > interrupts an in-flight registration request at dispose without a reply
+AssertionError: expected [ { protocolVersion: 8, …(7) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   {
++     "causationId": "00000000-0000-4000-8000-000000000041",
++     "event": "request.failure",
++     "messageId": "00000000-0000-4000-8000-000000000002",
++     "messageType": "event",
++     "payload": {
++       "code": "HARNESS_INTERNAL_FAILURE",
++       "message": "Harness failed while handling a message.",
++       "retryable": false,
++     },
++     "protocolVersion": 8,
++     "sentAt": "2026-10-18T12:00:01.000Z",
++     "sequence": 1,
++   },
++ ]
+
+ ❯ src/harness-runtime.test.ts:1302:30
+    1300|       await runtime.dispose();
+    1301|       expect(calls).toEqual(["handle-started", "handle-interrupted"]);
+    1302|       expect(transport.sent).toEqual([]);
+       |                              ^
+    1303|       await nextTurn();
+    1304|       expect(rejections).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

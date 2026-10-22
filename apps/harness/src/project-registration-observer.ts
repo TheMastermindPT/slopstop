@@ -1,5 +1,5 @@
 import { NonEmptyTextSchema, UuidTextSchema } from "@slopstop/protocol";
-import { Schema } from "effect";
+import { Deferred, Effect, Exit, Schema } from "effect";
 import { REGISTRATION_CLEANUP_BUDGET_MS } from "./registration/observer-limits.js";
 import { RegistryFailureSchema, registryFailure } from "./registration/registry-failure.js";
 
@@ -70,46 +70,45 @@ export interface GitVersionInspectionPort {
   ): Promise<GitVersionInspectionResult>;
 }
 
+type ObserverCloseResult =
+  | Readonly<{ status: "closed" }>
+  | Readonly<{
+      status: "pending-recovery";
+      code: "OBSERVER_CLEANUP_UNCONFIRMED";
+    }>;
+
 export interface ProjectRegistrationObserver {
   inspectGitVersion(request: GitVersionInspectionRequest): Promise<GitVersionInspectionResult>;
-  close(): Promise<
-    | Readonly<{ status: "closed" }>
-    | Readonly<{
-        status: "pending-recovery";
-        code: "OBSERVER_CLEANUP_UNCONFIRMED";
-      }>
-  >;
+  /** Closes the observer: aborts the active inspections and settles them within the budget. */
+  closeEffect: Effect.Effect<ObserverCloseResult>;
+  /** Temporary Promise facade over `closeEffect`, for test callers only. */
+  close(): Promise<ObserverCloseResult>;
 }
-
-type ObserverCloseResult = Awaited<ReturnType<ProjectRegistrationObserver["close"]>>;
 const cleanupUnconfirmed = {
   status: "pending-recovery",
   code: "OBSERVER_CLEANUP_UNCONFIRMED",
 } as const;
 
-async function settleClose(
-  work: Iterable<Promise<GitVersionInspectionResult>>,
-): Promise<ObserverCloseResult> {
-  const deadline = performance.now() + REGISTRATION_CLEANUP_BUDGET_MS;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      Promise.all(work).then((results): ObserverCloseResult => {
-        if (
-          performance.now() >= deadline ||
-          results.some((result) => result.status === "pending-recovery")
-        ) {
-          return cleanupUnconfirmed;
-        }
-        return { status: "closed" };
-      }),
-      new Promise<ObserverCloseResult>((resolve) => {
-        timer = setTimeout(() => resolve(cleanupUnconfirmed), REGISTRATION_CLEANUP_BUDGET_MS);
-      }),
-    ]);
-  } finally {
-    clearTimeout(timer);
-  }
+/**
+ * Waits for the aborted inspections until the cleanup budget ends; work still running then, or
+ * any inspection left pending recovery, leaves the cleanup unconfirmed.
+ */
+function settleClose(
+  work: readonly Promise<GitVersionInspectionResult>[],
+): Effect.Effect<ObserverCloseResult> {
+  // Only awaits inspections already running and starts no work, so no `concurrency`.
+  return Effect.forEach(work, (inspection) => Effect.promise(() => inspection)).pipe(
+    Effect.map(
+      (results): ObserverCloseResult =>
+        results.some((result) => result.status === "pending-recovery")
+          ? cleanupUnconfirmed
+          : { status: "closed" },
+    ),
+    Effect.timeoutOrElse({
+      duration: REGISTRATION_CLEANUP_BUDGET_MS,
+      orElse: () => Effect.succeed(cleanupUnconfirmed),
+    }),
+  );
 }
 
 export interface ObserverAdmissionPort {
@@ -121,7 +120,9 @@ export function createProjectRegistrationObserver(
   admission: ObserverAdmissionPort,
 ): ProjectRegistrationObserver {
   let closed = false;
-  let closing: Promise<ObserverCloseResult> | undefined;
+  let closeStarted = false;
+  // The one close outcome; a first close that is interrupted leaves it unconfirmed.
+  const closeOutcome = Deferred.makeUnsafe<ObserverCloseResult>();
   const active = new Map<AbortController, Promise<GitVersionInspectionResult>>();
   const inspect = async (
     request: GitVersionInspectionRequest,
@@ -142,14 +143,22 @@ export function createProjectRegistrationObserver(
       return registryFailure(error);
     }
   };
+  const closeEffect = Effect.suspend(() => {
+    if (closeStarted) return Deferred.await(closeOutcome);
+    closeStarted = true;
+    closed = true;
+    for (const controller of active.keys()) controller.abort();
+    return settleClose([...active.values()]).pipe(
+      Effect.onExit((exit) =>
+        Effect.asVoid(
+          Deferred.succeed(closeOutcome, Exit.isSuccess(exit) ? exit.value : cleanupUnconfirmed),
+        ),
+      ),
+    );
+  });
   return {
-    close: async () => {
-      if (closing !== undefined) return closing;
-      closed = true;
-      for (const controller of active.keys()) controller.abort();
-      closing = settleClose(active.values());
-      return closing;
-    },
+    closeEffect,
+    close: () => Effect.runPromise(closeEffect),
     inspectGitVersion: async (request) => {
       if (closed) return { status: "cancelled" };
       const controller = new AbortController();

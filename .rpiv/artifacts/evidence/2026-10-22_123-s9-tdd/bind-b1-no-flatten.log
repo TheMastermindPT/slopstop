@@ -1,0 +1,298 @@
+parent: d7a0e22
+tree: 7df907618bee86c201ab8f2d55f9b81d4e3b8fa3
+working-tree digest: fc84827d86e2ecdd
+command: pnpm exec vitest run --project harness apps/harness/src/process-fatal-diagnostics.test.ts apps/harness/src/process-shutdown.test.ts apps/harness/src/process-connection.test.ts
+started: 2026-10-22T21:18:20+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/process-connection.test.ts (5 tests | 1 failed) 14ms
+   × reports a startup failure with its code and summary: 'runtime start and dispose fail' 5ms
+ ❯ |harness| src/process-fatal-diagnostics.test.ts (17 tests | 4 failed) 17ms
+   × summarizes a fatal failure as metadata only: 'nested aggregates in order' 5ms
+   × summarizes a fatal failure as metadata only: 'the bound: 16' 1ms
+   × summarizes a fatal failure as metadata only: 'the bound: 17' 1ms
+   × summarizes a fatal failure as metadata only: 'a cycle' 1ms
+ ❯ |harness| src/process-shutdown.test.ts (3 tests | 2 failed) 184ms
+   × reports a failed shutdown with its summary, then exits: 'rejects' 68ms
+   × reports a failed shutdown with its summary, then exits: 'throws' 56ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/process-connection.test.ts > reports a startup failure with its code and summary: 'runtime start and dispose fail'
+AssertionError: expected [ [ { …(3) }, …(1) ] ] to deeply equal [ [ { …(3) }, …(1) ] ]
+
+- Expected
++ Received
+
+@@ -4,13 +4,10 @@
+        "code": "HARNESS_RUNTIME_START_FAILED",
+        "failures": [
+          {
+            "kind": "error",
+          },
+-         {
+-           "tag": "HarnessRuntimeDisposeUnconfirmed",
+-         },
+        ],
+        "omittedFailures": 0,
+      },
+      "Harness runtime failed to start.",
+    ],
+
+ ❯ src/process-connection.test.ts:78:33
+     76|   expect(launch.mock.calls[0]?.[0]).toBe(prepared);
+     77|   expect(attach).not.toHaveBeenCalled();
+     78|   expect(sink.fatal.mock.calls).toEqual([
+       |                                 ^
+     79|     [
+     80|       { code: "HARNESS_RUNTIME_START_FAILED", failures, omittedFailure…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'nested aggregates in order'
+AssertionError: expected { …(2) } to deeply equal { failures: [ { …(2) }, …(2) ], …(1) }
+
+- Expected
++ Received
+
+  {
+    "failures": [
+      {
+-       "parts": [
+-         "registry",
+-       ],
+-       "tag": "RegistrationCleanupUnconfirmed",
+-     },
+-     {
+-       "tag": "ApplicationDatabaseCloseUnconfirmed",
+-     },
+-     {
+-       "tag": "HarnessRuntimeDisposeUnconfirmed",
++       "kind": "error",
+      },
+    ],
+    "omittedFailures": 0,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'the bound: 16'
+AssertionError: expected { …(2) } to deeply equal { failures: [ …(16) ], …(1) }
+
+- Expected
++ Received
+
+  {
+    "failures": [
+      {
+-       "tag": "Failure0",
+-     },
+-     {
+-       "tag": "Failure1",
+-     },
+-     {
+-       "tag": "Failure2",
+-     },
+-     {
+-       "tag": "Failure3",
+-     },
+-     {
+-       "tag": "Failure4",
+-     },
+-     {
+-       "tag": "Failure5",
+-     },
+-     {
+-       "tag": "Failure6",
+-     },
+-     {
+-       "tag": "Failure7",
+-     },
+-     {
+-       "tag": "Failure8",
+-     },
+-     {
+-       "tag": "Failure9",
+-     },
+-     {
+-       "tag": "Failure10",
+-     },
+-     {
+-       "tag": "Failure11",
+-     },
+-     {
+-       "tag": "Failure12",
+-     },
+-     {
+-       "tag": "Failure13",
+-     },
+-     {
+-       "tag": "Failure14",
+-     },
+-     {
+-       "tag": "Failure15",
++       "kind": "error",
+      },
+    ],
+    "omittedFailures": 0,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'the bound: 17'
+AssertionError: expected { …(2) } to deeply equal { failures: [ …(16) ], …(1) }
+
+- Expected
++ Received
+
+  {
+    "failures": [
+      {
+-       "tag": "Failure0",
+-     },
+-     {
+-       "tag": "Failure1",
+-     },
+-     {
+-       "tag": "Failure2",
+-     },
+-     {
+-       "tag": "Failure3",
+-     },
+-     {
+-       "tag": "Failure4",
+-     },
+-     {
+-       "tag": "Failure5",
+-     },
+-     {
+-       "tag": "Failure6",
+-     },
+-     {
+-       "tag": "Failure7",
+-     },
+-     {
+-       "tag": "Failure8",
+-     },
+-     {
+-       "tag": "Failure9",
+-     },
+-     {
+-       "tag": "Failure10",
+-     },
+-     {
+-       "tag": "Failure11",
+-     },
+-     {
+-       "tag": "Failure12",
++       "kind": "error",
+      },
+-     {
+-       "tag": "Failure13",
+-     },
+-     {
+-       "tag": "Failure14",
+-     },
+-     {
+-       "tag": "Failure15",
+-     },
+    ],
+-   "omittedFailures": 1,
++   "omittedFailures": 0,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  |harness| src/process-fatal-diagnostics.test.ts > summarizes a fatal failure as metadata only: 'a cycle'
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+    "failures": [
+      {
+-       "tag": "ApplicationDatabaseCloseUnconfirmed",
++       "kind": "error",
+      },
+    ],
+-   "omittedFailures": 1,
++   "omittedFailures": 0,
+  }
+
+ ❯ src/process-fatal-diagnostics.test.ts:169:19
+    167|   const summary = summarizeHarnessFailure(value);
+    168|
+    169|   expect(summary).toEqual({ failures, omittedFailures });
+       |                   ^
+    170|   const serialized = JSON.stringify(summary);
+    171|   expect(serialized).not.toContain("private");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  |harness| src/process-shutdown.test.ts > reports a failed shutdown with its summary, then exits: 'rejects'
+ FAIL  |harness| src/process-shutdown.test.ts > reports a failed shutdown with its summary, then exits: 'throws'
+AssertionError: expected [ [ { …(3) }, …(1) ] ] to deeply equal [ [ { …(3) }, …(1) ] ]
+
+- Expected
++ Received
+
+@@ -4,13 +4,10 @@
+        "code": "HARNESS_SHUTDOWN_FAILED",
+        "failures": [
+          {
+            "kind": "error",
+          },
+-         {
+-           "tag": "HarnessRuntimeDisposeUnconfirmed",
+-         },
+        ],
+        "omittedFailures": 0,
+      },
+      "Harness shutdown failed.",
+    ],
+
+ ❯ src/process-shutdown.test.ts:40:33
+     38|   expect(stopRuntime).toHaveBeenCalledOnce();
+     39|   expect(succeeded).not.toHaveBeenCalled();
+     40|   expect(sink.fatal.mock.calls).toEqual([
+       |                                 ^
+     41|     [
+     42|       {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  7 failed | 18 passed (25)
+   Start at  21:18:21
+   Duration  2.33s (transform 3.49s, setup 0ms, import 5.73s, tests 215ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/process-fatal-diagnostics.ts bound blob 05a9a9cb22aaec75; restored blob 569f54e967ec84a5 (backup 569f54e967ec84a5) MATCH; tree before f6d08d3572281592 after f6d08d3572281592 MATCH

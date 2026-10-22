@@ -1,0 +1,41 @@
+parent: e011d6e
+tree: 01008a4fc81b54c22389c501c150a47a3a8d0d37
+working-tree digest: e32ed49a7d81c173
+command: pnpm exec vitest run --project harness apps/harness/src/storage/project-storage-node-errors.test.ts -t wrapped busy cause
+started: 2026-10-22T19:19:58+01:00
+---
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-123
+
+ ❯ |harness| src/storage/project-storage-node-errors.test.ts (37 tests | 1 failed | 36 skipped) 5ms
+     × knows a busy storage error, directly or by its cause: 'wrapped busy cause' 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/storage/project-storage-node-errors.test.ts > Project Storage Node error classification > knows a busy storage error, directly or by its cause: 'wrapped busy cause'
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/storage/project-storage-node-errors.test.ts:100:43
+     98|     { name: "plain error", error: new Error("plain"), busy: false },
+     99|   ])("knows a busy storage error, directly or by its cause: $name", ({…
+    100|     expect(isBusyStorageError({ error })).toBe(busy);
+       |                                           ^
+    101|   });
+    102| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 36 skipped (37)
+   Start at  19:19:58
+   Duration  551ms (transform 143ms, setup 0ms, import 408ms, tests 5ms, environment 0ms)
+
+--- exit: 1
+binding: source apps/harness/src/storage/project-storage-node-errors.ts bound blob 23fe188360279356; restored blob 7f180253195f7038 (backup 7f180253195f7038) MATCH; tree before 826d7f2e67e666c0 after 826d7f2e67e666c0 MATCH

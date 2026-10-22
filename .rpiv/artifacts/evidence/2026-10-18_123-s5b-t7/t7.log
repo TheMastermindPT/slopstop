@@ -1,0 +1,10 @@
+head 8881a57 cpu 8/6/6 start 2026-10-18T21:48:32+01:00
+== integration start 2026-10-18T21:48:32+01:00 command: pnpm exec vitest run --config vitest.integration.config.ts
+== integration exit 0 end 2026-10-18T21:49:46+01:00
+== registration start 2026-10-18T21:49:46+01:00 command: pnpm exec vitest run --config vitest.registration.config.ts
+== registration exit 0 end 2026-10-18T21:52:34+01:00
+== native-long start 2026-10-18T21:52:34+01:00 command: pnpm exec vitest run --config vitest.native-long.config.ts
+== native-long exit 0 end 2026-10-18T21:54:14+01:00
+== package-smoke start 2026-10-18T21:54:14+01:00 command: pnpm package:smoke
+== package-smoke exit 0 end 2026-10-18T21:55:20+01:00
+done 2026-10-18T21:55:20+01:00 head 8881a57 tracked-changes [ M .rpiv/artifacts/evidence/2026-10-18_123-s5b-tdd-evidence.md ]

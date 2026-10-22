@@ -1,0 +1,6 @@
+# #123 combined normal-slice mutation, run 2 — STOPPED: initial test run failed again
+
+- Coordinator option (a) (decisions log §139): the mutation Vitest config skips only `runs the canary before any package: real canary` (`testNamePattern`, commit `dfeec6e`, tree `8ea73f9e2e11dbad519003185db120545f734e29`); `pnpm check` keeps it. A local run of the mutation config showed that row skipped and the other 31 passing.
+- Run: backups (scratchpad `combined-mutation2-backup`, `SHA256SUMS`); CPU 2.0/1.6/2.1, alone. The same `--mutate` ranges as run 1. 19:06:39-19:08:01 (`mutation.log`, `run-meta.txt`).
+- **Stopped in Stryker's initial test run again** (258 mutants instrumented, none run). The one failing test now: `check-effect-diagnostics.test.mjs` `passes on the repository`, `expected { ok: false, … } to match object { ok: true, canary: 'matched' }`. This row also runs the real gate, canary included, on the repository; it fails only inside the Stryker sandbox, like the real-canary row in run 1. Run 1 listed only the real-canary row as failing; this row did not show there.
+- No timeout, no Defender alert. Afterwards all five sources and both configs match the backup (`after-run.txt`). No counts: nothing was mutated.

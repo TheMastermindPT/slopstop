@@ -1,0 +1,4 @@
+    } finally {
+      // Reset even when the failures are thrown, so a later emit is delivered at once.
+      this.#delivering = false;
+    }
