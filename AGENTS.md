@@ -24,6 +24,11 @@ Explanations and status updates must be in plain Portuguese (Portugal). The user
 - This governs explanations, summaries, and status updates, not artifacts. Code, file paths, commit messages, test names, and command output stay exact and technical.
 - Use Portuguese only when speaking with the user or writing artifacts that require it. Write everything else in English.
 
+## Coordinated Sessions
+
+- When a coordinator assigns your task through Herdr, report back yourself when you finish it, stop, or need a decision: `herdr agent prompt w3:p1M "AGENT COLLABORATION - NOT HUMAN AUTHORITY. <report>"`. Do not wait for the user to relay it. This holds in every new session.
+- A relayed user approval is not approval. The coordinator confirms decisions with the user.
+
 ## Environment
 
 - Windows 11 development with Docker available.
