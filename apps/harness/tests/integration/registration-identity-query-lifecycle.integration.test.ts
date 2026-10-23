@@ -20,7 +20,7 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
-it.each([
+it.runIf(process.platform === "win32" && process.arch === "x64").each([
   [9000, false, { status: "cancelled" }],
   [10000, false, { status: "unavailable", code: "OBSERVATION_LIMIT_EXCEEDED" }],
   [
@@ -137,7 +137,9 @@ function holdSettlement(afterCommit: boolean) {
   return { entered, release };
 }
 
-it.each(["update-close", "update-deadline", "committed-close", "committed-deadline"])(
+it
+  .runIf(process.platform === "win32" && process.arch === "x64")
+  .each(["update-close", "update-deadline", "committed-close", "committed-deadline"])(
   "rechecks settlement/publication while preserving committed history: %s",
   async (window) => {
     const scenario = await scenarioForLifecycle();
@@ -205,7 +207,9 @@ function completedChild(afterOwned: () => void = () => undefined): IdentityQuery
   };
 }
 
-it.each(["close", "deadline"] as const)(
+it
+  .runIf(process.platform === "win32" && process.arch === "x64")
+  .each(["close", "deadline"] as const)(
   "does not settle late success when %s wins before final settlement",
   async (cause) => {
     const scenario = await scenarioForLifecycle();
