@@ -1,0 +1,22 @@
+DESCRIPTION
+  Gets the Effect language service diagnostics on the given files or project
+
+USAGE
+  tsgo diagnostics [flags]
+
+FLAGS
+  --file file           The full path of the file to check for diagnostics
+  --project file        The full path of the project tsconfig.json file to check for diagnostics
+  --format choice       Output format: json (machine-readable), pretty (colored with context), text (plain text), github-actions (workflow commands) (choices: json, pretty, text, github-actions)
+  --strict              Treat warnings as errors (affects exit code)
+  --severity string     Filter by severity levels (comma-separated: error,warning,message)
+  --progress            Show progress as files are checked (outputs to stderr)
+  --lspconfig string    An optional inline JSON lsp config that replaces the current project lsp config
+  --list-files          Also emit, per checked file, the detected and supported Effect major versions
+
+GLOBAL FLAGS
+  --help, -h                                                          Show help information
+  --version, -v                                                       Show version information
+  --wizard                                                            Start wizard mode for a command
+  --completions <bash|zsh|fish|sh>                                    Print shell completion script (choices: bash, zsh, fish, sh)
+  --log-level <all|trace|debug|info|warn|warning|error|fatal|none>    Sets the minimum log level (choices: all, trace, debug, info, warn, warning, error, fatal, none)

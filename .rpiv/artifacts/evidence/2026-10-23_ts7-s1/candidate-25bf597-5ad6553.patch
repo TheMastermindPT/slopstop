@@ -1,0 +1,1733 @@
+diff --git a/.rpiv/artifacts/designs/2026-10-23_00-38-22_typescript-7-compiler-switch.md b/.rpiv/artifacts/designs/2026-10-23_00-38-22_typescript-7-compiler-switch.md
+index c534147..89c312f 100644
+--- a/.rpiv/artifacts/designs/2026-10-23_00-38-22_typescript-7-compiler-switch.md
++++ b/.rpiv/artifacts/designs/2026-10-23_00-38-22_typescript-7-compiler-switch.md
+@@ -13,7 +13,7 @@ status: in-review
+ last_updated: 2026-10-23T01:30:00+0100
+ last_updated_by: Pedro Mesquita
+ last_updated_note: "Pedro's §143 decisions applied before approval: lane normal, Q1 (a) one slice, Q2 (b) gate moves to effect-tsgo diagnostics mode with opening measurement M1 and a stop rule, Q3 (a), Q4 (a), Q5 (a). Earlier: lean brief written, lane rigorous inherited, Q1-Q5 open."
+-content_hash: a5218b3a8d2caee8bbcf59944ee55ec68023f812bc025be110f0c03bc16fbce2
++content_hash: 776efff4215a5c75a27ce6cd4e9389e1a686ce5648cfdd58444c3fbffc4f25fd
+ ---
+ 
+ # Design: #105 TypeScript 7 compiler switch
+@@ -213,6 +213,17 @@ A: First version written with lane rigorous (inherited) and Q1-Q5 open (`content
+ - Approach check: `not run (lane normal, Pedro's decision)`.
+ - Intent approval is distinct from build authority; branch and worktree wait for Pedro (§143).
+ 
++**Implementation (ts7-s1-compiler-switch, 2026-10-23, implementer; decisions through the coordinator):**
++- TS7-B2 `type-only import` row dropped (Pedro, (b)). Its oracle was false before the switch too: `dependency-cruiser.config.cjs` has no `tsPreCompilationDeps`, so `check:boundaries` ignores `import type`; turning it on gives 9 type-only `no-circular` errors and no cross-app one. Issue #141 holds the gap. The `value import` row keeps the parse proof.
++- M1 run on Windows with the CPU rule not met (Windows Search indexing; no game); Pedro told the implementer directly to go ahead. Result: `--format json`; exit 0 = no error-level entry, exit 1 = errors found or a broken run.
++- M1 stop-rule call (coordinator, disclosed to Pedro): D3's "distinguishable exits" is met by exit code plus output shape. The gate needs a complete JSON report whose summary counts match its entries, with exit 0 = 0 errors and exit 1 = more than 0. Anything else is `EFFECT_GATE_BROKEN`, and a `DiscoveryError` line is `EFFECT_GATE_BINARY_MISSING`. Diagnostics mode does not report plain type errors (M1 case 6); `pnpm typecheck` owns them.
++- Deviation from the TS7-B3 oracle text (spawn `cwd` and `--project` form): the gate spawns `effect-tsgo` with `cwd` set to the repository that holds the script, and passes `--project` as the absolute `<root>/<project>/tsconfig.json`. `effect-tsgo` finds TypeScript 7 only from its working directory (M1 case 8), so a `cwd` of a temporary root is a discovery failure. When `root` is the repository, the run is the same as the brief's.
++- The gate's mutation scope moves out of `stryker.project-storage.config.json`, whose ranges pointed at the old script, into `stryker.effect-gate.config.json`.
++
++## TDD Evidence (implement)
++
++- ts7-s1-compiler-switch: `.rpiv/artifacts/evidence/2026-10-23_ts7-s1/` (toolchain red/green logs, `defender-and-hashes.log`, `m1-diagnostics-format.md` and `m1-raw/`, `b3-red-scaffold.log`, `green.log`, `bindings/`, `bindings-real/`, `codescene.log`).
++
+ ## References
+ 
+ - Research: `.rpiv/artifacts/research/2026-10-18_20-08-00_typescript-7-and-effect-tsgo-gate.md` (content_hash `dbf67b1a…`)
+diff --git a/AGENTS.md b/AGENTS.md
+index a03471d..e38508f 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -27,6 +27,7 @@ Explanations and status updates must be in plain Portuguese (Portugal). The user
+ ## Environment
+ 
+ - Windows 11 development with Docker available.
++- On Windows, every checkout or worktree needs a Microsoft Defender folder exclusion for `node_modules\@effect\tsgo-win32-x64` before `pnpm install` or any Effect gate run: Defender quarantines the Effect build's `tsc.exe` (`artifacts/typescript/7.0.2/tsc.exe`, which `pnpm check:effect` runs). On every `@effect/tsgo` or `@typescript/native` bump, the coordinator checks each installed `tsc.exe` against the npm tarball hash before any run.
+ - Stack tooling: pnpm, Biome, Vitest + StrykerJS, Knip, dependency-cruiser, likeC4 (likec4 CLI is global).
+ - Work on feature branches. The user may push with GitHub Desktop or the CLI.
+ - Product is in active development, not hosted or in production.
+@@ -75,7 +76,7 @@ The project migrates fully to Effect, incrementally: new code and every code pat
+ - The renderer (React) does not run an Effect runtime. It may use protocol schemas and types.
+ - Tests provide fakes through `Effect.provideService` or test Layers. Fakes fail with `Effect.fail`, never `throw`, and time-based tests use `TestClock`, not real sleeps.
+ - Reviewers check these rules on new and touched code.
+-- Type checking authority: `pnpm typecheck` (the project's TypeScript, currently 6.0.2) is the type-checking authority. The editor and agent LSP is Effect tsgo (TypeScript-Go 7 plus the Effect language service, enabled by the `@effect/language-service` plugin in `tsconfig.base.json`). In the editor, an error that only the LSP reports is advisory: investigate it. `pnpm check:effect`, which runs inside `pnpm check`, runs the same Effect build in tsc mode and blocks on every error it reports: each `error`-level Effect diagnostic, and any other error, including a type error that only TypeScript-Go reports, which the gate reports as a broken run and never as clean. Effect `warning` diagnostics stay advice unless a reviewer and the user promote one to a rule.
++- Type checking authority: `pnpm typecheck` is the type-checking authority. It runs TypeScript 7.0.2 (TypeScript-Go, `tsc` from the `@typescript/native` alias) and owns every plain type error. The `typescript` package stays TypeScript 6.0.2 (`@typescript/typescript6`, binary `tsc6`) only for tools that need the TypeScript JavaScript API, such as dependency-cruiser; it is not a gate. The editor's built-in TypeScript (6.0.2) and the editor and agent LSP, Effect tsgo (TypeScript-Go 7 plus the Effect language service, enabled by the `@effect/language-service` plugin in `tsconfig.base.json`), are advisory: investigate an error only they report. `pnpm check:effect`, which runs inside `pnpm check`, runs `effect-tsgo diagnostics --format json` on the canary and the four packages and blocks on every `error`-level Effect diagnostic and on every broken run: an unknown exit, output that is not one complete report, or a TypeScript 7 or Effect build it cannot find, never reported as clean. It does not report plain type errors; `pnpm typecheck` does. Effect `warning` diagnostics stay advice unless a reviewer and the user promote one to a rule.
+ 
+ ## Test Discipline
+ 
+diff --git a/apps/harness/scripts/check-boundaries-parse.test.mjs b/apps/harness/scripts/check-boundaries-parse.test.mjs
+new file mode 100644
+index 0000000..2c5a666
+--- /dev/null
++++ b/apps/harness/scripts/check-boundaries-parse.test.mjs
+@@ -0,0 +1,67 @@
++import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { dirname, join } from "node:path";
++import { fileURLToPath } from "node:url";
++import { cruise } from "dependency-cruiser";
++import extractDepcruiseConfig from "dependency-cruiser/config-utl/extract-depcruise-config";
++import extractTSConfig from "dependency-cruiser/config-utl/extract-ts-config";
++import { afterEach, beforeEach, expect, it } from "vitest";
++
++const repository = fileURLToPath(new URL("../../../", import.meta.url));
++const desktop = "apps/desktop/src/a.ts";
++let root;
++
++beforeEach(() => {
++  root = mkdtempSync(join(tmpdir(), "slopstop-boundaries-parse-"));
++  copyFileSync(join(repository, "tsconfig.base.json"), join(root, "tsconfig.base.json"));
++  write("apps/harness/src/b.ts", "export const x = 1;\nexport type X = number;\n");
++  write("apps/desktop/src/c.ts", "export const y = 2;\n");
++});
++
++afterEach(() => {
++  rmSync(root, { recursive: true, force: true });
++});
++
++function write(path, text) {
++  mkdirSync(dirname(join(root, path)), { recursive: true });
++  writeFileSync(join(root, path), text);
++}
++
++async function cruiseFixture() {
++  const config = await extractDepcruiseConfig(join(repository, "dependency-cruiser.config.cjs"));
++  const result = await cruise(
++    ["apps"],
++    { ...config.options, validate: true, ruleSet: config, baseDir: root },
++    {},
++    { tsConfig: extractTSConfig(join(root, "tsconfig.base.json")) },
++  );
++  return result.output;
++}
++
++function violationsOf(output) {
++  return output.summary.violations.map(({ rule, from, to }) => ({ rule: rule.name, from, to }));
++}
++
++const forbidden = [{ rule: "no-app-to-app-imports", from: desktop, to: "apps/harness/src/b.ts" }];
++
++it.each([
++  {
++    name: "value import",
++    source: 'import { x } from "../../harness/src/b.ts";\nexport const z = x;\n',
++    target: "apps/harness/src/b.ts",
++    violations: forbidden,
++  },
++  {
++    name: "allowed",
++    source: 'import { y } from "./c.ts";\nexport const z = y;\n',
++    target: "apps/desktop/src/c.ts",
++    violations: [],
++  },
++])("reports a forbidden TypeScript import: $name", async ({ source, target, violations }) => {
++  write(desktop, source);
++
++  const output = await cruiseFixture();
++
++  expect(violationsOf(output)).toEqual(violations);
++  expect(output.modules.map(({ source }) => source)).toContain(target);
++});
+diff --git a/apps/harness/scripts/check-effect-diagnostics.mjs b/apps/harness/scripts/check-effect-diagnostics.mjs
+index 91283bd..85a881d 100644
+--- a/apps/harness/scripts/check-effect-diagnostics.mjs
++++ b/apps/harness/scripts/check-effect-diagnostics.mjs
+@@ -2,18 +2,15 @@ import { spawnSync } from "node:child_process";
+ import { existsSync, readdirSync, readFileSync } from "node:fs";
+ import { createRequire } from "node:module";
+ import { dirname, join, relative, resolve } from "node:path";
+-import { pathToFileURL } from "node:url";
++import { fileURLToPath, pathToFileURL } from "node:url";
+ 
+ /** The packages the gate checks, from the repository root. */
+ const defaultProjects = ["packages/kernel", "packages/protocol", "apps/harness", "apps/desktop"];
+ 
+-// `file(line,col): error|warning TSnnnn: message`; an Effect message ends with `effect(<rule>)`,
+-// possibly on a later line.
+-const diagnosticHeader = /^(.+)\((\d+),(\d+)\): (error|warning) TS\d+: /;
+-const effectRule = /effect\((\w+)\)\s*$/;
+-
+-// The binary belongs to the repository that holds this script, not to the checked root.
++// The binary belongs to the repository that holds this script, not to the checked root. It runs
++// from that repository too: `effect-tsgo` finds TypeScript 7 from its working directory.
+ const resolveFromScript = createRequire(import.meta.url).resolve;
++const toolRoot = fileURLToPath(new URL("../../../", import.meta.url));
+ 
+ /** A failure result whose `lines` name its cause, at most 20 of them. */
+ function failure(code, lines) {
+@@ -21,50 +18,66 @@ function failure(code, lines) {
+   return { ok: false, code, lines: shown };
+ }
+ 
+-/** The Effect build's `lib/tsc`, or a failure naming the missing package or executable. */
++/** The `effect-tsgo` command-line script, or a failure naming the missing package or script. */
+ function binaryPath(resolveModule, exists) {
+-  const binaryPackage = `@effect/tsgo-${process.platform}-${process.arch}`;
+   let manifest;
+   try {
+-    manifest = resolveModule(`${binaryPackage}/package.json`);
++    manifest = resolveModule("@effect/tsgo/package.json");
+   } catch {
+-    return { failure: failure("EFFECT_GATE_BINARY_MISSING", [`cannot resolve ${binaryPackage}`]) };
++    return { failure: failure("EFFECT_GATE_BINARY_MISSING", ["cannot resolve @effect/tsgo"]) };
+   }
+-  const binary = join(dirname(manifest), "lib", process.platform === "win32" ? "tsc.exe" : "tsc");
++  const binary = join(dirname(manifest), "dist", "effect-tsgo.cjs");
+   if (!exists(binary)) {
+     return { failure: failure("EFFECT_GATE_BINARY_MISSING", [`missing executable ${binary}`]) };
+   }
+   return { binary };
+ }
+ 
+-/** The diagnostic a header line opens, or undefined for a continuation line. */
+-function diagnosticAt(line) {
+-  const header = diagnosticHeader.exec(line);
+-  if (!header) return undefined;
+-  const [, file = "", lineNumber = "", column = "", severity = ""] = header;
+-  return { file, line: Number(lineNumber), column: Number(column), severity };
+-}
++const severities = ["error", "warning", "message"];
+ 
+-/** The rule ends a diagnostic's last line; the first one found after its header is its rule. */
+-function attachRule(current, line) {
+-  const rule = effectRule.exec(line)?.[1];
+-  if (current?.rule === undefined && rule) current.rule = rule;
+-}
++/** One `--format json` entry with everything the gate reads from it. */
++const isEntry = (entry) =>
++  typeof entry?.file === "string" &&
++  Number.isInteger(entry.line) &&
++  Number.isInteger(entry.column) &&
++  severities.includes(entry.severity) &&
++  typeof entry.name === "string";
+ 
+-/** Every diagnostic in the output, each with its Effect rule when it has one. */
+-function parseDiagnostics(output) {
+-  const diagnostics = [];
+-  for (const line of output.split(/\r?\n/)) {
+-    const opened = diagnosticAt(line);
+-    if (opened) diagnostics.push(opened);
+-    if (diagnostics.length > 0) attachRule(diagnostics.at(-1), line);
++/** The report's summary counts each severity exactly as its entries do. */
++const countsMatch = (summary, diagnostics) =>
++  severities.every(
++    (severity) =>
++      summary?.[`${severity}s`] ===
++      diagnostics.filter((entry) => entry.severity === severity).length,
++  );
++
++/**
++ * The diagnostics of one complete `--format json` report, paths relative to `root`; undefined
++ * for any output that is not such a report, so it can never read as clean.
++ */
++function readReport(stdout, root) {
++  let report;
++  try {
++    report = JSON.parse(stdout);
++  } catch {
++    return undefined;
+   }
+-  return diagnostics;
++  const diagnostics = report?.diagnostics;
++  if (!Array.isArray(diagnostics) || !diagnostics.every(isEntry)) return undefined;
++  if (!countsMatch(report.summary, diagnostics)) return undefined;
++  return diagnostics.map(({ file, line, column, severity, name }) => ({
++    file: relative(root, file).split("\\").join("/"),
++    line,
++    column,
++    severity,
++    rule: name,
++  }));
+ }
+ 
+ /** The binary was not started, was killed, or ended without an exit status. */
+ const didNotFinish = (run) => Boolean(run.error ?? run.signal) || run.status === null;
+-const isTscExit = (status) => status === 0 || status === 1;
++// `effect-tsgo diagnostics` exits 0 without error-level entries and 1 with them or on a failure.
++const isDiagnosticsExit = (status) => status === 0 || status === 1;
+ const location = ({ file, line, column }) => `${file}(${line},${column})`;
+ 
+ /** Why a run did not finish: its spawn error code, its signal, or a missing exit status. */
+@@ -73,57 +86,74 @@ function unfinishedCause(run) {
+   return run.signal ? `killed by ${run.signal}` : "no exit status";
+ }
+ 
+-/** One run of the binary on a project: a run that did not finish, or exited 2+, is a failure. */
++/**
++ * One run of the binary on a project. A run that did not finish, exited 2+, or printed anything
++ * but a complete report is a failure; a discovery failure names its cause.
++ */
+ function spawnProject({ root, binary, spawn }, project) {
+   const run = spawn(
+-    binary,
+-    ["--noEmit", "--pretty", "false", "-p", join(project, "tsconfig.json")],
+-    {
+-      cwd: root,
+-      encoding: "utf8",
+-    },
++    process.execPath,
++    [
++      binary,
++      "diagnostics",
++      "--project",
++      resolve(root, project, "tsconfig.json"),
++      "--format",
++      "json",
++    ],
++    { cwd: toolRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+   );
+   if (didNotFinish(run)) {
+     return failure("EFFECT_GATE_BINARY_FAILED", [`${project}: ${unfinishedCause(run)}`]);
+   }
+-  if (!isTscExit(run.status)) {
++  if (!isDiagnosticsExit(run.status)) {
+     return failure("EFFECT_GATE_BROKEN", [`${project}: exit ${run.status}`]);
+   }
+-  const output = [run.stdout ?? "", run.stderr ?? ""].join("\n");
+-  return { status: run.status, output, diagnostics: parseDiagnostics(output) };
++  const diagnostics = readReport(run.stdout ?? "", root);
++  if (diagnostics === undefined) return unreadableRun(project, run);
++  return { status: run.status, diagnostics };
+ }
+ 
+-/** The first non-empty output lines, for a run whose output cannot be read as diagnostics. */
++/** The first non-empty output lines, for a run whose output cannot be read as a report. */
+ const outputHead = (output) =>
+   output
+     .split(/\r?\n/)
+     .filter((line) => line.trim() !== "")
+     .slice(0, 10);
+ 
++/** No TypeScript 7 or no matching Effect build: `effect-tsgo` logs a `DiscoveryError` line. */
++const discoveryError = /DiscoveryError/;
++
++/** A run with no complete report: a discovery failure, or a broken run with its first lines. */
++function unreadableRun(project, run) {
++  const output = [run.stdout ?? "", run.stderr ?? ""].join("\n");
++  const discovery = output.split(/\r?\n/).find((line) => discoveryError.test(line));
++  if (discovery) return failure("EFFECT_GATE_BINARY_MISSING", [`${project}: ${discovery.trim()}`]);
++  const head = outputHead(output);
++  return failure("EFFECT_GATE_BROKEN", [
++    `${project}: exit ${run.status} with unreadable output`,
++    ...head,
++  ]);
++}
++
+ /**
+  * One package run, classified: a run that did not finish, or whose output cannot be trusted, is
+- * a failure and never a clean result.
++ * a failure and never a clean result. Plain type errors are not in the report; `pnpm typecheck`
++ * owns them.
+  */
+ function runProject(context, project) {
+   const run = spawnProject(context, project);
+   if (run.code) return run;
+   const { diagnostics, status } = run;
+   const errors = diagnostics.filter((entry) => entry.severity === "error");
+-  // Exit 1 names its errors and exit 0 has none; anything else is an untrustworthy run. An error
+-  // that is not an Effect diagnostic is one too: the gate cannot report that tree as clean.
++  // Exit 1 reports its errors and exit 0 has none; anything else is an untrustworthy run.
+   if (status === 1 && errors.length === 0) {
+-    const head = outputHead(run.output);
+-    return failure("EFFECT_GATE_BROKEN", [`${project}: exit 1 with no error line`, ...head]);
++    return failure("EFFECT_GATE_BROKEN", [`${project}: exit 1 with no error entry`]);
+   }
+   if (status === 0 && errors.length > 0) {
+     const named = errors.map((entry) => `${project}: exit 0 with error ${location(entry)}`);
+     return failure("EFFECT_GATE_BROKEN", named);
+   }
+-  const plain = errors.filter((entry) => entry.rule === undefined);
+-  if (plain.length > 0) {
+-    const named = plain.map((entry) => `${project}: non-Effect error ${location(entry)}`);
+-    return failure("EFFECT_GATE_BROKEN", named);
+-  }
+   return { diagnostics };
+ }
+ 
+@@ -143,35 +173,36 @@ const expectedCanary = [
+ ];
+ 
+ function canaryKey({ file, line, column, severity, rule }) {
+-  const relative = file.split("\\").join("/").replace(`${canaryProject}/`, "");
+-  return `${relative}(${line},${column}) ${severity} ${rule ?? "-"}`;
++  return `${file.replace(`${canaryProject}/`, "")}(${line},${column}) ${severity} ${rule}`;
+ }
+ 
+ const byText = (first, second) => first.localeCompare(second);
+ 
++/** The keys of `from` left after removing one copy of each key in `taken`, duplicates counted. */
++function remainder(from, taken) {
++  const left = [...taken];
++  return from.filter((key) => {
++    const index = left.indexOf(key);
++    if (index !== -1) left.splice(index, 1);
++    return index === -1;
++  });
++}
++
+ /**
+- * Runs the canary; any added, missing or moved diagnostic is a mismatch, never a pass. The
+- * Effect build carries the plugin itself, so a removed or changed plugin block shows up here as
+- * the defaults' diagnostics and exit code, which differ from the expected set.
++ * Runs the canary; any added, missing, duplicated or moved diagnostic is a mismatch, never a
++ * pass. A removed or changed plugin block shows up here as the defaults' diagnostics, which
++ * differ from the expected set.
+  */
+ function checkCanary(context) {
+   const run = spawnProject(context, canaryProject);
+   if (run.code) return run;
+   const actual = run.diagnostics.map(canaryKey).sort(byText);
+   const expected = [...expectedCanary].sort(byText);
+-  const matched =
+-    run.status === 1 &&
+-    actual.length === expected.length &&
+-    actual.every((key, index) => key === expected[index]);
+-  return matched ? undefined : canaryMismatch(run.status, actual, expected);
+-}
+-
+-/** The mismatch, naming each differing key and an exit status other than 1. */
+-function canaryMismatch(status, actual, expected) {
+-  const extra = actual.filter((key) => !expected.includes(key)).map((key) => `extra ${key}`);
+-  const missing = expected.filter((key) => !actual.includes(key)).map((key) => `missing ${key}`);
+-  const exit = status === 1 ? [] : [`canary exit ${status}`];
+-  return failure("EFFECT_GATE_CANARY_MISMATCH", [...exit, ...extra, ...missing]);
++  const extra = remainder(actual, expected).map((key) => `extra ${key}`);
++  const missing = remainder(expected, actual).map((key) => `missing ${key}`);
++  const exit = run.status === 1 ? [] : [`canary exit ${run.status}`];
++  const lines = [...exit, ...extra, ...missing];
++  return lines.length === 0 ? undefined : failure("EFFECT_GATE_CANARY_MISMATCH", lines);
+ }
+ 
+ /**
+@@ -189,9 +220,11 @@ function checkProjects(context, projects) {
+   }
+   // A pass names the packages it checked, in order.
+   if (errors.length === 0) return { ok: true, warnings, projects: [...projects] };
+-  const lines = errors.map((entry) => `${location(entry)} ${entry.rule}`);
++  // Every violation is listed: the 20-line cap is for the other failures only.
+   return {
+-    ...failure("EFFECT_GATE_VIOLATIONS", lines),
++    ok: false,
++    code: "EFFECT_GATE_VIOLATIONS",
++    lines: errors.map((entry) => `${location(entry)} ${entry.rule}`),
+     violations: errors.map(({ file, line, rule }) => ({ file, line, rule })),
+   };
+ }
+@@ -301,7 +334,8 @@ function checkWaivers(root) {
+ }
+ 
+ /**
+- * Runs the Effect build of TypeScript-Go, in tsc mode, over each project and blocks on every
++ * Runs `effect-tsgo diagnostics --format json` (the Effect build of TypeScript-Go 7) over each
++ * project and blocks on every
+  * `error`-level Effect diagnostic. Warnings are counted, never blocking. The full gate (no
+  * `projects` given) first proves on the canary that the real configuration is active, then
+  * checks the waiver register against the sources; a call that names its projects checks only
+diff --git a/apps/harness/scripts/check-effect-diagnostics.test.mjs b/apps/harness/scripts/check-effect-diagnostics.test.mjs
+index 472d8f7..c0e97bc 100644
+--- a/apps/harness/scripts/check-effect-diagnostics.test.mjs
++++ b/apps/harness/scripts/check-effect-diagnostics.test.mjs
+@@ -1,7 +1,7 @@
+ import { spawnSync } from "node:child_process";
+ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+ import { tmpdir } from "node:os";
+-import { dirname, join } from "node:path";
++import { dirname, join, resolve } from "node:path";
+ import { fileURLToPath } from "node:url";
+ import { afterEach, expect, it } from "vitest";
+ import { checkEffectDiagnostics } from "./check-effect-diagnostics.mjs";
+@@ -94,73 +94,6 @@ it.each(plantedRows)("fails on a planted Effect error: $name", ({ source, violat
+   expect(cli.stderr).toContain(violation.rule);
+ });
+ 
+-/** A fake `spawnSync` that answers `outcome` and counts its calls. */
+-function fakeSpawn(outcome) {
+-  const calls = [];
+-  const spawn = (...args) => {
+-    calls.push(args);
+-    return { status: null, signal: null, stdout: "", stderr: "", ...outcome };
+-  };
+-  return { spawn, calls };
+-}
+-
+-const binaryRows = [
+-  {
+-    name: "missing package",
+-    resolve: () => {
+-      throw Object.assign(new Error("Cannot find module"), { code: "MODULE_NOT_FOUND" });
+-    },
+-    exists: () => true,
+-    outcome: { status: 0 },
+-    code: "EFFECT_GATE_BINARY_MISSING",
+-    spawns: 0,
+-  },
+-  {
+-    name: "missing executable",
+-    exists: () => false,
+-    outcome: { status: 0 },
+-    code: "EFFECT_GATE_BINARY_MISSING",
+-    spawns: 0,
+-  },
+-  {
+-    name: "spawn error",
+-    outcome: { error: Object.assign(new Error("operation not permitted"), { code: "EPERM" }) },
+-    code: "EFFECT_GATE_BINARY_FAILED",
+-    spawns: 1,
+-  },
+-  {
+-    name: "killed",
+-    outcome: { status: null, signal: "SIGKILL" },
+-    code: "EFFECT_GATE_BINARY_FAILED",
+-    spawns: 1,
+-  },
+-  { name: "exit 2", outcome: { status: 2 }, code: "EFFECT_GATE_BROKEN", spawns: 1 },
+-  {
+-    name: "exit 1, no diagnostic line",
+-    outcome: { status: 1, stdout: "something went wrong\n" },
+-    code: "EFFECT_GATE_BROKEN",
+-    spawns: 1,
+-  },
+-  {
+-    name: "exit 1 with a non-Effect error",
+-    outcome: {
+-      status: 1,
+-      stdout: "src/a.ts(1,7): error TS2322: Type 'string' is not assignable.\n",
+-    },
+-    code: "EFFECT_GATE_BROKEN",
+-    spawns: 1,
+-  },
+-  {
+-    name: "exit 0 with an error line",
+-    outcome: {
+-      status: 0,
+-      stdout: "src/a.ts(3,18): error TS377080: Planted. effect(newPromise)\n",
+-    },
+-    code: "EFFECT_GATE_BROKEN",
+-    spawns: 1,
+-  },
+-];
+-
+ /** Every failure carries `lines` (at most 20) that name its cause (S5B-R1-3). */
+ function expectNamedCause(result, fragments) {
+   expect(Array.isArray(result.lines)).toBe(true);
+@@ -170,140 +103,6 @@ function expectNamedCause(result, fragments) {
+   for (const fragment of fragments) expect(text).toContain(fragment);
+ }
+ 
+-const binaryFragments = (root) => ({
+-  "missing package": [`@effect/tsgo-${process.platform}-${process.arch}`],
+-  "missing executable": [
+-    join(root, "node_modules", "tsgo", "lib", process.platform === "win32" ? "tsc.exe" : "tsc"),
+-  ],
+-  "spawn error": ["first", "EPERM"],
+-  killed: ["first", "SIGKILL"],
+-  "exit 2": ["first", "exit 2"],
+-  "exit 1, no diagnostic line": ["first", "exit 1", "something went wrong"],
+-  "exit 1 with a non-Effect error": ["first", "src/a.ts(1,7)"],
+-  "exit 0 with an error line": ["first", "exit 0", "src/a.ts(3,18)"],
+-});
+-
+-it.each(binaryRows)("distinguishes a broken binary run: $name", (row) => {
+-  const root = mkdtempSync(join(tmpdir(), "slopstop-effect-gate-"));
+-  roots.push(root);
+-  const { spawn, calls } = fakeSpawn(row.outcome);
+-  const result = checkEffectDiagnostics({
+-    root,
+-    projects: ["first", "second"],
+-    resolve: row.resolve ?? (() => join(root, "node_modules", "tsgo", "package.json")),
+-    exists: row.exists ?? (() => true),
+-    spawn,
+-  });
+-  expect(result).toMatchObject({ ok: false, code: row.code });
+-  expectNamedCause(result, binaryFragments(root)[row.name]);
+-  expect(calls).toHaveLength(row.spawns);
+-});
+-
+-const canaryFolder = "apps/harness/scripts/effect-diagnostics-canary";
+-const canaryLines = [
+-  "src/canary.ts(3,24): error TS377080: Planted. effect(newPromise)",
+-  "src/canary.ts(4,14): warning TS377030: Planted. effect(anyUnknownInErrorContext)",
+-  "src/canary.ts(4,24): error TS377021: Planted. effect(unknownInEffectCatch)",
+-  "src/canary.ts(4,24): warning TS377030: Planted. effect(anyUnknownInErrorContext)",
+-];
+-
+-/** Fake canary output: the expected set, or the expected set changed by `edit`. */
+-function canaryOutput(edit = (lines) => lines) {
+-  return `${edit(canaryLines)
+-    .map((line) => `${canaryFolder}/${line}`)
+-    .join("\n")}\n`;
+-}
+-
+-/** A copy of the repository canary under a temporary root, its plugin entry removed. */
+-function canaryWithoutPlugin() {
+-  const root = mkdtempSync(join(tmpdir(), "slopstop-effect-gate-"));
+-  roots.push(root);
+-  const source = join(repository, canaryFolder);
+-  const target = join(root, canaryFolder);
+-  cpSync(source, target, { recursive: true });
+-  const modules = join(repository, "node_modules");
+-  writeFileSync(
+-    join(target, "tsconfig.json"),
+-    JSON.stringify({
+-      extends: join(repository, "tsconfig.base.json"),
+-      compilerOptions: {
+-        noEmit: true,
+-        plugins: [],
+-        paths: { effect: [join(modules, "effect")], "effect/*": [join(modules, "effect", "*")] },
+-      },
+-      include: ["src", "tests"],
+-    }),
+-  );
+-  return root;
+-}
+-
+-const canaryRows = [
+-  {
+-    name: "extra diagnostic",
+-    edit: (lines) => [...lines, "src/canary.ts(1,1): error TS1: x effect(newPromise)"],
+-  },
+-  {
+-    name: "missing diagnostic",
+-    edit: (lines) => [...lines, "src/canary.ts(7,23): error TS1: x effect(newPromise)"],
+-  },
+-  {
+-    name: "override not applied",
+-    edit: (lines) => [...lines, "src/planted.test.ts(1,30): error TS1: x effect(newPromise)"],
+-  },
+-  { name: "exit 0 with the expected set", status: 0 },
+-  {
+-    name: "missing the last expected diagnostic",
+-    edit: (lines) => lines.filter((line) => !line.startsWith("src/canary.ts(4,24): warning")),
+-  },
+-  { name: "inactive language service", status: 0, edit: () => [] },
+-];
+-
+-it("runs the canary before any package: real canary", () => {
+-  expect(checkEffectDiagnostics({ root: repository, projects: [], canary: true })).toMatchObject({
+-    ok: true,
+-    canary: "matched",
+-  });
+-});
+-
+-it("runs the canary before any package: plugin removed", () => {
+-  const root = canaryWithoutPlugin();
+-  const result = checkEffectDiagnostics({ root, projects: [], canary: true });
+-  expect(result).toMatchObject({ ok: false, code: "EFFECT_GATE_CANARY_MISMATCH" });
+-  // Its exact lines come from the real binary's defaults: at least one differing key is named.
+-  expectNamedCause(result, []);
+-  expect(result.lines.some((line) => /^(extra|missing) /.test(line))).toBe(true);
+-});
+-
+-const missingEverything = [
+-  "missing src/canary.ts(3,24) error newPromise",
+-  "missing src/canary.ts(4,14) warning anyUnknownInErrorContext",
+-  "missing src/canary.ts(4,24) error unknownInEffectCatch",
+-  "missing src/canary.ts(4,24) warning anyUnknownInErrorContext",
+-];
+-const canaryFragments = {
+-  "extra diagnostic": ["extra src/canary.ts(1,1) error newPromise"],
+-  "missing diagnostic": ["extra src/canary.ts(7,23) error newPromise"],
+-  "override not applied": ["extra src/planted.test.ts(1,30) error newPromise"],
+-  "exit 0 with the expected set": ["canary exit 0"],
+-  "missing the last expected diagnostic": [
+-    "missing src/canary.ts(4,24) warning anyUnknownInErrorContext",
+-  ],
+-  "inactive language service": ["canary exit 0", ...missingEverything],
+-};
+-
+-it.each(canaryRows)("runs the canary before any package: $name", ({ name, edit, status = 1 }) => {
+-  const { spawn, calls } = fakeSpawn({ status, stdout: canaryOutput(edit) });
+-  const result = checkEffectDiagnostics({
+-    root: repository,
+-    resolve: () => join(repository, "node_modules", "tsgo", "package.json"),
+-    exists: () => true,
+-    spawn,
+-  });
+-  expect(result).toMatchObject({ ok: false, code: "EFFECT_GATE_CANARY_MISMATCH" });
+-  expectNamedCause(result, canaryFragments[name]);
+-  expect(calls).toHaveLength(1);
+-});
+-
+ const registerPath = "apps/harness/scripts/effect-diagnostics-waivers.json";
+ const waivedSource = [
+   "export const before = 1;",
+@@ -410,6 +209,529 @@ it.each(waiverRows)("keeps the waiver register exact: $name", (row) => {
+   if (row.fragments) expectNamedCause(result, row.fragments);
+ });
+ 
++it.each([
++  { name: "nested folder", path: "apps/x/src/deep/a.ts" },
++  { name: "packages area", path: "packages/y/src/a.ts" },
++  { name: "root-level file", path: "apps/x/a.ts" },
++  { name: "tests folder", path: "apps/x/tests/a.ts" },
++])("scans every registered location: $name", ({ path }) => {
++  const root = waiverTree(waivedSource, [], path);
++  const result = checkEffectDiagnostics({ root, projects: [], register: true });
++  expect(result).toEqual({
++    ok: false,
++    code: "EFFECT_GATE_WAIVER_UNREGISTERED",
++    lines: [`${path}(3) unregistered directive`],
++  });
++});
++
++it.each([
++  { name: "blank reason", entry: { ...registeredEntry, reason: "   " }, field: "reason" },
++  {
++    name: "no removeWhen",
++    entry: { ...registeredEntry, removeWhen: undefined },
++    field: "removeWhen",
++  },
++  { name: "numeric reason", entry: { ...registeredEntry, reason: 7 }, field: "reason" },
++])("rejects an incomplete waiver entry: $name", ({ entry, field }) => {
++  const root = waiverTree(waivedSource, [entry]);
++  const result = checkEffectDiagnostics({ root, projects: [], register: true });
++  expect(result).toEqual({
++    ok: false,
++    code: "EFFECT_GATE_BROKEN",
++    lines: [`EW1: missing ${field}`],
++  });
++});
++
++/** M1's recorded `effect-tsgo diagnostics --format json` runs, paths written as `<root>`/`<project>`. */
++const recorded = JSON.parse(
++  readFileSync(new URL("./effect-diagnostics-recorded.json", import.meta.url), "utf8"),
++);
++
++/** A recorded run with its paths moved under `root`, in the folder `project`. */
++function recordedRun(name, root, project) {
++  const place = (text) =>
++    text.split("<root>").join(root.split("\\").join("/")).split("<project>").join(project);
++  const { status, stdout, stderr } = recorded[name];
++  return { status, signal: null, stdout: place(stdout), stderr: place(stderr) };
++}
++
++/** A diagnostics report in the recorded shape, with summary counts that match its entries. */
++function report(diagnostics) {
++  const count = (severity) => diagnostics.filter((entry) => entry.severity === severity).length;
++  const summary = {
++    filesChecked: 1,
++    filesWithoutPlugin: 0,
++    totalFiles: 1,
++    errors: count("error"),
++    warnings: count("warning"),
++    messages: count("message"),
++  };
++  return `${JSON.stringify({ diagnostics, summary }, null, 2)}\n`;
++}
++
++/** One diagnostic entry in the recorded shape, at `[file, line, column, severity, name]`. */
++function entry([file, line, column, severity, name]) {
++  return {
++    file,
++    start: 0,
++    length: 1,
++    line,
++    column,
++    endLine: line,
++    endColumn: column + 1,
++    severity,
++    code: 377000,
++    name,
++    message: "Planted.",
++  };
++}
++
++/** A fake `spawnSync` that answers `outcome` and counts its calls. */
++function fakeSpawn(outcome) {
++  const calls = [];
++  const spawn = (...args) => {
++    calls.push(args);
++    return { status: null, signal: null, stdout: "", stderr: "", ...outcome };
++  };
++  return { spawn, calls };
++}
++
++/** A temporary root whose fake `@effect/tsgo` resolves inside it. */
++function fakeRoot() {
++  const root = mkdtempSync(join(tmpdir(), "slopstop-effect-gate-"));
++  roots.push(root);
++  return root;
++}
++
++const fakeManifest = (root) => join(root, "node_modules", "@effect", "tsgo", "package.json");
++const fakeCli = (root) => join(root, "node_modules", "@effect", "tsgo", "dist", "effect-tsgo.cjs");
++
++it("runs effect-tsgo diagnostics on each project", () => {
++  const root = fakeRoot();
++  const { spawn, calls } = fakeSpawn(recordedRun("clean", root, "packages/kernel"));
++  const projects = ["packages/kernel", "apps/desktop"];
++  const result = checkEffectDiagnostics({
++    root,
++    projects,
++    resolve: () => fakeManifest(root),
++    exists: () => true,
++    spawn,
++  });
++  expect(result).toEqual({ ok: true, warnings: 0, projects });
++  expect(calls).toEqual(
++    projects.map((project) => [
++      process.execPath,
++      [
++        fakeCli(root),
++        "diagnostics",
++        "--project",
++        resolve(root, project, "tsconfig.json"),
++        "--format",
++        "json",
++      ],
++      { cwd: repository, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
++    ]),
++  );
++});
++
++const unreadable = "first: exit 1 with unreadable output";
++const noFiles = "No files to check. Please provide an existing .ts file or a project tsconfig.json";
++const plantedLine = "first/src/a.ts(2,23)";
++
++/** Each row's fake run on `first` (and `second` when the first passes), and the expected result. */
++const runRows = [
++  {
++    name: "clean",
++    run: (root) => recordedRun("clean", root, "first"),
++    result: { ok: true, warnings: 0 },
++  },
++  {
++    name: "warnings only",
++    run: (root) => recordedRun("warnings", root, "first"),
++    result: { ok: true, warnings: 4 },
++  },
++  {
++    name: "planted error",
++    run: (root) => recordedRun("planted", root, "first"),
++    result: {
++      ok: false,
++      code: "EFFECT_GATE_VIOLATIONS",
++      lines: [`${plantedLine} unknownInEffectCatch`, "second/src/a.ts(2,23) unknownInEffectCatch"],
++      violations: [
++        { file: "first/src/a.ts", line: 2, rule: "unknownInEffectCatch" },
++        { file: "second/src/a.ts", line: 2, rule: "unknownInEffectCatch" },
++      ],
++    },
++    spawns: 2,
++  },
++  {
++    // Diagnostics mode reports no plain type error (M1 case 6); `pnpm typecheck` owns them.
++    name: "plain type error",
++    run: (root) => recordedRun("typeError", root, "first"),
++    result: { ok: true, warnings: 0 },
++  },
++  {
++    name: "missing tsconfig",
++    run: (root) => recordedRun("missingTsconfig", root, "first"),
++    result: { ok: false, code: "EFFECT_GATE_BROKEN", lines: [unreadable, noFiles] },
++  },
++  {
++    name: "invalid tsconfig",
++    run: (root) => recordedRun("invalidTsconfig", root, "first"),
++    result: { ok: false, code: "EFFECT_GATE_BROKEN", lines: [unreadable, noFiles] },
++  },
++  {
++    name: "discovery failure",
++    run: (root) => recordedRun("discovery", root, "first"),
++    result: {
++      ok: false,
++      code: "EFFECT_GATE_BINARY_MISSING",
++      lines: [
++        "first: [02:49:08.424] ERROR (#1): DiscoveryError: Unable to discover an installed typescript binary.",
++      ],
++    },
++  },
++  {
++    name: "unparseable output",
++    run: (root) => {
++      const run = recordedRun("planted", root, "first");
++      return { ...run, stdout: run.stdout.slice(0, run.stdout.indexOf('"severity": "error"')) };
++    },
++    result: {
++      ok: false,
++      code: "EFFECT_GATE_BROKEN",
++      lines: [unreadable, "{", '  "diagnostics": ['],
++    },
++    lineCount: 11,
++  },
++  {
++    name: "clean exit with an error entry",
++    run: (root) => ({ ...recordedRun("planted", root, "first"), status: 0 }),
++    result: {
++      ok: false,
++      code: "EFFECT_GATE_BROKEN",
++      lines: [`first: exit 0 with error ${plantedLine}`],
++    },
++  },
++  {
++    name: "found exit with no entry",
++    run: () => ({ status: 1, stdout: "", stderr: "" }),
++    result: { ok: false, code: "EFFECT_GATE_BROKEN", lines: [unreadable] },
++  },
++  {
++    name: "found exit with a clean report",
++    run: (root) => ({ ...recordedRun("warnings", root, "first"), status: 1 }),
++    result: { ok: false, code: "EFFECT_GATE_BROKEN", lines: ["first: exit 1 with no error entry"] },
++  },
++  {
++    name: "counts disagree with entries",
++    run: (root) => {
++      const run = recordedRun("warnings", root, "first");
++      return { ...run, stdout: run.stdout.replace('"warnings": 2', '"warnings": 1') };
++    },
++    result: { ok: false, code: "EFFECT_GATE_BROKEN" },
++    head: ["first: exit 0 with unreadable output", "{"],
++  },
++  {
++    name: "unknown exit",
++    run: () => ({ status: 7 }),
++    result: { ok: false, code: "EFFECT_GATE_BROKEN", lines: ["first: exit 7"] },
++  },
++  {
++    name: "killed",
++    run: () => ({ status: null, signal: "SIGKILL" }),
++    result: { ok: false, code: "EFFECT_GATE_BINARY_FAILED", lines: ["first: killed by SIGKILL"] },
++  },
++  {
++    name: "spawn error",
++    run: () => ({ error: Object.assign(new Error("operation not permitted"), { code: "EPERM" }) }),
++    result: { ok: false, code: "EFFECT_GATE_BINARY_FAILED", lines: ["first: spawn failed EPERM"] },
++  },
++  {
++    name: "no status",
++    run: () => ({ status: null }),
++    result: { ok: false, code: "EFFECT_GATE_BINARY_FAILED", lines: ["first: no exit status"] },
++  },
++  {
++    name: "no effect-tsgo",
++    resolve: () => {
++      throw Object.assign(new Error("Cannot find module"), { code: "MODULE_NOT_FOUND" });
++    },
++    run: (root) => recordedRun("clean", root, "first"),
++    result: {
++      ok: false,
++      code: "EFFECT_GATE_BINARY_MISSING",
++      lines: ["cannot resolve @effect/tsgo"],
++    },
++    spawns: 0,
++  },
++  {
++    name: "missing effect-tsgo script",
++    exists: () => false,
++    run: (root) => recordedRun("clean", root, "first"),
++    result: { ok: false, code: "EFFECT_GATE_BINARY_MISSING" },
++    missingCli: true,
++    spawns: 0,
++  },
++];
++
++it.each(runRows)("classifies a diagnostics run: $name", (row) => {
++  const root = fakeRoot();
++  const calls = [];
++  const spawn = (...args) => {
++    calls.push(args);
++    const project = calls.length === 1 ? "first" : "second";
++    const run = row.run(root);
++    const moved = { ...run, stdout: (run.stdout ?? "").split("/first/").join(`/${project}/`) };
++    return { status: null, signal: null, stdout: "", stderr: "", ...moved };
++  };
++  const result = checkEffectDiagnostics({
++    root,
++    projects: ["first", "second"],
++    resolve: row.resolve ?? (() => fakeManifest(root)),
++    exists: row.exists ?? (() => true),
++    spawn,
++  });
++  const expected = row.result.ok ? { ...row.result, projects: ["first", "second"] } : row.result;
++  if (row.result.lines === undefined) expect(result).toMatchObject(expected);
++  else if (row.lineCount === undefined) expect(result).toEqual(expected);
++  else {
++    expect(result).toMatchObject({ ok: false, code: row.result.code });
++    expect(result.lines.slice(0, 3)).toEqual(row.result.lines);
++    expect(result.lines).toHaveLength(row.lineCount);
++  }
++  if (row.head) expect(result.lines.slice(0, row.head.length)).toEqual(row.head);
++  if (row.missingCli) expect(result.lines).toEqual([`missing executable ${fakeCli(root)}`]);
++  expect(calls).toHaveLength(row.spawns ?? (row.result.ok ? 2 : 1));
++});
++
++/** `count` error-level Effect diagnostics in the recorded format, one per line of `first/src/a.ts`. */
++function manyViolations(root, count) {
++  const file = `${root.split("\\").join("/")}/first/src/a.ts`;
++  const entries = Array.from({ length: count }, (_, index) =>
++    entry([file, index + 1, 3, "error", "newPromise"]),
++  );
++  return { status: 1, signal: null, stdout: report(entries), stderr: "" };
++}
++
++it.each([{ count: 20 }, { count: 21 }, { count: 25 }])(
++  "lists every violation: $count",
++  ({ count }) => {
++    const root = fakeRoot();
++    const { spawn } = fakeSpawn(manyViolations(root, count));
++    const result = checkEffectDiagnostics({
++      root,
++      projects: ["first"],
++      resolve: () => fakeManifest(root),
++      exists: () => true,
++      spawn,
++    });
++    expect(result).toMatchObject({ ok: false, code: "EFFECT_GATE_VIOLATIONS" });
++    expect(result.lines).toEqual(
++      Array.from({ length: count }, (_, index) => `first/src/a.ts(${index + 1},3) newPromise`),
++    );
++    expect(result.violations).toHaveLength(count);
++  },
++);
++
++it.each([
++  { count: 20, tail: [] },
++  { count: 21, tail: ["… 2 more"] },
++  { count: 25, tail: ["… 6 more"] },
++])("caps other failure details at 20 lines: $count", ({ count, tail }) => {
++  const directives = Array.from(
++    { length: count },
++    () => "// @effect-diagnostics-next-line newPromise:off",
++  );
++  const root = waiverTree(directives, []);
++  const result = checkEffectDiagnostics({ root, projects: [], register: true });
++  const named = Array.from(
++    { length: count },
++    (_, index) => `apps/sample/src/a.ts(${index + 1}) unregistered directive`,
++  );
++  expect(result).toEqual({
++    ok: false,
++    code: "EFFECT_GATE_WAIVER_UNREGISTERED",
++    lines: tail.length === 0 ? named : [...named.slice(0, 19), ...tail],
++  });
++});
++
++const canaryFolder = "apps/harness/scripts/effect-diagnostics-canary";
++
++/** The canary's recorded entries under `root`, relative keys as `[file, line, column, severity, rule]`. */
++const canaryEntries = [
++  ["src/canary.ts", 3, 24, "error", "newPromise"],
++  ["src/canary.ts", 4, 14, "warning", "anyUnknownInErrorContext"],
++  ["src/canary.ts", 4, 24, "error", "unknownInEffectCatch"],
++  ["src/canary.ts", 4, 24, "warning", "anyUnknownInErrorContext"],
++];
++
++/** Fake canary output in the recorded format: the expected set, or that set changed by `edit`. */
++function canaryOutput(root, edit = (entries) => entries) {
++  const base = `${root.split("\\").join("/")}/${canaryFolder}`;
++  const entries = edit(canaryEntries).map(([file, line, column, severity, rule]) =>
++    entry([`${base}/${file}`, line, column, severity, rule]),
++  );
++  return report(entries);
++}
++
++/** A copy of the repository canary under a temporary root, its plugin entry removed. */
++function canaryWithoutPlugin() {
++  const root = fakeRoot();
++  const source = join(repository, canaryFolder);
++  const target = join(root, canaryFolder);
++  cpSync(source, target, { recursive: true });
++  const modules = join(repository, "node_modules");
++  writeFileSync(
++    join(target, "tsconfig.json"),
++    JSON.stringify({
++      extends: join(repository, "tsconfig.base.json"),
++      compilerOptions: {
++        noEmit: true,
++        plugins: [],
++        paths: { effect: [join(modules, "effect")], "effect/*": [join(modules, "effect", "*")] },
++      },
++      include: ["src", "tests"],
++    }),
++  );
++  return root;
++}
++
++it("runs the canary before any package: real canary", () => {
++  expect(checkEffectDiagnostics({ root: repository, projects: [], canary: true })).toMatchObject({
++    ok: true,
++    canary: "matched",
++  });
++});
++
++it("runs the canary before any package: plugin removed, real compiler", () => {
++  const root = canaryWithoutPlugin();
++  const result = checkEffectDiagnostics({ root, projects: [], canary: true });
++  expect(result).toEqual({
++    ok: false,
++    code: "EFFECT_GATE_CANARY_MISMATCH",
++    lines: [
++      "extra src/planted.test.ts(1,30) error newPromise",
++      "extra tests/planted.ts(1,31) error newPromise",
++    ],
++  });
++});
++
++const missingEverything = [
++  "missing src/canary.ts(3,24) error newPromise",
++  "missing src/canary.ts(4,14) warning anyUnknownInErrorContext",
++  "missing src/canary.ts(4,24) error unknownInEffectCatch",
++  "missing src/canary.ts(4,24) warning anyUnknownInErrorContext",
++];
++
++const canaryRows = [
++  {
++    name: "extra diagnostic",
++    edit: (entries) => [...entries, ["src/canary.ts", 1, 1, "error", "newPromise"]],
++    lines: ["extra src/canary.ts(1,1) error newPromise"],
++  },
++  {
++    name: "missing diagnostic",
++    edit: (entries) => [...entries, ["src/canary.ts", 7, 23, "error", "newPromise"]],
++    lines: ["extra src/canary.ts(7,23) error newPromise"],
++  },
++  {
++    name: "override not applied",
++    edit: (entries) => [...entries, ["src/planted.test.ts", 1, 30, "error", "newPromise"]],
++    lines: ["extra src/planted.test.ts(1,30) error newPromise"],
++  },
++  { name: "exit 0 with the expected set", status: 0, lines: ["canary exit 0"] },
++  {
++    name: "missing the last expected diagnostic",
++    edit: (entries) => entries.slice(0, 3),
++    lines: ["missing src/canary.ts(4,24) warning anyUnknownInErrorContext"],
++  },
++  {
++    name: "inactive language service",
++    status: 0,
++    edit: () => [],
++    lines: ["canary exit 0", ...missingEverything],
++  },
++  {
++    // M1 case 7c: the canary's tsconfig with `"plugins": []`.
++    name: "plugin removed",
++    run: (root) => recordedRun("canaryWithoutPlugin", root, canaryFolder),
++    lines: [
++      "extra src/planted.test.ts(1,30) error newPromise",
++      "extra tests/planted.ts(1,31) error newPromise",
++    ],
++  },
++];
++
++it.each(canaryRows)("runs the canary before any package: $name", (row) => {
++  const root = fakeRoot();
++  const run = row.run?.(root) ?? { status: row.status ?? 1, stdout: canaryOutput(root, row.edit) };
++  const { spawn, calls } = fakeSpawn(run);
++  const result = checkEffectDiagnostics({
++    root,
++    resolve: () => fakeManifest(root),
++    exists: () => true,
++    spawn,
++  });
++  expect(result).toEqual({ ok: false, code: "EFFECT_GATE_CANARY_MISMATCH", lines: row.lines });
++  expect(calls).toHaveLength(1);
++});
++
++const [firstKey, secondKey] = [
++  "src/canary.ts(3,24) error newPromise",
++  "src/canary.ts(4,14) warning anyUnknownInErrorContext",
++];
++
++const differenceRows = [
++  {
++    name: "duplicated line",
++    edit: (entries) => [...entries, entries[0]],
++    lines: [`extra ${firstKey}`],
++  },
++  {
++    name: "duplicate replaces a line",
++    edit: (entries) => [entries[0], entries[0], ...entries.slice(2)],
++    lines: [`extra ${firstKey}`, `missing ${secondKey}`],
++  },
++  {
++    name: "moved",
++    edit: ([first, ...rest]) => [[first[0], first[1], first[2] + 1, first[3], first[4]], ...rest],
++    lines: ["extra src/canary.ts(3,25) error newPromise", `missing ${firstKey}`],
++  },
++  { name: "clean exit, same set", status: 0, lines: ["canary exit 0"] },
++];
++
++it.each(differenceRows)("names every canary difference: $name", ({ edit, status = 1, lines }) => {
++  const root = fakeRoot();
++  const { spawn } = fakeSpawn({ status, stdout: canaryOutput(root, edit) });
++  const result = checkEffectDiagnostics({
++    root,
++    projects: [],
++    canary: true,
++    resolve: () => fakeManifest(root),
++    exists: () => true,
++    spawn,
++  });
++  expect(result).toEqual({ ok: false, code: "EFFECT_GATE_CANARY_MISMATCH", lines });
++  expect(result.lines.length).toBeGreaterThan(0);
++});
++
++it("names every canary difference: matched", () => {
++  const root = fakeRoot();
++  const reversed = canaryOutput(root, (entries) => [...entries].reverse());
++  const { spawn, calls } = fakeSpawn({ status: 1, stdout: reversed });
++  const result = checkEffectDiagnostics({
++    root,
++    projects: [],
++    canary: true,
++    resolve: () => fakeManifest(root),
++    exists: () => true,
++    spawn,
++  });
++  expect(result).toEqual({ ok: true, warnings: 0, projects: [], canary: "matched" });
++  expect(calls).toHaveLength(1);
++});
++
+ // The canary plus four packages take about 3 s alone; the bound leaves room under `pnpm check`.
+ it("passes on the repository", { timeout: 15_000 }, () => {
+   const result = checkEffectDiagnostics({ root: repository });
+diff --git a/apps/harness/scripts/effect-diagnostics-recorded.json b/apps/harness/scripts/effect-diagnostics-recorded.json
+new file mode 100644
+index 0000000..903bda8
+--- /dev/null
++++ b/apps/harness/scripts/effect-diagnostics-recorded.json
+@@ -0,0 +1,47 @@
++{
++  "clean": {
++    "status": 0,
++    "stdout": "{\n  \"diagnostics\": [],\n  \"summary\": {\n    \"filesChecked\": 1,\n    \"filesWithoutPlugin\": 0,\n    \"totalFiles\": 1,\n    \"errors\": 0,\n    \"warnings\": 0,\n    \"messages\": 0\n  }\n}\n",
++    "stderr": ""
++  },
++  "warnings": {
++    "status": 0,
++    "stdout": "{\n  \"diagnostics\": [\n    {\n      \"file\": \"<root>/<project>/src/a.ts\",\n      \"start\": 46,\n      \"length\": 7,\n      \"line\": 2,\n      \"column\": 14,\n      \"endLine\": 2,\n      \"endColumn\": 21,\n      \"severity\": \"warning\",\n      \"code\": 377030,\n      \"name\": \"anyUnknownInErrorContext\",\n      \"message\": \"This has unknown in the error channel which is not recommended.\\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.\"\n    },\n    {\n      \"file\": \"<root>/<project>/src/a.ts\",\n      \"start\": 56,\n      \"length\": 25,\n      \"line\": 2,\n      \"column\": 24,\n      \"endLine\": 2,\n      \"endColumn\": 49,\n      \"severity\": \"warning\",\n      \"code\": 377030,\n      \"name\": \"anyUnknownInErrorContext\",\n      \"message\": \"This has unknown in the error channel which is not recommended.\\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.\"\n    }\n  ],\n  \"summary\": {\n    \"filesChecked\": 1,\n    \"filesWithoutPlugin\": 0,\n    \"totalFiles\": 1,\n    \"errors\": 0,\n    \"warnings\": 2,\n    \"messages\": 0\n  }\n}\n",
++    "stderr": ""
++  },
++  "planted": {
++    "status": 1,
++    "stdout": "{\n  \"diagnostics\": [\n    {\n      \"file\": \"<root>/<project>/src/a.ts\",\n      \"start\": 46,\n      \"length\": 6,\n      \"line\": 2,\n      \"column\": 14,\n      \"endLine\": 2,\n      \"endColumn\": 20,\n      \"severity\": \"warning\",\n      \"code\": 377030,\n      \"name\": \"anyUnknownInErrorContext\",\n      \"message\": \"This has unknown in the error channel which is not recommended.\\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.\"\n    },\n    {\n      \"file\": \"<root>/<project>/src/a.ts\",\n      \"start\": 55,\n      \"length\": 17,\n      \"line\": 2,\n      \"column\": 23,\n      \"endLine\": 2,\n      \"endColumn\": 40,\n      \"severity\": \"error\",\n      \"code\": 377021,\n      \"name\": \"unknownInEffectCatch\",\n      \"message\": \"The `catch` callback in `Effect.tryPromise` returns `unknown`, so the Effect error type stays untyped. A specific typed error preserves error-channel information, for example by narrowing the value or wrapping it in `Data.TaggedError`.\"\n    },\n    {\n      \"file\": \"<root>/<project>/src/a.ts\",\n      \"start\": 55,\n      \"length\": 77,\n      \"line\": 2,\n      \"column\": 23,\n      \"endLine\": 2,\n      \"endColumn\": 100,\n      \"severity\": \"warning\",\n      \"code\": 377030,\n      \"name\": \"anyUnknownInErrorContext\",\n      \"message\": \"This has unknown in the error channel which is not recommended.\\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.\"\n    }\n  ],\n  \"summary\": {\n    \"filesChecked\": 1,\n    \"filesWithoutPlugin\": 0,\n    \"totalFiles\": 1,\n    \"errors\": 1,\n    \"warnings\": 2,\n    \"messages\": 0\n  }\n}\n",
++    "stderr": ""
++  },
++  "typeError": {
++    "status": 0,
++    "stdout": "{\n  \"diagnostics\": [],\n  \"summary\": {\n    \"filesChecked\": 1,\n    \"filesWithoutPlugin\": 0,\n    \"totalFiles\": 1,\n    \"errors\": 0,\n    \"warnings\": 0,\n    \"messages\": 0\n  }\n}\n",
++    "stderr": ""
++  },
++  "missingTsconfig": {
++    "status": 1,
++    "stdout": "",
++    "stderr": "No files to check. Please provide an existing .ts file or a project tsconfig.json\n"
++  },
++  "invalidTsconfig": {
++    "status": 1,
++    "stdout": "",
++    "stderr": "No files to check. Please provide an existing .ts file or a project tsconfig.json\n"
++  },
++  "discovery": {
++    "status": 1,
++    "stdout": "[02:49:08.424] ERROR (#1): DiscoveryError: Unable to discover an installed typescript binary.\n    at <root>\\node_modules\\@effect\\tsgo\\dist\\effect-tsgo.cjs:54240:116\n",
++    "stderr": ""
++  },
++  "canary": {
++    "status": 1,
++    "stdout": "{\n  \"diagnostics\": [\n    {\n      \"file\": \"<root>/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts\",\n      \"start\": 98,\n      \"length\": 44,\n      \"line\": 3,\n      \"column\": 24,\n      \"endLine\": 3,\n      \"endColumn\": 68,\n      \"severity\": \"error\",\n      \"code\": 377080,\n      \"name\": \"newPromise\",\n      \"message\": \"This code constructs `new Promise(...)`, prefer Effect APIs such as `Effect.async`, `Effect.promise`, or `Effect.tryPromise` instead of manual Promise construction.\"\n    },\n    {\n      \"file\": \"<root>/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts\",\n      \"start\": 157,\n      \"length\": 7,\n      \"line\": 4,\n      \"column\": 14,\n      \"endLine\": 4,\n      \"endColumn\": 21,\n      \"severity\": \"warning\",\n      \"code\": 377030,\n      \"name\": \"anyUnknownInErrorContext\",\n      \"message\": \"This has unknown in the error channel which is not recommended.\\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.\"\n    },\n    {\n      \"file\": \"<root>/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts\",\n      \"start\": 167,\n      \"length\": 17,\n      \"line\": 4,\n      \"column\": 24,\n      \"endLine\": 4,\n      \"endColumn\": 41,\n      \"severity\": \"error\",\n      \"code\": 377021,\n      \"name\": \"unknownInEffectCatch\",\n      \"message\": \"The `catch` callback in `Effect.tryPromise` returns `unknown`, so the Effect error type stays untyped. A specific typed error preserves error-channel information, for example by narrowing the value or wrapping it in `Data.TaggedError`.\"\n    },\n    {\n      \"file\": \"<root>/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts\",\n      \"start\": 167,\n      \"length\": 65,\n      \"line\": 4,\n      \"column\": 24,\n      \"endLine\": 4,\n      \"endColumn\": 89,\n      \"severity\": \"warning\",\n      \"code\": 377030,\n      \"name\": \"anyUnknownInErrorContext\",\n      \"message\": \"This has unknown in the error channel which is not recommended.\\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.\"\n    }\n  ],\n  \"summary\": {\n    \"filesChecked\": 3,\n    \"filesWithoutPlugin\": 0,\n    \"totalFiles\": 3,\n    \"errors\": 2,\n    \"warnings\": 2,\n    \"messages\": 0\n  }\n}\n",
++    "stderr": ""
++  },
++  "canaryWithoutPlugin": {
++    "status": 1,
++    "stdout": "{\n  \"diagnostics\": [\n    {\n      \"file\": \"<root>/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts\",\n      \"start\": 98,\n      \"length\": 44,\n      \"line\": 3,\n      \"column\": 24,\n      \"endLine\": 3,\n      \"endColumn\": 68,\n      \"severity\": \"error\",\n      \"code\": 377080,\n      \"name\": \"newPromise\",\n      \"message\": \"This code constructs `new Promise(...)`, prefer Effect APIs such as `Effect.async`, `Effect.promise`, or `Effect.tryPromise` instead of manual Promise construction.\"\n    },\n    {\n      \"file\": \"<root>/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts\",\n      \"start\": 157,\n      \"length\": 7,\n      \"line\": 4,\n      \"column\": 14,\n      \"endLine\": 4,\n      \"endColumn\": 21,\n      \"severity\": \"warning\",\n      \"code\": 377030,\n      \"name\": \"anyUnknownInErrorContext\",\n      \"message\": \"This has unknown in the error channel which is not recommended.\\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.\"\n    },\n    {\n      \"file\": \"<root>/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts\",\n      \"start\": 167,\n      \"length\": 17,\n      \"line\": 4,\n      \"column\": 24,\n      \"endLine\": 4,\n      \"endColumn\": 41,\n      \"severity\": \"error\",\n      \"code\": 377021,\n      \"name\": \"unknownInEffectCatch\",\n      \"message\": \"The `catch` callback in `Effect.tryPromise` returns `unknown`, so the Effect error type stays untyped. A specific typed error preserves error-channel information, for example by narrowing the value or wrapping it in `Data.TaggedError`.\"\n    },\n    {\n      \"file\": \"<root>/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts\",\n      \"start\": 167,\n      \"length\": 65,\n      \"line\": 4,\n      \"column\": 24,\n      \"endLine\": 4,\n      \"endColumn\": 89,\n      \"severity\": \"warning\",\n      \"code\": 377030,\n      \"name\": \"anyUnknownInErrorContext\",\n      \"message\": \"This has unknown in the error channel which is not recommended.\\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.\"\n    },\n    {\n      \"file\": \"<root>/apps/harness/scripts/effect-diagnostics-canary/src/planted.test.ts\",\n      \"start\": 29,\n      \"length\": 44,\n      \"line\": 1,\n      \"column\": 30,\n      \"endLine\": 1,\n      \"endColumn\": 74,\n      \"severity\": \"error\",\n      \"code\": 377080,\n      \"name\": \"newPromise\",\n      \"message\": \"This code constructs `new Promise(...)`, prefer Effect APIs such as `Effect.async`, `Effect.promise`, or `Effect.tryPromise` instead of manual Promise construction.\"\n    },\n    {\n      \"file\": \"<root>/apps/harness/scripts/effect-diagnostics-canary/tests/planted.ts\",\n      \"start\": 30,\n      \"length\": 44,\n      \"line\": 1,\n      \"column\": 31,\n      \"endLine\": 1,\n      \"endColumn\": 75,\n      \"severity\": \"error\",\n      \"code\": 377080,\n      \"name\": \"newPromise\",\n      \"message\": \"This code constructs `new Promise(...)`, prefer Effect APIs such as `Effect.async`, `Effect.promise`, or `Effect.tryPromise` instead of manual Promise construction.\"\n    }\n  ],\n  \"summary\": {\n    \"filesChecked\": 3,\n    \"filesWithoutPlugin\": 0,\n    \"totalFiles\": 3,\n    \"errors\": 4,\n    \"warnings\": 2,\n    \"messages\": 0\n  }\n}\n",
++    "stderr": ""
++  }
++}
+diff --git a/apps/harness/vitest.effect-gate-mutation.config.ts b/apps/harness/vitest.effect-gate-mutation.config.ts
+new file mode 100644
+index 0000000..156645c
+--- /dev/null
++++ b/apps/harness/vitest.effect-gate-mutation.config.ts
+@@ -0,0 +1,11 @@
++import { defineConfig } from "vitest/config";
++
++export default defineConfig({
++  test: {
++    name: "effect-gate-mutation",
++    environment: "node",
++    // The repository row runs the real canary and four packages, about 8 s alone.
++    testTimeout: 15_000,
++    include: ["apps/harness/scripts/check-effect-diagnostics.test.mjs"],
++  },
++});
+diff --git a/apps/harness/vitest.project-storage-mutation.config.ts b/apps/harness/vitest.project-storage-mutation.config.ts
+index e9aeed1..8a853e6 100644
+--- a/apps/harness/vitest.project-storage-mutation.config.ts
++++ b/apps/harness/vitest.project-storage-mutation.config.ts
+@@ -6,10 +6,6 @@ export default defineConfig({
+     environment: "node",
+     // registration-bootstrap-guards spawns Git and harness children; its usual limit (decisions log §75).
+     testTimeout: 15_000,
+-    // The two rows that run the real canary on the real tree fail only inside Stryker's sandbox;
+-    // the mutation run skips them, `pnpm check` keeps them (coordinator, decisions log §139).
+-    testNamePattern:
+-      /^(?!.*(?:runs the canary before any package: real canary|passes on the repository)$)/,
+     include: [
+       "packages/protocol/src/project-storage-protocol.test.ts",
+       "apps/harness/src/process-fatal-diagnostics.test.ts",
+@@ -46,7 +42,6 @@ export default defineConfig({
+       "apps/harness/src/storage/project-storage-upgrade-node-adapter.test.ts",
+       "apps/harness/tests/integration/project-storage-upgrade-steps.integration.test.ts",
+       "apps/harness/src/registration/registration-registry.test.ts",
+-      "apps/harness/scripts/check-effect-diagnostics.test.mjs",
+     ],
+   },
+ });
+diff --git a/package.json b/package.json
+index 41ea7b3..4d99755 100644
+--- a/package.json
++++ b/package.json
+@@ -49,6 +49,7 @@
+     "@stryker-mutator/core": "catalog:",
+     "@stryker-mutator/vitest-runner": "catalog:",
+     "@types/node": "catalog:",
++    "@typescript/native": "catalog:",
+     "@vitest/coverage-v8": "catalog:",
+     "dependency-cruiser": "catalog:",
+     "husky": "catalog:",
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index e3e3c2a..df9152a 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -78,6 +78,9 @@ catalogs:
+     '@types/react-dom':
+       specifier: 19.2.4
+       version: 19.2.4
++    '@typescript/native':
++      specifier: npm:typescript@7.0.2
++      version: 7.0.2
+     '@vitejs/plugin-react':
+       specifier: 6.0.5
+       version: 6.0.5
+@@ -136,7 +139,7 @@ catalogs:
+       specifier: 19.2.8
+       version: 19.2.8
+     typescript:
+-      specifier: 6.0.2
++      specifier: npm:@typescript/typescript6@6.0.2
+       version: 6.0.2
+     vite:
+       specifier: 8.2.1
+@@ -158,7 +161,7 @@ importers:
+         version: 2.5.8
+       '@commitlint/cli':
+         specifier: 'catalog:'
+-        version: 21.2.2(@types/node@24.13.3)(conventional-commits-parser@7.1.2)(typescript@6.0.2)
++        version: 21.2.2(@types/node@24.13.3)(@typescript/typescript6@6.0.2)(conventional-commits-parser@7.1.2)
+       '@commitlint/config-conventional':
+         specifier: 'catalog:'
+         version: 21.2.2
+@@ -177,6 +180,9 @@ importers:
+       '@types/node':
+         specifier: 'catalog:'
+         version: 24.13.3
++      '@typescript/native':
++        specifier: 'catalog:'
++        version: typescript@7.0.2
+       '@vitest/coverage-v8':
+         specifier: 'catalog:'
+         version: 4.1.10(vitest@4.1.10)
+@@ -206,7 +212,7 @@ importers:
+         version: runtime:24.20.0
+       typescript:
+         specifier: 'catalog:'
+-        version: 6.0.2
++        version: '@typescript/typescript6@6.0.2'
+       vitest:
+         specifier: 'catalog:'
+         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(esbuild@0.28.1)(jiti@2.7.0)(jsdom@30.0.1)(terser@5.50.0)(tsx@4.23.13)(yaml@2.9.0)
+@@ -2347,6 +2353,130 @@ packages:
+   '@types/yauzl@2.10.3':
+     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
+ 
++  '@typescript/typescript-aix-ppc64@7.0.2':
++    resolution: {integrity: sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ==}
++    engines: {node: '>=16.20.0'}
++    cpu: [ppc64]
++    os: [aix]
++
++  '@typescript/typescript-darwin-arm64@7.0.2':
++    resolution: {integrity: sha512-gowzar9MwS/aRWp6f3a4KUqzRjAZjOsmGNCM6LcTgXum+dBfgsBVMN+AgvOCCbguXyick6LJhpBszxMebJ8syA==}
++    engines: {node: '>=16.20.0'}
++    cpu: [arm64]
++    os: [darwin]
++
++  '@typescript/typescript-darwin-x64@7.0.2':
++    resolution: {integrity: sha512-SZ9xZInqApNlNGc9s0W1VSsktYSOe9cFqNOIqmN1Gs8SmkjKZYFt017G4VwPxASInODuAdbTW7sXiFUf893RgA==}
++    engines: {node: '>=16.20.0'}
++    cpu: [x64]
++    os: [darwin]
++
++  '@typescript/typescript-freebsd-arm64@7.0.2':
++    resolution: {integrity: sha512-W5NH4y/J0plIIS5b2xvTEkU7JFxyqdMAOgf+Ilhl0vHQXKO5dZoxd+C/jEtq56c4F3wk71RB4BMRQ2XdI+bwYQ==}
++    engines: {node: '>=16.20.0'}
++    cpu: [arm64]
++    os: [freebsd]
++
++  '@typescript/typescript-freebsd-x64@7.0.2':
++    resolution: {integrity: sha512-UMGDx5sTpzNw3WiPebH7l90IWfJggEd+egHt/q6p7/Cm3zqoV7VxkGXt+3DxPIw8CcmvAB0j3sVVfbhX+M4Tpw==}
++    engines: {node: '>=16.20.0'}
++    cpu: [x64]
++    os: [freebsd]
++
++  '@typescript/typescript-linux-arm64@7.0.2':
++    resolution: {integrity: sha512-Qh4eU4/y3yDjnfjjyPYihMj5/ODIlmt+Bzu17OI+fiSRDW57QmU5SiN63exPRNJPKUzcc1INa1NXdrJ+MqHjUQ==}
++    engines: {node: '>=16.20.0'}
++    cpu: [arm64]
++    os: [linux]
++
++  '@typescript/typescript-linux-arm@7.0.2':
++    resolution: {integrity: sha512-gffT3xPz9sR7j/YJExkyPntrI0P2EP9XbOyWzth2/Gs0RstK+90RBcO0ncXoXy/beYll1SXw846Nf2zdnEz0QQ==}
++    engines: {node: '>=16.20.0'}
++    cpu: [arm]
++    os: [linux]
++
++  '@typescript/typescript-linux-loong64@7.0.2':
++    resolution: {integrity: sha512-uEHck9i8hoAzXPiYRib1O7miOnz23SxIeVl6F4LXox+qov1K35jHcEW6VHKvZI+pyvl7fZEP4MCU5LYvIq1GuQ==}
++    engines: {node: '>=16.20.0'}
++    cpu: [loong64]
++    os: [linux]
++
++  '@typescript/typescript-linux-mips64el@7.0.2':
++    resolution: {integrity: sha512-R4KvAMnE43W5Qeqb0Ly56O3mWMWIAgsMyz36DCaycd5nbg/9kzm0liw3JocfRqyJY0KPmzFjbswozXyW0DnIYA==}
++    engines: {node: '>=16.20.0'}
++    cpu: [mips64el]
++    os: [linux]
++
++  '@typescript/typescript-linux-ppc64@7.0.2':
++    resolution: {integrity: sha512-DORx5b3sd/4S7eayxm4FQv+A7CrkUIGRaHiwI8oiHTAI1fAPWhF4J0vAlkC8biAlHSVVwxMQ3tjZ2/DVbnQiiA==}
++    engines: {node: '>=16.20.0'}
++    cpu: [ppc64]
++    os: [linux]
++
++  '@typescript/typescript-linux-riscv64@7.0.2':
++    resolution: {integrity: sha512-wf0jqEDOjrPRnKwYRyyJDRo11KMbvMFrU+q4zqKyChODBzvlkbhNQfKvLxQCcwTpdDaXSHZTVuh0JoCrKCUMHQ==}
++    engines: {node: '>=16.20.0'}
++    cpu: [riscv64]
++    os: [linux]
++
++  '@typescript/typescript-linux-s390x@7.0.2':
++    resolution: {integrity: sha512-IkwJc3L7yhytWd/ewjyxNDfOmswCm9GWMJT/ue/dU4aZNbwZeYAetq42VyLmsmSjvoX7z74X6ZaYCtzAr0EuGw==}
++    engines: {node: '>=16.20.0'}
++    cpu: [s390x]
++    os: [linux]
++
++  '@typescript/typescript-linux-x64@7.0.2':
++    resolution: {integrity: sha512-EYdf2cNg7rgCWJnxCdJ+F3V39O8ihb37eHAu1LK8oAFizgTQbPOK7zHHXbPt8rX24COqODXeI3sIf0fCXG7H/A==}
++    engines: {node: '>=16.20.0'}
++    cpu: [x64]
++    os: [linux]
++
++  '@typescript/typescript-netbsd-arm64@7.0.2':
++    resolution: {integrity: sha512-+polYF4MF04aPpO5FTkHran9yUQDSXqy5GiSDKpsll5jy3l3+g9QLhpf39T+ePtefhXLOGrLl0QIjkQP6VnelA==}
++    engines: {node: '>=16.20.0'}
++    cpu: [arm64]
++    os: [netbsd]
++
++  '@typescript/typescript-netbsd-x64@7.0.2':
++    resolution: {integrity: sha512-8YIT0EHM/3dq10ZOVF/A7pc/YSMtbcecct4rWtexrnSCHOPcpC2KTLXfTCR6vDpnSiY12heNb1GiN/wu+T/FyA==}
++    engines: {node: '>=16.20.0'}
++    cpu: [x64]
++    os: [netbsd]
++
++  '@typescript/typescript-openbsd-arm64@7.0.2':
++    resolution: {integrity: sha512-APT8+ClYnuYm1u9+kgGXoMj2VzWzcymwh2gNSQVySHfkRDGOTVkoWLjCmOQSaO+PoqQ57B0flRp9SA+7GnnkzQ==}
++    engines: {node: '>=16.20.0'}
++    cpu: [arm64]
++    os: [openbsd]
++
++  '@typescript/typescript-openbsd-x64@7.0.2':
++    resolution: {integrity: sha512-yX7s+Q0Dln0Dt9tEzZsAjXXR/+ytBM7AlglaqyeMPxQszJ1JhlJdZ6jLA+IzldHtflX81em7lDao1xXu+aRRkg==}
++    engines: {node: '>=16.20.0'}
++    cpu: [x64]
++    os: [openbsd]
++
++  '@typescript/typescript-sunos-x64@7.0.2':
++    resolution: {integrity: sha512-dLJDGaLZ1D4HPQn62u1n8mBDkJREwMsAkCdkwd4Ieqw+x3TUyTsqY0YiBCtE6H6OzzgGk3iuZ3vFWRS+E8/d1g==}
++    engines: {node: '>=16.20.0'}
++    cpu: [x64]
++    os: [sunos]
++
++  '@typescript/typescript-win32-arm64@7.0.2':
++    resolution: {integrity: sha512-Gyl1Vy6OsWesLzmq+EP0Fb7b4Nid5232AvcA2SFcdYreldpNtYFFofPjnt62y9hQy7VTaZp65ICJjuAQRaVcIQ==}
++    engines: {node: '>=16.20.0'}
++    cpu: [arm64]
++    os: [win32]
++
++  '@typescript/typescript-win32-x64@7.0.2':
++    resolution: {integrity: sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g==}
++    engines: {node: '>=16.20.0'}
++    cpu: [x64]
++    os: [win32]
++
++  '@typescript/typescript6@6.0.2':
++    resolution: {integrity: sha512-mbCddXd+jm7hfx7w2YU64/Av4/NqqeG3GoRZgxPcgoTxYjhrcfJRw9ULch71SS4G+Q3bOXFhRvPqjguN0Hyp5w==}
++    hasBin: true
++
+   '@vitejs/plugin-react@6.0.5':
+     resolution: {integrity: sha512-BOVzne/NL162sMdResB25mUv+vWMF5NoAjNf09TeGlE7ZpszZWSD3winycicLJw72yeVsoCn/2kOhEuCvEShMA==}
+     engines: {node: ^20.19.0 || >=22.12.0}
+@@ -5024,6 +5154,11 @@ packages:
+     engines: {node: '>=14.17'}
+     hasBin: true
+ 
++  typescript@7.0.2:
++    resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
++    engines: {node: '>=16.20.0'}
++    hasBin: true
++
+   unbash@4.0.10:
+     resolution: {integrity: sha512-b7zoBQvpWp0vuN5q2vK2RRBR2SvuruQAs50DApdDveBSn3eSYd84IaHodFqQIMlvY9K2VnyBUEXgwOBuGU9GBg==}
+     engines: {node: '>=14'}
+@@ -5670,12 +5805,12 @@ snapshots:
+     dependencies:
+       css-tree: 3.2.1
+ 
+-  '@commitlint/cli@21.2.2(@types/node@24.13.3)(conventional-commits-parser@7.1.2)(typescript@6.0.2)':
++  '@commitlint/cli@21.2.2(@types/node@24.13.3)(@typescript/typescript6@6.0.2)(conventional-commits-parser@7.1.2)':
+     dependencies:
+       '@commitlint/config-conventional': 21.2.2
+       '@commitlint/format': 21.2.2
+       '@commitlint/lint': 21.2.2
+-      '@commitlint/load': 21.2.2(@types/node@24.13.3)(typescript@6.0.2)
++      '@commitlint/load': 21.2.2(@types/node@24.13.3)(@typescript/typescript6@6.0.2)
+       '@commitlint/read': 21.2.1(conventional-commits-parser@7.1.2)
+       '@commitlint/types': 21.2.0
+       tinyexec: 1.3.0
+@@ -5720,14 +5855,14 @@ snapshots:
+       '@commitlint/rules': 21.2.2
+       '@commitlint/types': 21.2.0
+ 
+-  '@commitlint/load@21.2.2(@types/node@24.13.3)(typescript@6.0.2)':
++  '@commitlint/load@21.2.2(@types/node@24.13.3)(@typescript/typescript6@6.0.2)':
+     dependencies:
+       '@commitlint/config-validator': 21.2.0
+       '@commitlint/execute-rule': 21.0.1
+       '@commitlint/resolve-extends': 21.2.2
+       '@commitlint/types': 21.2.0
+-      cosmiconfig: 9.0.2(typescript@6.0.2)
+-      cosmiconfig-typescript-loader: 6.3.0(@types/node@24.13.3)(cosmiconfig@9.0.2(typescript@6.0.2))(typescript@6.0.2)
++      cosmiconfig: 9.0.2(@typescript/typescript6@6.0.2)
++      cosmiconfig-typescript-loader: 6.3.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2)(cosmiconfig@9.0.2(@typescript/typescript6@6.0.2))
+       es-toolkit: 1.50.0
+       is-plain-obj: 4.1.0
+       picocolors: 1.1.1
+@@ -7314,6 +7449,70 @@ snapshots:
+       '@types/node': 26.2.0
+     optional: true
+ 
++  '@typescript/typescript-aix-ppc64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-darwin-arm64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-darwin-x64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-freebsd-arm64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-freebsd-x64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-linux-arm64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-linux-arm@7.0.2':
++    optional: true
++
++  '@typescript/typescript-linux-loong64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-linux-mips64el@7.0.2':
++    optional: true
++
++  '@typescript/typescript-linux-ppc64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-linux-riscv64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-linux-s390x@7.0.2':
++    optional: true
++
++  '@typescript/typescript-linux-x64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-netbsd-arm64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-netbsd-x64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-openbsd-arm64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-openbsd-x64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-sunos-x64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-win32-arm64@7.0.2':
++    optional: true
++
++  '@typescript/typescript-win32-x64@7.0.2':
++    optional: true
++
++  '@typescript/typescript6@6.0.2':
++    dependencies:
++      '@typescript/old': typescript@6.0.2
++
+   '@vitejs/plugin-react@6.0.5(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.50.0)(tsx@4.23.13)(yaml@2.9.0))':
+     dependencies:
+       '@rolldown/pluginutils': 1.0.1
+@@ -7781,21 +7980,21 @@ snapshots:
+ 
+   convert-source-map@2.0.0: {}
+ 
+-  cosmiconfig-typescript-loader@6.3.0(@types/node@24.13.3)(cosmiconfig@9.0.2(typescript@6.0.2))(typescript@6.0.2):
++  cosmiconfig-typescript-loader@6.3.0(@types/node@24.13.3)(@typescript/typescript6@6.0.2)(cosmiconfig@9.0.2(@typescript/typescript6@6.0.2)):
+     dependencies:
+       '@types/node': 24.13.3
+-      cosmiconfig: 9.0.2(typescript@6.0.2)
++      cosmiconfig: 9.0.2(@typescript/typescript6@6.0.2)
+       jiti: 2.6.1
+-      typescript: 6.0.2
++      typescript: '@typescript/typescript6@6.0.2'
+ 
+-  cosmiconfig@9.0.2(typescript@6.0.2):
++  cosmiconfig@9.0.2(@typescript/typescript6@6.0.2):
+     dependencies:
+       env-paths: 2.2.1
+       import-fresh: 3.3.1
+       js-yaml: 4.3.1
+       parse-json: 5.2.0
+     optionalDependencies:
+-      typescript: 6.0.2
++      typescript: '@typescript/typescript6@6.0.2'
+ 
+   cross-dirname@0.1.0: {}
+ 
+@@ -9834,6 +10033,29 @@ snapshots:
+ 
+   typescript@6.0.2: {}
+ 
++  typescript@7.0.2:
++    optionalDependencies:
++      '@typescript/typescript-aix-ppc64': 7.0.2
++      '@typescript/typescript-darwin-arm64': 7.0.2
++      '@typescript/typescript-darwin-x64': 7.0.2
++      '@typescript/typescript-freebsd-arm64': 7.0.2
++      '@typescript/typescript-freebsd-x64': 7.0.2
++      '@typescript/typescript-linux-arm': 7.0.2
++      '@typescript/typescript-linux-arm64': 7.0.2
++      '@typescript/typescript-linux-loong64': 7.0.2
++      '@typescript/typescript-linux-mips64el': 7.0.2
++      '@typescript/typescript-linux-ppc64': 7.0.2
++      '@typescript/typescript-linux-riscv64': 7.0.2
++      '@typescript/typescript-linux-s390x': 7.0.2
++      '@typescript/typescript-linux-x64': 7.0.2
++      '@typescript/typescript-netbsd-arm64': 7.0.2
++      '@typescript/typescript-netbsd-x64': 7.0.2
++      '@typescript/typescript-openbsd-arm64': 7.0.2
++      '@typescript/typescript-openbsd-x64': 7.0.2
++      '@typescript/typescript-sunos-x64': 7.0.2
++      '@typescript/typescript-win32-arm64': 7.0.2
++      '@typescript/typescript-win32-x64': 7.0.2
++
+   unbash@4.0.10: {}
+ 
+   underscore@1.13.8: {}
+diff --git a/pnpm-workspace.yaml b/pnpm-workspace.yaml
+index 5982f50..71e3469 100644
+--- a/pnpm-workspace.yaml
++++ b/pnpm-workspace.yaml
+@@ -43,6 +43,7 @@ catalog:
+   "@types/node": 24.13.3
+   "@types/react": 19.2.18
+   "@types/react-dom": 19.2.4
++  "@typescript/native": npm:typescript@7.0.2
+   "@vitejs/plugin-react": 6.0.5
+   "@vitest/coverage-v8": 4.1.10
+   dependency-cruiser: 18.2.0
+@@ -62,7 +63,7 @@ catalog:
+   pino-pretty: 13.1.3
+   react: 19.2.8
+   react-dom: 19.2.8
+-  typescript: 6.0.2
++  typescript: npm:@typescript/typescript6@6.0.2
+   vite: 8.2.1
+   vitest: 4.1.10
+ 
+diff --git a/renovate.json b/renovate.json
+index da8f6cc..12f1e2f 100644
+--- a/renovate.json
++++ b/renovate.json
+@@ -21,6 +21,18 @@
+       "description": "Group Sentry SDK updates",
+       "matchPackageNames": ["@sentry/**"],
+       "groupName": "sentry"
++    },
++    {
++      "description": "TypeScript and the Effect build move together, each bump approved after the tsc.exe hash check",
++      "matchPackageNames": [
++        "typescript",
++        "@typescript/native",
++        "@typescript/typescript6",
++        "@effect/tsgo",
++        "@effect/tsgo-*"
++      ],
++      "groupName": "typescript and effect-tsgo",
++      "dependencyDashboardApproval": true
+     }
+   ]
+ }
+diff --git a/stryker.effect-gate.config.json b/stryker.effect-gate.config.json
+new file mode 100644
+index 0000000..a28dc44
+--- /dev/null
++++ b/stryker.effect-gate.config.json
+@@ -0,0 +1,26 @@
++{
++  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
++  "mutate": ["apps/harness/scripts/check-effect-diagnostics.mjs"],
++  "testRunner": "vitest",
++  "plugins": ["@stryker-mutator/vitest-runner"],
++  "vitest": {
++    "configFile": "apps/harness/vitest.effect-gate-mutation.config.ts",
++    "related": false
++  },
++  "coverageAnalysis": "perTest",
++  "ignoreStatic": true,
++  "incremental": false,
++  "concurrency": 4,
++  "reporters": ["json", "html"],
++  "jsonReporter": {
++    "fileName": "reports/mutation/effect-gate.json"
++  },
++  "htmlReporter": {
++    "fileName": "reports/mutation/effect-gate.html"
++  },
++  "thresholds": {
++    "high": 90,
++    "low": 80,
++    "break": 80
++  }
++}
+diff --git a/stryker.project-storage.config.json b/stryker.project-storage.config.json
+index d2d9ef7..45060b1 100644
+--- a/stryker.project-storage.config.json
++++ b/stryker.project-storage.config.json
+@@ -47,13 +47,7 @@
+     "apps/harness/src/storage/project-storage-node-errors.ts",
+     "apps/harness/src/storage/project-storage-upgrade-node-adapter.ts:558-564",
+     "apps/harness/src/registration/registry-database.ts:79-90",
+-    "apps/harness/src/registration/registration-registry.ts:182-200",
+-    "apps/harness/scripts/check-effect-diagnostics.mjs:19-22",
+-    "apps/harness/scripts/check-effect-diagnostics.mjs:41-63",
+-    "apps/harness/scripts/check-effect-diagnostics.mjs:157-175",
+-    "apps/harness/scripts/check-effect-diagnostics.mjs:191-191",
+-    "apps/harness/scripts/check-effect-diagnostics.mjs:215-253",
+-    "apps/harness/scripts/check-effect-diagnostics.mjs:256-262"
++    "apps/harness/src/registration/registration-registry.ts:182-200"
+   ],
+   "testRunner": "vitest",
+   "plugins": ["@stryker-mutator/vitest-runner"],

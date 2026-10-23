@@ -1,0 +1,5 @@
+::warning file=C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/planted/src/a.ts,line=2,col=14,endLine=2,endColumn=20,title=anyUnknownInErrorContext::This has unknown in the error channel which is not recommended.%0AHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.
+::error file=C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/planted/src/a.ts,line=2,col=23,endLine=2,endColumn=40,title=unknownInEffectCatch::The `catch` callback in `Effect.tryPromise` returns `unknown`, so the Effect error type stays untyped. A specific typed error preserves error-channel information, for example by narrowing the value or wrapping it in `Data.TaggedError`.
+::warning file=C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/planted/src/a.ts,line=2,col=23,endLine=2,endColumn=100,title=anyUnknownInErrorContext::This has unknown in the error channel which is not recommended.%0AHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.
+Checked 1 files out of 1 files. 
+1 errors, 2 warnings and 0 messages.

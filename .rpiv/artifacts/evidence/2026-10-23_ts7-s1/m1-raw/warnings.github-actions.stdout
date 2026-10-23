@@ -1,0 +1,4 @@
+::warning file=C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/warnings/src/a.ts,line=2,col=14,endLine=2,endColumn=21,title=anyUnknownInErrorContext::This has unknown in the error channel which is not recommended.%0AHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.
+::warning file=C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/warnings/src/a.ts,line=2,col=24,endLine=2,endColumn=49,title=anyUnknownInErrorContext::This has unknown in the error channel which is not recommended.%0AHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.
+Checked 1 files out of 1 files. 
+0 errors, 2 warnings and 0 messages.

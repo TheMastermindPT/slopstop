@@ -13,7 +13,7 @@ status: in-review
 last_updated: 2026-10-23T01:30:00+0100
 last_updated_by: Pedro Mesquita
 last_updated_note: "Pedro's §143 decisions applied before approval: lane normal, Q1 (a) one slice, Q2 (b) gate moves to effect-tsgo diagnostics mode with opening measurement M1 and a stop rule, Q3 (a), Q4 (a), Q5 (a). Earlier: lean brief written, lane rigorous inherited, Q1-Q5 open."
-content_hash: a5218b3a8d2caee8bbcf59944ee55ec68023f812bc025be110f0c03bc16fbce2
+content_hash: 411b3efe7090f517890db338c15d28a4731d7f7eb4ec5a9b49be85cc03c6a1d3
 ---
 
 # Design: #105 TypeScript 7 compiler switch
@@ -212,6 +212,24 @@ A: First version written with lane rigorous (inherited) and Q1-Q5 open (`content
 - Q5 (a): one Renovate group with `dependencyDashboardApproval` (D11).
 - Approach check: `not run (lane normal, Pedro's decision)`.
 - Intent approval is distinct from build authority; branch and worktree wait for Pedro (§143).
+
+**Implementation (ts7-s1-compiler-switch, 2026-10-23, implementer; decisions through the coordinator):**
+- TS7-B2 `type-only import` row dropped (Pedro, (b)). Its oracle was false before the switch too: `dependency-cruiser.config.cjs` has no `tsPreCompilationDeps`, so `check:boundaries` ignores `import type`; turning it on gives 9 type-only `no-circular` errors and no cross-app one. Issue #141 holds the gap. The `value import` row keeps the parse proof.
+- M1 run on Windows with the CPU rule not met (Windows Search indexing; no game); Pedro told the implementer directly to go ahead. Result: `--format json`; exit 0 = no error-level entry, exit 1 = errors found or a broken run.
+- M1 stop-rule call (coordinator, disclosed to Pedro): D3's "distinguishable exits" is met by exit code plus output shape. The gate needs a complete JSON report whose summary counts match its entries, with exit 0 = 0 errors and exit 1 = more than 0. Anything else is `EFFECT_GATE_BROKEN`, and a `DiscoveryError` line is `EFFECT_GATE_BINARY_MISSING`. Diagnostics mode does not report plain type errors (M1 case 6); `pnpm typecheck` owns them.
+- Deviation from the TS7-B3 oracle text (spawn `cwd` and `--project` form): the gate spawns `effect-tsgo` with `cwd` set to the repository that holds the script, and passes `--project` as the absolute `<root>/<project>/tsconfig.json`. `effect-tsgo` finds TypeScript 7 only from its working directory (M1 case 8), so a `cwd` of a temporary root is a discovery failure. When `root` is the repository, the run is the same as the brief's.
+- The gate's mutation scope moves out of `stryker.project-storage.config.json`, whose ranges pointed at the old script, into `stryker.effect-gate.config.json`.
+
+**Candidate review round 1 (slice-verifier, candidate `5ad6553`, 2026-10-23): passed, 0 violations, 3 warnings; coordinator triage disclosed to Pedro; no round 2.**
+- V1, D4 correction: VS Code no longer gets TypeScript 6.0.2. The alias puts the `@typescript/typescript6` wrapper at `node_modules/typescript`, whose `lib/` has no `tsserver.js`, so `typescript.tsdk` (`.vscode/settings.json:8`, unchanged) is not a valid workspace TypeScript, and VS Code uses its own bundled TypeScript (version not pinned). D4's and the table's "editor's built-in TypeScript stays 6.0.2" is replaced by that; the editor stays advisory. `AGENTS.md` is reworded accordingly.
+- V2: `pnpm check:dead-code` (exit 0) and `pnpm check:duplicates` (0 clones) recorded at `5ad6553`; no `knip.jsonc` entry needed.
+- V3: "passes on the repository" takes about 7.6 s alone (15 s bound, unchanged); only its comment is updated.
+- Brief text corrections: in M1 the discovery failure's `DiscoveryError` line is on stdout, not stderr (TS7-B3 `discovery failure` row). Discovery is done by the `effect-tsgo` CLI from its working directory by TypeScript major version and file hash (`dist/effect-tsgo.cjs`), not by `lib/getExePath.js` gitHead matching as the Architecture section says.
+- Mutation: Pedro dropped M2 and the scoped gate-script mutation ("esquece a mutacao", 2026-10-23). #139's "every mutant killed or equivalent" and D10 stay unproven residuals.
+
+## TDD Evidence (implement)
+
+- ts7-s1-compiler-switch: `.rpiv/artifacts/evidence/2026-10-23_ts7-s1/` (toolchain red/green logs, `defender-and-hashes.log`, `m1-diagnostics-format.md` and `m1-raw/`, `b3-red-scaffold.log`, `green.log`, `bindings/`, `bindings-real/`, `codescene.log`).
 
 ## References
 

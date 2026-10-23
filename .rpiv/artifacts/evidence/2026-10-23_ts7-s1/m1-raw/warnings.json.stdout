@@ -1,0 +1,38 @@
+{
+  "diagnostics": [
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/warnings/src/a.ts",
+      "start": 46,
+      "length": 7,
+      "line": 2,
+      "column": 14,
+      "endLine": 2,
+      "endColumn": 21,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/warnings/src/a.ts",
+      "start": 56,
+      "length": 25,
+      "line": 2,
+      "column": 24,
+      "endLine": 2,
+      "endColumn": 49,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    }
+  ],
+  "summary": {
+    "filesChecked": 1,
+    "filesWithoutPlugin": 0,
+    "totalFiles": 1,
+    "errors": 0,
+    "warnings": 2,
+    "messages": 0
+  }
+}

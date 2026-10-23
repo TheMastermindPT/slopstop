@@ -27,6 +27,7 @@ Explanations and status updates must be in plain Portuguese (Portugal). The user
 ## Environment
 
 - Windows 11 development with Docker available.
+- On Windows, every checkout or worktree needs a Microsoft Defender folder exclusion for `node_modules\@effect\tsgo-win32-x64` before `pnpm install` or any Effect gate run: Defender quarantines the Effect build's `tsc.exe` (`artifacts/typescript/7.0.2/tsc.exe`, which `pnpm check:effect` runs). On every `@effect/tsgo` or `@typescript/native` bump, the coordinator checks each installed `tsc.exe` against the npm tarball hash before any run.
 - Stack tooling: pnpm, Biome, Vitest + StrykerJS, Knip, dependency-cruiser, likeC4 (likec4 CLI is global).
 - Work on feature branches. The user may push with GitHub Desktop or the CLI.
 - Product is in active development, not hosted or in production.
@@ -75,7 +76,7 @@ The project migrates fully to Effect, incrementally: new code and every code pat
 - The renderer (React) does not run an Effect runtime. It may use protocol schemas and types.
 - Tests provide fakes through `Effect.provideService` or test Layers. Fakes fail with `Effect.fail`, never `throw`, and time-based tests use `TestClock`, not real sleeps.
 - Reviewers check these rules on new and touched code.
-- Type checking authority: `pnpm typecheck` (the project's TypeScript, currently 6.0.2) is the type-checking authority. The editor and agent LSP is Effect tsgo (TypeScript-Go 7 plus the Effect language service, enabled by the `@effect/language-service` plugin in `tsconfig.base.json`). In the editor, an error that only the LSP reports is advisory: investigate it. `pnpm check:effect`, which runs inside `pnpm check`, runs the same Effect build in tsc mode and blocks on every error it reports: each `error`-level Effect diagnostic, and any other error, including a type error that only TypeScript-Go reports, which the gate reports as a broken run and never as clean. Effect `warning` diagnostics stay advice unless a reviewer and the user promote one to a rule.
+- Type checking authority: `pnpm typecheck` is the type-checking authority. It runs TypeScript 7.0.2 (TypeScript-Go, `tsc` from the `@typescript/native` alias) and owns every plain type error. The `typescript` package stays TypeScript 6.0.2 (`@typescript/typescript6`, binary `tsc6`) only for tools that need the TypeScript JavaScript API, such as dependency-cruiser; it is not a gate. The VS Code editor's TypeScript is the one VS Code bundles (version not pinned: the `typescript.tsdk` folder holds no `tsserver.js` under the alias). That TypeScript and the editor and agent LSP, Effect tsgo (TypeScript-Go 7 plus the Effect language service, enabled by the `@effect/language-service` plugin in `tsconfig.base.json`), are advisory: investigate an error only they report. `pnpm check:effect`, which runs inside `pnpm check`, runs `effect-tsgo diagnostics --format json` on the canary and the four packages and blocks on every `error`-level Effect diagnostic and on every broken run: an unknown exit, output that is not one complete report, or a TypeScript 7 or Effect build it cannot find, never reported as clean. It does not report plain type errors; `pnpm typecheck` does. Effect `warning` diagnostics stay advice unless a reviewer and the user promote one to a rule.
 
 ## Test Discipline
 

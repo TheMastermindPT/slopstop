@@ -1,0 +1,6 @@
+# CodeScene, 2026-10-23, on the candidate working tree
+code_health_review apps/harness/scripts/check-effect-diagnostics.mjs -> {"score":10.0,"review":[]}
+code_health_review apps/harness/scripts/check-effect-diagnostics.test.mjs -> first {"score":9.68,...Excess Number of Function Arguments: entry, 5}; after entry([...]) -> {"score":10.0,"review":[]}
+code_health_score apps/harness/scripts/check-boundaries-parse.test.mjs -> Code Health score: 10
+code_health_score apps/harness/vitest.effect-gate-mutation.config.ts -> Could not determine Code Health score. (config file, no functions)
+code_health_score apps/harness/vitest.project-storage-mutation.config.ts -> Could not determine Code Health score. (config file, no functions)

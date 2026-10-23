@@ -1,0 +1,2 @@
+[02:49:08.424] ERROR (#1): DiscoveryError: Unable to discover an installed typescript binary.
+    at C:\Users\pedro\Documents\GitHub\slopstop-105\node_modules\@effect\tsgo\dist\effect-tsgo.cjs:54240:116

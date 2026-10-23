@@ -1,0 +1,155 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-105
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (62 tests | 6 failed | 44 skipped) 89ms
+   × classifies a diagnostics run: 'missing tsconfig' 13ms
+   × classifies a diagnostics run: 'invalid tsconfig' 2ms
+   × classifies a diagnostics run: 'discovery failure' 2ms
+   × classifies a diagnostics run: 'unparseable output' 2ms
+   × classifies a diagnostics run: 'found exit with no entry' 2ms
+   × classifies a diagnostics run: 'counts disagree with entries' 40ms
+
+ Test Files  1 failed | 6 passed | 34 skipped (41)
+      Tests  6 failed | 72 passed | 989 skipped (1067)
+   Start at  02:56:59
+   Duration  4.27s (transform 9.02s, setup 0ms, import 31.98s, tests 189ms, environment 7ms)
+
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'missing tsconfig'
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'invalid tsconfig'
+AssertionError: expected { ok: true, warnings: +0, …(1) } to deeply equal { ok: false, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "lines": [
+-     "first: exit 1 with unreadable output",
+-     "No files to check. Please provide an existing .ts file or a project tsconfig.json",
++   "ok": true,
++   "projects": [
++     "first",
++     "second",
+    ],
+-   "ok": false,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:497:56
+    495|   const expected = row.result.ok ? { ...row.result, projects: ["first"…
+    496|   if (row.result.lines === undefined) expect(result).toMatchObject(exp…
+    497|   else if (row.lineCount === undefined) expect(result).toEqual(expecte…
+       |                                                        ^
+    498|   else {
+    499|     expect(result).toMatchObject({ ok: false, code: row.result.code });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'discovery failure'
+AssertionError: expected { ok: true, warnings: +0, …(1) } to deeply equal { ok: false, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BINARY_MISSING",
+-   "lines": [
+-     "first: [02:49:08.424] ERROR (#1): DiscoveryError: Unable to discover an installed typescript binary.",
++   "ok": true,
++   "projects": [
++     "first",
++     "second",
+    ],
+-   "ok": false,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:497:56
+    495|   const expected = row.result.ok ? { ...row.result, projects: ["first"…
+    496|   if (row.result.lines === undefined) expect(result).toMatchObject(exp…
+    497|   else if (row.lineCount === undefined) expect(result).toEqual(expecte…
+       |                                                        ^
+    498|   else {
+    499|     expect(result).toMatchObject({ ok: false, code: row.result.code });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'unparseable output'
+AssertionError: expected { ok: true, warnings: +0, …(1) } to match object { ok: false, …(1) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:499:20
+    497|   else if (row.lineCount === undefined) expect(result).toEqual(expecte…
+    498|   else {
+    499|     expect(result).toMatchObject({ ok: false, code: row.result.code });
+       |                    ^
+    500|     expect(result.lines.slice(0, 3)).toEqual(row.result.lines);
+    501|     expect(result.lines).toHaveLength(row.lineCount);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'found exit with no entry'
+AssertionError: expected { ok: true, warnings: +0, …(1) } to deeply equal { ok: false, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "lines": [
+-     "first: exit 1 with unreadable output",
++   "ok": true,
++   "projects": [
++     "first",
++     "second",
+    ],
+-   "ok": false,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:497:56
+    495|   const expected = row.result.ok ? { ...row.result, projects: ["first"…
+    496|   if (row.result.lines === undefined) expect(result).toMatchObject(exp…
+    497|   else if (row.lineCount === undefined) expect(result).toEqual(expecte…
+       |                                                        ^
+    498|   else {
+    499|     expect(result).toMatchObject({ ok: false, code: row.result.code });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'counts disagree with entries'
+AssertionError: expected { ok: true, warnings: +0, …(1) } to match object { ok: false, …(1) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:496:54
+    494|   });
+    495|   const expected = row.result.ok ? { ...row.result, projects: ["first"…
+    496|   if (row.result.lines === undefined) expect(result).toMatchObject(exp…
+       |                                                      ^
+    497|   else if (row.lineCount === undefined) expect(result).toEqual(expecte…
+    498|   else {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+

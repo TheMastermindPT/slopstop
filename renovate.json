@@ -21,6 +21,18 @@
       "description": "Group Sentry SDK updates",
       "matchPackageNames": ["@sentry/**"],
       "groupName": "sentry"
+    },
+    {
+      "description": "TypeScript and the Effect build move together, each bump approved after the tsc.exe hash check",
+      "matchPackageNames": [
+        "typescript",
+        "@typescript/native",
+        "@typescript/typescript6",
+        "@effect/tsgo",
+        "@effect/tsgo-*"
+      ],
+      "groupName": "typescript and effect-tsgo",
+      "dependencyDashboardApproval": true
     }
   ]
 }

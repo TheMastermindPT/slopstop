@@ -1,0 +1,10 @@
+C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/canary-noplugin/src/canary.ts(3,24): error effect(newPromise): This code constructs `new Promise(...)`, prefer Effect APIs such as `Effect.async`, `Effect.promise`, or `Effect.tryPromise` instead of manual Promise construction.
+C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/canary-noplugin/src/canary.ts(4,14): warning effect(anyUnknownInErrorContext): This has unknown in the error channel which is not recommended.
+Having an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.
+C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/canary-noplugin/src/canary.ts(4,24): error effect(unknownInEffectCatch): The `catch` callback in `Effect.tryPromise` returns `unknown`, so the Effect error type stays untyped. A specific typed error preserves error-channel information, for example by narrowing the value or wrapping it in `Data.TaggedError`.
+C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/canary-noplugin/src/canary.ts(4,24): warning effect(anyUnknownInErrorContext): This has unknown in the error channel which is not recommended.
+Having an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.
+C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/canary-noplugin/src/planted.test.ts(1,30): error effect(newPromise): This code constructs `new Promise(...)`, prefer Effect APIs such as `Effect.async`, `Effect.promise`, or `Effect.tryPromise` instead of manual Promise construction.
+C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/canary-noplugin/tests/planted.ts(1,31): error effect(newPromise): This code constructs `new Promise(...)`, prefer Effect APIs such as `Effect.async`, `Effect.promise`, or `Effect.tryPromise` instead of manual Promise construction.
+Checked 3 files out of 3 files. 
+4 errors, 2 warnings and 0 messages.

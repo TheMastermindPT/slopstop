@@ -6,10 +6,6 @@ export default defineConfig({
     environment: "node",
     // registration-bootstrap-guards spawns Git and harness children; its usual limit (decisions log §75).
     testTimeout: 15_000,
-    // The two rows that run the real canary on the real tree fail only inside Stryker's sandbox;
-    // the mutation run skips them, `pnpm check` keeps them (coordinator, decisions log §139).
-    testNamePattern:
-      /^(?!.*(?:runs the canary before any package: real canary|passes on the repository)$)/,
     include: [
       "packages/protocol/src/project-storage-protocol.test.ts",
       "apps/harness/src/process-fatal-diagnostics.test.ts",
@@ -46,7 +42,6 @@ export default defineConfig({
       "apps/harness/src/storage/project-storage-upgrade-node-adapter.test.ts",
       "apps/harness/tests/integration/project-storage-upgrade-steps.integration.test.ts",
       "apps/harness/src/registration/registration-registry.test.ts",
-      "apps/harness/scripts/check-effect-diagnostics.test.mjs",
     ],
   },
 });

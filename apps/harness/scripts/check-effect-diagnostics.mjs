@@ -2,18 +2,15 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 /** The packages the gate checks, from the repository root. */
 const defaultProjects = ["packages/kernel", "packages/protocol", "apps/harness", "apps/desktop"];
 
-// `file(line,col): error|warning TSnnnn: message`; an Effect message ends with `effect(<rule>)`,
-// possibly on a later line.
-const diagnosticHeader = /^(.+)\((\d+),(\d+)\): (error|warning) TS\d+: /;
-const effectRule = /effect\((\w+)\)\s*$/;
-
-// The binary belongs to the repository that holds this script, not to the checked root.
+// The binary belongs to the repository that holds this script, not to the checked root. It runs
+// from that repository too: `effect-tsgo` finds TypeScript 7 from its working directory.
 const resolveFromScript = createRequire(import.meta.url).resolve;
+const toolRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
 /** A failure result whose `lines` name its cause, at most 20 of them. */
 function failure(code, lines) {
@@ -21,50 +18,66 @@ function failure(code, lines) {
   return { ok: false, code, lines: shown };
 }
 
-/** The Effect build's `lib/tsc`, or a failure naming the missing package or executable. */
+/** The `effect-tsgo` command-line script, or a failure naming the missing package or script. */
 function binaryPath(resolveModule, exists) {
-  const binaryPackage = `@effect/tsgo-${process.platform}-${process.arch}`;
   let manifest;
   try {
-    manifest = resolveModule(`${binaryPackage}/package.json`);
+    manifest = resolveModule("@effect/tsgo/package.json");
   } catch {
-    return { failure: failure("EFFECT_GATE_BINARY_MISSING", [`cannot resolve ${binaryPackage}`]) };
+    return { failure: failure("EFFECT_GATE_BINARY_MISSING", ["cannot resolve @effect/tsgo"]) };
   }
-  const binary = join(dirname(manifest), "lib", process.platform === "win32" ? "tsc.exe" : "tsc");
+  const binary = join(dirname(manifest), "dist", "effect-tsgo.cjs");
   if (!exists(binary)) {
     return { failure: failure("EFFECT_GATE_BINARY_MISSING", [`missing executable ${binary}`]) };
   }
   return { binary };
 }
 
-/** The diagnostic a header line opens, or undefined for a continuation line. */
-function diagnosticAt(line) {
-  const header = diagnosticHeader.exec(line);
-  if (!header) return undefined;
-  const [, file = "", lineNumber = "", column = "", severity = ""] = header;
-  return { file, line: Number(lineNumber), column: Number(column), severity };
-}
+const severities = ["error", "warning", "message"];
 
-/** The rule ends a diagnostic's last line; the first one found after its header is its rule. */
-function attachRule(current, line) {
-  const rule = effectRule.exec(line)?.[1];
-  if (current?.rule === undefined && rule) current.rule = rule;
-}
+/** One `--format json` entry with everything the gate reads from it. */
+const isEntry = (entry) =>
+  typeof entry?.file === "string" &&
+  Number.isInteger(entry.line) &&
+  Number.isInteger(entry.column) &&
+  severities.includes(entry.severity) &&
+  typeof entry.name === "string";
 
-/** Every diagnostic in the output, each with its Effect rule when it has one. */
-function parseDiagnostics(output) {
-  const diagnostics = [];
-  for (const line of output.split(/\r?\n/)) {
-    const opened = diagnosticAt(line);
-    if (opened) diagnostics.push(opened);
-    if (diagnostics.length > 0) attachRule(diagnostics.at(-1), line);
+/** The report's summary counts each severity exactly as its entries do. */
+const countsMatch = (summary, diagnostics) =>
+  severities.every(
+    (severity) =>
+      summary?.[`${severity}s`] ===
+      diagnostics.filter((entry) => entry.severity === severity).length,
+  );
+
+/**
+ * The diagnostics of one complete `--format json` report, paths relative to `root`; undefined
+ * for any output that is not such a report, so it can never read as clean.
+ */
+function readReport(stdout, root) {
+  let report;
+  try {
+    report = JSON.parse(stdout);
+  } catch {
+    return undefined;
   }
-  return diagnostics;
+  const diagnostics = report?.diagnostics;
+  if (!Array.isArray(diagnostics) || !diagnostics.every(isEntry)) return undefined;
+  if (!countsMatch(report.summary, diagnostics)) return undefined;
+  return diagnostics.map(({ file, line, column, severity, name }) => ({
+    file: relative(root, file).split("\\").join("/"),
+    line,
+    column,
+    severity,
+    rule: name,
+  }));
 }
 
 /** The binary was not started, was killed, or ended without an exit status. */
 const didNotFinish = (run) => Boolean(run.error ?? run.signal) || run.status === null;
-const isTscExit = (status) => status === 0 || status === 1;
+// `effect-tsgo diagnostics` exits 0 without error-level entries and 1 with them or on a failure.
+const isDiagnosticsExit = (status) => status === 0 || status === 1;
 const location = ({ file, line, column }) => `${file}(${line},${column})`;
 
 /** Why a run did not finish: its spawn error code, its signal, or a missing exit status. */
@@ -73,55 +86,72 @@ function unfinishedCause(run) {
   return run.signal ? `killed by ${run.signal}` : "no exit status";
 }
 
-/** One run of the binary on a project: a run that did not finish, or exited 2+, is a failure. */
+/**
+ * One run of the binary on a project. A run that did not finish, exited 2+, or printed anything
+ * but a complete report is a failure; a discovery failure names its cause.
+ */
 function spawnProject({ root, binary, spawn }, project) {
   const run = spawn(
-    binary,
-    ["--noEmit", "--pretty", "false", "-p", join(project, "tsconfig.json")],
-    {
-      cwd: root,
-      encoding: "utf8",
-    },
+    process.execPath,
+    [
+      binary,
+      "diagnostics",
+      "--project",
+      resolve(root, project, "tsconfig.json"),
+      "--format",
+      "json",
+    ],
+    { cwd: toolRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
   if (didNotFinish(run)) {
     return failure("EFFECT_GATE_BINARY_FAILED", [`${project}: ${unfinishedCause(run)}`]);
   }
-  if (!isTscExit(run.status)) {
+  if (!isDiagnosticsExit(run.status)) {
     return failure("EFFECT_GATE_BROKEN", [`${project}: exit ${run.status}`]);
   }
-  const output = [run.stdout ?? "", run.stderr ?? ""].join("\n");
-  return { status: run.status, output, diagnostics: parseDiagnostics(output) };
+  const diagnostics = readReport(run.stdout ?? "", root);
+  if (diagnostics === undefined) return unreadableRun(project, run);
+  return { status: run.status, diagnostics };
 }
 
-/** The first non-empty output lines, for a run whose output cannot be read as diagnostics. */
+/** The first non-empty output lines, for a run whose output cannot be read as a report. */
 const outputHead = (output) =>
   output
     .split(/\r?\n/)
     .filter((line) => line.trim() !== "")
     .slice(0, 10);
 
+/** No TypeScript 7 or no matching Effect build: `effect-tsgo` logs a `DiscoveryError` line. */
+const discoveryError = /DiscoveryError/;
+
+/** A run with no complete report: a discovery failure, or a broken run with its first lines. */
+function unreadableRun(project, run) {
+  const output = [run.stdout ?? "", run.stderr ?? ""].join("\n");
+  const discovery = output.split(/\r?\n/).find((line) => discoveryError.test(line));
+  if (discovery) return failure("EFFECT_GATE_BINARY_MISSING", [`${project}: ${discovery.trim()}`]);
+  const head = outputHead(output);
+  return failure("EFFECT_GATE_BROKEN", [
+    `${project}: exit ${run.status} with unreadable output`,
+    ...head,
+  ]);
+}
+
 /**
  * One package run, classified: a run that did not finish, or whose output cannot be trusted, is
- * a failure and never a clean result.
+ * a failure and never a clean result. Plain type errors are not in the report; `pnpm typecheck`
+ * owns them.
  */
 function runProject(context, project) {
   const run = spawnProject(context, project);
   if (run.code) return run;
   const { diagnostics, status } = run;
   const errors = diagnostics.filter((entry) => entry.severity === "error");
-  // Exit 1 names its errors and exit 0 has none; anything else is an untrustworthy run. An error
-  // that is not an Effect diagnostic is one too: the gate cannot report that tree as clean.
+  // Exit 1 reports its errors and exit 0 has none; anything else is an untrustworthy run.
   if (status === 1 && errors.length === 0) {
-    const head = outputHead(run.output);
-    return failure("EFFECT_GATE_BROKEN", [`${project}: exit 1 with no error line`, ...head]);
+    return failure("EFFECT_GATE_BROKEN", [`${project}: exit 1 with no error entry`]);
   }
   if (status === 0 && errors.length > 0) {
     const named = errors.map((entry) => `${project}: exit 0 with error ${location(entry)}`);
-    return failure("EFFECT_GATE_BROKEN", named);
-  }
-  const plain = errors.filter((entry) => entry.rule === undefined);
-  if (plain.length > 0) {
-    const named = plain.map((entry) => `${project}: non-Effect error ${location(entry)}`);
     return failure("EFFECT_GATE_BROKEN", named);
   }
   return { diagnostics };
@@ -143,35 +173,36 @@ const expectedCanary = [
 ];
 
 function canaryKey({ file, line, column, severity, rule }) {
-  const relative = file.split("\\").join("/").replace(`${canaryProject}/`, "");
-  return `${relative}(${line},${column}) ${severity} ${rule ?? "-"}`;
+  return `${file.replace(`${canaryProject}/`, "")}(${line},${column}) ${severity} ${rule}`;
 }
 
 const byText = (first, second) => first.localeCompare(second);
 
+/** The keys of `from` left after removing one copy of each key in `taken`, duplicates counted. */
+function remainder(from, taken) {
+  const left = [...taken];
+  return from.filter((key) => {
+    const index = left.indexOf(key);
+    if (index !== -1) left.splice(index, 1);
+    return index === -1;
+  });
+}
+
 /**
- * Runs the canary; any added, missing or moved diagnostic is a mismatch, never a pass. The
- * Effect build carries the plugin itself, so a removed or changed plugin block shows up here as
- * the defaults' diagnostics and exit code, which differ from the expected set.
+ * Runs the canary; any added, missing, duplicated or moved diagnostic is a mismatch, never a
+ * pass. A removed or changed plugin block shows up here as the defaults' diagnostics, which
+ * differ from the expected set.
  */
 function checkCanary(context) {
   const run = spawnProject(context, canaryProject);
   if (run.code) return run;
   const actual = run.diagnostics.map(canaryKey).sort(byText);
   const expected = [...expectedCanary].sort(byText);
-  const matched =
-    run.status === 1 &&
-    actual.length === expected.length &&
-    actual.every((key, index) => key === expected[index]);
-  return matched ? undefined : canaryMismatch(run.status, actual, expected);
-}
-
-/** The mismatch, naming each differing key and an exit status other than 1. */
-function canaryMismatch(status, actual, expected) {
-  const extra = actual.filter((key) => !expected.includes(key)).map((key) => `extra ${key}`);
-  const missing = expected.filter((key) => !actual.includes(key)).map((key) => `missing ${key}`);
-  const exit = status === 1 ? [] : [`canary exit ${status}`];
-  return failure("EFFECT_GATE_CANARY_MISMATCH", [...exit, ...extra, ...missing]);
+  const extra = remainder(actual, expected).map((key) => `extra ${key}`);
+  const missing = remainder(expected, actual).map((key) => `missing ${key}`);
+  const exit = run.status === 1 ? [] : [`canary exit ${run.status}`];
+  const lines = [...exit, ...extra, ...missing];
+  return lines.length === 0 ? undefined : failure("EFFECT_GATE_CANARY_MISMATCH", lines);
 }
 
 /**
@@ -189,9 +220,11 @@ function checkProjects(context, projects) {
   }
   // A pass names the packages it checked, in order.
   if (errors.length === 0) return { ok: true, warnings, projects: [...projects] };
-  const lines = errors.map((entry) => `${location(entry)} ${entry.rule}`);
+  // Every violation is listed: the 20-line cap is for the other failures only.
   return {
-    ...failure("EFFECT_GATE_VIOLATIONS", lines),
+    ok: false,
+    code: "EFFECT_GATE_VIOLATIONS",
+    lines: errors.map((entry) => `${location(entry)} ${entry.rule}`),
     violations: errors.map(({ file, line, rule }) => ({ file, line, rule })),
   };
 }
@@ -301,7 +334,8 @@ function checkWaivers(root) {
 }
 
 /**
- * Runs the Effect build of TypeScript-Go, in tsc mode, over each project and blocks on every
+ * Runs `effect-tsgo diagnostics --format json` (the Effect build of TypeScript-Go 7) over each
+ * project and blocks on every
  * `error`-level Effect diagnostic. Warnings are counted, never blocking. The full gate (no
  * `projects` given) first proves on the canary that the real configuration is active, then
  * checks the waiver register against the sources; a call that names its projects checks only

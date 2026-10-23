@@ -1,0 +1,90 @@
+{
+  "diagnostics": [
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/apps/desktop/src/main/package-smoke-authorization.ts",
+      "start": 509,
+      "length": 30,
+      "line": 13,
+      "column": 14,
+      "endLine": 13,
+      "endColumn": 44,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/apps/desktop/src/main/package-smoke-verifier.ts",
+      "start": 5978,
+      "length": 16,
+      "line": 207,
+      "column": 14,
+      "endLine": 207,
+      "endColumn": 30,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/apps/desktop/src/main/project-entry-bridge.ts",
+      "start": 4589,
+      "length": 14,
+      "line": 128,
+      "column": 11,
+      "endLine": 128,
+      "endColumn": 25,
+      "severity": "message",
+      "code": 377120,
+      "name": "flatMapConditionalToFilterOrFail",
+      "message": "`Effect.filterOrFail` expresses this conditional validation more directly than `Effect.flatMap` with an identity `Effect.succeed` branch."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/apps/desktop/src/main/project-storage-bridge.ts",
+      "start": 4214,
+      "length": 14,
+      "line": 120,
+      "column": 9,
+      "endLine": 120,
+      "endColumn": 23,
+      "severity": "message",
+      "code": 377120,
+      "name": "flatMapConditionalToFilterOrFail",
+      "message": "`Effect.filterOrFail` expresses this conditional validation more directly than `Effect.flatMap` with an identity `Effect.succeed` branch."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/apps/desktop/src/main/project-storage-package-smoke.ts",
+      "start": 1356,
+      "length": 31,
+      "line": 45,
+      "column": 7,
+      "endLine": 45,
+      "endColumn": 38,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/apps/desktop/src/main/registration-package-smoke.ts",
+      "start": 288,
+      "length": 29,
+      "line": 7,
+      "column": 14,
+      "endLine": 7,
+      "endColumn": 43,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    }
+  ],
+  "summary": {
+    "filesChecked": 135,
+    "filesWithoutPlugin": 0,
+    "totalFiles": 135,
+    "errors": 0,
+    "warnings": 4,
+    "messages": 2
+  }
+}

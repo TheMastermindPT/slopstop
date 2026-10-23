@@ -1,0 +1,33 @@
+{
+  "lspconfig": {
+    "ok": false,
+    "code": "EFFECT_GATE_CANARY_MISMATCH",
+    "lines": [
+      "canary exit 0",
+      "extra src/canary.ts(4,24) warning unknownInEffectCatch",
+      "extra src/canary.ts(6,4) warning effect(377000)",
+      "missing src/canary.ts(3,24) error newPromise",
+      "missing src/canary.ts(4,14) warning anyUnknownInErrorContext",
+      "missing src/canary.ts(4,24) error unknownInEffectCatch",
+      "missing src/canary.ts(4,24) warning anyUnknownInErrorContext"
+    ]
+  },
+  "lspconfigControl": {
+    "ok": true,
+    "warnings": 0,
+    "projects": [],
+    "canary": "matched"
+  },
+  "r25": {
+    "status": 1,
+    "stdout": "[ELIFECYCLE] Command failed with exit code 1.\n",
+    "stderr": "$ node apps/harness/scripts/check-effect-diagnostics.mjs\nEFFECT_GATE_VIOLATIONS\napps/harness/src/r2-5-planted.ts(2,24) unknownInEffectCatch\n"
+  },
+  "r25Removed": true,
+  "b2": {
+    "typescriptVersion": "7.0.2",
+    "status": 1,
+    "output": "\n RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-105\n\n ❯ |harness| scripts/check-boundaries-parse.test.mjs (2 tests | 2 failed) 139ms\n   × reports a forbidden TypeScript import: 'value import' 120ms\n   × reports a forbidden TypeScript import: 'allowed' 17ms\n\n Test Files  1 failed (1)\n      Tests  2 failed (2)\n   Start at  02:57:38\n   Duration  389ms (transform 17ms, setup 0ms, import 115ms, tests 139ms, environment 0ms)\n\n\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  |harness| scripts/check-boundaries-parse.test.mjs > reports a forbidden TypeScript import: 'value import'\nAssertionError: expected [] to deeply equal [ { …(3) } ]\n\n- Expected\n+ Received\n\n- [\n-   {\n-     \"from\": \"apps/desktop/src/a.ts\",\n-     \"rule\": \"no-app-to-app-imports\",\n-     \"to\": \"apps/harness/src/b.ts\",\n-   },\n- ]\n+ []\n\n ❯ scripts/check-boundaries-parse.test.mjs:65:32\n     63|   const output = await cruiseFixture();\n     64|\n     65|   expect(violationsOf(output)).toEqual(violations);\n       |                                ^\n     66|   expect(output.modules.map(({ source }) => source)).toContain(target);\n     67| });\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  |harness| scripts/check-boundaries-parse.test.mjs > reports a forbidden TypeScript import: 'allowed'\nAssertionError: expected [] to include 'apps/desktop/src/c.ts'\n ❯ scripts/check-boundaries-parse.test.mjs:66:54\n     64|\n     65|   expect(violationsOf(output)).toEqual(violations);\n     66|   expect(output.modules.map(({ source }) => source)).toContain(target);\n       |                                                      ^\n     67| });\n     68|\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n"
+  },
+  "b2Restored": "6.0.2 function"
+}

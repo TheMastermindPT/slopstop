@@ -1,0 +1,20 @@
+# Executable hashes vs npm tarballs (tarball entries streamed with tar -xO, never extracted), 2026-10-23
+@effect/tsgo-win32-x64@0.51.1 artifacts/typescript/7.0.2/tsc.exe  installed=npm=5875aa37ccb3237e82c47bb7fac02e801d3448e6b8c595e4f63414f9d9dee6e6
+@effect/tsgo-win32-x64@0.51.1 lib/tsc.exe                         installed=npm=5875aa37ccb3237e82c47bb7fac02e801d3448e6b8c595e4f63414f9d9dee6e6
+@effect/tsgo-win32-x64@0.51.1 artifacts/typescript/7.1.0-dev.20261006.1/tsc.exe installed=npm=e2d65a1b4e751c4b5e5ed667271196506bde9050035796ec8150da8905fa049a
+@typescript/typescript-win32-x64@7.0.2 lib/tsc.exe               installed=npm=f9ecfbdc93753d2c972d66a8d0d75f5bd737fd4a5f88b422d9091ea282bcb2c7
+# Get-MpThreatDetection (newest first) at 2026-10-23T02:41:39.8143813+01:00
+
+InitialDetectionTime : 10/18/2026 7:57:17 PM
+ThreatID             : 2147731849
+Res                  : file:_C:\Users\pedro\Documents\GitHub\slopstop\node_modules\@effect\tsgo-win32-x64\artifacts\typescript\7.0.2\tsc.exe;process:_pid:31960,ProcessStart:134367297329082596
+
+InitialDetectionTime : 10/17/2026 5:34:14 PM
+ThreatID             : 2147731849
+Res                  : file:_C:\Users\pedro\Documents\GitHub\slopstop\node_modules\@effect\tsgo-win32-x64\artifacts\typescript\7.0.2\tsc.exe;file:_C:\Users\pedro\Documents\GitHub\slopstop\node_modules\@effect\tsgo-win32-x64\lib\tsc.exe
+
+InitialDetectionTime : 10/17/2026 5:33:55 PM
+ThreatID             : 2147731849
+Res                  : file:_C:\Users\pedro\Documents\GitHub\slopstop\node_modules\@effect\tsgo-win32-x64\lib\tsc.exe
+
+

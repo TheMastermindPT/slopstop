@@ -1,0 +1,6 @@
+C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/warnings/src/a.ts(2,14): warning effect(anyUnknownInErrorContext): This has unknown in the error channel which is not recommended.
+Having an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.
+C:/Users/pedro/Documents/GitHub/slopstop-105/.m1-scratch/warnings/src/a.ts(2,24): warning effect(anyUnknownInErrorContext): This has unknown in the error channel which is not recommended.
+Having an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example.
+Checked 1 files out of 1 files. 
+0 errors, 2 warnings and 0 messages.

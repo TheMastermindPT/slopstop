@@ -1,0 +1,74 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-105
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (62 tests | 2 failed | 59 skipped) 16ms
+   × lists every violation: 21 8ms
+   × lists every violation: 25 3ms
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed | 59 skipped (62)
+   Start at  02:56:57
+   Duration  212ms (transform 36ms, setup 0ms, import 56ms, tests 16ms, environment 0ms)
+
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > lists every violation: 21
+AssertionError: expected [ …(20) ] to deeply equal [ …(21) ]
+
+- Expected
++ Received
+
+@@ -16,8 +16,7 @@
+    "first/src/a.ts(15,3) newPromise",
+    "first/src/a.ts(16,3) newPromise",
+    "first/src/a.ts(17,3) newPromise",
+    "first/src/a.ts(18,3) newPromise",
+    "first/src/a.ts(19,3) newPromise",
+-   "first/src/a.ts(20,3) newPromise",
+-   "first/src/a.ts(21,3) newPromise",
++   "… 2 more",
+  ]
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:528:24
+    526|   });
+    527|   expect(result).toMatchObject({ ok: false, code: "EFFECT_GATE_VIOLATI…
+    528|   expect(result.lines).toEqual(
+       |                        ^
+    529|     Array.from({ length: count }, (_, index) => `first/src/a.ts(${inde…
+    530|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > lists every violation: 25
+AssertionError: expected [ …(20) ] to deeply equal [ …(25) ]
+
+- Expected
++ Received
+
+@@ -16,12 +16,7 @@
+    "first/src/a.ts(15,3) newPromise",
+    "first/src/a.ts(16,3) newPromise",
+    "first/src/a.ts(17,3) newPromise",
+    "first/src/a.ts(18,3) newPromise",
+    "first/src/a.ts(19,3) newPromise",
+-   "first/src/a.ts(20,3) newPromise",
+-   "first/src/a.ts(21,3) newPromise",
+-   "first/src/a.ts(22,3) newPromise",
+-   "first/src/a.ts(23,3) newPromise",
+-   "first/src/a.ts(24,3) newPromise",
+-   "first/src/a.ts(25,3) newPromise",
++   "… 6 more",
+  ]
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:528:24
+    526|   });
+    527|   expect(result).toMatchObject({ ok: false, code: "EFFECT_GATE_VIOLATI…
+    528|   expect(result.lines).toEqual(
+       |                        ^
+    529|     Array.from({ length: count }, (_, index) => `first/src/a.ts(${inde…
+    530|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+

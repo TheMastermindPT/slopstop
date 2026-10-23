@@ -1,0 +1,33 @@
+{
+  "before": "1f38631e8bdc7eea9fa36d976da6b73b55813e9c73901756e7a3acdff4dcb5c0",
+  "summary": [
+    {
+      "id": "B4-violations-capped",
+      "exit": 1,
+      "failed": ["× lists every violation: 21 8ms", "× lists every violation: 25 3ms"],
+      "restored": true
+    },
+    {
+      "id": "B5-set-comparison",
+      "exit": 1,
+      "failed": [
+        "× names every canary difference: 'duplicated line' 18ms",
+        "× names every canary difference: 'duplicate replaces a line' 2ms"
+      ],
+      "restored": true
+    },
+    {
+      "id": "B3-unparseable-as-clean",
+      "exit": 1,
+      "failed": [
+        "× classifies a diagnostics run: 'missing tsconfig' 13ms",
+        "× classifies a diagnostics run: 'invalid tsconfig' 2ms",
+        "× classifies a diagnostics run: 'discovery failure' 2ms",
+        "× classifies a diagnostics run: 'unparseable output' 2ms",
+        "× classifies a diagnostics run: 'found exit with no entry' 2ms",
+        "× classifies a diagnostics run: 'counts disagree with entries' 40ms"
+      ],
+      "restored": true
+    }
+  ]
+}

@@ -1,0 +1,623 @@
+[
+  {
+    "id": "help.-",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--help"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 265
+  },
+  {
+    "id": "kernel.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "packages/kernel/tsconfig.json", "--format", "json"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 415
+  },
+  {
+    "id": "kernel.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "packages/kernel/tsconfig.json", "--format", "text"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 409
+  },
+  {
+    "id": "kernel.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "packages/kernel/tsconfig.json", "--format", "pretty"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 411
+  },
+  {
+    "id": "kernel.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "packages/kernel/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 413
+  },
+  {
+    "id": "protocol.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "packages/protocol/tsconfig.json", "--format", "json"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 761
+  },
+  {
+    "id": "protocol.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "packages/protocol/tsconfig.json", "--format", "text"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 765
+  },
+  {
+    "id": "protocol.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "packages/protocol/tsconfig.json", "--format", "pretty"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 771
+  },
+  {
+    "id": "protocol.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "packages/protocol/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 763
+  },
+  {
+    "id": "harness.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "apps/harness/tsconfig.json", "--format", "json"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 3649
+  },
+  {
+    "id": "harness.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "apps/harness/tsconfig.json", "--format", "text"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 3642
+  },
+  {
+    "id": "harness.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "apps/harness/tsconfig.json", "--format", "pretty"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 3657
+  },
+  {
+    "id": "harness.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "apps/harness/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 3720
+  },
+  {
+    "id": "desktop.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "apps/desktop/tsconfig.json", "--format", "json"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 2405
+  },
+  {
+    "id": "desktop.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "apps/desktop/tsconfig.json", "--format", "text"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 2382
+  },
+  {
+    "id": "desktop.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", "apps/desktop/tsconfig.json", "--format", "pretty"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 2419
+  },
+  {
+    "id": "desktop.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "apps/desktop/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 2395
+  },
+  {
+    "id": "canary.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "apps/harness/scripts/effect-diagnostics-canary/tsconfig.json",
+      "--format",
+      "json"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 410
+  },
+  {
+    "id": "canary.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "apps/harness/scripts/effect-diagnostics-canary/tsconfig.json",
+      "--format",
+      "text"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 413
+  },
+  {
+    "id": "canary.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "apps/harness/scripts/effect-diagnostics-canary/tsconfig.json",
+      "--format",
+      "pretty"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 421
+  },
+  {
+    "id": "canary.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "apps/harness/scripts/effect-diagnostics-canary/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 426
+  },
+  {
+    "id": "clean.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/clean/tsconfig.json", "--format", "json"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 431
+  },
+  {
+    "id": "clean.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/clean/tsconfig.json", "--format", "text"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 415
+  },
+  {
+    "id": "clean.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/clean/tsconfig.json", "--format", "pretty"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 396
+  },
+  {
+    "id": "clean.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/clean/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 402
+  },
+  {
+    "id": "planted.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/planted/tsconfig.json", "--format", "json"],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 464
+  },
+  {
+    "id": "planted.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/planted/tsconfig.json", "--format", "text"],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 425
+  },
+  {
+    "id": "planted.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/planted/tsconfig.json", "--format", "pretty"],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 488
+  },
+  {
+    "id": "planted.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/planted/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 454
+  },
+  {
+    "id": "warnings.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/warnings/tsconfig.json", "--format", "json"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 752
+  },
+  {
+    "id": "warnings.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/warnings/tsconfig.json", "--format", "text"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 692
+  },
+  {
+    "id": "warnings.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/warnings/tsconfig.json",
+      "--format",
+      "pretty"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 540
+  },
+  {
+    "id": "warnings.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/warnings/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 512
+  },
+  {
+    "id": "typeerror.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/typeerror/tsconfig.json", "--format", "json"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 434
+  },
+  {
+    "id": "typeerror.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/typeerror/tsconfig.json", "--format", "text"],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 648
+  },
+  {
+    "id": "typeerror.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/typeerror/tsconfig.json",
+      "--format",
+      "pretty"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 775
+  },
+  {
+    "id": "typeerror.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/typeerror/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "ms": 683
+  },
+  {
+    "id": "missing-tsconfig.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/nope/tsconfig.json", "--format", "json"],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 554
+  },
+  {
+    "id": "missing-tsconfig.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/nope/tsconfig.json", "--format", "text"],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 561
+  },
+  {
+    "id": "missing-tsconfig.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/nope/tsconfig.json", "--format", "pretty"],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 710
+  },
+  {
+    "id": "missing-tsconfig.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/nope/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 386
+  },
+  {
+    "id": "invalid-tsconfig.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/badjson/tsconfig.json", "--format", "json"],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 346
+  },
+  {
+    "id": "invalid-tsconfig.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/badjson/tsconfig.json", "--format", "text"],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 348
+  },
+  {
+    "id": "invalid-tsconfig.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": ["diagnostics", "--project", ".m1-scratch/badjson/tsconfig.json", "--format", "pretty"],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 327
+  },
+  {
+    "id": "invalid-tsconfig.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/badjson/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 338
+  },
+  {
+    "id": "canary-noplugin.json",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/canary-noplugin/tsconfig.json",
+      "--format",
+      "json"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 424
+  },
+  {
+    "id": "canary-noplugin.text",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/canary-noplugin/tsconfig.json",
+      "--format",
+      "text"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 453
+  },
+  {
+    "id": "canary-noplugin.pretty",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/canary-noplugin/tsconfig.json",
+      "--format",
+      "pretty"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 445
+  },
+  {
+    "id": "canary-noplugin.github-actions",
+    "cwd": "C:/Users/pedro/Documents/GitHub/slopstop-105",
+    "argv": [
+      "diagnostics",
+      "--project",
+      ".m1-scratch/canary-noplugin/tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 448
+  },
+  {
+    "id": "discovery.json",
+    "cwd": "C:/Users/pedro/AppData/Local/Temp/claude/C--Users-pedro-Documents-GitHub-slopstop/efeb1707-c443-446e-b550-bea0dae28245/scratchpad/m1-outside",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\Documents\\GitHub\\slopstop-105\\.m1-scratch\\clean\\tsconfig.json",
+      "--format",
+      "json"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 287
+  },
+  {
+    "id": "discovery.text",
+    "cwd": "C:/Users/pedro/AppData/Local/Temp/claude/C--Users-pedro-Documents-GitHub-slopstop/efeb1707-c443-446e-b550-bea0dae28245/scratchpad/m1-outside",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\Documents\\GitHub\\slopstop-105\\.m1-scratch\\clean\\tsconfig.json",
+      "--format",
+      "text"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 267
+  },
+  {
+    "id": "discovery.pretty",
+    "cwd": "C:/Users/pedro/AppData/Local/Temp/claude/C--Users-pedro-Documents-GitHub-slopstop/efeb1707-c443-446e-b550-bea0dae28245/scratchpad/m1-outside",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\Documents\\GitHub\\slopstop-105\\.m1-scratch\\clean\\tsconfig.json",
+      "--format",
+      "pretty"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 263
+  },
+  {
+    "id": "discovery.github-actions",
+    "cwd": "C:/Users/pedro/AppData/Local/Temp/claude/C--Users-pedro-Documents-GitHub-slopstop/efeb1707-c443-446e-b550-bea0dae28245/scratchpad/m1-outside",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\Documents\\GitHub\\slopstop-105\\.m1-scratch\\clean\\tsconfig.json",
+      "--format",
+      "github-actions"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null,
+    "ms": 282
+  }
+]

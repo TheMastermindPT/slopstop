@@ -1,0 +1,33 @@
+# B3/B4/B5/B6 red against the scaffold (spawn command switched to effect-tsgo diagnostics --format json, cwd = tool repo; old regex parser and classification kept). Supersedes an earlier scaffold run whose test file had lost expectNamedCause in a splice.
+# tree: 25bf597 + uncommitted; patch sha256 94de30ab4519aef248d17a44e135120ee8f84aad7cca1754c33263460a79b036
+   × fails on a planted Effect error: 'unknownInEffectCatch'
+   × fails on a planted Effect error: 'newPromise'
+   × classifies a diagnostics run: 'warnings only'
+   × classifies a diagnostics run: 'planted error'
+   × classifies a diagnostics run: 'missing tsconfig'
+   × classifies a diagnostics run: 'invalid tsconfig'
+   × classifies a diagnostics run: 'discovery failure'
+   × classifies a diagnostics run: 'unparseable output'
+   × classifies a diagnostics run: 'clean exit with an error entry'
+   × classifies a diagnostics run: 'found exit with no entry'
+   × classifies a diagnostics run: 'found exit with a clean report'
+   × classifies a diagnostics run: 'counts disagree with entries'
+   × lists every violation: 20
+   × lists every violation: 21
+   × lists every violation: 25
+   × runs the canary before any package: real canary
+   × runs the canary before any package: plugin removed, real compiler
+   × runs the canary before any package: 'extra diagnostic'
+   × runs the canary before any package: 'missing diagnostic'
+   × runs the canary before any package: 'override not applied'
+   × runs the canary before any package: 'exit 0 with the expected set'
+   × runs the canary before any package: 'missing the last expected diagnostic'
+   × runs the canary before any package: 'plugin removed'
+   × names every canary difference: 'duplicated line'
+   × names every canary difference: 'duplicate replaces a line'
+   × names every canary difference: 'moved'
+   × names every canary difference: 'clean exit, same set'
+   × names every canary difference: matched
+   × passes on the repository
+⎯⎯⎯⎯⎯⎯ Failed Tests 29 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  29 failed | 33 passed (62)

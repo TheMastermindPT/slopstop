@@ -1,0 +1,64 @@
+{
+  "diagnostics": [
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
+      "start": 98,
+      "length": 44,
+      "line": 3,
+      "column": 24,
+      "endLine": 3,
+      "endColumn": 68,
+      "severity": "error",
+      "code": 377080,
+      "name": "newPromise",
+      "message": "This code constructs `new Promise(...)`, prefer Effect APIs such as `Effect.async`, `Effect.promise`, or `Effect.tryPromise` instead of manual Promise construction."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
+      "start": 157,
+      "length": 7,
+      "line": 4,
+      "column": 14,
+      "endLine": 4,
+      "endColumn": 21,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
+      "start": 167,
+      "length": 17,
+      "line": 4,
+      "column": 24,
+      "endLine": 4,
+      "endColumn": 41,
+      "severity": "error",
+      "code": 377021,
+      "name": "unknownInEffectCatch",
+      "message": "The `catch` callback in `Effect.tryPromise` returns `unknown`, so the Effect error type stays untyped. A specific typed error preserves error-channel information, for example by narrowing the value or wrapping it in `Data.TaggedError`."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop-105/apps/harness/scripts/effect-diagnostics-canary/src/canary.ts",
+      "start": 167,
+      "length": 65,
+      "line": 4,
+      "column": 24,
+      "endLine": 4,
+      "endColumn": 89,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    }
+  ],
+  "summary": {
+    "filesChecked": 3,
+    "filesWithoutPlugin": 0,
+    "totalFiles": 3,
+    "errors": 2,
+    "warnings": 2,
+    "messages": 0
+  }
+}

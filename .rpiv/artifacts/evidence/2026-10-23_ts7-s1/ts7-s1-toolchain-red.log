@@ -1,0 +1,12 @@
+# TS7-B1 red at 25bf597d069094e04d6cfa75c0dd7c941a2f5858 (clean tree: 1 changes)
+$ pnpm exec tsc --version
+Version 6.0.2
+exit 0
+$ pnpm exec tsc6 --version
+'tsc6' is not recognized as an internal or external command,
+operable program or batch file.
+undefined
+exit 1
+$ node -e ts.version
+6.0.2 function
+exit 0

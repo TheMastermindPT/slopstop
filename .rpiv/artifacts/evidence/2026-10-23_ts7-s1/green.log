@@ -1,0 +1,68 @@
+# B2-B6 green (parser in place). tree: 25bf597 + uncommitted; patch sha256 cc63ef89119f8e888206478cfc1b93f9a7ed181069f0fb039aef5c48fbc8a522
+$ pnpm exec vitest run --project harness apps/harness/scripts/check-effect-diagnostics.test.mjs apps/harness/scripts/check-boundaries-parse.test.mjs --reporter verbose
+ ✓ |harness| scripts/check-boundaries-parse.test.mjs > reports a forbidden TypeScript import: 'value import' 203ms
+ ✓ |harness| scripts/check-boundaries-parse.test.mjs > reports a forbidden TypeScript import: 'allowed' 31ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'unknownInEffectCatch' 916ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'newPromise' 871ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'clean' 878ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'registered' 8ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive without entry' 8ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive without waiver line' 6ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'entry without directive' 6ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive under tests without entry' 6ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive under build without entry' 7ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive in a root config without en…' 6ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'registered under tests' 6ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'directive under node_modules is ignor…' 9ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'entry without reason' 6ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps the waiver register exact: 'entry without removeWhen' 5ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > scans every registered location: 'nested folder' 8ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > scans every registered location: 'packages area' 8ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > scans every registered location: 'root-level file' 5ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > scans every registered location: 'tests folder' 6ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > rejects an incomplete waiver entry: 'blank reason' 7ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > rejects an incomplete waiver entry: 'no removeWhen' 6ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > rejects an incomplete waiver entry: 'numeric reason' 6ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > runs effect-tsgo diagnostics on each project 2ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'clean' 2ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'warnings only' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'planted error' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'plain type error' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'missing tsconfig' 2ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'invalid tsconfig' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'discovery failure' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'unparseable output' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'clean exit with an error entry' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'found exit with no entry' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'found exit with a clean report' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'counts disagree with entries' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'unknown exit' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'killed' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'spawn error' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'no status' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'no effect-tsgo' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'missing effect-tsgo script' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > lists every violation: 20 2ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > lists every violation: 21 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > lists every violation: 25 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > caps other failure details at 20 lines: 20 9ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > caps other failure details at 20 lines: 21 8ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > caps other failure details at 20 lines: 25 8ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: real canary 423ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: plugin removed, real compiler 443ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'extra diagnostic' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'missing diagnostic' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'override not applied' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'exit 0 with the expected set' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'missing the last expected diagnostic' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'inactive language service' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: 'plugin removed' 2ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > names every canary difference: 'duplicated line' 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > names every canary difference: 'duplicate replaces a line' 2ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > names every canary difference: 'moved' 2ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > names every canary difference: 'clean exit, same set' 2ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > names every canary difference: matched 1ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > passes on the repository 7611ms
+ ✓ |harness| scripts/check-effect-diagnostics.test.mjs > keeps exactly the registered waivers 0ms
+      Tests  64 passed (64)
+   Duration  11.54s (transform 77ms, setup 0ms, import 404ms, tests 11.57s, environment 0ms)

@@ -1,0 +1,26 @@
+# TS7-B1 green on 25bf597 + switch (catalog/package.json/lockfile, uncommitted; patch sha256 f0f80644a2cfff2296d707e80b10e2148c00ffe38a8eac407549ade9c2473d49)
+$ pnpm exec tsc --version
+Version 7.0.2
+exit 0
+$ pnpm exec tsc6 --version
+Version 6.0.2
+exit 0
+$ node -e ts.version
+6.0.2 function
+exit 0
+$ pnpm typecheck
+$ pnpm -r --if-present typecheck
+Scope: 4 of 5 workspace projects
+packages/kernel typecheck$ tsc --noEmit -p tsconfig.json
+packages/kernel typecheck: Done
+packages/protocol typecheck$ tsc --noEmit -p tsconfig.json
+packages/protocol typecheck: Done
+apps/desktop typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck: Done
+apps/desktop typecheck: Done
+exit 0
+packages/kernel Version 7.0.2
+packages/protocol Version 7.0.2
+apps/desktop Version 7.0.2
+apps/harness Version 7.0.2

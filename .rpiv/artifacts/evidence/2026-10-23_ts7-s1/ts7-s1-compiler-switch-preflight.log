@@ -1,0 +1,26 @@
+preflight: findings
+finding: missing-test-file: TS7-B1 ts7-s1-toolchain.log
+finding: missing-test-file: TS7-B3 check-effect-diagnostics.test.mjs
+finding: missing-test-file: TS7-B4 check-effect-diagnostics.test.mjs
+finding: missing-test-file: TS7-B5 check-effect-diagnostics.test.mjs
+finding: missing-test-file: TS7-B6 check-effect-diagnostics.test.mjs
+unchecked: TS7-B3 line 132: result `{ ok: true, warnings: 0, projects: ["packages/kernel", "apps/desktop"] }`.
+unchecked: TS7-B4 line 150: 21 → the first 19 then exactly `… 2 more`
+unchecked: TS7-B4 line 150: 25 → the first 19 then `… 6 more`.
+unchecked: TS7-B6 line 162: `packages/y/src/a.ts` (both areas)
+unchecked: TS7-B6 line 162: a root-level `apps/x/a.ts`
+unchecked: TS7-B6 line 162: `apps/x/tests/a.ts`. And `apps/x/src/node_modules/z/a.ts` is not scanned (the kept S5B-R2-6 row).
+unchecked: TS7-B6 line 163: `removeWhen` missing
+unchecked: TS7-B6 line 163: `reason` a number → `EFFECT_GATE_BROKEN`, `lines` exactly `["<id>: missing reason"]` (or `removeWhen`).
+unchecked: TS7-B7 line 167: none (documentation). Checked at candidate review against D4 and D7: `AGENTS.md:78` names `pnpm typecheck` with TypeScript 7.0.2 (`@typescript/native`) as the authority, `typescript`/`tsc6` 6.0.2 as the JavaScript API for tools, the editor's built-in TypeScript (6.0.2) and the LSP as advisory, and `pnpm check:effect` as `effect-tsgo diagnostics` blocking every error-level Effect diagnostic and every broken run (with M1's answer on plain type errors)
+unchecked: TS7-B7 line 167: one Environment bullet carries D7.
+diagnostic: the candidate's parent is not the base; reprove-red re-proves against the parent
+reprove: --commit 5ad6553592e78ce3614504101e8fec04def69eec --test ts7-s1-toolchain.log::pnpm exec tsc --version
+reprove: --commit 5ad6553592e78ce3614504101e8fec04def69eec --test ts7-s1-toolchain.log::pnpm exec tsc6 --version
+reprove: --commit 5ad6553592e78ce3614504101e8fec04def69eec --test ts7-s1-toolchain.log::node -e "const ts=require('typescript');console.log(ts.version, typeof ts.createSourceFile)"
+reprove: --commit 5ad6553592e78ce3614504101e8fec04def69eec --test check-effect-diagnostics.test.mjs::runs effect-tsgo diagnostics on each project
+reprove: --commit 5ad6553592e78ce3614504101e8fec04def69eec --test check-effect-diagnostics.test.mjs::classifies a diagnostics run: $name
+reprove: --commit 5ad6553592e78ce3614504101e8fec04def69eec --test check-effect-diagnostics.test.mjs::runs the canary before any package: $name
+reprove: --commit 5ad6553592e78ce3614504101e8fec04def69eec --test check-effect-diagnostics.test.mjs::lists every violation: $count
+reprove: --commit 5ad6553592e78ce3614504101e8fec04def69eec --test check-effect-diagnostics.test.mjs::caps other failure details at 20 lines: $count
+reprove: --commit 5ad6553592e78ce3614504101e8fec04def69eec --test check-effect-diagnostics.test.mjs::names every canary difference: $name
