@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import path from "node:path";
 import { decodeStrict, ProjectIdSchema } from "@slopstop/protocol";
 import { expect, it } from "vitest";
@@ -25,8 +26,9 @@ async function realAndCopy(extended: boolean) {
 }
 
 /** `contents` with its own root path replaced by a token, so two roots compare by content. */
+/** Storage records its physical (long) root, so that is the spelling replaced. */
 function rootFree(contents: ReturnType<typeof databaseContents>, root: string) {
-  const escaped = JSON.stringify(root).slice(1, -1);
+  const escaped = JSON.stringify(realpathSync.native(root)).slice(1, -1);
   const free = (rows: readonly string[]) => rows.map((row) => row.split(escaped).join("<root>"));
   const rows = Object.entries(contents.rows).map(([table, values]) => [table, free(values)]);
   return { schema: free(contents.schema), rows: Object.fromEntries(rows) };

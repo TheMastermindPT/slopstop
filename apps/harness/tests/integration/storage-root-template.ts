@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { cp, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -54,8 +54,8 @@ export async function copyFromTemplate(
 }
 
 /**
- * Points a copied root's Storage locations at the copy. Storage records each location as
- * `path.resolve(projectRoot)`, so this writes what a real create in `to` would have written;
+ * Points a copied root's Storage locations at the copy. Storage records each location under the
+ * physical (long) spelling of its root, so this writes what a real create in `to` would have written;
  * `canonical-database-template.integration.test.ts` proves the copy then equals a real create.
  */
 function relocateStorageLocations(from: string, to: string): void {
@@ -69,10 +69,10 @@ function relocateStorageLocations(from: string, to: string): void {
     );
     const rows = database.prepare("SELECT location_id, normalized_path FROM storage_locations");
     for (const row of rows.all()) {
-      const relative = path.relative(from, String(row["normalized_path"]));
+      const relative = path.relative(realpathSync.native(from), String(row["normalized_path"]));
       if (relative.startsWith("..") || path.isAbsolute(relative))
         throw new Error("A template Storage location lies outside its root.");
-      update.run(path.resolve(to, relative), String(row["location_id"]));
+      update.run(path.resolve(realpathSync.native(to), relative), String(row["location_id"]));
     }
   } finally {
     database.close();

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -298,11 +299,27 @@ it
   },
 );
 
+/**
+ * The private paths Git reports: the long, forward-slash spelling of each folder, also when the
+ * fixture reached it through an 8.3 alias.
+ */
+function canonicalGitPaths(
+  fixture: Readonly<{ main: string; directory: string }>,
+  linked: boolean,
+) {
+  const canonical = (folder: string) => realpathSync.native(folder).replaceAll("\\", "/");
+  return {
+    worktree: canonical(fixture.directory),
+    gitDirectory: canonical(path.join(fixture.main, linked ? ".git/worktrees/linked" : ".git")),
+    commonDirectory: canonical(path.join(fixture.main, ".git")),
+  };
+}
+
 it.runIf(process.platform === "win32" && process.arch === "x64").each([false, true])(
   "executes six fixed queries and composes private paths for linked=%s",
   async (linked) => {
     const fixture = await createPhaseFixture(linked);
-    const { root, main, directory, scenario, request } = fixture;
+    const { root, scenario, request } = fixture;
     const seen: string[] = [];
     const owner = recordingIdentityOwner(scenario.registry, root, seen);
     try {
@@ -312,13 +329,7 @@ it.runIf(process.platform === "win32" && process.arch === "x64").each([false, tr
         status: "identity-observed",
         phaseId: expect.stringMatching(/^[0-9a-f-]{36}$/),
         booleans: { insideWorkTree: true, bareRepository: false, insideGitDirectory: false },
-        paths: {
-          worktree: directory.replaceAll("\\", "/"),
-          gitDirectory: path
-            .join(main, linked ? ".git/worktrees/linked" : ".git")
-            .replaceAll("\\", "/"),
-          commonDirectory: path.join(main, ".git").replaceAll("\\", "/"),
-        },
+        paths: canonicalGitPaths(fixture, linked),
       });
       expect(seen).toEqual(kinds);
       expectPhaseJournal(root, request, Reflect.get(result, "phaseId"));

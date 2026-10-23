@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { realpathSync } from "node:fs";
 import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -182,7 +183,7 @@ async function seedOwner(owner: ReturnType<typeof createProjectStorageOwner>, ro
   if (opened.status !== "ready" || opened.session.mode !== "read-write")
     throw new Error("Seed Storage unavailable");
   const database = opened.session.canonicalDatabasePath;
-  const relative = path.relative(root, database);
+  const relative = path.relative(realpathSync.native(root), database);
   if (relative.startsWith("..") || path.isAbsolute(relative))
     throw new Error("The seeded database lies outside its Storage root.");
   await step94("smoke-seed.generations", () => seedGenerations(database));

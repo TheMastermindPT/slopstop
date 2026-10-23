@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { lstatSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { decodeStrict, HarnessBootstrapSchema } from "@slopstop/protocol";
@@ -25,6 +24,7 @@ import {
   type ApplicationDatabaseAuthority,
   acquireApplicationDatabaseAuthority,
 } from "./storage/application-database-authority.js";
+import { physicalRoot } from "./storage/physical-root.js";
 import { createNodeProjectStorageDependencies } from "./storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "./storage/project-storage-store.js";
 import type { ProjectStorageUpgradePort } from "./storage/project-storage-upgrade.js";
@@ -33,34 +33,6 @@ import {
   type UpgradeEventLogger,
 } from "./upgrade-diagnostics-logger.js";
 import { createUnavailableWorkspaceApplication } from "./workspace-application.js";
-
-function isMissingPathError(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "ENOENT";
-}
-
-function parentOf(root: string): string {
-  const parent = path.dirname(root);
-  if (parent === root) throw new Error("Harness bootstrap root has no existing ancestor.");
-  return parent;
-}
-
-function physicalRoot(root: string): string {
-  const missingSegments: string[] = [];
-  let cursor = root;
-  for (;;) {
-    try {
-      const entry = lstatSync(cursor);
-      if (entry.isSymbolicLink()) {
-        throw new Error("Harness bootstrap root must not be a symbolic link.");
-      }
-      return path.join(realpathSync.native(cursor), ...missingSegments.reverse());
-    } catch (error: unknown) {
-      if (!isMissingPathError(error)) throw error;
-      missingSegments.push(path.basename(cursor));
-      cursor = parentOf(cursor);
-    }
-  }
-}
 
 function trustedRoot(value: string): string {
   const root = path.resolve(fileURLToPath(value));

@@ -14,6 +14,7 @@ import {
   type LocalLibsqlClient,
   type LocalLibsqlTransaction,
 } from "./local-libsql-worker-client.js";
+import { physicalRoot } from "./physical-root.js";
 import { ProjectStorageUnavailableError } from "./project-storage-errors.js";
 import { lstatIfPresent, requirePlainEntry } from "./project-storage-filesystem-authority.js";
 import { storageErrorCode } from "./project-storage-node-errors.js";
@@ -170,7 +171,7 @@ export function acquireApplicationDatabaseAuthority(
 }
 
 function createAuthorityParts(input: AuthorityInput): AuthorityParts {
-  const applicationStorageRoot = path.resolve(input.applicationStorageRoot);
+  const applicationStorageRoot = physicalRoot(input.applicationStorageRoot);
   const applicationDatabasePath = path.join(applicationStorageRoot, "application.db");
   const permits = Semaphore.makeUnsafe(1);
   const deciding = Semaphore.makeUnsafe(1);
