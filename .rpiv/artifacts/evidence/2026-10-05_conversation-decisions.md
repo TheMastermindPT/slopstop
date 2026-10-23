@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 6bca24ad212049fa7fff15535d961176748f4d54f1f5db5534ec6621b34112d0
+content_hash: 844726276dc129e1c1e338a3be4d6be3f813ec15465333d9e2c6122c1b4f06d4
 ---
 
 # Conversation — Human Decisions
@@ -2041,3 +2041,18 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - C: the single row's timeout is now 30 s. A: the launcher test file runs only on win32.
   - `pnpm check` 3338/3338; CodeScene 10.
   - **User approval:** merge and push. Fast-forwarded onto main (a single commit), and branch `fix/ci-red` deleted.
+- **Push `0b49cc0..c3898ef`** (local `check:deep` green). CI run 39952793922 progressed: the unit stage now passes on both runners (Ubuntu 95 files passed; Windows fast checks green), so the A/B/C fixes worked.
+  - It is still red at the next layer, which was hidden before. Ubuntu `test:coverage`/integration: 9 files fail, with case-variant storage names (case-sensitive filesystem), a missing `/tmp/opencode` parent and "promise resolved instead of rejecting". Windows harness integration: 10 files fail, mostly 15 s test and 10 s hook timeouts on the 2-vCPU runner.
+  - Reported to the user for a decision.
+- **User decision:** issue **#142**, plus a bounded read-only diagnosis by the implementer; the fixes are decided after it.
+- **#142 diagnosis 2** (`evidence/2026-10-23_ci-red-diagnosis-2.md`): all 17 failing files postdate the last green CI (`59fb35b`).
+  - C1: a shared `tmpdir()/opencode` parent that only one test creates, masked locally by an existing `%TEMP%\opencode`.
+  - C2: the runner's 8.3 temp path `C:\Users\RUNNER~1` makes the product refuse its roots with `PROJECT_STORAGE_BROKEN`; proven locally.
+  - C3: a hard-coded Git version.
+  - C4: Linux semantics (held handles, case-sensitive names).
+  - C5: Windows integration timeouts, 20-60x slower at their bounds; this looks like waits, not slowness, and stays open.
+- **User decisions:**
+  - Fix C1, C3 and C4 now (`runIf(win32)` on the C4 rows), plus CI `TEMP`/`TMP` = `runner.temp` for C2. Branch `fix/ci-red-2` in the main checkout, without a brief or review, red-green.
+  - C2 product: "Aceitar e converter". The product canonicalizes 8.3 aliases to long paths, in its own red-green slice right after.
+  - C4 product guarantees on POSIX go to issue **#143**, before Linux packaging.
+  - C5 is re-measured after these fixes.
