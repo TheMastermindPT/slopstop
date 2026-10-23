@@ -1,7 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { lstat, mkdtemp, readFile, rename, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { lstat, readFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { decodeStrict } from "@slopstop/protocol";
 import { afterEach, expect, it } from "vitest";
@@ -14,6 +13,7 @@ import {
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
 import { confirmationRequest } from "./registration-git-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -38,7 +38,7 @@ async function registryCount(options: ReturnType<typeof consentRegistryOptions>,
 }
 
 async function fixture() {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-preparation-"));
+  const root = await temporaryRoot("pc-s1-preparation-");
   roots.push(root);
   const directory = path.join(root, "repository");
   const git = path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe");

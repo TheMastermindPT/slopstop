@@ -364,42 +364,47 @@ it.for(brokenSourceRows)(`${title}: $name`, timeout, async (row) => {
   }
 });
 
-it(`${title}: a busy staged copy is discarded at the next opening`, timeout, async () => {
-  const root = await createTemporaryApplicationRoot();
-  await createGenerationTwoProject(root);
-  const sourceHashes = await sourceFileHashes({ root });
-  let lock: ReturnType<typeof holdExclusiveLock> | undefined;
-  const capture = capturingBackup({ root }, "after-staged-migration", {
-    onCheckpoint: (checkpoint) => {
-      if (checkpoint === "after-staged-migration") {
-        lock = holdExclusiveLock({ databasePath: upgradePaths({ root }).stagedCanonical });
-      }
-    },
-  });
-  const fixture = createUpgradeStorageOwner(root, capture.options);
-  const busyDiscard = {
-    kind: "discardFailed",
-    event: { projectId: openRequest.projectId, upgradeId: upgradeIds.upgradeId, cause: "busy" },
-  };
-  try {
+// A held handle blocks removal only on Windows; the POSIX guarantee is open in #143.
+it.runIf(process.platform === "win32")(
+  `${title}: a busy staged copy is discarded at the next opening`,
+  timeout,
+  async () => {
+    const root = await createTemporaryApplicationRoot();
+    await createGenerationTwoProject(root);
+    const sourceHashes = await sourceFileHashes({ root });
+    let lock: ReturnType<typeof holdExclusiveLock> | undefined;
+    const capture = capturingBackup({ root }, "after-staged-migration", {
+      onCheckpoint: (checkpoint) => {
+        if (checkpoint === "after-staged-migration") {
+          lock = holdExclusiveLock({ databasePath: upgradePaths({ root }).stagedCanonical });
+        }
+      },
+    });
+    const fixture = createUpgradeStorageOwner(root, capture.options);
+    const busyDiscard = {
+      kind: "discardFailed",
+      event: { projectId: openRequest.projectId, upgradeId: upgradeIds.upgradeId, cause: "busy" },
+    };
     try {
-      expect(await fixture.upgrade(openRequest)).toEqual(busy);
-      expect(fixture.diagnostics).toEqual([busyDiscard]);
-      expect(registryRows({ root }, "storage_upgrades")).toEqual([
-        expect.objectContaining({ state: "in-progress" }),
-      ]);
+      try {
+        expect(await fixture.upgrade(openRequest)).toEqual(busy);
+        expect(fixture.diagnostics).toEqual([busyDiscard]);
+        expect(registryRows({ root }, "storage_upgrades")).toEqual([
+          expect.objectContaining({ state: "in-progress" }),
+        ]);
+      } finally {
+        lock?.release();
+      }
+      const backup = capture.captured();
+      expect(backup).toBeDefined();
+      await expectMigrationRequiredOnSource(fixture.owner);
+      expect(fixture.diagnostics).toEqual([busyDiscard, abandonedEvent("interrupted")]);
+      await expectDiscardedUpgrade({ root }, { sourceHashes, backup });
     } finally {
-      lock?.release();
+      await fixture.owner.stop();
     }
-    const backup = capture.captured();
-    expect(backup).toBeDefined();
-    await expectMigrationRequiredOnSource(fixture.owner);
-    expect(fixture.diagnostics).toEqual([busyDiscard, abandonedEvent("interrupted")]);
-    await expectDiscardedUpgrade({ root }, { sourceHashes, backup });
-  } finally {
-    await fixture.owner.stop();
-  }
-});
+  },
+);
 
 it(
   "keeps a committed switch when a later step fails",

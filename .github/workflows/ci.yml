@@ -54,6 +54,14 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 35
     steps:
+      # The runner's default TEMP is the 8.3 short path C:\Users\RUNNER~1\...; tests take their
+      # temporary roots from it, and Project Storage answers broken for 8.3 aliases (CI diagnosis 2, C2).
+      - name: Use a long-path temporary folder
+        shell: pwsh
+        run: |
+          "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+          "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+
       - name: Check out repository
         uses: actions/checkout@v4
 

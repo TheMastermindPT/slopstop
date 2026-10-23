@@ -1,6 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { decodeStrict } from "@slopstop/protocol";
 import { afterEach, expect, it } from "vitest";
@@ -16,6 +15,7 @@ import {
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
 import { createPreviousRegistry } from "./registration-schema-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 async function queryRows(root: string) {
   const database = createWorkerLocalLibsqlClient(
@@ -69,7 +69,7 @@ afterEach(async () => {
 it.each(["0001_project_registration", "0003_registration_proposals"])(
   "extends the exact %s schema without replacing old rows",
   async (head) => {
-    const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-query-upgrade-"));
+    const root = await temporaryRoot("pc-s1-query-upgrade-");
     roots.push(root);
     const options = consentRegistryOptions(root);
     await mkdir(options.applicationStorageRoot);
@@ -119,7 +119,7 @@ it.each(["0001_project_registration", "0003_registration_proposals"])(
 );
 
 async function createNativeScenario() {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-live-query-"));
+  const root = await temporaryRoot("pc-s1-live-query-");
   roots.push(root);
   const directory = path.join(root, "repository with spaces");
   await mkdir(directory);

@@ -556,7 +556,8 @@ it(`${logTitle}: an interrupted upgrade`, timeout, async () => {
   }
 });
 
-it(`${logTitle}: a busy discard`, timeout, async () => {
+// A held handle blocks removal only on Windows; the POSIX guarantee is open in #143.
+it.runIf(process.platform === "win32")(`${logTitle}: a busy discard`, timeout, async () => {
   const payloads: unknown[] = [];
   for (const throwing of [undefined, "warn"] as const) {
     const root = await createTemporaryApplicationRoot();

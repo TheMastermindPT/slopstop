@@ -1,6 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { decodeStrict, RegisteredProjectSchema } from "@slopstop/protocol";
@@ -17,6 +16,7 @@ import {
   countingIdentityChild,
   createSelectedGitRepository,
 } from "./registration-git-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const roots: string[] = [];
 function failPublicationWrite() {
@@ -260,7 +260,7 @@ it
   .each(["complete", "interrupted", "publication-failed"] as const)(
   "uses real bound Storage bootstrap with %s publication and exact restart replay",
   async (mode) => {
-    const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-bootstrap-"));
+    const root = await temporaryRoot("pc-s1-bootstrap-");
     roots.push(root);
     const { directory, scenario } = await createSelectedGitRepository(root);
     const options = bootstrapOptions(root, mode);

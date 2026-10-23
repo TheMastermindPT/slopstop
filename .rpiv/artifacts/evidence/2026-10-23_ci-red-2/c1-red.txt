@@ -1,0 +1,27 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop/apps/harness
+
+ ❯ |harness-integration| tests/integration/project-list-runtime.integration.test.ts (1 test | 1 failed) 4ms
+   × dispatches a real saved Project list through the process protocol 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness-integration| tests/integration/project-list-runtime.integration.test.ts > dispatches a real saved Project list through the process protocol
+Error: ENOENT: no such file or directory, mkdtemp 'C:\Users\pedro\AppData\Local\Temp\slopstop-c1-empty\opencode\pc-list-transport-XXXXXX'
+ ❯ tests/integration/project-list-runtime.integration.test.ts:13:16
+     11|
+     12| it("dispatches a real saved Project list through the process protocol"…
+     13|   const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-list-tra…
+       |                ^
+     14|   const { port1, port2 } = new MessageChannel();
+     15|   const stop = await startHarnessProcessRuntime({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  14:49:12
+   Duration  2.15s (transform 1.22s, setup 0ms, import 1.93s, tests 4ms, environment 0ms)
+
+

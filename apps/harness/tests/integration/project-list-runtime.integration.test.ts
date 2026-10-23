@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rm } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MessageChannel } from "node:worker_threads";
@@ -8,9 +7,10 @@ import { protocolVersion } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { startHarnessProcessRuntime } from "../../src/process-bootstrap.js";
 import { silentHarnessLogger, transportFor } from "./project-storage-runtime-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 it("dispatches a real saved Project list through the process protocol", async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-list-transport-"));
+  const root = await temporaryRoot("pc-list-transport-");
   const { port1, port2 } = new MessageChannel();
   const stop = await startHarnessProcessRuntime({
     logger: silentHarnessLogger,

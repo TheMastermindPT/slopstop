@@ -233,7 +233,8 @@ it.for(unprovenCases)(
   },
 );
 
-it(
+// A held handle blocks removal only on Windows; the POSIX guarantee is open in #143.
+it.runIf(process.platform === "win32")(
   "removes only proven upgrade output: owner, held handle",
   async () => {
     const root = await createTemporaryApplicationRoot();

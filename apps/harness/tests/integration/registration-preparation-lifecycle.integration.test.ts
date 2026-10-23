@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { decodeStrict, UuidTextSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
@@ -15,6 +14,7 @@ import {
   createRepositoryTrustScenario,
 } from "./registration-consent-fixture.js";
 import { confirmationRequest, gate, trackTemporaryRoots } from "./registration-git-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const pending = { status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" } as const;
 const roots = trackTemporaryRoots({ realTimers: true });
@@ -49,7 +49,7 @@ async function fixture(
   closeObservation: () => Promise<{ status: "closed" } | typeof pending>,
   trigger?: "OBSERVATION_LIMIT_EXCEEDED" | "CANCELLED" | "INTERNAL_FAILURE",
 ) {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-prepare-control-"));
+  const root = await temporaryRoot("pc-s1-prepare-control-");
   roots.push(root);
   const scenario = await createRepositoryTrustScenario(root);
   await mkdir(path.join(scenario.directory, ".git"));

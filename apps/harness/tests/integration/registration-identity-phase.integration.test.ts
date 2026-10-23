@@ -1,6 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { decodeStrict } from "@slopstop/protocol";
@@ -14,6 +13,7 @@ import {
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
 import { installedGit, trackTemporaryRoots } from "./registration-git-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const roots = trackTemporaryRoots({ realTimers: false });
 
@@ -95,7 +95,7 @@ function recordingIdentityOwner(
 }
 
 async function createPhaseFixture(linked: boolean) {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-six-query-"));
+  const root = await temporaryRoot("pc-s1-six-query-");
   roots.push(root);
   const main = path.join(root, "main");
   const hooks = path.join(root, "empty-hooks");

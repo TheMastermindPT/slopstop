@@ -1,7 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
@@ -32,6 +31,7 @@ import {
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
 import { confirmationRequest, installedGit } from "./registration-git-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 import { missing94 } from "./trace-94.js";
 
 const roots: string[] = [];
@@ -190,7 +190,7 @@ async function expectIdentityChangeRefused(f: RegisteredFixture, displace: () =>
  * then each repository's own selection, trust, preparation and confirmation.
  */
 async function registeredProjects(count: number) {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-select-"));
+  const root = await temporaryRoot("pc-s1-select-");
   roots.push(root);
   const directories = Array.from({ length: count }, (_, index) =>
     path.join(root, index === 0 ? "repository" : `repository-${randomUUID()}`),

@@ -1,6 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { CanonicalProjectActivationRequestSchema, decodeStrict } from "@slopstop/protocol";
 import { afterEach, expect, it, vi } from "vitest";
@@ -11,6 +10,7 @@ import { observeRepositoryDirectory } from "../../src/storage/repository-identit
 import { checkedInMigrationRoot } from "./project-storage-runtime-fixture.js";
 import { registerFolder, registrationSession } from "./registration-flow-fixture.js";
 import { installedGit } from "./registration-git-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 import { missing94 } from "./trace-94.js";
 
 // B3: one case per physical pointer limit and one precedence case for the family.
@@ -35,7 +35,7 @@ async function discover(worktree: string) {
 }
 
 async function tempRoot() {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-physical-limit-"));
+  const root = await temporaryRoot("pc-s1-physical-limit-");
   roots.push(root);
   return root;
 }

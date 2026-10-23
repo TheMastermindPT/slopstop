@@ -1,11 +1,11 @@
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
 import { createWorkerLocalLibsqlClient } from "../../src/storage/local-libsql-worker-client.js";
 import { consentRegistryOptions } from "./registration-consent-fixture.js";
 import { createPreviousRegistry } from "./registration-schema-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -21,7 +21,7 @@ const throughPublications = [
 ];
 
 it("extends the exact 0005 registry with list visibility without replacing old rows", async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-visibility-upgrade-"));
+  const root = await temporaryRoot("pc-s1-visibility-upgrade-");
   roots.push(root);
   const options = consentRegistryOptions(root);
   await mkdir(options.applicationStorageRoot);

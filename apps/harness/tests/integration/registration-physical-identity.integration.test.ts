@@ -1,6 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { decodeStrict } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
@@ -18,11 +17,12 @@ import {
   createControlledIdentityConsent,
 } from "./registration-consent-fixture.js";
 import { installedGit, trackTemporaryRoots } from "./registration-git-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const roots = trackTemporaryRoots({ realTimers: false });
 
 async function physicalFixture() {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-physical-"));
+  const root = await temporaryRoot("pc-s1-physical-");
   roots.push(root);
   const hooks = path.join(root, "hooks");
   await mkdir(hooks);

@@ -1,7 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rm } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MessageChannel } from "node:worker_threads";
@@ -26,6 +25,7 @@ import {
   transportFor,
 } from "./project-storage-runtime-fixture.js";
 import { installedGit } from "./registration-git-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 import { begin94, end94, missing94 } from "./trace-94.js";
 
 /** Each harness event name with the payload it carries. */
@@ -55,7 +55,7 @@ export type GitConsent = Readonly<{
  * new runtime over that installation and repository instead.
  */
 export async function registrationSession(existing?: Readonly<{ root: string }>) {
-  const root = existing?.root ?? (await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-flow-")));
+  const root = existing?.root ?? (await temporaryRoot("pc-s1-flow-"));
   const directory = path.join(root, "repository");
   if (existing === undefined) {
     roots.push(root);

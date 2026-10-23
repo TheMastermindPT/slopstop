@@ -237,45 +237,53 @@ it("removes only proven upgrade output: adapter", async () => {
   });
 });
 
-it("removes only proven upgrade output: adapter, retained or case-variant target", async () => {
-  const retained = await upgradeOutputInstallation();
-  const retainedBefore = await entriesOf({ directory: retained.projectRoot });
-  await expectRefused(
-    retained.files.removeUpgradeOutput({
-      ...retained.output,
-      retainedGenerationIds: [sourceId, targetId],
-    }),
-    { name: "retained target", projectRoot: retained.projectRoot, before: retainedBefore },
-  );
-
-  const variants = [
-    [targetId, targetId.toUpperCase()],
-    [`.staging-${targetId}`, `.staging-${targetId.toUpperCase()}`],
-    [`.staging-${targetId}`, `.Staging-${targetId}`],
-  ] as const;
-  for (const [exact, variantName] of variants) {
-    const variant = await upgradeOutputInstallation();
-    await rename(
-      path.join(variant.projectRoot, exact),
-      path.join(variant.projectRoot, variantName),
+// Names that differ only in case are one name only on Windows; the POSIX guarantee is open in #143.
+it.runIf(process.platform === "win32")(
+  "removes only proven upgrade output: adapter, retained or case-variant target",
+  async () => {
+    const retained = await upgradeOutputInstallation();
+    const retainedBefore = await entriesOf({ directory: retained.projectRoot });
+    await expectRefused(
+      retained.files.removeUpgradeOutput({
+        ...retained.output,
+        retainedGenerationIds: [sourceId, targetId],
+      }),
+      { name: "retained target", projectRoot: retained.projectRoot, before: retainedBefore },
     );
-    const variantBefore = await entriesOf({ directory: variant.projectRoot });
-    await expectRefused(variant.files.removeUpgradeOutput(variant.output), {
-      name: `case-variant name ${variantName}`,
-      projectRoot: variant.projectRoot,
-      before: variantBefore,
-    });
-  }
-});
 
-it("removes only proven upgrade output: adapter, held handle", async () => {
-  const held = await upgradeOutputInstallation();
-  const handle = new DatabaseSync(path.join(held.projectRoot, targetId, "slopstop.db"));
-  try {
-    const attempt = held.files.removeUpgradeOutput(held.output);
-    await expect(attempt).rejects.toBeInstanceOf(ProjectStorageUnavailableError);
-    await expect(attempt).rejects.toThrow("Project Storage is busy; the upgrade can be retried.");
-  } finally {
-    handle.close();
-  }
-});
+    const variants = [
+      [targetId, targetId.toUpperCase()],
+      [`.staging-${targetId}`, `.staging-${targetId.toUpperCase()}`],
+      [`.staging-${targetId}`, `.Staging-${targetId}`],
+    ] as const;
+    for (const [exact, variantName] of variants) {
+      const variant = await upgradeOutputInstallation();
+      await rename(
+        path.join(variant.projectRoot, exact),
+        path.join(variant.projectRoot, variantName),
+      );
+      const variantBefore = await entriesOf({ directory: variant.projectRoot });
+      await expectRefused(variant.files.removeUpgradeOutput(variant.output), {
+        name: `case-variant name ${variantName}`,
+        projectRoot: variant.projectRoot,
+        before: variantBefore,
+      });
+    }
+  },
+);
+
+// A held handle blocks removal only on Windows; the POSIX guarantee is open in #143.
+it.runIf(process.platform === "win32")(
+  "removes only proven upgrade output: adapter, held handle",
+  async () => {
+    const held = await upgradeOutputInstallation();
+    const handle = new DatabaseSync(path.join(held.projectRoot, targetId, "slopstop.db"));
+    try {
+      const attempt = held.files.removeUpgradeOutput(held.output);
+      await expect(attempt).rejects.toBeInstanceOf(ProjectStorageUnavailableError);
+      await expect(attempt).rejects.toThrow("Project Storage is busy; the upgrade can be retried.");
+    } finally {
+      handle.close();
+    }
+  },
+);

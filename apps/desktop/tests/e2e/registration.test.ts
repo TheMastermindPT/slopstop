@@ -1,9 +1,8 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { type ElectronApplication, expect, test } from "@playwright/test";
 import { launchBuiltDesktop } from "./electron-launch.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const installedGit = path.join(
   process.env["ProgramFiles"] ?? "C:/Program Files",
@@ -11,7 +10,7 @@ const installedGit = path.join(
 );
 
 async function launchWithFreshUserData() {
-  const proof = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-registration-"));
+  const proof = await temporaryRoot("pc-s1-registration-");
   const userData = path.join(proof, "user-data");
   const repository = path.join(proof, "repository");
   execFileSync(installedGit, ["init", "--quiet", repository]);

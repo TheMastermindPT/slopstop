@@ -1,0 +1,21 @@
+$ pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:effect && pnpm test:unit && pnpm check:boundaries
+$ biome format .
+Checked 583 files in 496ms. No fixes applied.
+$ biome lint .
+Checked 585 files in 1513ms. No fixes applied.
+$ pnpm -r --if-present typecheck
+Scope: 4 of 5 workspace projects
+packages/kernel typecheck$ tsc --noEmit -p tsconfig.json
+packages/kernel typecheck: Done
+packages/protocol typecheck$ tsc --noEmit -p tsconfig.json
+packages/protocol typecheck: Done
+apps/desktop typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck$ tsc --noEmit -p tsconfig.json
+apps/harness typecheck: tests/integration/project-registration.integration.test.ts(319,85): error TS2345: Argument of type 'string' is not assignable to parameter of type 'string & Brand<"VersionObservationId">'.
+apps/harness typecheck:   Type 'string' is not assignable to type 'Brand<"VersionObservationId">'.
+apps/harness typecheck: Failed
+C:\Users\pedro\Documents\GitHub\slopstop\apps\harness:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @slopstop/harness@0.0.0 typecheck: `tsc --noEmit -p tsconfig.json`
+Exit status 1
+[ELIFECYCLE] Command failed with exit code 1.
+[ELIFECYCLE] Command failed with exit code 1.

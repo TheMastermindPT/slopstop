@@ -1,5 +1,4 @@
-import { mkdtemp, readdir, readFile, rename } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readdir, readFile, rename } from "node:fs/promises";
 import path from "node:path";
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import {
@@ -14,6 +13,7 @@ import {
 } from "./accessibility.js";
 import { launchBuiltDesktop } from "./electron-launch.js";
 import { seedTwoProjects } from "./harness-seed.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 /** The packaged main-window policy without `frame-ancestors`, which a `<meta>` ignores. */
 const metaPolicy =
@@ -30,7 +30,7 @@ const renderer = path.resolve(".vite/renderer/main_window");
 const regionSelector = "[data-conversation-region]";
 
 async function launch(userData?: string) {
-  const proof = await mkdtemp(path.join(tmpdir(), "opencode/s4a-foundation-"));
+  const proof = await temporaryRoot("s4a-foundation-");
   const data = userData ?? path.join(proof, "user-data");
   // Scale 1, so computed border widths and screenshots do not depend on the display's scale.
   const application = await launchBuiltDesktop(proof, data, ["--force-device-scale-factor=1"]);
@@ -41,7 +41,7 @@ async function launch(userData?: string) {
 }
 
 async function seededLaunch() {
-  const proof = await mkdtemp(path.join(tmpdir(), "opencode/s4a-seed-"));
+  const proof = await temporaryRoot("s4a-seed-");
   const userData = path.join(proof, "user-data");
   const projects = await seedTwoProjects(userData);
   return { ...(await launch(userData)), userData, projects };

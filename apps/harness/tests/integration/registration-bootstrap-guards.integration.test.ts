@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -26,6 +25,7 @@ import {
   gate,
   trackTemporaryRoots,
 } from "./registration-git-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const roots = trackTemporaryRoots({ realTimers: true });
 
@@ -59,7 +59,7 @@ function expectSeededCanonicalBinding(
 async function fixture(
   checkpoint: (point: string, directory: string) => Promise<void> = async () => {},
 ) {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-bootstrap-guard-"));
+  const root = await temporaryRoot("pc-s1-bootstrap-guard-");
   roots.push(root);
   const { directory, scenario } = await createSelectedGitRepository(root);
   const options = {

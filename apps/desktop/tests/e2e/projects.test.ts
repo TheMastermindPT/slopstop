@@ -1,13 +1,13 @@
-import { mkdtemp, rename, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { launchBuiltDesktop } from "./electron-launch.js";
 import { seedTwoProjects } from "./harness-seed.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 test("lists and switches real saved Projects through the sandboxed Electron preload", async () => {
   test.setTimeout(150_000);
-  const proof = await mkdtemp(path.join(tmpdir(), "opencode/pc-ui-proof-"));
+  const proof = await temporaryRoot("pc-ui-proof-");
   const userData = path.join(proof, "user-data");
   const [first] = await seedTwoProjects(userData);
   const application = await launchBuiltDesktop(proof, userData);

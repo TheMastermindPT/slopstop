@@ -1,6 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -25,6 +24,7 @@ import {
   countingIdentityChild,
   createSelectedGitRepository,
 } from "./registration-git-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 import { missing94 } from "./trace-94.js";
 
 const roots: string[] = [];
@@ -33,7 +33,7 @@ afterEach(async () => {
 });
 
 async function newRoot() {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-list-"));
+  const root = await temporaryRoot("pc-s1-list-");
   roots.push(root);
   return root;
 }

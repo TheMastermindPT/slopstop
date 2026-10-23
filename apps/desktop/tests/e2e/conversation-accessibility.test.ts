@@ -1,5 +1,3 @@
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import { projectConversationDiagnostics as rows } from "@slopstop/protocol";
@@ -26,6 +24,7 @@ import {
 } from "./conversation-window.js";
 import { launchBuiltDesktop } from "./electron-launch.js";
 import { seedTwoProjects } from "./harness-seed.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const canvas = [5, 6, 6];
 const frost = [156, 201, 224];
@@ -214,7 +213,7 @@ async function stepSix(application: ElectronApplication, page: Page) {
 
 test("meets the accessibility checklist in the real window", async () => {
   test.setTimeout(150_000);
-  const proof = await mkdtemp(path.join(tmpdir(), "opencode/s4b-a11y-"));
+  const proof = await temporaryRoot("s4b-a11y-");
   const userData = path.join(proof, "user-data");
   const shots = path.join(proof, "s4b-visual");
   await seedTwoProjects(userData);
@@ -509,7 +508,7 @@ test.describe("reaches the states the seed cannot", () => {
   let proof = "";
   test.beforeAll(async () => {
     test.setTimeout(150_000);
-    proof = await mkdtemp(path.join(tmpdir(), "opencode/s4b-states-"));
+    proof = await temporaryRoot("s4b-states-");
     userData = path.join(proof, "user-data");
     await seedTwoProjects(userData);
   });

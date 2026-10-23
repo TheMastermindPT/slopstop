@@ -1,5 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rm } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, expect, it, vi } from "vitest";
@@ -13,6 +12,7 @@ import {
   consentRegistryOptions,
   createRepositoryTrustScenario,
 } from "./registration-consent-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -71,7 +71,7 @@ it.each([
 );
 
 async function scenarioForLifecycle() {
-  const root = await mkdtemp(path.join(tmpdir(), "opencode/pc-s1-query-lifecycle-"));
+  const root = await temporaryRoot("pc-s1-query-lifecycle-");
   roots.push(root);
   const scenario = await createRepositoryTrustScenario(root);
   expect(

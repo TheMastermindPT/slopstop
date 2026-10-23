@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { decodeStrict } from "@slopstop/protocol";
@@ -69,6 +68,7 @@ import {
   inspectStoredConsent,
   readObserverRows,
 } from "./registration-version-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 
 const migrationResourcesRoot = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
@@ -112,10 +112,11 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
+/** Git for Windows' version shape, such as `2.56.0.windows.2`; the installed release varies by machine. */
+const gitForWindowsVersion = /^\d+\.\d+\.\d+\.windows\.\d+$/;
+
 async function createRoot(prefix: string): Promise<string> {
-  const parent = path.join(tmpdir(), "opencode");
-  await mkdir(parent, { recursive: true });
-  const root = await mkdtemp(path.join(parent, prefix));
+  const root = await temporaryRoot(prefix);
   roots.push(root);
   return root;
 }
@@ -314,24 +315,28 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
     it("inspects the admitted installed Git version through the owned native child", async () => {
       const root = await createRoot("pc-s1-version-");
       const request = versionRequest(admittedConsentId);
+      // The host's Git release varies, so the decoded version below is a placeholder: the
+      // assertion checks the installed version by its shape only.
       const expected = decodeStrict(GitVersionInspectionResultSchema, {
         status: "prepared",
         selectionId: request.selectionId,
         observationId: "c42caec7-06c4-49bd-9a34-e5b034ab2477",
-        version: "2.53.0.windows.1",
+        version: "0.0.0.windows.0",
       });
       if (expected.status !== "prepared") throw new Error("Invalid test version observation");
-      const { observer, journal, owned } = await createRecordedNativeObserver(
-        root,
-        expected.observationId,
-      );
+      const { observationId } = expected;
+      const { observer, journal, owned } = await createRecordedNativeObserver(root, observationId);
 
-      expect(await observer.inspectGitVersion(request)).toEqual(expected);
+      const result = await observer.inspectGitVersion(request);
+      expect(decodeStrict(GitVersionInspectionResultSchema, result)).toEqual({
+        ...expected,
+        version: expect.stringMatching(gitForWindowsVersion),
+      });
       expect(journal).toEqual(["intent", "owned", "validated"]);
       expect(owned).toHaveLength(1);
       expect(owned[0]).toMatchObject({
         platform: "win32",
-        jobName: `Local\\SlopStop.Registration.Observer.${expected.observationId}`,
+        jobName: `Local\\SlopStop.Registration.Observer.${observationId}`,
       });
       expect(owned[0]?.creationTime100ns).toMatch(/^[1-9][0-9]*$/);
     });
@@ -1000,7 +1005,7 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
         expect(result).toMatchObject({
           status: "prepared",
           selectionId: request.selectionId,
-          version: "2.53.0.windows.1",
+          version: expect.stringMatching(gitForWindowsVersion),
         });
         expect(await registry.hasUnsettled()).toBe(false);
         expect(await observer.inspectGitVersion(request)).toEqual(result);
