@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 64bb24e9ca73e7c0b829b8ce8f86029e14a487430863bdeb8621d0d5d6effc9b
+content_hash: cc56c96a02eb5f7b9adcf174867765adc9dc5975c3c985057c25c448a12d5263
 ---
 
 # Conversation — Human Decisions
@@ -2107,3 +2107,7 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **User decision:** the report-back rule goes into AGENTS.md (a new "Coordinated Sessions" section), because new agent sessions kept forgetting to report to the coordinator.
 - **Push retry refused (2026-10-23 ~19:45):** the `check:deep` unit stage passed 3396/3396, but the coverage/integration stage failed: 8 of 5581 tests in 6 files, all timeouts of 16-38 s (upgrade, conversation, Writer state rows). The push was not alone. The coordinator had let the implementer run `pnpm install` and focused tests in `slopstop-p1` at the same time, against the "heavy runs alone" rule. This is a coordinator error, and it was reported to the user before any rerun.
 - **Push rerun alone:** every test stage passed (unit 3396; coverage 5575; integration 2179/2185 with 6 skipped). The earlier timeouts were load. jscpd then failed: a 17-line clone in `project-storage-store.test.ts`, from #133 (merged without `check:duplicates`; coordinator error). The coordinator extracted `markerUpgradeSteps(state)`, a test-only refactor. File tests 44/44, typecheck, `check:duplicates` 0 clones, `pnpm check` 3396/3396, CodeScene 10. Push retried.
+- **Push attempt with the dedupe (`262c5e5`), machine alone (no game; the agents paused):** unit 3396 and coverage 5575 passed. Integration failed on 1 row: `canonical-command-repository-writer-state.integration.test.ts` "verifies and releases only the current durable Writer fence" timed out at 30 s. In the loaded run, another row of the same file ("validates and advances generation-2 Writer state") also hit 30 s. Same file twice, and the same shape as #142 C5 (rows that take under 1 s locally hang to their bound). Reported to the user; no rerun.
+- **Writer-state diagnosis** (`evidence/2026-10-23_writer-state-hang.md`): test-only slowness under disk contention, not a product hang. Each row runs 10-17 fixtures, and each fixture seeds SQLite with about 40 fsync-bound autocommits (~320 ms). Of 601 worker requests per run, none was in flight for more than 2 s, and the slowdown under parallel fsync load is linear. Limit: the 30 s timeout was not reproduced.
+- **Coordinator decision (test-only, assertions unchanged; disclosed):** F1, seed one template per file and `copyFile` per fixture (copy p50 21 ms; precedent `storage-root-template.ts`), on main. F2 (`it.each` split) is not now. Phase 1 resumes afterwards. The push waits for the user's free machine.
+- **F1 committed on main:** `c11ac74` (fixture template), with the diagnosis docs in `a41dd87`. On an idle machine, `pnpm check` passed 3396/3396. The writer-state rows went from 7.0 s and 6.2 s to 2.1 s and 0.5 s; the faults file from 41 s to 4.6 s.
