@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: dd900e8666a3b23e1a457771e227c4ee249a652437689b0dee8075773b56920d
+content_hash: 6bca24ad212049fa7fff15535d961176748f4d54f1f5db5534ec6621b34112d0
 ---
 
 # Conversation — Human Decisions
@@ -2035,3 +2035,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - C: **"Subir para 30 s só nesse teste"**, for that single row; the project default is unchanged.
   - The user deleted the stray home-level `node_modules` and `package.json`.
   - The work goes on branch `fix/ci-red` in the main checkout, without a designer brief or a review: red-green with the evidence recorded.
+- **CI fix `15862fd`** (evidence `evidence/2026-10-23_ci-red/`):
+  - B: the red was reproduced locally once the stray install was gone. The fixtures now link a real `node_modules/effect`.
+  - Measurement: 466 checked files are all `detectedEffect: v4`, renderer included. The gate runs `--list-files`, and any non-v4 file or missing file list is `EFFECT_GATE_BROKEN`.
+  - C: the single row's timeout is now 30 s. A: the launcher test file runs only on win32.
+  - `pnpm check` 3338/3338; CodeScene 10.
+  - **User approval:** merge and push. Fast-forwarded onto main (a single commit), and branch `fix/ci-red` deleted.
