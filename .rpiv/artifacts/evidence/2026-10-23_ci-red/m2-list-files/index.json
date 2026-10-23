@@ -1,0 +1,110 @@
+[
+  {
+    "id": "canary.plain",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\Documents\\GitHub\\slopstop\\apps\\harness\\scripts\\effect-diagnostics-canary\\tsconfig.json",
+      "--format",
+      "json"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null
+  },
+  {
+    "id": "canary.list",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\Documents\\GitHub\\slopstop\\apps\\harness\\scripts\\effect-diagnostics-canary\\tsconfig.json",
+      "--format",
+      "json",
+      "--list-files"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null
+  },
+  {
+    "id": "kernel.plain",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\Documents\\GitHub\\slopstop\\packages\\kernel\\tsconfig.json",
+      "--format",
+      "json"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null
+  },
+  {
+    "id": "kernel.list",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\Documents\\GitHub\\slopstop\\packages\\kernel\\tsconfig.json",
+      "--format",
+      "json",
+      "--list-files"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null
+  },
+  {
+    "id": "planted-linked.plain",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\AppData\\Local\\Temp\\slopstop-m2-CRTYBq\\tsconfig.json",
+      "--format",
+      "json"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null
+  },
+  {
+    "id": "planted-linked.list",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\AppData\\Local\\Temp\\slopstop-m2-CRTYBq\\tsconfig.json",
+      "--format",
+      "json",
+      "--list-files"
+    ],
+    "status": 1,
+    "signal": null,
+    "error": null
+  },
+  {
+    "id": "planted-unlinked.plain",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\AppData\\Local\\Temp\\slopstop-m2-CQJjVj\\tsconfig.json",
+      "--format",
+      "json"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null
+  },
+  {
+    "id": "planted-unlinked.list",
+    "argv": [
+      "diagnostics",
+      "--project",
+      "C:\\Users\\pedro\\AppData\\Local\\Temp\\slopstop-m2-CQJjVj\\tsconfig.json",
+      "--format",
+      "json",
+      "--list-files"
+    ],
+    "status": 0,
+    "signal": null,
+    "error": null
+  }
+]

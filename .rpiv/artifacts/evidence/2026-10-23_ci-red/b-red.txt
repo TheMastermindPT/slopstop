@@ -1,0 +1,66 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (62 tests | 2 failed | 57 skipped) 2641ms
+   × fails on a planted Effect error: 'unknownInEffectCatch' 777ms
+   × runs the canary before any package: plugin removed, real compiler 370ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > fails on a planted Effect error: 'unknownInEffectCatch'
+AssertionError: expected { ok: true, warnings: +0, …(1) } to match object { ok: false, …(1) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_VIOLATIONS",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:90:18
+     88|     return;
+     89|   }
+     90|   expect(result).toMatchObject({ ok: false, code: "EFFECT_GATE_VIOLATI…
+       |                  ^
+     91|   expect(result.violations).toEqual([violation]);
+     92|   expect(cli.status).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs the canary before any package: plugin removed, real compiler
+AssertionError: expected { ok: false, …(2) } to deeply equal { ok: false, …(2) }
+
+- Expected
++ Received
+
+  {
+    "code": "EFFECT_GATE_CANARY_MISMATCH",
+    "lines": [
+      "extra src/planted.test.ts(1,30) error newPromise",
+      "extra tests/planted.ts(1,31) error newPromise",
++     "missing src/canary.ts(4,14) warning anyUnknownInErrorContext",
++     "missing src/canary.ts(4,24) error unknownInEffectCatch",
++     "missing src/canary.ts(4,24) warning anyUnknownInErrorContext",
+    ],
+    "ok": false,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:610:18
+    608|   const root = canaryWithoutPlugin();
+    609|   const result = checkEffectDiagnostics({ root, projects: [], canary: …
+    610|   expect(result).toEqual({
+       |                  ^
+    611|     ok: false,
+    612|     code: "EFFECT_GATE_CANARY_MISMATCH",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 3 passed | 57 skipped (62)
+   Start at  12:47:01
+   Duration  2.83s (transform 33ms, setup 0ms, import 55ms, tests 2.64s, environment 0ms)
+

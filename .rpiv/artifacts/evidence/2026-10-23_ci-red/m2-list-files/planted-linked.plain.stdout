@@ -1,0 +1,51 @@
+{
+  "diagnostics": [
+    {
+      "file": "C:/Users/pedro/AppData/Local/Temp/slopstop-m2-CRTYBq/src/a.ts",
+      "start": 46,
+      "length": 7,
+      "line": 2,
+      "column": 14,
+      "endLine": 2,
+      "endColumn": 21,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/AppData/Local/Temp/slopstop-m2-CRTYBq/src/a.ts",
+      "start": 56,
+      "length": 17,
+      "line": 2,
+      "column": 24,
+      "endLine": 2,
+      "endColumn": 41,
+      "severity": "error",
+      "code": 377021,
+      "name": "unknownInEffectCatch",
+      "message": "The `catch` callback in `Effect.tryPromise` returns `unknown`, so the Effect error type stays untyped. A specific typed error preserves error-channel information, for example by narrowing the value or wrapping it in `Data.TaggedError`."
+    },
+    {
+      "file": "C:/Users/pedro/AppData/Local/Temp/slopstop-m2-CRTYBq/src/a.ts",
+      "start": 56,
+      "length": 69,
+      "line": 2,
+      "column": 24,
+      "endLine": 2,
+      "endColumn": 93,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    }
+  ],
+  "summary": {
+    "filesChecked": 1,
+    "filesWithoutPlugin": 0,
+    "totalFiles": 1,
+    "errors": 1,
+    "warnings": 2,
+    "messages": 0
+  }
+}

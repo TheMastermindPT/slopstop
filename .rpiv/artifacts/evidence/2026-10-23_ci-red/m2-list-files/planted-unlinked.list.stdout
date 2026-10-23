@@ -1,0 +1,18 @@
+{
+  "diagnostics": [],
+  "files": [
+    {
+      "file": "C:/Users/pedro/AppData/Local/Temp/slopstop-m2-CQJjVj/src/a.ts",
+      "detectedEffect": "unknown",
+      "supportedEffect": "v3"
+    }
+  ],
+  "summary": {
+    "filesChecked": 1,
+    "filesWithoutPlugin": 0,
+    "totalFiles": 1,
+    "errors": 0,
+    "warnings": 0,
+    "messages": 0
+  }
+}

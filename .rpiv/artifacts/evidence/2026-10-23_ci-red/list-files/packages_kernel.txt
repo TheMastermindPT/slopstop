@@ -1,0 +1,38 @@
+{
+  "diagnostics": [],
+  "files": [
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/kernel/src/index.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/kernel/src/project-storage-identifiers.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/kernel/src/project-storage-identifiers.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/kernel/src/workspace-identifiers.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/kernel/src/workspace-identifiers.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    }
+  ],
+  "summary": {
+    "filesChecked": 5,
+    "filesWithoutPlugin": 0,
+    "totalFiles": 5,
+    "errors": 0,
+    "warnings": 0,
+    "messages": 0
+  }
+}

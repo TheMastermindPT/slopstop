@@ -1,0 +1,138 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop
+
+ ❯ |harness| scripts/check-effect-diagnostics.test.mjs (65 tests | 4 failed) 11789ms
+   × fails on a file that resolves no Effect v4 359ms
+   × runs effect-tsgo diagnostics on each project 3ms
+   × classifies a diagnostics run: 'report without a file list' 2ms
+   × classifies a diagnostics run: 'file without Effect v4' 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > fails on a file that resolves no Effect v4
+AssertionError: expected { ok: true, warnings: +0, …(1) } to deeply equal { ok: false, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "lines": [
+-     ".: src/a.ts detects Effect unknown, not v4",
++   "ok": true,
++   "projects": [
++     ".",
+    ],
+-   "ok": false,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:127:61
+    125| it("fails on a file that resolves no Effect v4", () => {
+    126|   const root = plantedProject(plantedRows[0].source, { linked: false }…
+    127|   expect(checkEffectDiagnostics({ root, projects: ["."] })).toEqual({
+       |                                                             ^
+    128|     ok: false,
+    129|     code: "EFFECT_GATE_BROKEN",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > runs effect-tsgo diagnostics on each project
+AssertionError: expected [ [ …(3) ], [ …(3) ] ] to deeply equal [ [ …(3) ], [ …(3) ] ]
+
+- Expected
++ Received
+
+@@ -6,11 +6,10 @@
+        "diagnostics",
+        "--project",
+        "C:\\Users\\pedro\\AppData\\Local\\Temp\\slopstop-effect-gate-0iehBK\\packages\\kernel\\tsconfig.json",
+        "--format",
+        "json",
+-       "--list-files",
+      ],
+      {
+        "cwd": "C:\\Users\\pedro\\Documents\\GitHub\\slopstop\\",
+        "encoding": "utf8",
+        "maxBuffer": 67108864,
+@@ -23,11 +22,10 @@
+        "diagnostics",
+        "--project",
+        "C:\\Users\\pedro\\AppData\\Local\\Temp\\slopstop-effect-gate-0iehBK\\apps\\desktop\\tsconfig.json",
+        "--format",
+        "json",
+-       "--list-files",
+      ],
+      {
+        "cwd": "C:\\Users\\pedro\\Documents\\GitHub\\slopstop\\",
+        "encoding": "utf8",
+        "maxBuffer": 67108864,
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:378:17
+    376|   });
+    377|   expect(result).toEqual({ ok: true, warnings: 0, projects });
+    378|   expect(calls).toEqual(
+       |                 ^
+    379|     projects.map((project) => [
+    380|       process.execPath,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'report without a file list'
+AssertionError: expected { ok: true, warnings: +0, …(1) } to match object { ok: false, …(1) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "ok": false,
++   "ok": true,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:574:54
+    572|   });
+    573|   const expected = row.result.ok ? { ...row.result, projects: ["first"…
+    574|   if (row.result.lines === undefined) expect(result).toMatchObject(exp…
+       |                                                      ^
+    575|   else if (row.lineCount === undefined) expect(result).toEqual(expecte…
+    576|   else {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |harness| scripts/check-effect-diagnostics.test.mjs > classifies a diagnostics run: 'file without Effect v4'
+AssertionError: expected { ok: true, warnings: +0, …(1) } to deeply equal { ok: false, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "code": "EFFECT_GATE_BROKEN",
+-   "lines": [
+-     "first: first/src/b.ts detects Effect unknown, not v4",
++   "ok": true,
++   "projects": [
++     "first",
++     "second",
+    ],
+-   "ok": false,
++   "warnings": 0,
+  }
+
+ ❯ scripts/check-effect-diagnostics.test.mjs:575:56
+    573|   const expected = row.result.ok ? { ...row.result, projects: ["first"…
+    574|   if (row.result.lines === undefined) expect(result).toMatchObject(exp…
+    575|   else if (row.lineCount === undefined) expect(result).toEqual(expecte…
+       |                                                        ^
+    576|   else {
+    577|     expect(result).toMatchObject({ ok: false, code: row.result.code });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 61 passed (65)
+   Start at  12:51:02
+   Duration  11.97s (transform 33ms, setup 0ms, import 52ms, tests 11.79s, environment 0ms)
+

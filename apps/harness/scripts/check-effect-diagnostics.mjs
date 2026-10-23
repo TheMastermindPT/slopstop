@@ -43,6 +43,10 @@ const isEntry = (entry) =>
   severities.includes(entry.severity) &&
   typeof entry.name === "string";
 
+/** One `--list-files` entry: a checked file and the Effect version it detects. */
+const isListedFile = (entry) =>
+  typeof entry?.file === "string" && typeof entry.detectedEffect === "string";
+
 /** The report's summary counts each severity exactly as its entries do. */
 const countsMatch = (summary, diagnostics) =>
   severities.every(
@@ -51,27 +55,49 @@ const countsMatch = (summary, diagnostics) =>
       diagnostics.filter((entry) => entry.severity === severity).length,
   );
 
-/**
- * The diagnostics of one complete `--format json` report, paths relative to `root`; undefined
- * for any output that is not such a report, so it can never read as clean.
- */
-function readReport(stdout, root) {
-  let report;
+/** The parsed output when it is JSON, else undefined. */
+function parseJson(text) {
   try {
-    report = JSON.parse(stdout);
+    return JSON.parse(text);
   } catch {
     return undefined;
   }
-  const diagnostics = report?.diagnostics;
-  if (!Array.isArray(diagnostics) || !diagnostics.every(isEntry)) return undefined;
+}
+
+const everyOf = (list, check) => Array.isArray(list) && list.every(check);
+
+/**
+ * The diagnostics and listed files of one complete `--format json --list-files` report, paths
+ * relative to `root`; undefined for any output that is not such a report, so it can never read
+ * as clean.
+ */
+function readReport(stdout, root) {
+  const report = parseJson(stdout);
+  const { diagnostics, files } = report ?? {};
+  if (!everyOf(diagnostics, isEntry) || !everyOf(files, isListedFile)) return undefined;
   if (!countsMatch(report.summary, diagnostics)) return undefined;
-  return diagnostics.map(({ file, line, column, severity, name }) => ({
-    file: relative(root, file).split("\\").join("/"),
-    line,
-    column,
-    severity,
-    rule: name,
-  }));
+  const inRoot = (file) => relative(root, file).split("\\").join("/");
+  return {
+    diagnostics: diagnostics.map(({ file, line, column, severity, name }) => ({
+      file: inRoot(file),
+      line,
+      column,
+      severity,
+      rule: name,
+    })),
+    files: files.map(({ file, detectedEffect }) => ({ file: inRoot(file), detectedEffect })),
+  };
+}
+
+/**
+ * Files whose Effect version is not v4, each named. The language service picks its rules from
+ * the `effect` it resolves; on any other version the v4 rules are off and a clean report would lie.
+ */
+function undetectedEffect(project, files) {
+  const lines = files
+    .filter((entry) => entry.detectedEffect !== "v4")
+    .map((entry) => `${project}: ${entry.file} detects Effect ${entry.detectedEffect}, not v4`);
+  return lines.length === 0 ? undefined : failure("EFFECT_GATE_BROKEN", lines);
 }
 
 /** The binary was not started, was killed, or ended without an exit status. */
@@ -100,6 +126,7 @@ function spawnProject({ root, binary, spawn }, project) {
       resolve(root, project, "tsconfig.json"),
       "--format",
       "json",
+      "--list-files",
     ],
     { cwd: toolRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
   );
@@ -109,9 +136,9 @@ function spawnProject({ root, binary, spawn }, project) {
   if (!isDiagnosticsExit(run.status)) {
     return failure("EFFECT_GATE_BROKEN", [`${project}: exit ${run.status}`]);
   }
-  const diagnostics = readReport(run.stdout ?? "", root);
-  if (diagnostics === undefined) return unreadableRun(project, run);
-  return { status: run.status, diagnostics };
+  const report = readReport(run.stdout ?? "", root);
+  if (report === undefined) return unreadableRun(project, run);
+  return undetectedEffect(project, report.files) ?? { status: run.status, ...report };
 }
 
 /** The first non-empty output lines, for a run whose output cannot be read as a report. */

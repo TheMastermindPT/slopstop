@@ -1,0 +1,128 @@
+{
+  "diagnostics": [],
+  "files": [
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/availability-messages.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/canonical-project-protocol.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/canonical-project-protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/canonical-writer-smoke-protocol.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/canonical-writer-smoke-protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/decode-with-issues.test-support.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/domain-identity-schema.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/harness-failure-protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/index.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/project-conversation-protocol.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/project-conversation-protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/project-list-protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/project-registration-flow-protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/project-registration-protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/project-storage-protocol.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/project-storage-protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/project-upgrade-protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/protocol.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/schema-boundary-characterization.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/schema-codec.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/workspace-protocol.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/packages/protocol/src/workspace-protocol.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    }
+  ],
+  "summary": {
+    "filesChecked": 23,
+    "filesWithoutPlugin": 0,
+    "totalFiles": 23,
+    "errors": 0,
+    "warnings": 0,
+    "messages": 0
+  }
+}

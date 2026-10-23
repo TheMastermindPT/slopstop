@@ -1,0 +1,2164 @@
+{
+  "diagnostics": [
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-command-registry.test.ts",
+      "start": 8258,
+      "length": 6,
+      "line": 218,
+      "column": 18,
+      "endLine": 218,
+      "endColumn": 24,
+      "severity": "warning",
+      "code": 377098,
+      "name": "schemaNumber",
+      "message": "This Schema number API accepts `NaN`, `Infinity`, and `-Infinity`. Use `Schema.Finite` for finite domain numbers. If non-finite values are intentional, disable this diagnostic for that line."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-command-registry.test.ts",
+      "start": 11254,
+      "length": 6,
+      "line": 306,
+      "column": 29,
+      "endLine": 306,
+      "endColumn": 35,
+      "severity": "warning",
+      "code": 377098,
+      "name": "schemaNumber",
+      "message": "This Schema number API accepts `NaN`, `Infinity`, and `-Infinity`. Use `Schema.Finite` for finite domain numbers. If non-finite values are intentional, disable this diagnostic for that line."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-command-registry.test.ts",
+      "start": 12240,
+      "length": 6,
+      "line": 328,
+      "column": 29,
+      "endLine": 328,
+      "endColumn": 35,
+      "severity": "warning",
+      "code": 377098,
+      "name": "schemaNumber",
+      "message": "This Schema number API accepts `NaN`, `Infinity`, and `-Infinity`. Use `Schema.Finite` for finite domain numbers. If non-finite values are intentional, disable this diagnostic for that line."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-project-application.ts",
+      "start": 697,
+      "length": 32,
+      "line": 18,
+      "column": 14,
+      "endLine": 18,
+      "endColumn": 46,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-project-writer.ts",
+      "start": 2720,
+      "length": 34,
+      "line": 67,
+      "column": 14,
+      "endLine": 67,
+      "endColumn": 48,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-runtime-shutdown.test.ts",
+      "start": 13594,
+      "length": 4,
+      "line": 375,
+      "column": 7,
+      "endLine": 375,
+      "endColumn": 11,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-runtime-shutdown.test.ts",
+      "start": 13600,
+      "length": 11,
+      "line": 375,
+      "column": 13,
+      "endLine": 375,
+      "endColumn": 24,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-runtime.test.ts",
+      "start": 11041,
+      "length": 4,
+      "line": 322,
+      "column": 7,
+      "endLine": 322,
+      "endColumn": 11,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-runtime.ts",
+      "start": 4153,
+      "length": 4,
+      "line": 112,
+      "column": 33,
+      "endLine": 112,
+      "endColumn": 37,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-runtime.ts",
+      "start": 7608,
+      "length": 45,
+      "line": 194,
+      "column": 44,
+      "endLine": 194,
+      "endColumn": 89,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-runtime.ts",
+      "start": 16854,
+      "length": 26,
+      "line": 429,
+      "column": 37,
+      "endLine": 429,
+      "endColumn": 63,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-runtime.ts",
+      "start": 17328,
+      "length": 53,
+      "line": 443,
+      "column": 37,
+      "endLine": 443,
+      "endColumn": 90,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-bootstrap.test.ts",
+      "start": 3338,
+      "length": 77,
+      "line": 87,
+      "column": 7,
+      "endLine": 89,
+      "endColumn": 9,
+      "severity": "message",
+      "code": 377017,
+      "name": "unnecessaryEffectGen",
+      "message": "This Effect.gen contains a single return statement."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-bootstrap.ts",
+      "start": 5787,
+      "length": 74,
+      "line": 146,
+      "column": 23,
+      "endLine": 146,
+      "endColumn": 97,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-bootstrap.ts",
+      "start": 6227,
+      "length": 117,
+      "line": 156,
+      "column": 21,
+      "endLine": 158,
+      "endColumn": 8,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-bootstrap.ts",
+      "start": 6576,
+      "length": 21,
+      "line": 164,
+      "column": 38,
+      "endLine": 164,
+      "endColumn": 59,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/existing-registration.ts",
+      "start": 2288,
+      "length": 5,
+      "line": 57,
+      "column": 42,
+      "endLine": 57,
+      "endColumn": 47,
+      "severity": "warning",
+      "code": 377019,
+      "name": "unnecessaryFailYieldableError",
+      "message": "This `yield* Effect.fail(...)` passes a yieldable error value. `yield*` represents that value directly without wrapping it in `Effect.fail`."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-confirmation-store.ts",
+      "start": 14239,
+      "length": 32,
+      "line": 361,
+      "column": 14,
+      "endLine": 361,
+      "endColumn": 46,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-registry.ts",
+      "start": 3035,
+      "length": 7,
+      "line": 77,
+      "column": 39,
+      "endLine": 77,
+      "endColumn": 46,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-registry.ts",
+      "start": 3171,
+      "length": 18,
+      "line": 82,
+      "column": 34,
+      "endLine": 82,
+      "endColumn": 52,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-registry.ts",
+      "start": 7817,
+      "length": 26,
+      "line": 188,
+      "column": 27,
+      "endLine": 188,
+      "endColumn": 53,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registry-failure.ts",
+      "start": 776,
+      "length": 13,
+      "line": 24,
+      "column": 14,
+      "endLine": 24,
+      "endColumn": 27,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/repository-physical-observation.ts",
+      "start": 1142,
+      "length": 13,
+      "line": 26,
+      "column": 7,
+      "endLine": 26,
+      "endColumn": 20,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/windows-observer-api.ts",
+      "start": 3627,
+      "length": 23,
+      "line": 71,
+      "column": 14,
+      "endLine": 71,
+      "endColumn": 37,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/windows-version-child.ts",
+      "start": 1044,
+      "length": 18,
+      "line": 32,
+      "column": 7,
+      "endLine": 32,
+      "endColumn": 25,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/windows-version-child.ts",
+      "start": 1183,
+      "length": 22,
+      "line": 37,
+      "column": 7,
+      "endLine": 37,
+      "endColumn": 29,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/application-database-authority.test.ts",
+      "start": 6237,
+      "length": 28,
+      "line": 165,
+      "column": 19,
+      "endLine": 165,
+      "endColumn": 47,
+      "severity": "message",
+      "code": 377109,
+      "name": "preferUnsafeConstructor",
+      "message": "`Effect.runSync(Scope.make(...))` starts a fiber to run a pure constructor. Use the synchronous variant `Scope.makeUnsafe(...)` instead."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/application-database-authority.test.ts",
+      "start": 6596,
+      "length": 17,
+      "line": 175,
+      "column": 27,
+      "endLine": 175,
+      "endColumn": 44,
+      "severity": "message",
+      "code": 377123,
+      "name": "runOfExitToRunExit",
+      "message": "`Effect.runPromise` of `Effect.exit` re-implements `Effect.runPromiseExit`. Use the dedicated Exit runner directly."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/application-database-authority.ts",
+      "start": 4310,
+      "length": 18,
+      "line": 85,
+      "column": 51,
+      "endLine": 85,
+      "endColumn": 69,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/application-database-authority.ts",
+      "start": 17611,
+      "length": 24,
+      "line": 440,
+      "column": 30,
+      "endLine": 440,
+      "endColumn": 54,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/application-database-migration.ts",
+      "start": 1680,
+      "length": 24,
+      "line": 44,
+      "column": 14,
+      "endLine": 44,
+      "endColumn": 38,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/canonical-command-repository.ts",
+      "start": 4752,
+      "length": 31,
+      "line": 113,
+      "column": 14,
+      "endLine": 113,
+      "endColumn": 45,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/canonical-writer-lease.ts",
+      "start": 1418,
+      "length": 25,
+      "line": 38,
+      "column": 14,
+      "endLine": 38,
+      "endColumn": 39,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-application-client.ts",
+      "start": 677,
+      "length": 38,
+      "line": 19,
+      "column": 7,
+      "endLine": 19,
+      "endColumn": 45,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-application-client.ts",
+      "start": 5629,
+      "length": 18,
+      "line": 153,
+      "column": 38,
+      "endLine": 153,
+      "endColumn": 56,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-application-client.ts",
+      "start": 6023,
+      "length": 30,
+      "line": 162,
+      "column": 64,
+      "endLine": 162,
+      "endColumn": 94,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-application-client.ts",
+      "start": 7182,
+      "length": 30,
+      "line": 198,
+      "column": 65,
+      "endLine": 198,
+      "endColumn": 95,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-errors.ts",
+      "start": 13,
+      "length": 30,
+      "line": 1,
+      "column": 14,
+      "endLine": 1,
+      "endColumn": 44,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-errors.ts",
+      "start": 137,
+      "length": 25,
+      "line": 5,
+      "column": 14,
+      "endLine": 5,
+      "endColumn": 39,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-locks.test.ts",
+      "start": 949,
+      "length": 37,
+      "line": 22,
+      "column": 20,
+      "endLine": 22,
+      "endColumn": 57,
+      "severity": "message",
+      "code": 377109,
+      "name": "preferUnsafeConstructor",
+      "message": "`Effect.runSync(Deferred.make(...))` starts a fiber to run a pure constructor. Use the synchronous variant `Deferred.makeUnsafe(...)` instead."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-store.ts",
+      "start": 5263,
+      "length": 26,
+      "line": 172,
+      "column": 59,
+      "endLine": 172,
+      "endColumn": 85,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-store.ts",
+      "start": 19975,
+      "length": 7,
+      "line": 566,
+      "column": 39,
+      "endLine": 566,
+      "endColumn": 46,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-store.ts",
+      "start": 20272,
+      "length": 18,
+      "line": 572,
+      "column": 78,
+      "endLine": 572,
+      "endColumn": 96,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-upgrade-pipeline.ts",
+      "start": 13965,
+      "length": 5,
+      "line": 385,
+      "column": 43,
+      "endLine": 385,
+      "endColumn": 48,
+      "severity": "warning",
+      "code": 377019,
+      "name": "unnecessaryFailYieldableError",
+      "message": "This `yield* Effect.fail(...)` passes a yieldable error value. `yield*` represents that value directly without wrapping it in `Effect.fail`."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-upgrade-verification.ts",
+      "start": 1535,
+      "length": 18,
+      "line": 35,
+      "column": 7,
+      "endLine": 35,
+      "endColumn": 25,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/retryable-attempt.ts",
+      "start": 599,
+      "length": 26,
+      "line": 11,
+      "column": 39,
+      "endLine": 11,
+      "endColumn": 65,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/retryable-attempt.ts",
+      "start": 1002,
+      "length": 18,
+      "line": 25,
+      "column": 41,
+      "endLine": 25,
+      "endColumn": 59,
+      "severity": "warning",
+      "code": 377030,
+      "name": "anyUnknownInErrorContext",
+      "message": "This has unknown in the error channel which is not recommended.\nHaving an unknown or any error type is not useful. Consider instead using specific error types baked by Data.TaggedError for example."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-command-repository-faults.integration.test.ts",
+      "start": 1025,
+      "length": 6,
+      "line": 35,
+      "column": 39,
+      "endLine": 35,
+      "endColumn": 45,
+      "severity": "warning",
+      "code": 377098,
+      "name": "schemaNumber",
+      "message": "This Schema number API accepts `NaN`, `Infinity`, and `-Infinity`. Use `Schema.Finite` for finite domain numbers. If non-finite values are intentional, disable this diagnostic for that line."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/conformance-counter-command.ts",
+      "start": 25685,
+      "length": 6,
+      "line": 761,
+      "column": 51,
+      "endLine": 761,
+      "endColumn": 57,
+      "severity": "warning",
+      "code": 377098,
+      "name": "schemaNumber",
+      "message": "This Schema number API accepts `NaN`, `Infinity`, and `-Infinity`. Use `Schema.Finite` for finite domain numbers. If non-finite values are intentional, disable this diagnostic for that line."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/conformance-counter-command.ts",
+      "start": 25703,
+      "length": 6,
+      "line": 761,
+      "column": 69,
+      "endLine": 761,
+      "endColumn": 75,
+      "severity": "warning",
+      "code": 377098,
+      "name": "schemaNumber",
+      "message": "This Schema number API accepts `NaN`, `Infinity`, and `-Infinity`. Use `Schema.Finite` for finite domain numbers. If non-finite values are intentional, disable this diagnostic for that line."
+    }
+  ],
+  "files": [
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/active-project-conversation.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/active-project-conversation.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/active-project-coordinator.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/active-project-coordinator.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/active-work-admission.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-command-registry.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-command-registry.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-json.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-json.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-project-application.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-project-application.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-project-writer.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-project-writer.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/canonical-writer-conversation.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/effect-rejection.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-logger.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-runtime-shutdown.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-runtime.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/harness-runtime.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/index.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/node-active-project-coordinator.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-bootstrap.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-bootstrap.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-connection.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-connection.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-entry.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-fatal-diagnostics.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-fatal-diagnostics.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-shutdown.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/process-shutdown.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/project-registration-observer.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/project-registration-observer.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/project-storage-application.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/project-storage-application.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/project-upgrade-outcome.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/project-upgrade-outcome.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/upgrade-diagnostics-logger.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/upgrade-diagnostics-logger.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/workspace-application.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/workspace-application.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/conversation/conversation-errors.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/conversation/conversation-rows.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/conversation/conversation-save.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/conversation/conversation-store.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/executable-consent-store.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/executable-identity.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/existing-registration.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/git-executable-discovery.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/git-identity-query-results.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/git-identity-query-results.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/git-version-inspection.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/identity-query-child.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/identity-query-consent.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/identity-query-control.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/identity-query-journal.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/list-visibility.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/observer-clock.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/observer-journal.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/observer-limits.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/physical-identity.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/project-listing.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/project-registration-flow.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/project-registration-flow.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/project-registration-owner.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/project-registration-preparation.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/project-registration-preparation.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registered-name.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registered-project-selection.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-confirmation-store.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-listing.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-listing.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-proposal-steps.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-proposal-store.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-registry.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-registry.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-step.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registration-storage-bootstrap.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registry-database.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registry-effect.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/registry-failure.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/repository-identity-query-owner.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/repository-physical-observation.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/repository-trust.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/version-observation-execution.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/windows-file-identity.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/windows-observer-absence.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/windows-observer-api.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/registration/windows-version-child.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/application-database-authority.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/application-database-authority.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/application-database-migration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/application-database-migration.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/application-schema.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/canonical-command-ledger.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/canonical-command-repository.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/canonical-command-settlement.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/canonical-schema.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/canonical-writer-lease.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/canonical-writer-lease.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/canonical-writer-recovery.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/database-schema-verifier.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/generated-migration-resources.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/generated-migrations.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/generated-migrations.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/initial-repository-binding.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/local-libsql-worker-client.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/permit-lock.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/permit-lock.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-application-client.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-conversation-specs.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-create-inspection.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-create-request.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-database-authority.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-database-build.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-database-specs.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-errors.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-file-adapter.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-filesystem-authority.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-generation-manifest.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-healthy-opening.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-locks-service.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-locks.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-locks.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-manifest.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-manifest.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-node-adapters.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-node-adapters.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-node-errors.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-node-errors.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-node-registry.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-node-registry.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-node-schemas.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-node-support.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-opening-manifest.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-opening.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-opening.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-registry-rows.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-spec-builders.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-store.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-store.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-transaction.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-transaction.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-upgrade-eligibility.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-upgrade-eligibility.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-upgrade-node-adapter.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-upgrade-node-adapter.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-upgrade-pipeline.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-upgrade-recovery.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-upgrade-verification.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/project-storage-upgrade.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/repository-identity-observer.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/retained-application-client.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/retryable-attempt.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/runtime-schema.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/schema-metadata-columns.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/sql-integer-schema.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/sqlite-busy.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/sqlite-busy.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/sqlite-schema-expression.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/sqlite-schema-expression.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/sqlite-schema-lexing.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/sqlite-schema-scanner.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/storage/storage-schema-constraints.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/src/types/fs-native-extensions.d.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/active-project-coordinator-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/active-project-coordinator-real-commands.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/application-database-authority-cases.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/application-database-authority.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/application-database-close-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/application-database-gated-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-command-database-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-command-driver.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-command-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-command-repository-faults.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-command-repository-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-command-repository-writer-state.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-command-repository.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-database-template.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-generation-four-pin.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-project-activation.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-project-settlement.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-project-switch.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-runtime-application-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-storage-identity-rebuild.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-storage-selection-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-writer-lease.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-writer-package-smoke-entry.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-writer-package-smoke-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-writer-package-smoke.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-writer-reconciliation-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-writer-reconciliation.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-writer-recovery-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-writer-recovery-runtime-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-writer-recovery.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/canonical-writer-smoke-test-transport.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/command-admission-cases.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/conformance-counter-command.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/conversation-fence-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/conversation-journey-ui-seed.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/conversation-store-busy.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/conversation-store.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/conversation-uncertain-commit.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/conversation-writer-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/conversation-writer-serialization.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/harness-logger.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/harness-runtime-real-commands.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/harness-runtime.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/harness-test-transport.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/local-database-worker-client.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/local-database-worker-parity.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/migration-guard-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/process-bootstrap.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-conversation-closure-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-conversation-runtime-busy.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-conversation-runtime-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-conversation-runtime.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-entry-ui-seed.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-list-runtime.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-registration.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-application-client.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-chained-upgrade.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-conversation-schema.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-create-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-create-request.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-create.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-filesystem-authority.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-historical-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-node-adapters.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-open-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-open-initialization.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-open-recovery.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-open.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-runtime-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-schema-cases.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-transaction.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-upgrade-directories.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-upgrade-failure.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-upgrade-faults.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-upgrade-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-upgrade-recovery-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-upgrade-recovery.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-upgrade-steps.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-upgrade-verification.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-storage-upgrade.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-upgrade-runtime-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-upgrade-runtime.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/project-upgrade-ui-seed.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/refused-conversation-ports.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registered-project-selection.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-absence-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-bootstrap-guards.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-bootstrap.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-consent-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-decision-oracle.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-flow-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-flow-outcomes.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-flow-runtime.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-git-discovery.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-git-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-identity-consent-cases.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-identity-phase.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-identity-query-lifecycle.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-identity-query.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-list-removal-race.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-list-visibility.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-list.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-manual-clock.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-native-clock-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-native-fault-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-owner-recovery-cases.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-owner-recovery-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-peer-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-physical-identity.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-physical-limits.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-preparation-lifecycle.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-preparation.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-project-upgrade-timing.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-project-upgrade.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-recovery-scenarios.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-repository-trust-cases.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-schema-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-storage-upgrade-kill.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-storage-upgrades.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-version-fixture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registration-visibility-upgrade.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/registry-witness-race.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/storage-root-capture.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/storage-root-equivalence.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/storage-root-template.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/trace-94-runner.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/trace-94-setup.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/trace-94.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/tests/integration/trace-94.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/vitest.integration.config.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/vitest.registration.config.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/vitest.registration-files.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/vitest.native-long.config.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/vitest.native-long-files.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/harness/vitest.trace-94.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    }
+  ],
+  "summary": {
+    "filesChecked": 300,
+    "filesWithoutPlugin": 0,
+    "totalFiles": 300,
+    "errors": 0,
+    "warnings": 46,
+    "messages": 4
+  }
+}

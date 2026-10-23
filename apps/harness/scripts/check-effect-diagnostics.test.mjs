@@ -1,5 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,19 +19,36 @@ import { checkEffectDiagnostics } from "./check-effect-diagnostics.mjs";
 const repository = fileURLToPath(new URL("../../../", import.meta.url));
 const checker = fileURLToPath(new URL("./check-effect-diagnostics.mjs", import.meta.url));
 const roots = [];
+const links = [];
 
 afterEach(() => {
+  // Links go first, so removing a root never reaches the repository's `effect`.
+  for (const link of links.splice(0)) unlinkSync(link);
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 /**
- * A temporary project at the folder's root that extends the repository base config and finds
- * `effect` in the repository. Its own plugin entry makes the two planted rules `error`, so these
+ * Links `root/node_modules/effect` to the repository's copy (a junction on Windows). The Effect
+ * language service picks its rule set from the `effect` that package resolution finds, not from
+ * `paths`; without this link a temporary root gets the v3 rules.
+ */
+function linkEffect(root) {
+  const link = join(root, "node_modules", "effect");
+  mkdirSync(dirname(link), { recursive: true });
+  const kind = process.platform === "win32" ? "junction" : "dir";
+  symlinkSync(realpathSync(join(repository, "node_modules", "effect")), link, kind);
+  links.push(link);
+}
+
+/**
+ * A temporary project at the folder's root that extends the repository base config and resolves
+ * `effect` through its own link. Its own plugin entry makes the two planted rules `error`, so these
  * rows test the gate's classification apart from the curated repository configuration.
  */
-function plantedProject(source) {
+function plantedProject(source, { linked = true } = {}) {
   const root = mkdtempSync(join(tmpdir(), "slopstop-effect-gate-"));
   roots.push(root);
+  if (linked) linkEffect(root);
   const modules = join(repository, "node_modules");
   writeFileSync(
     join(root, "tsconfig.json"),
@@ -31,7 +58,6 @@ function plantedProject(source) {
         noEmit: true,
         types: [],
         typeRoots: [join(modules, "@types")],
-        paths: { effect: [join(modules, "effect")], "effect/*": [join(modules, "effect", "*")] },
         plugins: [
           {
             name: "@effect/language-service",
@@ -92,6 +118,17 @@ it.each(plantedRows)("fails on a planted Effect error: $name", ({ source, violat
   expect(cli.status).toBe(1);
   expect(cli.stderr).toContain(`${violation.file}(${violation.line},`);
   expect(cli.stderr).toContain(violation.rule);
+});
+
+// The CI failure of 2026-10-23: a root with no `effect` to resolve gets the v3 rules and a clean
+// report, though its planted v4 error is there.
+it("fails on a file that resolves no Effect v4", () => {
+  const root = plantedProject(plantedRows[0].source, { linked: false });
+  expect(checkEffectDiagnostics({ root, projects: ["."] })).toEqual({
+    ok: false,
+    code: "EFFECT_GATE_BROKEN",
+    lines: [".: src/a.ts detects Effect unknown, not v4"],
+  });
 });
 
 /** Every failure carries `lines` (at most 20) that name its cause (S5B-R1-3). */
@@ -247,17 +284,37 @@ const recorded = JSON.parse(
   readFileSync(new URL("./effect-diagnostics-recorded.json", import.meta.url), "utf8"),
 );
 
-/** A recorded run with its paths moved under `root`, in the folder `project`. */
-function recordedRun(name, root, project) {
+/** One `--list-files` entry: `file` (absolute, `/` separators) and the Effect version it detects. */
+const listed = (file, detectedEffect = "v4") => ({
+  file,
+  detectedEffect,
+  supportedEffect: detectedEffect === "v4" ? "v4" : "v3",
+});
+
+/**
+ * A recorded run with its paths moved under `root`, in the folder `project`. A report also gets
+ * the `files` list that `--list-files` adds (M2: the only change to the report), one entry per
+ * `[path, detectedEffect]` in `files` under the project folder; `files: null` leaves it out.
+ */
+function recordedRun(name, root, project, files = [["src/a.ts", "v4"]]) {
   const place = (text) =>
     text.split("<root>").join(root.split("\\").join("/")).split("<project>").join(project);
   const { status, stdout, stderr } = recorded[name];
-  return { status, signal: null, stdout: place(stdout), stderr: place(stderr) };
+  const run = { status, signal: null, stdout: place(stdout), stderr: place(stderr) };
+  if (files === null || !run.stdout.startsWith("{")) return run;
+  const { diagnostics, summary } = JSON.parse(run.stdout);
+  const base = `${root.split("\\").join("/")}/${project}`;
+  const list = files.map(([path, detected]) => listed(`${base}/${path}`, detected));
+  return { ...run, stdout: `${JSON.stringify({ diagnostics, files: list, summary }, null, 2)}\n` };
 }
 
-/** A diagnostics report in the recorded shape, with summary counts that match its entries. */
+/**
+ * A diagnostics report in the recorded shape, with summary counts that match its entries and a
+ * `--list-files` list naming each file of its entries as `v4`.
+ */
 function report(diagnostics) {
   const count = (severity) => diagnostics.filter((entry) => entry.severity === severity).length;
+  const files = [...new Set(diagnostics.map((entry) => entry.file))].map((file) => listed(file));
   const summary = {
     filesChecked: 1,
     filesWithoutPlugin: 0,
@@ -266,7 +323,7 @@ function report(diagnostics) {
     warnings: count("warning"),
     messages: count("message"),
   };
-  return `${JSON.stringify({ diagnostics, summary }, null, 2)}\n`;
+  return `${JSON.stringify({ diagnostics, files, summary }, null, 2)}\n`;
 }
 
 /** One diagnostic entry in the recorded shape, at `[file, line, column, severity, name]`. */
@@ -328,6 +385,7 @@ it("runs effect-tsgo diagnostics on each project", () => {
         resolve(root, project, "tsconfig.json"),
         "--format",
         "json",
+        "--list-files",
       ],
       { cwd: repository, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
     ]),
@@ -431,6 +489,26 @@ const runRows = [
     },
     result: { ok: false, code: "EFFECT_GATE_BROKEN" },
     head: ["first: exit 0 with unreadable output", "{"],
+  },
+  {
+    name: "report without a file list",
+    run: (root) => recordedRun("clean", root, "first", null),
+    result: { ok: false, code: "EFFECT_GATE_BROKEN" },
+    head: ["first: exit 0 with unreadable output", "{"],
+  },
+  {
+    // Without an Effect v4 the language service runs the v3 rules, so a v4 rule could never fire.
+    name: "file without Effect v4",
+    run: (root) =>
+      recordedRun("clean", root, "first", [
+        ["src/a.ts", "v4"],
+        ["src/b.ts", "unknown"],
+      ]),
+    result: {
+      ok: false,
+      code: "EFFECT_GATE_BROKEN",
+      lines: ["first: first/src/b.ts detects Effect unknown, not v4"],
+    },
   },
   {
     name: "unknown exit",
@@ -566,6 +644,13 @@ const canaryEntries = [
   ["src/canary.ts", 4, 24, "warning", "anyUnknownInErrorContext"],
 ];
 
+/** The canary's checked files as M2 lists them, each detecting Effect v4. */
+const canaryFiles = [
+  ["src/canary.ts", "v4"],
+  ["src/planted.test.ts", "v4"],
+  ["tests/planted.ts", "v4"],
+];
+
 /** Fake canary output in the recorded format: the expected set, or that set changed by `edit`. */
 function canaryOutput(root, edit = (entries) => entries) {
   const base = `${root.split("\\").join("/")}/${canaryFolder}`;
@@ -581,16 +666,12 @@ function canaryWithoutPlugin() {
   const source = join(repository, canaryFolder);
   const target = join(root, canaryFolder);
   cpSync(source, target, { recursive: true });
-  const modules = join(repository, "node_modules");
+  linkEffect(root);
   writeFileSync(
     join(target, "tsconfig.json"),
     JSON.stringify({
       extends: join(repository, "tsconfig.base.json"),
-      compilerOptions: {
-        noEmit: true,
-        plugins: [],
-        paths: { effect: [join(modules, "effect")], "effect/*": [join(modules, "effect", "*")] },
-      },
+      compilerOptions: { noEmit: true, plugins: [] },
       include: ["src", "tests"],
     }),
   );
@@ -655,7 +736,7 @@ const canaryRows = [
   {
     // M1 case 7c: the canary's tsconfig with `"plugins": []`.
     name: "plugin removed",
-    run: (root) => recordedRun("canaryWithoutPlugin", root, canaryFolder),
+    run: (root) => recordedRun("canaryWithoutPlugin", root, canaryFolder, canaryFiles),
     lines: [
       "extra src/planted.test.ts(1,30) error newPromise",
       "extra tests/planted.ts(1,31) error newPromise",
@@ -732,9 +813,9 @@ it("names every canary difference: matched", () => {
   expect(calls).toHaveLength(1);
 });
 
-// The canary plus four packages take about 7.6 s alone in diagnostics mode (2026-10-23); the
-// bound leaves room under `pnpm check`.
-it("passes on the repository", { timeout: 15_000 }, () => {
+// The canary plus four packages take about 7.6 s alone in diagnostics mode locally and 12.6-13.4 s
+// on the 2-vCPU CI runners (2026-10-23); Pedro raised this row's bound to 30 s.
+it("passes on the repository", { timeout: 30_000 }, () => {
   const result = checkEffectDiagnostics({ root: repository });
   expect(result).toMatchObject({ ok: true, canary: "matched" });
   expect(result.projects).toEqual([

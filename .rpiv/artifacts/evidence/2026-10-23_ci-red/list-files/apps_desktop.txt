@@ -1,0 +1,767 @@
+{
+  "diagnostics": [
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/package-smoke-authorization.ts",
+      "start": 509,
+      "length": 30,
+      "line": 13,
+      "column": 14,
+      "endLine": 13,
+      "endColumn": 44,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/package-smoke-verifier.ts",
+      "start": 5978,
+      "length": 16,
+      "line": 207,
+      "column": 14,
+      "endLine": 207,
+      "endColumn": 30,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-entry-bridge.ts",
+      "start": 4589,
+      "length": 14,
+      "line": 128,
+      "column": 11,
+      "endLine": 128,
+      "endColumn": 25,
+      "severity": "message",
+      "code": 377120,
+      "name": "flatMapConditionalToFilterOrFail",
+      "message": "`Effect.filterOrFail` expresses this conditional validation more directly than `Effect.flatMap` with an identity `Effect.succeed` branch."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-storage-bridge.ts",
+      "start": 4214,
+      "length": 14,
+      "line": 120,
+      "column": 9,
+      "endLine": 120,
+      "endColumn": 23,
+      "severity": "message",
+      "code": 377120,
+      "name": "flatMapConditionalToFilterOrFail",
+      "message": "`Effect.filterOrFail` expresses this conditional validation more directly than `Effect.flatMap` with an identity `Effect.succeed` branch."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-storage-package-smoke.ts",
+      "start": 1356,
+      "length": 31,
+      "line": 45,
+      "column": 7,
+      "endLine": 45,
+      "endColumn": 38,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/registration-package-smoke.ts",
+      "start": 288,
+      "length": 29,
+      "line": 7,
+      "column": 14,
+      "endLine": 7,
+      "endColumn": 43,
+      "severity": "warning",
+      "code": 377055,
+      "name": "extendsNativeError",
+      "message": "This class extends the native `Error` type directly. Untagged native errors lose distinction in the Effect failure channel."
+    }
+  ],
+  "files": [
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/bounded-log-destination.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/bounded-log-destination.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/canonical-writer-package-smoke-test-peers.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/canonical-writer-package-smoke.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/canonical-writer-package-smoke.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/crash-reporting.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/crash-reporting.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/desktop-runtime.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/desktop-runtime.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/desktop-shutdown.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/desktop-shutdown.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/effect-rejection.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/forge-env.d.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-bridges.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-bridges.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-log-lines.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-log-lines.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-request-core.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-request-core.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-send-failure.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-session-test-peers.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-session.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-session.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-supervisor.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/harness-supervisor.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/logger.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/logger.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/main.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/package-smoke-authorization.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/package-smoke-launcher.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/package-smoke-runtime.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/package-smoke-verifier.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/package-smoke-verifier.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-conversation-failure.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-entry-bridge.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-entry-bridge.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-entry-ipc.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-entry-ipc.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-registration-ipc.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-registration-ipc.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-storage-bootstrap.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-storage-bootstrap.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-storage-bridge.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-storage-bridge.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-storage-package-smoke.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-storage-package-smoke.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/project-upgrade-failure.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/registration-package-smoke.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/registration-package-smoke.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/security.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/security.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/workspace-bridge.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/main/workspace-bridge.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/preload/preload.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/preload/preload.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/busy-announcement.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/legacy-shell.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/test-api.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/test-setup.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/use-project-upgrade.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/window.d.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/workspace-hooks.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/add-repository/outcomes.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/add-repository/registration-fake.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/add-repository/use-add-repository.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/conversation-memory.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/save-outcome.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/save-outcome.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/saved-at.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/saved-at.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/settle-save.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/settle-save.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/use-conversation-load.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/use-conversation-save.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/use-project-conversation.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/remove-from-list/use-remove-from-list.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/theme/seixo-tokens.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/shared/content-security-policy.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/shared/content-security-policy.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/shared/desktop-api.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/shared/upgrade-result-fixtures.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/types/electron-forge-plugin-auto-unpack-natives.d.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/add-repository-button.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/app.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/app.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/main.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/project-list-problem.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/project-upgrade.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/projects-list.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/projects-list.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/projects-workspace.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/upgrade-problem.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/workspace-view.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/add-repository/add-repository.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/add-repository/flow-screens.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/add-repository/flow-view.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/add-repository/outcome-view.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/conversation-details.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/conversation-memory.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/conversation-parts.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/conversation-region.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/conversation-region.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/conversation-save-outcomes.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/conversation-test-harness.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/load-notice.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/project-conversation.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/conversation/status-row.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/icons/runa-icon.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/icons/runa-icon.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/remove-from-list/removal-view.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/remove-from-list/remove-button.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/src/renderer/remove-from-list/remove-from-list.test.tsx",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/build/harness-runtime-staging-plugin.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/build/harness-runtime-staging-plugin.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/accessibility.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/conversation-accessibility.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/conversation-window.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/conversation.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/electron-launch.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/harness-seed.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/project-upgrade.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/projects.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/registration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/renderer-foundation.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/shell.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/e2e/single-instance.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/integration/bounded-log-destination.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/tests/integration/package-smoke-authorization.integration.test.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/forge.config.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/playwright.config.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/vite.harness.config.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/vite.main.config.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/vite.preload.config.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    },
+    {
+      "file": "C:/Users/pedro/Documents/GitHub/slopstop/apps/desktop/vite.renderer.config.ts",
+      "detectedEffect": "v4",
+      "supportedEffect": "v4"
+    }
+  ],
+  "summary": {
+    "filesChecked": 135,
+    "filesWithoutPlugin": 0,
+    "totalFiles": 135,
+    "errors": 0,
+    "warnings": 4,
+    "messages": 2
+  }
+}
