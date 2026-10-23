@@ -20,7 +20,7 @@ import { ApplicationDatabaseFault } from "./application-database-migration.js";
 import { requireDeclaredSchemaObjects } from "./database-schema-verifier.js";
 import { loadGeneratedMigrations } from "./generated-migration-resources.js";
 import type { GeneratedMigration } from "./generated-migrations.js";
-import { physicalRoot } from "./physical-root.js";
+import { requirePhysicalRoot } from "./physical-root.js";
 import { createApplicationClientManager } from "./project-storage-application-client.js";
 import { type CreateInspection, inspectCreateRows } from "./project-storage-create-inspection.js";
 import {
@@ -102,8 +102,8 @@ export type NodeProjectStorageOptions = Readonly<{
 }>;
 
 function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageStoreDependencies {
-  const applicationStorageRoot = physicalRoot(options.applicationStorageRoot);
-  const migrationResourcesRoot = physicalRoot(options.migrationResourcesRoot);
+  const applicationStorageRoot = requirePhysicalRoot(options.applicationStorageRoot);
+  const migrationResourcesRoot = requirePhysicalRoot(options.migrationResourcesRoot);
   const applicationDatabasePath = path.join(applicationStorageRoot, "application.db");
   const projectRootFor = (projectId: ProjectId): string =>
     projectRootPath(applicationStorageRoot, projectId);

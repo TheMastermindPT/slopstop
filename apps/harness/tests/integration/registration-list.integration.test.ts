@@ -24,6 +24,7 @@ import {
   countingIdentityChild,
   createSelectedGitRepository,
 } from "./registration-git-fixture.js";
+import { expectNoRootSpelling } from "./storage-root-privacy.js";
 import { temporaryRoot } from "./temporary-root.js";
 import { missing94 } from "./trace-94.js";
 
@@ -160,7 +161,7 @@ async function expectListedAfterRestart(
   expect(await owner.listProjects()).toEqual(expected);
   expect(await owner.listProjects()).toEqual(expected);
   expect(identity.calls()).toBe(registration === "registered" ? 18 : 12);
-  expect(JSON.stringify(await owner.listProjects())).not.toContain(root);
+  expectNoRootSpelling(JSON.stringify(await owner.listProjects()), root);
   if (registration !== "registered") return;
   await rm(directory, { recursive: true });
   expect(await owner.listProjects()).toEqual({

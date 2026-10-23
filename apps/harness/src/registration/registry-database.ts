@@ -14,6 +14,7 @@ import type {
   LocalLibsqlClient,
   LocalLibsqlResultSet,
 } from "../storage/local-libsql-worker-client.js";
+import { requirePhysicalRoot } from "../storage/physical-root.js";
 import {
   lstatIfPresent,
   requirePlainEntry,
@@ -48,13 +49,22 @@ const standaloneAuthorities = new WeakMap<
   ApplicationDatabaseAuthority
 >();
 
+/**
+ * Whether `applicationDatabasePath`, which an authority keeps under its physical root, belongs
+ * to `applicationStorageRoot` in any spelling. The disk is read only when the spellings differ.
+ */
+function sameInstallation(applicationStorageRoot: string, applicationDatabasePath: string) {
+  const databaseUnder = (root: string) => path.join(root, "application.db");
+  if (databaseUnder(path.resolve(applicationStorageRoot)) === applicationDatabasePath) return true;
+  return databaseUnder(requirePhysicalRoot(applicationStorageRoot)) === applicationDatabasePath;
+}
+
 export function applicationDatabaseFor(
   options: RegistrationDatabaseOptions,
 ): ApplicationDatabaseAuthority {
-  const expectedPath = path.join(path.resolve(options.applicationStorageRoot), "application.db");
   const injected = options.applicationDatabase;
   if (injected !== undefined) {
-    if (injected.applicationDatabasePath !== expectedPath)
+    if (!sameInstallation(options.applicationStorageRoot, injected.applicationDatabasePath))
       throw new Error("Application database authority belongs to another installation root.");
     return injected;
   }

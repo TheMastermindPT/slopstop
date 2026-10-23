@@ -14,7 +14,11 @@ import {
   type LocalLibsqlClient,
   type LocalLibsqlTransaction,
 } from "./local-libsql-worker-client.js";
-import { physicalRoot } from "./physical-root.js";
+import {
+  physicalRoot,
+  requirePhysicalRoot,
+  type StorageRootCanonicalizationError,
+} from "./physical-root.js";
 import { ProjectStorageUnavailableError } from "./project-storage-errors.js";
 import { lstatIfPresent, requirePlainEntry } from "./project-storage-filesystem-authority.js";
 import { storageErrorCode } from "./project-storage-node-errors.js";
@@ -147,31 +151,40 @@ type AuthorityParts = Readonly<{
   closeIfNeverStopped: Effect.Effect<void>;
 }>;
 
+/**
+ * The authority over the physical spelling of `input.applicationStorageRoot`. A root that cannot
+ * be canonicalized throws its `StorageRootCanonicalizationError`.
+ */
 export function createApplicationDatabaseAuthority(
   input: AuthorityInput,
 ): ApplicationDatabaseAuthority {
-  return createAuthorityParts(input).authority;
+  return createAuthorityParts(input, requirePhysicalRoot(input.applicationStorageRoot)).authority;
 }
 
 /**
- * The authority as a scoped resource. The acquire is synchronous. Closing the scope runs the
- * bounded close for an authority that was neither stopped nor withheld, and an unconfirmed
- * close becomes a defect of the release, so it is reported, never swallowed.
+ * The authority as a scoped resource. The root is canonicalized first, and a refusal fails the
+ * acquire on the typed error channel; the rest of the acquire is synchronous. Closing the scope
+ * runs the bounded close for an authority that was neither stopped nor withheld, and an
+ * unconfirmed close becomes a defect of the release, so it is reported, never swallowed.
  */
 export function acquireApplicationDatabaseAuthority(
   input: AuthorityInput,
-): Effect.Effect<ApplicationDatabaseAuthority, never, Scope.Scope> {
+): Effect.Effect<ApplicationDatabaseAuthority, StorageRootCanonicalizationError, Scope.Scope> {
   return Effect.map(
     Effect.acquireRelease(
-      Effect.sync(() => createAuthorityParts(input)),
+      Effect.flatMap(physicalRoot(input.applicationStorageRoot), (applicationStorageRoot) =>
+        Effect.sync(() => createAuthorityParts(input, applicationStorageRoot)),
+      ),
       (parts) => parts.closeIfNeverStopped,
     ),
     (parts) => parts.authority,
   );
 }
 
-function createAuthorityParts(input: AuthorityInput): AuthorityParts {
-  const applicationStorageRoot = physicalRoot(input.applicationStorageRoot);
+function createAuthorityParts(
+  input: AuthorityInput,
+  applicationStorageRoot: string,
+): AuthorityParts {
   const applicationDatabasePath = path.join(applicationStorageRoot, "application.db");
   const permits = Semaphore.makeUnsafe(1);
   const deciding = Semaphore.makeUnsafe(1);

@@ -23,7 +23,10 @@ afterEach(() => {
 
 const stoppedMessage = "Project Storage application database is stopped.";
 
-/** Options under a temporary root that no row creates; constructing an authority uses no disk. */
+/**
+ * Options under a temporary root that no row creates; constructing an authority only reads the
+ * disk (to canonicalize the root) and writes nothing.
+ */
 function diskFreeOptions() {
   const base = path.join(os.tmpdir(), `slopstop-registration-registry-unit-${randomUUID()}`);
   const options = {

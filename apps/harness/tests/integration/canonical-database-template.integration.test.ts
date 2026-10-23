@@ -25,8 +25,10 @@ async function realAndCopy(extended: boolean) {
   return { real, copy };
 }
 
-/** `contents` with its own root path replaced by a token, so two roots compare by content. */
-/** Storage records its physical (long) root, so that is the spelling replaced. */
+/**
+ * `contents` with its own root path replaced by a token, so two roots compare by content.
+ * Storage records its physical (long) root, so that is the spelling replaced.
+ */
 function rootFree(contents: ReturnType<typeof databaseContents>, root: string) {
   const escaped = JSON.stringify(realpathSync.native(root)).slice(1, -1);
   const free = (rows: readonly string[]) => rows.map((row) => row.split(escaped).join("<root>"));

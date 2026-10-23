@@ -24,6 +24,7 @@ import {
   validCanonicalMigrationSql,
 } from "./migration-guard-fixture.js";
 import { createRequest } from "./project-storage-create-request.js";
+import { expectNoRootSpelling } from "./storage-root-privacy.js";
 
 type MigrationGuardCase = Readonly<{
   name: string;
@@ -333,7 +334,7 @@ it.each(migrationGuardCases)(
         throw new Error("Expected generated migration guard to fail closed.");
       }
       expect(failure.message).toBe(expectedMessage);
-      expect(String(failure)).not.toContain(fixture.root);
+      expectNoRootSpelling(String(failure), fixture.root);
     } finally {
       await rm(fixture.root, { recursive: true, force: true });
     }

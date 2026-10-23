@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -41,5 +42,14 @@ export async function createGatedFirstClientAuthority(prefix: string, firstFailu
       };
     },
   });
-  return { root, authority, firstOpen, release: () => release(), opens: () => opens };
+  // The authority lists and creates under the physical spelling, which an 8.3 TEMP changes.
+  const physicalRoot = realpathSync.native(root);
+  return {
+    root,
+    physicalRoot,
+    authority,
+    firstOpen,
+    release: () => release(),
+    opens: () => opens,
+  };
 }

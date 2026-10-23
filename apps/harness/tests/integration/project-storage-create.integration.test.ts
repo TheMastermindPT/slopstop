@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -47,6 +48,7 @@ import {
   sqliteExecutor,
 } from "./project-storage-schema-cases.js";
 import { applicationRegistrationTables } from "./registration-schema-fixture.js";
+import { expectNoRootSpelling } from "./storage-root-privacy.js";
 
 type CreatedGenerationPaths = Readonly<{
   directory: string;
@@ -167,8 +169,8 @@ it(
       ],
     ]);
     await expectActivationBaselines(paths, authority.manifest);
-    expect(JSON.stringify(authority.manifest)).not.toContain(root);
-    expect(JSON.stringify(response)).not.toContain(root);
+    expectNoRootSpelling(JSON.stringify(authority.manifest), root);
+    expectNoRootSpelling(JSON.stringify(response), root);
   },
   projectStorageIntegrationTimeout,
 );
@@ -368,7 +370,7 @@ async function expectSchemaProbeFailure(input: {
       message: input.expectedMessage,
     });
     if (input.redactPaths === true) {
-      expect(String(failure)).not.toContain(root);
+      expectNoRootSpelling(String(failure), root);
       expect(String(failure)).not.toContain(databasePath);
     }
   } finally {
@@ -644,8 +646,8 @@ it.each(sameNameSchemaMutationCases)(
     expect(rejected.result).toMatchObject(rejectedPayload);
     expect(rejected.allocationCount()).toBe(0);
     await expectRolledBackFreshInitialization(root);
-    expect(JSON.stringify(rejected.result)).not.toContain(root);
-    expect(JSON.stringify(rejected.result)).not.toContain(rejected.migrationResourcesRoot);
+    expectNoRootSpelling(JSON.stringify(rejected.result), root);
+    expectNoRootSpelling(JSON.stringify(rejected.result), rejected.migrationResourcesRoot);
 
     // A restart with the same resources reports the same precise refusal, never an
     // internal failure from a schema-less database left behind.
@@ -692,7 +694,7 @@ it.each(["canonical_lineage_id", "runtime_lineage_id"] as const)(
     await expect(
       readRows(applicationPath, "SELECT creation_state, activated_at FROM storage_generations"),
     ).resolves.toEqual([["staging", null]]);
-    expect(JSON.stringify(result)).not.toContain(root);
+    expectNoRootSpelling(JSON.stringify(result), root);
   },
   projectStorageIntegrationTimeout,
 );
@@ -863,7 +865,7 @@ it.each(authorityCorruptionCases)(
         },
       },
     });
-    if (scenario.redactRoot === true) expect(JSON.stringify(result)).not.toContain(root);
+    if (scenario.redactRoot === true) expectNoRootSpelling(JSON.stringify(result), root);
   },
   projectStorageIntegrationTimeout,
 );
@@ -949,7 +951,7 @@ it(
         sha256File(path.join(generationDirectory, "mastra.db")),
       ]),
     ).resolves.toEqual(before);
-    expect(JSON.stringify(result)).not.toContain(root);
+    expectNoRootSpelling(JSON.stringify(result), root);
   },
   projectStorageIntegrationTimeout,
 );
@@ -987,7 +989,7 @@ it.each(["format_version", "schema_version"] as const)(
       },
     });
     await expect(sha256File(applicationPath)).resolves.toBe(before);
-    expect(JSON.stringify(result)).not.toContain(root);
+    expectNoRootSpelling(JSON.stringify(result), root);
   },
   projectStorageIntegrationTimeout,
 );
@@ -1014,7 +1016,8 @@ async function seedOrphanLocation(input: { root: string }): Promise<string> {
       .run(
         "00000000-0000-4000-8000-000000000061",
         "00000000-0000-4000-8000-000000000062",
-        path.resolve(input.root, "projects", createRequest.projectId),
+        // Storage records the physical spelling of its root.
+        path.resolve(realpathSync.native(input.root), "projects", createRequest.projectId),
         "2026-08-31T12:00:00.000Z",
       );
   } finally {
@@ -1078,7 +1081,7 @@ it(
     });
     expect(fixture.allocationCount()).toBe(0);
     await expect(sha256File(applicationPath)).resolves.toBe(before);
-    expect(JSON.stringify(result)).not.toContain(root);
+    expectNoRootSpelling(JSON.stringify(result), root);
   },
   projectStorageIntegrationTimeout,
 );
@@ -1217,7 +1220,7 @@ it.each(malformedApplicationAuthorityCases)(
     expect(allocationCount).toBe(0);
     await expect(sha256File(applicationPath)).resolves.toBe(before);
     await expect(pathExists(path.join(root, "projects"))).resolves.toBe(false);
-    expect(JSON.stringify(result)).not.toContain(root);
+    expectNoRootSpelling(JSON.stringify(result), root);
   },
   projectStorageIntegrationTimeout,
 );

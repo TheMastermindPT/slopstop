@@ -1,7 +1,15 @@
 import { execSync } from "node:child_process";
-import { cp, symlink } from "node:fs/promises";
+import { cp, mkdtemp, rm, symlink } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
-import { expect, it } from "vitest";
+import { Effect } from "effect";
+import { afterEach, expect, it } from "vitest";
+import { applicationDatabaseFor } from "../../src/registration/registry-database.js";
+import {
+  acquireApplicationDatabaseAuthority,
+  createApplicationDatabaseAuthority,
+} from "../../src/storage/application-database-authority.js";
+import { StorageRootCanonicalizationError } from "../../src/storage/physical-root.js";
 import { createNodeProjectStorageDependencies } from "../../src/storage/project-storage-node-adapters.js";
 import {
   createHealthyProjectStorageFixture,
@@ -16,6 +24,23 @@ import {
   fixedCreationIds,
   projectStorageIntegrationTimeout,
 } from "./project-storage-runtime-fixture.js";
+
+const homeRoots: string[] = [];
+
+afterEach(async () => {
+  const roots = homeRoots.splice(0);
+  for (const root of roots) await rm(root, { recursive: true, force: true, maxRetries: 10 });
+});
+
+/**
+ * A new application root under the home folder. The alias rows use it because the system volume
+ * keeps 8.3 names, while a CI temp volume may not.
+ */
+async function homeRoot(): Promise<string> {
+  const root = await mkdtemp(path.join(os.homedir(), "slopstop-alias-root-"));
+  homeRoots.push(root);
+  return root;
+}
 
 /**
  * The Windows 8.3 alias of an existing folder, as `cmd` reports it. A volume without 8.3 names
@@ -64,7 +89,8 @@ const openedReadWrite = {
 it.runIf(process.platform === "win32")(
   "opens Storage created through the long root through its 8.3 alias",
   async () => {
-    const root = await createHealthyProjectStorageFixture();
+    const root = await homeRoot();
+    await createProjectStorage(root);
     expect(await openPayload(shortAlias(root))).toMatchObject(openedReadWrite);
   },
   projectStorageIntegrationTimeout,
@@ -73,7 +99,7 @@ it.runIf(process.platform === "win32")(
 it.runIf(process.platform === "win32")(
   "opens Storage created through the 8.3 alias through the long root",
   async () => {
-    const root = await createTemporaryApplicationRoot();
+    const root = await homeRoot();
     await createProjectStorage(shortAlias(root));
     expect(await openPayload(root)).toMatchObject(openedReadWrite);
   },
@@ -83,12 +109,52 @@ it.runIf(process.platform === "win32")(
 it.runIf(process.platform === "win32")(
   "opens Storage created under a missing child of the 8.3 alias through the long root",
   async () => {
-    const root = await createTemporaryApplicationRoot();
+    const root = await homeRoot();
     await createProjectStorage(path.join(shortAlias(root), "missing-child"));
     expect(await openPayload(path.join(root, "missing-child"))).toMatchObject(openedReadWrite);
   },
   projectStorageIntegrationTimeout,
 );
+
+function authorityFor(applicationStorageRoot: string) {
+  return createApplicationDatabaseAuthority({
+    applicationStorageRoot,
+    migrationResourcesRoot: checkedInMigrationRoot,
+  });
+}
+
+function registryJoin(applicationStorageRoot: string, authorityRoot: string) {
+  const applicationDatabase = authorityFor(authorityRoot);
+  const joined = applicationDatabaseFor({
+    applicationStorageRoot,
+    migrationResourcesRoot: checkedInMigrationRoot,
+    applicationDatabase,
+  });
+  return { applicationDatabase, joined };
+}
+
+it.runIf(process.platform === "win32")(
+  "joins the registry to an authority of the same folder in either spelling",
+  async () => {
+    const root = await homeRoot();
+    const alias = shortAlias(root);
+    for (const [registryRoot, authorityRoot] of [
+      [root, alias],
+      [alias, root],
+    ] as const) {
+      const { applicationDatabase, joined } = registryJoin(registryRoot, authorityRoot);
+      expect(joined).toBe(applicationDatabase);
+    }
+  },
+);
+
+it("still refuses to join the registry to an authority of another folder", async () => {
+  const root = await createTemporaryApplicationRoot();
+  const other = await createTemporaryApplicationRoot();
+  expect(() => registryJoin(root, other)).toThrow(
+    "Application database authority belongs to another installation root.",
+  );
+});
 
 function nodeStorageWithRoot(applicationStorageRoot: string) {
   return createNodeProjectStorageDependencies({
@@ -98,16 +164,47 @@ function nodeStorageWithRoot(applicationStorageRoot: string) {
   });
 }
 
-it("refuses a symbolic-link Storage root before any Storage exists", async () => {
+async function linkedRoot(): Promise<string> {
   const target = await createTemporaryApplicationRoot();
   const link = path.join(await createTemporaryApplicationRoot(), "linked-root");
   await symlink(target, link, "junction");
-  expect(() => nodeStorageWithRoot(link)).toThrow("Storage root must not be a symbolic link.");
+  return link;
+}
+
+const linkRefusal = {
+  _tag: "StorageRootCanonicalizationError",
+  reason: "symbolic-link",
+  message: "Root must not be a symbolic link.",
+};
+
+it("refuses a symbolic-link Storage root before any Storage exists", async () => {
+  const link = await linkedRoot();
+  expect(() => nodeStorageWithRoot(link)).toThrow(expect.objectContaining(linkRefusal));
+});
+
+it("fails the authority acquire on its typed channel for a symbolic-link root", async () => {
+  const link = await linkedRoot();
+  const refusal = await Effect.runPromise(
+    Effect.scoped(
+      Effect.flip(
+        acquireApplicationDatabaseAuthority({
+          applicationStorageRoot: link,
+          migrationResourcesRoot: checkedInMigrationRoot,
+        }),
+      ),
+    ),
+  );
+  expect(refusal).toBeInstanceOf(StorageRootCanonicalizationError);
+  expect(refusal).toMatchObject(linkRefusal);
 });
 
 it("reports a Storage root that cannot be inspected, never resolving it", () => {
   expect(() => nodeStorageWithRoot("C:\\invalid\0root")).toThrow(
-    expect.objectContaining({ code: "ERR_INVALID_ARG_VALUE" }),
+    expect.objectContaining({
+      _tag: "StorageRootCanonicalizationError",
+      reason: "inspection-failed",
+      cause: expect.objectContaining({ code: "ERR_INVALID_ARG_VALUE" }),
+    }),
   );
 });
 

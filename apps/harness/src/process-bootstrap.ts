@@ -24,7 +24,7 @@ import {
   type ApplicationDatabaseAuthority,
   acquireApplicationDatabaseAuthority,
 } from "./storage/application-database-authority.js";
-import { physicalRoot } from "./storage/physical-root.js";
+import { requirePhysicalRoot } from "./storage/physical-root.js";
 import { createNodeProjectStorageDependencies } from "./storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "./storage/project-storage-store.js";
 import type { ProjectStorageUpgradePort } from "./storage/project-storage-upgrade.js";
@@ -39,7 +39,7 @@ function trustedRoot(value: string): string {
   if (!path.isAbsolute(root)) {
     throw new Error("Harness bootstrap root must resolve absolutely.");
   }
-  return physicalRoot(root);
+  return requirePhysicalRoot(root);
 }
 
 function rootsOverlap(first: string, second: string): boolean {
@@ -250,7 +250,9 @@ const applicationDatabaseLayer = Layer.effect(
   ApplicationDatabase,
   Effect.gen(function* () {
     // Scoped: disposing the runtime closes an authority the shutdown never stopped or withheld.
-    return yield* acquireApplicationDatabaseAuthority(yield* HarnessRoots);
+    // `checkHarnessBootstrap` already canonicalized the roots, so a refusal here is a broken
+    // invariant: it dies with the tagged error, and the startup failure reports it.
+    return yield* Effect.orDie(acquireApplicationDatabaseAuthority(yield* HarnessRoots));
   }),
 );
 

@@ -88,6 +88,7 @@ function verdict(operation: Promise<unknown>) {
 it("opens the registry when the authority's own fresh creation lands between the missing check and the witness check", async () => {
   const {
     root,
+    physicalRoot,
     authority: applicationDatabase,
     firstOpen,
     release,
@@ -101,7 +102,7 @@ it("opens the registry when the authority's own fresh creation lands between the
     // window. The add now joins that creation and never lists the root, so the bounded
     // fallback below opens the gate; the hook stays to reproduce the race on the old code.
     listing.hook = async (directory) => {
-      if (path.resolve(directory) !== path.resolve(root)) return;
+      if (path.resolve(directory) !== physicalRoot) return;
       listing.hook = undefined;
       release();
       await untilPresent(databasePath);
@@ -151,7 +152,7 @@ it("exempts the authority's own creation in flight from the witness rule when tw
     let rootListings = 0;
     // Only a second look at the root (the exemption skipped) lets the creation land in it.
     listing.hook = async (directory) => {
-      if (path.resolve(directory) !== path.resolve(gated.root)) return;
+      if (path.resolve(directory) !== gated.physicalRoot) return;
       rootListings += 1;
       if (rootListings !== 2) return;
       gated.release();
@@ -176,7 +177,7 @@ it("answers broken, not a witness, when the root cannot be listed", async () => 
   await withGatedRegistry("slopstop-registry-unlistable-", async (gated, options) => {
     gated.release();
     listing.hook = async (directory) => {
-      if (path.resolve(directory) !== path.resolve(gated.root)) return;
+      if (path.resolve(directory) !== gated.physicalRoot) return;
       throw Object.assign(new Error("Injected access denial."), { code: "EACCES" });
     };
     expect(await verdict(withRegistrationDatabase(options, async () => "opened"))).toEqual({
@@ -246,7 +247,7 @@ it("lets an open-only caller that decides between a creation and its registratio
     let openOnly: Promise<LocalLibsqlClient | undefined> | undefined;
     // The creator holds its decision while the open-only caller passes its join and queues.
     listing.hook = async (directory) => {
-      if (path.resolve(directory) !== path.resolve(gated.root)) return;
+      if (path.resolve(directory) !== gated.physicalRoot) return;
       listing.hook = undefined;
       openOnly = gated.authority.openCurrent({ createIfMissing: false });
     };
@@ -293,7 +294,7 @@ it("keeps the registry's fresh creation joinable when Storage starts in the tick
     // The root's creation settles; the registry's creation registers in the next job, and
     // Storage checks for an initialization in this one.
     building.hook = (directory, made) => {
-      if (path.resolve(directory) !== path.resolve(gated.root)) return made;
+      if (path.resolve(directory) !== gated.physicalRoot) return made;
       building.hook = undefined;
       return new Promise((settle, fail) => {
         made.then((value) => {

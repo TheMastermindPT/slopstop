@@ -19,7 +19,10 @@ afterEach(() => {
 
 const unusedRoot = path.join(os.tmpdir(), "slopstop-application-authority-unit-unused");
 
-/** An authority over a root it never touches: admission and stop use no disk. */
+/**
+ * An authority over a root it never writes: construction only reads the disk to canonicalize
+ * the root, and admission and stop use no disk.
+ */
 function diskFreeAuthority(closeDeadlineMs?: number) {
   return createApplicationDatabaseAuthority({
     applicationStorageRoot: unusedRoot,

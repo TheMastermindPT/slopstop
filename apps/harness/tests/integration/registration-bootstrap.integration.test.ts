@@ -16,6 +16,7 @@ import {
   countingIdentityChild,
   createSelectedGitRepository,
 } from "./registration-git-fixture.js";
+import { expectNoRootSpelling } from "./storage-root-privacy.js";
 import { temporaryRoot } from "./temporary-root.js";
 
 const roots: string[] = [];
@@ -285,7 +286,7 @@ it
       expect(result).toMatchObject({ status: "registered", requestId: request.requestId });
       expect(dispatches()).toBe(12);
       await expectRegisteredGeneration(session, { result, request });
-      expect(JSON.stringify(result)).not.toContain(root);
+      expectNoRootSpelling(JSON.stringify(result), root);
       await expectExactRestartReplay(session, { result, request, directory, dispatches });
     } finally {
       await stopSession(session);
