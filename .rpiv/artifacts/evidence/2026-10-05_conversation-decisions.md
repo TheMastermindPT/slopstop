@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: ef152ed670bca425fd7a3bd8b5dc4da9d269ed30c8a9dd27eea2bc608055f25a
+content_hash: c9f90fbc60ed44f7b6bd6b94b61cc2ce27c8f5716730996ffeebabad250bc713
 ---
 
 # Conversation — Human Decisions
@@ -2089,3 +2089,15 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **User approval (2026-10-23):** push main (`e2ef472` onward, with the docs commits) once the review's linter job and the #133 build are done, alone on an idle machine; then check the CI.
 - **Architecture review linter run** (idle machine): depcruise, knip and `check:effect` are clean. **jscpd failed**: `apps/desktop/tests/e2e/temporary-root.ts` is a byte-identical copy of `apps/harness/tests/integration/temporary-root.ts`, from `b08bafd`. Coordinator error: `fix/ci-red-2` was merged without `check:duplicates` or `check:deep`.
 - **User decision: a recorded jscpd exception.** `jscpd.json` ignores the desktop copy. Reason: the apps never import one another (AGENTS.md), so this 13-line test helper exists once per app. `pnpm check:duplicates` passes (0 clones).
+- **#133 candidate `8e56c7e`:** under the user's override, `pnpm check` gave 3392/3396, with 4 load-timing failures in untouched files (green in the idle run 1). The `project-upgrade` e2e passed, so LOG-B7 is proven in the real app.
+- **Round 1 (slice-verifier): FAILED**, with 2 violations and 1 warning.
+  - V1: `conversation.test.ts` e2e now sees 2 forwarded `completed` lines. The brief's "other callers keep the empty list" was false at the base.
+  - V2: the fatal codes and messages are harness literals with no type or test link to the protocol schema.
+- **Coordinator triage (disclosed):** V1 (a), expected events in `conversation.test.ts`, with an appended LOG-B7 amendment; V2 fixed with one protocol code-to-message table plus a drift row; polish, including the lost backslashes. New commits, no round 2. `pnpm check` and the `conversation` e2e run under the CPU rule.
+- **#133 fix round `cdf7fd3`:** V1 now expects the two journey upgrades (LOG-B7 amended, append-only keep, brief `5978a833`). V2 has one protocol table `harnessFatalCodeMessages`; the drift proofs failed as expected, at runtime (SchemaError) and in tsc (TS2345). Polish done. With the machine free (the user's go), `pnpm check` passed 3396/3396, and the `conversation` and `project-upgrade` e2e passed 2/2.
+- **User decision: "Aceito, squash e push".** #133 `log-s1-harness-desktop-log-link` is accepted at `cdf7fd3`. Named residuals:
+  - the fix delta had no second review;
+  - the real-app fatal proof is deferred;
+  - no mutation;
+  - the V1 red at `8e56c7e` was not run.
+  The evidence was copied to the main checkout's gitignored evidence folder.
