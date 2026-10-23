@@ -1,7 +1,9 @@
 import { StringDecoder } from "node:string_decoder";
 import {
   decodeStrictResult,
+  HarnessFatalLogLineSchema,
   HarnessUpgradeLogLineSchema,
+  harnessFatalCodes,
   harnessUpgradeLogEvents,
 } from "@slopstop/protocol";
 import { Result } from "effect";
@@ -11,27 +13,49 @@ import type { Logger } from "pino";
 const harnessLogLineLimit = 16 * 1024;
 
 const upgradeEvents: ReadonlySet<string> = new Set(Object.values(harnessUpgradeLogEvents));
+const fatalCodes: ReadonlySet<string> = new Set(harnessFatalCodes);
 
-type LineLogger = Pick<Logger, "info" | "warn">;
+type LineLogger = Pick<Logger, "info" | "warn" | "error">;
 
-/** A JSON object line that names a harness upgrade event, with that event. */
-function upgradeLineOf(line: string): Readonly<{ event: string; value: object }> | undefined {
+/**
+ * A harness line the desktop decodes: a JSON object naming a known upgrade event, or a
+ * level-60 line naming a known fatal code. Its echoed name is already in a closed vocabulary.
+ */
+type CandidateLine =
+  | Readonly<{ kind: "upgrade"; event: string; value: object }>
+  | Readonly<{ kind: "fatal"; fatalCode: string; value: object }>;
+
+function jsonObjectOf(line: string): object | undefined {
   let value: unknown;
   try {
     value = JSON.parse(line);
   } catch {
     return undefined;
   }
-  if (typeof value !== "object" || value === null) return undefined;
-  const event: unknown = Reflect.get(value, "event");
-  return typeof event === "string" && upgradeEvents.has(event) ? { event, value } : undefined;
+  return typeof value === "object" && value !== null ? value : undefined;
 }
 
-function forwardLine(logger: LineLogger, attempt: number, line: string): void {
-  const upgrade = upgradeLineOf(line);
-  if (upgrade === undefined) return;
-  const { event } = upgrade;
-  const decoded = decodeStrictResult(HarnessUpgradeLogLineSchema, upgrade.value);
+/** `value[key]` when it is one of `known`. */
+function knownField(value: object, key: "event" | "code", known: ReadonlySet<string>) {
+  const field: unknown = Reflect.get(value, key);
+  return typeof field === "string" && known.has(field) ? field : undefined;
+}
+
+function candidateOf(line: string): CandidateLine | undefined {
+  const value = jsonObjectOf(line);
+  if (value === undefined) return undefined;
+  const event = knownField(value, "event", upgradeEvents);
+  if (event !== undefined) return { kind: "upgrade", event, value };
+  const fatalCode = knownField(value, "code", fatalCodes);
+  const isFatal = fatalCode !== undefined && Reflect.get(value, "level") === 60;
+  return isFatal ? { kind: "fatal", fatalCode, value } : undefined;
+}
+
+type UpgradeCandidate = Extract<CandidateLine, { kind: "upgrade" }>;
+type FatalCandidate = Extract<CandidateLine, { kind: "fatal" }>;
+
+function forwardUpgrade(logger: LineLogger, attempt: number, { event, value }: UpgradeCandidate) {
+  const decoded = decodeStrictResult(HarnessUpgradeLogLineSchema, value);
   if (Result.isFailure(decoded)) {
     logger.warn(
       { code: "HARNESS_LOG_LINE_INVALID", attempt, event },
@@ -45,10 +69,33 @@ function forwardLine(logger: LineLogger, attempt: number, line: string): void {
   else logger.warn(entry, "Harness upgrade event.");
 }
 
+function forwardFatal(logger: LineLogger, attempt: number, { fatalCode, value }: FatalCandidate) {
+  const decoded = decodeStrictResult(HarnessFatalLogLineSchema, value);
+  if (Result.isFailure(decoded)) {
+    logger.warn(
+      { code: "HARNESS_LOG_LINE_INVALID", attempt, fatalCode },
+      "Harness fatal log line rejected.",
+    );
+    return;
+  }
+  // `source` keeps a forwarded code apart from the desktop's own diagnostic of the same code.
+  const { level: _level, time, service: _service, msg: _msg, ...fields } = decoded.success;
+  logger.error(
+    { source: "harness", attempt, ...fields, harnessTime: new Date(time).toISOString() },
+    "Harness fatal event.",
+  );
+}
+
+function forwardLine(logger: LineLogger, attempt: number, line: string): void {
+  const candidate = candidateOf(line);
+  if (candidate?.kind === "upgrade") forwardUpgrade(logger, attempt, candidate);
+  else if (candidate?.kind === "fatal") forwardFatal(logger, attempt, candidate);
+}
+
 /**
- * Splits harness stdout into lines and forwards only valid upgrade log lines to the desktop
- * log. A line longer than `harnessLogLineLimit` is dropped up to its newline; a partial line
- * left at exit is reported once.
+ * Splits harness stdout into lines and forwards only valid upgrade and fatal log lines to the
+ * desktop log. A line longer than `harnessLogLineLimit` is dropped up to its newline; a partial
+ * line left at exit is reported once.
  */
 export function createHarnessLogLineForwarder(logger: LineLogger, attempt: number) {
   // Characters split across chunks are joined before any line is cut.

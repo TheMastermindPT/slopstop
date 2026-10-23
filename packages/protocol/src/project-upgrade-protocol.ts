@@ -150,6 +150,7 @@ export type ProjectUpgradeDiscardCause = typeof ProjectUpgradeDiscardCauseSchema
 
 /** The `event` of each harness upgrade log line. */
 export const harnessUpgradeLogEvents = {
+  completed: "project-storage.upgrade.completed",
   abandoned: "project-storage.upgrade.abandoned",
   discardFailed: "project-storage.upgrade.discard-failed",
 } as const;
@@ -158,7 +159,7 @@ export const harnessUpgradeLogEvents = {
  * Epoch milliseconds of years 0000 to 9999: every such instant has a four-digit-year RFC 3339
  * form, so the desktop can always write it as `harnessTime`.
  */
-const EpochMillisecondsSchema = Schema.Number.check(
+export const EpochMillisecondsSchema = Schema.Number.check(
   Schema.isInt(),
   // 0000-01-01T00:00:00.000Z and 9999-12-31T23:59:59.999Z.
   Schema.isGreaterThanOrEqualTo(-62_167_219_200_000),
@@ -174,6 +175,13 @@ const upgradeLogLineBase = {
 
 /** Exactly what the harness logger serializes for one upgrade diagnostic, one JSON line each. */
 export const HarnessUpgradeLogLineSchema = Schema.Union([
+  Schema.Struct({
+    ...upgradeLogLineBase,
+    level: Schema.Literal(30),
+    event: Schema.Literal(harnessUpgradeLogEvents.completed),
+    sourceGenerationId: StorageGenerationIdSchema,
+    targetGenerationId: StorageGenerationIdSchema,
+  }),
   Schema.Struct({
     ...upgradeLogLineBase,
     level: Schema.Literal(30),

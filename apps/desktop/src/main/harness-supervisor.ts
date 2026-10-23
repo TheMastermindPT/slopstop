@@ -80,8 +80,8 @@ export class HarnessSupervisor {
   readonly #listeners = new Set<StatusListener>();
   /**
    * How each child's output is watched: `quiet` stops output logging but keeps forwarding upgrade
-   * lines, `drain` keeps forwarding until stdout ends (immediately when there is none), and
-   * `remove` stops everything.
+   * and fatal lines, `drain` keeps forwarding until stdout ends (immediately when there is none),
+   * and `remove` stops everything.
    */
   readonly #observations = new Map<UtilityProcess, ChildObservation>();
   #attempt = 0;

@@ -72,6 +72,7 @@ export type UpgradeAdapterContext = Readonly<{
 }>;
 
 const noDiagnostics: ProjectStorageUpgradeDiagnostics = {
+  completed: () => undefined,
   abandoned: () => undefined,
   discardFailed: () => undefined,
 };
@@ -402,6 +403,7 @@ export function createProjectStorageUpgradeSteps(
     context.paths.forCreation(projectId, generationId);
   const diagnostics = context.diagnostics ?? noDiagnostics;
   return {
+    completed: (event) => diagnostics.completed(event),
     abandoned: (event) => diagnostics.abandoned(event),
     discardFailed: (event) => diagnostics.discardFailed(event),
     findUnfinished: (projectId) => findUnfinishedUpgrade(context, projectId),

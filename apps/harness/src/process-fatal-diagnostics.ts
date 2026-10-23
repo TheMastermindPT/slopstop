@@ -1,20 +1,14 @@
 import {
-  type CleanupPart,
+  type RegistrationCleanupPart as CleanupPart,
+  type HarnessFatalValueKind as FatalValueKind,
+  HARNESS_FAILURE_TAG_PATTERN,
+  HARNESS_FATAL_SUMMARY_BOUND,
+  type HarnessFatalCode,
+  type HarnessFatalMessage,
+  harnessFatalMessages,
   REGISTRATION_CLEANUP_PARTS,
   REGISTRATION_CLEANUP_TAG,
-} from "./registration/registration-listing.js";
-
-type FatalValueKind =
-  | "error"
-  | "string"
-  | "number"
-  | "boolean"
-  | "bigint"
-  | "symbol"
-  | "function"
-  | "object"
-  | "null"
-  | "undefined";
+} from "@slopstop/protocol";
 
 /** One failure in a summary: its tag (with the unconfirmed cleanup parts) or its value kind. */
 type HarnessFailureEntry =
@@ -27,21 +21,25 @@ type HarnessFailureSummary = Readonly<{
   omittedFailures: number;
 }>;
 
-type HarnessExitCode =
-  | "HARNESS_START_FAILED"
-  | "HARNESS_RUNTIME_START_FAILED"
-  | "HARNESS_SHUTDOWN_FAILED";
+/** The fatal codes whose line carries a failure summary. */
+type HarnessExitCode = Extract<
+  HarnessFatalCode,
+  "HARNESS_START_FAILED" | "HARNESS_RUNTIME_START_FAILED" | "HARNESS_SHUTDOWN_FAILED"
+>;
 
 type FatalMetadata =
   | Readonly<{
-      code: "HARNESS_UNCAUGHT_EXCEPTION" | "HARNESS_UNHANDLED_REJECTION";
+      code: Exclude<HarnessFatalCode, HarnessExitCode>;
       valueKind: FatalValueKind;
     }>
   | (Readonly<{ code: HarnessExitCode }> & HarnessFailureSummary);
 
-/** Where a harness fatal exit is reported: one `fatal` line, then `exit(1)`. */
+/**
+ * Where a harness fatal exit is reported: one `fatal` line with one of the fixed messages the
+ * protocol owns, then `exit(1)`.
+ */
 export type HarnessFatalSink = Readonly<{
-  fatal(metadata: FatalMetadata, message: string): void;
+  fatal(metadata: FatalMetadata, message: HarnessFatalMessage): void;
   exit(code: 1): void;
 }>;
 
@@ -56,8 +54,8 @@ function valueKind(value: unknown): FatalValueKind {
 }
 
 /** Pino logs stay bounded: failures past this many are only counted. */
-const MAX_SUMMARIZED_FAILURES = 16;
-const IDENTIFIER_TAG = /^[A-Za-z][A-Za-z0-9]{0,63}$/;
+const MAX_SUMMARIZED_FAILURES = HARNESS_FATAL_SUMMARY_BOUND;
+const IDENTIFIER_TAG = HARNESS_FAILURE_TAG_PATTERN;
 
 /** A field of an object value; any other value has none. */
 function fieldOf(value: unknown, key: "_tag" | "parts"): unknown {
@@ -135,11 +133,14 @@ export function summarizeHarnessFailure(value: unknown): HarnessFailureSummary {
   return { failures: walk.failures, omittedFailures: walk.omittedFailures };
 }
 
-/** Reports `failure` once on `sink` with its code and summary, then exits 1. */
-export function reportHarnessFailure(
+/**
+ * Reports `failure` once on `sink` with its code, one of that code's fixed messages and the
+ * failure summary, then exits 1.
+ */
+export function reportHarnessFailure<Code extends HarnessExitCode>(
   sink: HarnessFatalSink,
-  code: HarnessExitCode,
-  message: string,
+  code: Code,
+  message: HarnessFatalMessage<Code>,
   failure: unknown,
 ): void {
   sink.fatal({ code, ...summarizeHarnessFailure(failure) }, message);
@@ -151,14 +152,14 @@ export function createHarnessFatalHandlers(options: HarnessFatalSink) {
     uncaughtException(value: unknown): void {
       options.fatal(
         { code: "HARNESS_UNCAUGHT_EXCEPTION", valueKind: valueKind(value) },
-        "Harness encountered an uncaught exception.",
+        harnessFatalMessages.uncaughtException,
       );
       options.exit(1);
     },
     unhandledRejection(value: unknown): void {
       options.fatal(
         { code: "HARNESS_UNHANDLED_REJECTION", valueKind: valueKind(value) },
-        "Harness encountered an unhandled rejection.",
+        harnessFatalMessages.unhandledRejection,
       );
       options.exit(1);
     },

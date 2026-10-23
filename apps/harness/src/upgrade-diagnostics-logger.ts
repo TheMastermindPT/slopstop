@@ -15,6 +15,14 @@ export function createUpgradeDiagnosticsLogger(
   logger: UpgradeEventLogger,
 ): ProjectStorageUpgradeDiagnostics {
   return {
+    completed: ({ projectId, upgradeId, sourceGenerationId, targetGenerationId }) =>
+      logger.info({
+        event: harnessUpgradeLogEvents.completed,
+        projectId,
+        upgradeId,
+        sourceGenerationId,
+        targetGenerationId,
+      }),
     abandoned: ({ projectId, upgradeId, reason }) =>
       logger.info({ event: harnessUpgradeLogEvents.abandoned, projectId, upgradeId, reason }),
     discardFailed: ({ projectId, upgradeId, cause }) =>

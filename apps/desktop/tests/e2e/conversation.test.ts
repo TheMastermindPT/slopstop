@@ -21,6 +21,16 @@ type Opening = Readonly<{ name: string; upgrade: boolean }>;
 let userData = "";
 let proof = "";
 let storageOnly = "";
+/** The Projects that upgrade when first opened, in opening order. */
+let upgradedProjectIds: readonly string[] = [];
+
+/** The forwarded `completed` line of each upgrade, in opening order. */
+const completedUpgrades = () =>
+  upgradedProjectIds.map((projectId) => ({
+    source: "harness",
+    event: "project-storage.upgrade.completed",
+    projectId,
+  }));
 
 /**
  * Launches the built desktop, runs one part of the journey with no page error, and closes it. A
@@ -125,7 +135,9 @@ test.beforeAll(async () => {
   proof = await mkdtemp(path.join(tmpdir(), "slopstop-conversation-"));
   userData = path.join(proof, "user-data");
   await mkdir(userData);
-  storageOnly = `without a repository ${(await seedConversationJourney(userData)).storageOnlyShort}`;
+  const seeded = await seedConversationJourney(userData);
+  storageOnly = `without a repository ${seeded.storageOnlyShort}`;
+  upgradedProjectIds = seeded.upgradedProjectIds;
 });
 
 /** Opens a Project with no messages yet and saves the given ones in order. */
@@ -156,7 +168,7 @@ test("saves, switches, restarts and reopens", async () => {
         openAndSave(page, storage, ["One message without a repository"]));
     return { a: messagesA, b: messagesB, storage: messagesStorage };
   });
-  await expectDesktopLog(userData, 1);
+  await expectDesktopLog(userData, 1, completedUpgrades());
 
   await withLaunch((page) =>
     test.step("after a restart, each Project reopens with its messages", async () => {
@@ -165,5 +177,6 @@ test("saves, switches, restarts and reopens", async () => {
       await reopen(page, { ...storage, upgrade: false }, saved.storage);
     }),
   );
-  await expectDesktopLog(userData, 2);
+  // The reopens upgrade nothing, so the log still holds only the first launch's two lines.
+  await expectDesktopLog(userData, 2, completedUpgrades());
 });

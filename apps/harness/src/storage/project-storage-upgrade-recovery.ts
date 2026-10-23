@@ -70,12 +70,12 @@ function failureError(cause: unknown, kind: "busy" | "broken"): Error {
     : new ProjectStorageBrokenError("Project Storage upgrade discard failed.", { cause });
 }
 
-/** Reports through the diagnostics port; a failing port never changes the discard's outcome. */
-function reportSafely(report: () => void): void {
+/** Runs one diagnostics report; a throwing port never changes the caller's outcome. */
+export function reportSafely(report: () => void): void {
   try {
     report();
   } catch {
-    // Diagnostics are best effort: the outcome the caller answers with stays the discard's own.
+    // Diagnostics are best effort: the caller answers with its own outcome.
   }
 }
 

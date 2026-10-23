@@ -1,3 +1,4 @@
+import { type HarnessFatalMessage, harnessFatalMessages } from "@slopstop/protocol";
 import { createHarnessLogger } from "./harness-logger.js";
 import type { HarnessTransport, StopHarnessRuntime } from "./harness-runtime.js";
 import { checkHarnessBootstrap, launchHarnessProcessRuntime } from "./process-bootstrap.js";
@@ -37,7 +38,7 @@ const fatalSink: HarnessFatalSink = {
   },
 };
 
-function failStartup(message: string): never {
+function failStartup(message: HarnessFatalMessage<"HARNESS_START_FAILED">): never {
   logger.fatal({ code: "HARNESS_START_FAILED" }, message);
   process.exit(1);
 }
@@ -65,7 +66,7 @@ const utilityProcess = process as UtilityProcess;
 const parentPort = utilityProcess.parentPort;
 
 if (parentPort === undefined) {
-  failStartup("Harness utility process has no parent port.");
+  failStartup(harnessFatalMessages.noParentPort);
 }
 
 /** Starts the harness on `port`; a failed start is reported only after its bounded dispose settled. */
@@ -94,7 +95,7 @@ function connect(port: UtilityMessagePort, bootstrap: unknown): Promise<void> {
 parentPort.once("message", (event) => {
   const port = event.ports[0];
   if (port === undefined) {
-    failStartup("Harness received an invalid bootstrap message.");
+    failStartup(harnessFatalMessages.invalidBootstrap);
   }
   // A rejection here would be a defect after startup; the unhandled-rejection handler reports it.
   void connect(port, event.data);

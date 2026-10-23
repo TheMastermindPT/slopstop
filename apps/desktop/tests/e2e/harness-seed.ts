@@ -40,10 +40,12 @@ export async function seedTwoProjects(userData: string) {
 
 /**
  * Seeds the conversation journey: repository-a, repository-b rewound to generation three, and a
- * generation-three Project without a repository. Returns the latter's short identity.
+ * generation-three Project without a repository. Returns the latter's short identity, and the
+ * identities of the two generation-three Projects (repository-b, then the Project without a
+ * repository), which upgrade when opened.
  */
 export async function seedConversationJourney(userData: string) {
-  await seedTwoProjects(userData);
+  const [, repositoryB] = await seedTwoProjects(userData);
   runHarnessSeed(
     "conversation-journey-ui-seed.integration.test.ts",
     "SLOPSTOP_CONVERSATION_JOURNEY_SEED",
@@ -53,5 +55,8 @@ export async function seedConversationJourney(userData: string) {
     Schema.Struct({ storageOnlyProjectId: ProjectIdSchema }),
     JSON.parse(await readFile(path.join(userData, "fixture-journey-projects.json"), "utf8")),
   );
-  return { storageOnlyShort: storageOnlyProjectId.slice(0, 8) };
+  return {
+    storageOnlyShort: storageOnlyProjectId.slice(0, 8),
+    upgradedProjectIds: [repositoryB.projectId, storageOnlyProjectId] as const,
+  };
 }

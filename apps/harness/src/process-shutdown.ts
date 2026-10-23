@@ -1,3 +1,4 @@
+import { harnessFatalMessages } from "@slopstop/protocol";
 import type { StopHarnessRuntime } from "./harness-runtime.js";
 import { type HarnessFatalSink, reportHarnessFailure } from "./process-fatal-diagnostics.js";
 
@@ -21,7 +22,7 @@ export function createHarnessPortCloseHandler(options: HarnessShutdownObserverOp
           reportHarnessFailure(
             options.sink,
             "HARNESS_SHUTDOWN_FAILED",
-            "Harness shutdown failed.",
+            harnessFatalMessages.shutdownFailed,
             failure,
           ),
       );

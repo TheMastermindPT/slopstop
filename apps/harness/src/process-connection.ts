@@ -1,3 +1,4 @@
+import { harnessFatalMessages } from "@slopstop/protocol";
 import type { StopHarnessRuntime } from "./harness-runtime.js";
 import { type HarnessFatalSink, reportHarnessFailure } from "./process-fatal-diagnostics.js";
 
@@ -22,7 +23,7 @@ export async function connectHarnessProcess<Prepared>(
     reportHarnessFailure(
       options.sink,
       "HARNESS_START_FAILED",
-      "Harness received an invalid bootstrap message.",
+      harnessFatalMessages.invalidBootstrap,
       failure,
     );
     return;
@@ -34,7 +35,7 @@ export async function connectHarnessProcess<Prepared>(
     reportHarnessFailure(
       options.sink,
       "HARNESS_RUNTIME_START_FAILED",
-      "Harness runtime failed to start.",
+      harnessFatalMessages.runtimeStartFailed,
       failure,
     );
     return;

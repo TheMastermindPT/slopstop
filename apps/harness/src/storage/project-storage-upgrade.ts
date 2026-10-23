@@ -110,6 +110,13 @@ export type UpgradeAbandonedEvent = Readonly<{
   upgradeId: ProjectStorageUpgradeId;
   reason: ProjectUpgradeAbandonReason;
 }>;
+/** A committed upgrade: the switch from the source to the target generation happened. */
+type UpgradeCompletedEvent = Readonly<{
+  projectId: ProjectId;
+  upgradeId: ProjectStorageUpgradeId;
+  sourceGenerationId: StorageGenerationId;
+  targetGenerationId: StorageGenerationId;
+}>;
 type UpgradeDiscardFailedEvent = Readonly<{
   projectId: ProjectId;
   upgradeId: ProjectStorageUpgradeId;
@@ -129,8 +136,9 @@ export type UnfinishedProof =
   | Readonly<{ status: "proven"; retainedGenerationIds: readonly StorageGenerationId[] }>
   | Readonly<{ status: "unproven" }>;
 
-/** Diagnostics of discarded and undiscardable upgrades; ids and a class only. */
+/** Diagnostics of committed, discarded and undiscardable upgrades; ids and a class only. */
 export type ProjectStorageUpgradeDiagnostics = Readonly<{
+  completed(event: UpgradeCompletedEvent): void;
   abandoned(event: UpgradeAbandonedEvent): void;
   discardFailed(event: UpgradeDiscardFailedEvent): void;
 }>;

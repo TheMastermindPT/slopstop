@@ -27,6 +27,7 @@ import {
 import {
   discardKnownUpgrade,
   discardUnfinishedUpgrade,
+  reportSafely,
 } from "./project-storage-upgrade-recovery.js";
 
 type StorageGenerationId = StagedUpgrade["targetGenerationId"];
@@ -414,6 +415,17 @@ function runDeclaredUpgrade(
       pipeline,
       () => dependencies.upgrades.switchActive(upgrade, dependencies.clock.now()),
       (cause) => new UpgradeSwitchFailed({ cause }),
+    );
+    // The switch is committed: the upgrade happened, whatever the later checkpoint answers.
+    yield* Effect.sync(() =>
+      reportSafely(() =>
+        dependencies.upgrades.completed({
+          projectId: upgrade.projectId,
+          upgradeId: upgrade.upgradeId,
+          sourceGenerationId: upgrade.source.generationId,
+          targetGenerationId: upgrade.targetGenerationId,
+        }),
+      ),
     );
     return {
       status: "upgraded",

@@ -13,8 +13,16 @@ function forwarder() {
   const logger = {
     info: vi.fn((object: unknown, message?: unknown) => calls.push(["info", object, message])),
     warn: vi.fn((object: unknown, message?: unknown) => calls.push(["warn", object, message])),
+    error: vi.fn((object: unknown, message?: unknown) => calls.push(["error", object, message])),
   };
   return { calls, lines: createHarnessLogLineForwarder(logger, 1) };
+}
+
+/** Pushes one complete `line` and expects exactly `expected` logger calls. */
+function expectOnlyCall(line: string, expected: readonly unknown[]) {
+  const { calls, lines } = forwarder();
+  lines.push(Buffer.from(`${line}\n`));
+  expect(calls).toEqual(expected);
 }
 
 const cases = [
@@ -132,4 +140,117 @@ it.for(inRange)("forwards an upgrade line whose time is $name", (range) => {
       "Harness upgrade event.",
     ],
   ]);
+});
+
+const completedFields = {
+  event: "project-storage.upgrade.completed",
+  projectId: "00000000-0000-4000-8000-000000000010",
+  upgradeId: "00000000-0000-4000-8000-0000000000a1",
+  sourceGenerationId: "00000000-0000-4000-8000-000000000014",
+  targetGenerationId: "00000000-0000-4000-8000-0000000000a2",
+} as const;
+const completedLine = (overrides: Readonly<Record<string, unknown>> = {}) =>
+  JSON.stringify({ level: 30, time: 0, service: "harness", ...completedFields, ...overrides });
+
+it("decodes the completed upgrade line", () => {
+  const { calls, lines } = forwarder();
+  lines.push(Buffer.from(`${completedLine()}\n`));
+  expect(calls).toEqual([
+    [
+      "info",
+      { source: "harness", ...completedFields, harnessTime: "1970-01-01T00:00:00.000Z" },
+      "Harness upgrade event.",
+    ],
+  ]);
+});
+
+const invalidCompletedLines = [
+  { name: "an extra path key", line: completedLine({ path: "C:\\private\\project" }) },
+  { name: "level 40", line: completedLine({ level: 40 }) },
+  { name: "a missing targetGenerationId", line: completedLine({ targetGenerationId: undefined }) },
+  {
+    name: "a sourceGenerationId that is not a lowercase UUID",
+    line: completedLine({ sourceGenerationId: "00000000-0000-4000-8000-00000000000A" }),
+  },
+] as const;
+
+const rejectedLine = (key: "event" | "fatalCode", name: string, message: string) => [
+  "warn",
+  { code: "HARNESS_LOG_LINE_INVALID", attempt: 1, [key]: name },
+  message,
+];
+
+it.for(invalidCompletedLines)("rejects an invalid completed line: $name", (invalid) => {
+  expectOnlyCall(invalid.line, [
+    rejectedLine("event", completedFields.event, "Harness upgrade log line rejected."),
+  ]);
+});
+
+const shutdownFatalFields = {
+  failures: [
+    { tag: "RegistrationCleanupUnconfirmed", parts: ["registry", "listing"] },
+    { kind: "error" },
+  ],
+  omittedFailures: 0,
+};
+const fatalLine = (overrides: Readonly<Record<string, unknown>> = {}) =>
+  JSON.stringify({
+    level: 60,
+    time: 0,
+    service: "harness",
+    msg: "Harness shutdown failed.",
+    code: "HARNESS_SHUTDOWN_FAILED",
+    ...shutdownFatalFields,
+    ...overrides,
+  });
+
+it("forwards a harness fatal line", () => {
+  const { calls, lines } = forwarder();
+  lines.push(Buffer.from(`${fatalLine()}\n`));
+  expect(calls).toEqual([
+    [
+      "error",
+      {
+        source: "harness",
+        attempt: 1,
+        code: "HARNESS_SHUTDOWN_FAILED",
+        ...shutdownFatalFields,
+        harnessTime: "1970-01-01T00:00:00.000Z",
+      },
+      "Harness fatal event.",
+    ],
+  ]);
+});
+
+const invalidFatalLines = [
+  { name: "an extra message key", line: fatalLine({ message: "C:\\private\\project" }) },
+  {
+    name: "17 entries",
+    line: fatalLine({ failures: Array.from({ length: 17 }, () => ({ kind: "error" })) }),
+  },
+  { name: "a path in a tag", line: fatalLine({ failures: [{ tag: "C:\\private" }] }) },
+] as const;
+
+it.for(invalidFatalLines)("rejects an invalid fatal line: $name", (invalid) => {
+  expectOnlyCall(invalid.line, [
+    rejectedLine("fatalCode", "HARNESS_SHUTDOWN_FAILED", "Harness fatal log line rejected."),
+  ]);
+});
+
+const otherHarnessLines = [
+  {
+    name: "an info line",
+    line: JSON.stringify({
+      level: 30,
+      time: 0,
+      service: "harness",
+      msg: "Harness message port connected.",
+    }),
+  },
+  { name: "a level-60 line with an unknown code", line: fatalLine({ code: "HARNESS_OTHER" }) },
+  { name: "a level-50 line with a known code", line: fatalLine({ level: 50 }) },
+] as const;
+
+it.for(otherHarnessLines)("ignores other harness lines: $name", (other) => {
+  expectOnlyCall(other.line, []);
 });

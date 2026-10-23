@@ -145,6 +145,7 @@ function unexpectedUpgradeSteps(): ProjectStorageStoreDependencies["upgrades"] {
     throw new Error("Unexpected upgrade step.");
   };
   return {
+    completed: () => undefined,
     abandoned: () => undefined,
     discardFailed: () => undefined,
     findUnfinished: async () => undefined,
@@ -827,6 +828,11 @@ function unfinishedMarker(): UnfinishedUpgrade {
 
 /** Opening evidence of a Project whose canonical database needs a migration. */
 function migrationRequiredEvidence(): ProjectStorageOpenEvidence {
+  return openingEvidence("known-older");
+}
+
+/** Opening evidence of a healthy Project whose canonical database is `canonicalVersion`. */
+function openingEvidence(canonicalVersion: "known-older" | "current"): ProjectStorageOpenEvidence {
   const probe = {
     status: "present",
     identityMatches: true,
@@ -843,7 +849,7 @@ function migrationRequiredEvidence(): ProjectStorageOpenEvidence {
       canonicalDatabaseLineageId: expectedCanonicalLineageId,
       runtimeDatabaseLineageId: expectedRuntimeLineageId,
     },
-    canonical: { ...probe, format: "known-older", migration: "known-older" },
+    canonical: { ...probe, format: canonicalVersion, migration: canonicalVersion },
     runtime: { ...probe, format: "current", migration: "current" },
     release: async () => undefined,
   };
@@ -867,6 +873,7 @@ function upgradeRecoveryFixture(
   const steps = dependencies.upgrades;
   const upgrades: ProjectStorageStoreDependencies["upgrades"] = {
     ...steps,
+    completed: (event) => record(["completed", event]),
     abandoned: (event) => record(["abandoned", event]),
     discardFailed: (event) => record(["discardFailed", event]),
     findUnfinished: async () => marker,
@@ -1013,6 +1020,191 @@ it("keeps the discard outcome when its diagnostics port throws: owner", async ()
   expect(outcomes[0]?.discarded).toMatchObject({ status: "ready" });
   expect(outcomes[0]?.refused).toEqual({ status: "broken", message: invalidOutput.message });
   expect(outcomes[1]).toEqual(outcomes[0]);
+});
+
+type UpgradeSteps = ProjectStorageStoreDependencies["upgrades"];
+type CommittedUpgradeOptions = Readonly<{
+  steps?: Partial<UpgradeSteps>;
+  evidence?: ProjectStorageOpenEvidence;
+  failAt?: string;
+}>;
+
+/** Typed fakes around one upgrade that runs through to the committed switch unless told not to. */
+function committedUpgradeFixture(options: CommittedUpgradeOptions = {}) {
+  const { dependencies } = lifecycleDependencies();
+  const events: unknown[][] = [];
+  let marker: UnfinishedUpgrade | undefined;
+  const head = { formatVersion: 1, schemaVersion: 1, lastMigrationId: "0001_initial" };
+  const upgrades = {
+    ...dependencies.upgrades,
+    abandoned: (event) => events.push(["abandoned", event]),
+    discardFailed: (event) => events.push(["discardFailed", event]),
+    completed: (event) => events.push(["completed", event]),
+    findUnfinished: async () => marker,
+    proveUnfinished: async () => ({
+      status: "proven",
+      retainedGenerationIds: [expectedGenerationId],
+    }),
+    releaseUnfinished: async () => {
+      marker = undefined;
+    },
+    plan: async () => ({ status: "eligible", source: storedSource(), canonicalMigrations: [] }),
+    declare: async () => {
+      marker = unfinishedMarker();
+    },
+    copyBackup: async () => undefined,
+    verifyBackup: async () => "verified",
+    sealBackup: async () => undefined,
+    stage: async () => undefined,
+    migrate: async () => ({
+      canonical: head,
+      runtime: head,
+      projectSequence: 0,
+      runtimeWaterline: 0,
+    }),
+    verifyStaged: async () => "verified",
+    switchActive: async () => {
+      marker = undefined;
+    },
+    ...options.steps,
+  } satisfies UpgradeSteps;
+  const owner = createProjectStorageOwner({
+    ...dependencies,
+    ids: {
+      ...dependencies.ids,
+      generationId: () => recoveryTargetId,
+      upgradeId: () => recoveryUpgradeId,
+    },
+    opening: { inspect: async () => options.evidence ?? migrationRequiredEvidence() },
+    upgrades,
+    failures: {
+      checkpoint: async (point) => {
+        if (point === options.failAt) throw new Error(`Injected failure at ${point}.`);
+      },
+    },
+  });
+  return { owner, events };
+}
+
+/** Whatever the upgrade answers, as data: a value, or the message it rejects with. */
+async function upgradeOutcome(owner: ReturnType<typeof createProjectStorageOwner>) {
+  try {
+    return { answered: await owner.upgrade({ projectId: request.projectId }) };
+  } catch (error: unknown) {
+    return { rejected: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+const completedEvent = [
+  "completed",
+  {
+    projectId: request.projectId,
+    upgradeId: recoveryUpgradeId,
+    sourceGenerationId: expectedGenerationId,
+    targetGenerationId: recoveryTargetId,
+  },
+];
+
+it("reports a committed upgrade once: owner", async () => {
+  const fixture = committedUpgradeFixture();
+  expect(await fixture.owner.upgrade({ projectId: request.projectId })).toMatchObject({
+    status: "ready",
+    result: {
+      status: "upgraded",
+      sourceGenerationId: expectedGenerationId,
+      generationId: recoveryTargetId,
+      upgradeId: recoveryUpgradeId,
+    },
+  });
+  expect(fixture.events).toEqual([completedEvent]);
+  await fixture.owner.stop();
+});
+
+const abandonedEvent = [
+  "abandoned",
+  { projectId: request.projectId, upgradeId: recoveryUpgradeId, reason: "failed" },
+];
+const failedAnswer = (code: string) => ({
+  answered: { status: "ready", result: { status: "failed", diagnostic: { code } } },
+});
+
+const uncommittedUpgrades = [
+  {
+    name: "refused (unsupported)",
+    options: { steps: { plan: async () => ({ status: "unsupported" }) } },
+    outcome: { answered: { status: "ready", result: { status: "refused" } } },
+    events: [],
+  },
+  {
+    name: "failed (backup invalid)",
+    options: { steps: { verifyBackup: async () => "invalid" } },
+    outcome: failedAnswer("PROJECT_UPGRADE_BACKUP_INVALID"),
+    events: [abandonedEvent],
+  },
+  {
+    name: "failed (verification mismatch)",
+    options: { steps: { verifyStaged: async () => "mismatch" } },
+    outcome: failedAnswer("PROJECT_UPGRADE_VERIFICATION_FAILED"),
+    events: [abandonedEvent],
+  },
+  {
+    name: "the switch step rejects",
+    options: {
+      steps: {
+        switchActive: async () => {
+          throw new Error("Injected switch failure.");
+        },
+      },
+    },
+    outcome: { rejected: "Injected switch failure." },
+    events: [abandonedEvent],
+  },
+  {
+    name: "not-required",
+    options: { evidence: openingEvidence("current") },
+    outcome: { answered: { status: "ready", result: { status: "not-required" } } },
+    events: [],
+  },
+] as const satisfies readonly Readonly<{
+  name: string;
+  options: CommittedUpgradeOptions;
+  outcome: object;
+  events: readonly unknown[];
+}>[];
+
+it.for(uncommittedUpgrades)(
+  "reports no completion without a committed switch: $name",
+  async ({ options, outcome, events }) => {
+    const fixture = committedUpgradeFixture(options);
+    expect(await upgradeOutcome(fixture.owner)).toMatchObject(outcome);
+    expect(fixture.events).toEqual(events);
+    await fixture.owner.stop();
+  },
+);
+
+it("still reports completion when the after-switch checkpoint fails: owner", async () => {
+  const fixture = committedUpgradeFixture({ failAt: "after-upgrade-switch" });
+  expect(await upgradeOutcome(fixture.owner)).toEqual({
+    rejected: "Injected failure at after-upgrade-switch.",
+  });
+  expect(fixture.events).toEqual([completedEvent]);
+  await fixture.owner.stop();
+});
+
+it("keeps the upgrade answer when completion reporting throws: owner", async () => {
+  const recording = committedUpgradeFixture();
+  const throwing = committedUpgradeFixture({
+    steps: {
+      completed: () => {
+        throw new Error("Diagnostics sink failed.");
+      },
+    },
+  });
+  const expected = await upgradeOutcome(recording.owner);
+  expect(await upgradeOutcome(throwing.owner)).toEqual(expected);
+  expect(expected).toMatchObject({ answered: { result: { status: "upgraded" } } });
+  await recording.owner.stop();
+  await throwing.owner.stop();
 });
 
 it("answers broken when the eligibility opening cannot be released: owner", async () => {

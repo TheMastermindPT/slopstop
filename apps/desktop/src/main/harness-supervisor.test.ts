@@ -1016,7 +1016,7 @@ describe("harness upgrade log lines", () => {
     "Harness upgrade log line rejected.",
   ];
 
-  it("forwards only harness upgrade log lines", () => {
+  it("forwards harness upgrade log lines and drops other output lines", () => {
     const recorded = recordLogCalls();
     const child = new FakeChild();
     supervisorWith([child]).start();

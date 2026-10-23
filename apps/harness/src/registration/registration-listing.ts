@@ -1,4 +1,9 @@
-import { decodeStrict, ProjectListResultSchema } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  ProjectListResultSchema,
+  REGISTRATION_CLEANUP_TAG,
+  type RegistrationCleanupPart,
+} from "@slopstop/protocol";
 import { Data, Effect, Result } from "effect";
 import { untypedRejection } from "../effect-rejection.js";
 import { REGISTRATION_SHUTDOWN_CLEANUP_BUDGET_MS } from "./observer-limits.js";
@@ -12,14 +17,8 @@ export type RegistrationListingPorts = Readonly<{
   registry: Readonly<{ stop(): Promise<void> }>;
 }>;
 
-/** The registration parts whose cleanup at stop can be unconfirmed, in reporting order. */
-export const REGISTRATION_CLEANUP_PARTS = ["registry", "observer", "listing"] as const;
-
 /** A registration part whose cleanup at stop was not confirmed. */
-export type CleanupPart = (typeof REGISTRATION_CLEANUP_PARTS)[number];
-
-/** The tag of the failure naming the unconfirmed cleanup parts. */
-export const REGISTRATION_CLEANUP_TAG = "RegistrationCleanupUnconfirmed";
+type CleanupPart = RegistrationCleanupPart;
 
 /** Stop could not confirm every part's cleanup; each unconfirmed part is named. */
 class RegistrationCleanupUnconfirmed extends Data.TaggedError(REGISTRATION_CLEANUP_TAG)<{

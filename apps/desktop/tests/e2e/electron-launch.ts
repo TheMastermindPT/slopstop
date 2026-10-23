@@ -63,14 +63,21 @@ export async function startingLines(userData: string): Promise<number> {
 }
 
 /**
- * After a clean run, the desktop log holds one start line per launch so far, no forwarded harness
- * upgrade event and no harness log-line fault code. A successful upgrade writes no harness line,
- * so this proves only that no failed or rejected upgrade line was logged; the positive harness to
- * desktop log link is not exercised here.
+ * After a clean run, the desktop log holds one start line per launch so far, exactly the
+ * `forwarded` harness upgrade events (each line matching its expected fields, in order) and no
+ * harness log-line fault code. A run with a successful upgrade expects its forwarded `completed`
+ * line, which proves the harness to desktop log link; a run without one expects none. Answers
+ * the forwarded upgrade lines.
  */
-export async function expectDesktopLog(userData: string, launches: number) {
+export async function expectDesktopLog(
+  userData: string,
+  launches: number,
+  forwarded: readonly Readonly<Record<string, unknown>>[] = [],
+): Promise<LogLine[]> {
   const lines = await desktopLogLines(userData);
   expect(lines.filter((line) => line["msg"] === startingMessage)).toHaveLength(launches);
-  expect(lines.filter((line) => line["msg"] === forwardedUpgradeMessage)).toEqual([]);
+  const upgradeLines = lines.filter((line) => line["msg"] === forwardedUpgradeMessage);
+  expect(upgradeLines).toEqual(forwarded.map((fields) => expect.objectContaining(fields)));
   expect(JSON.stringify(lines)).not.toContain("HARNESS_LOG_LINE_");
+  return upgradeLines;
 }

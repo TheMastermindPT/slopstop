@@ -12,7 +12,7 @@ status: in-review
 last_updated: 2026-10-23T17:05:00+0100
 last_updated_by: Pedro Mesquita
 last_updated_note: "Pedro's decisions appended (Q1 a, Q2 a, Q3 a, Q4 a); brief approved from f6afcee7. Earlier: lean brief written, Q1-Q4 open."
-content_hash: d199549249e807f71c0670591189fac5414e32a5764893c7e898a7a82f41aad9
+content_hash: 5978a833f5d54b7acf739e1231ca6fe36680cf9ef008554b175e82c90d405d20
 ---
 
 # Design: #133 harness-to-desktop log link
@@ -208,6 +208,10 @@ Public seams: the protocol schemas through `decodeStrictResult`; the Project Sto
   - Q3 (a): forwarded fatal lines are logged at `error` with "Harness fatal event." (LOG-B5 as written).
   - Q4 (a): LOG-B6 is part of the contract (the piped-child flush row).
   - Lane normal confirmed; the approval is of document intent only. Build authority and the workspace (a linked worktree) are agreed at `/rpiv:implement`.
+- **2026-10-23, candidate review round 1 (slice-verifier on `8e56c7e`) and the coordinator's triage (disclosed to Pedro):** fix round in new commits, no round 2.
+  - **LOG-B7 amended (V1).** The clause "the other e2e callers keep the empty list" was false already at `be3ff6a`: `conversation.test.ts` upgrades repository-b and the Project without a repository. Its two `expectDesktopLog` calls now expect the two forwarded `completed` lines in opening order (`source`, `event`, `projectId`). The Verification Notes baseline ("only `project-upgrade.test.ts` upgrades today") is wrong in the same way.
+  - **D4 completed (V2).** Protocol owns one table, `harnessFatalCodeMessages` (code to fixed messages; `HARNESS_START_FAILED` has two). The schema and `harnessFatalCodes` are derived from it. The harness types its codes from `HarnessFatalCode` and its messages from `HarnessFatalMessage<Code>`, and its six call sites take their messages from `harnessFatalMessages`. A new row drives the real `connectHarnessProcess` and `createHarnessPortCloseHandler` and decodes their lines.
+  - **Wording corrections, recorded here because the body is approved:** Architecture says "the one fixed message of each code", but `HARNESS_START_FAILED` has two. The s9 reference `271b418` is not an ancestor of the base; its content arrived through the squash `4cf6541`. The `## TDD Evidence (implement)` heading follows the References list with no blank line.
 
 ## References
 
@@ -217,3 +221,6 @@ Public seams: the protocol schemas through `decodeStrictResult`; the Project Sto
 - #123 Part A design (s9) `.rpiv/artifacts/designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md`, approved `content_hash e0cf6eff…` (§142).
 - Source: `apps/desktop/src/main/harness-log-lines.ts`, `apps/desktop/src/main/harness-supervisor.ts`, `apps/desktop/src/main/logger.ts`, `apps/harness/src/harness-logger.ts`, `apps/harness/src/process-fatal-diagnostics.ts`, `apps/harness/src/process-entry.ts`, `apps/harness/src/process-connection.ts`, `apps/harness/src/process-shutdown.ts`, `apps/harness/src/upgrade-diagnostics-logger.ts`, `apps/harness/src/storage/project-storage-upgrade-pipeline.ts`, `packages/protocol/src/project-upgrade-protocol.ts`, `apps/desktop/tests/e2e/project-upgrade.test.ts`, `apps/desktop/tests/e2e/electron-launch.ts`.
 - Standing decisions: `.rpiv/decisions/degrade-distinguishes-broken.md`, `.rpiv/decisions/shared-vocab-union.md`.
+## TDD Evidence (implement)
+
+- 2026-10-23, `log-s1-harness-desktop-log-link`: LOG-B1..B7 evidence, bindings and gates in `.rpiv/evidence/2026-10-23_16-18-47_harness-desktop-log-link/log-s1-tdd-evidence.md`.

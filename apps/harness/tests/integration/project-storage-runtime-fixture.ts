@@ -364,6 +364,27 @@ type StorageCreationIds = Readonly<{
 }>;
 
 /**
+ * Records failure diagnostics in `recorded` and passes every diagnostic on to `forward`; a
+ * completion is passed on unrecorded.
+ */
+function recordingDiagnostics(
+  recorded: UpgradeDiagnosticEvent[],
+  forward: UpgradeDiagnostics | undefined,
+): UpgradeDiagnostics {
+  return {
+    completed: (event) => forward?.completed(event),
+    abandoned: (event) => {
+      recorded.push({ kind: "abandoned", event });
+      forward?.abandoned(event);
+    },
+    discardFailed: (event) => {
+      recorded.push({ kind: "discardFailed", event });
+      forward?.discardFailed(event);
+    },
+  };
+}
+
+/**
  * The raw Storage owner with fixed ids (the creation generation outside an upgrade, the
  * attempt's target generation and upgrade id inside one), a clock that answers the creation
  * time except while `upgrade` runs, where it answers exactly the two upgrade instants and
@@ -411,16 +432,7 @@ export function createUpgradeStorageOwner(root: string, options: UpgradeOwnerOpt
         if (checkpoint === options.failAt) throw new Error(`Injected failure at ${checkpoint}.`);
       },
     },
-    upgradeDiagnostics: {
-      abandoned: (event) => {
-        diagnostics.push({ kind: "abandoned", event });
-        options.upgradeDiagnostics?.abandoned(event);
-      },
-      discardFailed: (event) => {
-        diagnostics.push({ kind: "discardFailed", event });
-        options.upgradeDiagnostics?.discardFailed(event);
-      },
-    },
+    upgradeDiagnostics: recordingDiagnostics(diagnostics, options.upgradeDiagnostics),
   });
   const owner = createProjectStorageOwner(dependencies);
   return {

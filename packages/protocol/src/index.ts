@@ -67,6 +67,24 @@ export {
   writerProofStaleProjectId,
 } from "./canonical-writer-smoke-protocol.js";
 export type {
+  HarnessFatalCode,
+  HarnessFatalLogLine,
+  HarnessFatalMessage,
+  HarnessFatalValueKind,
+  RegistrationCleanupPart,
+} from "./harness-fatal-log-protocol.js";
+export {
+  HARNESS_FAILURE_TAG_PATTERN,
+  HARNESS_FATAL_SUMMARY_BOUND,
+  HARNESS_FATAL_VALUE_KINDS,
+  HarnessFatalLogLineSchema,
+  harnessFatalCodeMessages,
+  harnessFatalCodes,
+  harnessFatalMessages,
+  REGISTRATION_CLEANUP_PARTS,
+  REGISTRATION_CLEANUP_TAG,
+} from "./harness-fatal-log-protocol.js";
+export type {
   ProjectConversationDiagnostic,
   ProjectConversationReadRequest,
   ProjectConversationReadResult,
@@ -161,6 +179,7 @@ export type {
   ProjectUpgradeResult,
 } from "./project-upgrade-protocol.js";
 export {
+  EpochMillisecondsSchema,
   HarnessUpgradeLogLineSchema,
   harnessUpgradeLogEvents,
   ProjectUpgradeAbandonReasonSchema,

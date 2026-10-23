@@ -45,5 +45,17 @@ test("updates an older Project in the window", async () => {
   } finally {
     await application.close();
   }
-  await expectDesktopLog(userData, 1);
+  const generationId = expect.stringMatching(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+  );
+  const [completed] = await expectDesktopLog(userData, 1, [
+    {
+      source: "harness",
+      event: "project-storage.upgrade.completed",
+      projectId,
+      sourceGenerationId: generationId,
+      targetGenerationId: generationId,
+    },
+  ]);
+  expect(completed?.["sourceGenerationId"]).not.toBe(completed?.["targetGenerationId"]);
 });
