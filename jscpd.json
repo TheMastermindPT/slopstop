@@ -12,6 +12,7 @@
     "**/out/**",
     "**/playwright-report/**",
     "**/test-results/**",
-    "apps/harness/tests/fixtures/canonical-project-writer-generation-2.sql"
+    "apps/harness/tests/fixtures/canonical-project-writer-generation-2.sql",
+    "apps/desktop/tests/e2e/temporary-root.ts"
   ]
 }

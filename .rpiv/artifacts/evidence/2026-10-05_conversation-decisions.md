@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: f7d02cd36d5177e8ea7a6d457c850bda377700726954a6623e69dd85a507ea0e
+content_hash: ef152ed670bca425fd7a3bd8b5dc4da9d269ed30c8a9dd27eea2bc608055f25a
 ---
 
 # Conversation — Human Decisions
@@ -2086,3 +2086,6 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - Phases 3 and 4 come before C2.
   - Phase 5 folds into #123 Part B.
   - Phase 6 waits for its decisions (ADRs, C2, Frame).
+- **User approval (2026-10-23):** push main (`e2ef472` onward, with the docs commits) once the review's linter job and the #133 build are done, alone on an idle machine; then check the CI.
+- **Architecture review linter run** (idle machine): depcruise, knip and `check:effect` are clean. **jscpd failed**: `apps/desktop/tests/e2e/temporary-root.ts` is a byte-identical copy of `apps/harness/tests/integration/temporary-root.ts`, from `b08bafd`. Coordinator error: `fix/ci-red-2` was merged without `check:duplicates` or `check:deep`.
+- **User decision: a recorded jscpd exception.** `jscpd.json` ignores the desktop copy. Reason: the apps never import one another (AGENTS.md), so this 13-line test helper exists once per app. `pnpm check:duplicates` passes (0 clones).
