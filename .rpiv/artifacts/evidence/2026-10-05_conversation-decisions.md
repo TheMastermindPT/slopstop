@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: ee18bd0f1f96714b02a914decda24a097bf38918a69e7fb9ab5d9c363172d767
+content_hash: 85861e8c19e095234d68fdef7e5fed1b6b62aee1685781ee72960fec3dbf03fc
 ---
 
 # Conversation — Human Decisions
@@ -2102,3 +2102,5 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - the V1 red at `8e56c7e` was not run.
   The evidence was copied to the main checkout's gitignored evidence folder.
 - **#133 squash `7d04277` on main.** The first push was refused by the pre-push hook. `check-golden-sql.test.mjs` pins `jscpd.json` exactly, and the jscpd exception (`6423829`) broke that pin; coordinator error. **User decision:** update the oracle. The pin now lists both exclusions (the fixture and the per-app test helper) and still fails on any other change. `pnpm check` passed 3396/3396. The push was retried.
+- **Review Phase 1 brief** `designs/2026-10-23_18-52-05_arch-review-phase-1-correctness-fixes.md` (`f8987631…`, lane normal): `p1-s1-registration-recovery` (L4-01, L4-02, L4-03) and `p1-s2-correctness-polish` (the other 9). **User decisions:** Q1 (a) reconcile once at Layer build, where a failure keeps today's gate answer and never fails startup; Q2 (a) the kill before the child row is recorded is a named residual; Q3 (a) the release-failure fatal summary carries the protocol activation code; Q4 (a) only `model.c4` now, with the ADR at the review Phase 6 trigger. The user approved the brief with these choices appended. It is built in a new worktree `slopstop-p1`.
+- Decisions appended to the Phase 1 brief: append-only **keep** against `f8987631`, so the approval carries to `content_hash 5799758d3682f7d55ef19b4857c4506620cc811eac7384793d9e77f4dfed2013`. The approved copy is saved and the brief committed.
