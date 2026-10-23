@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e5d925517b6e542bdd5749d56dc7d99bbe843bf0fa64a28e74ec6bb992948407
+content_hash: dd900e8666a3b23e1a457771e227c4ee249a652437689b0dee8075773b56920d
 ---
 
 # Conversation — Human Decisions
@@ -2020,3 +2020,18 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - the 5 preflight findings from bare contract paths;
   - no deep review.
   Integration, e2e and smoke run in the `check:deep` at the push.
+- **TS 7 integration and push:** squash `0b49cc0` on main; `pnpm install` on main; TS 7.0.2 and `require('typescript')` 6.0.2; both `tsc.exe` hashes match npm; no Defender detection. Push `4cf6541..0b49cc0`, with the pre-push `check:deep` green.
+- **CI finding (coordinator error):** GitHub CI has failed on every push since 2026-10-10, and the coordinator never checked it after a push.
+  - Ubuntu: about 30 rows in `package-smoke-launcher.test.ts`.
+  - Windows (Part A and TS 7 runs): `check-effect-diagnostics.test.mjs`. A planted error gave `ok: true`, a possible silent clean on the runner; there is also a canary mismatch and a `rename` row.
+  - A bounded diagnosis was given to the implementer: no code changes, no heavy runs.
+- **CI diagnosis** (`evidence/2026-10-23_ci-red-diagnosis.md`):
+  - A: `package-smoke-launcher.test.ts` uses a Windows-only mocked package tree, red on Ubuntu since `95e2c85`; it is test-only.
+  - B1 and B2: the gate fixtures in `os.tmpdir()` resolve no Effect v4, so the language service falls back to the v3 rules, and a planted v4 error reads as clean. Locally this was masked by a stray `C:\Users\pedro\node_modules\effect`. This also exposes a real silent-clean class.
+  - C: the "passes on the repository" row takes 13.4 s on CI, against its 15 s bound.
+- **User decisions:**
+  - B: fix the fixtures (link a real `node_modules/effect`) and harden the gate. Any checked file whose `detectedEffect` is not `v4` is BROKEN; measure first which files report `unknown`.
+  - A: the file runs only on win32.
+  - C: **"Subir para 30 s só nesse teste"**, for that single row; the project default is unchanged.
+  - The user deleted the stray home-level `node_modules` and `package.json`.
+  - The work goes on branch `fix/ci-red` in the main checkout, without a designer brief or a review: red-green with the evidence recorded.
