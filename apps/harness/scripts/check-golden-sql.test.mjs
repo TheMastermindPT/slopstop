@@ -180,7 +180,7 @@ it("rejects equal file identities even if link counts report one", () => {
   });
 });
 
-it("retains the exact single-fixture exclusion and zero-duplication policy", () => {
+it("retains the exact exclusions (one fixture, one per-app test helper) and zero-duplication policy", () => {
   const config = JSON.parse(readFileSync(join(repository, "jscpd.json"), "utf8"));
   expect(config).toEqual({
     path: ["apps", "packages"],
@@ -197,6 +197,7 @@ it("retains the exact single-fixture exclusion and zero-duplication policy", () 
       "**/playwright-report/**",
       "**/test-results/**",
       fixture,
+      "apps/desktop/tests/e2e/temporary-root.ts",
     ],
   });
   const { scripts } = JSON.parse(readFileSync(join(repository, "package.json"), "utf8"));

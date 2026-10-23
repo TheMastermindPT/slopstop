@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: c9f90fbc60ed44f7b6bd6b94b61cc2ce27c8f5716730996ffeebabad250bc713
+content_hash: ee18bd0f1f96714b02a914decda24a097bf38918a69e7fb9ab5d9c363172d767
 ---
 
 # Conversation — Human Decisions
@@ -2101,3 +2101,4 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - no mutation;
   - the V1 red at `8e56c7e` was not run.
   The evidence was copied to the main checkout's gitignored evidence folder.
+- **#133 squash `7d04277` on main.** The first push was refused by the pre-push hook. `check-golden-sql.test.mjs` pins `jscpd.json` exactly, and the jscpd exception (`6423829`) broke that pin; coordinator error. **User decision:** update the oracle. The pin now lists both exclusions (the fixture and the per-app test helper) and still fails on any other change. `pnpm check` passed 3396/3396. The push was retried.
