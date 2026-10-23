@@ -1,0 +1,28 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop
+
+ ❯ |harness-integration| tests/integration/storage-root-alias.integration.test.ts (9 tests | 1 failed) 3324ms
+   × joins the registry to an authority of the same folder in either spelling 31ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness-integration| tests/integration/storage-root-alias.integration.test.ts > joins the registry to an authority of the same folder in either spelling
+Error: Application database authority belongs to another installation root.
+ ❯ applicationDatabaseFor src/registration/registry-database.ts:58:13
+     56|   if (injected !== undefined) {
+     57|     if (injected.applicationDatabasePath !== expectedPath)
+     58|       throw new Error("Application database authority belongs to anoth…
+       |             ^
+     59|     return injected;
+     60|   }
+ ❯ registryJoin tests/integration/storage-root-alias.integration.test.ts:128:18
+ ❯ tests/integration/storage-root-alias.integration.test.ts:145:47
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  15:57:42
+   Duration  5.48s (transform 1.21s, setup 0ms, import 1.94s, tests 3.32s, environment 0ms)
+

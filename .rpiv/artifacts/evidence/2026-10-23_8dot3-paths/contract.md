@@ -57,3 +57,10 @@
 ## Gates
 
 - Red-green per row with the smallest Vitest command; `pnpm check` under the CPU rule; CodeScene 10 on touched files; one slice-verifier candidate round. No timeout raised, no push, no merge.
+
+## Note after review round 1 (2026-10-23, appended; earlier text kept)
+
+- **B4 as built (V3, coordinator decision: reword).** The composition accepts every spelling the operating system resolves to the same folder: a Windows 8.3 alias, another letter case, or a path through a link above the nearest existing entry. A link at the nearest existing entry is refused. A different folder is still refused (T3; the registry's "belongs to another installation root" refusal is now pinned too). The packaged app's acceptance set is unchanged: the bootstrap already applied this function.
+- **B5 as built (V4, coordinator decision: fix).** A canonicalization failure is the tagged `StorageRootCanonicalizationError` (`reason`: `symbolic-link`, `no-existing-ancestor`, `inspection-failed`, with the original `cause`). `acquireApplicationDatabaseAuthority` fails on its typed channel. The synchronous factories (the storage composition, `createApplicationDatabaseAuthority`, the registry join) and the bootstrap check throw that tagged error once, through `requirePhysicalRoot`. The bootstrap Layer turns the acquire's error into a defect (`Effect.orDie`), because the roots were already canonicalized and the startup failure reports it.
+- **B2 extended (V1).** The registry join (`applicationDatabaseFor`) compares the injected authority with the physical spelling of its root. It reads the disk only when the raw spelling differs.
+- **T1/T2/T2b (V2).** The alias rows use roots under `os.homedir()`, because the system volume keeps 8.3 names and a CI temp volume may not.

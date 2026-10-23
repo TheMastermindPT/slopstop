@@ -1,0 +1,29 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop
+
+ ❯ |harness| src/registration/registration-registry.test.ts (10 tests | 2 failed) 36ms
+   × never stops an injected authority: 'idle' 11ms
+   × never stops an injected authority: 'lease held' 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness| src/registration/registration-registry.test.ts > never stops an injected authority: 'idle'
+ FAIL  |harness| src/registration/registration-registry.test.ts > never stops an injected authority: 'lease held'
+Error: Application database authority belongs to another installation root.
+ ❯ applicationDatabaseFor src/registration/registry-database.ts:58:13
+     56|   if (injected !== undefined) {
+     57|     if (injected.applicationDatabasePath !== expectedPath)
+     58|       throw new Error("Application database authority belongs to anoth…
+       |             ^
+     59|     return injected;
+     60|   }
+ ❯ src/registration/registration-registry.test.ts:67:10
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 8 passed (10)
+   Start at  15:53:22
+   Duration  1.65s (transform 624ms, setup 0ms, import 1.23s, tests 36ms, environment 0ms)
+

@@ -1,0 +1,125 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop
+
+ ❯ |harness-integration| tests/integration/registry-witness-race.integration.test.ts (13 tests | 3 failed) 2137ms
+   × answers broken, not a witness, when the root cannot be listed 138ms
+   × lets an open-only caller that decides between a creation and its registration wait for it 21ms
+   × keeps the registry's fresh creation joinable when Storage starts in the tick it is registered 18ms
+ ❯ |harness-integration| tests/integration/project-storage-create.integration.test.ts (61 tests | 1 failed) 24291ms
+   × blocks an orphan location at the deterministic Project path before allocation 1033ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness-integration| tests/integration/project-storage-create.integration.test.ts > blocks an orphan location at the deterministic Project path before allocation
+AssertionError: expected { status: 'ready', result: { …(4) } } to match object { status: 'ready', result: { …(3) } }
+(9 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "result": {
+-     "diagnostic": {
+-       "code": "PROJECT_STORAGE_PRIOR_STATE_WITNESS",
+-     },
+-     "reason": "prior-state-witness",
+-     "status": "blocked",
++     "status": "created",
+    },
+    "status": "ready",
+  }
+
+ ❯ tests/integration/project-storage-create.integration.test.ts:1072:20
+    1070|     await fixture.owner.stop();
+    1071|
+    1072|     expect(result).toMatchObject({
+       |                    ^
+    1073|       status: "ready",
+    1074|       result: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |harness-integration| tests/integration/registry-witness-race.integration.test.ts > answers broken, not a witness, when the root cannot be listed
+AssertionError: expected { status: 'opened', value: 'opened' } to deeply equal { status: 'broken', …(1) }
+
+- Expected
++ Received
+
+  {
+-   "code": "INTERNAL_FAILURE",
+-   "status": "broken",
++   "status": "opened",
++   "value": "opened",
+  }
+
+ ❯ tests/integration/registry-witness-race.integration.test.ts:182:84
+    180|       throw Object.assign(new Error("Injected access denial."), { code…
+    181|     };
+    182|     expect(await verdict(withRegistrationDatabase(options, async () =>…
+       |                                                                                    ^
+    183|       status: "broken",
+    184|       code: "INTERNAL_FAILURE",
+ ❯ withGatedRegistry tests/integration/registry-witness-race.integration.test.ts:140:5
+ ❯ tests/integration/registry-witness-race.integration.test.ts:176:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |harness-integration| tests/integration/registry-witness-race.integration.test.ts > lets an open-only caller that decides between a creation and its registration wait for it
+Error: The open-only caller did not start.
+ ❯ tests/integration/registry-witness-race.integration.test.ts:255:39
+    253|     const creator = gated.authority.openCurrent({ createIfMissing: tru…
+    254|     await gated.firstOpen;
+    255|     if (openOnly === undefined) throw new Error("The open-only caller …
+       |                                       ^
+    256|     const early = await settledWithin(openOnly, 200);
+    257|     gated.release();
+ ❯ withGatedRegistry tests/integration/registry-witness-race.integration.test.ts:140:5
+ ❯ tests/integration/registry-witness-race.integration.test.ts:245:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |harness-integration| tests/integration/registry-witness-race.integration.test.ts > keeps the registry's fresh creation joinable when Storage starts in the tick it is registered
+Error: Storage did not start.
+ ❯ tests/integration/registry-witness-race.integration.test.ts:307:38
+    305|     const creating = verdict(withRegistrationDatabase(options, async (…
+    306|     await gated.firstOpen;
+    307|     if (storage === undefined) throw new Error("Storage did not start.…
+       |                                      ^
+    308|     const state = await storage;
+    309|     const existing = verdict(
+ ❯ withGatedRegistry tests/integration/registry-witness-race.integration.test.ts:140:5
+ ❯ tests/integration/registry-witness-race.integration.test.ts:291:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+ProjectStorageUnavailableError: Project Storage application database is stopped.
+ ❯ stoppedError apps/harness/src/storage/application-database-authority.ts:100:10
+ ❯ accept apps/harness/src/storage/application-database-authority.ts:208:24
+ ❯ admit apps/harness/src/storage/application-database-authority.ts:220:17
+ ❯ Object.transaction apps/harness/src/storage/application-database-authority.ts:252:32
+ ❯ Object.transaction apps/harness/src/storage/application-database-migration.ts:420:34
+ ❯ runWriteTransaction apps/harness/src/storage/project-storage-transaction.ts:112:32
+ ❯ runClassifiedWriteTransaction apps/harness/src/storage/project-storage-transaction.ts:145:10
+ ❯ migrateApplicationDatabase apps/harness/src/storage/application-database-migration.ts:461:10
+ ❯ migrateOn apps/harness/src/storage/application-database-authority.ts:331:25
+ ❯ initializeOnNewClient apps/harness/src/storage/application-database-authority.ts:430:14
+
+This error originated in "apps/harness/tests/integration/registry-witness-race.integration.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "lets an open-only caller that decides between a creation and its registration wait for it". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  2 failed | 4 passed (6)
+      Tests  4 failed | 117 passed (121)
+     Errors  1 error
+   Start at  15:58:19
+   Duration  54.10s (transform 6.72s, setup 0ms, import 11.42s, tests 75.89s, environment 1ms)
+
