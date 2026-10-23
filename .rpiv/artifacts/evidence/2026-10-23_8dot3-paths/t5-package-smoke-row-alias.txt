@@ -1,0 +1,32 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop
+
+ ❯ |harness-native-long| tests/integration/canonical-writer-package-smoke.integration.test.ts (149 tests | 1 failed | 148 skipped) 1298ms
+   × rejects a retained live Writer with a real independently acquired native fence (source-process qualification) 1296ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness-native-long| tests/integration/canonical-writer-package-smoke.integration.test.ts > rejects a retained live Writer with a real independently acquired native fence (source-process qualification)
+Error: The seeded database lies outside its Storage root.
+ ❯ seedOwner tests/integration/canonical-writer-package-smoke.integration.test.ts:187:11
+    185|   const relative = path.relative(root, database);
+    186|   if (relative.startsWith("..") || path.isAbsolute(relative))
+    187|     throw new Error("The seeded database lies outside its Storage root…
+       |           ^
+    188|   await step94("smoke-seed.generations", () => seedGenerations(databas…
+    189|   const client = createWorkerLocalLibsqlClient(database, "generation");
+ ❯ buildSeed tests/integration/canonical-writer-package-smoke.integration.test.ts:163:12
+ ❯ tests/integration/canonical-writer-package-smoke.integration.test.ts:143:20
+ ❯ buildTemplate tests/integration/storage-root-template.ts:27:5
+ ❯ copyFromTemplate tests/integration/storage-root-template.ts:49:18
+ ❯ seed tests/integration/canonical-writer-package-smoke.integration.test.ts:142:16
+ ❯ tests/integration/canonical-writer-package-smoke.integration.test.ts:431:13
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 148 skipped (149)
+   Start at  15:09:01
+   Duration  3.21s (transform 1.01s, setup 0ms, import 1.69s, tests 1.30s, environment 0ms)
+

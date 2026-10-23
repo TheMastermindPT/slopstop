@@ -1,0 +1,73 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop
+
+ ❯ |harness-integration| tests/integration/storage-root-alias.integration.test.ts (3 tests | 2 failed) 1658ms
+   × opens Storage created through the long root through its 8.3 alias 915ms
+   × opens Storage created through the 8.3 alias through the long root 379ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness-integration| tests/integration/storage-root-alias.integration.test.ts > opens Storage created through the long root through its 8.3 alias
+AssertionError: expected { status: 'broken', …(2) } to match object { status: 'opened', …(2) }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "identity": {
+-     "canonicalDatabaseLineageId": "00000000-0000-4000-8000-000000000015",
+-     "generationId": "00000000-0000-4000-8000-000000000014",
+-     "runtimeDatabaseLineageId": "00000000-0000-4000-8000-000000000016",
+-     "storageId": "00000000-0000-4000-8000-000000000012",
+-   },
+-   "mode": "read-write",
+-   "status": "opened",
++   "status": "broken",
+  }
+
+ ❯ tests/integration/storage-root-alias.integration.test.ts:67:49
+     65|   async () => {
+     66|     const root = await createHealthyProjectStorageFixture();
+     67|     expect(await openPayload(shortAlias(root))).toMatchObject(openedRe…
+       |                                                 ^
+     68|   },
+     69|   projectStorageIntegrationTimeout,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |harness-integration| tests/integration/storage-root-alias.integration.test.ts > opens Storage created through the 8.3 alias through the long root
+AssertionError: expected { status: 'broken', …(2) } to match object { status: 'opened', …(2) }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "identity": {
+-     "canonicalDatabaseLineageId": "00000000-0000-4000-8000-000000000015",
+-     "generationId": "00000000-0000-4000-8000-000000000014",
+-     "runtimeDatabaseLineageId": "00000000-0000-4000-8000-000000000016",
+-     "storageId": "00000000-0000-4000-8000-000000000012",
+-   },
+-   "mode": "read-write",
+-   "status": "opened",
++   "status": "broken",
+  }
+
+ ❯ tests/integration/storage-root-alias.integration.test.ts:77:37
+     75|     const root = await createTemporaryApplicationRoot();
+     76|     await createProjectStorage(shortAlias(root));
+     77|     expect(await openPayload(root)).toMatchObject(openedReadWrite);
+       |                                     ^
+     78|   },
+     79|   projectStorageIntegrationTimeout,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  15:03:56
+   Duration  3.20s (transform 830ms, setup 0ms, import 1.38s, tests 1.66s, environment 0ms)
+

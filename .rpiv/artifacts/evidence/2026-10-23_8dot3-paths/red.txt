@@ -1,0 +1,136 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop
+
+ ❯ |harness-integration| tests/integration/storage-root-alias.integration.test.ts (6 tests | 5 failed) 2210ms
+   × opens Storage created through the long root through its 8.3 alias 923ms
+   × opens Storage created through the 8.3 alias through the long root 411ms
+   × opens Storage created under a missing child of the 8.3 alias through the long root 432ms
+   × refuses a symbolic-link Storage root before any Storage exists 6ms
+   × reports a Storage root that cannot be inspected, never resolving it 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |harness-integration| tests/integration/storage-root-alias.integration.test.ts > opens Storage created through the long root through its 8.3 alias
+AssertionError: expected { status: 'broken', …(2) } to match object { status: 'opened', …(2) }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "identity": {
+-     "canonicalDatabaseLineageId": "00000000-0000-4000-8000-000000000015",
+-     "generationId": "00000000-0000-4000-8000-000000000014",
+-     "runtimeDatabaseLineageId": "00000000-0000-4000-8000-000000000016",
+-     "storageId": "00000000-0000-4000-8000-000000000012",
+-   },
+-   "mode": "read-write",
+-   "status": "opened",
++   "status": "broken",
+  }
+
+ ❯ tests/integration/storage-root-alias.integration.test.ts:70:49
+     68|   async () => {
+     69|     const root = await createHealthyProjectStorageFixture();
+     70|     expect(await openPayload(shortAlias(root))).toMatchObject(openedRe…
+       |                                                 ^
+     71|   },
+     72|   projectStorageIntegrationTimeout,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  |harness-integration| tests/integration/storage-root-alias.integration.test.ts > opens Storage created through the 8.3 alias through the long root
+AssertionError: expected { status: 'broken', …(2) } to match object { status: 'opened', …(2) }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "identity": {
+-     "canonicalDatabaseLineageId": "00000000-0000-4000-8000-000000000015",
+-     "generationId": "00000000-0000-4000-8000-000000000014",
+-     "runtimeDatabaseLineageId": "00000000-0000-4000-8000-000000000016",
+-     "storageId": "00000000-0000-4000-8000-000000000012",
+-   },
+-   "mode": "read-write",
+-   "status": "opened",
++   "status": "broken",
+  }
+
+ ❯ tests/integration/storage-root-alias.integration.test.ts:80:37
+     78|     const root = await createTemporaryApplicationRoot();
+     79|     await createProjectStorage(shortAlias(root));
+     80|     expect(await openPayload(root)).toMatchObject(openedReadWrite);
+       |                                     ^
+     81|   },
+     82|   projectStorageIntegrationTimeout,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  |harness-integration| tests/integration/storage-root-alias.integration.test.ts > opens Storage created under a missing child of the 8.3 alias through the long root
+AssertionError: expected { status: 'broken', …(2) } to match object { status: 'opened', …(2) }
+(5 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "identity": {
+-     "canonicalDatabaseLineageId": "00000000-0000-4000-8000-000000000015",
+-     "generationId": "00000000-0000-4000-8000-000000000014",
+-     "runtimeDatabaseLineageId": "00000000-0000-4000-8000-000000000016",
+-     "storageId": "00000000-0000-4000-8000-000000000012",
+-   },
+-   "mode": "read-write",
+-   "status": "opened",
++   "status": "broken",
+  }
+
+ ❯ tests/integration/storage-root-alias.integration.test.ts:90:65
+     88|     const root = await createTemporaryApplicationRoot();
+     89|     await createProjectStorage(path.join(shortAlias(root), "missing-ch…
+     90|     expect(await openPayload(path.join(root, "missing-child"))).toMatc…
+       |                                                                 ^
+     91|   },
+     92|   projectStorageIntegrationTimeout,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  |harness-integration| tests/integration/storage-root-alias.integration.test.ts > refuses a symbolic-link Storage root before any Storage exists
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ tests/integration/storage-root-alias.integration.test.ts:107:43
+    105|   const link = path.join(await createTemporaryApplicationRoot(), "link…
+    106|   await symlink(target, link, "junction");
+    107|   expect(() => nodeStorageWithRoot(link)).toThrow("Storage root must n…
+       |                                           ^
+    108| });
+    109|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  |harness-integration| tests/integration/storage-root-alias.integration.test.ts > reports a Storage root that cannot be inspected, never resolving it
+AssertionError: expected function to throw an error, but it didn't
+ ❯ tests/integration/storage-root-alias.integration.test.ts:111:58
+    109|
+    110| it("reports a Storage root that cannot be inspected, never resolving i…
+    111|   expect(() => nodeStorageWithRoot("C:\\invalid\0root")).toThrow(
+       |                                                          ^
+    112|     expect.objectContaining({ code: "ERR_INVALID_ARG_VALUE" }),
+    113|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 1 passed (6)
+   Start at  15:04:44
+   Duration  3.68s (transform 784ms, setup 0ms, import 1.30s, tests 2.21s, environment 0ms)
+

@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop
+
+
+ Test Files  11 passed (11)
+      Tests  160 passed (160)
+   Start at  15:11:09
+   Duration  142.40s (transform 11.47s, setup 0ms, import 21.61s, tests 259.04s, environment 2ms)
+
