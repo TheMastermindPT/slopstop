@@ -869,29 +869,14 @@ function upgradeRecoveryFixture(
     if (sink.failing) throw new Error("Diagnostics sink failed.");
     events.push(event);
   };
-  let marker = initial;
+  const state: { marker: UnfinishedUpgrade | undefined } = { marker: initial };
   const steps = dependencies.upgrades;
   const upgrades: ProjectStorageStoreDependencies["upgrades"] = {
     ...steps,
     completed: (event) => record(["completed", event]),
     abandoned: (event) => record(["abandoned", event]),
     discardFailed: (event) => record(["discardFailed", event]),
-    findUnfinished: async () => marker,
-    proveUnfinished: async () => ({
-      status: "proven",
-      retainedGenerationIds: [expectedGenerationId],
-    }),
-    releaseUnfinished: async () => {
-      marker = undefined;
-    },
-    plan: async () => ({ status: "eligible", source: storedSource(), canonicalMigrations: [] }),
-    declare: async () => {
-      marker = unfinishedMarker();
-    },
-    copyBackup: async () => undefined,
-    verifyBackup: async () => "verified",
-    sealBackup: async () => undefined,
-    stage: async () => undefined,
+    ...markerUpgradeSteps(state),
   };
   const owner = createProjectStorageOwner({
     ...dependencies,
@@ -910,6 +895,32 @@ function upgradeRecoveryFixture(
     },
   });
   return { owner, events, upgrades, sink };
+}
+
+/** The marker-driven upgrade fakes both recovery tests share: `declare` sets the marker, `release` clears it. */
+function markerUpgradeSteps(state: { marker: UnfinishedUpgrade | undefined }) {
+  return {
+    findUnfinished: async () => state.marker,
+    proveUnfinished: async () => ({
+      status: "proven" as const,
+      retainedGenerationIds: [expectedGenerationId],
+    }),
+    releaseUnfinished: async () => {
+      state.marker = undefined;
+    },
+    plan: async () => ({
+      status: "eligible" as const,
+      source: storedSource(),
+      canonicalMigrations: [],
+    }),
+    declare: async () => {
+      state.marker = unfinishedMarker();
+    },
+    copyBackup: async () => undefined,
+    verifyBackup: async () => "verified" as const,
+    sealBackup: async () => undefined,
+    stage: async () => undefined,
+  };
 }
 
 function storedSource() {
@@ -1033,29 +1044,14 @@ type CommittedUpgradeOptions = Readonly<{
 function committedUpgradeFixture(options: CommittedUpgradeOptions = {}) {
   const { dependencies } = lifecycleDependencies();
   const events: unknown[][] = [];
-  let marker: UnfinishedUpgrade | undefined;
+  const state: { marker: UnfinishedUpgrade | undefined } = { marker: undefined };
   const head = { formatVersion: 1, schemaVersion: 1, lastMigrationId: "0001_initial" };
   const upgrades = {
     ...dependencies.upgrades,
     abandoned: (event) => events.push(["abandoned", event]),
     discardFailed: (event) => events.push(["discardFailed", event]),
     completed: (event) => events.push(["completed", event]),
-    findUnfinished: async () => marker,
-    proveUnfinished: async () => ({
-      status: "proven",
-      retainedGenerationIds: [expectedGenerationId],
-    }),
-    releaseUnfinished: async () => {
-      marker = undefined;
-    },
-    plan: async () => ({ status: "eligible", source: storedSource(), canonicalMigrations: [] }),
-    declare: async () => {
-      marker = unfinishedMarker();
-    },
-    copyBackup: async () => undefined,
-    verifyBackup: async () => "verified",
-    sealBackup: async () => undefined,
-    stage: async () => undefined,
+    ...markerUpgradeSteps(state),
     migrate: async () => ({
       canonical: head,
       runtime: head,
@@ -1064,7 +1060,7 @@ function committedUpgradeFixture(options: CommittedUpgradeOptions = {}) {
     }),
     verifyStaged: async () => "verified",
     switchActive: async () => {
-      marker = undefined;
+      state.marker = undefined;
     },
     ...options.steps,
   } satisfies UpgradeSteps;

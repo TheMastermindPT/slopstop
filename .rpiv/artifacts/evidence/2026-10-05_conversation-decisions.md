@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 75e8bea4e7c4efc01d2efb85b10be69decbe86e1daa82ac584f99edfbd7215a8
+content_hash: 64bb24e9ca73e7c0b829b8ce8f86029e14a487430863bdeb8621d0d5d6effc9b
 ---
 
 # Conversation — Human Decisions
@@ -2105,3 +2105,5 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Review Phase 1 brief** `designs/2026-10-23_18-52-05_arch-review-phase-1-correctness-fixes.md` (`f8987631…`, lane normal): `p1-s1-registration-recovery` (L4-01, L4-02, L4-03) and `p1-s2-correctness-polish` (the other 9). **User decisions:** Q1 (a) reconcile once at Layer build, where a failure keeps today's gate answer and never fails startup; Q2 (a) the kill before the child row is recorded is a named residual; Q3 (a) the release-failure fatal summary carries the protocol activation code; Q4 (a) only `model.c4` now, with the ADR at the review Phase 6 trigger. The user approved the brief with these choices appended. It is built in a new worktree `slopstop-p1`.
 - Decisions appended to the Phase 1 brief: append-only **keep** against `f8987631`, so the approval carries to `content_hash 5799758d3682f7d55ef19b4857c4506620cc811eac7384793d9e77f4dfed2013`. The approved copy is saved and the brief committed.
 - **User decision:** the report-back rule goes into AGENTS.md (a new "Coordinated Sessions" section), because new agent sessions kept forgetting to report to the coordinator.
+- **Push retry refused (2026-10-23 ~19:45):** the `check:deep` unit stage passed 3396/3396, but the coverage/integration stage failed: 8 of 5581 tests in 6 files, all timeouts of 16-38 s (upgrade, conversation, Writer state rows). The push was not alone. The coordinator had let the implementer run `pnpm install` and focused tests in `slopstop-p1` at the same time, against the "heavy runs alone" rule. This is a coordinator error, and it was reported to the user before any rerun.
+- **Push rerun alone:** every test stage passed (unit 3396; coverage 5575; integration 2179/2185 with 6 skipped). The earlier timeouts were load. jscpd then failed: a 17-line clone in `project-storage-store.test.ts`, from #133 (merged without `check:duplicates`; coordinator error). The coordinator extracted `markerUpgradeSteps(state)`, a test-only refactor. File tests 44/44, typecheck, `check:duplicates` 0 clones, `pnpm check` 3396/3396, CodeScene 10. Push retried.
