@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 04181943e6b1abfe6b36b95490bff87a9cba045df77d6b8b1857e3c69c564e3a
+content_hash: f7d02cd36d5177e8ea7a6d457c850bda377700726954a6623e69dd85a507ea0e
 ---
 
 # Conversation — Human Decisions
@@ -2077,3 +2077,12 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Main is at `e2ef472`, 7 commits ahead of origin; the push waits for the user.
 - **#133 brief** `designs/2026-10-23_16-18-47_harness-desktop-log-link.md` (`f6afcee7…`, lane normal): one slice `log-s1-harness-desktop-log-link`, LOG-B1..B7. **User decisions:** Q1 (a) omit the "upgrade path" (source and target ids let a chain be read across lines); Q2 (a) all five harness fatal codes; Q3 (a) desktop level error; Q4 (a) the piped-child flush row LOG-B6. The user approved the brief with these choices appended. Heavy runs: only the `project-upgrade` e2e once at the candidate. No mutation.
 - The decisions were appended to the #133 brief: append-only **keep** against `f6afcee7`, so the user's approval carries to `content_hash d199549249e807f71c0670591189fac5414e32a5764893c7e898a7a82f41aad9`. The approved copy is saved, the brief committed, and the implementer starts on main.
+- **Architecture review** `architecture-reviews/2026-10-23_16-18-48_whole-project.md` (+ `.json`): 60 findings (2 High, 20 Med, 38 Low), 9 compounds; 55 verified, 5 weakened, 0 falsified. No god-files, app boundaries hold, no High security finding.
+  - Top: IX-3, two UUID roots (kernel vs protocol); IX-4, registration classifies one SQLite error three ways (against degrade-distinguishes-broken); IX-1, harness failure codes reach the renderer on 2 of 8 paths. Also L4-01 (`reconcileObservers` has no production caller) and L1-04 (Sentry minidumps bypass the sanitizer).
+  - Limit: no linter ran (the machine was busy). A background job runs them when the machine is idle.
+- **User decision: "Aceitar as fases como plano"**, with no per-finding triage. The 6 proposed phases are the plan:
+  - Phase 1 (12 quick correctness fixes, including L4-01 and L1-04) is the next slice after #133.
+  - Phase 2 (vocabulary owners) starts with an ADR for the identity root.
+  - Phases 3 and 4 come before C2.
+  - Phase 5 folds into #123 Part B.
+  - Phase 6 waits for its decisions (ADRs, C2, Frame).
