@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 844726276dc129e1c1e338a3be4d6be3f813ec15465333d9e2c6122c1b4f06d4
+content_hash: 326dc3c0eb55fa20aefd93a59cc2e549ca0b78efc1fec21ba347b03cafaf5043
 ---
 
 # Conversation — Human Decisions
@@ -2056,3 +2056,17 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - C2 product: "Aceitar e converter". The product canonicalizes 8.3 aliases to long paths, in its own red-green slice right after.
   - C4 product guarantees on POSIX go to issue **#143**, before Linux packaging.
   - C5 is re-measured after these fixes.
+- **`fix/ci-red-2` committed as `b08bafd`:** the first `pnpm check` failed on typecheck (a branded id in the C3 edit). That was fixed, and the second run passed 3338/3338; CodeScene 10. The CI proof is still owed. **User decision:** push later.
+- **Coordinator decision (disclosed):** the C2 product slice (canonicalize 8.3 aliases) starts on the same branch, in separate commits. It gets a short contract in the evidence instead of a designer brief, red-green, and one candidate review round, because storage is touched.
+- **C2 contract** (`evidence/2026-10-23_8dot3-paths/contract.md`):
+  - Cause: only `process-bootstrap` canonicalizes with `realpathSync.native`. The storage composition only uses `path.resolve`, so two openers of the same folder persist two spellings, and the strict `normalizedPath` check refuses the second (`project-storage-create-inspection.ts:91`).
+  - Plan: `physicalRoot` at the storage composition entry; the strict check is unchanged. Rows T1-T6.
+  - **Coordinator decisions (disclosed):** Q1 keep the CI `TEMP=RUNNER_TEMP` workaround, because T1 and T2 prove 8.3 on Windows. Q2: the package-smoke verifier's 8.3 refusal is out of scope (a test tool) and noted in the evidence. GO for the build.
+- **C2 build** `dff9a8e` (+ evidence `1b4551e`); `pnpm check` 3338/3338 under the user's CPU override. Round 1 (slice-verifier): FAILED, with 1 violation and 4 warnings.
+  - V1 (violation): `registry-database.ts:54` still compares the unresolved root, so an alias plus an injected authority is refused. The packaged app is unaffected.
+  - V2-V5: CI 8.3 availability, an overstated B4 wording, a sync bare throw inside `Effect.sync`, and privacy pins that go blind.
+- **Coordinator triage (disclosed):** fix V1, V2 (the alias goes under the home folder), V3 wording, **V4 as a fix** (a tagged error and `Effect.try`, per the AGENTS.md Effect rules for touched code), V5 and the polish items. New commits, with no round 2.
+- **C2 fix round 1 done (staged; `pnpm check` waits for the CPU rule):** V1-V5 and the polish are fixed. V4 now has `StorageRootCanonicalizationError` (`Data.TaggedError`) through `Effect.try` at the authority acquire. Two more alias-only defects were found and fixed (registry-witness-race hooks; the orphan-location fixture). Runs: alias 74/74, normal 138/138, unit 23/23; CodeScene passed.
+  - **Residual:** a location row persisted under a non-physical spelling is no longer a prior-state witness. The packaged app never wrote such rows, because the bootstrap always canonicalized.
+- **C2 fix round committed** `e55b35b` (+ evidence `e7f5182`): `pnpm check` 3340/3340 under the user's override; CodeScene passed. Not run: Ubuntu (the next CI run) and the full package-smoke file under the alias.
+- **User decision:** "junta ao main, o push fica para mais tarde". `fix/ci-red-2` (`b08bafd`, `dff9a8e`, `1b4551e`, `e55b35b`, `e7f5182`) was fast-forwarded onto main and the branch deleted. The push, `check:deep` and the CI check wait for the user.
