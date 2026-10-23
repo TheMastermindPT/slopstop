@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: ecc03b116d93d9e6a7b949191976e2cf2f86554584bbf6b59a33c2ec3748c879
+content_hash: e5d925517b6e542bdd5749d56dc7d99bbe843bf0fa64a28e74ec6bb992948407
 ---
 
 # Conversation — Human Decisions
@@ -1978,3 +1978,45 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - The push ran on an idle machine (CPU 1/3/2%). The pre-push `check:deep` passed, including e2e 27/27 and `package:launch-smoke`: `8fcee45..4cf6541`. This settles V2 and the final-code heavy runs.
   - The `slopstop-110` and `slopstop-123` worktrees and both branches were deleted (§87 and the push approval). The Stryker reports were copied first to the main checkout's gitignored evidence folder (`worktree-reports/`).
 - **Next:** Phase 2 continues. Its order (the TS 7 switch, #133, #135, #95/#97, #93) is not decided; confirm with the user (§129).
+
+## 143. Next Phase 2 item: the #105 TypeScript 7 switch (decisions, 2026-10-23)
+
+- **User decision:** "sim, começa pelo TS 7". The next Phase 2 item is the #105 compiler-switch slice (§134.1), with the alias layout. Its scope also takes the s5b residuals R2-1 and R2-2 and issue #139 (the gate-script mutants).
+- The designer writes the brief from the main checkout. It also covers the gate mode after the switch (effect-tsgo diagnostics vs tsc mode), the new type-checking authority (AGENTS.md and CLAUDE.md), the Defender note and the lane. The heavy-run policy of 2026-10-23 applies.
+- Branch and worktree wait for the user's approval.
+- **TS 7 brief** `designs/2026-10-23_00-38-22_typescript-7-compiler-switch.md` (first `content_hash b915fb3d…`): one slice `ts7-s1-compiler-switch`, TS7-B1..B7. `lane.mjs` gives normal; the designer had raised it to rigorous, inherited from the #105 research.
+- **User decisions:**
+  - Lane: normal (no intent review; one candidate review round).
+  - Q1 (a): one slice.
+  - Q2 (b): the gate moves to effect-tsgo diagnostics mode now. An opening measurement records the real output and exit codes before the parser is written. The canary still guards a silent clean. Unparseable output is BROKEN. If the mode cannot meet these guarantees, stop and report, with no silent fallback.
+  - Q3 (a): the editor stays on TS 6 and is advisory.
+  - Q4 (a): M2 is time-boxed, then fake-compiler rows.
+  - Q5 (a): one Renovate group with `dependencyDashboardApproval`.
+- **User approval:** the TS 7 brief `content_hash a5218b3a8d2caee8bbcf59944ee55ec68023f812bc025be110f0c03bc16fbce2` (lane normal), including the M1-dependent clause: if diagnostics mode does not report plain type errors, the gate stops covering them, and `pnpm typecheck` on TS 7 covers them instead. The approved copy is saved and the brief committed on main.
+- **User approval:** a new worktree `slopstop-105` on branch `refactor/105-typescript-7-switch` from main. The user adds the Defender exclusion for its `node_modules\@effect\tsgo-win32-x64` before the first install or run.
+- **User instruction:** the agents send the coordinator a message (`herdr agent prompt w3:p1M`) when they finish a task.
+- **ts7-s1 build:** install done; both `tsc.exe` hashes match npm; no new Defender detection. TS7-B1 red, then green.
+- **TS7-B2 contract mismatch:** `dependency-cruiser.config.cjs` has no `tsPreCompilationDeps`, so `check:boundaries` ignores `import type` today, independent of TS 7. Enabling it gives 9 type-only `no-circular` errors and 0 cross-app ones. **User decision (b):** the type-only row is dropped from B2; the value-import row keeps the parse proof. The gap is issue **#141**. It is recorded as an appended Developer Context entry.
+- **M1 (`slopstop-105/.rpiv/artifacts/evidence/2026-10-23_ts7-s1/m1-diagnostics-format.md`):** it ran with CPU at 27-52% (Windows Search was indexing; no game), because the user told the implementer directly to go ahead. It took about 1 minute.
+  - `effect-tsgo diagnostics --format json` gives a full JSON document, with per-diagnostic fields and summary counts. Exit 0 means no error-level diagnostic. Exit 1 means errors found or broken.
+  - The broken cases have no JSON: empty stdout, or a DiscoveryError line.
+  - The canary set equals today's `expectedCanary`, and `plugins: []` gives a mismatch.
+  - A plain type error is not reported, so `pnpm typecheck` (TS 7.0.2) owns type errors.
+- **Coordinator decision (stop-rule call; the user may contest):** the guarantee is met by exit code plus output shape. No broken case can read as clean. GO for the parser: each exit must carry consistent JSON, and anything else is BROKEN. Every M1 raw shape is pinned.
+- **ts7-s1 candidate `b74ce96` + `5ad6553`:** B1-B6 red, then green; bindings observed; `pnpm check` 3335/3335; `check:effect` in diagnostics mode with the same 50 advisory warnings; CodeScene 10. Brief `776efff4` (append-only keep).
+  - Recorded deviation: effect-tsgo is spawned with its cwd at the repository root, because it finds TS 7 only from its cwd.
+  - Risk noted: the "passes on the repository" row now takes 7.6 s alone, against its 15 s timeout. The timeout is not raised.
+- **User decision (told to the implementer directly): "esquece a mutacao".** M2 and the gate-script mutation do not run. #139 ("all killed or equivalent") and M2 (D10) become named residuals, and #139 stays open. The Stryker config stays committed for a later run.
+- **ts7-s1 review round 1** (slice-verifier on `5ad6553`): passed, 0 violations, 3 warnings.
+  - V1: under the alias, `node_modules/typescript/lib` has no `tsserver.js`, so VS Code falls back to its bundled TS, and the D4 claim "editor on 6.0.2" is false. **Coordinator decision (a):** reword AGENTS.md. The VS Code editor uses its bundled TS, which is advisory; `settings.json` is unchanged.
+  - V2: the knip and jscpd logs were recorded (both clean).
+  - V3: the 7.6 s row against the 15 s bound. Only the stale comment is fixed; the timeout is not raised.
+  - No round 2. Open for CI: which `tsc` bin wins between `@typescript/native` and the transitive `@typescript/old` on Linux is not observed yet; the push's CI shows it.
+- **ts7-s1 final:** `9031277` (V1 wording, V3 comment) and evidence `e4a2baa`; `pnpm check` 3335/3335 on an idle machine.
+- **User decision: "Aceito, squash e push", without a deep review.** ts7-s1 is accepted at `9031277` (brief append-only keep vs `a5218b3a…`). Named residuals:
+  - #139 and M2, not run (the mutation was dropped);
+  - the 7.6 s row against its 15 s bound;
+  - Linux CI not yet observed;
+  - the 5 preflight findings from bare contract paths;
+  - no deep review.
+  Integration, e2e and smoke run in the `check:deep` at the push.
