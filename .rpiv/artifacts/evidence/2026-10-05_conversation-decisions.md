@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 326dc3c0eb55fa20aefd93a59cc2e549ca0b78efc1fec21ba347b03cafaf5043
+content_hash: 04181943e6b1abfe6b36b95490bff87a9cba045df77d6b8b1857e3c69c564e3a
 ---
 
 # Conversation — Human Decisions
@@ -2070,3 +2070,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - **Residual:** a location row persisted under a non-physical spelling is no longer a prior-state witness. The packaged app never wrote such rows, because the bootstrap always canonicalized.
 - **C2 fix round committed** `e55b35b` (+ evidence `e7f5182`): `pnpm check` 3340/3340 under the user's override; CodeScene passed. Not run: Ubuntu (the next CI run) and the full package-smoke file under the alias.
 - **User decision:** "junta ao main, o push fica para mais tarde". `fix/ci-red-2` (`b08bafd`, `dff9a8e`, `1b4551e`, `e55b35b`, `e7f5182`) was fast-forwarded onto main and the branch deleted. The push, `check:deep` and the CI check wait for the user.
+
+## 144. Next Phase 2 items: architecture review and #133 (decisions, 2026-10-23)
+
+- **User decision (AskUserQuestion):** the whole-project `/rpiv:architectural-review` (Phase 2 item 9) runs in pane `w3:p2M`, with its agent fan-out approved. It is read-only and runs no test suites; linter runs follow the CPU rule. In parallel, the designer writes the **#133** brief: the successful-upgrade log, the proven log link, and forwarding the s9 fatal lines (§141). The process stays proportional.
+- Main is at `e2ef472`, 7 commits ahead of origin; the push waits for the user.
+- **#133 brief** `designs/2026-10-23_16-18-47_harness-desktop-log-link.md` (`f6afcee7…`, lane normal): one slice `log-s1-harness-desktop-log-link`, LOG-B1..B7. **User decisions:** Q1 (a) omit the "upgrade path" (source and target ids let a chain be read across lines); Q2 (a) all five harness fatal codes; Q3 (a) desktop level error; Q4 (a) the piped-child flush row LOG-B6. The user approved the brief with these choices appended. Heavy runs: only the `project-upgrade` e2e once at the candidate. No mutation.
+- The decisions were appended to the #133 brief: append-only **keep** against `f6afcee7`, so the user's approval carries to `content_hash d199549249e807f71c0670591189fac5414e32a5764893c7e898a7a82f41aad9`. The approved copy is saved, the brief committed, and the implementer starts on main.
