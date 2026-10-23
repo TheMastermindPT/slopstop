@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { decodeStrict, ProjectActivationIdSchema, ProjectIdSchema } from "@slopstop/protocol";
-import { expect, vi } from "vitest";
+import { afterAll, expect, vi } from "vitest";
 import { createCanonicalCommandRegistry } from "../../src/canonical-command-registry.js";
 import * as repositories from "../../src/storage/canonical-command-repository.js";
 import type { InStatement } from "../../src/storage/local-libsql-worker-client.js";
@@ -76,6 +76,29 @@ async function seedCanonicalDatabase(file: string) {
   });
 }
 
+/**
+ * The seeded canonical database of one test file, built on first use. Each fixture copies it:
+ * seeding runs every migration statement as its own disk-flushed commit, which dominated these
+ * files' time under disk contention.
+ */
+let templateRoot: string | undefined;
+let template: Promise<string> | undefined;
+
+afterAll(async () => {
+  await Promise.allSettled(template === undefined ? [] : [template]);
+  template = undefined;
+  if (templateRoot !== undefined)
+    await rm(templateRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+  templateRoot = undefined;
+});
+
+async function buildTemplate(): Promise<string> {
+  templateRoot = await mkdtemp(path.join(os.tmpdir(), "slopstop-durable-writer-template-"));
+  const file = path.join(templateRoot, "slopstop.db");
+  await seedCanonicalDatabase(file);
+  return file;
+}
+
 export async function fixture() {
   const roots: LocalLibsqlClient[] = [];
   let nextId = 100;
@@ -92,7 +115,8 @@ export async function fixture() {
   };
   const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-durable-writer-"));
   const file = path.join(root, "slopstop.db");
-  await seedCanonicalDatabase(file);
+  template ??= buildTemplate();
+  await copyFile(await template, file);
   const input = (generation: number) => ({
     canonicalDatabasePath: file,
     projectId,
