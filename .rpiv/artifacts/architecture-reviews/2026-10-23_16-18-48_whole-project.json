@@ -1,0 +1,2983 @@
+{
+  "schema": 1,
+  "artifact": "2026-10-23_16-18-48_whole-project.md",
+  "target": "packages/kernel, packages/protocol, apps/harness, apps/desktop",
+  "createdAt": "2026-10-23T15:32:43.790Z",
+  "layers": [
+    {
+      "n": "0",
+      "name": "Desktop renderer, preload and shared API"
+    },
+    {
+      "n": "1",
+      "name": "Desktop main: supervision, bridges, IPC"
+    },
+    {
+      "n": "2",
+      "name": "Packaging and smoke tooling"
+    },
+    {
+      "n": "3",
+      "name": "Harness process entry, runtime and orchestration"
+    },
+    {
+      "n": "4",
+      "name": "Harness project registration"
+    },
+    {
+      "n": "5",
+      "name": "Harness canonical commands, writer and conversation persistence"
+    },
+    {
+      "n": "6.1",
+      "name": "Project storage owner, opening and node adapters"
+    },
+    {
+      "n": "6.2",
+      "name": "Storage upgrade pipeline"
+    },
+    {
+      "n": "6.3",
+      "name": "Database plumbing, schema and migrations"
+    },
+    {
+      "n": "7",
+      "name": "Protocol contracts"
+    },
+    {
+      "n": "8",
+      "name": "Kernel identifiers"
+    }
+  ],
+  "findings": [
+    {
+      "id": "L0-01",
+      "layer": 0,
+      "lens": "Lc",
+      "title": "Step kit shared across features lives inside the add-repository flow module",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/renderer/remove-from-list/removal-view.tsx",
+          "startLine": 8,
+          "endLine": 8,
+          "quoted": [
+            "import { BusyLine, StepActions, StepHeading, useEscape } from \"../add-repository/flow-screens.js\";"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/renderer/add-repository/flow-screens.tsx",
+          "startLine": 6,
+          "endLine": 6,
+          "quoted": [
+            "const steps = [\"Folder\", \"Trust\", \"Git version\", \"Git access\", \"Confirm\"] as const;"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/renderer/add-repository/flow-screens.tsx",
+          "startLine": 148,
+          "endLine": 148,
+          "quoted": [
+            "export type ScreenOf<Kind extends FlowScreen[\"kind\"]> = Extract<FlowScreen, { kind: Kind }>;"
+          ]
+        }
+      ],
+      "symbol": "StepActions",
+      "anchor": "cohesion 0.33, 11 islands; 4 of 9 exports consumed outside the feature; 2 real responsibilities",
+      "what": "The module mixes a feature-neutral step kit (heading, actions, busy line, escape hook) with add-repository content (step labels, flow title, Git query list, ScreenOf).",
+      "why": "The remove-from-list feature reaches into the add-repository folder for generic parts, so add-repository edits ripple into another feature.",
+      "remediation": {
+        "steps": [
+          "Move StepHeading, useEscape, StepActions, BusyLine, Target and Warning to a feature-neutral renderer module.",
+          "Keep the step frame in the add-repository folder; move QueryList next to its only consumer and ScreenOf next to FlowScreen."
+        ],
+        "acceptance": [
+          "apps/desktop/src/renderer/remove-from-list/removal-view.tsx imports nothing from apps/desktop/src/renderer/add-repository/"
+        ],
+        "testStrategy": "Existing renderer component tests and the add/remove Electron journeys stay green unchanged.",
+        "tradeoff": "Keep as one kit file — acceptable if no third feature appears."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/RENDER",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "d8e39e9c2811efdf"
+    },
+    {
+      "id": "L1-01",
+      "layer": 1,
+      "lens": "D",
+      "title": "Three desktop bridges copy one request skeleton and check the reply echo against three different baselines",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-storage-bridge.ts",
+          "startLine": 121,
+          "endLine": 121,
+          "quoted": ["          isDeepStrictEqual(result.request, command?.payload)"]
+        },
+        {
+          "path": "apps/desktop/src/main/workspace-bridge.ts",
+          "startLine": 224,
+          "endLine": 224,
+          "quoted": [
+            "          isDeepStrictEqual(result.query, query) ? acceptQueryResult(result) : undefined,"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/main/project-entry-bridge.ts",
+          "startLine": 123,
+          "endLine": 123,
+          "quoted": ["      const inputRequest = decodeStrict(operation.requestSchema, input);"]
+        }
+      ],
+      "symbol": "answerRequest",
+      "anchor": "3 copies of a ~25-35 LOC skeleton; metrics run=6 overlap=0.37; co-change support=4 conf=1.00",
+      "what": "Each bridge re-implements stopped-guard, request, decode, echo check, metadata and stop; storage compares the echo with the validated payload, workspace with the caller object, entry with a re-decoded copy. Entry throws synchronously on invalid input, the others reject asynchronously.",
+      "why": "The shared core (apps/desktop/src/main/harness-request-core.ts) owns only neutral texts, so an invariant the storage comment states is already broken in a sibling. Previously recorded as #123 deep-review Q19/Q20/Q22.",
+      "remediation": {
+        "steps": [
+          "Pin the echo baseline and invalid-input behaviour per bridge with characterization tests.",
+          "Move the skeleton (guard, request, decode, echo against the validated payload, invalid input as envelope) into the request core; bridges supply schemas and texts only."
+        ],
+        "acceptance": [
+          "All three bridges compare the echo with the validated command payload",
+          "No bridge method throws synchronously on invalid input"
+        ],
+        "testStrategy": "Bridge unit tests through the bridge public methods; re-pin the cross-bridge correlation rows (precedent 8a0658d).",
+        "tradeoff": "Keep per-bridge copies — rejected: they already drifted."
+      },
+      "severity": "Low",
+      "effort": "M",
+      "blastRadius": ["internal", "cross-module"],
+      "class": "polish",
+      "entityStage": "HarnessSession/ADAPTER(out)",
+      "verify": "Weakened",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 4 (Desktop bridge and IPC consolidation) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T1-harness-failure-carriage",
+      "fp": "d0ba1bc7161a897b",
+      "verifyNote": "Narrower: storage/workspace do not fold invalid input to an envelope either — they reject asynchronously (prior Q20); the echo-baseline divergence and the copied skeleton stand."
+    },
+    {
+      "id": "L1-02",
+      "layer": 1,
+      "lens": "M",
+      "title": "Per-bridge fault-text tables repeat four identical Match arms",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-storage-bridge.ts",
+          "startLine": 57,
+          "endLine": 57,
+          "quoted": ["function faultText(fault: ProjectRequestFault): string {"]
+        },
+        {
+          "path": "apps/desktop/src/main/workspace-bridge.ts",
+          "startLine": 135,
+          "endLine": 135,
+          "quoted": [
+            "function faultText(fault: Exclude<ProjectRequestFault, { kind: \"stopped\" }>, echo: string): string {"
+          ]
+        }
+      ],
+      "symbol": "faultText",
+      "anchor": "2 copies of ~30 LOC; 4 of 6 arms character-identical",
+      "what": "Both bridges hold desktopText/protocolText tables and a faultText match that differ only in stopped and mismatched-echo handling.",
+      "why": "A fault-kind change needs two edits; the approved #123 brief kept these per bridge on purpose, so this is a follow-up, not a regression (prior Q22).",
+      "remediation": {
+        "steps": [
+          "Add a bridgeFaultText builder over the shared arms in apps/desktop/src/main/harness-request-core.ts; bridges pass noun, stopped text and echo text."
+        ],
+        "acceptance": [
+          "apps/desktop/src/main/project-storage-bridge.ts and apps/desktop/src/main/workspace-bridge.ts define no Match over transport/protocol/harness/send"
+        ],
+        "testStrategy": "Existing bridge tests assert the rendered texts unchanged.",
+        "tradeoff": "Keep — acceptable while only two bridges exist."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "HarnessSession/ADAPTER(out)",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 4 (Desktop bridge and IPC consolidation) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": ["L1-01"],
+      "crossCutTag": "T1-harness-failure-carriage",
+      "fp": "36a534492460e2e2"
+    },
+    {
+      "id": "L1-03",
+      "layer": 1,
+      "lens": "D",
+      "title": "Upgrade fault mapper re-implements the conversation fault table; activation flattens every fault to connection lost",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-conversation-failure.ts",
+          "startLine": 34,
+          "endLine": 34,
+          "quoted": ["function faultMeaning(fault: ProjectRequestFault): FaultMeaning {"]
+        },
+        {
+          "path": "apps/desktop/src/main/project-upgrade-failure.ts",
+          "startLine": 32,
+          "endLine": 32,
+          "quoted": ["export function projectUpgradeFailure("]
+        },
+        {
+          "path": "apps/desktop/src/main/project-entry-bridge.ts",
+          "startLine": 49,
+          "endLine": 49,
+          "quoted": [
+            "// Activation and switch answer their coordinator-unavailable result for every fault."
+          ]
+        }
+      ],
+      "symbol": "faultMeaning",
+      "anchor": "2 implementations of a 7-arm classification + 2 identical harnessRows maps; 1 peer flattens",
+      "what": "The upgrade mapper restates faultMeaning arm for arm; activation and switch map protocol and desktop defects to a coordinator-unavailable result.",
+      "why": "The G25 table lives in two places and one peer reports broken as unavailable, against degrade-distinguishes-broken.",
+      "remediation": {
+        "steps": [
+          "Export faultMeaning and make the upgrade mapper consume it.",
+          "Route activation and switch through faultMeaning so protocol/desktop faults answer broken."
+        ],
+        "acceptance": [
+          "One fault-classification function in apps/desktop/src/main",
+          "An undecodable activation reply answers a broken result, not connection lost"
+        ],
+        "testStrategy": "Bridge tests send a protocol fault on activation and assert broken.",
+        "tradeoff": "Keep activation flattening — rejected by degrade-distinguishes-broken."
+      },
+      "severity": "Med",
+      "effort": "M",
+      "blastRadius": ["cross-module"],
+      "class": "polish",
+      "entityStage": "ProjectActivation/RENDER",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 4 (Desktop bridge and IPC consolidation) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T1-harness-failure-carriage",
+      "fp": "32ca9baf80cc385d"
+    },
+    {
+      "id": "L1-04",
+      "layer": 1,
+      "lens": "Sec",
+      "title": "Sentry native-crash minidumps bypass the event sanitizer",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/crash-reporting.ts",
+          "startLine": 99,
+          "endLine": 99,
+          "quoted": ["  Sentry.init({"]
+        },
+        {
+          "path": "apps/desktop/src/main/crash-reporting.ts",
+          "startLine": 102,
+          "endLine": 102,
+          "quoted": ["    beforeSend: sanitizeEvent,"]
+        }
+      ],
+      "symbol": "Sentry.init",
+      "anchor": "1 of the default integrations (minidump) uploads an attachment that beforeSend never touches; gated by consent + DSN env",
+      "what": "Sentry.init has no integrations override, so the default minidump integration uploads raw native crash dumps (module paths, process memory) once consent is on.",
+      "why": "AGENTS.md forbids sending full local paths, prompts or model output to Sentry; the sanitizer only edits event fields.",
+      "remediation": {
+        "steps": [
+          "Disable the minidump integration (integrations filter) or strip attachments in beforeSend / beforeSendAttachment.",
+          "Add a test that the configured integration list excludes the minidump integration."
+        ],
+        "acceptance": ["No Sentry integration that uploads attachments is active"],
+        "testStrategy": "Unit test over the options passed to Sentry.init.",
+        "tradeoff": "Keep minidumps for crash triage — only with an explicit separate consent and path scrubbing."
+      },
+      "severity": "Med",
+      "effort": "S",
+      "blastRadius": ["other"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "2aff132338043c11"
+    },
+    {
+      "id": "L1-05",
+      "layer": 1,
+      "lens": "Sec",
+      "title": "Thirteen IPC handlers never check the sender frame",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/main.ts",
+          "startLine": 294,
+          "endLine": 294,
+          "quoted": [
+            "  ipcMain.handle(desktopIpcChannels.queryWorkspace, (_event, value: unknown) => {"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/main/project-entry-ipc.ts",
+          "startLine": 41,
+          "endLine": 41,
+          "quoted": [
+            "  ipcMain.handle(desktopIpcChannels.listProjects, (_event, value: unknown) => {"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/main/project-registration-ipc.ts",
+          "startLine": 60,
+          "endLine": 60,
+          "quoted": [
+            "  ipcMain.handle(desktopIpcChannels.registerProject, (_event, value: unknown) => {"
+          ]
+        }
+      ],
+      "symbol": "ipcMain.handle",
+      "anchor": "13 handlers, 0 senderFrame checks; payloads strictly decoded; window-level guards present",
+      "what": "Every renderer-to-main handler ignores the event argument.",
+      "why": "Electron checklist #17; today the sandbox, context isolation, navigation lock and strict decode block the path, so this is defense in depth only.",
+      "remediation": {
+        "steps": [
+          "Add one sender check (main frame of the app window, file: origin) in the shared gated-handler helper (see L1-07)."
+        ],
+        "acceptance": ["Every ipcMain.handle validates event.senderFrame"],
+        "testStrategy": "Unit test with a fake event from a foreign frame answers a refusal.",
+        "tradeoff": "Leave as is — acceptable with one window and no remote content."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "HarnessSession/ADAPTER(in)",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 4 (Desktop bridge and IPC consolidation) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": ["L1-07"],
+      "crossCutTag": null,
+      "fp": "84339ab64611d3a1"
+    },
+    {
+      "id": "L1-06",
+      "layer": 1,
+      "lens": "Sec",
+      "title": "Renderer served over file:// keeps the file-protocol privilege fuse on",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/main.ts",
+          "startLine": 344,
+          "endLine": 344,
+          "quoted": ["    await window.loadFile(rendererPath);"]
+        },
+        {
+          "path": "apps/desktop/src/shared/content-security-policy.ts",
+          "startLine": 26,
+          "endLine": 26,
+          "quoted": ["    \"script-src 'self'\","]
+        }
+      ],
+      "symbol": "loadFile",
+      "anchor": "0 of 2 file-protocol hardenings (custom protocol, GrantFileProtocolExtraPrivileges off)",
+      "what": "The renderer loads with loadFile, so CSP 'self' covers the whole file: scheme and the GrantFileProtocolExtraPrivileges fuse stays at its default.",
+      "why": "If HTML injection ever lands in the renderer, it could read local files; Electron recommends a custom protocol. Defense in depth only.",
+      "remediation": {
+        "steps": ["Serve the renderer from a registered custom protocol and turn the fuse off."],
+        "acceptance": [
+          "forge.config.ts sets GrantFileProtocolExtraPrivileges false",
+          "Renderer URL uses the custom scheme"
+        ],
+        "testStrategy": "Electron launch journey loads the app under the custom scheme.",
+        "tradeoff": "Keep file:// — acceptable until remote or user content renders as HTML."
+      },
+      "severity": "Low",
+      "effort": "M",
+      "blastRadius": ["other"],
+      "class": "redesign",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "81ed6f8ac46680e1"
+    },
+    {
+      "id": "L1-07",
+      "layer": 1,
+      "lens": "M",
+      "title": "The gated IPC handler shape is written out nine times",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-entry-ipc.ts",
+          "startLine": 43,
+          "endLine": 43,
+          "quoted": ["    if (!gate.accepting()) return Promise.resolve(projectListClosing);"]
+        },
+        {
+          "path": "apps/desktop/src/main/main.ts",
+          "startLine": 296,
+          "endLine": 296,
+          "quoted": [
+            "    if (!gate.accepting()) return Promise.resolve(workspaceQueryClosing(query));"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/main/project-registration-ipc.ts",
+          "startLine": 62,
+          "endLine": 62,
+          "quoted": [
+            "    if (!gate.accepting()) return Promise.resolve(projectRegistrationClosing);"
+          ]
+        }
+      ],
+      "symbol": "gate.accepting",
+      "anchor": "9 handlers in 3 files",
+      "what": "Each handler decodes, checks the shutdown gate, answers a closing envelope and forwards.",
+      "why": "A new rule for all handlers (sender check, logging) needs nine edits.",
+      "remediation": {
+        "steps": [
+          "Add handleGated(channel, schema, closingAnswer, forward) and migrate the nine handlers."
+        ],
+        "acceptance": ["One gated-handler helper; no inline gate.accepting() in handlers"],
+        "testStrategy": "Existing IPC tests unchanged.",
+        "tradeoff": "Keep — acceptable at nine sites."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "HarnessSession/ADAPTER(in)",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 4 (Desktop bridge and IPC consolidation) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "6625808b4e7ccce8"
+    },
+    {
+      "id": "L1-08",
+      "layer": 1,
+      "lens": "A",
+      "title": "Standalone bridge factories exist only for tests and drive a composition production never runs",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/project-entry-bridge.ts",
+          "startLine": 230,
+          "endLine": 230,
+          "quoted": ["export function createProjectEntryBridge("]
+        },
+        {
+          "path": "apps/desktop/src/main/project-storage-bridge.ts",
+          "startLine": 162,
+          "endLine": 162,
+          "quoted": ["export function createProjectStorageBridge("]
+        },
+        {
+          "path": "apps/desktop/src/main/workspace-bridge.ts",
+          "startLine": 268,
+          "endLine": 268,
+          "quoted": [
+            "export function createWorkspaceBridge(options: WorkspaceBridgeOptions): WorkspaceBridgeClient {"
+          ]
+        }
+      ],
+      "symbol": "createProjectStorageBridge",
+      "anchor": "3 test-only factories, 0 production callers",
+      "what": "Each factory builds a private core and passes core.unsubscribe as afterStop; production composes the shared core with keepCore.",
+      "why": "Bridge tests exercise a stop/unsubscribe path production does not use, so the production composition is less tested than it looks.",
+      "remediation": {
+        "steps": [
+          "Make bridge tests build the shared core the way apps/desktop/src/main/harness-bridges.ts does, then delete the three factories."
+        ],
+        "acceptance": ["No test-only factory exported from bridge modules"],
+        "testStrategy": "Bridge tests through the shared-core composition.",
+        "tradeoff": "Keep the factories — acceptable if documented as test seams."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Weakened",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 4 (Desktop bridge and IPC consolidation) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "2768e9fe4f2f1259",
+      "verifyNote": "Narrower: the harness instance (startHarnessProcessRuntime) falls away; only the three desktop bridge factories stand."
+    },
+    {
+      "id": "L1-09",
+      "layer": 1,
+      "lens": "A",
+      "title": "The desktop Project Storage bridge is reached in production only by the package smoke",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/main.ts",
+          "startLine": 182,
+          "endLine": 182,
+          "quoted": ["  const bridge = builtDesktopServices(runtime)?.projectStorage.owner;"]
+        }
+      ],
+      "symbol": "projectStorage.owner",
+      "anchor": "3 operations (open/create/close), 1 production consumer (smoke)",
+      "what": "There is no renderer channel for project.open/create/close; the harness still serves them.",
+      "why": "A live protocol surface is kept for a test path only; it is part of the smoke surface in L2-01.",
+      "remediation": {
+        "steps": [
+          "Decide whether open/create/close are product IPC (add channels) or smoke-only (move behind the smoke module)."
+        ],
+        "acceptance": ["The decision is recorded and the code matches it"],
+        "testStrategy": "n/a",
+        "tradeoff": "Keep — acceptable while registration owns creation."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["cross-module"],
+      "class": "polish",
+      "entityStage": "ProjectStorage/ADAPTER(in)",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "add4fdfdd23d4a24"
+    },
+    {
+      "id": "L1-10",
+      "layer": 1,
+      "lens": "L",
+      "title": "A unit test imports the side-effecting Electron entry for test-only exports",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/workspace-bridge.test.ts",
+          "startLine": 26,
+          "endLine": 26,
+          "quoted": [
+            "import { broadcastWorkspaceNotification, registerWorkspaceIpc } from \"./main.js\";"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/main/main.ts",
+          "startLine": 290,
+          "endLine": 290,
+          "quoted": ["export function registerWorkspaceIpc("]
+        }
+      ],
+      "symbol": "registerWorkspaceIpc",
+      "anchor": "2 test-only exports on the entry module; entry runs startBootstrap at load",
+      "what": "The test neutralises the entry's top-level bootstrap with five vi.mock calls to reach registerWorkspaceIpc and broadcastWorkspaceNotification.",
+      "why": "The sibling handler sets already live in their own IPC modules; the entry is not a seam.",
+      "remediation": {
+        "steps": [
+          "Move the workspace IPC registration into its own module like apps/desktop/src/main/project-entry-ipc.ts."
+        ],
+        "acceptance": ["No file imports apps/desktop/src/main/main.ts"],
+        "testStrategy": "The moved module is tested directly.",
+        "tradeoff": "Keep — acceptable but fragile."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 4 (Desktop bridge and IPC consolidation) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "60130715ea3604a5"
+    },
+    {
+      "id": "L1-11",
+      "layer": 1,
+      "lens": "Fp",
+      "title": "Window creation on activate is fire-and-forget with no rejection handler",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/main.ts",
+          "startLine": 460,
+          "endLine": 460,
+          "quoted": ["    void createActiveWindow();"]
+        }
+      ],
+      "symbol": "createActiveWindow",
+      "anchor": "1 unobserved promise of 2 window-creation sites; no unhandledRejection handler in desktop main",
+      "what": "A loadFile rejection on the macOS activate path becomes an unhandled rejection with no log.",
+      "why": "Reachable only on macOS; the product runs on Windows today.",
+      "remediation": {
+        "steps": ["Route the activate path through the same catch as startBootstrap."],
+        "acceptance": [
+          "No `void` promise on a state-changing call in apps/desktop/src/main/main.ts"
+        ],
+        "testStrategy": "Unit test with a rejecting window factory asserts a logged failure.",
+        "tradeoff": "Leave — acceptable while Windows-only."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "502adc9adb4e361a"
+    },
+    {
+      "id": "L1-12",
+      "layer": 1,
+      "lens": "IX",
+      "title": "Storage and workspace bridges co-change as one module because only neutral texts were shared",
+      "evidence": [
+        {
+          "path": "apps/desktop/src/main/harness-request-core.ts",
+          "startLine": 36,
+          "endLine": 36,
+          "quoted": [
+            " * bridge-specific texts (uncorrelated, undecodable, mismatched, stopped) stay with each bridge."
+          ]
+        },
+        {
+          "path": "apps/desktop/src/main/project-storage-bridge.ts",
+          "startLine": 40,
+          "endLine": 40,
+          "quoted": ["const desktopText = {"]
+        },
+        {
+          "path": "apps/desktop/src/main/workspace-bridge.ts",
+          "startLine": 116,
+          "endLine": 116,
+          "quoted": ["const desktopText = {"]
+        }
+      ],
+      "symbol": "bridgeNeutralText",
+      "anchor": "co-change support=4 conf=1.00 with no import edge; constituents L1-01, L1-02",
+      "what": "Every commit that touched one bridge touched the other, because the skeleton and text tables are copied.",
+      "why": "Root cause: the request core was scoped to bridge-neutral texts. The stopped-handling difference is designed (S7-R14, P-S7-2(a)), so only the copying is the defect.",
+      "remediation": {
+        "steps": ["Land L1-01 and L1-02; the co-change pair should disappear."],
+        "acceptance": ["The pair drops out of the metrics co-change block"],
+        "testStrategy": "metrics.mjs co-change after the change.",
+        "tradeoff": "Accept the coupling — acceptable for two bridges."
+      },
+      "severity": "Low",
+      "effort": "M",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "HarnessSession/ADAPTER(out)",
+      "verify": "Weakened",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 4 (Desktop bridge and IPC consolidation) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": ["L1-01", "L1-02"],
+      "crossCutTag": "T1-harness-failure-carriage",
+      "fp": "2253e53eae2cd56e",
+      "verifyNote": "Narrower: the stopped-as-broken vs stopped-as-closing difference is designed (S7-R14, decision P-S7-2(a)); the hidden coupling from the copied skeleton stands."
+    },
+    {
+      "id": "L2-01",
+      "layer": 2,
+      "lens": "L",
+      "title": "A test-tree entry and ~1.8k LOC of smoke code ship in the production bundle behind a self-asserted gate",
+      "evidence": [
+        {
+          "path": "apps/desktop/forge.config.ts",
+          "startLine": 49,
+          "endLine": 49,
+          "quoted": [
+            "              \"../harness/tests/integration/canonical-writer-package-smoke-entry.ts\","
+          ]
+        },
+        {
+          "path": "apps/desktop/src/main/main.ts",
+          "startLine": 107,
+          "endLine": 107,
+          "quoted": [
+            "const packageSmoke = app.isPackaged && process.env[\"SLOPSTOP_PACKAGE_SMOKE\"] === \"1\";"
+          ]
+        },
+        {
+          "path": "apps/desktop/src/main/package-smoke-authorization.ts",
+          "startLine": 127,
+          "endLine": 127,
+          "quoted": ["  if (!isDeepStrictEqual(marker, { version: 1, token: input.token })) {"]
+        },
+        {
+          "path": "apps/harness/tests/integration/canonical-writer-package-smoke-fixture.ts",
+          "startLine": 1,
+          "endLine": 1,
+          "quoted": ["import { deepStrictEqual } from \"node:assert/strict\";"]
+        }
+      ],
+      "symbol": "runCanonicalWriterPackageSmoke",
+      "anchor": "~1855 non-test LOC in 6 smoke modules; 4 env vars + 1 self-written marker enter smoke mode",
+      "what": "The packaged app contains writer-proof-fixture.cjs built from the harness test tree (with node:assert) and enters smoke mode when the caller writes its own token marker.",
+      "why": "Accepted by the 2026-08-31 and 2026-09-04 designs (no ADR). It needs same-user control, so no privilege boundary is crossed, but it is an environment-driven alternate mode in the signed binary — the class the RunAsNode/NODE_OPTIONS fuses close.",
+      "remediation": {
+        "steps": [
+          "Record the trade-off in an ADR, or build a separate smoke-only package variant so the shipped bundle carries no test entry."
+        ],
+        "acceptance": [
+          "Either an ADR names the accepted risk, or the production forge config has no tests/ entry"
+        ],
+        "testStrategy": "package:smoke against the smoke variant.",
+        "tradeoff": "Keep as designed — acceptable pre-release; revisit before distribution."
+      },
+      "severity": "Low",
+      "effort": "M",
+      "blastRadius": ["other"],
+      "class": "redesign",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "994a5f0f29b22c44"
+    },
+    {
+      "id": "L2-02",
+      "layer": 2,
+      "lens": "Sec",
+      "title": "Application and runtime migration SQL ships outside the ASAR integrity boundary without a content pin",
+      "evidence": [
+        {
+          "path": "apps/desktop/forge.config.ts",
+          "startLine": 26,
+          "endLine": 26,
+          "quoted": ["    extraResource: [packagedMigrationResources],"]
+        },
+        {
+          "path": "apps/harness/src/storage/generated-migration-resources.ts",
+          "startLine": 378,
+          "endLine": 378,
+          "quoted": [
+            "  const rebuildPinned = spec.resourceKind === \"canonical\" && spec.schemaVersion >= 2;"
+          ]
+        }
+      ],
+      "symbol": "rebuildPinned",
+      "anchor": "2 of 3 database kinds have unpinned migrations outside app.asar",
+      "what": "Migrations are read from resources/harness-migrations; only canonical specs are SHA-256-pinned, the others pass a structural table check only.",
+      "why": "Someone with write access to the install's resources could get SQL executed by the signed app; low because it needs install-directory write access.",
+      "remediation": {
+        "steps": [
+          "Pin application and runtime migration bytes like canonical, or move them inside the ASAR."
+        ],
+        "acceptance": ["Every packaged migration resource is content-pinned"],
+        "testStrategy": "Unit test: a tampered application migration is refused.",
+        "tradeoff": "Keep — acceptable until an installer location is fixed."
+      },
+      "severity": "Low",
+      "effort": "M",
+      "blastRadius": ["on-disk"],
+      "class": "polish",
+      "entityStage": "StorageUpgrade/INGEST",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "9efc66d606296fd6"
+    },
+    {
+      "id": "L3-01",
+      "layer": 3,
+      "lens": "Fp",
+      "title": "Coordinator stop throws a plain Error and drops the typed release code",
+      "evidence": [
+        {
+          "path": "apps/harness/src/active-project-coordinator.ts",
+          "startLine": 665,
+          "endLine": 665,
+          "quoted": [
+            "    if (result.status === \"failed\") throw new Error(\"Canonical Project activation release failed.\");"
+          ]
+        },
+        {
+          "path": "apps/harness/src/active-project-coordinator.ts",
+          "startLine": 692,
+          "endLine": 692,
+          "quoted": ["              code: released.code,"]
+        },
+        {
+          "path": "apps/harness/src/process-fatal-diagnostics.ts",
+          "startLine": 84,
+          "endLine": 84,
+          "quoted": ["    return { kind: valueKind(value) };"]
+        }
+      ],
+      "symbol": "stop",
+      "anchor": "1 of 2 release consumers drops the code; the fatal summary logs only the value kind (error)",
+      "what": "When release fails during stop, the code (WRITER_FENCE_STALE, WRITER_LEASE_CLOSE_FAILED, ...) is replaced by a message-only Error.",
+      "why": "The switch path keeps the code; on shutdown the cause never reaches the redacted fatal log.",
+      "remediation": {
+        "steps": [
+          "Fail stop with a tagged release error carrying code and stage; let the fatal summarizer name the tag."
+        ],
+        "acceptance": ["A failed stop logs its release code"],
+        "testStrategy": "Coordinator unit test asserts the tagged error and code.",
+        "tradeoff": "Keep — loses shutdown diagnostics."
+      },
+      "severity": "Med",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectActivation/MUTATE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T3-failure-classification",
+      "fp": "2b6ee6f3f2675086"
+    },
+    {
+      "id": "L3-02",
+      "layer": 3,
+      "lens": "Fp",
+      "title": "Request-boundary catches discard the failure cause without a log",
+      "evidence": [
+        {
+          "path": "apps/harness/src/harness-runtime.ts",
+          "startLine": 407,
+          "endLine": 407,
+          "quoted": ["    void handleMessage(message).catch(() => {"]
+        },
+        {
+          "path": "apps/harness/src/project-storage-application.ts",
+          "startLine": 117,
+          "endLine": 117,
+          "quoted": ["  } catch {"]
+        },
+        {
+          "path": "apps/harness/src/workspace-application.ts",
+          "startLine": 147,
+          "endLine": 147,
+          "quoted": ["  } catch {"]
+        }
+      ],
+      "symbol": "handleMessage",
+      "anchor": "4 catch-all boundary sites, 0 log a cause; runtime has no logger",
+      "what": "The harness answers HARNESS_INTERNAL_FAILURE correctly but keeps no local evidence of what failed.",
+      "why": "A storage or registration bug reaches the user as internal failure with no Pino record; a tag or class name would be privacy-safe.",
+      "remediation": {
+        "steps": [
+          "Give the runtime the harness logger and log a redacted cause summary (tag/class) at each boundary catch."
+        ],
+        "acceptance": ["Each boundary catch logs one redacted line"],
+        "testStrategy": "Runtime test with a throwing handler asserts one log line without paths or messages.",
+        "tradeoff": "Keep — acceptable only while #133 has no log link."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "HarnessSession/DOMAIN",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 3 (Failure classification and diagnostics) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T3-failure-classification",
+      "fp": "765b828c78f51cd6"
+    },
+    {
+      "id": "L3-03",
+      "layer": 3,
+      "lens": "A",
+      "title": "The Workspace-protocol Conversation arm is dead; the live project.conversation path replaced it",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/workspace-protocol.ts",
+          "startLine": 84,
+          "endLine": 84,
+          "quoted": ["  query: Schema.Literal(\"conversation.read\"),"]
+        },
+        {
+          "path": "apps/harness/src/workspace-application.ts",
+          "startLine": 208,
+          "endLine": 208,
+          "quoted": ["          return queryOwner(\"conversation\", options.conversation, query);"]
+        },
+        {
+          "path": "packages/protocol/src/protocol.ts",
+          "startLine": 280,
+          "endLine": 280,
+          "quoted": ["    command: Schema.Literal(\"project.conversation.read\"),"]
+        }
+      ],
+      "symbol": "conversation.read",
+      "anchor": "4 conversation literals, 0 adapters; 2 live project.conversation commands",
+      "what": "Two conversation-read contracts exist and only one is served.",
+      "why": "The C1 design moved off the Workspace path on purpose and deferred cleanup to C2; the tracer-bullet premise (ports filled later) no longer holds for Conversation.",
+      "remediation": {
+        "steps": [
+          "At C2, delete the Conversation literals from the Workspace protocol or route them to the live owner."
+        ],
+        "acceptance": ["One conversation-read contract in packages/protocol"],
+        "testStrategy": "Protocol tests.",
+        "tradeoff": "Keep until C2 — as decided."
+      },
+      "severity": "Low",
+      "effort": "M",
+      "blastRadius": ["public-API"],
+      "class": "polish",
+      "entityStage": "WorkspaceProjection/PORT(in)",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T4-staged-surfaces",
+      "fp": "70705b35c39e4299"
+    },
+    {
+      "id": "L3-04",
+      "layer": 3,
+      "lens": "A",
+      "title": "Frame and Memory Workspace arms and three preload methods have no producer and no renderer consumer",
+      "evidence": [
+        {
+          "path": "apps/harness/src/process-bootstrap.ts",
+          "startLine": 200,
+          "endLine": 200,
+          "quoted": ["        workspaceApplication: createUnavailableWorkspaceApplication(),"]
+        },
+        {
+          "path": "apps/desktop/src/main/package-smoke-verifier.ts",
+          "startLine": 101,
+          "endLine": 101,
+          "quoted": ["    queryResult: await window.slopstop.queryWorkspace(query),"]
+        },
+        {
+          "path": "apps/desktop/src/preload/preload.ts",
+          "startLine": 114,
+          "endLine": 114,
+          "quoted": ["  queryWorkspace: async (query: unknown) => {"]
+        }
+      ],
+      "symbol": "createUnavailableWorkspaceApplication",
+      "anchor": "3 owner ports, 0 adapters; 3 of 15 preload methods smoke-only",
+      "what": "The Workspace plumbing runs through four layers to an always-unavailable owner; only the package smoke calls it.",
+      "why": "A staged foundation (tracer bullet 2026-08-25), but it pins a Frame shape the decision log already marked for redesign.",
+      "remediation": {
+        "steps": [
+          "Keep as staged; when Frame starts, redesign the Frame protocol first (decision log :199) rather than filling the current shape."
+        ],
+        "acceptance": ["Frame work starts from an ADR update"],
+        "testStrategy": "n/a",
+        "tradeoff": "Remove until needed — rejected: the boundary tracer is deliberate."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["public-API"],
+      "class": "polish",
+      "entityStage": "WorkspaceProjection/ADAPTER(out)",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T4-staged-surfaces",
+      "fp": "8557aa113440532e"
+    },
+    {
+      "id": "L3-05",
+      "layer": 3,
+      "lens": "A",
+      "title": "The harness package entry is a public API no package may import and it hides test-only exports from knip",
+      "evidence": [
+        {
+          "path": "apps/harness/package.json",
+          "startLine": 8,
+          "endLine": 8,
+          "quoted": ["    \".\": \"./src/index.ts\""]
+        },
+        {
+          "path": "apps/harness/src/index.ts",
+          "startLine": 18,
+          "endLine": 18,
+          "quoted": ["  defineCanonicalCommand,"]
+        }
+      ],
+      "symbol": "@slopstop/harness",
+      "anchor": "12 exports, 0 package consumers, >= 2 test-only exports masked",
+      "what": "apps/harness/src/index.ts is the package export; only tests import it, by relative path.",
+      "why": "Applications never import one another, so the entry only shields exports from dead-code detection.",
+      "remediation": {
+        "steps": [
+          "Drop the package export (or mark the entry test-only in knip) and import the modules directly in tests."
+        ],
+        "acceptance": ["knip sees apps/harness/src/index.ts as non-entry"],
+        "testStrategy": "knip run.",
+        "tradeoff": "Keep — acceptable but masks dead code."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T4-staged-surfaces",
+      "fp": "a2c4aae72a2400f4"
+    },
+    {
+      "id": "L3-06",
+      "layer": 3,
+      "lens": "D",
+      "title": "Production Node coordinator wiring has no injection point, so a fixture copies it",
+      "evidence": [
+        {
+          "path": "apps/harness/src/node-active-project-coordinator.ts",
+          "startLine": 31,
+          "endLine": 31,
+          "quoted": ["      registry: createCanonicalCommandRegistry([]),"]
+        },
+        {
+          "path": "apps/harness/tests/integration/project-storage-upgrade-fixture.ts",
+          "startLine": 190,
+          "endLine": 190,
+          "quoted": [
+            "      sha256Text: async (text) => createHash(\"sha256\").update(text).digest(\"hex\"),"
+          ]
+        }
+      ],
+      "symbol": "createNodeActiveProjectCoordinator",
+      "anchor": "fixture copies 0.45 of the production file; production hard-codes registry [] and openClient",
+      "what": "The upgrade fixture re-creates the repository-factory wiring and already omits createConversationId.",
+      "why": "A production wiring change will not reach the fixture.",
+      "remediation": {
+        "steps": [
+          "Let the factory accept registry and client overrides; the fixture passes overrides only."
+        ],
+        "acceptance": ["The fixture no longer contains a sha256Text lambda"],
+        "testStrategy": "Integration tests unchanged.",
+        "tradeoff": "Keep the copy — acceptable but drifts."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "CanonicalCommand/AGGREGATE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 5 (SQL plumbing and writer authority) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "9c29d8ade14aa49f"
+    },
+    {
+      "id": "L3-07",
+      "layer": 3,
+      "lens": "L",
+      "title": "The Project Storage session leaks raw database paths and four owners open their own clients",
+      "evidence": [
+        {
+          "path": "apps/harness/src/project-storage-application.ts",
+          "startLine": 27,
+          "endLine": 27,
+          "quoted": ["      canonicalDatabasePath: string;"]
+        },
+        {
+          "path": "apps/harness/src/registration/registered-project-selection.ts",
+          "startLine": 62,
+          "endLine": 62,
+          "quoted": [
+            "      const client = createWorkerLocalLibsqlClient(session.canonicalDatabasePath, \"generation\");"
+          ]
+        },
+        {
+          "path": "apps/harness/src/conversation/conversation-store.ts",
+          "startLine": 226,
+          "endLine": 226,
+          "quoted": [
+            "  return createWorkerLocalLibsqlClient(databasePath, \"generation\", { readOnly: true });"
+          ]
+        }
+      ],
+      "symbol": "canonicalDatabasePath",
+      "anchor": "4 open-by-path sites outside the Storage owner; 1 cross-owner read of canonical tables in SQL",
+      "what": "Registration opens the canonical database itself and queries repository_bindings and project_workspaces.",
+      "why": "Storage owns the generation lifecycle but not client ownership; registration depends on the canonical table layout.",
+      "remediation": {
+        "steps": [
+          "Expose narrow read operations (registered binding lookup) from the Storage/canonical owner instead of paths.",
+          "Make the session carry clients or capabilities, not file paths."
+        ],
+        "acceptance": [
+          "No module outside apps/harness/src/storage opens a client from canonicalDatabasePath"
+        ],
+        "testStrategy": "Registration selection integration tests unchanged.",
+        "tradeoff": "Keep — acceptable while one process owns all clients."
+      },
+      "severity": "Med",
+      "effort": "L",
+      "blastRadius": ["cross-module"],
+      "class": "redesign",
+      "entityStage": "ProjectStorage/PORT(in)",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 5 (SQL plumbing and writer authority) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T5-sql-plumbing",
+      "fp": "dce698b361c33680"
+    },
+    {
+      "id": "L3-08",
+      "layer": 3,
+      "lens": "T",
+      "title": "Fixed real-time windows serve as absence oracles in runtime tests",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/project-conversation-runtime.integration.test.ts",
+          "startLine": 460,
+          "endLine": 460,
+          "quoted": ["        await Promise.race([released, elapsed(2000)]);"]
+        },
+        {
+          "path": "apps/harness/tests/integration/canonical-writer-package-smoke.integration.test.ts",
+          "startLine": 980,
+          "endLine": 980,
+          "quoted": ["    await new Promise<void>((resolve) => setTimeout(resolve, 20));"]
+        }
+      ],
+      "symbol": null,
+      "anchor": "3 sites; 2000 ms and 20 ms windows",
+      "what": "Tests assert that nothing happened within a fixed real wait.",
+      "why": "A non-waiting but slow implementation passes; machine load makes it more likely.",
+      "remediation": {
+        "steps": [
+          "Replace absence windows with an explicit signal (a Deferred the lifecycle completes) or TestClock where time is simulated."
+        ],
+        "acceptance": ["No fixed elapsed() race used as an oracle"],
+        "testStrategy": "The tests fail against a non-waiting implementation.",
+        "tradeoff": "Keep — real I/O justifies real time (comment at :400)."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "1f632f72af42044e"
+    },
+    {
+      "id": "L4-01",
+      "layer": 4,
+      "lens": "S",
+      "title": "The restart reconciler for unsettled registration observations has no production caller",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/observer-journal.ts",
+          "startLine": 286,
+          "endLine": 286,
+          "quoted": ["    reconcileObservers: (absence) =>"]
+        },
+        {
+          "path": "apps/harness/src/registration/observer-journal.ts",
+          "startLine": 200,
+          "endLine": 200,
+          "quoted": ["  if (await hasUnsettled(transaction)) return unsettled();"]
+        },
+        {
+          "path": "apps/harness/src/registration/identity-query-journal.ts",
+          "startLine": 88,
+          "endLine": 88,
+          "quoted": ["      if (owned.size === 0) return false;"]
+        }
+      ],
+      "symbol": "reconcileObservers",
+      "anchor": "2 writers on registration_identity_query_attempts; reconciler 0 production callers, 11 test calls",
+      "what": "A harness kill between begin and settle leaves result_json NULL; the durable gate then refuses every later registration with OBSERVER_CLEANUP_UNCONFIRMED, and nothing settles the row.",
+      "why": "The startup wiring was recorded as not delivered (evidence 2026-09-13 :437) and never landed; it is not an accepted residual.",
+      "remediation": {
+        "steps": [
+          "Wire reconcileObservers into the registration startup path once, before admission opens.",
+          "Add an integration test: kill mid-query, restart, registration succeeds."
+        ],
+        "acceptance": [
+          "A production caller of reconcileObservers exists",
+          "After a mid-query kill and restart, a new registration is admitted"
+        ],
+        "testStrategy": "Integration test through the runtime transport with a real restart.",
+        "tradeoff": "Leave — users can be stuck until manual DB repair."
+      },
+      "severity": "Med",
+      "effort": "M",
+      "blastRadius": ["on-disk", "cross-module"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/PERSIST",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T4-staged-surfaces",
+      "fp": "605cc47177e5109c"
+    },
+    {
+      "id": "L4-02",
+      "layer": 4,
+      "lens": "Fp",
+      "title": "A database failure while checking a receipt is reported as permanent registry corruption",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/registration-confirmation-store.ts",
+          "startLine": 323,
+          "endLine": 323,
+          "quoted": [
+            "    if (!(await receiptGenerationAgrees(transaction, reservation, receipt))) throw corrupt();"
+          ]
+        },
+        {
+          "path": "apps/harness/src/registration/registration-confirmation-store.ts",
+          "startLine": 325,
+          "endLine": 325,
+          "quoted": ["  } catch {"]
+        },
+        {
+          "path": "apps/harness/src/registration/registry-failure.ts",
+          "startLine": 39,
+          "endLine": 39,
+          "quoted": ["  return { status: \"broken\", code: \"INTERNAL_FAILURE\" };"]
+        }
+      ],
+      "symbol": "readPublication",
+      "anchor": "1 bare catch over 2+ SQL awaits on 3 call paths",
+      "what": "The catch maps busy, I/O and worker-closed errors from receiptGenerationAgrees to REGISTRY_CORRUPT.",
+      "why": "A transient failure is shown as a damaged registry; degrade-distinguishes-broken requires distinct diagnostics.",
+      "remediation": {
+        "steps": [
+          "Narrow the catch to decode and agreement checks; let execute errors reach registryFailure."
+        ],
+        "acceptance": ["A SQLITE_BUSY during publication answers REGISTRY_BUSY"],
+        "testStrategy": "Integration fault-injection test on the receipt query.",
+        "tradeoff": "Keep — misreports transient faults."
+      },
+      "severity": "Med",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/AGGREGATE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T3-failure-classification",
+      "fp": "926252b46fc137ed"
+    },
+    {
+      "id": "L4-03",
+      "layer": 4,
+      "lens": "Fp",
+      "title": "An idempotency conflict on prepareExecutable is reported as an internal failure",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/registration-registry.ts",
+          "startLine": 122,
+          "endLine": 122,
+          "quoted": [
+            "              throw new Error(\"Registration selection identity conflicts.\");"
+          ]
+        },
+        {
+          "path": "apps/harness/src/registration/registration-registry.ts",
+          "startLine": 143,
+          "endLine": 143,
+          "quoted": ["              throw new RegistryFault({"]
+        }
+      ],
+      "symbol": "prepareExecutable",
+      "anchor": "2 sibling write operations, 1 uses the typed rejection",
+      "what": "A reused selectionId with a different path throws a plain Error, which registryFailure maps to INTERNAL_FAILURE.",
+      "why": "The caller cannot tell a client conflict from a bug; the sibling decideVersion raises REGISTRATION_IDEMPOTENCY_CONFLICT.",
+      "remediation": {
+        "steps": [
+          "Throw RegistryFault({status: rejected, code: REGISTRATION_IDEMPOTENCY_CONFLICT})."
+        ],
+        "acceptance": ["The conflict answers REGISTRATION_IDEMPOTENCY_CONFLICT"],
+        "testStrategy": "Registry unit test.",
+        "tradeoff": "None."
+      },
+      "severity": "Med",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/AGGREGATE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T3-failure-classification",
+      "fp": "2b34b202a2240d5b"
+    },
+    {
+      "id": "L4-04",
+      "layer": 4,
+      "lens": "M",
+      "title": "Decode-or-REGISTRY_CORRUPT is re-implemented about 20 times and most sites skip the mapping",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/identity-query-consent.ts",
+          "startLine": 67,
+          "endLine": 67,
+          "quoted": ["  const row = decodeStrict(versionRowsSchema, registryRows(result))[0];"]
+        },
+        {
+          "path": "apps/harness/src/registration/repository-trust.ts",
+          "startLine": 107,
+          "endLine": 107,
+          "quoted": [
+            "  const identity = decodeStrictResult(PhysicalDirectoryKeySchema, JSON.parse(row.identityJson));"
+          ]
+        },
+        {
+          "path": "apps/harness/src/registration/registration-confirmation-store.ts",
+          "startLine": 98,
+          "endLine": 98,
+          "quoted": [
+            "const corrupt = () => new RegistryFault({ status: \"broken\", code: \"REGISTRY_CORRUPT\" });"
+          ]
+        }
+      ],
+      "symbol": "registryRows",
+      "anchor": "19 registryRows sites in 8 files, ~12 bare decodeStrict; 3 separate corrupt constants",
+      "what": "Bare decodeStrict and unguarded JSON.parse throw plain errors that end as INTERNAL_FAILURE, while other sites answer REGISTRY_CORRUPT for the same damage.",
+      "why": "One fault has two outcomes depending on the path.",
+      "remediation": {
+        "steps": [
+          "Add decodeRegistryRows(schema, result) and decodeRegistryJson(schema, text) in apps/harness/src/registration/registry-database.ts, both failing REGISTRY_CORRUPT; migrate sites in small commits."
+        ],
+        "acceptance": ["No bare decodeStrict over registryRows in apps/harness/src/registration"],
+        "testStrategy": "Corrupt-row integration cases assert REGISTRY_CORRUPT on every path.",
+        "tradeoff": "Keep — inconsistent diagnostics."
+      },
+      "severity": "Med",
+      "effort": "M",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/VALIDATE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 3 (Failure classification and diagnostics) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T3-failure-classification",
+      "fp": "74526627f5557a50"
+    },
+    {
+      "id": "L4-05",
+      "layer": 4,
+      "lens": "M",
+      "title": "The wall clock is read inline at 15 registration sites while four roots inject their own clock",
+      "evidence": [
+        {
+          "path": "apps/harness/src/process-bootstrap.ts",
+          "startLine": 211,
+          "endLine": 211,
+          "quoted": ["const currentTime = () => new Date().toISOString();"]
+        },
+        {
+          "path": "apps/harness/src/registration/registration-confirmation-store.ts",
+          "startLine": 273,
+          "endLine": 273,
+          "quoted": ["      createdAt: new Date().toISOString(),"]
+        },
+        {
+          "path": "apps/desktop/src/main/harness-supervisor.ts",
+          "startLine": 498,
+          "endLine": 498,
+          "quoted": ["          sentAt: new Date().toISOString(),"]
+        }
+      ],
+      "symbol": "currentTime",
+      "anchor": "15 inline reads in registration + 2 desktop; 4 duplicate clock adapters",
+      "what": "Registration stamps rows with new Date() directly; composition roots each define the same clock.",
+      "why": "Time cannot be controlled in tests (AGENTS.md TestClock rule) and there is no single UTC source.",
+      "remediation": {
+        "steps": [
+          "Inject one UTC clock (or Effect Clock) per process returning a decoded UTC instant; replace inline reads."
+        ],
+        "acceptance": ["No new Date().toISOString() in apps/harness/src/registration"],
+        "testStrategy": "Registration tests with a fixed clock.",
+        "tradeoff": "Keep — untestable timestamps."
+      },
+      "severity": "Med",
+      "effort": "M",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/PERSIST",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": ["L7-04"],
+      "crossCutTag": "T2-shared-vocabulary-owner",
+      "fp": "abbf94932d6fc230"
+    },
+    {
+      "id": "L4-06",
+      "layer": 4,
+      "lens": "M",
+      "title": "Observation deadline logic exists twice and the timer race is hand-rolled three times",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/identity-query-control.ts",
+          "startLine": 21,
+          "endLine": 21,
+          "quoted": ["  const deadline = performance.now() + 10000;"]
+        },
+        {
+          "path": "apps/harness/src/registration/windows-version-child.ts",
+          "startLine": 323,
+          "endLine": 323,
+          "quoted": ["function observationInterruption(control: ObservationControl) {"]
+        },
+        {
+          "path": "apps/harness/src/registration/repository-physical-observation.ts",
+          "startLine": 182,
+          "endLine": 182,
+          "quoted": ["async function withinPhysicalDeadline<Result>("]
+        }
+      ],
+      "symbol": "identityQueryInterruption",
+      "anchor": "2 classifiers, 3 races in 4 files; only one copy uses ObserverClock",
+      "what": "The identity-query control hard-codes performance.now() and 10000 ms while its twin uses the injectable ObserverClock.",
+      "why": "The Effect waivers EW1-EW3 cover avoiding Effect until Part B, not three copies; one copy cannot be tested without real time.",
+      "remediation": {
+        "steps": [
+          "Extract one ObservationDeadline on ObserverClock (interruption + race) and use it at all sites; fold into Part B Effect migration."
+        ],
+        "acceptance": ["One deadline primitive in apps/harness/src/registration"],
+        "testStrategy": "Deadline tests with a fake ObserverClock.",
+        "tradeoff": "Wait for Part B — acceptable if Part B is near."
+      },
+      "severity": "Med",
+      "effort": "M",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/AGGREGATE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "65595e1dda7275c9"
+    },
+    {
+      "id": "L4-07",
+      "layer": 4,
+      "lens": "M",
+      "title": "Git child output classification is restated three times with a BOM difference",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/git-identity-query-results.ts",
+          "startLine": 32,
+          "endLine": 32,
+          "quoted": [
+            "    text = new TextDecoder(\"utf-8\", { fatal: true, ignoreBOM: true }).decode(bytes);"
+          ]
+        },
+        {
+          "path": "apps/harness/src/registration/version-observation-execution.ts",
+          "startLine": 106,
+          "endLine": 106,
+          "quoted": ["    text = new TextDecoder(\"utf-8\", { fatal: true }).decode(bytes);"]
+        }
+      ],
+      "symbol": "classifyGitOutput",
+      "anchor": "3 copies in 2 files; one decoder keeps a BOM, the other strips it",
+      "what": "Size limit, exit code and single-line checks are repeated; the decoders disagree on a leading U+FEFF.",
+      "why": "Two observations of the same Git output can classify differently.",
+      "remediation": {
+        "steps": ["Add classifyGitOutput(settled) with one decoder policy."],
+        "acceptance": ["One TextDecoder configuration for Git line output"],
+        "testStrategy": "Unit test with a BOM-prefixed line.",
+        "tradeoff": "Keep — low risk."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/VALIDATE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "470c775fed3881d9"
+    },
+    {
+      "id": "L4-08",
+      "layer": 4,
+      "lens": "D",
+      "title": "Registration hashes JSON in field order, outside the canonical hasher, in two copies",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/registration-confirmation-store.ts",
+          "startLine": 97,
+          "endLine": 97,
+          "quoted": [
+            "const digest = (value: unknown) => createHash(\"sha256\").update(JSON.stringify(value)).digest(\"hex\");"
+          ]
+        },
+        {
+          "path": "apps/harness/src/registration/registration-proposal-store.ts",
+          "startLine": 72,
+          "endLine": 72,
+          "quoted": [
+            "  return createHash(\"sha256\").update(JSON.stringify(value)).digest(\"hex\");"
+          ]
+        },
+        {
+          "path": "apps/harness/src/canonical-json.ts",
+          "startLine": 59,
+          "endLine": 59,
+          "quoted": ["export function hashCanonicalJson(value: unknown): string {"]
+        }
+      ],
+      "symbol": "digest",
+      "anchor": "2 identical bodies; digest used at 9 call sites",
+      "what": "Both stores hash JSON.stringify output, which depends on key insertion order.",
+      "why": "A record built in a different field order changes its fingerprint; the persisted format pins the current behaviour.",
+      "remediation": {
+        "steps": [
+          "Keep one typed preparationFingerprint helper (format-compatible) and make the confirmation store use it."
+        ],
+        "acceptance": ["One sha256-over-JSON helper in apps/harness/src/registration"],
+        "testStrategy": "Fingerprint pins over persisted fixtures.",
+        "tradeoff": "Switch to hashCanonicalJson — rejected: breaks persisted fingerprints."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["on-disk"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/PERSIST",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "1ef6427705df4b6b"
+    },
+    {
+      "id": "L4-09",
+      "layer": 4,
+      "lens": "C",
+      "title": "Registration forges the ProjectStorageCreateRequestId brand on a weaker validator",
+      "evidence": [
+        {
+          "path": "apps/harness/src/registration/registration-confirmation-store.ts",
+          "startLine": 43,
+          "endLine": 43,
+          "quoted": [
+            "  createRequestId: UuidTextSchema.pipe(Schema.brand(\"ProjectStorageCreateRequestId\")),"
+          ]
+        },
+        {
+          "path": "packages/protocol/src/project-storage-protocol.ts",
+          "startLine": 19,
+          "endLine": 19,
+          "quoted": [
+            "export const ProjectStorageCreateRequestIdSchema = LowercaseDomainIdentityTextSchema.pipe("
+          ]
+        }
+      ],
+      "symbol": "ProjectStorageCreateRequestId",
+      "anchor": "1 forged brand over 1 canonical brand; same value decoded twice under different rules",
+      "what": "The stored reservation accepts upper-case, nil and max UUIDs that the protocol brand rejects later.",
+      "why": "The type system cannot tell the two validators apart.",
+      "remediation": {
+        "steps": ["Import ProjectStorageCreateRequestIdSchema from the protocol."],
+        "acceptance": [
+          "No Schema.brand(\"ProjectStorageCreateRequestId\") outside packages/protocol"
+        ],
+        "testStrategy": "Registration store decode tests.",
+        "tradeoff": "None."
+      },
+      "severity": "Med",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/VALIDATE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T2-shared-vocabulary-owner",
+      "fp": "f65b15d2cbba06e1"
+    },
+    {
+      "id": "L4-10",
+      "layer": 4,
+      "lens": "C",
+      "title": "Registration ids are branded twice, cross the boundary unbranded, and consentId names two concepts",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/project-registration-protocol.ts",
+          "startLine": 10,
+          "endLine": 10,
+          "quoted": [
+            "const RepositoryBindingIdSchema = UuidTextSchema.pipe(Schema.brand(\"RepositoryBindingId\"));"
+          ]
+        },
+        {
+          "path": "apps/harness/src/registration/registration-confirmation-store.ts",
+          "startLine": 41,
+          "endLine": 41,
+          "quoted": [
+            "  repositoryBindingId: UuidTextSchema.pipe(Schema.brand(\"RepositoryBindingId\")),"
+          ]
+        },
+        {
+          "path": "packages/protocol/src/project-registration-flow-protocol.ts",
+          "startLine": 18,
+          "endLine": 18,
+          "quoted": ["  consentId: UuidTextSchema,"]
+        }
+      ],
+      "symbol": "RepositoryBindingId",
+      "anchor": "4 brands declared twice; 9 harness-only brands; 1 field name for 2 concepts",
+      "what": "The protocol keeps its registration brands private, so the harness re-declares them; the flow protocol sends plain UUIDs.",
+      "why": "Brands give no protection across the boundary and consentId hides two different consents.",
+      "remediation": {
+        "steps": [
+          "Export the registration brand schemas from packages/protocol and use them in the flow protocol and the harness.",
+          "Split consentId into executable and identity-query consent fields at the next protocol version."
+        ],
+        "acceptance": ["No registration brand declared in apps/harness"],
+        "testStrategy": "Protocol decode tests.",
+        "tradeoff": "Keep — weak typing only."
+      },
+      "severity": "Med",
+      "effort": "M",
+      "blastRadius": ["public-API"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/COMMAND",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T2-shared-vocabulary-owner",
+      "fp": "08971342b421b2eb"
+    },
+    {
+      "id": "L5-01",
+      "layer": 5,
+      "lens": "D",
+      "title": "Two writer-fence currentness predicates disagree on the coherence check",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/canonical-command-repository.ts",
+          "startLine": 177,
+          "endLine": 177,
+          "quoted": ["          FROM writer_fence AS f LEFT JOIN writer_generations AS g"]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-command-ledger.ts",
+          "startLine": 103,
+          "endLine": 103,
+          "quoted": ["      FROM writer_fence AS f LEFT JOIN writer_generations AS g"]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-command-ledger.ts",
+          "startLine": 116,
+          "endLine": 116,
+          "quoted": [
+            "    normalizedUtc(fence.activatedAt) === normalizedUtc(fence.generationAcquiredAt),"
+          ]
+        }
+      ],
+      "symbol": "verifyFence",
+      "anchor": "2 SQL readers of one join; repository predicate lacks activatedAt/generationAcquiredAt and project-id checks; production caller apps/harness/src/canonical-project-writer.ts:231",
+      "what": "verifyFence answers current on a fence row that the settlement path refuses as inconsistent.",
+      "why": "This is the write-authority check; two predicates for one invariant already drifted.",
+      "remediation": {
+        "steps": [
+          "Make verifyFence use readCanonicalWriterFence and currentSettlementFence semantics.",
+          "Pin the inconsistent-fence case first."
+        ],
+        "acceptance": [
+          "One fence reader in apps/harness/src/storage",
+          "verifyFence refuses a row with activatedAt != generationAcquiredAt"
+        ],
+        "testStrategy": "Repository integration test with a corrupted fence row.",
+        "tradeoff": "Keep — authority drift on the write path."
+      },
+      "severity": "Med",
+      "effort": "S",
+      "blastRadius": ["on-disk"],
+      "class": "polish",
+      "entityStage": "ProjectActivation/VALIDATE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T6-writer-authority",
+      "fp": "ac343cad594bc921"
+    },
+    {
+      "id": "L5-02",
+      "layer": 5,
+      "lens": "L",
+      "title": "Writer ports hand out the raw driver transaction and the Conversation read port can write without a fence check",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/canonical-command-repository.ts",
+          "startLine": 54,
+          "endLine": 54,
+          "quoted": ["    work: (tx: LocalLibsqlTransaction) => Promise<Result>,"]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-command-repository.ts",
+          "startLine": 63,
+          "endLine": 63,
+          "quoted": [
+            "  /** Runs Conversation read work in one transaction on the writer's client; no fence check. */"
+          ]
+        },
+        {
+          "path": "apps/harness/src/canonical-command-registry.ts",
+          "startLine": 22,
+          "endLine": 22,
+          "quoted": [
+            "export type CanonicalCommandTransaction = Readonly<Pick<LocalLibsqlTransaction, \"execute\">>;"
+          ]
+        }
+      ],
+      "symbol": "conversationRead",
+      "anchor": "3 port signatures typed by the driver; 4 top-level harness files import driver types",
+      "what": "Conversation and command closures receive LocalLibsqlTransaction; conversationRead runs in a write transaction with no fence check.",
+      "why": "ADR 0006 puts Conversation outside settlement, but nothing limits a closure to its tables; the carve-out is enforced by method name only.",
+      "remediation": {
+        "steps": [
+          "Give conversationRead a read-only transaction view (execute on SELECT only) and type command handlers by a narrow port.",
+          "Add a dependency-cruiser rule harness-application-no-sql-driver (with tsPreCompilationDeps)."
+        ],
+        "acceptance": [
+          "conversationRead cannot commit a write",
+          "No top-level harness module imports the driver types"
+        ],
+        "testStrategy": "Unit test: a write inside conversationRead fails.",
+        "tradeoff": "Keep — authority by convention."
+      },
+      "severity": "Med",
+      "effort": "M",
+      "blastRadius": ["cross-module"],
+      "class": "redesign",
+      "entityStage": "Conversation/READ",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 5 (SQL plumbing and writer authority) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T6-writer-authority",
+      "fp": "50438d89a6f7e443"
+    },
+    {
+      "id": "L5-03",
+      "layer": 5,
+      "lens": "C",
+      "title": "One stored column, recovery_record_id, is validated by two different UUID rules",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/canonical-command-repository.ts",
+          "startLine": 284,
+          "endLine": 284,
+          "quoted": ["        decodeStrict(identitySchema, dependencies.createRecoveryRecordId()),"]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-writer-recovery.ts",
+          "startLine": 43,
+          "endLine": 43,
+          "quoted": ["  recoveryRecordId: recoveryIdentitySchema,"]
+        },
+        {
+          "path": "apps/harness/src/canonical-json.ts",
+          "startLine": 38,
+          "endLine": 38,
+          "quoted": ["export const CanonicalStoredIdentitySchema = UuidTextSchema.check("]
+        }
+      ],
+      "symbol": "identitySchema",
+      "anchor": "6 lowercase-UUID definitions, 2 acceptance sets, 1 column with 2 validators",
+      "what": "The repository writes recovery ids through the loose UUID base (accepts nil/max), the recovery owner reads them through the strict kernel base.",
+      "why": "Hidden today only because randomUUID never yields nil; part of the identity-vocabulary split (T2).",
+      "remediation": {
+        "steps": [
+          "Use LowercaseDomainIdentityTextSchema from the protocol at every stored-UUID site."
+        ],
+        "acceptance": ["One lowercase stored-identity schema in the repo"],
+        "testStrategy": "Decode tests with nil and upper-case ids.",
+        "tradeoff": "None."
+      },
+      "severity": "Med",
+      "effort": "S",
+      "blastRadius": ["on-disk"],
+      "class": "polish",
+      "entityStage": "ProjectActivation/AUDIT",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": ["L7-03"],
+      "crossCutTag": "T2-shared-vocabulary-owner",
+      "fp": "7c031a7d244a8ba3"
+    },
+    {
+      "id": "L5-04",
+      "layer": 5,
+      "lens": "T",
+      "title": "Fourteen ledger refusal guards are tested by an oracle that accepts any Error",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/canonical-command-fixture.ts",
+          "startLine": 1154,
+          "endLine": 1154,
+          "quoted": ["  expect(error).toBeInstanceOf(Error);"]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-command-ledger.ts",
+          "startLine": 404,
+          "endLine": 404,
+          "quoted": [
+            "  if (!matchesRequest) throw new Error(\"Canonical requested receipt authority is inconsistent.\");"
+          ]
+        }
+      ],
+      "symbol": "expectBrokenReplay",
+      "anchor": "14 bare throw sites; 1 message asserted anywhere; helpers called 31 times",
+      "what": "Which refusal fired is not pinned; the guards throw untyped Errors.",
+      "why": "A guard swapped for another refusal still passes; the idempotency authority is the riskiest code in the ledger.",
+      "remediation": {
+        "steps": [
+          "Give ledger refusals typed errors with stable codes (AGENTS.md typed-error rule) and assert the code in the shared oracle."
+        ],
+        "acceptance": ["The shared oracle asserts a specific refusal code"],
+        "testStrategy": "Mutation run on the ledger after the change.",
+        "tradeoff": "Keep — weak oracle."
+      },
+      "severity": "Low",
+      "effort": "M",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "CanonicalCommand/VALIDATE",
+      "verify": "Weakened",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 3 (Failure classification and diagnostics) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T6-writer-authority",
+      "fp": "fe329a88e1cb9892",
+      "verifyNote": "Narrower: the :368 and :404 guards are distinct predicates sharing one message, not a shadowed guard; the any-Error oracle over 14 untyped throws stands."
+    },
+    {
+      "id": "L5-05",
+      "layer": 5,
+      "lens": "T",
+      "title": "Two recovery-refusal tests assert only status while the helper pins the code",
+      "evidence": [
+        {
+          "path": "apps/harness/tests/integration/canonical-writer-reconciliation.integration.test.ts",
+          "startLine": 703,
+          "endLine": 703,
+          "quoted": ["    expect((await activateRecovery(f)).status).toBe(\"broken\");"]
+        },
+        {
+          "path": "apps/harness/tests/integration/canonical-writer-recovery-fixture.ts",
+          "startLine": 153,
+          "endLine": 153,
+          "quoted": ["      code: \"WRITER_FENCE_ACTIVATION_FAILED\","]
+        }
+      ],
+      "symbol": null,
+      "anchor": "2 rows; the only test reaching the initial-writer recovery guard",
+      "what": "Any other broken-activation cause also passes these rows.",
+      "why": "The shared helper already asserts WRITER_FENCE_ACTIVATION_FAILED.",
+      "remediation": {
+        "steps": ["Use the shared helper in both rows."],
+        "acceptance": ["Both rows assert the code"],
+        "testStrategy": "n/a",
+        "tradeoff": "None."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectActivation/AUDIT",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "cc1cda7d35289e17"
+    },
+    {
+      "id": "L5-06",
+      "layer": 5,
+      "lens": "T",
+      "title": "Red-phase scaffolding assertions remain in green suites",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/canonical-writer-lease.test.ts",
+          "startLine": 13,
+          "endLine": 13,
+          "quoted": ["  expect(create).toBeTypeOf(\"function\");"]
+        },
+        {
+          "path": "apps/harness/tests/integration/canonical-command-repository-faults.integration.test.ts",
+          "startLine": 196,
+          "endLine": 196,
+          "quoted": [
+            "  expect(error instanceof Error && error.message.includes(\"not implemented\")).toBe(false);"
+          ]
+        }
+      ],
+      "symbol": null,
+      "anchor": "13 toBeTypeOf(\"function\") sites + 4 not-implemented guards",
+      "what": "Assertions that held only while stubs existed can no longer fail.",
+      "why": "They make oracles look stronger than they are.",
+      "remediation": {
+        "steps": ["Delete them."],
+        "acceptance": ["No toBeTypeOf(\"function\") or not-implemented assertion in harness tests"],
+        "testStrategy": "n/a",
+        "tradeoff": "None."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "72e1df122b98dd16"
+    },
+    {
+      "id": "L5-07",
+      "layer": 5,
+      "lens": "S",
+      "title": "writer_recovery_records insert vocabulary is split across two modules",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/canonical-command-repository.ts",
+          "startLine": 281,
+          "endLine": 281,
+          "quoted": [
+            "      VALUES (?,?,?,'abandoned-active-fence',NULL,NULL,?,'generation-superseded',?,?)`,"
+          ]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-writer-recovery.ts",
+          "startLine": 175,
+          "endLine": 175,
+          "quoted": ["      VALUES (?,?,?,'commit-uncertain',?,?,?,NULL,NULL,NULL)`,"]
+        }
+      ],
+      "symbol": "recordRecovery",
+      "anchor": "writers=2 on one table; coordinated in one transaction",
+      "what": "The repository decides and writes the superseded-generation record inline; the recovery module owns the other shapes.",
+      "why": "Cohesion only; no invariant at risk (schema uniqueness holds).",
+      "remediation": {
+        "steps": ["Move the abandoned-active-fence insert into the recovery owner."],
+        "acceptance": ["One module writes writer_recovery_records"],
+        "testStrategy": "Existing recovery integration tests.",
+        "tradeoff": "Keep — acceptable."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectActivation/AUDIT",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 5 (SQL plumbing and writer authority) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": ["L5-03"],
+      "crossCutTag": "T6-writer-authority",
+      "fp": "7c81d99208701c0d"
+    },
+    {
+      "id": "L5-08",
+      "layer": 5,
+      "lens": "S",
+      "title": "Two owners enforce one transaction at a time on the writer client",
+      "evidence": [
+        {
+          "path": "apps/harness/src/canonical-project-writer.ts",
+          "startLine": 132,
+          "endLine": 132,
+          "quoted": ["  const slot = createPermitLock();"]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-command-repository.ts",
+          "startLine": 377,
+          "endLine": 377,
+          "quoted": ["    if (this.busy) throw new WriterOwnerBusy();"]
+        }
+      ],
+      "symbol": "WriterOwnerBusy",
+      "anchor": "2 coordination mechanisms for 1 resource; the boolean guard is documented unreachable",
+      "what": "The writer slot (PermitLock) and a boolean busy flag both guard the client; callers still map WriterOwnerBusy.",
+      "why": "Redundant coordination with a plain boolean against the AGENTS.md coordination rule.",
+      "remediation": {
+        "steps": [
+          "Drop the boolean or make it a defect assertion; remove the unreachable mapping."
+        ],
+        "acceptance": ["One coordination owner for the writer client"],
+        "testStrategy": "Writer unit tests.",
+        "tradeoff": "Keep as a fail-fast tripwire — acceptable if typed as a defect."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectActivation/PRODUCE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 5 (SQL plumbing and writer authority) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T6-writer-authority",
+      "fp": "b64eeee93ae8e242"
+    },
+    {
+      "id": "L6.1-01",
+      "layer": "6.1",
+      "lens": "Fe",
+      "title": "Shutdown recognises the opening-release-failed variant by comparing message strings",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-store.ts",
+          "startLine": 147,
+          "endLine": 147,
+          "quoted": ["    error.message === openingReleaseFailedMessage &&"]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-errors.ts",
+          "startLine": 10,
+          "endLine": 10,
+          "quoted": [
+            "export const openingReleaseFailedMessage = \"Project Storage opening release failed.\";"
+          ]
+        }
+      ],
+      "symbol": "shutdownOperationFailure",
+      "anchor": "1 decode + 2 encode sites of one variant keyed on a string",
+      "what": "The variant exists only as a bare message string; editing it silently breaks shutdown unwrapping.",
+      "why": "The errors module should own both construction and recognition.",
+      "remediation": {
+        "steps": [
+          "Add a tagged subclass or a constructor/recogniser pair in apps/harness/src/storage/project-storage-errors.ts."
+        ],
+        "acceptance": ["No error.message comparison in apps/harness/src/storage"],
+        "testStrategy": "Store unit test.",
+        "tradeoff": "None."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectStorage/DOMAIN",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "8e5b65ab0587ed2d"
+    },
+    {
+      "id": "L6.1-02",
+      "layer": "6.1",
+      "lens": "D",
+      "title": "Sealed-generation verification re-derives the opening metadata projection",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-database-build.ts",
+          "startLine": 122,
+          "endLine": 122,
+          "quoted": ["    const expectedMetadata ="]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-opening.ts",
+          "startLine": 248,
+          "endLine": 248,
+          "quoted": ["export function expectedOpeningMetadata("]
+        }
+      ],
+      "symbol": "expectedOpeningMetadata",
+      "anchor": "2 copies of a 12-line projection + comparison",
+      "what": "Build verification inlines the canonical/runtime metadata triple instead of calling the exported opening helpers.",
+      "why": "An added compared field on one side leaves the other passing.",
+      "remediation": {
+        "steps": ["Call expectedOpeningMetadata and openingMetadataAgrees from the build."],
+        "acceptance": ["One metadata projection"],
+        "testStrategy": "Existing build tests.",
+        "tradeoff": "None."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectStorage/ADAPTER(out)",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "f839861e1d5811a3"
+    },
+    {
+      "id": "L6.1-03",
+      "layer": "6.1",
+      "lens": "M",
+      "title": "Two busy classifiers disagree on which storage errors are retryable",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/sqlite-busy.ts",
+          "startLine": 8,
+          "endLine": 8,
+          "quoted": ["export function isSqliteBusy(error: unknown): boolean {"]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-node-errors.ts",
+          "startLine": 56,
+          "endLine": 56,
+          "quoted": ["export function isBusyStorageError(input: { error: unknown }): boolean {"]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-node-errors.ts",
+          "startLine": 26,
+          "endLine": 26,
+          "quoted": ["  \"SQLITE_IOERR\","]
+        }
+      ],
+      "symbol": "isBusyStorageError",
+      "anchor": "2 owners, 6 consumers; IOERR/AUTH/CANTOPEN/PERM/READONLY/EACCES/EPERM/EBUSY busy in one, broken in the other",
+      "what": "The same SQLITE_IOERR is retryable busy in the upgrade and broken in registration and conversation.",
+      "why": "One error class gets two meanings; shared-vocab-union calls for one owner.",
+      "remediation": {
+        "steps": [
+          "Decide the busy set once; keep unavailable vs busy as separate named predicates in one module."
+        ],
+        "acceptance": ["One busy classification used by upgrade, registry and conversation"],
+        "testStrategy": "Classifier unit table over codes.",
+        "tradeoff": "Keep — inconsistent retry behaviour."
+      },
+      "severity": "Med",
+      "effort": "S",
+      "blastRadius": ["cross-module"],
+      "class": "polish",
+      "entityStage": "StorageUpgrade/VALIDATE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 3 (Failure classification and diagnostics) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T3-failure-classification",
+      "fp": "c8366e7fa55072ce"
+    },
+    {
+      "id": "L6.1-04",
+      "layer": "6.1",
+      "lens": "M",
+      "title": "The Node error-code reader is re-implemented three times next to its owner",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-node-errors.ts",
+          "startLine": 6,
+          "endLine": 6,
+          "quoted": [
+            "export function storageErrorCode(input: { error: unknown }): string | undefined {"
+          ]
+        },
+        {
+          "path": "apps/harness/src/storage/generated-migration-resources.ts",
+          "startLine": 43,
+          "endLine": 43,
+          "quoted": ["function errorCode(error: unknown): string | undefined {"]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-writer-lease.ts",
+          "startLine": 101,
+          "endLine": 101,
+          "quoted": ["function errorCode(error: unknown): unknown {"]
+        }
+      ],
+      "symbol": "storageErrorCode",
+      "anchor": "3 copies vs 1 owner across 3 layers",
+      "what": "Generic error-code reading lives in a Storage-named module and is copied elsewhere.",
+      "why": "Small drift risk.",
+      "remediation": {
+        "steps": ["Move to a neutral node-error-code module and reuse."],
+        "acceptance": ["One errorCode helper"],
+        "testStrategy": "n/a",
+        "tradeoff": "Keep — low risk."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 5 (SQL plumbing and writer authority) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "d9141bd95d6b5f07"
+    },
+    {
+      "id": "L6.3-01",
+      "layer": "6.3",
+      "lens": "M",
+      "title": "SQL result-set access has no owner; four converters guard differently",
+      "evidence": [
+        {
+          "path": "apps/harness/src/canonical-json.ts",
+          "startLine": 18,
+          "endLine": 18,
+          "quoted": [
+            "export function canonicalResultObjects(result: LocalLibsqlResultSet): unknown[] {"
+          ]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-node-schemas.ts",
+          "startLine": 28,
+          "endLine": 28,
+          "quoted": ["export function resultObjects(result: LocalLibsqlResultSet): unknown[] {"]
+        },
+        {
+          "path": "apps/harness/src/storage/application-database-migration.ts",
+          "startLine": 93,
+          "endLine": 93,
+          "quoted": [
+            "export function applicationDatabaseRows(result: LocalLibsqlResultSet): unknown[] {"
+          ]
+        },
+        {
+          "path": "apps/harness/src/registration/registry-database.ts",
+          "startLine": 42,
+          "endLine": 42,
+          "quoted": ["  return applicationDatabaseRows(result);"]
+        }
+      ],
+      "symbol": "resultObjects",
+      "anchor": "4 converters + 1 shallow alias (19 call sites), 2 exactly-one, 4 changed-once checks in 9 files",
+      "what": "Only the canonical converter refuses duplicate column aliases and width mismatch; the others silently overwrite a key.",
+      "why": "A schema change with a duplicated alias corrupts rows on three of four paths.",
+      "remediation": {
+        "steps": [
+          "Add one sql-result module (resultObjects with canonical guards, exactlyOne, changedOnce taking the failure) and migrate; drop registryRows."
+        ],
+        "acceptance": ["One result-set converter in apps/harness"],
+        "testStrategy": "Unit tests with duplicate aliases.",
+        "tradeoff": "Keep — silent overwrite risk."
+      },
+      "severity": "Med",
+      "effort": "M",
+      "blastRadius": ["cross-module"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 5 (SQL plumbing and writer authority) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T5-sql-plumbing",
+      "fp": "5a998c8bdd30cc45"
+    },
+    {
+      "id": "L6.3-02",
+      "layer": "6.3",
+      "lens": "M",
+      "title": "A Semaphore is taken and released by hand with runPromise/runSync next to PermitLock",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/application-database-authority.ts",
+          "startLine": 222,
+          "endLine": 222,
+          "quoted": ["      await Effect.runPromise(Semaphore.take(permits, 1));"]
+        },
+        {
+          "path": "apps/harness/src/storage/application-database-authority.ts",
+          "startLine": 398,
+          "endLine": 398,
+          "quoted": ["    await Effect.runPromise(Semaphore.take(deciding, 1));"]
+        },
+        {
+          "path": "apps/harness/src/storage/permit-lock.ts",
+          "startLine": 85,
+          "endLine": 85,
+          "quoted": ["export async function withPermit<Result>("]
+        }
+      ],
+      "symbol": "Semaphore.take",
+      "anchor": "2 hand-rolled take/release pairs; no waiver",
+      "what": "Manual permit bookkeeping outside an edge, beside the existing withPermit facade.",
+      "why": "AGENTS.md: runPromise/runSync only at edges; coordination through Semaphore programs.",
+      "remediation": {
+        "steps": [
+          "Use withPermit or a held-permit PermitLock variant; migrate when the authority becomes an Effect service."
+        ],
+        "acceptance": ["No Effect.runPromise(Semaphore.take in apps/harness/src/storage"],
+        "testStrategy": "Authority race tests.",
+        "tradeoff": "Fold into Part B."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 5 (SQL plumbing and writer authority) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T5-sql-plumbing",
+      "fp": "acb3063e9bb488bf"
+    },
+    {
+      "id": "L6.3-03",
+      "layer": "6.3",
+      "lens": "M",
+      "title": "The transaction decorator is hand-written three times",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/application-database-authority.ts",
+          "startLine": 103,
+          "endLine": 103,
+          "quoted": ["function admittedTransaction("]
+        },
+        {
+          "path": "apps/harness/src/storage/application-database-migration.ts",
+          "startLine": 414,
+          "endLine": 414,
+          "quoted": ["function checkpointedClient("]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-command-repository.ts",
+          "startLine": 362,
+          "endLine": 362,
+          "quoted": ["  async transaction(mode: \"write\"): Promise<LocalLibsqlTransaction> {"]
+        }
+      ],
+      "symbol": "admittedTransaction",
+      "anchor": "3 copies; a new transaction member needs 3 edits",
+      "what": "Each forwards every member to override one hook.",
+      "why": "Mechanical repetition across two layers.",
+      "remediation": {
+        "steps": ["Add decorateTransaction(inner, overrides)."],
+        "acceptance": ["One transaction decorator"],
+        "testStrategy": "n/a",
+        "tradeoff": "Keep — low risk."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 5 (SQL plumbing and writer authority) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T5-sql-plumbing",
+      "fp": "65e4ae9d83393e98"
+    },
+    {
+      "id": "L6.3-04",
+      "layer": "6.3",
+      "lens": "M",
+      "title": "The schema-metadata CHECK block is hand-written three times in the verifier spec",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-database-specs.ts",
+          "startLine": 249,
+          "endLine": 249,
+          "quoted": ["    \"application_metadata_key\","]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-database-specs.ts",
+          "startLine": 657,
+          "endLine": 657,
+          "quoted": ["    \"canonical_metadata_key\","]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-database-specs.ts",
+          "startLine": 710,
+          "endLine": 710,
+          "quoted": ["    \"runtime_metadata_key\","]
+        }
+      ],
+      "symbol": "namedCheck",
+      "anchor": "3 x 25 LOC; columns already shared, checks not",
+      "what": "Five namedCheck calls repeat per database kind.",
+      "why": "The spec is an independent oracle against Drizzle by design, but inside the spec the copy is mechanical.",
+      "remediation": {
+        "steps": [
+          "Add a schemaMetadataChecks(table, prefix) builder next to schemaMetadataColumnDefinitions."
+        ],
+        "acceptance": ["One metadata-check builder"],
+        "testStrategy": "Verifier spec tests.",
+        "tradeoff": "Keep — oracle stays independent either way."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectStorage/ADAPTER(out)",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "60dc4de1e815a491"
+    },
+    {
+      "id": "L6.3-05",
+      "layer": "6.3",
+      "lens": "Sec",
+      "title": "The worker's effect resolver silently walks up out of the asar instead of failing",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/local-libsql-worker-client.ts",
+          "startLine": 108,
+          "endLine": 108,
+          "quoted": ["  const processEntry = process.argv[1];"]
+        },
+        {
+          "path": "apps/harness/src/storage/local-libsql-worker-client.ts",
+          "startLine": 114,
+          "endLine": 114,
+          "quoted": ["    const parent = path.dirname(current);"]
+        },
+        {
+          "path": "apps/harness/src/storage/local-libsql-worker-client.ts",
+          "startLine": 286,
+          "endLine": 286,
+          "quoted": ["  const Schema = await import(workerData.effectSchema);"]
+        }
+      ],
+      "symbol": "resolveWorkerModuleUrl",
+      "anchor": "up to ~9 ancestor directories probed after the integrity-covered candidate",
+      "what": "If the staged copy is missing, the worker imports the first effect/dist/Schema.js in any ancestor, up to C:\\node_modules.",
+      "why": "degrade-distinguishes-broken: a missing staged module should fail visibly, not load foreign code; reachable only with a damaged asar.",
+      "remediation": {
+        "steps": [
+          "Resolve only the staged path in packaged mode and fail with a distinct diagnostic otherwise."
+        ],
+        "acceptance": ["Packaged worker never probes outside its resources"],
+        "testStrategy": "Unit test of the resolver with a missing staged copy.",
+        "tradeoff": "Keep — low reachability."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["other"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "0ec5be106d745ffa"
+    },
+    {
+      "id": "L6.3-06",
+      "layer": "6.3",
+      "lens": "A",
+      "title": "Two file-private aliases only forward to invalidSqliteSchemaExpression",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/sqlite-schema-scanner.ts",
+          "startLine": 18,
+          "endLine": 18,
+          "quoted": ["function invalidSchema(): never {"]
+        },
+        {
+          "path": "apps/harness/src/storage/sqlite-schema-expression.ts",
+          "startLine": 163,
+          "endLine": 163,
+          "quoted": ["function invalidExpression(): never {"]
+        }
+      ],
+      "symbol": "invalidSchema",
+      "anchor": "1 statement, 0 parameters each; 4 and 8 callers",
+      "what": "Shallow wrappers with no added behaviour.",
+      "why": "Indirection only.",
+      "remediation": {
+        "steps": ["Inline the calls."],
+        "acceptance": ["No local alias"],
+        "testStrategy": "n/a",
+        "tradeoff": "Keep — harmless."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 6 (Packaging, staged surfaces and remaining polish) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "f586c9c7a38a34e0"
+    },
+    {
+      "id": "L7-01",
+      "layer": 7,
+      "lens": "M",
+      "title": "The damaged-registry code set is restated at nine sites in three packages, two of them untyped",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/project-list-protocol.ts",
+          "startLine": 98,
+          "endLine": 98,
+          "quoted": ["      \"REGISTRY_SCHEMA_UNKNOWN\","]
+        },
+        {
+          "path": "apps/desktop/src/renderer/add-repository-button.tsx",
+          "startLine": 7,
+          "endLine": 7,
+          "quoted": ["const registryBroken = new Set(["]
+        },
+        {
+          "path": "apps/desktop/src/renderer/remove-from-list/use-remove-from-list.ts",
+          "startLine": 31,
+          "endLine": 31,
+          "quoted": ["const damagedRegistry = new Set(["]
+        }
+      ],
+      "symbol": "REGISTRY_SCHEMA_UNKNOWN",
+      "anchor": "9 sites in 3 packages; 2 renderer copies are Set<string>",
+      "what": "Every protocol result and the renderer gating restate the same three codes.",
+      "why": "shared-vocab-union: a renamed or added code compiles silently in the renderer and stales the add/remove gating.",
+      "remediation": {
+        "steps": [
+          "Export one RegistryBrokenCodes tuple and schema from packages/protocol next to RegistryPendingRecoverySchema; consume it everywhere."
+        ],
+        "acceptance": ["One definition of the registry-broken set"],
+        "testStrategy": "Protocol tests; renderer gating tests.",
+        "tradeoff": "None."
+      },
+      "severity": "Med",
+      "effort": "S",
+      "blastRadius": ["public-API"],
+      "class": "polish",
+      "entityStage": "ProjectRegistration/RENDER",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T2-shared-vocabulary-owner",
+      "fp": "55bd88357ab4f80c"
+    },
+    {
+      "id": "L7-02",
+      "layer": 7,
+      "lens": "M",
+      "title": "harnessFailureRow and rowSchema are copied verbatim in two protocol modules",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/project-upgrade-protocol.ts",
+          "startLine": 11,
+          "endLine": 11,
+          "quoted": [
+            "function harnessFailureRow<const Code extends HarnessFailureCode>(code: Code) {"
+          ]
+        },
+        {
+          "path": "packages/protocol/src/project-conversation-protocol.ts",
+          "startLine": 17,
+          "endLine": 17,
+          "quoted": [
+            "function harnessFailureRow<const Code extends HarnessFailureCode>(code: Code) {"
+          ]
+        }
+      ],
+      "symbol": "harnessFailureRow",
+      "anchor": "2 helpers x 2 copies + 5 repeated rows",
+      "what": "The exact diagnostic-row primitive has no owner; the message texts already do.",
+      "why": "Part of IX/T1: only two result schemas can carry a harness failure at all.",
+      "remediation": {
+        "steps": [
+          "Move harnessFailureRow and rowSchema into packages/protocol/src/harness-failure-protocol.ts."
+        ],
+        "acceptance": ["One harnessFailureRow"],
+        "testStrategy": "Protocol tests.",
+        "tradeoff": "None."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["public-API"],
+      "class": "polish",
+      "entityStage": "HarnessSession/PORT(out)",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 4 (Desktop bridge and IPC consolidation) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T1-harness-failure-carriage",
+      "fp": "eb43ccc9e9cb7e67"
+    },
+    {
+      "id": "L7-03",
+      "layer": 7,
+      "lens": "C",
+      "title": "Two UUID base validators disagree and both feed protocol and harness identity schemas",
+      "evidence": [
+        {
+          "path": "packages/kernel/src/workspace-identifiers.ts",
+          "startLine": 4,
+          "endLine": 4,
+          "quoted": [
+            "const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;"
+          ]
+        },
+        {
+          "path": "packages/protocol/src/schema-codec.ts",
+          "startLine": 68,
+          "endLine": 68,
+          "quoted": ["export const UuidTextSchema = Schema.String.check("]
+        },
+        {
+          "path": "apps/harness/src/conversation/conversation-rows.ts",
+          "startLine": 17,
+          "endLine": 17,
+          "quoted": [
+            "export const ConversationRowSchema = Schema.Struct({ conversationId: UuidTextSchema });"
+          ]
+        }
+      ],
+      "symbol": "UuidTextSchema",
+      "anchor": "2 bases with different acceptance sets (nil/max, case) feeding 40+ schema sites in 3 packages; 1 hand patch",
+      "what": "Conversation rows decode ids with the loose base while the protocol brands the same ids on the strict kernel base.",
+      "why": "Values accepted at storage can be refused at the boundary; shared-vocab-union.",
+      "remediation": {
+        "steps": [
+          "Decide one identity base (kernel DomainIdentityTextSchema) and narrow UuidTextSchema to transport-only needs; migrate stored-id sites."
+        ],
+        "acceptance": ["Stored and branded ids share one validator"],
+        "testStrategy": "Decode tests with nil, max and upper-case ids.",
+        "tradeoff": "Keep — latent drift."
+      },
+      "severity": "High",
+      "effort": "M",
+      "blastRadius": ["public-API", "on-disk", "cross-module"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T2-shared-vocabulary-owner",
+      "fp": "e48f9100b688b63c"
+    },
+    {
+      "id": "L7-04",
+      "layer": 7,
+      "lens": "C",
+      "title": "The UTC instant concept has two acceptance sets under four names, and the envelope sentAt allows any offset",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/canonical-project-protocol.ts",
+          "startLine": 47,
+          "endLine": 47,
+          "quoted": [
+            "export const CanonicalSettlementTimeSchema = dateTimeTextSchema({ offset: true }).check("
+          ]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-command-ledger.ts",
+          "startLine": 36,
+          "endLine": 36,
+          "quoted": [
+            "export const canonicalWriterUtcInstantSchema = dateTimeTextSchema({ offset: true }).check("
+          ]
+        },
+        {
+          "path": "apps/harness/src/storage/project-storage-node-schemas.ts",
+          "startLine": 49,
+          "endLine": 49,
+          "quoted": ["export const utcInstantSchema = dateTimeTextSchema({ offset: true }).check("]
+        },
+        {
+          "path": "packages/protocol/src/protocol.ts",
+          "startLine": 92,
+          "endLine": 92,
+          "quoted": ["const TimestampSchema = dateTimeTextSchema({ offset: true });"]
+        }
+      ],
+      "symbol": "CanonicalSettlementTimeSchema",
+      "anchor": "7-9 sites; 2026-10-23T12:00Z passes storage/registration, fails ledger/settlement; utcInstantSchema names two variants",
+      "what": "Seconds-required and seconds-optional UTC schemas coexist; the transport timestamp accepts +01:00.",
+      "why": "AGENTS.md requires RFC 3339 UTC at process boundaries; shared-vocab-union.",
+      "remediation": {
+        "steps": [
+          "Export one protocol UtcInstantSchema with one seconds policy plus normalizedUtc; use it for the envelope and all stored timestamps."
+        ],
+        "acceptance": [
+          "One UTC instant schema in packages/protocol",
+          "Envelope sentAt rejects non-Z offsets"
+        ],
+        "testStrategy": "Protocol decode tests; protocol version bump if the envelope tightens.",
+        "tradeoff": "Keep — inconsistent acceptance."
+      },
+      "severity": "High",
+      "effort": "M",
+      "blastRadius": ["public-API", "on-disk"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T2-shared-vocabulary-owner",
+      "fp": "1fc23cffa804d2bb"
+    },
+    {
+      "id": "L7-05",
+      "layer": 7,
+      "lens": "C",
+      "title": "The SHA-256 hex schema is restated nine times with no protocol owner",
+      "evidence": [
+        {
+          "path": "apps/harness/src/canonical-json.ts",
+          "startLine": 16,
+          "endLine": 16,
+          "quoted": [
+            "export const CanonicalSha256Schema = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u));"
+          ]
+        },
+        {
+          "path": "packages/protocol/src/project-registration-flow-protocol.ts",
+          "startLine": 9,
+          "endLine": 9,
+          "quoted": [
+            "const Sha256TextSchema = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/));"
+          ]
+        },
+        {
+          "path": "apps/harness/src/registration/executable-identity.ts",
+          "startLine": 6,
+          "endLine": 6,
+          "quoted": ["  sha256: Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/)),"]
+        }
+      ],
+      "symbol": "Sha256TextSchema",
+      "anchor": "9 definitions (one reordered class), 2 inline sha256Text adapters",
+      "what": "Every module writes its own hex regex; the stored proposal fingerprint has no format check.",
+      "why": "shared-vocab-union; the owner must live in protocol because protocol copies cannot import harness.",
+      "remediation": {
+        "steps": [
+          "Export Sha256HexSchema from packages/protocol/src/schema-codec.ts and one Node sha256Text adapter."
+        ],
+        "acceptance": ["One sha256 hex schema"],
+        "testStrategy": "n/a",
+        "tradeoff": "Keep — no value drift today."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": null,
+      "verify": "Weakened",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T2-shared-vocabulary-owner",
+      "fp": "bb150999a919aba1",
+      "verifyNote": "Narrower: the stored proposalFingerprint is compared to a recomputed value, so only the format check is missing; no value drift."
+    },
+    {
+      "id": "L7-06",
+      "layer": 7,
+      "lens": "C",
+      "title": "Writer release failure codes are restated in three protocol lists and three harness unions",
+      "evidence": [
+        {
+          "path": "packages/protocol/src/canonical-project-protocol.ts",
+          "startLine": 141,
+          "endLine": 141,
+          "quoted": ["const canonicalProjectActivationDiagnosticCodes = ["]
+        },
+        {
+          "path": "apps/harness/src/storage/canonical-writer-lease.ts",
+          "startLine": 3,
+          "endLine": 3,
+          "quoted": ["export type CanonicalWriterLeaseFailureCode ="]
+        }
+      ],
+      "symbol": "CanonicalWriterLeaseFailureCode",
+      "anchor": "6 restatements, 0 drift, compile-linked",
+      "what": "Each harness union is a hand-written subset of the protocol set.",
+      "why": "The compiler guards drift today.",
+      "remediation": {
+        "steps": ["Export one release-code tuple; write harness unions as Extract of it."],
+        "acceptance": ["One release-code tuple"],
+        "testStrategy": "n/a",
+        "tradeoff": "Keep — compile-checked."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["internal"],
+      "class": "polish",
+      "entityStage": "ProjectActivation/DEFINE",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "4998d4c28f11a8c9"
+    },
+    {
+      "id": "L7-07",
+      "layer": 7,
+      "lens": "C",
+      "title": "The staged-upgrade / storage-operation id borrows another brand under three names",
+      "evidence": [
+        {
+          "path": "apps/harness/src/storage/project-storage-upgrade.ts",
+          "startLine": 25,
+          "endLine": 25,
+          "quoted": [
+            "export type ProjectStorageUpgradeId = ProjectStorageCreateRequest[\"createRequestId\"];"
+          ]
+        },
+        {
+          "path": "packages/protocol/src/project-upgrade-protocol.ts",
+          "startLine": 102,
+          "endLine": 102,
+          "quoted": ["    upgradeId: ProjectStorageCreateRequestIdSchema,"]
+        }
+      ],
+      "symbol": "ProjectStorageUpgradeId",
+      "anchor": "4+ sites, 3 names, 1 borrowed brand",
+      "what": "upgradeId, storageOperationId, backupId and createRequestId share ProjectStorageCreateRequestId.",
+      "why": "CONTEXT.md concepts have no own type.",
+      "remediation": {
+        "steps": ["Add a protocol StorageOperationIdSchema or an exported alias."],
+        "acceptance": ["Upgrade ids use a named brand"],
+        "testStrategy": "n/a",
+        "tradeoff": "Keep — no drift."
+      },
+      "severity": "Low",
+      "effort": "S",
+      "blastRadius": ["public-API"],
+      "class": "polish",
+      "entityStage": "StorageUpgrade/OUTPUT",
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "c1f8d017887fc4ad"
+    },
+    {
+      "id": "L8-01",
+      "layer": 8,
+      "lens": "C",
+      "title": "The kernel declares 23 identity types by hand that shadow protocol types and have no consumer",
+      "evidence": [
+        {
+          "path": "packages/kernel/src/workspace-identifiers.ts",
+          "startLine": 13,
+          "endLine": 13,
+          "quoted": ["export type ProjectId = DomainIdentity<\"ProjectId\">;"]
+        },
+        {
+          "path": "packages/protocol/src/workspace-protocol.ts",
+          "startLine": 10,
+          "endLine": 10,
+          "quoted": ["export type ProjectId = typeof ProjectIdSchema.Type;"]
+        },
+        {
+          "path": "packages/kernel/src/project-storage-identifiers.ts",
+          "startLine": 5,
+          "endLine": 5,
+          "quoted": ["export type StorageGenerationId = DomainIdentity<\"StorageGenerationId\">;"]
+        }
+      ],
+      "symbol": "DomainIdentity",
+      "anchor": "23 type aliases + 4 guards, 0 consumers outside the kernel; kernel type looser on case",
+      "what": "Identity brands are applied in protocol; numeric brands live in the kernel; the kernel's identity types are unused shadows.",
+      "why": "ADR 0001:124 says brands have one definition; AGENTS.md derives types from schemas.",
+      "remediation": {
+        "steps": [
+          "Choose the owner: either the kernel owns identity schemas (like WriterGenerationSchema) and protocol re-exports, or the kernel drops the shadows."
+        ],
+        "acceptance": ["Each identity brand has one definition"],
+        "testStrategy": "Kernel and protocol tests.",
+        "tradeoff": "Keep — dead shadows."
+      },
+      "severity": "Med",
+      "effort": "M",
+      "blastRadius": ["public-API"],
+      "class": "redesign",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 2 (Vocabulary owners (ADR first)) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": "T2-shared-vocabulary-owner",
+      "fp": "f69f97dfd75c710f"
+    },
+    {
+      "id": "L8-02",
+      "layer": 8,
+      "lens": "L",
+      "title": "The declared kernel role (domain behaviour) does not exist and the declared model has stale technologies",
+      "evidence": [
+        {
+          "path": "docs/architecture/model.c4",
+          "startLine": 35,
+          "endLine": 35,
+          "quoted": ["      description \"Framework-independent canonical domain behavior.\""]
+        },
+        {
+          "path": "docs/architecture/model.c4",
+          "startLine": 39,
+          "endLine": 39,
+          "quoted": ["      technology \"TypeScript, Zod\""]
+        },
+        {
+          "path": "apps/harness/src/canonical-command-registry.ts",
+          "startLine": 22,
+          "endLine": 22,
+          "quoted": [
+            "export type CanonicalCommandTransaction = Readonly<Pick<LocalLibsqlTransaction, \"execute\">>;"
+          ]
+        }
+      ],
+      "symbol": null,
+      "anchor": "kernel ~76 LOC, 0 behaviour functions; Zod and libSQL stale in the model",
+      "what": "The model says the kernel executes domain behaviour, but the only domain rules live in harness storage code and the command handler port is typed by the SQL driver.",
+      "why": "The declared direction cannot be built as the ports stand; the model misleads readers.",
+      "remediation": {
+        "steps": [
+          "Update docs/architecture/model.c4 to the actual roles and technologies (Effect Schema, node:sqlite, Drizzle DDL).",
+          "Decide in an ADR whether domain rules move to the kernel before Phase 6 commands."
+        ],
+        "acceptance": ["model.c4 matches the code", "An ADR states where domain behaviour lives"],
+        "testStrategy": "pnpm check:architecture.",
+        "tradeoff": "Keep the aspiration — only with an ADR."
+      },
+      "severity": "Med",
+      "effort": "S",
+      "blastRadius": ["other"],
+      "class": "redesign",
+      "entityStage": null,
+      "verify": "Verified",
+      "status": "accepted",
+      "statusNote": "accepted into Phase 1 (Quick correctness fixes) — Pedro accepted the 6 phases as the plan, no per-finding triage (decisions §144)",
+      "dependsOn": [],
+      "crossCutTag": null,
+      "fp": "ea75a2a2d35c57c5"
+    }
+  ],
+  "status": "ready",
+  "healthScore": "drifting",
+  "finalizedAt": "2026-10-23T16:40:08.671Z"
+}
