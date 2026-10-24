@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 756024a33da97d7fb66b151b1e3cc4663fdeb29545493a771aa46c1cf915158c
+content_hash: b5bf6f9976bde6be23561ba9101b4f8a60ba8305e7a468d4cc5b362b7d54ef5a
 ---
 
 # Conversation — Human Decisions
@@ -2127,3 +2127,7 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - the s1 fix delta had no round 2;
   - one red was observed through a pre-permit seam.
   Squash onto main; on the combined tree, run the 4 D7 integration files, `check:duplicates` and `pnpm check`; then push with `check:deep` and check the CI.
+- **Phase 1 push refused:** unit 3411 and coverage 5599 passed; integration failed 1 of 2194, `registered-project-selection` "runtime switches between two registered Projects" ("Activation A missing"). Alone, the file passes 9/9. **User decision:** retry the push once with `SLOPSTOP_TRACE_94=1`; a second failure goes to diagnosis.
+- **Retry with trace failed again** (now in the coverage stage): the same row, "Activation A missing". Twice in full suites, passing alone. **This points at Phase 1** (it changed the registration start). Diagnosis is assigned; the trace is under `%TEMP%/slopstop-trace-94/`. Main is unpushed at `4dbd834`.
+- **Selection-row diagnosis:** caused by s1 P1-B1. Every harness start now runs one `application.db` write transaction. The row starts two runtimes on the same root, with separate authorities and `timeout: 0`, so the host's activation gets a retryable `REGISTRY_BUSY` while the reopened runtime reconciles; this happens only under full-suite load. It was reproduced deterministically with a held transaction. There is no product impact: the single-instance lock means one harness per userData. **Coordinator decision:** a test-only reorder (start `reopened` after the host's switch); also check sibling tests for the same race.
+- **Selection fix `0e0d539`** (test-only, assertions unchanged): the switch row and the read-only row (same race) are reordered. The other multi-runtime tests were scanned and ruled out (heuristic, disclosed). Registration project 244/244; `check:duplicates` clean; `pnpm check` 3411/3411. The push is retried.
