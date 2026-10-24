@@ -10,8 +10,6 @@ function fixture(platform: NodeJS.Platform = "linux") {
     unlock: vi.fn((_fd: number, _offset: number, _length: number) => undefined),
   };
   const create = leases.createCanonicalWriterLeaseFactory;
-  expect(create).toBeTypeOf("function");
-  if (typeof create !== "function") throw new Error("Native lease factory is missing.");
   return { ...dependencies, close, factory: create(dependencies) };
 }
 

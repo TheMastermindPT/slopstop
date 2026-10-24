@@ -7,6 +7,10 @@ export class ProjectStorageBrokenError extends Error {
 }
 
 /** The broken answer of an opening whose release failed, for plain openings and upgrades alike. */
-export const openingReleaseFailedMessage = "Project Storage opening release failed.";
+export class ProjectStorageOpeningReleaseFailedError extends ProjectStorageBrokenError {
+  constructor(cause: unknown) {
+    super("Project Storage opening release failed.", { cause });
+  }
+}
 
 export class ProjectStorageApplicationClientInitializationError extends ProjectStorageBrokenError {}

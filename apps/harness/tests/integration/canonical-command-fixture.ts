@@ -1152,7 +1152,6 @@ export async function expectBrokenReplay(
     (error: unknown) => error,
   );
   expect(error).toBeInstanceOf(Error);
-  expect(error instanceof Error && error.message.includes("not implemented")).toBe(false);
   expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
   expect(f.dependencies.createReceiptId).not.toHaveBeenCalled();
   expect(f.dependencies.createEventId).not.toHaveBeenCalled();
@@ -1188,8 +1187,6 @@ export async function knownBodyFailure(
     (error: unknown) => error,
   );
   expect(error).toBeInstanceOf(Error);
-  expect(error).not.toEqual(new Error("Canonical command settlement is not implemented."));
-  expect(error instanceof Error && error.message.includes("not implemented")).toBe(false);
   if (expected !== undefined) expect(error).toBe(expected);
   expect(await f.snapshot()).toEqual(before);
   return error;

@@ -28,6 +28,7 @@ import {
   activateRecovery,
   advanceRecoveryFixture,
   createRecoveryFixture,
+  expectBrokenRecoveryActivation,
   expectedUnresolvedRecoveryRow,
   expectRecoveryActivationRows,
   prepareRecoveryActivation,
@@ -695,13 +696,11 @@ it("S6 G4 B11 rejects any recovery row at initial generation", async () => {
     ])
       await f.raw.execute(`DELETE FROM ${table}`);
     await f.raw.execute("UPDATE project_state SET last_writer_generation=0");
-    const before = await f.snapshot();
     f.observation.after = (sql, result) =>
       sql.includes("FROM writer_recovery_records")
         ? { ...result, rows: [result.columns.map(() => null)] }
         : result;
-    expect((await activateRecovery(f)).status).toBe("broken");
-    expect(await f.snapshot()).toEqual(before);
+    await expectBrokenRecoveryActivation(f);
   } finally {
     await f.raw.close();
   }
@@ -714,9 +713,7 @@ it("S6 G4 B11 rejects older unresolved generation without hiding it behind G2", 
     await seedRecoveryRecord(f);
     await f.repository.releaseFence("2026-09-05T12:00:06.000Z");
     forbidReplayWork(f);
-    const before = await f.snapshot();
-    expect((await activateRecovery(f, 3)).status).toBe("broken");
-    expect(await f.snapshot()).toEqual(before);
+    await expectBrokenRecoveryActivation(f, 3);
   } finally {
     await f.raw.close();
   }

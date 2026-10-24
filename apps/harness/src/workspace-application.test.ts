@@ -385,7 +385,7 @@ describe("workspace application", () => {
       // @ts-expect-error Memory ports cannot publish Conversation notifications.
       memoryListener?.(notifications[0]);
     };
-    expect(assertOwnerNotificationTypes).toBeTypeOf("function");
+    void assertOwnerNotificationTypes;
 
     stop();
     expect(conversationListener).toBeUndefined();

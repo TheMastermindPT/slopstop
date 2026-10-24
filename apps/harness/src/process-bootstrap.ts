@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { decodeStrict, HarnessBootstrapSchema } from "@slopstop/protocol";
@@ -271,6 +272,35 @@ const projectStorageLayer = Layer.effect(
   }),
 );
 
+/**
+ * Settles the observations a killed harness left unsettled. A new installation has no journal
+ * yet, so there is nothing to settle, and reconciling would create its database. A broken
+ * reconciliation logs one code-only warning; its rows keep the gates closed.
+ */
+function reconcileLeftObservations(
+  registry: Pick<RegistrationRegistry, "reconcileAtStart">,
+  input: Readonly<{ applicationStorageRoot: string; logger: UpgradeEventLogger }>,
+) {
+  return Effect.gen(function* () {
+    const journal = path.join(input.applicationStorageRoot, "application.db");
+    if (!(yield* Effect.sync(() => existsSync(journal)))) return;
+    const outcome = yield* Effect.result(
+      Effect.tryPromise(() =>
+        registry.reconcileAtStart(
+          process.platform === "win32" ? createWindowsObserverAbsencePort() : undefined,
+        ),
+      ),
+    );
+    if (Result.isSuccess(outcome) && reconciliationAnswered(outcome.success.status)) return;
+    yield* Effect.sync(() => input.logger.warn({ code: "REGISTRATION_RECONCILIATION_FAILED" }));
+  });
+}
+
+/** Settled, or left pending for an observation whose absence is not proven: not broken. */
+function reconciliationAnswered(status: string): boolean {
+  return status === "settled" || status === "pending-recovery";
+}
+
 const projectRegistrationLayer = Layer.effect(
   ProjectRegistration,
   Effect.gen(function* () {
@@ -282,6 +312,13 @@ const projectRegistrationLayer = Layer.effect(
     };
     const selection = createDirectoryHandoff();
     const registry = createRegistrationRegistry(options, selection.port);
+    // The registry's unsettled-observer gates wait for this one reconciliation to end.
+    yield* Effect.forkScoped(
+      reconcileLeftObservations(registry, {
+        applicationStorageRoot: roots.applicationStorageRoot,
+        logger: yield* UpgradeLog,
+      }),
+    );
     const observer = createProjectRegistrationObserver(
       createGitVersionInspection(
         registry,
@@ -364,5 +401,6 @@ import { createRegistrationListing } from "./registration/registration-listing.j
 import { createRegistrationRegistry } from "./registration/registration-registry.js";
 import type { RegistrationDatabaseOptions } from "./registration/registry-database.js";
 import { createVersionObservationExecution } from "./registration/version-observation-execution.js";
+import { createWindowsObserverAbsencePort } from "./registration/windows-observer-absence.js";
 import { createWindowsVersionChild } from "./registration/windows-version-child.js";
 import { observeSelectedExecutable } from "./storage/repository-identity-observer.js";

@@ -489,17 +489,13 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
   async verifyFence(): Promise<WriterFenceCheck> {
     try {
       const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
-      const rows = await readFenceRows(this.owner.client, this.projectId);
-      if (rows.length === 0) return { status: "stale" };
-      const row = one(rows);
+      // The settlement reader: a fence that contradicts its generation throws, so it is broken.
+      const fence = await readCanonicalWriterFence(this.owner.client, this.projectId);
+      if (fence === undefined) return { status: "stale" };
       const current = [
-        row.generation === this.writerGeneration,
-        row.generationNumber === this.writerGeneration,
-        row.tokenDigest === digest,
-        row.generationDigest === digest,
-        row.state === "active",
-        row.releasedAt === null,
-        row.generationReleasedAt === null,
+        fence.generation === this.writerGeneration,
+        fence.tokenDigest === digest,
+        fence.state === "active",
       ].every(Boolean);
       return current ? { status: "current" } : { status: "stale" };
     } catch (cause) {

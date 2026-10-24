@@ -193,7 +193,6 @@ function replayCounterCommand(commandId: ReturnType<typeof seedAppliedMemoryRece
 
 function expectGenuineReplayFailure(error: unknown): void {
   expect(error).toBeInstanceOf(Error);
-  expect(error instanceof Error && error.message.includes("not implemented")).toBe(false);
   expect(error).not.toEqual(new Error("Unexpected lifecycle settlement dependency."));
 }
 
@@ -458,7 +457,8 @@ const rowShapeCases = [
   { action: "release", query: "PRAGMA foreign_keys" },
   { action: "activation", query: "SELECT last_writer_generation" },
   { action: "activation", query: "SELECT f.writer_generation" },
-  { action: "verify", query: "SELECT f.writer_generation" },
+  // The fence check reads through the settlement fence reader (P1-B7).
+  { action: "verify", query: "SELECT f.project_id AS projectId" },
 ].flatMap((entry) => ["duplicate-alias", "extra-cell"].map((fault) => ({ ...entry, fault })));
 
 const configurationFaults = [

@@ -55,8 +55,6 @@ const activationOnlySettlementDependencies = {
 
 it("configures every canonical activation and release transaction", async () => {
   const create = repositories.createCanonicalCommandRepositoryFactory;
-  expect(create).toBeTypeOf("function");
-  if (typeof create !== "function") throw new Error("Canonical repository factory is missing.");
   const root = await createTemporaryApplicationRoot();
   const storage = await createStorageRuntimeForRoot(root);
   try {

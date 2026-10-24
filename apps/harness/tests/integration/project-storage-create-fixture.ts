@@ -283,11 +283,8 @@ export function observeSwitchPromise<Value>(promise: Promise<Value>) {
   return { promise, isSettled: () => settled };
 }
 export function requireSwitch(owner: ActiveProjectCoordinator) {
-  const method: unknown = Reflect.get(owner, "switchProject");
-  expect(method, "public switchProject capability").toBeTypeOf("function");
-  if (typeof method !== "function") throw new Error("Public switchProject capability missing.");
   return (request: CanonicalProjectSwitchRequest): Promise<CanonicalProjectSwitchResult> =>
-    method.call(owner, request);
+    owner.switchProject(request);
 }
 function switchObservations() {
   const log: string[] = [];

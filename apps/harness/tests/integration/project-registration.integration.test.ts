@@ -573,6 +573,30 @@ describe.runIf(process.platform === "win32" && process.arch === "x64")(
       }
     });
 
+    it("rejects a reused selection with another executable path", async () => {
+      const root = await createRoot("p1-selection-conflict-");
+      const registry = registryAt(root);
+      const { selectionId } = versionRequest(null);
+      const installedGit = path.join(
+        process.env["ProgramFiles"] ?? "C:/Program Files",
+        "Git/cmd/git.exe",
+      );
+      try {
+        expect(
+          await registry.prepareExecutable({ selectionId, executablePath: installedGit }),
+        ).toEqual({ status: "prepared", selectionId });
+        // Another real executable, so only the reused selection decides the answer.
+        expect(
+          await registry.prepareExecutable({ selectionId, executablePath: process.execPath }),
+        ).toEqual({ status: "rejected", code: "REGISTRATION_IDEMPOTENCY_CONFLICT" });
+        expect(
+          await registry.prepareExecutable({ selectionId, executablePath: installedGit }),
+        ).toEqual({ status: "prepared", selectionId });
+      } finally {
+        await registry.stop();
+      }
+    });
+
     it.each(["before-ddl", "after-ddl", "before-metadata", "before-commit"] as const)(
       "rolls back the registry extension at %s",
       async (failurePoint) => {

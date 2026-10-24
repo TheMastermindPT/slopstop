@@ -143,10 +143,10 @@ export function expectRecoveryActivationRows(
   });
 }
 
-export async function expectBrokenRecoveryActivation(f: RecoveryFixture) {
+export async function expectBrokenRecoveryActivation(f: RecoveryFixture, generation = 2) {
   const before = await f.snapshot();
   const start = f.calls.length;
-  const result = await activateRecovery(f);
+  const result = await activateRecovery(f, generation);
   expect(result).toEqual({
     status: "broken",
     error: expect.objectContaining({

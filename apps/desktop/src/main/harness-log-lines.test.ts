@@ -189,6 +189,7 @@ it.for(invalidCompletedLines)("rejects an invalid completed line: $name", (inval
 const shutdownFatalFields = {
   failures: [
     { tag: "RegistrationCleanupUnconfirmed", parts: ["registry", "listing"] },
+    { tag: "CanonicalProjectReleaseFailed", code: "WRITER_FENCE_STALE" },
     { kind: "error" },
   ],
   omittedFailures: 0,

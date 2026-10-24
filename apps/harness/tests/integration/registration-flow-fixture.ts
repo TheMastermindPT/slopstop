@@ -19,6 +19,7 @@ import {
 } from "@slopstop/protocol";
 import { afterEach } from "vitest";
 import { startHarnessProcessRuntime } from "../../src/process-bootstrap.js";
+import type { UpgradeEventLogger } from "../../src/upgrade-diagnostics-logger.js";
 import {
   checkedInMigrationRoot,
   silentHarnessLogger,
@@ -52,9 +53,11 @@ export type GitConsent = Readonly<{
 /**
  * A harness process runtime over a fresh installation, driven through its transport with
  * one fresh Git repository at `directory`. Given the `root` of an earlier session, it starts a
- * new runtime over that installation and repository instead.
+ * new runtime over that installation and repository instead, logging to `logger` if given.
  */
-export async function registrationSession(existing?: Readonly<{ root: string }>) {
+export async function registrationSession(
+  existing?: Readonly<{ root: string; logger?: UpgradeEventLogger }>,
+) {
   const root = existing?.root ?? (await temporaryRoot("pc-s1-flow-"));
   const directory = path.join(root, "repository");
   if (existing === undefined) {
@@ -63,7 +66,7 @@ export async function registrationSession(existing?: Readonly<{ root: string }>)
   }
   const { port1, port2 } = new MessageChannel();
   const stop = await startHarnessProcessRuntime({
-    logger: silentHarnessLogger,
+    logger: existing?.logger ?? silentHarnessLogger,
     bootstrap: {
       kind: "harness.connect",
       applicationStorageRootUrl: pathToFileURL(path.join(root, "installation")).href,

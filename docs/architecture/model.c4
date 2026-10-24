@@ -32,16 +32,16 @@ model {
 
     kernel = package "Project kernel" {
       technology "TypeScript"
-      description "Framework-independent canonical domain behavior."
+      description "Framework-independent domain types: branded identities and pure Effect Schema data. Domain behavior lives in harness storage today."
     }
 
     protocol = package "Process protocol" {
-      technology "TypeScript, Zod"
+      technology "TypeScript, Effect Schema"
       description "Versioned schemas, message factories, and parse diagnostics for trust boundaries."
     }
 
     canonicalDb = database "Canonical project data" {
-      technology "libSQL, Drizzle"
+      technology "node:sqlite (worker), Drizzle schema and migrations"
       description "SlopStop-owned event, projection, evidence, memory, approval, and recovery state."
     }
 

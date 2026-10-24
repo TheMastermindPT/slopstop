@@ -7,7 +7,7 @@ import {
   ProjectStorageOpenResultSchema,
   WriterGenerationSchema,
 } from "@slopstop/protocol";
-import { expect, vi } from "vitest";
+import { vi } from "vitest";
 import * as coordinators from "../../src/active-project-coordinator.js";
 import type { ProjectStorageActivationOutcome } from "../../src/project-storage-application.js";
 import {
@@ -165,8 +165,6 @@ export function fixture(realCommands = false, id: ProjectId = projectId) {
     now: () => "2026-09-04T12:00:00.000Z",
   };
   const create = coordinators.createActiveProjectCoordinator;
-  expect(create).toBeTypeOf("function");
-  if (typeof create !== "function") throw new Error("Coordinator factory is missing.");
   return {
     owner: create(dependencies),
     dependencies,

@@ -223,3 +223,28 @@ describe("crash reporting", () => {
     );
   });
 });
+
+it("initializes Sentry without native minidumps", () => {
+  vi.stubEnv("SLOPSTOP_SENTRY_CONSENT", "1");
+  vi.stubEnv("SLOPSTOP_SENTRY_DSN", "https://public@example.invalid/1");
+  expect(initializeCrashReporting()).toBe(true);
+  const options = sentryMocks.init.mock.calls[0]?.[0] as
+    | {
+        integrations?: unknown;
+        attachScreenshot?: unknown;
+        beforeSend(event: SanitizedEvent): SanitizedEvent;
+      }
+    | undefined;
+  if (options === undefined) throw new Error("Expected Sentry initialization options.");
+  expect(options.integrations).toBeTypeOf("function");
+  const integrations = options.integrations as (defaults: { name: string }[]) => unknown;
+  expect(
+    integrations([
+      { name: "SentryMinidump" },
+      { name: "ElectronBreadcrumbs" },
+      { name: "MainProcessSession" },
+    ]),
+  ).toEqual([{ name: "ElectronBreadcrumbs" }, { name: "MainProcessSession" }]);
+  expect(options.attachScreenshot).not.toBe(true);
+  expect(options.beforeSend({ server_name: "private-machine" }).server_name).toBeUndefined();
+});

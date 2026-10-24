@@ -88,17 +88,23 @@ function sanitizeEvent<T extends SanitizableEvent>(event: T): T {
   return event;
 }
 
-export function initializeCrashReporting(): boolean {
+/** The Sentry DSN, only with explicit consent and a non-empty value. */
+function consentedDsn(): string | undefined {
+  if (process.env["SLOPSTOP_SENTRY_CONSENT"] !== "1") return undefined;
   const dsn = process.env["SLOPSTOP_SENTRY_DSN"];
-  const hasConsent = process.env["SLOPSTOP_SENTRY_CONSENT"] === "1";
+  return dsn === undefined || dsn.length === 0 ? undefined : dsn;
+}
 
-  if (!hasConsent || dsn === undefined || dsn.length === 0) {
-    return false;
-  }
+export function initializeCrashReporting(): boolean {
+  const dsn = consentedDsn();
+  if (dsn === undefined) return false;
 
   Sentry.init({
     dsn,
     sendDefaultPii: false,
+    // Native minidumps hold process memory and paths and bypass `beforeSend`, so none is sent.
+    integrations: (defaults) =>
+      defaults.filter((integration) => integration.name !== "SentryMinidump"),
     beforeSend: sanitizeEvent,
   });
 

@@ -1,4 +1,7 @@
 import {
+  CANONICAL_PROJECT_RELEASE_FAILURE_TAG,
+  type CanonicalProjectActivationDiagnosticCode,
+  CanonicalProjectActivationDiagnosticCodeSchema,
   type RegistrationCleanupPart as CleanupPart,
   type HarnessFatalValueKind as FatalValueKind,
   HARNESS_FAILURE_TAG_PATTERN,
@@ -9,10 +12,15 @@ import {
   REGISTRATION_CLEANUP_PARTS,
   REGISTRATION_CLEANUP_TAG,
 } from "@slopstop/protocol";
+import { Schema } from "effect";
 
-/** One failure in a summary: its tag (with the unconfirmed cleanup parts) or its value kind. */
+/**
+ * One failure in a summary: its tag (with the unconfirmed cleanup parts, or a failed stop's
+ * release code) or its value kind.
+ */
 type HarnessFailureEntry =
   | Readonly<{ tag: string; parts?: readonly CleanupPart[] }>
+  | Readonly<{ tag: string; code: CanonicalProjectActivationDiagnosticCode }>
   | Readonly<{ kind: FatalValueKind }>;
 
 /** A failure value as metadata only: no message, path, cause or stack. */
@@ -58,7 +66,7 @@ const MAX_SUMMARIZED_FAILURES = HARNESS_FATAL_SUMMARY_BOUND;
 const IDENTIFIER_TAG = HARNESS_FAILURE_TAG_PATTERN;
 
 /** A field of an object value; any other value has none. */
-function fieldOf(value: unknown, key: "_tag" | "parts"): unknown {
+function fieldOf(value: unknown, key: "_tag" | "parts" | "code"): unknown {
   return typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
 }
 
@@ -76,12 +84,21 @@ function cleanupParts(value: unknown): CleanupPart[] {
   return Array.isArray(parts) ? parts.filter(isCleanupPart) : [];
 }
 
+const isReleaseCode = Schema.is(CanonicalProjectActivationDiagnosticCodeSchema);
+
+/** A failed stop's release code; a code outside the protocol's codes is dropped. */
+function releaseEntry(tag: string, value: unknown): HarnessFailureEntry {
+  const code = fieldOf(value, "code");
+  return isReleaseCode(code) ? { tag, code } : { tag };
+}
+
 function failureEntry(value: unknown): HarnessFailureEntry {
   const tag = identifierTag(value);
   if (tag === undefined) {
     return { kind: valueKind(value) };
   }
-  return tag === REGISTRATION_CLEANUP_TAG ? { tag, parts: cleanupParts(value) } : { tag };
+  if (tag === REGISTRATION_CLEANUP_TAG) return { tag, parts: cleanupParts(value) };
+  return tag === CANONICAL_PROJECT_RELEASE_FAILURE_TAG ? releaseEntry(tag, value) : { tag };
 }
 
 /** An aggregate with failures to flatten; an empty one is summarized as one error. */

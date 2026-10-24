@@ -51,6 +51,11 @@ import {
   unchangedText,
 } from "./canonical-command-fixture.js";
 import {
+  activated as activatedWriter,
+  fixture as writerFixture,
+  times as writerTimes,
+} from "./canonical-command-repository-fixture.js";
+import {
   admissionCases,
   applyCounter,
   conflictCases,
@@ -1558,3 +1563,39 @@ it.each(authorityTimeCases)(
     }
   },
 );
+
+it.each([
+  {
+    name: "its activation instant is not the generation's",
+    sql: `UPDATE writer_fence SET activated_at='${writerTimes[2]}'`,
+  },
+  {
+    name: "its generation belongs to another Project",
+    sql: "UPDATE writer_generations SET project_id='00000000-0000-4000-8000-000000000020'",
+  },
+])("fails the fence check on an incoherent fence: $name", async ({ sql }) => {
+  const f = await writerFixture();
+  try {
+    const repository = await activatedWriter(f, 1);
+    f.mutate(sql);
+    const before = f.snapshot();
+    await expect(repository.verifyFence()).rejects.toMatchObject({
+      code: "WRITER_FENCE_CHECK_FAILED",
+    });
+    expect(f.snapshot()).toBe(before);
+  } finally {
+    await f.dispose();
+  }
+});
+
+it("keeps the fence check answers of coherent fences", async () => {
+  const f = await writerFixture();
+  try {
+    const repository = await activatedWriter(f, 1);
+    expect(await repository.verifyFence()).toEqual({ status: "current" });
+    f.mutate("DELETE FROM writer_fence");
+    expect(await repository.verifyFence()).toEqual({ status: "stale" });
+  } finally {
+    await f.dispose();
+  }
+});

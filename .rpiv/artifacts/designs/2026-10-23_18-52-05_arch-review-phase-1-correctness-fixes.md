@@ -13,7 +13,7 @@ status: in-review
 last_updated: 2026-10-23T20:30:00+0100
 last_updated_by: Pedro Mesquita
 last_updated_note: "Pedro's decisions appended (Q1 a, Q2 a, Q3 a, Q4 a); brief approved from f8987631. Earlier: lean brief written; two slices; Q1-Q4 open."
-content_hash: 5799758d3682f7d55ef19b4857c4506620cc811eac7384793d9e77f4dfed2013
+content_hash: a5f8e982962cd31b868bf7c1554eaa093e9a54d9fcff3fe5ebc70ba3de5c80d9
 ---
 
 # Design: Architecture review Phase 1, quick correctness fixes
@@ -286,6 +286,47 @@ Public seams:
   - Q3 (a): the summary entry for `CanonicalProjectReleaseFailed` gains `code`, from the protocol's activation diagnostic codes. That extends `HarnessFatalLogLineSchema` (#133). The P1-B4 rows marked "(Q3 (a))" and the s2 source paths marked "(Q3 (a))" are part of the contract.
   - Q4 (a): s2 corrects only `model.c4` (P1-B12). The domain-behavior ADR waits for the Phase 6 trigger (Deferred Work).
   - The lane stays normal for both slices. This approval covers document intent only. Build authority and the workspace (a linked worktree per slice) are agreed at `/rpiv:implement`.
+- **2026-10-23, P1-B1 placement change (coordinator decision, option (A), disclosed to Pedro; keeps Q1 (a)):**
+  - Found at the P1-B1 green: the harness builds its Layers synchronously. `launchHarnessProcessRuntime`'s `start` calls `runtime.runSync`, and four `process-bootstrap.test.ts` rows call `runtime.runSync` on `harnessServicesLayer`. Awaiting `reconcileObservers` inside `projectRegistrationLayer` made the Layer async: `AsyncFiberError`, and the runtime never started. Awaiting `runtime.context()` before `start` instead broke 6 existing rows. That attempt was reverted.
+  - Placement now:
+    - The Layer forks the one reconciliation in its scope (`Effect.forkScoped`), so the Layer stays synchronous.
+    - The observer's admission port (`reconciledAdmission`) awaits that fiber's exit before `registry.hasUnsettled()`. Admission still never opens before the reconciliation ends, and the start, Projects and Conversations are never delayed.
+    - A failure, a defect, or an interruption at shutdown ends the fiber. Admission then reads the journal itself, so unsettled rows keep `OBSERVER_CLEANUP_UNCONFIRMED`: never a startup failure, never a silent "settled".
+  - A new installation (no `application.db`) is not reconciled, because it has no journal and reconciling would create its database at start. Found through `process-bootstrap.test.ts` "unsubscribe throws": a stop during an in-flight reconciliation over that row's made-up roots reported the reconciliation's failure.
+  - Added row (coordinator requirement): `keeps the gate answer when the start's reconciliation fails`, in the restart file. An injected absence fault makes the reconciliation broken over a row it would otherwise settle; admission answers `OBSERVER_CLEANUP_UNCONFIRMED` and the row stays unsettled.
+  - Residual: the other observer-unsettled gates (`authorizeQueries` in `repository-trust.ts`) do not wait for the start's reconciliation. During its few milliseconds they may still answer `OBSERVER_CLEANUP_UNCONFIRMED`: a retryable gate answer, never a wrong success.
+- **2026-10-23, s1 fix round 1 (slice-verifier round 1 on `a275c51`: V1 violation, V2-V4 warnings; coordinator decisions, Pedro decided V2):**
+  - **V1:** the start's reconciliation no longer goes through the registry's tracked runner. Before, a stop that overlapped it awaited its rejection, which happens on any unsettled row, probe error, busy or corrupt journal, and reported `RegistrationCleanupUnconfirmed` / `HARNESS_SHUTDOWN_FAILED`. `registry.reconcileAtStart` now runs `reconcileObservers` untracked, and the Layer forks it.
+    - Row: `stops cleanly while the start's reconciliation is still running`.
+    - Red: `dispose()` rejected with `parts: ["registry"]`. Then green.
+  - **V2 (Pedro: "Fazer as duas esperarem"):** both unsettled-observer gates wait for the same one reconciliation before their transaction. They are the observer admission (`hasUnsettled`) and the trust authorization (`admitRepositoryIdentityQueries`, which runs `authorizeQueries`). The wait lives in the registry, which owns the start reconciliation's `Deferred`. This replaces the bootstrap admission adapter, and the earlier residual line above no longer holds.
+    - A failed reconciliation still never fails the start, and the gates then read the journal, so unsettled rows keep `OBSERVER_CLEANUP_UNCONFIRMED`.
+    - Row: `holds trust authorization until the start's reconciliation ends`.
+    - Its first red attempt (holding the absence probe inside the reconciliation's transaction) passed with no gate change. The application database authority admits one write transaction at a time, so the authorization already queued behind it.
+    - The red was observed by holding the reconciliation's entry check before the write permit (the existing `lstatIfPresent` seam): the authorization answered `pending-recovery / OBSERVER_CLEANUP_UNCONFIRMED`. Then green.
+  - **New-installation skip (kept):** with no `application.db`, there is no journal and nothing to reconcile, so the start does not create the database.
+  - **V4 (`degrade-distinguishes-broken`):** a reconciliation that answers anything other than `settled` or `pending-recovery`, or that rejects, logs one warning `{ code: "REGISTRATION_RECONCILIATION_FAILED" }` through the process logger, with no path or message value. The desktop forwards only known upgrade and fatal lines, so this line stays in the harness log. Rows 2 and 3 of the restart file assert the warnings: none for `pending-recovery`, one for a broken reconciliation.
+  - **V3:** `-t "reused selection"` reran green at the fix-round content. The Verification Notes dev-launch startup check is skipped (coordinator: dev mode renders blank, #137). It is a **named residual**.
+  - **Corrections to the 2026-10-23 placement entry:**
+    - "the start, Projects and Conversations are never delayed" is overstated. Their first write on the shared application database authority can queue behind the reconciliation's one write transaction, for milliseconds.
+    - "an interruption at shutdown ends the fiber" is overstated too. The fiber is interrupted at runtime dispose, after the stop program, and its untracked transaction is not cancelled.
+- **2026-10-24, s2 (`p1-s2-correctness-polish`) implementation notes:**
+  - **P1-B7 oracle change (Pedro approved option (a), AskUserQuestion in the coordinator's session; follows D4):**
+    - With the settlement reader, four existing rows of `canonical-command-repository-writer-state.integration.test.ts` (`verifyStaleCases` rows 2-5) are incoherent fences: fence `writer_generation=2` with no generation 2; a fence-only token digest; a fence-only release; a fence-only `released_at`. They no longer answer `stale`; they reject with `WRITER_FENCE_CHECK_FAILED`.
+    - Row 1 (the fence of another Project, so no row for this Project) stays `stale`.
+    - The file joins s2's scope and its candidate run, which is now four integration files.
+  - **P1-B9 count:** the `not implemented` assertions were 4, not 1: three in `canonical-command-fixture.ts` and one in the faults file. All were deleted. The `toBeTypeOf("function")` sites were 12; none was kept. One of them (`workspace-application.test.ts`) only referenced a function that carries `@ts-expect-error` type checks; it is now referenced with `void`.
+  - **P1-B11 oracle gap:** no existing test asserts the build's "metadata disagrees with the manifest" branch. The refactor stays under the agreeing-path oracles only.
+  - **P1-B4:** the protocol owns `CANONICAL_PROJECT_RELEASE_FAILURE_TAG`, and the coordinator's error uses it. The fatal summary echoes a `code` only when it is one of the protocol's activation codes; any other value is dropped, never echoed.
+  - **P1-B6:** the reopen rule is an Effect in `window-reopen.ts`, and `main.ts` runs it at the `activate` edge with the desktop logger.
+  - **CodeScene:** `crash-reporting.ts` was 9.68 at the base (a complex conditional in `initializeCrashReporting`). The consent and DSN check moved to `consentedDsn`, which brings it to 10.
+- **2026-10-24, s2 candidate review (slice-verifier, candidate `e3baa87`): passed, no violations. Coordinator: no code fix round.**
+  - **P1-B7 Expected red correction:** at the base, not every incoherent row answered `current`, so the Expected red and the Verification Notes overstate it. The generation-belongs-to-another-Project row and writer-state `verifyStaleCases` rows 2-5 answered `stale`; the TDD log records it. Either way, the base gave an answer where the settlement reader now rejects.
+  - **Reader parameter:** `readCanonicalWriterFence` widened to `Pick<LocalLibsqlTransaction, "execute">`, not `Pick<LocalLibsqlClient, "execute">` as the slice text says. The two are type-compatible for this use.
+  - **P1-B9 count correction:** the 12 deleted `toBeTypeOf("function")` sites are 9 typeof-throw pairs, 2 `Reflect.get` guards and 1 `void` reference. The TDD log's "11 pairs" is wrong; the count above (12 sites) holds.
+  - **Commits:** the slice is two commits (`24c1f94` and the test-only `e3baa87`); the coordinator squashes them at integration.
+  - **Known test limit:** the fatal summary unit test builds the release failure as a plain `{ _tag, code }` object, not the `CanonicalProjectReleaseFailed` class; the two join through those field names only.
+  - **Cross-slice V1 (warning):** main's `c11ac74` and `262c5e5` touch files s2 edits (`canonical-command-repository-fixture.ts`, `project-storage-store.test.ts`), and s2's P1-B7 rows newly import that fixture. No run covers the combined result. The coordinator runs the four D7 integration files, `check:duplicates` and `pnpm check` on the squashed tree, then `check:deep` (full `test:integration`) before the push.
 
 ## References
 

@@ -45,8 +45,6 @@ export const lifecycleSettlementDependencies = {
 
 export function factory(dependencies: repositories.CanonicalCommandRepositoryFactoryDependencies) {
   const create = repositories.createCanonicalCommandRepositoryFactory;
-  expect(create).toBeTypeOf("function");
-  if (typeof create !== "function") throw new Error("Canonical repository factory is missing.");
   return create(dependencies);
 }
 

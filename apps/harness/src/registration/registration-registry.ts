@@ -43,6 +43,11 @@ export interface RegistrationRegistry
     VersionObserverJournal,
     ObserverAdmissionPort,
     ObserverRecoveryPort {
+  /**
+   * The harness start's one reconciliation of observations a killed harness left. It is not
+   * tracked, so a stop never waits for it or reports its outcome.
+   */
+  reconcileAtStart: ObserverRecoveryPort["reconcileObservers"];
   prepareExecutable(
     request: ExecutableSelectionRequest,
   ): Promise<
@@ -85,6 +90,7 @@ export function createRegistrationRegistry(
   };
   const run: RegistryRunner = (operation) =>
     track(() => withRegistrationDatabase(options, operation));
+  const untracked: RegistryRunner = (operation) => withRegistrationDatabase(options, operation);
   const prepareAndRun: PreparedRegistryRunner = (prepare, operation) =>
     track(async () => {
       await withRegistrationDatabase(options, async () => undefined);
@@ -93,10 +99,31 @@ export function createRegistrationRegistry(
         withRegistrationDatabase(options, next, "existing-only"),
       );
     });
+  // The harness start's one reconciliation: both unsettled-observer gates wait for its end.
+  let startReconciled: Deferred.Deferred<void> | undefined;
+  // Without a start reconciliation the gate runs at once, so a stop still finds it tracked.
+  const afterStartReconciliation = <Value>(gate: () => Promise<Value>): Promise<Value> =>
+    startReconciled === undefined
+      ? gate()
+      : Effect.runPromise(Deferred.await(startReconciled)).then(gate);
+  const trust = createRepositoryTrustOwner(run, prepareAndRun, repositorySelection);
+  const observers = createRegistryObserverJournal(run);
   return {
     ...createIdentityQueryConsentAuthority(run),
-    ...createRepositoryTrustOwner(run, prepareAndRun, repositorySelection),
-    ...createRegistryObserverJournal(run),
+    ...trust,
+    ...observers,
+    admitRepositoryIdentityQueries: (input, port) =>
+      afterStartReconciliation(() => trust.admitRepositoryIdentityQueries(input, port)),
+    hasUnsettled: () => afterStartReconciliation(observers.hasUnsettled),
+    reconcileAtStart: async (absence) => {
+      const ended = Deferred.makeUnsafe<void>();
+      startReconciled = ended;
+      try {
+        return await createRegistryObserverJournal(untracked).reconcileObservers(absence);
+      } finally {
+        Deferred.doneUnsafe(ended, Effect.void);
+      }
+    },
     prepareExecutable: async (request) => {
       try {
         return await run(async (client) => {
@@ -119,7 +146,10 @@ export function createRegistrationRegistry(
                 ],
               });
             } else if (existing.executablePath !== request.executablePath) {
-              throw new Error("Registration selection identity conflicts.");
+              throw new RegistryFault({
+                status: "rejected",
+                code: "REGISTRATION_IDEMPOTENCY_CONFLICT",
+              });
             }
             return { status: "prepared" as const, selectionId: request.selectionId };
           });

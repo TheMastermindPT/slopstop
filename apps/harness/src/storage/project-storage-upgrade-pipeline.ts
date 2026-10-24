@@ -2,9 +2,9 @@ import { projectUpgradeDiagnostics } from "@slopstop/protocol";
 import { Data, Effect, Result } from "effect";
 import { projectStorageCreateRequestFingerprintInput } from "./project-storage-create-request.js";
 import {
-  openingReleaseFailedMessage,
   ProjectStorageApplicationClientInitializationError,
   ProjectStorageBrokenError,
+  ProjectStorageOpeningReleaseFailedError,
   ProjectStorageUnavailableError,
 } from "./project-storage-errors.js";
 import {
@@ -176,9 +176,7 @@ async function releaseOpening(session: Readonly<{ close(): Promise<void> }>): Pr
   try {
     await session.close();
   } catch (error) {
-    throw new ProjectStorageBrokenError(openingReleaseFailedMessage, {
-      cause: error,
-    });
+    throw new ProjectStorageOpeningReleaseFailedError(error);
   }
 }
 

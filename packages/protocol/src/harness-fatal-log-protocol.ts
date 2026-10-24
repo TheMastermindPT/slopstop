@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { CanonicalProjectActivationDiagnosticCodeSchema } from "./canonical-project-protocol.js";
 import { EpochMillisecondsSchema } from "./project-upgrade-protocol.js";
 
 /** Fatal summaries stay bounded: failures past this many are only counted. */
@@ -9,6 +10,9 @@ export const HARNESS_FAILURE_TAG_PATTERN = /^[A-Za-z][A-Za-z0-9]{0,63}$/;
 
 /** The tag of the failure naming the unconfirmed registration cleanup parts. */
 export const REGISTRATION_CLEANUP_TAG = "RegistrationCleanupUnconfirmed";
+
+/** The tag of the failure naming the activation release code of a failed stop. */
+export const CANONICAL_PROJECT_RELEASE_FAILURE_TAG = "CanonicalProjectReleaseFailed";
 
 /** The registration parts whose cleanup at stop can be unconfirmed, in reporting order. */
 export const REGISTRATION_CLEANUP_PARTS = ["registry", "observer", "listing"] as const;
@@ -45,6 +49,10 @@ const failureEntrySchema = Schema.Union([
     parts: Schema.Array(Schema.Literals(REGISTRATION_CLEANUP_PARTS)).check(
       Schema.isMaxLength(REGISTRATION_CLEANUP_PARTS.length),
     ),
+  }),
+  Schema.Struct({
+    tag: Schema.Literal(CANONICAL_PROJECT_RELEASE_FAILURE_TAG),
+    code: CanonicalProjectActivationDiagnosticCodeSchema,
   }),
   Schema.Struct({ kind: ValueKindSchema }),
 ]);

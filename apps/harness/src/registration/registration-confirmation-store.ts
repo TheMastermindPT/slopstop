@@ -10,7 +10,10 @@ import {
 } from "@slopstop/protocol";
 import { Result, Schema } from "effect";
 import { receiptGenerationResolves } from "../storage/application-database-migration.js";
-import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
+import type {
+  LocalLibsqlResultSet,
+  LocalLibsqlTransaction,
+} from "../storage/local-libsql-worker-client.js";
 import { upgradeChainFor } from "../storage/project-storage-upgrade-node-adapter.js";
 import { PhysicalDirectoryKeySchema, samePhysicalIdentity } from "./physical-identity.js";
 import {
@@ -293,7 +296,7 @@ function receiptRowAgrees(
   input: Readonly<{
     receipt: RegisteredProject;
     row: (typeof publicationRowsSchema.Type)[number];
-    reservation: Reservation;
+    reservation: PublishedReservation;
   }>,
 ): boolean {
   const { receipt, row, reservation } = input;
@@ -307,22 +310,64 @@ function receiptRowAgrees(
   ].every(Boolean);
 }
 
+/** The reservation fields a published receipt is checked against. */
+type PublishedReservation = Readonly<{
+  reservationId: string;
+  projectId: string;
+  repositoryBindingId: string;
+  workspaceId: string;
+  createRequestId: string;
+  proposal: Readonly<{ proposalId: string }>;
+}>;
+
+/** A failed SQL read inside the receipt check; it keeps the read's own failure. */
+class ReceiptReadFailed extends Error {
+  constructor(readonly failure: unknown) {
+    super("A receipt check read failed.");
+    this.name = "ReceiptReadFailed";
+  }
+}
+
+function markedReads(
+  transaction: Pick<LocalLibsqlTransaction, "execute">,
+): Pick<LocalLibsqlTransaction, "execute"> {
+  return {
+    execute: (statement, args) =>
+      transaction.execute(statement, args).catch((failure: unknown) => {
+        throw new ReceiptReadFailed(failure);
+      }),
+  };
+}
+
+/** The decoded receipt of a publication row that agrees with it; it throws when they disagree. */
+function agreeingReceipt(result: LocalLibsqlResultSet, reservation: PublishedReservation) {
+  const row = decodeStrict(publicationRowsSchema, registryRows(result))[0];
+  if (row === undefined) return undefined;
+  const receipt = decodeStrict(RegisteredProjectSchema, JSON.parse(row.resultJson));
+  if (!receiptRowAgrees({ receipt, row, reservation })) throw corrupt();
+  return receipt;
+}
+
+/**
+ * The published receipt of `reservation`, if any. A receipt that does not decode or agree is
+ * corrupt; a failed read keeps its own failure (busy, or broken).
+ */
 export async function readPublication(
-  transaction: LocalLibsqlTransaction,
-  reservation: Reservation,
+  transaction: Pick<LocalLibsqlTransaction, "execute">,
+  reservation: PublishedReservation,
 ) {
   const result = await transaction.execute({
     sql: "SELECT request_id AS requestId, result_json AS resultJson, result_fingerprint AS fingerprint FROM registration_publications WHERE reservation_id = ?",
     args: [reservation.reservationId],
   });
   try {
-    const row = decodeStrict(publicationRowsSchema, registryRows(result))[0];
-    if (row === undefined) return undefined;
-    const receipt = decodeStrict(RegisteredProjectSchema, JSON.parse(row.resultJson));
-    if (!receiptRowAgrees({ receipt, row, reservation })) throw corrupt();
-    if (!(await receiptGenerationAgrees(transaction, reservation, receipt))) throw corrupt();
+    const receipt = agreeingReceipt(result, reservation);
+    if (receipt === undefined) return undefined;
+    const reads = markedReads(transaction);
+    if (!(await receiptGenerationAgrees(reads, reservation, receipt))) throw corrupt();
     return receipt;
-  } catch {
+  } catch (error) {
+    if (error instanceof ReceiptReadFailed) throw error.failure;
     throw corrupt();
   }
 }
@@ -333,8 +378,8 @@ export async function readPublication(
  * request, the chain ending at the registration's active generation.
  */
 async function receiptGenerationAgrees(
-  transaction: LocalLibsqlTransaction,
-  reservation: Reservation,
+  transaction: Pick<LocalLibsqlTransaction, "execute">,
+  reservation: PublishedReservation,
   receipt: RegisteredProject,
 ): Promise<boolean> {
   const generation = await transaction.execute({

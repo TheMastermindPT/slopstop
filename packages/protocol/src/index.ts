@@ -74,6 +74,7 @@ export type {
   RegistrationCleanupPart,
 } from "./harness-fatal-log-protocol.js";
 export {
+  CANONICAL_PROJECT_RELEASE_FAILURE_TAG,
   HARNESS_FAILURE_TAG_PATTERN,
   HARNESS_FATAL_SUMMARY_BOUND,
   HARNESS_FATAL_VALUE_KINDS,

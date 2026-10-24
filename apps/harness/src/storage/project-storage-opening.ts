@@ -262,7 +262,7 @@ export function expectedOpeningMetadata(
       };
 }
 
-function openingMetadataAgrees(
+export function openingMetadataAgrees(
   actual: OpeningDatabaseMetadata,
   expected: OpeningDatabaseMetadata,
 ): boolean {

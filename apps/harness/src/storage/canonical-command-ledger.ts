@@ -90,7 +90,14 @@ export async function currentCanonicalSettlementFence(
   );
 }
 
-export async function readCanonicalWriterFence(tx: LocalLibsqlTransaction, projectId: ProjectId) {
+/**
+ * The Project's Writer fence, joined with its generation; one that contradicts its generation
+ * throws. Read inside a transaction or through a client.
+ */
+export async function readCanonicalWriterFence(
+  tx: Pick<LocalLibsqlTransaction, "execute">,
+  projectId: ProjectId,
+) {
   const rows = decodeStrict(
     settlementFenceRowsSchema,
     canonicalResultObjects(

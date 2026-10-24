@@ -651,8 +651,6 @@ function retainedSessionFixture() {
 
 async function acquireSession(owner: ReturnType<typeof createProjectStorageOwner>) {
   const acquire = owner.acquireActivation;
-  expect(acquire).toBeTypeOf("function");
-  if (typeof acquire !== "function") throw new Error("Activation port is missing.");
   const outcome = await acquire({ projectId: request.projectId });
   expect(outcome).toMatchObject({
     status: "ready",
@@ -1221,4 +1219,52 @@ it("answers broken when the eligibility opening cannot be released: owner", asyn
     message: "Project Storage opening release failed.",
   });
   await owner.stop();
+});
+
+/** What the stop reports when it begins while an open is still inspecting its Project. */
+async function stopDuringOpening(inspect: () => Promise<ProjectStorageOpenEvidence>) {
+  const { dependencies } = lifecycleDependencies();
+  const entered = deferred();
+  const released = deferred();
+  const owner = createProjectStorageOwner({
+    ...dependencies,
+    opening: {
+      inspect: async () => {
+        entered.resolve();
+        await released.promise;
+        return inspect();
+      },
+    },
+  });
+  const opening = owner.open({ projectId: request.projectId }).catch(() => undefined);
+  await entered.promise;
+  const stopping = owner.stop().then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  released.resolve();
+  await opening;
+  return stopping;
+}
+
+it("unwraps an opening release failure at shutdown by type", async () => {
+  const releaseFailure = new Error("Injected opening release failure.");
+  const typed = await stopDuringOpening(async () => ({
+    ...openingEvidence("current"),
+    release: async () => {
+      throw releaseFailure;
+    },
+  }));
+  expect(typed).toBeInstanceOf(AggregateError);
+  expect((typed as AggregateError).errors).toEqual([releaseFailure]);
+
+  // The same message text on a plain broken error is not that failure: it is kept whole.
+  const imitation = new ProjectStorageBrokenError("Project Storage opening release failed.", {
+    cause: new Error("inner"),
+  });
+  const plain = await stopDuringOpening(async () => {
+    throw imitation;
+  });
+  expect(plain).toBeInstanceOf(AggregateError);
+  expect((plain as AggregateError).errors).toEqual([imitation]);
 });

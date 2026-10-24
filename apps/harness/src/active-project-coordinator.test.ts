@@ -996,3 +996,30 @@ it("reconciles an uncertain save through the injected opener (CNV-B29)", async (
   expect(openReconciliationClient).toHaveBeenCalledExactlyOnceWith("A/slopstop.db");
   await owner.stop();
 });
+
+it.each([
+  {
+    code: "WRITER_FENCE_STALE",
+    fail: (f: ReturnType<typeof fixture>) =>
+      f.repository.releaseFence.mockResolvedValue({ status: "stale" }),
+    attempts: (f: ReturnType<typeof fixture>) => f.repository.releaseFence.mock.calls.length,
+  },
+  {
+    code: "PROJECT_STORAGE_RELEASE_FAILED",
+    fail: (f: ReturnType<typeof fixture>) => f.faults.set("storage", new Error("close failed")),
+    attempts: (f: ReturnType<typeof fixture>) =>
+      f.calls.filter((call) => call === "storage").length,
+  },
+] as const)("fails stop with the release code: $code", async ({ code, fail, attempts }) => {
+  const f = fixture();
+  await f.owner.activate(request);
+  fail(f);
+  const failure = await f.owner.stop().then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  expect(failure).toMatchObject({ _tag: "CanonicalProjectReleaseFailed", code });
+  const released = attempts(f);
+  await f.owner.stop().catch(() => undefined);
+  expect(attempts(f)).toBe(released + 1);
+});

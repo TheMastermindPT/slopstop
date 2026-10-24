@@ -26,8 +26,6 @@ void (async () => {
 
 it("holds one native byte-range lease across independent descriptors", async () => {
   const create = leases.createNodeCanonicalWriterLeaseFactory;
-  expect(create).toBeTypeOf("function");
-  if (typeof create !== "function") throw new Error("Native lease factory is missing.");
   const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-native-lease-"));
   const leasePath = path.join(root, ".slopstop-writer.lock");
   const nativeEntry = createRequire(import.meta.url).resolve("fs-native-extensions");

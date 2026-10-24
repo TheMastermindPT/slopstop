@@ -15,6 +15,7 @@ import type {
   ProjectUpgradeResult,
 } from "@slopstop/protocol";
 import {
+  CANONICAL_PROJECT_RELEASE_FAILURE_TAG,
   type CanonicalProjectActivationDiagnosticCode,
   CanonicalProjectActivationResultSchema,
   CanonicalProjectCommandResultSchema,
@@ -23,7 +24,7 @@ import {
   type ProjectId,
   projectAvailabilityMessages,
 } from "@slopstop/protocol";
-import { Deferred, Effect } from "effect";
+import { Data, Deferred, Effect } from "effect";
 import {
   type ConversationPorts,
   readConversation,
@@ -153,6 +154,14 @@ type ReleaseResult =
       ownership: Ownership;
       code: CanonicalProjectActivationDiagnosticCode;
     }>;
+
+/** A stop whose activation release failed; `code` names the release step that failed. */
+class CanonicalProjectReleaseFailed extends Data.TaggedError(
+  CANONICAL_PROJECT_RELEASE_FAILURE_TAG,
+)<{
+  readonly message: string;
+  readonly code: CanonicalProjectActivationDiagnosticCode;
+}> {}
 
 function activationFailure(
   request: CanonicalProjectActivationRequest,
@@ -662,7 +671,11 @@ export function createActiveProjectCoordinator(
       return;
     }
     const result = await release(ownedActivation(current));
-    if (result.status === "failed") throw new Error("Canonical Project activation release failed.");
+    if (result.status === "failed")
+      throw new CanonicalProjectReleaseFailed({
+        message: "Canonical Project activation release failed.",
+        code: result.code,
+      });
     state = { status: "stopped" };
   };
   // A failed release leaves stop retryable; a successful stop stays the shared answer.

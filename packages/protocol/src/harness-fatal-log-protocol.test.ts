@@ -21,6 +21,12 @@ const sixteenEntries = Array.from({ length: 16 }, (_, index) => ({ tag: `Failure
 const acceptedLines = [
   { name: "shutdown with a cleanup entry and a value kind", line: shutdownLine() },
   {
+    name: "shutdown with a release failure and its code",
+    line: shutdownLine({
+      failures: [{ tag: "CanonicalProjectReleaseFailed", code: "WRITER_FENCE_STALE" }],
+    }),
+  },
+  {
     name: "runtime start with 16 entries and 3 omitted",
     line: fatalLine("HARNESS_RUNTIME_START_FAILED", "Harness runtime failed to start.", {
       failures: sixteenEntries,
@@ -95,6 +101,14 @@ const textCarryingLines = [
   {
     name: "parts that are not an array",
     line: withEntry({ tag: "RegistrationCleanupUnconfirmed", parts: "registry" }),
+  },
+  {
+    name: "an unknown release code",
+    line: withEntry({ tag: "CanonicalProjectReleaseFailed", code: "C:\\private" }),
+  },
+  {
+    name: "a code on another tag",
+    line: withEntry({ tag: "Failure", code: "WRITER_FENCE_STALE" }),
   },
   { name: "a non-string tag", line: withEntry({ tag: 42 }) },
   { name: "an unknown value kind", line: withEntry({ kind: "C:\\private" }) },

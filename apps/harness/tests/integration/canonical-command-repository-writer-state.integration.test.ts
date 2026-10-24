@@ -173,8 +173,21 @@ it("verifies and releases only the current durable Writer fence", async () => {
 }, 30_000);
 
 async function verifyStaleCases(): Promise<void> {
+  // A fence of another Project: no fence row for this Project, so stale.
+  for (const sql of ["UPDATE writer_fence SET project_id='00000000-0000-4000-8000-000000000020'"]) {
+    const f = await fixture();
+    try {
+      const repository = await activated(f, 1);
+      f.mutate(sql);
+      const before = f.snapshot();
+      expect(await repository.verifyFence()).toEqual({ status: "stale" });
+      expect(f.snapshot()).toBe(before);
+    } finally {
+      await f.dispose();
+    }
+  }
+  // A fence row that contradicts its generation row is a broken invariant, not stale (D4).
   for (const sql of [
-    "UPDATE writer_fence SET project_id='00000000-0000-4000-8000-000000000020'",
     "UPDATE writer_fence SET writer_generation=2",
     `UPDATE writer_fence SET token_digest='${"d".repeat(64)}'`,
     `UPDATE writer_fence SET state='released', released_at='${times[1]}'`,
@@ -185,7 +198,9 @@ async function verifyStaleCases(): Promise<void> {
       const repository = await activated(f, 1);
       f.mutate(sql);
       const before = f.snapshot();
-      expect(await repository.verifyFence()).toEqual({ status: "stale" });
+      await expect(repository.verifyFence(), sql).rejects.toMatchObject({
+        code: "WRITER_FENCE_CHECK_FAILED",
+      });
       expect(f.snapshot()).toBe(before);
     } finally {
       await f.dispose();

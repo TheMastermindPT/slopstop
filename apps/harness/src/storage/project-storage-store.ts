@@ -22,9 +22,9 @@ import type {
 } from "../project-storage-application.js";
 import { projectStorageCreateRequestFingerprintInput } from "./project-storage-create-request.js";
 import {
-  openingReleaseFailedMessage,
   ProjectStorageApplicationClientInitializationError,
   ProjectStorageBrokenError,
+  ProjectStorageOpeningReleaseFailedError,
   ProjectStorageUnavailableError,
 } from "./project-storage-errors.js";
 import {
@@ -143,9 +143,7 @@ type ProjectStorageOperationResult =
   | ProjectStorageCloseResult;
 
 function shutdownOperationFailure(error: unknown): unknown {
-  return error instanceof ProjectStorageBrokenError &&
-    error.message === openingReleaseFailedMessage &&
-    error.cause !== undefined
+  return error instanceof ProjectStorageOpeningReleaseFailedError && error.cause !== undefined
     ? error.cause
     : error;
 }
@@ -699,9 +697,7 @@ export function createProjectStorageOwner(
               try {
                 await classified.session.close();
               } catch (error) {
-                throw new ProjectStorageBrokenError(openingReleaseFailedMessage, {
-                  cause: error,
-                });
+                throw new ProjectStorageOpeningReleaseFailedError(error);
               }
             }
             lifecycle.assertRunning();

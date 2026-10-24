@@ -363,8 +363,6 @@ async function unexpectedSettlement(): Promise<never> {
 
 it("refuses stale fences and preserves native close failure", async () => {
   const create = writers.createCanonicalProjectWriter;
-  expect(create).toBeTypeOf("function");
-  if (typeof create !== "function") throw new Error("Writer factory is missing.");
   for (const scenario of [
     {
       status: "stale",
@@ -418,8 +416,6 @@ it("refuses stale fences and preserves native close failure", async () => {
 
 it("retains failed release ownership and resumes cleanup on stop retry", async () => {
   const create = writers.createCanonicalProjectWriter;
-  expect(create).toBeTypeOf("function");
-  if (typeof create !== "function") throw new Error("Writer factory is missing.");
   for (const stage of ["fence", "repository", "lease"] as const) {
     const calls: string[] = [];
     let fail = true;

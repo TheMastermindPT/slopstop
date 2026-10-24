@@ -171,3 +171,27 @@ it.each([
   expect(serialized).not.toContain("private");
   expect(serialized).not.toContain("is unconfirmed");
 });
+
+/** The shape `CanonicalProjectReleaseFailed` has; the summary reads only `_tag` and `code`. */
+function releaseFailed(code: string) {
+  return {
+    _tag: "CanonicalProjectReleaseFailed",
+    name: "CanonicalProjectReleaseFailed",
+    message: P,
+    code,
+  };
+}
+
+it("summarizes a release failure with its code", () => {
+  expect(summarizeHarnessFailure(releaseFailed("WRITER_FENCE_STALE"))).toEqual({
+    failures: [{ tag: "CanonicalProjectReleaseFailed", code: "WRITER_FENCE_STALE" }],
+    omittedFailures: 0,
+  });
+  // A code outside the protocol's activation codes is dropped, never echoed.
+  const unknown = summarizeHarnessFailure(releaseFailed(P));
+  expect(unknown).toEqual({
+    failures: [{ tag: "CanonicalProjectReleaseFailed" }],
+    omittedFailures: 0,
+  });
+  expect(JSON.stringify(unknown)).not.toContain("private");
+});

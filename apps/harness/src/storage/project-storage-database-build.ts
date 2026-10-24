@@ -28,6 +28,7 @@ import {
   normalizeStorageError,
   type ProjectStorageGenerationPaths,
 } from "./project-storage-node-support.js";
+import { expectedOpeningMetadata, openingMetadataAgrees } from "./project-storage-opening.js";
 import {
   type ManifestIdentityAuthority,
   manifestIdentityMatches,
@@ -119,23 +120,7 @@ async function verifyOwnedDatabase(
     await requireForeignKeys(client);
     const migrations = await loadMigrations(spec);
     const metadata = await requireCurrentMetadata(client, spec, migrations);
-    const expectedMetadata =
-      spec.databaseKind === "canonical"
-        ? {
-            formatVersion: manifest.canonical.formatVersion,
-            schemaVersion: manifest.canonical.schemaVersion,
-            lastMigrationId: manifest.canonical.lastMigrationId,
-          }
-        : {
-            formatVersion: manifest.runtime.adapterFormatVersion,
-            schemaVersion: manifest.runtime.adapterSchemaVersion,
-            lastMigrationId: manifest.runtime.adapterLastMigrationId,
-          };
-    if (
-      metadata.formatVersion !== expectedMetadata.formatVersion ||
-      metadata.schemaVersion !== expectedMetadata.schemaVersion ||
-      metadata.lastMigrationId !== expectedMetadata.lastMigrationId
-    ) {
+    if (!openingMetadataAgrees(metadata, expectedOpeningMetadata(spec.databaseKind, manifest))) {
       throw new ProjectStorageBrokenError("Database metadata disagrees with the manifest.");
     }
     if (!(await databaseIdentityMatches(client, spec, creation))) {

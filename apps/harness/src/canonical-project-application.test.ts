@@ -375,8 +375,6 @@ async function unexpectedSwitch(): Promise<never> {
 
 it("validates canonical owner results without swallowing owner failures", async () => {
   const create = applications.createCanonicalProjectApplication;
-  expect(create).toBeTypeOf("function");
-  if (typeof create !== "function") throw new Error("Canonical application factory is missing.");
   const owner = {
     activate: vi.fn(async () => activation),
     switchProject: unexpectedSwitch,
@@ -439,9 +437,6 @@ function switchApplication(value: CanonicalProjectSwitchResult) {
     stop: async () => undefined,
   };
   const app = applications.createCanonicalProjectApplication(owner);
-  const method: unknown = Reflect.get(app, "switchProject");
-  expect(method, "Canonical application switch capability").toBeTypeOf("function");
-  if (typeof method !== "function") throw new Error("Canonical application switch is missing.");
   return { app, owner };
 }
 

@@ -53,6 +53,7 @@ import {
 } from "./project-storage-package-smoke.js";
 import { runRegistrationPackageSmoke } from "./registration-package-smoke.js";
 import { configureSessionSecurity, lockNavigation } from "./security.js";
+import { reopenWindowWhenNoneIsOpen } from "./window-reopen.js";
 import {
   capabilityForIntent,
   type WorkspaceBridgeClient,
@@ -427,7 +428,7 @@ async function bootstrap(): Promise<void> {
   configureSessionSecurity();
 
   // The one read of the services builds every owner, after the logs and userData paths are set.
-  const { harness, projectEntry, workspace } = runtime.runSync(readDesktopServices);
+  const { logger, harness, projectEntry, workspace } = runtime.runSync(readDesktopServices);
 
   const supervisor = harness.owner;
   registerProjectEntryIpc(projectEntry.owner, desktopShutdown);
@@ -442,7 +443,12 @@ async function bootstrap(): Promise<void> {
   smokeWindow = await createActiveWindow();
   runPackageSmokeIfReady();
 
-  app.on("activate", reopenWindowWhenNoneIsOpen);
+  const reopen = reopenWindowWhenNoneIsOpen({
+    windowCount: () => BrowserWindow.getAllWindows().length,
+    create: createActiveWindow,
+    logger,
+  });
+  app.on("activate", () => void Effect.runPromise(reopen));
 }
 
 /** In package-smoke mode, runs the proof once the harness first reports ready. */
@@ -453,12 +459,6 @@ function awaitSmokeHarnessReady(supervisor: DesktopSupervisor): void {
     smokeHarnessReady = true;
     runPackageSmokeIfReady();
   });
-}
-
-function reopenWindowWhenNoneIsOpen(): void {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    void createActiveWindow();
-  }
 }
 
 app.on("before-quit", (event) => {
