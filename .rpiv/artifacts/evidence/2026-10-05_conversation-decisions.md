@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: cc56c96a02eb5f7b9adcf174867765adc9dc5975c3c985057c25c448a12d5263
+content_hash: 756024a33da97d7fb66b151b1e3cc4663fdeb29545493a771aa46c1cf915158c
 ---
 
 # Conversation — Human Decisions
@@ -2111,3 +2111,19 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Writer-state diagnosis** (`evidence/2026-10-23_writer-state-hang.md`): test-only slowness under disk contention, not a product hang. Each row runs 10-17 fixtures, and each fixture seeds SQLite with about 40 fsync-bound autocommits (~320 ms). Of 601 worker requests per run, none was in flight for more than 2 s, and the slowdown under parallel fsync load is linear. Limit: the 30 s timeout was not reproduced.
 - **Coordinator decision (test-only, assertions unchanged; disclosed):** F1, seed one template per file and `copyFile` per fixture (copy p50 21 ms; precedent `storage-root-template.ts`), on main. F2 (`it.each` split) is not now. Phase 1 resumes afterwards. The push waits for the user's free machine.
 - **F1 committed on main:** `c11ac74` (fixture template), with the diagnosis docs in `a41dd87`. On an idle machine, `pnpm check` passed 3396/3396. The writer-state rows went from 7.0 s and 6.2 s to 2.1 s and 0.5 s; the faults file from 41 s to 4.6 s.
+- **Push `c3898ef..e55594d` succeeded**, with `check:deep` green alone. CI run 40021560592: **the Windows job is green**, for the first time since 2026-09-04. Ubuntu is down to 1 file, `registration-identity-query-lifecycle.integration.test.ts` (about 9 rows: `unavailable` instead of `prepared`, probably the Windows-only registration preparation). The cause is to be checked.
+- **Ubuntu cause:** `registration-identity-query-lifecycle.integration.test.ts` has no platform guard. The product answers `IDENTITY_CAPABILITY_UNAVAILABLE` off win32-x64 by design (`repository-identity-observer.ts:20-21`), and every sibling is guarded. It was hidden before by C1. **Coordinator decision:** add `runIf(win32 && x64)` to its three `it.each` (test-only, no assertion change). It ships with the next push.
+- **Phase 1 s1:** the P1-B2 and P1-B3 reds and greens are done, and the P1-B1 red was observed. The P1-B1 green failed by design: the harness builds its Layers synchronously (`runSync`), so awaiting the reconciliation in the Layer raises `AsyncFiberError`. **Coordinator decision (option A, disclosed):** fork the single reconciliation in the Layer scope, and have admission join it before `hasUnsettled`. Admission still never opens before the reconciliation, and startup is never delayed or failed (Q1 a). A failing reconciliation keeps today's gate answer. This is recorded as an appended brief entry.
+- **Phase 1 s1 candidate `a275c51`:** `pnpm check` 3400/3400, the restart file 3/3, CodeScene 10. Round 1 (slice-verifier) FAILED: V1 the stop drain awaits the tracked start reconciliation, so an unsettleable row makes the stop report `HARNESS_SHUTDOWN_FAILED`; V2 the placement narrowed the guarantee to the observer gate (trust authorization does not wait) and skips new installations; V3 an evidence gap; V4 non-settled outcomes emit no diagnostic.
+- **User decision on V2: "Fazer as duas esperarem".** Trust authorization (`authorizeQueries`) also joins the one reconciliation. The new-installation skip stays and is stated in the brief.
+- **Coordinator triage:** fix V1 (untracked start reconciliation, plus a dispose-without-request row), V4 (one code-only warn line) and V3 (rerun the filtered row; the dev launch is a named residual because dev mode renders blank, #137). The overstated phrases are corrected in an appended note. New commits, no round 2.
+- **s1 fix round:** V1 is green (an untracked `reconcileAtStart`). For V2 the expected red was not observed, because the authority's single-writer permit already queues trust authorization behind the reconciliation, except in a short pre-permit window. **Coordinator decision:** implement the explicit join anyway (the user's "both wait"). The red goes through an existing seam if one can hold the pre-permit step; otherwise the row is a pin with a disclosed TDD exception.
+- **s1 fix round `9838d7f`:** V1 red, then green. V2: the registry owns the start reconciliation's Deferred and both gates wait; the red was observed by holding `lstatIfPresent` before the write permit. V4 `REGISTRATION_RECONCILIATION_FAILED` warn: red, then green. V3: the filtered row is green; the dev launch is a residual (#137). Restart file 5/5; `pnpm check` 3400/3400; CodeScene 10. s1 is the predecessor for s2. Acceptance is combined at the end.
+- **Phase 1 s2, P1-B7 oracle change (user decision a):** `verifyFence` uses the settlement coherence rule. The 4 existing writer-state rows where the fence contradicts its generation change from `stale` to `WRITER_FENCE_CHECK_FAILED`; the project_id row stays stale. The file joins the s2 scope.
+- **Phase 1 s2 candidate `e3baa87`** (+ polish notes `94c6366`): round 1 PASSED, no violations. One cross-slice warning: the combined tree with main's `c11ac74` and `262c5e5` is not run yet. Needs-run items are covered at integration.
+- **User decision: "Aceito, junta e faz push".** Review Phase 1 (s1 `9838d7f`, s2 `e3baa87`) is accepted. Named residuals:
+  - Q2, a kill before the child row is recorded;
+  - the dev-launch startup check (#137);
+  - the s1 fix delta had no round 2;
+  - one red was observed through a pre-permit seam.
+  Squash onto main; on the combined tree, run the 4 D7 integration files, `check:duplicates` and `pnpm check`; then push with `check:deep` and check the CI.
