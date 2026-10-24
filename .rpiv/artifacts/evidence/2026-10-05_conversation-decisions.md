@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: b5bf6f9976bde6be23561ba9101b4f8a60ba8305e7a468d4cc5b362b7d54ef5a
+content_hash: 62ca5e7a7433501094afdaa21c487f91c8285c1daa503b2deb398226b0bb118c
 ---
 
 # Conversation — Human Decisions
@@ -2131,3 +2131,6 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Retry with trace failed again** (now in the coverage stage): the same row, "Activation A missing". Twice in full suites, passing alone. **This points at Phase 1** (it changed the registration start). Diagnosis is assigned; the trace is under `%TEMP%/slopstop-trace-94/`. Main is unpushed at `4dbd834`.
 - **Selection-row diagnosis:** caused by s1 P1-B1. Every harness start now runs one `application.db` write transaction. The row starts two runtimes on the same root, with separate authorities and `timeout: 0`, so the host's activation gets a retryable `REGISTRY_BUSY` while the reopened runtime reconciles; this happens only under full-suite load. It was reproduced deterministically with a held transaction. There is no product impact: the single-instance lock means one harness per userData. **Coordinator decision:** a test-only reorder (start `reopened` after the host's switch); also check sibling tests for the same race.
 - **Selection fix `0e0d539`** (test-only, assertions unchanged): the switch row and the read-only row (same race) are reordered. The other multi-runtime tests were scanned and ruled out (heuristic, disclosed). Registration project 244/244; `check:duplicates` clean; `pnpm check` 3411/3411. The push is retried.
+- **Push `e55594d..9596d10` succeeded**, with `check:deep` green alone. CI run 40091767807: the Windows job is green. On Ubuntu every test passes (158 files, 21 skipped), but the coverage thresholds fail (harness 72-76% vs 85%; global branches 74.98% vs 75%), because the win32-only rows are skipped there. Reported to the user.
+- **User decision:** coverage is measured on the Windows job, where all rows run. The Ubuntu job runs every test without the coverage thresholds, and the thresholds are unchanged. Assigned to the implementer on main.
+- **Coverage change committed `2806143`** (not pushed): the Windows job runs `pnpm test:coverage` (unit plus all 4 integration projects, thresholds gate there) in place of the separate integration step; Ubuntu runs `check:deep:posix` (`check`, `test:integration`, the shared deep checks; no coverage). `check:deep:shared` holds dead-code, duplicates, architecture and e2e; `check:deep` is unchanged. The `check-golden-sql.test.mjs` pin follows the split (24/24). `pnpm check` 3411/3411, `check:duplicates` clean. Watch item: the Windows job keeps its 35 min timeout, and the coverage step is slower than the plain integration step.
