@@ -38,8 +38,9 @@ jobs:
       - name: Install Electron test system dependencies
         run: pnpm exec playwright install-deps chromium
 
-      - name: Run portable deep checks
-        run: xvfb-run --auto-servernum pnpm check:deep:portable
+      # Coverage is measured on Windows: its win32-only rows are skipped here (Pedro, 2026-10-24).
+      - name: Run POSIX deep checks
+        run: xvfb-run --auto-servernum pnpm check:deep:posix
 
       - name: Configure packaged Electron sandbox
         run: |
@@ -82,8 +83,9 @@ jobs:
       - name: Run fast checks
         run: pnpm check
 
-      - name: Run harness integration tests
-        run: pnpm test:integration
+      # The coverage run includes every integration project, and its thresholds gate here.
+      - name: Run tests with coverage
+        run: pnpm test:coverage
 
       - name: Build and run packaged Electron tests
         run: pnpm test:e2e

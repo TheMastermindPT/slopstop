@@ -204,7 +204,9 @@ it("retains the exact exclusions (one fixture, one per-app test helper) and zero
   expect(scripts["check:duplicates"]).toBe(
     "node apps/harness/scripts/check-golden-sql.mjs && jscpd --config jscpd.json",
   );
-  expect(scripts["check:deep:portable"]).toContain("pnpm check:duplicates");
+  expect(scripts["check:deep:shared"]).toContain("pnpm check:duplicates");
+  expect(scripts["check:deep:portable"]).toContain("pnpm check:deep:shared");
+  expect(scripts["check:deep:posix"]).toContain("pnpm check:deep:shared");
 });
 
 function runRootCommand(scannerExit) {
