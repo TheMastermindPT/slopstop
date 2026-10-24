@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 62ca5e7a7433501094afdaa21c487f91c8285c1daa503b2deb398226b0bb118c
+content_hash: 58dfa474f24549d3d690ca4302fa901533221d5f04514136af1c93ad3aaa3d36
 ---
 
 # Conversation — Human Decisions
@@ -2134,3 +2134,5 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Push `e55594d..9596d10` succeeded**, with `check:deep` green alone. CI run 40091767807: the Windows job is green. On Ubuntu every test passes (158 files, 21 skipped), but the coverage thresholds fail (harness 72-76% vs 85%; global branches 74.98% vs 75%), because the win32-only rows are skipped there. Reported to the user.
 - **User decision:** coverage is measured on the Windows job, where all rows run. The Ubuntu job runs every test without the coverage thresholds, and the thresholds are unchanged. Assigned to the implementer on main.
 - **Coverage change committed `2806143`** (not pushed): the Windows job runs `pnpm test:coverage` (unit plus all 4 integration projects, thresholds gate there) in place of the separate integration step; Ubuntu runs `check:deep:posix` (`check`, `test:integration`, the shared deep checks; no coverage). `check:deep:shared` holds dead-code, duplicates, architecture and e2e; `check:deep` is unchanged. The `check-golden-sql.test.mjs` pin follows the split (24/24). `pnpm check` 3411/3411, `check:duplicates` clean. Watch item: the Windows job keeps its 35 min timeout, and the coverage step is slower than the plain integration step.
+- **User decisions (2026-10-24):** the push of `2806143`/`d2851ca` waits ("mais tarde"). The next work is Architecture Review Phase 2, identity-root ADR first (IX-3). The ADR draft (`docs/adr/0023-*`, Proposed, options plus measured counts plus questions) is assigned to the designer `w3:p1S`; docs only, no commit before the user decides.
+- **Identity-root ADR 0023 (designer draft):** measured that the two roots differ only on nil/max (the kernel regex has `/i`; lowercase is a separate filter copied at 6 TS sites and 1 SQL helper); stored ids are protected by the strict lowercase SQL CHECK; only 6 acceptance pins (all `MessageId`). **User decisions:** Q1 option A, the strict kernel root, with shared-vocab-union read as governing diagnostic vocabulary, not acceptance sets; Q2 tighten `MessageId` and flip the 6 pins; Q3 reject uppercase, no normalization; Q4 protocol owns the branded schemas, the kernel keeps the root, the lowercase filter and the numeric brands, and the 23 kernel shadows are deleted; Q5 the CHECK on the 34 application-db id columns waits for the next application-schema migration (named residual); Q6 one shared Phase 2 bump to `protocolVersion` 9. Next: ADR to Accepted, then the Phase 2 brief.

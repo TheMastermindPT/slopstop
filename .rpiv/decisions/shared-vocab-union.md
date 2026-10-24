@@ -25,3 +25,4 @@ Genuinely additive per-consumer supersets (e.g. a type-resolved algorithm layere
 
 ## History
 - 2026-07-23 accepted — promoted from the shared+AR-helpers hardening plan (methodology principle M1 of the 2026-07-21 architecture review). source: .rpiv/artifacts/plans/2026-07-23_00-15-31_shared-and-ar-helpers-hardening.md
+- 2026-10-24 clarified — the union governs diagnostic vocabulary (every distinct issue code and message is kept), not acceptance sets; identity text acceptance follows ADR 0023 (one strict kernel root). Pedro's decision D1. source: docs/adr/0023-one-strict-identity-text-root.md
