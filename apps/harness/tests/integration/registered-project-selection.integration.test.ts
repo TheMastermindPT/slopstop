@@ -258,7 +258,7 @@ it.runIf(process.platform === "win32")(
     const before = rows(a, "SELECT * FROM storage_generations ORDER BY project_id");
     expect(before).toHaveLength(2);
     const host = await runtime(a.options);
-    const reopened = await runtime(a.options);
+    let reopened: Awaited<ReturnType<typeof runtime>> | undefined;
     try {
       const activeA = requireActive(
         await activate(host, a.registered.projectId),
@@ -282,7 +282,9 @@ it.runIf(process.platform === "win32")(
         event: "project.command.result",
         payload: { status: "project-mismatch", diagnostic: { code: "PROJECT_NOT_ACTIVE" } },
       });
-      // A's native lease must be released even while the first runtime still owns B.
+      // A's native lease must be released even while the first runtime still owns B. The second
+      // runtime starts only now: its start reconciliation's write would make the first busy.
+      reopened = await runtime(a.options);
       const reopenedA = requireActive(
         await activate(reopened, a.registered.projectId),
         "Reopened A missing",
@@ -294,7 +296,7 @@ it.runIf(process.platform === "win32")(
       });
       expect(rows(a, "SELECT * FROM storage_generations ORDER BY project_id")).toEqual(before);
     } finally {
-      await reopened.stop();
+      await reopened?.stop();
       await host.stop();
     }
   },
@@ -502,12 +504,15 @@ it.runIf(process.platform === "win32")(
   async () => {
     const f = await registeredFixture();
     const writer = await runtime(f.options);
-    const reader = await runtime(f.options);
+    let reader: Awaited<ReturnType<typeof runtime>> | undefined;
     try {
       expect(await activate(writer, f.registered.projectId)).toMatchObject({
         status: "active",
         access: "read-write",
       });
+      // The reader starts after the writer's activation: its start reconciliation's write would
+      // make that activation busy.
+      reader = await runtime(f.options);
       const selected = await activate(reader, f.registered.projectId);
       expect(selected).toMatchObject({
         status: "active",
@@ -522,7 +527,7 @@ it.runIf(process.platform === "win32")(
         payload: { status: "read-only", diagnostic: { code: "WRITER_UNAVAILABLE" } },
       });
     } finally {
-      await reader.stop();
+      await reader?.stop();
       await writer.stop();
     }
   },
