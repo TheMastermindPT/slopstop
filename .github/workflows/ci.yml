@@ -35,20 +35,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Electron test system dependencies
-        run: pnpm exec playwright install-deps chromium
-
       # Coverage is measured on Windows: its win32-only rows are skipped here (Pedro, 2026-10-24).
+      # The Electron journeys and the package smoke run only on Windows: they launch electron.exe
+      # and register through Git for Windows (Pedro, 2026-10-25).
       - name: Run POSIX deep checks
-        run: xvfb-run --auto-servernum pnpm check:deep:posix
-
-      - name: Configure packaged Electron sandbox
-        run: |
-          sudo chown root:root apps/desktop/out/SlopStop-linux-x64/chrome-sandbox
-          sudo chmod 4755 apps/desktop/out/SlopStop-linux-x64/chrome-sandbox
-
-      - name: Run packaged Electron smoke
-        run: xvfb-run --auto-servernum pnpm package:launch-smoke
+        run: pnpm check:deep:posix
 
   windows-process-and-package:
     name: Windows process and package proof

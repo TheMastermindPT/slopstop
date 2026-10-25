@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 15f4f1ef82a8fa670e83296256f953e9d31a4f236073995c19260710eaa31a50
+content_hash: 9762f14b8f60b2adc4d1bad03e2e72a167c77d6388b57ca6887b5a467dd8f2fc
 ---
 
 # Conversation — Human Decisions
@@ -2186,3 +2186,4 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - R3, R10: accepted by design;
   - R7 and Phase 1 Q2: a new GitHub issue (approved).
   Squash onto main; on the combined tree run `check:duplicates` and `pnpm check`; push with `check:deep` alone (it carries `2806143`), then check the CI.
+- **Phase 2 pushed `9596d10..316e596`** with `check:deep` green alone (unit 3595, coverage 5799, integration 2204, e2e, launch smoke). Issue #144 is opened for R7 and Phase 1 Q2. CI run 40153543969: **Windows green** (22 min, the first run with coverage on Windows). Ubuntu red, but only in e2e (16 failed, 5 passed): with coverage gone, the job reached the Electron journeys for the first time since September, and they are Windows-only (`electron.exe`, Git for Windows). This is not caused by Phase 2. **User decisions:** Ubuntu no longer runs the e2e; and, asked separately because the Linux package smoke depends on the e2e package and needs Git for Windows, the packaged smoke also leaves Ubuntu. `test:e2e` moves from `check:deep:shared` to `check:deep:portable`, so local `check:deep` is unchanged. The Ubuntu job drops the Electron dependency, xvfb, sandbox and smoke steps. The pin test passes 24/24.
