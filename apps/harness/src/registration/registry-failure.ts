@@ -1,5 +1,6 @@
 import {
   RegistrationIdempotencyConflictSchema,
+  RegistryBrokenCodeSchema,
   RegistryPendingRecoverySchema,
 } from "@slopstop/protocol";
 import { Schema } from "effect";
@@ -9,7 +10,7 @@ import { isSqliteBusy } from "../storage/sqlite-busy.js";
 export const RegistryFailureSchema = Schema.Union([
   Schema.Struct({
     status: Schema.Literal("broken"),
-    code: Schema.Literals(["REGISTRY_SCHEMA_UNKNOWN", "REGISTRY_SCHEMA_NEWER", "REGISTRY_CORRUPT"]),
+    code: RegistryBrokenCodeSchema,
   }),
   Schema.Struct({
     status: Schema.Literal("unavailable"),

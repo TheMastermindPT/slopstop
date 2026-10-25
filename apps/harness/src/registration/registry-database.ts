@@ -19,6 +19,7 @@ import {
   lstatIfPresent,
   requirePlainEntry,
 } from "../storage/project-storage-filesystem-authority.js";
+import { systemUtcClock, type UtcClock } from "../utc-clock.js";
 import { RegistryFault } from "./registry-failure.js";
 
 export type RegistrationDatabaseOptions = Readonly<{
@@ -27,7 +28,14 @@ export type RegistrationDatabaseOptions = Readonly<{
   failures?: ApplicationDatabaseMigrationFailures;
   // The harness's shared application database authority; standalone owners get their own.
   applicationDatabase?: ApplicationDatabaseAuthority;
+  /** The source of every stored registration time; the system clock when absent. */
+  clock?: UtcClock;
 }>;
+
+/** The clock that stamps every stored registration time. */
+export function registrationClock(options: RegistrationDatabaseOptions): UtcClock {
+  return options.clock ?? systemUtcClock;
+}
 
 export type RegistryRunner = <Result>(
   operation: (client: LocalLibsqlClient) => Promise<Result>,

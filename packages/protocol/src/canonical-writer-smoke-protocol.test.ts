@@ -213,15 +213,15 @@ describe.each(envelopes)("$name closed envelope", ({ schema, value }) => {
   it.each(invalidMessageIds)("rejects smoke proofId %s", (proofId) => {
     expect(decodeWithIssues(schema, { ...value, proofId }).success).toBe(false);
   });
-  it("retains valid uppercase MessageId spelling", () => {
+  it("rejects uppercase MessageId spelling", () => {
     const uppercase = { ...value, proofId: uppercaseMessageId };
-    expect(decodeStrict(schema, uppercase)).toEqual(uppercase);
+    expect(decodeWithIssues(schema, uppercase).success).toBe(false);
   });
   it("rejects fixture kinds at both product boundaries", () => {
     expect(acceptsStrict(DesktopMessageSchema, value)).toBe(false);
     expect(acceptsStrict(HarnessMessageSchema, value)).toBe(false);
     const metadata = {
-      protocolVersion: 8,
+      protocolVersion: 9,
       messageId: correlation.requestId,
       sentAt: "2026-09-05T12:00:00.000Z",
       payload: value,
@@ -251,9 +251,9 @@ describe.each(envelopes.filter(({ name }) => name !== "start"))(
     it.each(invalidMessageIds)("rejects smoke requestId %s", (requestId) => {
       expect(decodeWithIssues(schema, { ...value, requestId }).success).toBe(false);
     });
-    it("retains valid uppercase requestId spelling", () => {
+    it("rejects uppercase requestId spelling", () => {
       const uppercase = { ...value, requestId: uppercaseMessageId };
-      expect(decodeStrict(schema, uppercase)).toEqual(uppercase);
+      expect(decodeWithIssues(schema, uppercase).success).toBe(false);
     });
     it.each([0, 1, 2, 3, 4, 5, 1.5, "1", null])(
       "requires its exact stepNumber %j",
@@ -279,8 +279,8 @@ describe("start bootstrap and general MessageId owner", () => {
     expectTypeOf<WriterProofEvent["proofId"]>().toEqualTypeOf<MessageId>();
     expectTypeOf<WriterProofEvent["requestId"]>().toEqualTypeOf<MessageId>();
   });
-  it.each([nil, max, uppercaseMessageId])("preserves legacy MessageId acceptance %s", (value) => {
-    expect(decodeStrict(MessageIdSchema, value)).toBe(value);
+  it.each([nil, max, uppercaseMessageId])("rejects a non-strict MessageId (%s)", (value) => {
+    expect(acceptsStrict(MessageIdSchema, value)).toBe(false);
   });
   it.each([
     { kind: "writer-proof.connect" },

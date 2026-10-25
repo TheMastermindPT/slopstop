@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { decodeStrict } from "@slopstop/protocol";
+import { decodeStrict, isRegistryBrokenCode } from "@slopstop/protocol";
 import { Duration, Effect, Result } from "effect";
 import { untypedRejection } from "../effect-rejection.js";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
@@ -25,7 +25,11 @@ import {
   RegistrationProposalRecordSchema,
   readProposal,
 } from "./registration-proposal-store.js";
-import { type RegistrationDatabaseOptions, withRegistrationDatabase } from "./registry-database.js";
+import {
+  type RegistrationDatabaseOptions,
+  registrationClock,
+  withRegistrationDatabase,
+} from "./registry-database.js";
 import { registryFailure } from "./registry-failure.js";
 import { createRepositoryIdentityQueryOwner } from "./repository-identity-query-owner.js";
 import type { IdentityQueryAdmissionPort, RepositoryTrustOwner } from "./repository-trust.js";
@@ -76,7 +80,7 @@ async function observeProposal(
       authority,
       observation,
       proposalId: randomUUID(),
-      preparedAt: new Date().toISOString(),
+      preparedAt: registrationClock(dependencies.options).now(),
     });
     return { status: "captured" as const, record };
   };
@@ -198,7 +202,7 @@ async function confirm(dependencies: Dependencies, input: unknown, signal: Abort
     const observed = await inspectConfirmation(dependencies, request, signal);
     if (observed.status !== "confirmation-observed") return observed;
     const reserved = await write((transaction) =>
-      reserveConfirmation(transaction, observed, signal),
+      reserveConfirmation(transaction, observed, registrationClock(dependencies.options), signal),
     );
     if (reserved.status !== "reserved") return reserved;
     if (reserved.created && dependencies.bootstrap !== undefined && !signal.aborted) {
@@ -227,19 +231,12 @@ const pendingCreation = { status: "pending-recovery", code: "REGISTRATION_INCOMP
 const pendingListing = { status: "broken", code: "INTERNAL_FAILURE" } as const;
 type PendingClose = typeof pendingCleanup | typeof pendingCreation | typeof pendingListing;
 
-type BrokenListing = Extract<Awaited<ReturnType<Listing>>, Readonly<{ status: "broken" }>>;
-const registryDataCodes: ReadonlySet<BrokenListing["code"]> = new Set([
-  "REGISTRY_SCHEMA_UNKNOWN",
-  "REGISTRY_SCHEMA_NEWER",
-  "REGISTRY_CORRUPT",
-]);
-
 /**
  * Whether a listing's own cleanup did not complete. Only the registry-data codes are answers
  * whose cleanup completed; every other broken code is unconfirmed (G19, #102).
  */
 function listingCleanupFailed(result: Awaited<ReturnType<Listing>>): boolean {
-  return result.status === "broken" && !registryDataCodes.has(result.code);
+  return result.status === "broken" && !isRegistryBrokenCode(result.code);
 }
 
 async function listProjects(dependencies: Dependencies, _input: unknown, signal: AbortSignal) {

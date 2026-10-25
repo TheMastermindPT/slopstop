@@ -1,13 +1,13 @@
 import { deepStrictEqual } from "node:assert/strict";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
-  dateTimeTextSchema,
   decodeStrict,
   EmptyObjectSchema,
+  LowercaseDomainIdentityTextSchema,
   ProjectActivationIdSchema,
   ProjectStorageCreateResultSchema,
   ProjectStorageOpenResultSchema,
-  UuidTextSchema,
+  UtcInstantSchema,
   type WriterProofControl,
   writerProofProjectId,
   writerProofStaleCommand,
@@ -76,15 +76,9 @@ const tables = [
   "writer_handoffs",
   "writer_recovery_records",
 ] as const;
-const uuid = UuidTextSchema.check(
-  Schema.makeFilter(
-    (s: string) =>
-      s === s.toLowerCase() &&
-      s !== "00000000-0000-0000-0000-000000000000" &&
-      s !== "ffffffff-ffff-ffff-ffff-ffffffffffff",
-  ),
-);
-const utc = dateTimeTextSchema({ precision: 3 });
+const uuid = LowercaseDomainIdentityTextSchema;
+// A producer oracle: `toISOString` writes exactly three fraction digits.
+const utc = UtcInstantSchema.check(Schema.isPattern(/\.\d{3}Z$/u));
 const digest = Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/));
 const safeFailure = "Writer proof fixture failed.";
 

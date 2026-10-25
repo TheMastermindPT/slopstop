@@ -48,14 +48,14 @@ async function registerThroughPreload() {
   const version = await api.registerProject({
     step: "decide-git-version",
     selectionId: git.selectionId,
-    consentId: crypto.randomUUID(),
+    executableConsentId: crypto.randomUUID(),
     decision: "accepted",
   });
   if (version.status !== "git-version-observed") return version;
   const consent = {
     selectionId: git.selectionId,
     observationId: version.observationId,
-    consentId: crypto.randomUUID(),
+    identityQueryConsentId: crypto.randomUUID(),
   };
   await api.registerProject({
     step: "decide-identity-queries",

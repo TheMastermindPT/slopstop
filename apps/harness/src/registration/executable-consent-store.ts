@@ -1,4 +1,4 @@
-import { dateTimeTextSchema, decodeStrict, NonEmptyTextSchema } from "@slopstop/protocol";
+import { decodeStrict, NonEmptyTextSchema, UtcInstantSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
 import {
   type GitVersionInspectionRequest,
@@ -13,7 +13,7 @@ const selectionRowsSchema = Schema.Array(
     ...ExecutableIdentitySchema.fields,
     selectionId: GitVersionInspectionRequestSchema.fields.selectionId,
     executablePath: NonEmptyTextSchema,
-    capturedAt: dateTimeTextSchema(),
+    capturedAt: UtcInstantSchema,
   }),
 ).check(Schema.isMaxLength(1));
 

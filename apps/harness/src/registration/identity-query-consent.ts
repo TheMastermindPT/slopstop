@@ -1,4 +1,4 @@
-import { decodeStrict, decodeStrictResult, UuidTextSchema } from "@slopstop/protocol";
+import { decodeStrict, decodeStrictResult, IdentityQueryConsentIdSchema } from "@slopstop/protocol";
 import { Result, Schema } from "effect";
 import {
   GitVersionInspectionResultSchema,
@@ -7,6 +7,7 @@ import {
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { observeSelectedExecutable } from "../storage/repository-identity-observer.js";
+import type { UtcClock } from "../utc-clock.js";
 import { readSelection } from "./executable-consent-store.js";
 import {
   type ExecutableIdentity,
@@ -19,7 +20,7 @@ import { RegistryFault, registryFailure } from "./registry-failure.js";
 export const IdentityQueryConsentRequestSchema = Schema.Struct({
   selectionId: PreparedGitVersionSchema.fields.selectionId,
   observationId: PreparedGitVersionSchema.fields.observationId,
-  consentId: UuidTextSchema.pipe(Schema.brand("IdentityQueryConsentId")),
+  consentId: IdentityQueryConsentIdSchema,
 });
 const ConsentDecisionSchema = Schema.Literals(["accepted", "declined"]);
 const IdentityQueryDecisionSchema = Schema.Struct({
@@ -81,7 +82,11 @@ async function readValidatedVersion(
   return version;
 }
 
-async function recordDecision(transaction: LocalLibsqlTransaction, request: IdentityQueryDecision) {
+async function recordDecision(
+  transaction: LocalLibsqlTransaction,
+  request: IdentityQueryDecision,
+  clock: UtcClock,
+) {
   const rows = await transaction.execute({
     sql: "SELECT consent_id AS consentId, selection_id AS selectionId, observation_id AS observationId, decision FROM registration_identity_consents WHERE consent_id = ?",
     args: [request.consentId],
@@ -101,7 +106,7 @@ async function recordDecision(transaction: LocalLibsqlTransaction, request: Iden
       request.selectionId,
       request.observationId,
       request.decision,
-      new Date().toISOString(),
+      clock.now(),
     ],
   });
   return { status: "recorded" as const };
@@ -142,13 +147,14 @@ export async function resolveIdentityQueryConsent(
 
 export function createIdentityQueryConsentAuthority(
   run: RegistryRunner,
+  clock: UtcClock,
 ): IdentityQueryConsentAuthority {
   const write = <Result>(operation: (transaction: LocalLibsqlTransaction) => Promise<Result>) =>
     run((client) => withWriteTransaction(client, operation));
   return {
     decideIdentityQueries: (input) =>
       write((transaction) =>
-        recordDecision(transaction, decodeStrict(IdentityQueryDecisionSchema, input)),
+        recordDecision(transaction, decodeStrict(IdentityQueryDecisionSchema, input), clock),
       ).catch(registryFailure),
     resolveIdentityQueries: (input) =>
       write((transaction) =>

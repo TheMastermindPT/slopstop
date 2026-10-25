@@ -1,23 +1,52 @@
 import { Schema } from "effect";
-import { ProjectIdSchema } from "./domain-identity-schema.js";
+import { LowercaseDomainIdentityTextSchema, ProjectIdSchema } from "./domain-identity-schema.js";
 import {
   RegistrationIdempotencyConflictSchema,
   RegistryPendingRecoverySchema,
 } from "./project-list-protocol.js";
-import { NonEmptyTextSchema, UuidTextSchema, wholeUnion } from "./schema-codec.js";
-
-const Sha256TextSchema = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/));
+import { registryBrokenCodes } from "./project-registration-protocol.js";
+import { NonEmptyTextSchema, Sha256HexSchema, wholeUnion } from "./schema-codec.js";
 
 const DecisionSchema = Schema.Literals(["accepted", "declined"]);
 
+/** Registration flow identities; the wire carries them as plain strict text, the harness brands them. */
+export const RegistrationPreparationRequestIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("RegistrationPreparationRequestId"),
+);
+export type RegistrationPreparationRequestId = typeof RegistrationPreparationRequestIdSchema.Type;
+export const ExecutableSelectionIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("ExecutableSelectionId"),
+);
+export type ExecutableSelectionId = typeof ExecutableSelectionIdSchema.Type;
+export const VersionObservationIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("VersionObservationId"),
+);
+export type VersionObservationId = typeof VersionObservationIdSchema.Type;
+export const IdentityQueryConsentIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("IdentityQueryConsentId"),
+);
+export type IdentityQueryConsentId = typeof IdentityQueryConsentIdSchema.Type;
+export const RepositorySelectionIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("RepositorySelectionId"),
+);
+export type RepositorySelectionId = typeof RepositorySelectionIdSchema.Type;
+export const RepositoryTrustIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("RepositoryTrustId"),
+);
+export type RepositoryTrustId = typeof RepositoryTrustIdSchema.Type;
+export const ExecutableConsentIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("ExecutableConsentId"),
+);
+export type ExecutableConsentId = typeof ExecutableConsentIdSchema.Type;
+
 /** The folder trust and Git consent a proposal is prepared under. */
 const PreparationFields = {
-  preparationRequestId: UuidTextSchema,
-  selectionId: UuidTextSchema,
-  observationId: UuidTextSchema,
-  consentId: UuidTextSchema,
-  repositorySelectionId: UuidTextSchema,
-  trustId: UuidTextSchema,
+  preparationRequestId: LowercaseDomainIdentityTextSchema,
+  selectionId: LowercaseDomainIdentityTextSchema,
+  observationId: LowercaseDomainIdentityTextSchema,
+  identityQueryConsentId: LowercaseDomainIdentityTextSchema,
+  repositorySelectionId: LowercaseDomainIdentityTextSchema,
+  trustId: LowercaseDomainIdentityTextSchema,
 };
 
 /** A Project answered for the folder; its name is the registered worktree folder name. */
@@ -27,31 +56,31 @@ const NamedProjectFields = { projectId: ProjectIdSchema, name: NonEmptyTextSchem
 const RendererRegistrationSteps = [
   Schema.Struct({
     step: Schema.Literal("decide-trust"),
-    repositorySelectionId: UuidTextSchema,
-    trustId: UuidTextSchema,
+    repositorySelectionId: LowercaseDomainIdentityTextSchema,
+    trustId: LowercaseDomainIdentityTextSchema,
     decision: DecisionSchema,
   }),
   Schema.Struct({ step: Schema.Literal("prepare-git") }),
   Schema.Struct({
     step: Schema.Literal("decide-git-version"),
-    selectionId: UuidTextSchema,
-    consentId: UuidTextSchema,
+    selectionId: LowercaseDomainIdentityTextSchema,
+    executableConsentId: LowercaseDomainIdentityTextSchema,
     decision: DecisionSchema,
   }),
   Schema.Struct({
     step: Schema.Literal("decide-identity-queries"),
-    selectionId: UuidTextSchema,
-    observationId: UuidTextSchema,
-    consentId: UuidTextSchema,
+    selectionId: LowercaseDomainIdentityTextSchema,
+    observationId: LowercaseDomainIdentityTextSchema,
+    identityQueryConsentId: LowercaseDomainIdentityTextSchema,
     decision: DecisionSchema,
   }),
   Schema.Struct({ step: Schema.Literal("prepare"), ...PreparationFields }),
   Schema.Struct({
     step: Schema.Literal("confirm"),
-    requestId: UuidTextSchema,
+    requestId: LowercaseDomainIdentityTextSchema,
     ...PreparationFields,
-    proposalId: UuidTextSchema,
-    proposalFingerprint: Sha256TextSchema,
+    proposalId: LowercaseDomainIdentityTextSchema,
+    proposalFingerprint: Sha256HexSchema,
   }),
   Schema.Struct({ step: Schema.Literal("remove-from-list"), projectId: ProjectIdSchema }),
 ] as const;
@@ -72,9 +101,7 @@ const ProjectRegistrationFailureSchemas = [
   Schema.Struct({
     status: Schema.Literal("broken"),
     code: Schema.Literals([
-      "REGISTRY_SCHEMA_UNKNOWN",
-      "REGISTRY_SCHEMA_NEWER",
-      "REGISTRY_CORRUPT",
+      ...registryBrokenCodes,
       "INTERNAL_FAILURE",
       "PROJECT_REGISTRATION_TRANSPORT_FAILED",
     ]),
@@ -123,25 +150,25 @@ const ProjectRegistrationFailureSchemas = [
 export const ProjectRegistrationResultSchema = wholeUnion([
   Schema.Struct({
     status: Schema.Literal("repository-selected"),
-    repositorySelectionId: UuidTextSchema,
+    repositorySelectionId: LowercaseDomainIdentityTextSchema,
   }),
   Schema.Struct({ status: Schema.Literal("trust-recorded") }),
   Schema.Struct({
     status: Schema.Literal("git-prepared"),
-    selectionId: UuidTextSchema,
+    selectionId: LowercaseDomainIdentityTextSchema,
     executablePath: NonEmptyTextSchema,
   }),
   Schema.Struct({
     status: Schema.Literal("git-version-observed"),
-    selectionId: UuidTextSchema,
-    observationId: UuidTextSchema,
+    selectionId: LowercaseDomainIdentityTextSchema,
+    observationId: LowercaseDomainIdentityTextSchema,
     version: NonEmptyTextSchema,
   }),
   Schema.Struct({ status: Schema.Literal("identity-queries-recorded") }),
   Schema.Struct({
     status: Schema.Literal("proposal-prepared"),
-    proposalId: UuidTextSchema,
-    proposalFingerprint: Sha256TextSchema,
+    proposalId: LowercaseDomainIdentityTextSchema,
+    proposalFingerprint: Sha256HexSchema,
     name: NonEmptyTextSchema,
     repositoryDirectory: NonEmptyTextSchema,
     worktree: NonEmptyTextSchema,
@@ -172,7 +199,7 @@ export type RendererRegistrationRequest = typeof RendererRegistrationRequestSche
 export const RepositoryChoiceResultSchema = wholeUnion([
   Schema.Struct({
     status: Schema.Literal("repository-selected"),
-    repositorySelectionId: UuidTextSchema,
+    repositorySelectionId: LowercaseDomainIdentityTextSchema,
     directory: NonEmptyTextSchema,
   }),
   ...ProjectRegistrationFailureSchemas,

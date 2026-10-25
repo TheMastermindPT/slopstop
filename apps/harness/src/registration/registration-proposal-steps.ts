@@ -37,7 +37,7 @@ function preparationOf(request: PrepareRequest) {
     admission: {
       selectionId: request.selectionId,
       observationId: request.observationId,
-      consentId: request.consentId,
+      consentId: request.identityQueryConsentId,
       repositorySelectionId: request.repositorySelectionId,
       trustId: request.trustId,
     },

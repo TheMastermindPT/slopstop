@@ -11,6 +11,13 @@ import { describe, expect, it, vi } from "vitest";
 import { App } from "../app.js";
 import { exposeApi, readyApi } from "../test-api.js";
 
+/** Every code of a registry that cannot be read, listed apart from the protocol tuple. */
+const damagedRegistryCodes = [
+  "REGISTRY_SCHEMA_UNKNOWN",
+  "REGISTRY_SCHEMA_NEWER",
+  "REGISTRY_CORRUPT",
+] as const;
+
 const chess = decodeStrict(ProjectIdSchema, "11111111-1111-4111-8111-111111111111");
 const maxreps = decodeStrict(ProjectIdSchema, "22222222-2222-4222-8222-222222222222");
 const stuck = decodeStrict(ProjectIdSchema, "33333333-3333-4333-8333-333333333333");
@@ -114,6 +121,23 @@ describe("Remove from list", () => {
     expect(await heading("No Project selected")).toBeTruthy();
     expect(document.activeElement).toBe(await removeButton("maxreps"));
     expect(registerProject).not.toHaveBeenCalled();
+  });
+
+  it.each(damagedRegistryCodes)("treats a damaged registry as not updatable (%s)", async (code) => {
+    const { user } = renderList([{ status: "broken", code }]);
+    await user.click(await removeButton("chess"));
+    await user.click(await screen.findByRole("button", { name: "Remove from list" }));
+    expect(document.activeElement).toBe(await heading("Saved Projects can't be updated"));
+    expect(screen.getByText(`Reference: ${code}`)).toBeTruthy();
+  });
+
+  it("does not treat an internal removal failure as a damaged registry", async () => {
+    const { user } = renderList([{ status: "broken", code: "INTERNAL_FAILURE" }]);
+    await user.click(await removeButton("chess"));
+    await user.click(await screen.findByRole("button", { name: "Remove from list" }));
+    expect(document.activeElement).toBe(await heading("chess wasn't removed"));
+    expect(screen.queryByRole("heading", { name: "Saved Projects can't be updated" })).toBeNull();
+    expect(screen.getByText("Reference: INTERNAL_FAILURE")).toBeTruthy();
   });
 
   it("keeps busy and damaged registries distinct and the list unchanged", async () => {

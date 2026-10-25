@@ -4,9 +4,8 @@ import {
   CanonicalSettlementTimeSchema,
   ProjectActivationIdSchema,
 } from "./canonical-project-protocol.js";
-import { ProjectIdSchema } from "./domain-identity-schema.js";
+import { LowercaseDomainIdentityTextSchema, ProjectIdSchema } from "./domain-identity-schema.js";
 import { type HarnessFailureCode, harnessFailureMessages } from "./harness-failure-protocol.js";
-import { UuidTextSchema } from "./schema-codec.js";
 import {
   ConversationBranchIdSchema,
   ConversationIdSchema,
@@ -133,7 +132,7 @@ export type ProjectConversationReadRequest = typeof ProjectConversationReadReque
 export const ProjectConversationSaveRequestSchema = Schema.Struct({
   projectId: ProjectIdSchema,
   activationId: ProjectActivationIdSchema,
-  saveId: UuidTextSchema,
+  saveId: LowercaseDomainIdentityTextSchema,
   expectedRevision: CountSchema,
   text: ConversationTextSchema,
 });

@@ -1,20 +1,27 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import {
-  dateTimeTextSchema,
   decodeStrict,
   decodeStrictResult,
+  LowercaseDomainIdentityTextSchema,
   ProjectIdSchema,
+  ProjectStorageCreateRequestIdSchema,
   type RegisteredProject,
   RegisteredProjectSchema,
-  UuidTextSchema,
+  RegistrationRequestIdSchema,
+  RepositoryBindingIdSchema,
+  Sha256HexSchema,
+  UtcInstantSchema,
+  WorkspaceIdSchema,
 } from "@slopstop/protocol";
 import { Result, Schema } from "effect";
+import { sha256Hex } from "../sha256-text.js";
 import { receiptGenerationResolves } from "../storage/application-database-migration.js";
 import type {
   LocalLibsqlResultSet,
   LocalLibsqlTransaction,
 } from "../storage/local-libsql-worker-client.js";
 import { upgradeChainFor } from "../storage/project-storage-upgrade-node-adapter.js";
+import type { UtcClock } from "../utc-clock.js";
 import { PhysicalDirectoryKeySchema, samePhysicalIdentity } from "./physical-identity.js";
 import {
   PrepareProjectRegistrationSchema,
@@ -30,23 +37,23 @@ import type { RepositoryTrustOwner } from "./repository-trust.js";
 
 export const ConfirmationValidationRequestSchema = Schema.Struct({
   version: Schema.Literal(1),
-  requestId: UuidTextSchema.pipe(Schema.brand("RegistrationRequestId")),
+  requestId: RegistrationRequestIdSchema,
   preparation: PrepareProjectRegistrationSchema,
   proposalId: RegistrationProposalRecordSchema.fields.proposalId,
-  proposalFingerprint: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/)),
+  proposalFingerprint: Sha256HexSchema,
 });
 export type ConfirmationRequest = typeof ConfirmationValidationRequestSchema.Type;
 
 const reservationSchema = Schema.Struct({
   version: Schema.Literal(1),
-  reservationId: UuidTextSchema.pipe(Schema.brand("RegistrationReservationId")),
+  reservationId: LowercaseDomainIdentityTextSchema.pipe(Schema.brand("RegistrationReservationId")),
   projectId: ProjectIdSchema,
-  repositoryBindingId: UuidTextSchema.pipe(Schema.brand("RepositoryBindingId")),
-  workspaceId: UuidTextSchema.pipe(Schema.brand("WorkspaceId")),
-  createRequestId: UuidTextSchema.pipe(Schema.brand("ProjectStorageCreateRequestId")),
-  createdAt: dateTimeTextSchema(),
+  repositoryBindingId: RepositoryBindingIdSchema,
+  workspaceId: WorkspaceIdSchema,
+  createRequestId: ProjectStorageCreateRequestIdSchema,
+  createdAt: UtcInstantSchema,
   proposal: RegistrationProposalRecordSchema,
-  confirmationPhaseId: UuidTextSchema,
+  confirmationPhaseId: LowercaseDomainIdentityTextSchema,
 });
 export type Reservation = typeof reservationSchema.Type;
 const { version: _keyVersion, ...commonKeyFields } = PhysicalDirectoryKeySchema.fields;
@@ -57,13 +64,15 @@ const requestRowsSchema = Schema.Array(
   Schema.Struct({
     fingerprint: Schema.String,
     requestJson: Schema.String,
-    reservationId: UuidTextSchema,
+    reservationId: reservationSchema.fields.reservationId,
   }),
 ).check(Schema.isMaxLength(1));
-const reservationIdRowsSchema = Schema.Array(Schema.Struct({ reservationId: UuidTextSchema }));
+const reservationIdRowsSchema = Schema.Array(
+  Schema.Struct({ reservationId: reservationSchema.fields.reservationId }),
+);
 const publicationRowsSchema = Schema.Array(
   Schema.Struct({
-    requestId: UuidTextSchema,
+    requestId: RegistrationRequestIdSchema,
     resultJson: Schema.String,
     fingerprint: Schema.String,
   }),
@@ -97,7 +106,7 @@ export type RegistrationBootstrap = (
       { status: "captured" } | { status: "unresolved" }
     >
 >;
-const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+const digest = (value: unknown) => sha256Hex(JSON.stringify(value));
 const corrupt = () => new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
 
 export function incomplete(request: ConfirmationRequest) {
@@ -128,7 +137,7 @@ function reservationRowAgrees(
   ].every(Boolean);
 }
 
-async function readReservation(transaction: LocalLibsqlTransaction, id: string) {
+async function readReservation(transaction: Pick<LocalLibsqlTransaction, "execute">, id: string) {
   const result = await transaction.execute({
     sql: "SELECT common_platform AS platform, common_volume_identity AS volumeIdentity, common_file_identity AS fileIdentity, common_birth_identity AS birthIdentity, record_json AS recordJson, record_fingerprint AS fingerprint FROM registration_reservations WHERE reservation_id = ?",
     args: [id],
@@ -222,7 +231,7 @@ async function confirmationOutcome(
 }
 
 export async function findCommonReservation(
-  transaction: LocalLibsqlTransaction,
+  transaction: Pick<LocalLibsqlTransaction, "execute">,
   proposal: RegistrationProposalRecord,
 ) {
   const key = proposal.observation.physical.commonDirectory;
@@ -258,6 +267,7 @@ async function insertReservation(transaction: LocalLibsqlTransaction, record: Re
 export async function reserveConfirmation(
   transaction: LocalLibsqlTransaction,
   input: { request: ConfirmationRequest; saved: RegistrationProposalRecord; phaseId: string },
+  clock: UtcClock,
   signal: AbortSignal,
 ) {
   const previous = await readConfirmation(transaction, input.request);
@@ -273,7 +283,7 @@ export async function reserveConfirmation(
       repositoryBindingId: randomUUID(),
       workspaceId: randomUUID(),
       createRequestId: randomUUID(),
-      createdAt: new Date().toISOString(),
+      createdAt: clock.now(),
       proposal: input.saved,
       confirmationPhaseId: input.phaseId,
     });

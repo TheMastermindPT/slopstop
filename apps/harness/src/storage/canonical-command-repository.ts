@@ -1,10 +1,19 @@
-import type { ProjectActivationId, ProjectId, WriterGeneration } from "@slopstop/protocol";
-import { decodeStrict, UuidTextSchema, WriterGenerationSchema } from "@slopstop/protocol";
+import type {
+  ProjectActivationId,
+  ProjectId,
+  WriterGeneration,
+  WriterReleaseFailureCode,
+} from "@slopstop/protocol";
+import {
+  decodeStrict,
+  LowercaseDomainIdentityTextSchema,
+  Sha256HexSchema,
+  WriterGenerationSchema,
+} from "@slopstop/protocol";
 import { Data, Schema } from "effect";
 import {
   type CanonicalCommandSnapshot,
   canonicalChangedOnce as changedOnce,
-  CanonicalSha256Schema as digestSchema,
   hashCanonicalJson,
   canonicalResultObjects as objects,
   canonicalExactlyOne as one,
@@ -37,7 +46,9 @@ import {
   withWriteTransaction,
 } from "./project-storage-transaction.js";
 
-export const WriterCapabilityTokenSchema = digestSchema.pipe(Schema.brand("WriterCapabilityToken"));
+export const WriterCapabilityTokenSchema = Sha256HexSchema.pipe(
+  Schema.brand("WriterCapabilityToken"),
+);
 export type WriterCapabilityToken = typeof WriterCapabilityTokenSchema.Type;
 export type WriterFenceCheck = Readonly<{ status: "current" }> | Readonly<{ status: "stale" }>;
 export interface CanonicalCommandRepository {
@@ -72,8 +83,10 @@ export type FencedConversationWork<Result> =
 export type CanonicalCommandRepositoryFailureCode =
   | "WRITER_FENCE_ACTIVATION_FAILED"
   | "WRITER_FENCE_CHECK_FAILED"
-  | "WRITER_FENCE_RELEASE_FAILED"
-  | "WRITER_REPOSITORY_CLOSE_FAILED";
+  | Extract<
+      WriterReleaseFailureCode,
+      "WRITER_FENCE_RELEASE_FAILED" | "WRITER_REPOSITORY_CLOSE_FAILED"
+    >;
 export type CanonicalCommandRepositoryActivationResult =
   | Readonly<{
       status: "activated";
@@ -132,9 +145,6 @@ export class WriterOwnerBusy extends Data.TaggedError("WriterOwnerBusy")<{
   }
 }
 
-const identitySchema = UuidTextSchema.check(
-  Schema.makeFilter((value: string) => value === value.toLowerCase()),
-);
 const SqlCountSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0));
 const summaryRowsSchema = Schema.Array(
   Schema.Struct({
@@ -247,7 +257,7 @@ async function recordHandoff(
       sql: "INSERT INTO writer_handoffs (project_id,handoff_id,from_writer_generation,to_writer_generation,kind,recorded_at) VALUES (?,?,?,?,?,?)",
       args: [
         input.projectId,
-        decodeStrict(identitySchema, dependencies.createHandoffId()),
+        decodeStrict(LowercaseDomainIdentityTextSchema, dependencies.createHandoffId()),
         previous?.generation ?? null,
         generation,
         kind,
@@ -281,7 +291,7 @@ async function recordRecovery(
       VALUES (?,?,?,'abandoned-active-fence',NULL,NULL,?,'generation-superseded',?,?)`,
       args: [
         input.projectId,
-        decodeStrict(identitySchema, dependencies.createRecoveryRecordId()),
+        decodeStrict(LowercaseDomainIdentityTextSchema, dependencies.createRecoveryRecordId()),
         previous.generation,
         input.activatedAt,
         generation,
@@ -434,7 +444,7 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
   private async settleOwned(
     command: CanonicalCommandSnapshot,
   ): Promise<CanonicalCommandSettlementResult> {
-    const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
+    const digest = decodeStrict(Sha256HexSchema, await this.sha256Text(this.input.writerToken));
     const fingerprint = hashCanonicalJson(command);
     const outcome = await runClassifiedWriteTransaction<
       LocalLibsqlTransaction,
@@ -459,7 +469,7 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
   async conversationTransaction<Result>(
     work: (tx: LocalLibsqlTransaction) => Promise<Result>,
   ): Promise<ClassifiedWriteTransactionOutcome<FencedConversationWork<Result>>> {
-    const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
+    const digest = decodeStrict(Sha256HexSchema, await this.sha256Text(this.input.writerToken));
     return this.owner.exclusively(() =>
       runClassifiedWriteTransaction<LocalLibsqlTransaction, FencedConversationWork<Result>>(
         this.owner,
@@ -488,7 +498,7 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
 
   async verifyFence(): Promise<WriterFenceCheck> {
     try {
-      const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
+      const digest = decodeStrict(Sha256HexSchema, await this.sha256Text(this.input.writerToken));
       // The settlement reader: a fence that contradicts its generation throws, so it is broken.
       const fence = await readCanonicalWriterFence(this.owner.client, this.projectId);
       if (fence === undefined) return { status: "stale" };
@@ -507,7 +517,7 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
     try {
       return await this.owner.exclusively(async () => {
         const time = decodeStrict(utcInstantSchema, releasedAt);
-        const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
+        const digest = decodeStrict(Sha256HexSchema, await this.sha256Text(this.input.writerToken));
         if ((await this.recordUncertainty(digest)).status === "stale") return { status: "stale" };
         return await withWriteTransaction<LocalLibsqlTransaction, WriterFenceCheck>(
           this.owner,
@@ -537,7 +547,7 @@ class LocalCanonicalCommandRepository implements CanonicalCommandRepository {
     try {
       await this.owner.close(async () => {
         if (this.uncertainty === undefined || this.uncertaintyRecorded) return;
-        const digest = decodeStrict(digestSchema, await this.sha256Text(this.input.writerToken));
+        const digest = decodeStrict(Sha256HexSchema, await this.sha256Text(this.input.writerToken));
         if ((await this.recordUncertainty(digest)).status === "stale")
           throw new Error("Canonical Writer uncertainty authority is stale.");
       });
@@ -611,7 +621,7 @@ export function createCanonicalCommandRepositoryFactory(
         client = owner;
         const writerToken = decodeStrict(WriterCapabilityTokenSchema, input.writerToken);
         const activatedAt = decodeStrict(utcInstantSchema, input.activatedAt);
-        const digest = decodeStrict(digestSchema, await dependencies.sha256Text(writerToken));
+        const digest = decodeStrict(Sha256HexSchema, await dependencies.sha256Text(writerToken));
         const validated = { ...input, writerToken, activatedAt };
         const writerGeneration = await owner.exclusively(() =>
           withWriteTransaction(owner, (tx) =>

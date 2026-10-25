@@ -119,7 +119,7 @@ export function createProjectRegistrationFlow(
     Effect.gen(function* () {
       const inspection = decodeStrict(GitVersionInspectionRequestSchema, {
         selectionId: request.selectionId,
-        consentId: request.consentId,
+        consentId: request.executableConsentId,
       });
       if (inspection.consentId === null) return internalFailure;
       const consentId = inspection.consentId;
@@ -152,7 +152,7 @@ export function createProjectRegistrationFlow(
           ...decodeStrict(IdentityQueryConsentRequestSchema, {
             selectionId: request.selectionId,
             observationId: request.observationId,
-            consentId: request.consentId,
+            consentId: request.identityQueryConsentId,
           }),
           decision: request.decision,
         }),

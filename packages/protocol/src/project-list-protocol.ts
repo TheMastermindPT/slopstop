@@ -1,6 +1,9 @@
 import { Schema } from "effect";
 import { ProjectIdSchema } from "./domain-identity-schema.js";
-import { InitialRepositoryBindingSchema } from "./project-registration-protocol.js";
+import {
+  InitialRepositoryBindingSchema,
+  registryBrokenCodes,
+} from "./project-registration-protocol.js";
 import {
   PersistenceHealthSchema,
   ProjectStorageDiagnosticCodeSchema,
@@ -95,9 +98,7 @@ export const ProjectListResultSchema = wholeUnion([
   Schema.Struct({
     status: Schema.Literal("broken"),
     code: Schema.Literals([
-      "REGISTRY_SCHEMA_UNKNOWN",
-      "REGISTRY_SCHEMA_NEWER",
-      "REGISTRY_CORRUPT",
+      ...registryBrokenCodes,
       "INTERNAL_FAILURE",
       "PROJECT_LIST_TRANSPORT_FAILED",
     ]),

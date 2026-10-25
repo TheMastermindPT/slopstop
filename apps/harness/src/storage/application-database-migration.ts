@@ -1,4 +1,9 @@
-import { acceptsStrict, decodeStrictResult, NonEmptyTextSchema } from "@slopstop/protocol";
+import {
+  acceptsStrict,
+  decodeStrictResult,
+  NonEmptyTextSchema,
+  type RegistryBrokenCode,
+} from "@slopstop/protocol";
 import { Result, Schema } from "effect";
 import { requireDeclaredSchemaObjects, tableNames } from "./database-schema-verifier.js";
 import { loadGeneratedMigrations } from "./generated-migration-resources.js";
@@ -27,10 +32,7 @@ import {
 import { SqlIntegerSchema } from "./sql-integer-schema.js";
 
 export type ApplicationDatabaseFailure =
-  | Readonly<{
-      status: "broken";
-      code: "REGISTRY_SCHEMA_UNKNOWN" | "REGISTRY_SCHEMA_NEWER" | "REGISTRY_CORRUPT";
-    }>
+  | Readonly<{ status: "broken"; code: RegistryBrokenCode }>
   | typeof missingWithWitnessFailure;
 
 // A missing application database where prior state proves it existed; the one owner of this

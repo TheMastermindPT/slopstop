@@ -37,7 +37,7 @@ it.runIf(process.platform === "win32")(
       const version = await session.register({
         step: "decide-git-version",
         selectionId: git.selectionId,
-        consentId: randomUUID(),
+        executableConsentId: randomUUID(),
         decision: "accepted",
       });
       expect(version).toEqual({
@@ -53,7 +53,7 @@ it.runIf(process.platform === "win32")(
           step: "decide-identity-queries",
           selectionId: git.selectionId,
           observationId: version.observationId,
-          consentId: randomUUID(),
+          identityQueryConsentId: randomUUID(),
           decision: "accepted",
         }),
       ).toEqual({ status: "identity-queries-recorded" });
@@ -80,7 +80,7 @@ it.runIf(process.platform === "win32")(
         await session.register({
           step: "decide-git-version",
           selectionId: git.selectionId,
-          consentId: randomUUID(),
+          executableConsentId: randomUUID(),
           decision: "declined",
         }),
       ).toEqual({ status: "cancelled" });

@@ -1,15 +1,16 @@
 import {
   CanonicalDatabaseLineageIdSchema,
-  dateTimeTextSchema,
   decodeStrict,
   ProjectIdSchema,
   ProjectStorageCreateRequestIdSchema,
   RuntimeDatabaseLineageIdSchema,
+  Sha256HexSchema,
   StorageGenerationIdSchema,
   StorageIdSchema,
   TrimmedNonEmptyTextSchema,
 } from "@slopstop/protocol";
 import { Schema } from "effect";
+import { utcInstantSchema } from "./project-storage-node-schemas.js";
 
 export const projectStorageManifestFilename = "manifest.json";
 export const canonicalDatabaseFilename = "slopstop.db";
@@ -20,13 +21,10 @@ const safeNonnegativeIntegerSchema = Schema.Number.check(
   Schema.isInt(),
   Schema.isGreaterThanOrEqualTo(0),
 );
-const utcInstantSchema = dateTimeTextSchema({ offset: true }).check(
-  Schema.makeFilter((value: string) => value.endsWith("Z") || "UTC instant must end in Z."),
-);
 const activationBaselineSchema = Schema.Struct({
   algorithm: Schema.Literal("sha256"),
   sizeBytes: safeNonnegativeIntegerSchema,
-  sha256: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u)),
+  sha256: Sha256HexSchema,
 });
 
 const manifestIdentityFields = {

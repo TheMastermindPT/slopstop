@@ -2,7 +2,11 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { decodeStrict, decodeStrictResult, UuidTextSchema } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  decodeStrictResult,
+  LowercaseDomainIdentityTextSchema,
+} from "@slopstop/protocol";
 import { Result, Schema } from "effect";
 import {
   createProjectRegistrationObserver,
@@ -28,7 +32,7 @@ export const ownerCheckpoints = [
 const checkpointSchema = Schema.Struct({
   kind: Schema.Literal("checkpoint"),
   point: Schema.Literals(ownerCheckpoints),
-  observationId: UuidTextSchema,
+  observationId: LowercaseDomainIdentityTextSchema,
   identity: Schema.optional(
     Schema.Struct({
       platform: Schema.Literal("win32"),

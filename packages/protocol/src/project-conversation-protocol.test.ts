@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { decodeWithIssues } from "./decode-with-issues.test-support.js";
 import * as protocol from "./index.js";
 import { acceptsStrict } from "./schema-codec.js";
 
@@ -8,7 +9,7 @@ const saveId = "00000000-0000-4000-8000-000000000012";
 const readRequest = { projectId, activationId, after: null };
 const saveRequest = { projectId, activationId, saveId, expectedRevision: 0, text: "Hello" };
 const envelope = {
-  protocolVersion: 8,
+  protocolVersion: 9,
   messageType: "command",
   messageId: "00000000-0000-4000-8000-000000000013",
   sentAt: "2026-10-10T12:00:00.000Z",
@@ -332,4 +333,20 @@ it("names why message text cannot be saved (CNV-B12)", () => {
       text: " ",
     }),
   ).toThrow("Message text cannot be saved.");
+});
+
+it.each([
+  "00000000-0000-0000-0000-000000000000",
+  "ffffffff-ffff-ffff-ffff-ffffffffffff",
+  "ABCDEFAB-CDEF-4ABC-8ABC-ABCDEFABCDEF",
+])("rejects a non-strict save id (%s)", (value) => {
+  expect(decodeWithIssues(protocol.ProjectConversationSaveRequestSchema, saveRequest).success).toBe(
+    true,
+  );
+  const decoded = decodeWithIssues(protocol.ProjectConversationSaveRequestSchema, {
+    ...saveRequest,
+    saveId: value,
+  });
+  expect(decoded.success).toBe(false);
+  expect(decoded.error?.issues.map((issue) => issue.path)).toEqual([["saveId"]]);
 });

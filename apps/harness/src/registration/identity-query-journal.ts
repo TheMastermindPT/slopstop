@@ -2,9 +2,14 @@ import { randomUUID } from "node:crypto";
 import { decodeStrict } from "@slopstop/protocol";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
+import type { UtcClock } from "../utc-clock.js";
 import { type IdentityQueryDispatch, identityQueryArguments } from "./identity-query-child.js";
 import { ObserverChildIdentitySchema, ObserverTerminalSchema } from "./observer-journal.js";
-import { type RegistrationDatabaseOptions, withRegistrationDatabase } from "./registry-database.js";
+import {
+  type RegistrationDatabaseOptions,
+  registrationClock,
+  withRegistrationDatabase,
+} from "./registry-database.js";
 import { RegistryFault } from "./registry-failure.js";
 import { authorizeQueries, type RepositoryTrustOwner } from "./repository-trust.js";
 import type {
@@ -18,6 +23,7 @@ async function commitDecision<Result extends Readonly<{ status: string }>>(
   transaction: LocalLibsqlTransaction,
   id: string,
   decide: () => Result,
+  clock: UtcClock,
 ): Promise<Result> {
   let staged: string | null = null;
   for (;;) {
@@ -30,7 +36,7 @@ async function commitDecision<Result extends Readonly<{ status: string }>>(
     }
     const updated = await transaction.execute({
       sql: "UPDATE registration_identity_query_attempts SET result_json = ?, settled_at = ? WHERE observation_id = ? AND terminal_json IS NOT NULL AND result_json IS ?",
-      args: [encoded, new Date().toISOString(), id, staged],
+      args: [encoded, clock.now(), id, staged],
     });
     if (updated.rowsAffected !== 1)
       throw new RegistryFault({ status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" });
@@ -41,6 +47,7 @@ async function commitDecision<Result extends Readonly<{ status: string }>>(
 
 export function createIdentityQueryJournal(options: RegistrationDatabaseOptions) {
   const owned = new Set<string>();
+  const clock = registrationClock(options);
   const write = <T>(operation: (transaction: LocalLibsqlTransaction) => Promise<T>) =>
     withRegistrationDatabase(
       options,
@@ -76,7 +83,7 @@ export function createIdentityQueryJournal(options: RegistrationDatabaseOptions)
               phase,
               arguments: identityQueryArguments(phase.query),
             }),
-            new Date().toISOString(),
+            clock.now(),
           ],
         });
         return { status: "started" as const, observationId, authority, phase };
@@ -114,7 +121,7 @@ export function createIdentityQueryJournal(options: RegistrationDatabaseOptions)
         async (client) => {
           const transaction = await client.transaction("write");
           try {
-            return await commitDecision(transaction, id, decide);
+            return await commitDecision(transaction, id, decide, clock);
           } catch (error) {
             if (!transaction.closed) await transaction.rollback();
             throw error;
@@ -130,7 +137,7 @@ export function createIdentityQueryJournal(options: RegistrationDatabaseOptions)
     noDispatch: (id: string, result: Readonly<{ status: string }>) =>
       update(
         "UPDATE registration_identity_query_attempts SET result_json = ?, settled_at = ? WHERE observation_id = ? AND child_json IS NULL AND result_json IS NULL",
-        [JSON.stringify(result), new Date().toISOString(), id],
+        [JSON.stringify(result), clock.now(), id],
       ).then(() => {
         owned.delete(id);
       }),

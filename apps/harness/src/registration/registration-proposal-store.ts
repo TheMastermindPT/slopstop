@@ -1,12 +1,15 @@
-import { createHash } from "node:crypto";
 import {
-  dateTimeTextSchema,
   decodeStrict,
   decodeStrictResult,
+  LowercaseDomainIdentityTextSchema,
   NonEmptyTextSchema,
-  UuidTextSchema,
+  RegistrationPreparationRequestIdSchema,
+  RegistrationProposalIdSchema,
+  Sha256HexSchema,
+  UtcInstantSchema,
 } from "@slopstop/protocol";
 import { Result, Schema } from "effect";
+import { sha256Hex } from "../sha256-text.js";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { ExecutableIdentitySchema } from "./executable-identity.js";
 import {
@@ -19,7 +22,7 @@ import { RepositoryIdentityAdmissionRequestSchema } from "./repository-trust.js"
 
 export const PrepareProjectRegistrationSchema = Schema.Struct({
   version: Schema.Literal(1),
-  requestId: UuidTextSchema.pipe(Schema.brand("RegistrationPreparationRequestId")),
+  requestId: RegistrationPreparationRequestIdSchema,
   admission: RepositoryIdentityAdmissionRequestSchema,
 });
 export type PrepareProjectRegistration = typeof PrepareProjectRegistrationSchema.Type;
@@ -27,8 +30,8 @@ export type PrepareProjectRegistration = typeof PrepareProjectRegistrationSchema
 const pathSchema = NonEmptyTextSchema.check(Schema.isPattern(/^[^\r\n\0]+$/));
 export const RegistrationProposalRecordSchema = Schema.Struct({
   request: PrepareProjectRegistrationSchema,
-  proposalId: UuidTextSchema.pipe(Schema.brand("RegistrationProposalId")),
-  preparedAt: dateTimeTextSchema(),
+  proposalId: RegistrationProposalIdSchema,
+  preparedAt: UtcInstantSchema,
   authority: Schema.Struct({
     repositoryDirectory: pathSchema,
     repositoryIdentity: PhysicalDirectoryKeySchema,
@@ -41,7 +44,7 @@ export const RegistrationProposalRecordSchema = Schema.Struct({
   }),
   observation: Schema.Struct({
     status: Schema.Literal("physically-observed"),
-    phaseId: UuidTextSchema,
+    phaseId: LowercaseDomainIdentityTextSchema,
     booleans: Schema.Struct({
       insideWorkTree: Schema.Literal(true),
       bareRepository: Schema.Literal(false),
@@ -58,9 +61,9 @@ export const RegistrationProposalRecordSchema = Schema.Struct({
 export type RegistrationProposalRecord = typeof RegistrationProposalRecordSchema.Type;
 const proposalRowsSchema = Schema.Array(
   Schema.Struct({
-    proposalId: UuidTextSchema,
-    inputFingerprint: Schema.String,
-    proposalFingerprint: Schema.String,
+    proposalId: RegistrationProposalIdSchema,
+    inputFingerprint: Sha256HexSchema,
+    proposalFingerprint: Sha256HexSchema,
     recordJson: Schema.String,
   }),
 ).check(Schema.isMaxLength(1));
@@ -69,7 +72,7 @@ export function preparationFingerprint(
   value: PrepareProjectRegistration | RegistrationProposalRecord,
 ) {
   // Versioned, schema-ordered fields; never hash caller object order or mutable caller objects.
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return sha256Hex(JSON.stringify(value));
 }
 
 export function preparedResult(record: RegistrationProposalRecord) {
@@ -84,6 +87,31 @@ export function preparedResult(record: RegistrationProposalRecord) {
   };
 }
 
+type ProposalRow = (typeof proposalRowsSchema.Type)[number];
+const corruptProposal = () => new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+
+function decodeProposalRecord(row: ProposalRow): RegistrationProposalRecord {
+  try {
+    return decodeStrict(RegistrationProposalRecordSchema, JSON.parse(row.recordJson));
+  } catch {
+    throw corruptProposal();
+  }
+}
+
+/** The record belongs to the request and its row, and both fingerprints match the record. */
+function proposalRowAgrees(
+  record: RegistrationProposalRecord,
+  row: ProposalRow,
+  request: PrepareProjectRegistration,
+): boolean {
+  return [
+    record.request.requestId === request.requestId,
+    record.proposalId === row.proposalId,
+    preparationFingerprint(record.request) === row.inputFingerprint,
+    preparationFingerprint(record) === row.proposalFingerprint,
+  ].every(Boolean);
+}
+
 export async function readProposal(
   transaction: LocalLibsqlTransaction,
   request: PrepareProjectRegistration,
@@ -93,25 +121,11 @@ export async function readProposal(
     args: [request.requestId],
   });
   const rows = decodeStrictResult(proposalRowsSchema, registryRows(result));
-  if (Result.isFailure(rows)) {
-    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-  }
+  if (Result.isFailure(rows)) throw corruptProposal();
   const row = rows.success[0];
   if (row === undefined) return undefined;
-  let record: RegistrationProposalRecord;
-  try {
-    record = decodeStrict(RegistrationProposalRecordSchema, JSON.parse(row.recordJson));
-  } catch {
-    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-  }
-  if (
-    record.request.requestId !== request.requestId ||
-    record.proposalId !== row.proposalId ||
-    preparationFingerprint(record.request) !== row.inputFingerprint ||
-    preparationFingerprint(record) !== row.proposalFingerprint
-  ) {
-    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-  }
+  const record = decodeProposalRecord(row);
+  if (!proposalRowAgrees(record, row, request)) throw corruptProposal();
   if (preparationFingerprint(record.request) !== preparationFingerprint(request)) {
     throw new RegistryFault({ status: "rejected", code: "REGISTRATION_IDEMPOTENCY_CONFLICT" });
   }

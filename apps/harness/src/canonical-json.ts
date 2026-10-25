@@ -1,19 +1,17 @@
-import { createHash } from "node:crypto";
 import {
   type CanonicalJsonValue,
   CanonicalJsonValueSchema,
   decodeStrict,
   frozenOutput,
+  LowercaseDomainIdentityTextSchema,
   type ProjectId,
   ProjectIdSchema,
   type TypedCommand,
   TypedCommandSchema,
-  UuidTextSchema,
 } from "@slopstop/protocol";
 import { Schema } from "effect";
+import { sha256Hex } from "./sha256-text.js";
 import type { LocalLibsqlResultSet } from "./storage/local-libsql-worker-client.js";
-
-export const CanonicalSha256Schema = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u));
 
 export function canonicalResultObjects(result: LocalLibsqlResultSet): unknown[] {
   if (new Set(result.columns).size !== result.columns.length)
@@ -35,9 +33,7 @@ export function canonicalChangedOnce(result: LocalLibsqlResultSet): void {
     throw new Error("Canonical Writer row was not changed exactly once.");
 }
 
-export const CanonicalStoredIdentitySchema = UuidTextSchema.check(
-  Schema.makeFilter((value: string) => value === value.toLowerCase()),
-);
+export const CanonicalStoredIdentitySchema = LowercaseDomainIdentityTextSchema;
 
 function renderJson(value: CanonicalJsonValue): string {
   if (value === null || typeof value !== "object") {
@@ -57,7 +53,7 @@ export function canonicalJsonText(value: unknown): string {
 }
 
 export function hashCanonicalJson(value: unknown): string {
-  return createHash("sha256").update(canonicalJsonText(value), "utf8").digest("hex");
+  return sha256Hex(canonicalJsonText(value));
 }
 
 const commandSnapshotSchema = frozenOutput(

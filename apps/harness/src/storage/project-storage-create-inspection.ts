@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
 import path from "node:path";
 import type { ProjectStorageCreateRequest } from "@slopstop/protocol";
+import { sha256Hex } from "../sha256-text.js";
 import { chainRootCreatedAt } from "./application-database-migration.js";
 import { projectStorageCreateRequestFingerprintInput } from "./project-storage-create-request.js";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
@@ -92,14 +92,12 @@ async function requireActiveCreateAuthority(input: {
 }
 
 function requireCanonicalCreateRequestFingerprint(generation: GenerationRow): void {
-  const expectedFingerprint = createHash("sha256")
-    .update(
-      projectStorageCreateRequestFingerprintInput({
-        projectId: generation.projectId,
-        createRequestId: generation.createRequestId,
-      }),
-    )
-    .digest("hex");
+  const expectedFingerprint = sha256Hex(
+    projectStorageCreateRequestFingerprintInput({
+      projectId: generation.projectId,
+      createRequestId: generation.createRequestId,
+    }),
+  );
   if (generation.createRequestFingerprint !== expectedFingerprint) {
     throw new ProjectStorageBrokenError("Create request fingerprint does not agree.");
   }

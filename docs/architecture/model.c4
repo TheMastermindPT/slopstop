@@ -73,7 +73,6 @@ model {
   slopstop.desktop.main -[launches]-> slopstop.harness "supervises"
   slopstop.desktop.main -[imports]-> slopstop.protocol "validates messages"
   slopstop.harness -[imports]-> slopstop.protocol "validates messages"
-  slopstop.harness -[imports]-> slopstop.kernel "executes domain behavior"
   slopstop.protocol -[imports]-> slopstop.kernel "may reuse domain schemas"
   slopstop.harness -[persists]-> slopstop.canonicalDb "serializes canonical writes"
   slopstop.harness -[persists]-> slopstop.mastraDb "isolates adapter state"

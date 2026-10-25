@@ -928,3 +928,43 @@ describe("S5 G2 receipt protocol", () => {
     },
   );
 });
+
+describe("writer release codes", () => {
+  const released = (code: string, retryable: boolean) => ({
+    status: "release-failed",
+    request: switchRequest,
+    diagnostic: { code, message: "Project activation resources could not be released.", retryable },
+  });
+
+  it("names the 8 writer release codes once, without the stale fence", () => {
+    expect(protocol.writerReleaseFailureCodes).toEqual([
+      "PROJECT_STORAGE_RELEASE_FAILED",
+      "WRITER_LEASE_OPEN_FAILED",
+      "WRITER_LEASE_LOCK_FAILED",
+      "WRITER_LEASE_UNLOCK_FAILED",
+      "WRITER_LEASE_CLOSE_FAILED",
+      "WRITER_FENCE_RELEASE_FAILED",
+      "WRITER_REPOSITORY_CLOSE_FAILED",
+      "WRITER_CLIENT_ABANDON_FAILED",
+    ]);
+    expect(protocol.writerReleaseFailureCodes).not.toContain("WRITER_FENCE_STALE");
+    const decode = (value: unknown) =>
+      protocol.acceptsStrict(protocol.CanonicalProjectSwitchResultSchema, value);
+    expect(decode(released("WRITER_FENCE_STALE", false))).toBe(true);
+    expect(decode(released("WRITER_FENCE_STALE", true))).toBe(false);
+  });
+
+  it.each(protocol.writerReleaseFailureCodes)("carries every writer release code (%s)", (code) => {
+    const decode = (value: unknown) =>
+      protocol.acceptsStrict(protocol.CanonicalProjectSwitchResultSchema, value);
+    expect(decode(released(code, true))).toBe(true);
+    expect(decode(released(code, false))).toBe(false);
+    expect(
+      protocol.acceptsStrict(protocol.CanonicalProjectActivationResultSchema, {
+        status: "broken",
+        request: { projectId },
+        diagnostic: { code, message: "Project activation failed.", retryable: false },
+      }),
+    ).toBe(true);
+  });
+});

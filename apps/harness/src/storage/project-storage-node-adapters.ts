@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import type { InitialRepositoryBinding } from "@slopstop/protocol";
 import {
@@ -12,6 +12,8 @@ import {
   StorageIdSchema,
 } from "@slopstop/protocol";
 import { Effect } from "effect";
+import { sha256Text } from "../sha256-text.js";
+import { systemUtcClock } from "../utc-clock.js";
 import {
   type ApplicationDatabaseAuthority,
   createApplicationDatabaseAuthority,
@@ -58,7 +60,7 @@ import {
   runtimeDatabaseFilename,
 } from "./project-storage-manifest.js";
 import { createNodeRegistryOperations } from "./project-storage-node-registry.js";
-import { privateLocationIdSchema, utcInstantSchema } from "./project-storage-node-schemas.js";
+import { privateLocationIdSchema } from "./project-storage-node-schemas.js";
 import {
   createLocalClient,
   exactlyOne,
@@ -130,11 +132,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
       runtimeLineageId: () => decodeStrict(RuntimeDatabaseLineageIdSchema, randomUUID()),
       upgradeId: () => decodeStrict(ProjectStorageCreateRequestIdSchema, randomUUID()),
     } satisfies ProjectStorageStoreDependencies["ids"]);
-  const clock =
-    options.clock ??
-    ({
-      now: () => decodeStrict(utcInstantSchema, new Date().toISOString()),
-    } satisfies ProjectStorageStoreDependencies["clock"]);
+  const clock = options.clock ?? systemUtcClock;
   const paths: ProjectStorageStoreDependencies["paths"] = {
     forCreation: (projectId, generationId) => {
       const projectRoot = projectRootFor(projectId);
@@ -379,7 +377,7 @@ function createNodeAdapters(options: NodeProjectStorageOptions): ProjectStorageS
     ids,
     clock,
     hashes: {
-      sha256Text: async (value) => createHash("sha256").update(value).digest("hex"),
+      sha256Text,
       sha256File: (filePath) => sha256File({ filePath }),
     },
     paths,

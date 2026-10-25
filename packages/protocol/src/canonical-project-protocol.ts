@@ -8,16 +8,17 @@ import { LowercaseDomainIdentityTextSchema, ProjectIdSchema } from "./domain-ide
 import {
   type RegisteredProjectSelectionCode,
   registeredProjectSelectionCodes,
+  registryBrokenCodes,
 } from "./project-registration-protocol.js";
 import {
   ProjectDatabaseHealthSchema,
   SafeModeStorageIdentitySchema,
 } from "./project-storage-protocol.js";
 import {
-  dateTimeTextSchema,
   frozenOutput,
   NonEmptyTextSchema,
   TrimmedNonEmptyTextSchema,
+  utcInstant,
   wholeUnion,
 } from "./schema-codec.js";
 
@@ -44,10 +45,8 @@ export const ProjectSequenceSchema = KernelProjectSequenceSchema;
 export type ProjectSequence = typeof ProjectSequenceSchema.Type;
 export const CanonicalEventOrdinalSchema = KernelCanonicalEventOrdinalSchema;
 export type CanonicalEventOrdinal = typeof CanonicalEventOrdinalSchema.Type;
-export const CanonicalSettlementTimeSchema = dateTimeTextSchema({ offset: true }).check(
-  Schema.isPattern(/T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u, {
-    message: "Settlement time must include seconds and use UTC Z notation.",
-  }),
+export const CanonicalSettlementTimeSchema = utcInstant(
+  "Settlement time must include seconds and use UTC Z notation.",
 );
 
 const systemCommandRejectionCodes = [
@@ -138,22 +137,29 @@ function diagnosticSchema<CodeSchema extends Schema.Top, RetryableSchema extends
   return Schema.Struct({ ...diagnosticFields, code, retryable });
 }
 
+/** The codes of a writer release that did not complete; a release retries each of them. */
+export const writerReleaseFailureCodes = [
+  "PROJECT_STORAGE_RELEASE_FAILED",
+  "WRITER_LEASE_OPEN_FAILED",
+  "WRITER_LEASE_LOCK_FAILED",
+  "WRITER_LEASE_UNLOCK_FAILED",
+  "WRITER_LEASE_CLOSE_FAILED",
+  "WRITER_FENCE_RELEASE_FAILED",
+  "WRITER_REPOSITORY_CLOSE_FAILED",
+  "WRITER_CLIENT_ABANDON_FAILED",
+] as const;
+export const WriterReleaseFailureCodeSchema = Schema.Literals(writerReleaseFailureCodes);
+export type WriterReleaseFailureCode = typeof WriterReleaseFailureCodeSchema.Type;
+
 const canonicalProjectActivationDiagnosticCodes = [
   ...registeredProjectSelectionCodes,
   "PROJECT_ALREADY_ACTIVE",
   "PROJECT_COORDINATOR_UNAVAILABLE",
   "PROJECT_STORAGE_UNAVAILABLE",
   "PROJECT_STORAGE_BROKEN",
-  "PROJECT_STORAGE_RELEASE_FAILED",
-  "WRITER_LEASE_OPEN_FAILED",
-  "WRITER_LEASE_LOCK_FAILED",
-  "WRITER_LEASE_UNLOCK_FAILED",
-  "WRITER_LEASE_CLOSE_FAILED",
   "WRITER_FENCE_ACTIVATION_FAILED",
   "WRITER_FENCE_STALE",
-  "WRITER_FENCE_RELEASE_FAILED",
-  "WRITER_REPOSITORY_CLOSE_FAILED",
-  "WRITER_CLIENT_ABANDON_FAILED",
+  ...writerReleaseFailureCodes,
 ] as const;
 export const CanonicalProjectActivationDiagnosticCodeSchema = Schema.Literals(
   canonicalProjectActivationDiagnosticCodes,
@@ -234,22 +240,10 @@ export const CanonicalProjectActivationResultSchema = wholeUnion([
   ]),
   activationFailureSchema("broken", [
     "PROJECT_STORAGE_BROKEN",
-    ...selectionCodes([
-      "REGISTRY_SCHEMA_UNKNOWN",
-      "REGISTRY_SCHEMA_NEWER",
-      "REGISTRY_CORRUPT",
-      "INTERNAL_FAILURE",
-    ]),
-    "PROJECT_STORAGE_RELEASE_FAILED",
-    "WRITER_LEASE_OPEN_FAILED",
-    "WRITER_LEASE_LOCK_FAILED",
-    "WRITER_LEASE_UNLOCK_FAILED",
-    "WRITER_LEASE_CLOSE_FAILED",
+    ...selectionCodes([...registryBrokenCodes, "INTERNAL_FAILURE"]),
     "WRITER_FENCE_ACTIVATION_FAILED",
     "WRITER_FENCE_STALE",
-    "WRITER_FENCE_RELEASE_FAILED",
-    "WRITER_REPOSITORY_CLOSE_FAILED",
-    "WRITER_CLIENT_ABANDON_FAILED",
+    ...writerReleaseFailureCodes,
   ]),
 ]);
 export type CanonicalProjectActivationResult = typeof CanonicalProjectActivationResultSchema.Type;
@@ -412,19 +406,7 @@ function switchOutcomeSchema<
 
 const switchReleaseDiagnosticSchema = wholeUnion([
   diagnosticSchema(Schema.Literal("WRITER_FENCE_STALE"), Schema.Literal(false)),
-  diagnosticSchema(
-    Schema.Literals([
-      "WRITER_FENCE_RELEASE_FAILED",
-      "WRITER_REPOSITORY_CLOSE_FAILED",
-      "WRITER_CLIENT_ABANDON_FAILED",
-      "WRITER_LEASE_OPEN_FAILED",
-      "WRITER_LEASE_LOCK_FAILED",
-      "WRITER_LEASE_UNLOCK_FAILED",
-      "WRITER_LEASE_CLOSE_FAILED",
-      "PROJECT_STORAGE_RELEASE_FAILED",
-    ]),
-    Schema.Literal(true),
-  ),
+  diagnosticSchema(WriterReleaseFailureCodeSchema, Schema.Literal(true)),
 ]);
 
 export const CanonicalProjectSwitchResultSchema = Schema.Union([

@@ -48,26 +48,54 @@ const offsetPattern = "[+-](?:[01]\\d|2[0-3]):[0-5]\\d";
 
 type DateTimeTextOptions = Readonly<{ offset?: boolean; precision?: number }>;
 
-// RFC 3339 instants stay strings across processes; nothing converts them to Date.
-export function dateTimeTextSchema(options: DateTimeTextOptions = {}) {
+function dateTimeCheck(options: DateTimeTextOptions) {
   const time =
     options.precision === undefined
       ? `${hourMinutePattern}(?::[0-5]\\d(?:\\.\\d+)?)?`
       : `${hourMinutePattern}:[0-5]\\d\\.\\d{${options.precision}}`;
   const zone = options.offset === true ? `(?:Z|${offsetPattern})` : "Z";
-  return Schema.String.check(
-    Schema.isPattern(new RegExp(`^${datePattern}T(?:${time}${zone})$`, "u"), {
-      expected: "an RFC 3339 date-time",
-    }),
+  return Schema.isPattern(new RegExp(`^${datePattern}T(?:${time}${zone})$`, "u"), {
+    expected: "an RFC 3339 date-time",
+  });
+}
+
+// RFC 3339 instants stay strings across processes; nothing converts them to Date.
+function dateTimeTextSchema(options: DateTimeTextOptions = {}) {
+  return Schema.String.check(dateTimeCheck(options));
+}
+
+/**
+ * A UTC instant: RFC 3339 structure, then `Z`, then seconds with a fraction of any length. A
+ * malformed instant reports only its structure.
+ */
+export const UtcInstantSchema = Schema.String.check(
+  dateTimeCheck({ offset: true }).abort(),
+  Schema.makeFilter((value: string) => value.endsWith("Z"), {
+    message: "UTC instant must end in Z.",
+  }),
+  Schema.makeFilter((value: string) => /T\d{2}:\d{2}:\d{2}/u.test(value), {
+    message: "UTC instant must include seconds.",
+  }),
+);
+
+/**
+ * The same accepted set under one named message for both rules, reported with the structure
+ * code `invalid_format` (the settlement boundary's vocabulary).
+ */
+export function utcInstant(message: string) {
+  return dateTimeTextSchema({ offset: true }).check(
+    Schema.isPattern(/T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u, { message }),
   );
 }
 
-const uuidPattern =
-  /^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/u;
+/** The instant without trailing fraction zeros, so equal instants compare equal as text. */
+export function normalizedUtc(value: string): string {
+  const [seconds, fraction = ""] = decodeStrict(UtcInstantSchema, value).slice(0, -1).split(".");
+  return `${seconds}.${fraction.replace(/0+$/u, "")}`;
+}
 
-export const UuidTextSchema = Schema.String.check(
-  Schema.isPattern(uuidPattern, { expected: "a UUID" }),
-);
+/** A SHA-256 digest as 64 lowercase hex characters. */
+export const Sha256HexSchema = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u));
 
 export const NonEmptyTextSchema = Schema.String.check(Schema.isMinLength(1));
 

@@ -19,6 +19,7 @@ export type {
   ProjectSequence,
   TypedCommand,
   WriterGeneration,
+  WriterReleaseFailureCode,
 } from "./canonical-project-protocol.js";
 export {
   CanonicalCommandReceiptSchema,
@@ -44,6 +45,8 @@ export {
   SystemCommandRejectionCodeSchema,
   TypedCommandSchema,
   WriterGenerationSchema,
+  WriterReleaseFailureCodeSchema,
+  writerReleaseFailureCodes,
 } from "./canonical-project-protocol.js";
 export type {
   WriterProofControl,
@@ -66,6 +69,7 @@ export {
   writerProofStaleCreateRequestId,
   writerProofStaleProjectId,
 } from "./canonical-writer-smoke-protocol.js";
+export { LowercaseDomainIdentityTextSchema } from "./domain-identity-schema.js";
 export type {
   HarnessFatalCode,
   HarnessFatalLogLine,
@@ -112,29 +116,55 @@ export {
   RegistryPendingRecoverySchema,
 } from "./project-list-protocol.js";
 export type {
+  ExecutableConsentId,
+  ExecutableSelectionId,
+  IdentityQueryConsentId,
   ProjectRegistrationRequest,
   ProjectRegistrationResult,
   RegistrationCapability,
+  RegistrationPreparationRequestId,
   RendererRegistrationRequest,
   RepositoryChoiceResult,
+  RepositorySelectionId,
+  RepositoryTrustId,
+  VersionObservationId,
 } from "./project-registration-flow-protocol.js";
 export {
+  ExecutableConsentIdSchema,
+  ExecutableSelectionIdSchema,
+  IdentityQueryConsentIdSchema,
   ProjectRegistrationRequestSchema,
   ProjectRegistrationResultSchema,
   RegistrationCapabilitySchema,
+  RegistrationPreparationRequestIdSchema,
   RendererRegistrationRequestSchema,
   RepositoryChoiceResultSchema,
+  RepositorySelectionIdSchema,
+  RepositoryTrustIdSchema,
+  VersionObservationIdSchema,
 } from "./project-registration-flow-protocol.js";
 export type {
   InitialRepositoryBinding,
   RegisteredProject,
   RegisteredProjectSelectionCode,
+  RegistrationProposalId,
+  RegistrationRequestId,
+  RegistryBrokenCode,
+  RepositoryBindingId,
+  WorkspaceId,
 } from "./project-registration-protocol.js";
 export {
   InitialRepositoryBindingSchema,
+  isRegistryBrokenCode,
   RegisteredProjectSchema,
   RegisteredProjectSelectionCodeSchema,
+  RegistrationProposalIdSchema,
+  RegistrationRequestIdSchema,
+  RegistryBrokenCodeSchema,
+  RepositoryBindingIdSchema,
   registeredProjectSelectionCodes,
+  registryBrokenCodes,
+  WorkspaceIdSchema,
 } from "./project-registration-protocol.js";
 export type {
   CanonicalDatabaseLineageId,
@@ -153,6 +183,7 @@ export type {
   RuntimeDatabaseLineageId,
   StorageGenerationId,
   StorageId,
+  StorageOperationId,
 } from "./project-storage-protocol.js";
 export {
   CanonicalDatabaseLineageIdSchema,
@@ -248,17 +279,19 @@ export {
 export type { SchemaIssueSummary } from "./schema-codec.js";
 export {
   acceptsStrict,
-  dateTimeTextSchema,
   decodeStrict,
   decodeStrictResult,
   EmptyObjectSchema,
   frozenOutput,
   NonBlankTextSchema,
   NonEmptyTextSchema,
+  normalizedUtc,
+  Sha256HexSchema,
   strictParseOptions,
   summarizeSchemaError,
   TrimmedNonEmptyTextSchema,
-  UuidTextSchema,
+  UtcInstantSchema,
+  utcInstant,
 } from "./schema-codec.js";
 export type {
   AcceptedRevisionId,

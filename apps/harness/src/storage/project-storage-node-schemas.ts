@@ -1,15 +1,16 @@
 import {
   CanonicalDatabaseLineageIdSchema,
-  dateTimeTextSchema,
   decodeStrictResult,
+  LowercaseDomainIdentityTextSchema,
   NonEmptyTextSchema,
   ProjectIdSchema,
   ProjectStorageCreateRequestIdSchema,
   RuntimeDatabaseLineageIdSchema,
+  Sha256HexSchema,
   StorageGenerationIdSchema,
   StorageIdSchema,
   TrimmedNonEmptyTextSchema,
-  UuidTextSchema,
+  UtcInstantSchema,
 } from "@slopstop/protocol";
 import { Result, Schema } from "effect";
 import type { LocalLibsqlResultSet } from "./local-libsql-worker-client.js";
@@ -46,15 +47,8 @@ export const generationRowColumns = `storage_id AS storageId, generation_id AS g
       creation_state AS creationState, created_at AS createdAt,
       activated_at AS activatedAt`;
 
-export const utcInstantSchema = dateTimeTextSchema({ offset: true }).check(
-  Schema.makeFilter((value: string) => value.endsWith("Z") || "UTC instant must end in Z."),
-);
-export const privateLocationIdSchema = UuidTextSchema.check(
-  Schema.makeFilter(
-    (value: string) => value === value.toLowerCase() || "Identity must use lowercase UUID text.",
-  ),
-);
-const sha256Schema = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u));
+export const utcInstantSchema = UtcInstantSchema;
+export const privateLocationIdSchema = LowercaseDomainIdentityTextSchema;
 
 export const stagingDeclarationSchema = Schema.Struct({
   projectId: ProjectIdSchema,
@@ -64,7 +58,7 @@ export const stagingDeclarationSchema = Schema.Struct({
   canonicalDatabaseLineageId: CanonicalDatabaseLineageIdSchema,
   runtimeDatabaseLineageId: RuntimeDatabaseLineageIdSchema,
   createRequestId: ProjectStorageCreateRequestIdSchema,
-  createRequestFingerprint: sha256Schema,
+  createRequestFingerprint: Sha256HexSchema,
   createdAt: utcInstantSchema,
   observedAt: utcInstantSchema,
   normalizedPath: NonEmptyTextSchema,
@@ -100,7 +94,7 @@ export const generationRowSchema = Schema.Struct({
   canonicalDatabaseLineageId: CanonicalDatabaseLineageIdSchema,
   runtimeDatabaseLineageId: RuntimeDatabaseLineageIdSchema,
   createRequestId: ProjectStorageCreateRequestIdSchema,
-  createRequestFingerprint: sha256Schema,
+  createRequestFingerprint: Sha256HexSchema,
   generationDirectoryName: StorageGenerationIdSchema,
   creationState: Schema.Literals(["staging", "active"]),
   createdAt: utcInstantSchema,

@@ -1,4 +1,8 @@
-import { decodeStrict, type ProjectId, type ProjectStorageCreateRequest } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  type ProjectId,
+  type ProjectStorageCreateRequestId,
+} from "@slopstop/protocol";
 import { Schema } from "effect";
 import type { LocalLibsqlResultSet } from "./local-libsql-worker-client.js";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
@@ -29,7 +33,7 @@ const maximumRegistryGenerationsPerProject = 256;
 
 export async function generationRowsByRequest(
   client: LocalClient | LocalTransaction,
-  createRequestId: ProjectStorageCreateRequest["createRequestId"],
+  createRequestId: ProjectStorageCreateRequestId,
 ): Promise<readonly GenerationRow[]> {
   const result = await client.execute({
     sql: `SELECT ${generationRowColumns}

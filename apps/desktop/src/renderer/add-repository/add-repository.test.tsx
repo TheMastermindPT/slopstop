@@ -307,3 +307,25 @@ describe("Add existing repository", () => {
     expect(screen.queryByRole("button", { name: "Show chess" })).toBeNull();
   });
 });
+
+describe("Add existing repository consents", () => {
+  it("sends each consent under its own name", async () => {
+    const { user, fake } = await reachProposal();
+    await press(user, "Confirm registration");
+    await heading("repository was added");
+    const sent = (step: string): Record<string, unknown> => {
+      const found = fake.calls.find((call) => call.step === step);
+      if (found === undefined) throw new Error(`No ${step} call`);
+      return Object.fromEntries(Object.entries(found));
+    };
+    const version = sent("decide-git-version");
+    const queries = sent("decide-identity-queries");
+    expect(version["executableConsentId"]).toEqual(expect.any(String));
+    expect(version).not.toHaveProperty("consentId");
+    expect(queries["identityQueryConsentId"]).toEqual(expect.any(String));
+    expect(queries).not.toHaveProperty("consentId");
+    expect(queries["identityQueryConsentId"]).not.toBe(version["executableConsentId"]);
+    expect(sent("prepare")["identityQueryConsentId"]).toBe(queries["identityQueryConsentId"]);
+    expect(sent("confirm")["identityQueryConsentId"]).toBe(queries["identityQueryConsentId"]);
+  });
+});

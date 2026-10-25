@@ -418,6 +418,8 @@ it
   .each([
     "UPDATE registration_proposals SET record_json = '{}'",
     "UPDATE registration_proposals SET proposal_fingerprint = 'corrupt'",
+    `UPDATE registration_proposals SET proposal_fingerprint = '${"A".repeat(64)}'`,
+    `UPDATE registration_proposals SET input_fingerprint = '${"A".repeat(64)}'`,
   ])("reports corrupt saved proposal as broken without a new observation: %s", async (sql) => {
   const f = await fixture();
   try {

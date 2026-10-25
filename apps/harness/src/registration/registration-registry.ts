@@ -18,6 +18,7 @@ import {
   type PreparedRegistryRunner,
   type RegistrationDatabaseOptions,
   type RegistryRunner,
+  registrationClock,
   stopStandaloneAuthority,
   withRegistrationDatabase,
 } from "./registry-database.js";
@@ -106,10 +107,11 @@ export function createRegistrationRegistry(
     startReconciled === undefined
       ? gate()
       : Effect.runPromise(Deferred.await(startReconciled)).then(gate);
-  const trust = createRepositoryTrustOwner(run, prepareAndRun, repositorySelection);
-  const observers = createRegistryObserverJournal(run);
+  const clock = registrationClock(options);
+  const trust = createRepositoryTrustOwner(run, prepareAndRun, clock, repositorySelection);
+  const observers = createRegistryObserverJournal(run, clock);
   return {
-    ...createIdentityQueryConsentAuthority(run),
+    ...createIdentityQueryConsentAuthority(run, clock),
     ...trust,
     ...observers,
     admitRepositoryIdentityQueries: (input, port) =>
@@ -119,7 +121,7 @@ export function createRegistrationRegistry(
       const ended = Deferred.makeUnsafe<void>();
       startReconciled = ended;
       try {
-        return await createRegistryObserverJournal(untracked).reconcileObservers(absence);
+        return await createRegistryObserverJournal(untracked, clock).reconcileObservers(absence);
       } finally {
         Deferred.doneUnsafe(ended, Effect.void);
       }
@@ -142,7 +144,7 @@ export function createRegistrationRegistry(
                   observed.identity.fileIdentity,
                   observed.identity.birthIdentity,
                   observed.identity.sha256,
-                  new Date().toISOString(),
+                  clock.now(),
                 ],
               });
             } else if (existing.executablePath !== request.executablePath) {
@@ -180,12 +182,7 @@ export function createRegistrationRegistry(
               return { status: "unavailable" as const, code: "GIT_CONFIRMATION_REQUIRED" as const };
             await transaction.execute({
               sql: "INSERT INTO registration_version_consents (consent_id, selection_id, decision, decided_at) VALUES (?, ?, ?, ?)",
-              args: [
-                request.consentId,
-                request.selectionId,
-                request.decision,
-                new Date().toISOString(),
-              ],
+              args: [request.consentId, request.selectionId, request.decision, clock.now()],
             });
             return { status: "recorded" as const };
           }),

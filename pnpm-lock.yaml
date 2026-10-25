@@ -301,9 +301,6 @@ importers:
 
   apps/harness:
     dependencies:
-      '@slopstop/kernel':
-        specifier: workspace:*
-        version: link:../../packages/kernel
       '@slopstop/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol

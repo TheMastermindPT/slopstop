@@ -20,6 +20,7 @@ import {
 import { afterEach } from "vitest";
 import { startHarnessProcessRuntime } from "../../src/process-bootstrap.js";
 import type { UpgradeEventLogger } from "../../src/upgrade-diagnostics-logger.js";
+import type { UtcClock } from "../../src/utc-clock.js";
 import {
   checkedInMigrationRoot,
   silentHarnessLogger,
@@ -47,26 +48,28 @@ export const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 export type GitConsent = Readonly<{
   selectionId: string;
   observationId: string;
-  consentId: string;
+  identityQueryConsentId: string;
 }>;
 
 /**
  * A harness process runtime over a fresh installation, driven through its transport with
  * one fresh Git repository at `directory`. Given the `root` of an earlier session, it starts a
- * new runtime over that installation and repository instead, logging to `logger` if given.
+ * new runtime over that installation and repository instead, logging to `logger` if given. A
+ * given `clock` is the process clock.
  */
 export async function registrationSession(
-  existing?: Readonly<{ root: string; logger?: UpgradeEventLogger }>,
+  existing?: Readonly<{ root?: string; logger?: UpgradeEventLogger; clock?: UtcClock }>,
 ) {
   const root = existing?.root ?? (await temporaryRoot("pc-s1-flow-"));
   const directory = path.join(root, "repository");
-  if (existing === undefined) {
+  if (existing?.root === undefined) {
     roots.push(root);
     execFileSync(installedGit, ["init", "--quiet", directory]);
   }
   const { port1, port2 } = new MessageChannel();
   const stop = await startHarnessProcessRuntime({
     logger: existing?.logger ?? silentHarnessLogger,
+    ...(existing?.clock === undefined ? {} : { clock: existing.clock }),
     bootstrap: {
       kind: "harness.connect",
       applicationStorageRootUrl: pathToFileURL(path.join(root, "installation")).href,
@@ -125,14 +128,14 @@ export async function registrationSession(
     const version = await register({
       step: "decide-git-version",
       selectionId: git.selectionId,
-      consentId: randomUUID(),
+      executableConsentId: randomUUID(),
       decision: "accepted",
     });
     if (version.status !== "git-version-observed") throw missing94("Git version missing", version);
     const consent = {
       selectionId: git.selectionId,
       observationId: version.observationId,
-      consentId: randomUUID(),
+      identityQueryConsentId: randomUUID(),
     };
     const recorded = await register({
       step: "decide-identity-queries",

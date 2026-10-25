@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { decodeWithIssues } from "./decode-with-issues.test-support.js";
 import {
   acceptsStrict,
   CanonicalCommandReceiptSchema,
@@ -43,38 +44,65 @@ describe("schema boundary characterization", () => {
     ]) {
       expect(accepts(CanonicalSettlementTimeSchema, value), value).toBe(false);
     }
+    for (const value of ["2026-10-03T12:00:00+01:00", "2026-10-03T12:00Z"]) {
+      expect(decodeWithIssues(CanonicalSettlementTimeSchema, value).error?.issues, value).toEqual([
+        {
+          code: "invalid_format",
+          path: [],
+          message: "Settlement time must include seconds and use UTC Z notation.",
+        },
+      ]);
+    }
   });
 
-  it("accepts message timestamps with offsets and without seconds", () => {
-    const handshake = (sentAt: string) => ({
-      protocolVersion: 8,
+  it.each([
+    "2026-10-03T12:00Z",
+    "2026-10-03T12:00:00.5+05:30",
+    "2026-10-03T12:00:00-00:00",
+    "2026-10-03T12:00:00+24:00",
+    "2026-10-03T12:00:00",
+    "2026-10-03",
+  ])("rejects a non-UTC or minute-only message timestamp (%s)", (sentAt) => {
+    const handshake = (at: string) => ({
+      protocolVersion: 9,
       messageType: "command",
       messageId: "00000000-0000-4000-8000-000000000001",
-      sentAt,
+      sentAt: at,
       command: "system.handshake",
       payload: { desktopVersion: "1.0.0" },
     });
-    for (const sentAt of [
-      "2026-10-03T12:00Z",
-      "2026-10-03T12:00:00.5+05:30",
-      "2026-10-03T12:00:00-00:00",
-    ]) {
-      expect(parseDesktopMessage(handshake(sentAt)).ok, sentAt).toBe(true);
-    }
-    for (const sentAt of ["2026-10-03T12:00:00+24:00", "2026-10-03T12:00:00", "2026-10-03"]) {
-      expect(parseDesktopMessage(handshake(sentAt)).ok, sentAt).toBe(false);
-    }
+    expect(parseDesktopMessage(handshake("2026-10-03T12:00:00.000Z")).ok).toBe(true);
+    const parsed = parseDesktopMessage(handshake(sentAt));
+    expect(parsed.ok).toBe(false);
+    expect(!parsed.ok && parsed.error.code).toBe("PROTOCOL_MESSAGE_INVALID");
+    expect(!parsed.ok && parsed.error.issues.map((issue) => issue.path)).toContain("sentAt");
   });
 
-  it("keeps domain identities lowercase and message identities broad", () => {
+  it("keeps domain and message identities strict and lowercase", () => {
     expect(accepts(ProjectIdSchema, projectId)).toBe(true);
     expect(accepts(ProjectIdSchema, projectId.toUpperCase())).toBe(false);
     expect(accepts(ProjectIdSchema, "00000000-0000-0000-0000-000000000000")).toBe(false);
-    expect(accepts(MessageIdSchema, "00000000-0000-0000-0000-000000000000")).toBe(true);
-    expect(accepts(MessageIdSchema, "ffffffff-ffff-ffff-ffff-ffffffffffff")).toBe(true);
-    expect(accepts(MessageIdSchema, "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF")).toBe(false);
-    expect(accepts(MessageIdSchema, "018F47A3-4E3D-7D2B-9C41-7DF4605C0A11")).toBe(true);
-    expect(accepts(MessageIdSchema, "018f47a3-4e3d-0d2b-9c41-7df4605c0a11")).toBe(false);
+    expect(accepts(MessageIdSchema, projectId)).toBe(true);
+    for (const value of [
+      "00000000-0000-0000-0000-000000000000",
+      "ffffffff-ffff-ffff-ffff-ffffffffffff",
+      "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF",
+      "018F47A3-4E3D-7D2B-9C41-7DF4605C0A11",
+      "018f47a3-4e3d-0d2b-9c41-7df4605c0a11",
+    ]) {
+      expect(accepts(MessageIdSchema, value), value).toBe(false);
+    }
+    expect(decodeWithIssues(MessageIdSchema, projectId.toUpperCase()).error?.issues).toEqual([
+      { code: "custom", path: [], message: "Identity must use lowercase UUID text." },
+    ]);
+    for (const value of [
+      "00000000-0000-0000-0000-000000000000",
+      "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    ]) {
+      expect(decodeWithIssues(MessageIdSchema, value).error?.issues, value).toEqual([
+        { code: "invalid_format", path: [] },
+      ]);
+    }
   });
 
   it("treats an optional member as absent or undefined but never null", () => {

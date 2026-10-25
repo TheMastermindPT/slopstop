@@ -17,9 +17,11 @@ import {
   HarnessRuntimeDisposeUnconfirmed,
   harnessServicesLayer,
   launchOnProcessRuntime,
+  ProcessClock,
   startHarnessProcessRuntime,
 } from "./process-bootstrap.js";
 import { ApplicationDatabaseCloseUnconfirmed } from "./storage/application-database-authority.js";
+import { systemUtcClock } from "./utc-clock.js";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -102,6 +104,25 @@ it.each<{ name: Row; disposesAfter: number; rejects: boolean; admitsAfter: boole
     expect(existsSync(base)).toBe(false);
   },
 );
+
+it("gives a process started without a clock the system clock", async () => {
+  const base = path.join(os.tmpdir(), `slopstop-process-bootstrap-unit-${randomUUID()}`);
+  const roots = {
+    applicationStorageRoot: path.join(base, "storage"),
+    migrationResourcesRoot: path.join(base, "migrations"),
+  };
+  const runtime = ManagedRuntime.make(harnessServicesLayer(roots, silentHarnessLogger));
+  try {
+    const clock = runtime.runSync(
+      Effect.gen(function* () {
+        return yield* ProcessClock;
+      }),
+    );
+    expect(clock).toBe(systemUtcClock);
+  } finally {
+    await runtime.dispose();
+  }
+});
 
 /** A test service whose Layer release is the row's controlled Effect. */
 class Released extends Context.Service<Released, Readonly<{ ready: true }>>()(

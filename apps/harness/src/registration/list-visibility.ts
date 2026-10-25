@@ -6,11 +6,12 @@ import {
 } from "@slopstop/protocol";
 import { Effect, Result, Schema } from "effect";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
+import type { UtcClock } from "../utc-clock.js";
 import type { ProjectRegistrationFlow } from "./project-registration-flow.js";
 import { readProjectRegistrationRecords } from "./registration-confirmation-store.js";
 import { failureOf } from "./registration-step.js";
 import type { RegistrationDatabaseOptions } from "./registry-database.js";
-import { registryRows } from "./registry-database.js";
+import { registrationClock, registryRows } from "./registry-database.js";
 import { RegistryReadFailed, registryRead, withRegistryTransaction } from "./registry-effect.js";
 
 const hiddenRowsSchema = Schema.Array(Schema.Struct({ projectId: Schema.String }));
@@ -46,7 +47,7 @@ export function showProject(transaction: LocalLibsqlTransaction, projectId: stri
   );
 }
 
-function hideProject(transaction: LocalLibsqlTransaction, projectId: ProjectId) {
+function hideProject(transaction: LocalLibsqlTransaction, projectId: ProjectId, clock: UtcClock) {
   return Effect.gen(function* () {
     const records = yield* registryRead(transaction, readProjectRegistrationRecords);
     const record = records.find(({ reservation }) => reservation.projectId === projectId);
@@ -56,7 +57,7 @@ function hideProject(transaction: LocalLibsqlTransaction, projectId: ProjectId) 
     yield* statement(
       transaction,
       "INSERT OR IGNORE INTO registration_list_visibility (project_id, hidden_at) VALUES (?, ?)",
-      [projectId, new Date().toISOString()],
+      [projectId, clock.now()],
     );
     return { status: "removed", projectId } as const;
   });
@@ -76,7 +77,7 @@ export function createListRemoval(
 ) {
   const hide = (projectId: ProjectId): Effect.Effect<ProjectRegistrationResult> =>
     withRegistryTransaction(dependencies.options, (transaction) =>
-      hideProject(transaction, projectId),
+      hideProject(transaction, projectId, registrationClock(dependencies.options)),
     ).pipe(
       Effect.catchTag("RegistryReadFailed", (failed) => Effect.succeed(failureOf(failed.failure))),
     );

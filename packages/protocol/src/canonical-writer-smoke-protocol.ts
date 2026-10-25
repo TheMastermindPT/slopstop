@@ -49,27 +49,18 @@ export const writerProofStaleCommand = Object.freeze(
   }),
 );
 
-const smokeMessageIdSchema = MessageIdSchema.check(
-  Schema.makeFilter(
-    (value: string) =>
-      (value !== "00000000-0000-0000-0000-000000000000" &&
-        value !== "ffffffff-ffff-ffff-ffff-ffffffffffff") ||
-      "Writer proof correlation must use a non-NIL, non-MAX message identity.",
-  ),
-);
-
 export const WriterProofStartSchema = Schema.Struct({
   version: Schema.Literal(1),
   kind: Schema.Literal("writer-proof.connect"),
-  proofId: smokeMessageIdSchema,
+  proofId: MessageIdSchema,
   bootstrap: HarnessBootstrapSchema,
 });
 export type WriterProofStart = typeof WriterProofStartSchema.Type;
 
 const correlation = {
   version: Schema.Literal(1),
-  proofId: smokeMessageIdSchema,
-  requestId: smokeMessageIdSchema,
+  proofId: MessageIdSchema,
+  requestId: MessageIdSchema,
 };
 
 function expectedReceipt(commandId: CommandId, sequence: 1 | 2) {

@@ -10,20 +10,16 @@ export const DomainIdentityTextSchema = Schema.String.check(
   Schema.isPattern(UUID_PATTERN, { expected: "UUID text" }),
 );
 
-export type ProjectId = DomainIdentity<"ProjectId">;
-export type WaypointId = DomainIdentity<"WaypointId">;
-export type ConversationId = DomainIdentity<"ConversationId">;
-export type ConversationBranchId = DomainIdentity<"ConversationBranchId">;
-export type ConversationMessageId = DomainIdentity<"ConversationMessageId">;
-export type ContextProposalId = DomainIdentity<"ContextProposalId">;
-export type ContextRecordId = DomainIdentity<"ContextRecordId">;
-export type FrameDraftId = DomainIdentity<"FrameDraftId">;
-export type FrameSectionId = DomainIdentity<"FrameSectionId">;
-export type ReviewAnnotationId = DomainIdentity<"ReviewAnnotationId">;
-export type AcceptedRevisionId = DomainIdentity<"AcceptedRevisionId">;
-export type MemoryTopicId = DomainIdentity<"MemoryTopicId">;
-export type MemoryRevisionId = DomainIdentity<"MemoryRevisionId">;
-export type MemoryProposalId = DomainIdentity<"MemoryProposalId">;
+// Case stays a separate filter, so structure and case report distinct issues.
+export function lowercaseDomainIdentity(message: string) {
+  return DomainIdentityTextSchema.check(
+    Schema.makeFilter((value: string) => value === value.toLowerCase(), { message }),
+  );
+}
+
+export const LowercaseDomainIdentityTextSchema = lowercaseDomainIdentity(
+  "Identity must use lowercase UUID text.",
+);
 
 export const WorkspaceProjectionRevisionSchema = Schema.Number.check(
   Schema.isInt(),
@@ -31,7 +27,7 @@ export const WorkspaceProjectionRevisionSchema = Schema.Number.check(
 ).pipe(Schema.brand("WorkspaceProjectionRevision"));
 export type WorkspaceProjectionRevision = typeof WorkspaceProjectionRevisionSchema.Type;
 
-const isDomainIdentityText = Schema.is(DomainIdentityTextSchema);
+const isDomainIdentityText = Schema.is(LowercaseDomainIdentityTextSchema);
 
 export function isDomainIdentity(value: unknown): value is DomainIdentity<string> {
   return isDomainIdentityText(value);

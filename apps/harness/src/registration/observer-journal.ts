@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { decodeStrict, NonEmptyTextSchema, UuidTextSchema } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  LowercaseDomainIdentityTextSchema,
+  NonEmptyTextSchema,
+} from "@slopstop/protocol";
 import { Schema } from "effect";
 import {
   type GitVersionInspectionResult,
@@ -10,6 +14,7 @@ import {
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { SqlIntegerSchema } from "../storage/sql-integer-schema.js";
+import type { UtcClock } from "../utc-clock.js";
 import { readConsent, readSelection } from "./executable-consent-store.js";
 import { sameExecutableIdentity } from "./executable-identity.js";
 import { type RegistryRunner, registryRows } from "./registry-database.js";
@@ -52,7 +57,7 @@ const terminalSchema = Schema.Struct({
 });
 const attemptRowsSchema = Schema.Array(
   Schema.Struct({
-    id: UuidTextSchema,
+    id: LowercaseDomainIdentityTextSchema,
     child: Schema.NullOr(Schema.String),
     terminal: Schema.NullOr(Schema.String),
   }),
@@ -81,6 +86,7 @@ async function queryChildIsSettled(
 
 async function reconcileIdentityQueryAttempts(
   transaction: LocalLibsqlTransaction,
+  clock: UtcClock,
   absence?: ObserverAbsencePort,
 ) {
   const rows = await transaction.execute(
@@ -93,7 +99,7 @@ async function reconcileIdentityQueryAttempts(
       sql: "UPDATE registration_identity_query_attempts SET result_json = ?, settled_at = ? WHERE observation_id = ? AND result_json IS NULL",
       args: [
         JSON.stringify({ status: "broken", code: "INTERNAL_FAILURE" }),
-        new Date().toISOString(),
+        clock.now(),
         record.id,
       ],
     });
@@ -177,10 +183,11 @@ async function writeOutcome(
   transaction: LocalLibsqlTransaction,
   observationId: ObservationId,
   result: GitVersionInspectionResult,
+  clock: UtcClock,
 ): Promise<void> {
   await transaction.execute({
     sql: "INSERT INTO registration_observer_outcomes (observation_id, result_json, settled_at) VALUES (?, ?, ?)",
-    args: [observationId, JSON.stringify(result), new Date().toISOString()],
+    args: [observationId, JSON.stringify(result), clock.now()],
   });
 }
 
@@ -194,14 +201,18 @@ function invalidatedResult(
   return decodeStrict(GitVersionInspectionResultSchema, { status: "unavailable", code });
 }
 
-async function beginObservation(transaction: LocalLibsqlTransaction, request: VersionDispatch) {
+async function beginObservation(
+  transaction: LocalLibsqlTransaction,
+  request: VersionDispatch,
+  clock: UtcClock,
+) {
   const previous = await readResult(transaction, request);
   if (previous !== undefined) return { status: "settled" as const, result: previous };
   if (await hasUnsettled(transaction)) return unsettled();
   const observationId = decodeStrict(ObservationIdSchema, randomUUID());
   await transaction.execute({
     sql: "INSERT INTO registration_observer_intents (observation_id, selection_id, consent_id, created_at) VALUES (?, ?, ?, ?)",
-    args: [observationId, request.selectionId, request.consentId, new Date().toISOString()],
+    args: [observationId, request.selectionId, request.consentId, clock.now()],
   });
   return { status: "started" as const, observationId };
 }
@@ -209,6 +220,7 @@ async function beginObservation(transaction: LocalLibsqlTransaction, request: Ve
 async function completeObservation(
   transaction: LocalLibsqlTransaction,
   result: typeof PreparedGitVersionSchema.Type,
+  clock: UtcClock,
 ) {
   const prepared = decodeStrict(PreparedGitVersionSchema, result);
   if ((await confirmedExit(transaction, prepared.observationId)) !== 0) {
@@ -220,10 +232,10 @@ async function completeObservation(
   });
   if (intent.rows[0]?.[0] !== prepared.selectionId)
     throw new Error("Version observation scope is invalid.");
-  await writeOutcome(transaction, prepared.observationId, prepared);
+  await writeOutcome(transaction, prepared.observationId, prepared, clock);
 }
 
-async function reconcileStoredTerminals(transaction: LocalLibsqlTransaction) {
+async function reconcileStoredTerminals(transaction: LocalLibsqlTransaction, clock: UtcClock) {
   const pending = await transaction.execute(`
     SELECT i.observation_id AS observationId, c.identity_json AS identityJson
     FROM registration_observer_intents i
@@ -239,10 +251,12 @@ async function reconcileStoredTerminals(transaction: LocalLibsqlTransaction) {
     }
     await confirmedExit(transaction, row.observationId);
     // The unique terminal outcome fences any former publisher in this same transaction.
-    await writeOutcome(transaction, row.observationId, {
-      status: "broken",
-      code: "INTERNAL_FAILURE",
-    });
+    await writeOutcome(
+      transaction,
+      row.observationId,
+      { status: "broken", code: "INTERNAL_FAILURE" },
+      clock,
+    );
   }
   if (await hasUnsettled(transaction)) {
     return { status: "pending-recovery" as const, code: "OBSERVER_CLEANUP_UNCONFIRMED" as const };
@@ -253,6 +267,7 @@ async function reconcileStoredTerminals(transaction: LocalLibsqlTransaction) {
 async function reconcileAbsentOwners(
   transaction: LocalLibsqlTransaction,
   absence: ObserverAbsencePort,
+  clock: UtcClock,
 ) {
   const pending = await transaction.execute(`
     SELECT i.observation_id AS observationId, c.identity_json AS identityJson
@@ -267,11 +282,12 @@ async function reconcileAbsentOwners(
       throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
     }
     if ((await absence.inspect(child)).status !== "absent") continue;
-    await writeOutcome(transaction, row.observationId, {
-      status: "broken",
-      code: "INTERNAL_FAILURE",
-      reconciliation: "exact-owner-absence",
-    });
+    await writeOutcome(
+      transaction,
+      row.observationId,
+      { status: "broken", code: "INTERNAL_FAILURE", reconciliation: "exact-owner-absence" },
+      clock,
+    );
   }
   if (await hasUnsettled(transaction)) return unsettled();
   return { status: "settled" as const };
@@ -279,20 +295,21 @@ async function reconcileAbsentOwners(
 
 export function createRegistryObserverJournal(
   run: RegistryRunner,
+  clock: UtcClock,
 ): VersionObserverJournal & ObserverAdmissionPort & ObserverRecoveryPort {
   const write = <Result>(operation: (transaction: LocalLibsqlTransaction) => Promise<Result>) =>
     run((client) => withWriteTransaction(client, operation));
   return {
     reconcileObservers: (absence) =>
       write(async (transaction) => {
-        await reconcileIdentityQueryAttempts(transaction, absence);
-        const terminalResult = await reconcileStoredTerminals(transaction);
+        await reconcileIdentityQueryAttempts(transaction, clock, absence);
+        const terminalResult = await reconcileStoredTerminals(transaction, clock);
         if (absence === undefined) return terminalResult;
-        return reconcileAbsentOwners(transaction, absence);
+        return reconcileAbsentOwners(transaction, absence, clock);
       }).catch(registryFailure),
     hasUnsettled: () => write(hasUnsettled),
     readResult: (request) => write((transaction) => readResult(transaction, request)),
-    begin: (request) => write((transaction) => beginObservation(transaction, request)),
+    begin: (request) => write((transaction) => beginObservation(transaction, request, clock)),
     recordNoDispatch: (observationId, reason) =>
       write(async (transaction) => {
         const children = await transaction.execute({
@@ -306,6 +323,7 @@ export function createRegistryObserverJournal(
           reason === "cancelled"
             ? { status: "cancelled" }
             : { status: "unavailable", code: "GIT_UNAVAILABLE" },
+          clock,
         );
       }),
     recordChild: (observationId, input) =>
@@ -324,19 +342,19 @@ export function createRegistryObserverJournal(
         const terminal = decodeStrict(terminalSchema, input);
         await transaction.execute({
           sql: "INSERT INTO registration_observer_terminals (observation_id, exit_code, stdout_closed, stderr_closed, tree_empty, observed_at) VALUES (?, ?, 1, 1, 1, ?)",
-          args: [observationId, terminal.exitCode, new Date().toISOString()],
+          args: [observationId, terminal.exitCode, clock.now()],
         });
       }),
-    complete: (result) => write((transaction) => completeObservation(transaction, result)),
+    complete: (result) => write((transaction) => completeObservation(transaction, result, clock)),
     cancel: (observationId) =>
       write(async (transaction) => {
         await confirmedExit(transaction, observationId);
-        await writeOutcome(transaction, observationId, { status: "cancelled" });
+        await writeOutcome(transaction, observationId, { status: "cancelled" }, clock);
       }),
     invalidate: (observationId, code) =>
       write(async (transaction) => {
         const exitCode = await confirmedExit(transaction, observationId);
-        await writeOutcome(transaction, observationId, invalidatedResult(code, exitCode));
+        await writeOutcome(transaction, observationId, invalidatedResult(code, exitCode), clock);
       }),
   };
 }

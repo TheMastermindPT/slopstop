@@ -33,6 +33,7 @@ import {
   createUpgradeDiagnosticsLogger,
   type UpgradeEventLogger,
 } from "./upgrade-diagnostics-logger.js";
+import { systemUtcClock, type UtcClock } from "./utc-clock.js";
 import { createUnavailableWorkspaceApplication } from "./workspace-application.js";
 
 function trustedRoot(value: string): string {
@@ -144,6 +145,11 @@ type HarnessRuntimeIo = Readonly<{
   transport: HarnessTransport;
   /** The process log; upgrade diagnostics of the coordinator's Storage owner go here. */
   logger: UpgradeEventLogger;
+  /**
+   * The clock for registration times and message `sentAt`; the system clock when absent.
+   * Project Storage and the canonical coordinator read `systemUtcClock` directly.
+   */
+  clock?: UtcClock;
 }>;
 
 export async function startHarnessProcessRuntime(
@@ -173,7 +179,7 @@ export function launchHarnessProcessRuntime(
   // One runtime per harness process builds the owners once, sharing one application
   // database authority. Their shutdown order stays explicit in the harness runtime.
   return launchOnProcessRuntime({
-    layer: harnessServicesLayer(roots, input.logger),
+    layer: harnessServicesLayer(roots, input.logger, input.clock),
     start: (runtime) => {
       const services = runtime.runSync(
         Effect.gen(function* () {
@@ -182,6 +188,7 @@ export function launchHarnessProcessRuntime(
             projectStorage: yield* ProjectStorage,
             registration: yield* ProjectRegistration,
             canonicalProjects: yield* CanonicalProjects,
+            clock: yield* ProcessClock,
           };
         }),
       );
@@ -202,14 +209,12 @@ export function launchHarnessProcessRuntime(
         projectStorageApplication: createProjectStorageApplication(services.projectStorage),
         harnessVersion: "0.0.0",
         createId: randomUUID,
-        now: currentTime,
+        now: services.clock.now,
         runtime,
       });
     },
   });
 }
-
-const currentTime = () => new Date().toISOString();
 
 type HarnessRootPaths = Readonly<{
   applicationStorageRoot: string;
@@ -219,6 +224,10 @@ type HarnessRootPaths = Readonly<{
 /** Where the coordinator's Storage owner reports its upgrade diagnostics. */
 class UpgradeLog extends Context.Service<UpgradeLog, UpgradeEventLogger>()(
   "slopstop/harness/UpgradeLog",
+) {}
+/** The clock for registration times and message `sentAt`, built by its Layer. */
+export class ProcessClock extends Context.Service<ProcessClock, UtcClock>()(
+  "slopstop/harness/ProcessClock",
 ) {}
 class HarnessRoots extends Context.Service<HarnessRoots, HarnessRootPaths>()(
   "slopstop/harness/HarnessRoots",
@@ -309,6 +318,7 @@ const projectRegistrationLayer = Layer.effect(
       ...roots,
       applicationVersion: "0.0.0",
       applicationDatabase: yield* ApplicationDatabase,
+      clock: yield* ProcessClock,
     };
     const selection = createDirectoryHandoff();
     const registry = createRegistrationRegistry(options, selection.port);
@@ -371,12 +381,17 @@ const canonicalProjectsLayer = Layer.effect(
  * The harness process's application Layer: the owners built once for its one runtime, sharing
  * one application database authority.
  */
-export function harnessServicesLayer(roots: HarnessRootPaths, upgradeLog: UpgradeEventLogger) {
+export function harnessServicesLayer(
+  roots: HarnessRootPaths,
+  upgradeLog: UpgradeEventLogger,
+  clock: UtcClock = systemUtcClock,
+) {
   return canonicalProjectsLayer.pipe(
     Layer.provideMerge(Layer.mergeAll(projectStorageLayer, projectRegistrationLayer)),
     Layer.provideMerge(applicationDatabaseLayer),
     Layer.provideMerge(Layer.succeed(HarnessRoots, roots)),
     Layer.provideMerge(Layer.succeed(UpgradeLog, upgradeLog)),
+    Layer.provideMerge(Layer.succeed(ProcessClock, clock)),
   );
 }
 

@@ -1,18 +1,18 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { decodeStrict, ProjectActivationIdSchema } from "@slopstop/protocol";
 import {
   type ActiveProjectCoordinatorDependencies,
   createActiveProjectCoordinator,
 } from "./active-project-coordinator.js";
 import { createCanonicalCommandRegistry } from "./canonical-command-registry.js";
+import { sha256Text } from "./sha256-text.js";
 import {
   createCanonicalCommandRepositoryFactory,
   WriterCapabilityTokenSchema,
 } from "./storage/canonical-command-repository.js";
 import { createNodeCanonicalWriterLeaseFactory } from "./storage/canonical-writer-lease.js";
 import { createWorkerLocalLibsqlClient } from "./storage/local-libsql-worker-client.js";
-
-const currentTime = () => new Date().toISOString();
+import { systemUtcClock } from "./utc-clock.js";
 
 /**
  * The coordinator over Node writer leases and repositories, with random ids and the wall
@@ -31,16 +31,16 @@ export function createNodeActiveProjectCoordinator(
       registry: createCanonicalCommandRegistry([]),
       createReceiptId: randomUUID,
       createEventId: randomUUID,
-      now: currentTime,
+      now: systemUtcClock.now,
       openClient: (databasePath) => createWorkerLocalLibsqlClient(databasePath, "generation"),
-      sha256Text: async (text) => createHash("sha256").update(text).digest("hex"),
+      sha256Text,
       createHandoffId: randomUUID,
       createRecoveryRecordId: randomUUID,
     }),
     createActivationId: () => decodeStrict(ProjectActivationIdSchema, randomUUID()),
     createWriterToken: () =>
       decodeStrict(WriterCapabilityTokenSchema, randomBytes(32).toString("hex")),
-    now: currentTime,
+    now: systemUtcClock.now,
     // Conversation reads through a per-request read-only client and save reconciliations use
     // the coordinator's defaults (the generation pool).
     createConversationId: randomUUID,

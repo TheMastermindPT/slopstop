@@ -5,6 +5,7 @@ import type {
   ProjectStorageCloseRequest,
   ProjectStorageCloseResult,
   ProjectStorageCreateRequest,
+  ProjectStorageCreateRequestId,
   ProjectStorageCreateResult,
   ProjectStorageOpenRequest,
   ProjectStorageOpenResult,
@@ -92,7 +93,7 @@ type AllocatedCreation = Readonly<{
   generationId: StorageGenerationId;
   canonicalDatabaseLineageId: CanonicalDatabaseLineageId;
   runtimeDatabaseLineageId: RuntimeDatabaseLineageId;
-  createRequestId: ProjectStorageCreateRequest["createRequestId"];
+  createRequestId: ProjectStorageCreateRequestId;
   createRequestFingerprint: string;
   createdAt: string;
 }>;

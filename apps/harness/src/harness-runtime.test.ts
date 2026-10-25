@@ -145,7 +145,7 @@ function canonicalRuntimeFixture(
     request,
   );
   const expected = (event: string, payload: unknown, number: number, causationId: string) => ({
-    protocolVersion: 8,
+    protocolVersion: 9,
     messageType: "event",
     messageId: `00000000-0000-4000-8000-${String(900 + number).padStart(12, "0")}`,
     sentAt: options.now(),
@@ -438,7 +438,7 @@ const failureScopeCases = [
   {
     kind: "message",
     input: {
-      protocolVersion: 8,
+      protocolVersion: 9,
       messageType: "command",
       messageId: "00000000-0000-4000-8000-000000000202",
       sentAt: "2026-08-14T12:00:00.000Z",
@@ -504,7 +504,7 @@ describe("harness runtime transport", () => {
         }
         expect(transport.sent).toEqual([
           {
-            protocolVersion: 8,
+            protocolVersion: 9,
             messageType: "event",
             messageId: "00000000-0000-4000-8000-000000000002",
             sentAt: "2026-08-14T12:00:01.000Z",
@@ -751,7 +751,7 @@ describe("harness runtime transport", () => {
 
     expect(transport.sent).toMatchObject([
       {
-        protocolVersion: 8,
+        protocolVersion: 9,
         sequence: 1,
         causationId: open.messageId,
         event: "project.open.result",
@@ -762,7 +762,7 @@ describe("harness runtime transport", () => {
         },
       },
       {
-        protocolVersion: 8,
+        protocolVersion: 9,
         sequence: 2,
         causationId: create.messageId,
         event: "project.create.result",
@@ -773,7 +773,7 @@ describe("harness runtime transport", () => {
         },
       },
       {
-        protocolVersion: 8,
+        protocolVersion: 9,
         sequence: 3,
         causationId: close.messageId,
         event: "project.close.result",
@@ -801,7 +801,7 @@ describe("harness runtime transport", () => {
 
     expect(transport.sent).toMatchObject([
       {
-        protocolVersion: 8,
+        protocolVersion: 9,
         causationId: command.messageId,
         event: "project.registration.result",
         payload: { status: "unavailable", code: "PROJECT_REGISTRATION_UNAVAILABLE" },
@@ -841,7 +841,7 @@ describe("harness runtime transport", () => {
 
     expect(transport.sent).toEqual([
       {
-        protocolVersion: 8,
+        protocolVersion: 9,
         messageType: "event",
         messageId: "00000000-0000-4000-8000-000000000002",
         sentAt: "2026-08-14T12:00:01.000Z",
@@ -1135,7 +1135,7 @@ it("routes an upgrade to the canonical application and answers its result", asyn
     expect(upgrade).toHaveBeenCalledWith(result.request);
     expect(transport.sent).toEqual([
       {
-        protocolVersion: 8,
+        protocolVersion: 9,
         messageType: "event",
         messageId: "00000000-0000-4000-8000-000000000901",
         sentAt: "2026-10-06T12:00:00.000Z",
@@ -1181,7 +1181,7 @@ const conversationSentAt = "2026-10-10T12:00:00.000Z";
 /** One harness event the conversation dispatch test expects, its ids counted from 900. */
 function conversationEvent(sequence: number, causationId: string, name: string, payload: unknown) {
   return {
-    protocolVersion: 8,
+    protocolVersion: 9,
     messageType: "event",
     messageId: `00000000-0000-4000-8000-${String(899 + sequence).padStart(12, "0")}`,
     sentAt: conversationSentAt,

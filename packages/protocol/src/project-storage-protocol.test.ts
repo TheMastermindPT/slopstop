@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { decodeWithIssues } from "./decode-with-issues.test-support.js";
 import {
   acceptsStrict,
@@ -6,12 +6,14 @@ import {
   ProjectDatabaseHealthSchema,
   ProjectIdSchema,
   ProjectStorageCloseResultSchema,
+  type ProjectStorageCreateRequestId,
   ProjectStorageCreateRequestIdSchema,
   ProjectStorageCreateResultSchema,
   ProjectStorageOpenResultSchema,
   RuntimeDatabaseLineageIdSchema,
   StorageGenerationIdSchema,
   StorageIdSchema,
+  type StorageOperationId,
 } from "./index.js";
 
 const projectId = "00000000-0000-4000-8000-000000000010";
@@ -272,5 +274,19 @@ describe("Project Storage protocol", () => {
         }),
       ).toBe(true);
     }
+  });
+});
+
+describe("storage operation id", () => {
+  it("names the storage operation id after its create request", () => {
+    expect(
+      decodeWithIssues(ProjectStorageCreateRequestIdSchema, "00000000-0000-4000-8000-0000000000a1")
+        .success,
+    ).toBe(true);
+    expect(
+      decodeWithIssues(ProjectStorageCreateRequestIdSchema, "00000000-0000-4000-8000-0000000000A1")
+        .error?.issues,
+    ).toEqual([{ code: "custom", path: [], message: "Identity must use lowercase UUID text." }]);
+    expectTypeOf<StorageOperationId>().toEqualTypeOf<ProjectStorageCreateRequestId>();
   });
 });

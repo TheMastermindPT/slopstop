@@ -5,6 +5,13 @@ import { describe, expect, it, vi } from "vitest";
 import { App } from "./app.js";
 import { exposeApi, readyApi } from "./test-api.js";
 
+/** Every code of a registry that cannot be read, listed apart from the protocol tuple. */
+const damagedRegistryCodes = [
+  "REGISTRY_SCHEMA_UNKNOWN",
+  "REGISTRY_SCHEMA_NEWER",
+  "REGISTRY_CORRUPT",
+] as const;
+
 const registeredId = "11111111-1111-4111-8111-111111111111";
 const unboundId = "22222222-2222-4222-8222-222222222222";
 
@@ -198,16 +205,28 @@ describe("Projects list", () => {
     expect(screen.queryByText(/No saved Projects yet/)).toBeNull();
   });
 
-  it("shows a damaged registry as an alert and disables adding with the reason", async () => {
-    renderWithList({ status: "broken", code: "REGISTRY_CORRUPT" });
+  it.each(damagedRegistryCodes)(
+    "shows a damaged registry as an alert and disables adding with the reason (%s)",
+    async (code) => {
+      renderWithList({ status: "broken", code });
+      const alert = await screen.findByRole("alert");
+      expect(within(alert).getByText("Saved Projects can't be read")).toBeTruthy();
+      expect(alert.textContent).toContain(
+        "The Project registry is damaged or was written by a newer Ragnarok. Nothing was changed or reset.",
+      );
+      expect(alert.textContent).toContain(`Reference: ${code}`);
+      expect((await addButton()).getAttribute("aria-disabled")).toBe("true");
+      expect(screen.getByText("Unavailable while saved Projects can't be read.")).toBeTruthy();
+    },
+  );
+
+  it("does not treat an internal list failure as a damaged registry", async () => {
+    renderWithList({ status: "broken", code: "INTERNAL_FAILURE" });
     const alert = await screen.findByRole("alert");
-    expect(within(alert).getByText("Saved Projects can't be read")).toBeTruthy();
-    expect(alert.textContent).toContain(
-      "The Project registry is damaged or was written by a newer Ragnarok. Nothing was changed or reset.",
-    );
-    expect(alert.textContent).toContain("Reference: REGISTRY_CORRUPT");
-    expect((await addButton()).getAttribute("aria-disabled")).toBe("true");
-    expect(screen.getByText("Unavailable while saved Projects can't be read.")).toBeTruthy();
+    expect(alert.textContent).toContain("Projects could not be read. INTERNAL_FAILURE.");
+    expect(within(alert).queryByText("Saved Projects can't be read")).toBeNull();
+    expect((await addButton()).getAttribute("aria-disabled")).toBeNull();
+    expect(screen.queryByText("Unavailable while saved Projects can't be read.")).toBeNull();
   });
 
   it("invites adding a repository when no Projects are saved", async () => {

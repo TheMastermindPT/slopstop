@@ -1,11 +1,11 @@
 import {
   type ProjectId,
-  type ProjectStorageCreateRequest,
   type ProjectUpgradeAbandonReason,
   type ProjectUpgradeDiscardCause,
   projectUpgradeDiagnostics,
   type StorageGenerationId,
   type StorageId,
+  type StorageOperationId,
 } from "@slopstop/protocol";
 import type { GeneratedMigration } from "./generated-migrations.js";
 import { ProjectStorageUnavailableError } from "./project-storage-errors.js";
@@ -22,7 +22,7 @@ export class ProjectStorageUpgradeBusyError extends ProjectStorageUnavailableErr
 }
 
 export type ProjectStorageUpgradeRequest = Readonly<{ projectId: ProjectId }>;
-export type ProjectStorageUpgradeId = ProjectStorageCreateRequest["createRequestId"];
+export type ProjectStorageUpgradeId = StorageOperationId;
 
 type UpgradeRows = typeof projectUpgradeDiagnostics;
 type UpgradeDiagnostic<Code extends string> = Readonly<{ code: Code; message: string }>;

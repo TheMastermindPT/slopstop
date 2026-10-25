@@ -16,7 +16,7 @@ export type Selection = Readonly<{
 type GitProgram = Readonly<{ selectionId: string; executablePath: string }>;
 /** Git approval (D8): reusable across folders until the program changes or can't start. */
 export type GitApproval = GitProgram &
-  Readonly<{ observationId: string; consentId: string; version: string }>;
+  Readonly<{ observationId: string; identityQueryConsentId: string; version: string }>;
 type Preparation = Extract<RendererRegistrationRequest, { step: "prepare" }>;
 type Proposal = Extract<ProjectRegistrationResult, { status: "proposal-prepared" }>;
 
@@ -103,7 +103,7 @@ export function useAddRepository(host: FlowHost) {
       preparationRequestId: crypto.randomUUID(),
       selectionId: granted.selectionId,
       observationId: granted.observationId,
-      consentId: granted.consentId,
+      identityQueryConsentId: granted.identityQueryConsentId,
       repositorySelectionId: selection.repositorySelectionId,
       trustId: selection.trustId,
     };
@@ -177,7 +177,7 @@ export function useAddRepository(host: FlowHost) {
     void register({
       step: "decide-git-version",
       selectionId: current.git.selectionId,
-      consentId: crypto.randomUUID(),
+      executableConsentId: crypto.randomUUID(),
       decision: "accepted",
     }).then(
       guarded(token, (version) => {
@@ -201,14 +201,14 @@ export function useAddRepository(host: FlowHost) {
     const granted: GitApproval = {
       ...current.git,
       observationId: current.observationId,
-      consentId: crypto.randomUUID(),
+      identityQueryConsentId: crypto.randomUUID(),
       version: current.version,
     };
     void register({
       step: "decide-identity-queries",
       selectionId: granted.selectionId,
       observationId: granted.observationId,
-      consentId: granted.consentId,
+      identityQueryConsentId: granted.identityQueryConsentId,
       decision: "accepted",
     }).then(
       guarded(token, (recorded) => {

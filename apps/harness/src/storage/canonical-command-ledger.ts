@@ -7,12 +7,14 @@ import {
   CanonicalSettlementTimeSchema,
   CommandReceiptMetadataSchema,
   CommandRejectionSchema,
-  dateTimeTextSchema,
   decodeStrict,
+  normalizedUtc,
   ProjectActivationIdSchema,
   type ProjectId,
   ProjectIdSchema,
   ProjectSequenceSchema,
+  Sha256HexSchema,
+  UtcInstantSchema,
   type WriterGeneration,
   WriterGenerationSchema,
 } from "@slopstop/protocol";
@@ -23,7 +25,6 @@ import {
 } from "../canonical-command-registry.js";
 import {
   type CanonicalCommandSnapshot,
-  CanonicalSha256Schema,
   canonicalChangedOnce,
   canonicalExactlyOne,
   canonicalJsonText,
@@ -33,17 +34,15 @@ import {
 } from "../canonical-json.js";
 import type { LocalLibsqlTransaction } from "./local-libsql-worker-client.js";
 
-export const canonicalWriterUtcInstantSchema = dateTimeTextSchema({ offset: true }).check(
-  Schema.isPattern(/T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u),
-);
+export const canonicalWriterUtcInstantSchema = UtcInstantSchema;
 export const canonicalWriterFenceSchema = Schema.Struct({
   generation: WriterGenerationSchema,
-  tokenDigest: CanonicalSha256Schema,
+  tokenDigest: Sha256HexSchema,
   state: Schema.Literals(["active", "released"]),
   activatedAt: canonicalWriterUtcInstantSchema,
   releasedAt: Schema.NullOr(canonicalWriterUtcInstantSchema),
   generationNumber: Schema.NullOr(WriterGenerationSchema),
-  generationDigest: Schema.NullOr(CanonicalSha256Schema),
+  generationDigest: Schema.NullOr(Sha256HexSchema),
   generationAcquiredAt: Schema.NullOr(canonicalWriterUtcInstantSchema),
   generationReleasedAt: Schema.NullOr(canonicalWriterUtcInstantSchema),
 });
@@ -54,18 +53,12 @@ const settlementFenceRowsSchema = Schema.Array(
     generationProjectId: ProjectIdSchema,
     generationActivationId: ProjectActivationIdSchema,
     generationNumber: WriterGenerationSchema,
-    generationDigest: CanonicalSha256Schema,
+    generationDigest: Sha256HexSchema,
     generationAcquiredAt: canonicalWriterUtcInstantSchema,
   }),
 );
 const SqlCountSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0));
 
-export function normalizedUtc(value: string): string {
-  const [seconds, fraction = ""] = decodeStrict(canonicalWriterUtcInstantSchema, value)
-    .slice(0, -1)
-    .split(".");
-  return `${seconds}.${fraction.replace(/0+$/u, "")}`;
-}
 export function coherentCanonicalWriterRelease(
   fence: typeof canonicalWriterFenceSchema.Type,
 ): boolean {
@@ -138,7 +131,7 @@ export type AppliedEventRow = Omit<CanonicalEventInput, "payload"> &
 const storedReceiptSchema = Schema.Struct({
   ...CommandReceiptMetadataSchema.fields,
   outcome: Schema.Literals(["applied", "unchanged", "rejected"]),
-  fingerprint: CanonicalSha256Schema,
+  fingerprint: Sha256HexSchema,
   generationProjectId: CommandReceiptMetadataSchema.fields.projectId,
   generationNumber: CommandReceiptMetadataSchema.fields.writerGeneration,
 });
@@ -157,7 +150,7 @@ const pointerRowsSchema = Schema.Array(
     projectId: CommandReceiptMetadataSchema.fields.projectId,
     commandId: CommandReceiptMetadataSchema.fields.commandId,
     receiptId: CommandReceiptMetadataSchema.fields.receiptId,
-    fingerprint: CanonicalSha256Schema,
+    fingerprint: Sha256HexSchema,
     createdAt: CanonicalSettlementTimeSchema,
   }),
 );
@@ -172,7 +165,7 @@ const storedEventSchema = Schema.Struct({
   eventOrdinal: CanonicalEventOrdinalSchema,
   occurredAt: CanonicalSettlementTimeSchema,
   payloadText: Schema.String,
-  payloadHash: CanonicalSha256Schema,
+  payloadHash: Sha256HexSchema,
 });
 const storedEventRowsSchema = Schema.Array(storedEventSchema);
 const receiptSelect = `SELECT r.project_id AS projectId, r.receipt_id AS receiptId, r.command_id AS commandId,
@@ -191,7 +184,7 @@ const storedRejectionRowsSchema = Schema.Array(
     code: Schema.String,
     retryable: Schema.Literals([0, 1]),
     detailsText: Schema.String,
-    detailsHash: CanonicalSha256Schema,
+    detailsHash: Sha256HexSchema,
   }),
 );
 const rejectionDetailsSchema = Schema.Struct({ version: Schema.Literal(1) });

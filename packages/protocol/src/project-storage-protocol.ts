@@ -20,6 +20,13 @@ export const ProjectStorageCreateRequestIdSchema = LowercaseDomainIdentityTextSc
   Schema.brand("ProjectStorageCreateRequestId"),
 );
 export type ProjectStorageCreateRequestId = typeof ProjectStorageCreateRequestIdSchema.Type;
+/**
+ * The id of a Storage operation, such as a staged upgrade and its pre-upgrade backup under
+ * `snapshots/<upgradeId>/`. A staged upgrade's id equals the create request id of the generation
+ * it creates, so the id is that type under the Storage operation's name; values decode with
+ * {@link ProjectStorageCreateRequestIdSchema}.
+ */
+export type StorageOperationId = ProjectStorageCreateRequestId;
 
 export const PersistenceHealthSchema = Schema.Literals([
   "healthy",

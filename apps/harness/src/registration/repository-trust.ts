@@ -1,9 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { decodeStrict, decodeStrictResult, UuidTextSchema } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  decodeStrictResult,
+  RepositorySelectionIdSchema,
+  RepositoryTrustIdSchema,
+} from "@slopstop/protocol";
 import { Result, Schema } from "effect";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { observeRepositoryDirectory } from "../storage/repository-identity-observer.js";
+import type { UtcClock } from "../utc-clock.js";
 import {
   type IdentityQueryConsentAuthority,
   IdentityQueryConsentRequestSchema,
@@ -23,10 +29,9 @@ import {
 } from "./registry-database.js";
 import { RegistryFault, registryFailure } from "./registry-failure.js";
 
-const RepositorySelectionIdSchema = UuidTextSchema.pipe(Schema.brand("RepositorySelectionId"));
 export const RepositoryTrustRequestSchema = Schema.Struct({
   repositorySelectionId: RepositorySelectionIdSchema,
-  trustId: UuidTextSchema.pipe(Schema.brand("RepositoryTrustId")),
+  trustId: RepositoryTrustIdSchema,
 });
 const TrustDecisionValueSchema = Schema.Literals(["accepted", "declined"]);
 export const RepositoryTrustDecisionSchema = Schema.Struct({
@@ -121,23 +126,26 @@ async function chooseRepository(selection: NativeRepositorySelectionPort | undef
   return selection.select();
 }
 
-async function persistRepositorySelection(transaction: LocalLibsqlTransaction, directory: string) {
+async function persistRepositorySelection(
+  transaction: LocalLibsqlTransaction,
+  directory: string,
+  clock: UtcClock,
+) {
   const observed = await observeRepositoryDirectory(directory);
   if (observed.status !== "observed") return observed;
   const repositorySelectionId = decodeStrict(RepositorySelectionIdSchema, randomUUID());
   await transaction.execute({
     sql: "INSERT INTO registration_repository_selections (selection_id, directory_path, identity_json, captured_at) VALUES (?, ?, ?, ?)",
-    args: [
-      repositorySelectionId,
-      directory,
-      JSON.stringify(observed.key),
-      new Date().toISOString(),
-    ],
+    args: [repositorySelectionId, directory, JSON.stringify(observed.key), clock.now()],
   });
   return { status: "prepared" as const, repositorySelectionId };
 }
 
-async function decideTrust(transaction: LocalLibsqlTransaction, request: TrustDecision) {
+async function decideTrust(
+  transaction: LocalLibsqlTransaction,
+  request: TrustDecision,
+  clock: UtcClock,
+) {
   const rows = await transaction.execute({
     sql: "SELECT trust_id AS trustId, selection_id AS repositorySelectionId, decision FROM registration_repository_trust WHERE trust_id = ?",
     args: [request.trustId],
@@ -157,12 +165,7 @@ async function decideTrust(transaction: LocalLibsqlTransaction, request: TrustDe
   }
   await transaction.execute({
     sql: "INSERT INTO registration_repository_trust (trust_id, selection_id, decision, decided_at) VALUES (?, ?, ?, ?)",
-    args: [
-      request.trustId,
-      request.repositorySelectionId,
-      request.decision,
-      new Date().toISOString(),
-    ],
+    args: [request.trustId, request.repositorySelectionId, request.decision, clock.now()],
   });
   return { status: "recorded" as const };
 }
@@ -199,6 +202,7 @@ export async function authorizeQueries(
 export function createRepositoryTrustOwner(
   run: RegistryRunner,
   prepareAndRun: PreparedRegistryRunner,
+  clock: UtcClock,
   selection?: NativeRepositorySelectionPort,
 ): RepositoryTrustOwner {
   const write = <Result>(operation: (transaction: LocalLibsqlTransaction) => Promise<Result>) =>
@@ -211,14 +215,14 @@ export function createRepositoryTrustOwner(
           if (chosen.status !== "selected") return chosen;
           return reopen((client) =>
             withWriteTransaction(client, (transaction) =>
-              persistRepositorySelection(transaction, chosen.directory),
+              persistRepositorySelection(transaction, chosen.directory, clock),
             ),
           );
         },
       ).catch(registryFailure),
     decideRepositoryTrust: (input) =>
       write((transaction) =>
-        decideTrust(transaction, decodeStrict(RepositoryTrustDecisionSchema, input)),
+        decideTrust(transaction, decodeStrict(RepositoryTrustDecisionSchema, input), clock),
       ).catch(registryFailure),
     admitRepositoryIdentityQueries: (input, port) =>
       run(async (client) => {

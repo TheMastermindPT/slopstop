@@ -74,7 +74,7 @@ async function admitGitVersion(session: Session) {
   return session.register({
     step: "decide-git-version",
     selectionId: git.selectionId,
-    consentId: randomUUID(),
+    executableConsentId: randomUUID(),
     decision: "accepted",
   });
 }

@@ -3,6 +3,7 @@ import type { BigIntStats } from "node:fs";
 import { type FileHandle, lstat, open, stat } from "node:fs/promises";
 import path from "node:path";
 import { decodeStrict } from "@slopstop/protocol";
+import { sha256Hex } from "../sha256-text.js";
 import { storageErrorCode } from "../storage/project-storage-node-errors.js";
 import { observeRepositoryDirectory } from "../storage/repository-identity-observer.js";
 import type { composeIdentityQueryValues } from "./git-identity-query-results.js";
@@ -169,9 +170,7 @@ async function capture(worktree: string, control: IdentityQueryControl) {
       status: "captured",
       snapshot: decodeStrict(RepositoryPhysicalSnapshotSchema, {
         physical: { worktree: root, gitDirectory, commonDirectory },
-        metadataFingerprint: createHash("sha256")
-          .update(JSON.stringify([admin.stamp, common?.stamp ?? "absent"]))
-          .digest("hex"),
+        metadataFingerprint: sha256Hex(JSON.stringify([admin.stamp, common?.stamp ?? "absent"])),
       }),
     } as const;
   } catch (error) {

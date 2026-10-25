@@ -13,6 +13,7 @@ import {
   type CanonicalProjectSwitchResult,
   CanonicalProjectSwitchResultSchema,
 } from "./canonical-project-protocol.js";
+import { LowercaseDomainIdentityTextSchema } from "./domain-identity-schema.js";
 import {
   type HarnessFailureCode,
   HarnessFailureCodeSchema,
@@ -62,12 +63,11 @@ import {
   ProjectUpgradeResultSchema,
 } from "./project-upgrade-protocol.js";
 import {
-  dateTimeTextSchema,
   decodeStrict,
   decodeStrictResult,
   NonEmptyTextSchema,
   summarizeSchemaError,
-  UuidTextSchema,
+  UtcInstantSchema,
 } from "./schema-codec.js";
 import type {
   WorkspaceIntent,
@@ -84,12 +84,12 @@ import {
   WorkspaceQuerySchema,
 } from "./workspace-protocol.js";
 
-export const protocolVersion = 8 as const;
+export const protocolVersion = 9 as const;
 
-export const MessageIdSchema = UuidTextSchema.pipe(Schema.brand("MessageId"));
+export const MessageIdSchema = LowercaseDomainIdentityTextSchema.pipe(Schema.brand("MessageId"));
 export type MessageId = typeof MessageIdSchema.Type;
 
-const TimestampSchema = dateTimeTextSchema({ offset: true });
+const TimestampSchema = UtcInstantSchema;
 const SequenceSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0));
 
 // Reads only the version; every other key is intentionally ignored by this probe.

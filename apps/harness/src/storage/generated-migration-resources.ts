@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
 import { lstat, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { decodeStrict, TrimmedNonEmptyTextSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
+import { sha256Hex } from "../sha256-text.js";
 import type { GeneratedMigration } from "./generated-migrations.js";
 import type { DatabaseSpec } from "./project-storage-database-specs.js";
 import { ProjectStorageBrokenError } from "./project-storage-errors.js";
@@ -290,8 +290,7 @@ function pinnedAfterRebuild(input: {
     const pin = pinnedCanonicalSuccessors[index];
     return (
       migration.migrationId === pin?.migrationId &&
-      createHash("sha256").update(JSON.stringify(migration.statements)).digest("hex") ===
-        pin.statementsSha256
+      sha256Hex(JSON.stringify(migration.statements)) === pin.statementsSha256
     );
   });
 }
@@ -323,10 +322,8 @@ function requireCanonicalRebuild(input: {
   ].every(Boolean);
   if (!authorityAgrees) invalid();
   // Pins identify the reviewed executable proposal, never caller-supplied metadata.
-  const predecessorHash = createHash("sha256").update(predecessor).digest("hex");
-  const successorHash = createHash("sha256")
-    .update(JSON.stringify(successor.statements))
-    .digest("hex");
+  const predecessorHash = sha256Hex(predecessor);
+  const successorHash = sha256Hex(JSON.stringify(successor.statements));
   if (predecessorHash !== "e21883d8c39eb5012a6df799fb8d2f5182e9050bf3546e48bde57f90abf3942c")
     invalid();
   if (successorHash !== "e3a917fc5c7e2bc5a5a20ae9c50160cd072d6b49a35856530cc0118fbbca5b14")

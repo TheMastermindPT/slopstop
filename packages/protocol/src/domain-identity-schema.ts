@@ -1,16 +1,8 @@
-import { DomainIdentityTextSchema } from "@slopstop/kernel";
+import { LowercaseDomainIdentityTextSchema, lowercaseDomainIdentity } from "@slopstop/kernel";
 import { Schema } from "effect";
 
-function lowercaseIdentity(message: string) {
-  return DomainIdentityTextSchema.check(
-    Schema.makeFilter((value: string) => value === value.toLowerCase(), { message }),
-  );
-}
+export { LowercaseDomainIdentityTextSchema };
 
-export const LowercaseDomainIdentityTextSchema = lowercaseIdentity(
-  "Identity must use lowercase UUID text.",
-);
-
-export const ProjectIdSchema = lowercaseIdentity(
+export const ProjectIdSchema = lowercaseDomainIdentity(
   "Project identity must use lowercase UUID text.",
 ).pipe(Schema.brand("ProjectId"));

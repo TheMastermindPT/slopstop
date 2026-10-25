@@ -16,7 +16,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@slopstop/kernel": "workspace:*",
     "@slopstop/protocol": "workspace:*",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",

@@ -1,18 +1,12 @@
 import { FolderPlusIcon } from "@phosphor-icons/react";
-import type { RegistrationCapability } from "@slopstop/protocol";
+import { isRegistryBrokenCode, type RegistrationCapability } from "@slopstop/protocol";
 import { busyAnnouncement } from "./busy-announcement.js";
 import type { ListState } from "./projects-list.js";
 import styles from "./projects-workspace.module.css";
 
-const registryBroken = new Set([
-  "REGISTRY_CORRUPT",
-  "REGISTRY_SCHEMA_UNKNOWN",
-  "REGISTRY_SCHEMA_NEWER",
-]);
-
 /** Whether the saved list says the registry itself is damaged; adding is blocked then. */
 export function isRegistryBroken(list: ListState): boolean {
-  return list.status === "broken" && registryBroken.has(list.code);
+  return list.status === "broken" && isRegistryBrokenCode(list.code);
 }
 
 function addHint(capability: RegistrationCapability, broken: boolean) {

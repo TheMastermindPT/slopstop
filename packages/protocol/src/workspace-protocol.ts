@@ -1,50 +1,57 @@
-import {
-  DomainIdentityTextSchema,
-  WorkspaceProjectionRevisionSchema as KernelWorkspaceProjectionRevisionSchema,
-} from "@slopstop/kernel";
+import { WorkspaceProjectionRevisionSchema as KernelWorkspaceProjectionRevisionSchema } from "@slopstop/kernel";
 import { Schema } from "effect";
-import { ProjectIdSchema } from "./domain-identity-schema.js";
+import { LowercaseDomainIdentityTextSchema, ProjectIdSchema } from "./domain-identity-schema.js";
 import { NonEmptyTextSchema, wholeUnion } from "./schema-codec.js";
 
 export { ProjectIdSchema };
 export type ProjectId = typeof ProjectIdSchema.Type;
-export const WaypointIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("WaypointId"));
+export const WaypointIdSchema = LowercaseDomainIdentityTextSchema.pipe(Schema.brand("WaypointId"));
 export type WaypointId = typeof WaypointIdSchema.Type;
-export const ConversationIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("ConversationId"));
+export const ConversationIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("ConversationId"),
+);
 export type ConversationId = typeof ConversationIdSchema.Type;
-export const ConversationBranchIdSchema = DomainIdentityTextSchema.pipe(
+export const ConversationBranchIdSchema = LowercaseDomainIdentityTextSchema.pipe(
   Schema.brand("ConversationBranchId"),
 );
 export type ConversationBranchId = typeof ConversationBranchIdSchema.Type;
-export const ConversationMessageIdSchema = DomainIdentityTextSchema.pipe(
+export const ConversationMessageIdSchema = LowercaseDomainIdentityTextSchema.pipe(
   Schema.brand("ConversationMessageId"),
 );
 export type ConversationMessageId = typeof ConversationMessageIdSchema.Type;
-export const ContextProposalIdSchema = DomainIdentityTextSchema.pipe(
+export const ContextProposalIdSchema = LowercaseDomainIdentityTextSchema.pipe(
   Schema.brand("ContextProposalId"),
 );
 export type ContextProposalId = typeof ContextProposalIdSchema.Type;
-export const ContextRecordIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("ContextRecordId"));
+export const ContextRecordIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("ContextRecordId"),
+);
 export type ContextRecordId = typeof ContextRecordIdSchema.Type;
-export const FrameDraftIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("FrameDraftId"));
+export const FrameDraftIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("FrameDraftId"),
+);
 export type FrameDraftId = typeof FrameDraftIdSchema.Type;
-export const FrameSectionIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("FrameSectionId"));
+export const FrameSectionIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("FrameSectionId"),
+);
 export type FrameSectionId = typeof FrameSectionIdSchema.Type;
-export const ReviewAnnotationIdSchema = DomainIdentityTextSchema.pipe(
+export const ReviewAnnotationIdSchema = LowercaseDomainIdentityTextSchema.pipe(
   Schema.brand("ReviewAnnotationId"),
 );
 export type ReviewAnnotationId = typeof ReviewAnnotationIdSchema.Type;
-export const AcceptedRevisionIdSchema = DomainIdentityTextSchema.pipe(
+export const AcceptedRevisionIdSchema = LowercaseDomainIdentityTextSchema.pipe(
   Schema.brand("AcceptedRevisionId"),
 );
 export type AcceptedRevisionId = typeof AcceptedRevisionIdSchema.Type;
-export const MemoryTopicIdSchema = DomainIdentityTextSchema.pipe(Schema.brand("MemoryTopicId"));
+export const MemoryTopicIdSchema = LowercaseDomainIdentityTextSchema.pipe(
+  Schema.brand("MemoryTopicId"),
+);
 export type MemoryTopicId = typeof MemoryTopicIdSchema.Type;
-export const MemoryRevisionIdSchema = DomainIdentityTextSchema.pipe(
+export const MemoryRevisionIdSchema = LowercaseDomainIdentityTextSchema.pipe(
   Schema.brand("MemoryRevisionId"),
 );
 export type MemoryRevisionId = typeof MemoryRevisionIdSchema.Type;
-export const MemoryProposalIdSchema = DomainIdentityTextSchema.pipe(
+export const MemoryProposalIdSchema = LowercaseDomainIdentityTextSchema.pipe(
   Schema.brand("MemoryProposalId"),
 );
 export type MemoryProposalId = typeof MemoryProposalIdSchema.Type;

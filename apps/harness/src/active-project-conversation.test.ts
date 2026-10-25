@@ -1,4 +1,5 @@
 import {
+  ConversationMessageIdSchema,
   decodeStrict,
   ProjectActivationIdSchema,
   ProjectIdSchema,
@@ -249,7 +250,13 @@ describe("readConversation maps the read-only reader's answers", () => {
         branchId: ids[1] ?? "",
         revision: 1,
         messages: [
-          { messageId: ids[2] ?? "", cursor: 1, author: "user" as const, text: "Hello", savedAt },
+          {
+            messageId: decodeStrict(ConversationMessageIdSchema, ids[2]),
+            cursor: 1,
+            author: "user" as const,
+            text: "Hello",
+            savedAt,
+          },
         ],
         nextCursor: null,
       },

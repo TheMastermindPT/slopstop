@@ -1,9 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { decodeWithIssues } from "./decode-with-issues.test-support.js";
 import {
+  AcceptedRevisionIdSchema,
   acceptsStrict,
+  ContextProposalIdSchema,
+  ContextRecordIdSchema,
+  ConversationBranchIdSchema,
+  ConversationIdSchema,
+  ConversationMessageIdSchema,
   decodeStrict,
+  FrameDraftIdSchema,
+  FrameSectionIdSchema,
+  MemoryProposalIdSchema,
+  MemoryRevisionIdSchema,
+  MemoryTopicIdSchema,
   ProjectIdSchema,
+  ReviewAnnotationIdSchema,
+  WaypointIdSchema,
   WorkspaceIntentResultSchema,
   WorkspaceIntentSchema,
   WorkspaceNotificationSchema,
@@ -796,4 +809,35 @@ describe("workspace protocol", () => {
       }),
     ).toBe(false);
   });
+});
+
+const workspaceIdentitySchemas = {
+  WaypointIdSchema,
+  ConversationIdSchema,
+  ConversationBranchIdSchema,
+  ConversationMessageIdSchema,
+  ContextProposalIdSchema,
+  ContextRecordIdSchema,
+  FrameDraftIdSchema,
+  FrameSectionIdSchema,
+  ReviewAnnotationIdSchema,
+  AcceptedRevisionIdSchema,
+  MemoryTopicIdSchema,
+  MemoryRevisionIdSchema,
+  MemoryProposalIdSchema,
+};
+
+describe("workspace identity schemas", () => {
+  const valid = "018f47a3-4e3d-7d2b-9c41-7df4605c0a11";
+
+  it.each(Object.entries(workspaceIdentitySchemas))(
+    "rejects an uppercase workspace identity (%s)",
+    (_name, schema) => {
+      expect(decodeWithIssues(schema, valid)).toEqual({ success: true, data: valid });
+      expect(decodeWithIssues(schema, valid.toUpperCase()).error?.issues).toEqual([
+        { code: "custom", path: [], message: "Identity must use lowercase UUID text." },
+      ]);
+      expect(decodeWithIssues(schema, "00000000-0000-0000-0000-000000000000").success).toBe(false);
+    },
+  );
 });

@@ -1,4 +1,3 @@
-import { isDomainIdentity } from "@slopstop/kernel";
 import {
   type CanonicalJsonValue,
   CanonicalJsonValueSchema,
@@ -22,7 +21,7 @@ import type { LocalLibsqlTransaction } from "./storage/local-libsql-worker-clien
 export type CanonicalCommandTransaction = Readonly<Pick<LocalLibsqlTransaction, "execute">>;
 export const CanonicalEventInputSchema = Schema.Struct({
   aggregateType: NonBlankTextSchema,
-  aggregateId: CanonicalStoredIdentitySchema.check(Schema.makeFilter(isDomainIdentity)),
+  aggregateId: CanonicalStoredIdentitySchema,
   aggregateVersion: TypedCommandSchema.fields.version,
   eventType: NonBlankTextSchema,
   eventVersion: TypedCommandSchema.fields.version,

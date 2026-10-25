@@ -1,3 +1,4 @@
+import { Sha256HexSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
 
 const PhysicalNumberSchema = Schema.String.check(Schema.isPattern(/^[1-9][0-9]*$/));
@@ -24,7 +25,7 @@ export const RepositoryPhysicalSnapshotSchema = Schema.Struct({
     gitDirectory: PhysicalDirectoryKeySchema,
     commonDirectory: PhysicalDirectoryKeySchema,
   }),
-  metadataFingerprint: Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/)),
+  metadataFingerprint: Sha256HexSchema,
 });
 export type RepositoryPhysicalSnapshot = typeof RepositoryPhysicalSnapshotSchema.Type;
 

@@ -1,4 +1,8 @@
-import type { ProjectId, ProjectRegistrationResult } from "@slopstop/protocol";
+import {
+  isRegistryBrokenCode,
+  type ProjectId,
+  type ProjectRegistrationResult,
+} from "@slopstop/protocol";
 import { useRef, useState } from "react";
 
 export type RemovalTarget = Readonly<{ projectId: ProjectId; name: string }>;
@@ -28,12 +32,6 @@ export type RemovalHost = Readonly<{
   announce(message: string): void;
 }>;
 
-const damagedRegistry = new Set([
-  "REGISTRY_CORRUPT",
-  "REGISTRY_SCHEMA_UNKNOWN",
-  "REGISTRY_SCHEMA_NEWER",
-]);
-
 /** Why a removal did not happen; busy and damaged registries stay distinct. */
 function removalFailure(result: ProjectRegistrationResult, name: string): RemovalFailure {
   const code = "code" in result ? result.code : result.status;
@@ -47,7 +45,7 @@ function removalFailure(result: ProjectRegistrationResult, name: string): Remova
       retry: true,
       reference: code,
     };
-  if (damagedRegistry.has(code))
+  if (isRegistryBrokenCode(code))
     return {
       tone: "error",
       word: "Not removed",

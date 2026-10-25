@@ -140,6 +140,7 @@ Phase 2 already needs one bump for the registration brand exports and the `conse
 
 - **Recommended:** the kernel owns the identity text root and the lowercase filter, which are pure `Schema` values and allowed there by ADR 0001. `packages/protocol` owns every branded identity schema, and types derive from those schemas (`typeof X.Type`, AGENTS.md).
 - **Kernel shadows:** the kernel deletes its 23 unused identity type shadows. It keeps `isDomainIdentity`, now meaning strict lowercase, which harness uses at 2 sites. Numeric kernel brands such as `WorkspaceProjectionRevision` are unaffected.
+  - **Note, 2026-10-24 (measured after Phase 2 s2, no decision change):** harness uses `isDomainIdentity` at 0 sites. Both sites moved to the one strict root, and the harness no longer imports `@slopstop/kernel`. The kernel still exports `isDomainIdentity`.
 - **Harness brands:** the harness stops declaring brands that the protocol owns. This covers the 4 registration brands declared twice and the forged `ProjectStorageCreateRequestId` (L4-09, L4-10). The 9 harness-only registration brands move onto the strict root.
 - **L8-02:** the model text for the kernel ("domain types") is corrected in Phase 1 and is consistent with this split.
 

@@ -1,3 +1,5 @@
+import { summarizeSchemaError } from "@slopstop/protocol";
+import { SchemaIssue } from "effect";
 import { SchemaError } from "effect/Schema";
 import { describe, expect, it } from "vitest";
 import {
@@ -231,6 +233,19 @@ describe("Project Storage upgrade manifest", () => {
       expect.soft(() => serializeProjectStorageManifest(invalid)).toThrow();
     }
   });
+
+  it("refuses an upgrade storage operation that differs from its create request", () => {
+    const mismatched = {
+      ...validUpgradeManifest,
+      provenance: {
+        ...validUpgradeManifest.provenance,
+        storageOperationId: "00000000-0000-4000-8000-0000000000a2",
+      },
+    };
+    expect(() => serializeProjectStorageManifest(mismatched)).toThrow(
+      "Upgrade storage operation must equal its create request.",
+    );
+  });
 });
 
 const validBackupManifest = {
@@ -275,5 +290,39 @@ describe("Project Storage backup manifest", () => {
         .soft(() => parseProjectStorageBackupManifest(JSON.stringify(invalid)))
         .toThrow(SchemaError);
     }
+  });
+});
+
+const formatIssue = SchemaIssue.makeFormatterStandardSchemaV1();
+
+/** The manifest's refusal as code and path, with each custom issue's message. */
+function manifestIssues(manifest: unknown) {
+  try {
+    serializeProjectStorageManifest(manifest);
+    return [];
+  } catch (error) {
+    if (!(error instanceof SchemaError)) throw error;
+    const messages = formatIssue(error.issue).issues;
+    return summarizeSchemaError(error).map((summary, index) =>
+      summary.code === "custom" ? { ...summary, message: messages[index]?.message } : summary,
+    );
+  }
+}
+
+describe("Project Storage manifest instants", () => {
+  it.each([
+    [
+      "minute only",
+      "2026-10-03T12:00Z",
+      [{ code: "custom", path: ["createdAt"], message: "UTC instant must include seconds." }],
+    ],
+    [
+      "offset",
+      "2026-10-03T12:00:00+01:00",
+      [{ code: "custom", path: ["createdAt"], message: "UTC instant must end in Z." }],
+    ],
+  ])("rejects a minute-only stored instant (%s)", (_name, createdAt, expected) => {
+    expect(manifestIssues(validInitialManifest)).toEqual([]);
+    expect(manifestIssues({ ...validInitialManifest, createdAt })).toEqual(expected);
   });
 });

@@ -1,9 +1,10 @@
+import { Sha256HexSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
 import { PhysicalIdentitySchema, samePhysicalIdentity } from "./physical-identity.js";
 
 export const ExecutableIdentitySchema = Schema.Struct({
   ...PhysicalIdentitySchema.fields,
-  sha256: Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/)),
+  sha256: Sha256HexSchema,
 });
 
 export type ExecutableIdentity = typeof ExecutableIdentitySchema.Type;

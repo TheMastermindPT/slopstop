@@ -1,17 +1,18 @@
-import { isDomainIdentity } from "@slopstop/kernel";
 import {
   type CommandId,
   CommandIdSchema,
   decodeStrict,
+  LowercaseDomainIdentityTextSchema,
+  normalizedUtc,
   ProjectActivationIdSchema,
   type ProjectId,
   ProjectIdSchema,
+  Sha256HexSchema,
   type WriterGeneration,
   WriterGenerationSchema,
 } from "@slopstop/protocol";
 import { Schema } from "effect";
 import {
-  CanonicalSha256Schema,
   canonicalChangedOnce,
   canonicalExactlyOne,
   canonicalJsonText,
@@ -20,7 +21,6 @@ import {
 import {
   canonicalWriterUtcInstantSchema,
   currentCanonicalSettlementFence,
-  normalizedUtc,
   readCanonicalProjectSequence,
   type readCanonicalWriterFence,
   readCheckedCanonicalSettlement,
@@ -31,16 +31,12 @@ export type CanonicalUncertaintyDescriptor = Readonly<{
   commandId: CommandId;
   fingerprint: string;
 }>;
-const recoveryIdentitySchema = Schema.String.check(
-  Schema.makeFilter(isDomainIdentity),
-  Schema.makeFilter((value: string) => value === value.toLowerCase()),
-);
 const preparedRecoverySchema = Schema.Struct({
   projectId: ProjectIdSchema,
   writerGeneration: WriterGenerationSchema,
   commandId: CommandIdSchema,
-  fingerprint: CanonicalSha256Schema,
-  recoveryRecordId: recoveryIdentitySchema,
+  fingerprint: Sha256HexSchema,
+  recoveryRecordId: LowercaseDomainIdentityTextSchema,
   observedAt: canonicalWriterUtcInstantSchema,
 });
 export type PreparedCanonicalUncertainty = Readonly<typeof preparedRecoverySchema.Type>;
@@ -53,7 +49,7 @@ const recordingRowSchema = Schema.Struct({
   sourceProjectId: ProjectIdSchema,
   sourceGeneration: WriterGenerationSchema,
   sourceActivationId: ProjectActivationIdSchema,
-  sourceDigest: CanonicalSha256Schema,
+  sourceDigest: Sha256HexSchema,
   sourceAcquiredAt: canonicalWriterUtcInstantSchema,
   sourceReleasedAt: Schema.NullOr(canonicalWriterUtcInstantSchema),
 });
@@ -143,7 +139,7 @@ export function prepareCanonicalUncertainty(
   dependencies: Readonly<{ createRecoveryRecordId(): string; now(): string }>,
 ): PreparedCanonicalUncertainty {
   const recoveryRecordId = decodeStrict(
-    recoveryIdentitySchema,
+    LowercaseDomainIdentityTextSchema,
     dependencies.createRecoveryRecordId(),
   );
   return Object.freeze(

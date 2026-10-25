@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { decodeStrict, UuidTextSchema } from "@slopstop/protocol";
+import { decodeStrict, LowercaseDomainIdentityTextSchema } from "@slopstop/protocol";
 import { Schema } from "effect";
 import { expect, it, vi } from "vitest";
 import { REGISTRATION_CLEANUP_BUDGET_MS } from "../../src/registration/observer-limits.js";
@@ -169,10 +169,10 @@ it.runIf(process.platform === "win32")(
       if (typeof json !== "string") throw new Error("Missing reservation record");
       const record = Schema.decodeUnknownSync(
         Schema.Struct({
-          projectId: UuidTextSchema,
-          repositoryBindingId: UuidTextSchema,
-          workspaceId: UuidTextSchema,
-          createRequestId: UuidTextSchema,
+          projectId: LowercaseDomainIdentityTextSchema,
+          repositoryBindingId: LowercaseDomainIdentityTextSchema,
+          workspaceId: LowercaseDomainIdentityTextSchema,
+          createRequestId: LowercaseDomainIdentityTextSchema,
         }),
       )(JSON.parse(json));
       expect(new Set(Object.values(record)).size).toBe(4);

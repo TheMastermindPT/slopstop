@@ -1,10 +1,10 @@
+import type { WriterReleaseFailureCode } from "@slopstop/protocol";
 import { retryableAttempt } from "./retryable-attempt.js";
 
-export type CanonicalWriterLeaseFailureCode =
-  | "WRITER_LEASE_OPEN_FAILED"
-  | "WRITER_LEASE_LOCK_FAILED"
-  | "WRITER_LEASE_UNLOCK_FAILED"
-  | "WRITER_LEASE_CLOSE_FAILED";
+export type CanonicalWriterLeaseFailureCode = Extract<
+  WriterReleaseFailureCode,
+  `WRITER_LEASE_${string}`
+>;
 export interface CanonicalWriterLease {
   release(): Promise<void>;
 }

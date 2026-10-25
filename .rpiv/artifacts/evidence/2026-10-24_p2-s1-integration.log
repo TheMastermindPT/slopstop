@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 C:/Users/pedro/Documents/GitHub/slopstop-p2
+
+
+ Test Files  2 passed (2)
+      Tests  11 passed (11)
+   Start at  16:30:13
+   Duration  3.02s (transform 1.55s, setup 0ms, import 2.43s, tests 1.56s, environment 0ms)
+

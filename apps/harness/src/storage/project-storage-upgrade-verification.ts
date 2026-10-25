@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { sha256Hex } from "../sha256-text.js";
 import { requireDeclaredSchemaObjects, tableNames } from "./database-schema-verifier.js";
 import { type LocalLibsqlClient, withDatabase } from "./local-libsql-worker-client.js";
 import { databaseSpecs } from "./project-storage-database-specs.js";
@@ -48,7 +48,7 @@ function digestRows(rows: unknown): string {
   const encoded = JSON.stringify(rows, (_key, value: unknown) =>
     value instanceof ArrayBuffer ? ["blob", Buffer.from(value).toString("hex")] : value,
   );
-  return createHash("sha256").update(encoded).digest("hex");
+  return sha256Hex(encoded);
 }
 
 /** Row count and a digest over every column of every row, in a total order. */

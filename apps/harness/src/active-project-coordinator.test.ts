@@ -1,5 +1,6 @@
 import { setImmediate as nextTurn } from "node:timers/promises";
 import {
+  ConversationMessageIdSchema,
   decodeStrict,
   ProjectStorageOpenResultSchema,
   projectUpgradeDiagnostics,
@@ -772,7 +773,10 @@ const fallbackPage: ProjectConversationPage = {
     revision: 101,
     messages: [
       {
-        messageId: "00000000-0000-4000-8000-000000000063",
+        messageId: decodeStrict(
+          ConversationMessageIdSchema,
+          "00000000-0000-4000-8000-000000000063",
+        ),
         cursor: 101,
         author: "user",
         text: "m101",

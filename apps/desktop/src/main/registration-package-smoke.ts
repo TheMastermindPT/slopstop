@@ -24,9 +24,9 @@ function rendererRegistrationScript(repositorySelectionId: string): string {
   if (trusted.status !== "trust-recorded") return { result: trusted };
   const git = await api.registerProject({ step: "prepare-git" });
   if (git.status !== "git-prepared") return { result: git };
-  const version = await api.registerProject({ step: "decide-git-version", selectionId: git.selectionId, consentId: uuid(), decision: "accepted" });
+  const version = await api.registerProject({ step: "decide-git-version", selectionId: git.selectionId, executableConsentId: uuid(), decision: "accepted" });
   if (version.status !== "git-version-observed") return { result: version };
-  const consent = { selectionId: git.selectionId, observationId: version.observationId, consentId: uuid() };
+  const consent = { selectionId: git.selectionId, observationId: version.observationId, identityQueryConsentId: uuid() };
   const recorded = await api.registerProject({ step: "decide-identity-queries", ...consent, decision: "accepted" });
   if (recorded.status !== "identity-queries-recorded") return { result: recorded };
   const preparation = { preparationRequestId: uuid(), ...consent, repositorySelectionId, trustId };

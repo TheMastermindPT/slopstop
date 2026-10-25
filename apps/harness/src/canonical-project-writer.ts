@@ -4,6 +4,7 @@ import type {
   ProjectId,
   TypedCommand,
   WriterGeneration,
+  WriterReleaseFailureCode,
 } from "@slopstop/protocol";
 import { CanonicalProjectCommandResultSchema, decodeStrict } from "@slopstop/protocol";
 import { Cause, Effect, Exit } from "effect";
@@ -20,19 +21,13 @@ import {
   type CanonicalCommandRepository,
   WriterOwnerBusy,
 } from "./storage/canonical-command-repository.js";
-import type {
-  CanonicalWriterLease,
-  CanonicalWriterLeaseFailureCode,
-} from "./storage/canonical-writer-lease.js";
+import type { CanonicalWriterLease } from "./storage/canonical-writer-lease.js";
 import { CanonicalWriterLeaseError } from "./storage/canonical-writer-lease.js";
 import { createPermitLock, type PermitLock, withPermitEffect } from "./storage/permit-lock.js";
 import { retryableAttempt } from "./storage/retryable-attempt.js";
 export type CanonicalProjectWriterReleaseFailureCode =
   | "WRITER_FENCE_STALE"
-  | "WRITER_FENCE_RELEASE_FAILED"
-  | "WRITER_REPOSITORY_CLOSE_FAILED"
-  | "WRITER_CLIENT_ABANDON_FAILED"
-  | CanonicalWriterLeaseFailureCode;
+  | Exclude<WriterReleaseFailureCode, "PROJECT_STORAGE_RELEASE_FAILED">;
 export interface CanonicalProjectWriter {
   readonly projectId: ProjectId;
   readonly activationId: ProjectActivationId;

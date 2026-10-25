@@ -1,11 +1,12 @@
-import { NonEmptyTextSchema, UuidTextSchema } from "@slopstop/protocol";
+import {
+  ExecutableConsentIdSchema,
+  ExecutableSelectionIdSchema,
+  NonEmptyTextSchema,
+  VersionObservationIdSchema,
+} from "@slopstop/protocol";
 import { Deferred, Effect, Exit, Schema } from "effect";
 import { REGISTRATION_CLEANUP_BUDGET_MS } from "./registration/observer-limits.js";
 import { RegistryFailureSchema, registryFailure } from "./registration/registry-failure.js";
-
-const ExecutableSelectionIdSchema = UuidTextSchema.pipe(Schema.brand("ExecutableSelectionId"));
-const ExecutableConsentIdSchema = UuidTextSchema.pipe(Schema.brand("ExecutableConsentId"));
-const VersionObservationIdSchema = UuidTextSchema.pipe(Schema.brand("VersionObservationId"));
 
 export const GitVersionInspectionRequestSchema = Schema.Struct({
   selectionId: ExecutableSelectionIdSchema,

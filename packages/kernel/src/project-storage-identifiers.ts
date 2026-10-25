@@ -1,15 +1,4 @@
 import { Schema } from "effect";
-import type { DomainIdentity } from "./workspace-identifiers.js";
-
-export type StorageId = DomainIdentity<"StorageId">;
-export type StorageGenerationId = DomainIdentity<"StorageGenerationId">;
-export type CanonicalDatabaseLineageId = DomainIdentity<"CanonicalDatabaseLineageId">;
-export type RuntimeDatabaseLineageId = DomainIdentity<"RuntimeDatabaseLineageId">;
-export type ProjectStorageCreateRequestId = DomainIdentity<"ProjectStorageCreateRequestId">;
-export type ProjectActivationId = DomainIdentity<"ProjectActivationId">;
-export type CommandId = DomainIdentity<"CommandId">;
-export type CommandReceiptId = DomainIdentity<"CommandReceiptId">;
-export type CanonicalEventId = DomainIdentity<"CanonicalEventId">;
 
 const PositiveSafeIntegerSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThan(0));
 

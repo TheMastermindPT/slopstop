@@ -1,4 +1,9 @@
-import { decodeStrictResult, UuidTextSchema } from "@slopstop/protocol";
+import {
+  ConversationBranchIdSchema,
+  ConversationIdSchema,
+  ConversationMessageIdSchema,
+  decodeStrictResult,
+} from "@slopstop/protocol";
 import { Effect, Result, Schema } from "effect";
 import { canonicalResultObjects } from "../canonical-json.js";
 import { canonicalWriterUtcInstantSchema } from "../storage/canonical-command-ledger.js";
@@ -14,8 +19,8 @@ import {
 
 const CursorSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThan(0));
 
-export const ConversationRowSchema = Schema.Struct({ conversationId: UuidTextSchema });
-export const BranchRowSchema = Schema.Struct({ branchId: UuidTextSchema });
+export const ConversationRowSchema = Schema.Struct({ conversationId: ConversationIdSchema });
+export const BranchRowSchema = Schema.Struct({ branchId: ConversationBranchIdSchema });
 const CountSchema = Schema.Number.check(Schema.isInt(), Schema.isGreaterThanOrEqualTo(0));
 /** A branch's message count, highest cursor, and messages of its conversation on other branches. */
 export const BranchShapeRowSchema = Schema.Struct({
@@ -24,7 +29,7 @@ export const BranchShapeRowSchema = Schema.Struct({
   stray: CountSchema,
 });
 export const MessageRowSchema = Schema.Struct({
-  messageId: UuidTextSchema,
+  messageId: ConversationMessageIdSchema,
   cursor: CursorSchema,
   author: Schema.Literal("user"),
   text: Schema.String,
@@ -32,7 +37,7 @@ export const MessageRowSchema = Schema.Struct({
 });
 export type MessageRow = typeof MessageRowSchema.Type;
 export const SavedRowSchema = Schema.Struct({
-  messageId: UuidTextSchema,
+  messageId: ConversationMessageIdSchema,
   cursor: CursorSchema,
   savedAt: canonicalWriterUtcInstantSchema,
   fingerprint: Schema.String,

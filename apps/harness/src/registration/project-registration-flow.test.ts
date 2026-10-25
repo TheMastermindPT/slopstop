@@ -81,3 +81,91 @@ it("handles a registration request that arrives after a completed one behind the
     })),
   );
 });
+
+/** A flow whose consent and preparation ports record their arguments and answer at once. */
+function recordingFlow() {
+  const calls: Record<string, unknown[]> = {
+    decideVersion: [],
+    decideIdentityQueries: [],
+    prepare: [],
+  };
+  const record = (name: string) => async (input: unknown) => {
+    calls[name]?.push(input);
+    return { status: "recorded" } as const;
+  };
+  const flow = createProjectRegistrationFlow({
+    registry: {
+      selectRepository: unexpected,
+      decideRepositoryTrust: unexpected,
+      prepareExecutable: unexpected,
+      decideVersion: record("decideVersion"),
+      decideIdentityQueries: record("decideIdentityQueries"),
+    },
+    observer: {
+      inspectGitVersion: unexpected,
+      closeEffect: Effect.die("Unexpected observer close."),
+      close: unexpected,
+    },
+    selection: createDirectoryHandoff(),
+    discoverGit: () => Effect.die("Unexpected Git discovery."),
+    createId: () => {
+      throw new Error("Unexpected id.");
+    },
+    owner: {
+      prepare: async (input: unknown) => {
+        calls["prepare"]?.push(input);
+        return { status: "rejected", code: "REPOSITORY_NOT_FOUND" };
+      },
+      confirm: unexpected,
+    },
+    options: { applicationStorageRoot: "unused", migrationResourcesRoot: "unused" },
+  });
+  return {
+    calls,
+    handle: (request: Parameters<typeof flow.handle>[0]) => Effect.runPromise(flow.handle(request)),
+  };
+}
+
+it("routes each wire consent to its own consent", async () => {
+  const id = (suffix: string) => `018f47a3-4e3d-7d2b-9c41-7df4605c0${suffix}`;
+  const [c1, c2] = [id("c01"), id("c02")];
+  const { calls, handle } = recordingFlow();
+  const selectionId = id("a01");
+  const observationId = id("a02");
+
+  await expect(
+    handle({
+      step: "decide-git-version",
+      selectionId,
+      executableConsentId: c1,
+      decision: "declined",
+    }),
+  ).resolves.toEqual({ status: "cancelled" });
+  expect(calls["decideVersion"]).toEqual([{ selectionId, consentId: c1, decision: "declined" }]);
+
+  await expect(
+    handle({
+      step: "decide-identity-queries",
+      selectionId,
+      observationId,
+      identityQueryConsentId: c2,
+      decision: "declined",
+    }),
+  ).resolves.toEqual({ status: "cancelled" });
+  expect(calls["decideIdentityQueries"]).toEqual([
+    { selectionId, observationId, consentId: c2, decision: "declined" },
+  ]);
+
+  await handle({
+    step: "prepare",
+    preparationRequestId: id("a03"),
+    selectionId,
+    observationId,
+    identityQueryConsentId: c2,
+    repositorySelectionId: id("a04"),
+    trustId: id("a05"),
+  });
+  expect(calls["prepare"]).toEqual([
+    expect.objectContaining({ admission: expect.objectContaining({ consentId: c2 }) }),
+  ]);
+});
