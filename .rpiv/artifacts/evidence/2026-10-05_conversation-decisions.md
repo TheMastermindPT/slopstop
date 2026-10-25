@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 9762f14b8f60b2adc4d1bad03e2e72a167c77d6388b57ca6887b5a467dd8f2fc
+content_hash: baa1670a3373f957fa0650a59dc93b161144b21f0040206bc7a55ae82c1baa4a
 ---
 
 # Conversation — Human Decisions
@@ -2187,3 +2187,4 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
   - R7 and Phase 1 Q2: a new GitHub issue (approved).
   Squash onto main; on the combined tree run `check:duplicates` and `pnpm check`; push with `check:deep` alone (it carries `2806143`), then check the CI.
 - **Phase 2 pushed `9596d10..316e596`** with `check:deep` green alone (unit 3595, coverage 5799, integration 2204, e2e, launch smoke). Issue #144 is opened for R7 and Phase 1 Q2. CI run 40153543969: **Windows green** (22 min, the first run with coverage on Windows). Ubuntu red, but only in e2e (16 failed, 5 passed): with coverage gone, the job reached the Electron journeys for the first time since September, and they are Windows-only (`electron.exe`, Git for Windows). This is not caused by Phase 2. **User decisions:** Ubuntu no longer runs the e2e; and, asked separately because the Linux package smoke depends on the e2e package and needs Git for Windows, the packaged smoke also leaves Ubuntu. `test:e2e` moves from `check:deep:shared` to `check:deep:portable`, so local `check:deep` is unchanged. The Ubuntu job drops the Electron dependency, xvfb, sandbox and smoke steps. The pin test passes 24/24.
+- **Effect re-measure (2026-10-25, `b94f302`):** 51 warnings: harness 47 and **desktop 4** (the 4 package-smoke error classes), correcting the earlier "all in harness"; kernel and protocol 0. **User decisions: Phase 3 brief approved** (`designs/2026-10-25_12-24-03_arch-review-phase-3-failure-classification.md`, hash `30f2f102…`; approved copy saved). The slices are s1 busy classifier, s2 registry decode (+R2, R8), s3 ledger refusals, s4 request-failure log, s5a/b/c the Effect warnings, s6 promotion at 0, and s7 R6. Q1, Q2, Q4, Q5, Q7, Q8 and Q9 follow the recommendations: no verdict change; `REGISTRY_CORRUPT` is kept; the full log path runs through the desktop forwarder; `_tag` is accepted and pinned; R6 is in Phase 3; no waivers; the #123 Part B line is the execution model. **Q3: s3 is normal WITH one scoped ledger mutation run** (the user's explicit choice for this slice; the coordinator had recommended no mutation). Q6: the three s5a slices are normal, with recorded lane overrides (filename triggers).
