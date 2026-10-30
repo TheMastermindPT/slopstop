@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { decodeStrict } from "@slopstop/protocol";
+import { decodeStrict, HarnessReconciliationFailureLogLineSchema } from "@slopstop/protocol";
 import { afterEach, expect, it, vi } from "vitest";
+import { createHarnessLogger } from "../../src/harness-logger.js";
 import { GitVersionInspectionRequestSchema } from "../../src/project-registration-observer.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
 import * as absence from "../../src/registration/windows-observer-absence.js";
@@ -20,6 +21,7 @@ import { createRepositoryTrustScenario } from "./registration-consent-fixture.js
 import { registrationSession, type Session } from "./registration-flow-fixture.js";
 import { startObserverOwner } from "./registration-owner-recovery-fixture.js";
 import { createStoredVersionConsent } from "./registration-version-fixture.js";
+import { memoryLogDestination } from "./request-diagnostics-fixture.js";
 import { temporaryRoot } from "./temporary-root.js";
 
 const pendingRecovery = { status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" };
@@ -164,9 +166,19 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
       }
       const fault = injectAbsenceFault("inaccessible-process");
       const recording = recordingLogger();
+      // The same calls also go through the real harness logger, so the written line is checked.
+      const destination = memoryLogDestination();
+      const harnessLogger = createHarnessLogger(destination.stream);
+      const logger = {
+        info: (fields: object, message?: string) => harnessLogger.info(fields, message),
+        warn: (fields: object, message?: string) => {
+          recording.logger.warn(fields);
+          harnessLogger.warn(fields, message);
+        },
+      };
       let admission: unknown;
       try {
-        admission = await admissionAfterRestart(root, recording.logger);
+        admission = await admissionAfterRestart(root, logger);
       } finally {
         fault.restore();
       }
@@ -175,6 +187,21 @@ it.runIf(process.platform === "win32" && process.arch === "x64")(
       expect(admission).toEqual(pendingRecovery);
       expect(recording.warnings).toEqual([{ code: "REGISTRATION_RECONCILIATION_FAILED" }]);
       expect(await unsettledAt(installation)).toBe(true);
+      const reconciliationLines = destination.lines.filter((line) =>
+        line.includes('"code":"REGISTRATION_RECONCILIATION_FAILED"'),
+      );
+      expect(reconciliationLines).toHaveLength(1);
+      expect(
+        decodeStrict(
+          HarnessReconciliationFailureLogLineSchema,
+          JSON.parse(reconciliationLines[0] ?? ""),
+        ),
+      ).toMatchObject({
+        level: 40,
+        service: "harness",
+        code: "REGISTRATION_RECONCILIATION_FAILED",
+        msg: "Registration reconciliation failed.",
+      });
     } finally {
       await subject.stop();
     }

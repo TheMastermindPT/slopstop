@@ -1,6 +1,4 @@
 import {
-  decodeStrict,
-  decodeStrictResult,
   LowercaseDomainIdentityTextSchema,
   NonEmptyTextSchema,
   RegistrationPreparationRequestIdSchema,
@@ -8,7 +6,7 @@ import {
   Sha256HexSchema,
   UtcInstantSchema,
 } from "@slopstop/protocol";
-import { Result, Schema } from "effect";
+import { Schema } from "effect";
 import { sha256Hex } from "../sha256-text.js";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { ExecutableIdentitySchema } from "./executable-identity.js";
@@ -16,8 +14,8 @@ import {
   PhysicalDirectoryKeySchema,
   RepositoryPhysicalSnapshotSchema,
 } from "./physical-identity.js";
-import { registryRows } from "./registry-database.js";
-import { RegistryFault } from "./registry-failure.js";
+import { decodeRegistryJson, decodeRegistryRows } from "./registry-database.js";
+import { RegistryFault, registryCorrupt } from "./registry-failure.js";
 import { RepositoryIdentityAdmissionRequestSchema } from "./repository-trust.js";
 
 export const PrepareProjectRegistrationSchema = Schema.Struct({
@@ -88,15 +86,6 @@ export function preparedResult(record: RegistrationProposalRecord) {
 }
 
 type ProposalRow = (typeof proposalRowsSchema.Type)[number];
-const corruptProposal = () => new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-
-function decodeProposalRecord(row: ProposalRow): RegistrationProposalRecord {
-  try {
-    return decodeStrict(RegistrationProposalRecordSchema, JSON.parse(row.recordJson));
-  } catch {
-    throw corruptProposal();
-  }
-}
 
 /** The record belongs to the request and its row, and both fingerprints match the record. */
 function proposalRowAgrees(
@@ -120,12 +109,10 @@ export async function readProposal(
     sql: "SELECT proposal_id AS proposalId, input_fingerprint AS inputFingerprint, proposal_fingerprint AS proposalFingerprint, record_json AS recordJson FROM registration_proposals WHERE request_id = ?",
     args: [request.requestId],
   });
-  const rows = decodeStrictResult(proposalRowsSchema, registryRows(result));
-  if (Result.isFailure(rows)) throw corruptProposal();
-  const row = rows.success[0];
+  const row = decodeRegistryRows(proposalRowsSchema, result)[0];
   if (row === undefined) return undefined;
-  const record = decodeProposalRecord(row);
-  if (!proposalRowAgrees(record, row, request)) throw corruptProposal();
+  const record = decodeRegistryJson(RegistrationProposalRecordSchema, row.recordJson);
+  if (!proposalRowAgrees(record, row, request)) throw registryCorrupt();
   if (preparationFingerprint(record.request) !== preparationFingerprint(request)) {
     throw new RegistryFault({ status: "rejected", code: "REGISTRATION_IDEMPOTENCY_CONFLICT" });
   }

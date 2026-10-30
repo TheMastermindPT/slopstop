@@ -1,11 +1,10 @@
 import { randomUUID } from "node:crypto";
 import {
   decodeStrict,
-  decodeStrictResult,
   RepositorySelectionIdSchema,
   RepositoryTrustIdSchema,
 } from "@slopstop/protocol";
-import { Result, Schema } from "effect";
+import { Schema } from "effect";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { withWriteTransaction } from "../storage/project-storage-transaction.js";
 import { observeRepositoryDirectory } from "../storage/repository-identity-observer.js";
@@ -23,9 +22,10 @@ import {
   samePhysicalIdentity,
 } from "./physical-identity.js";
 import {
+  decodeRegistryJson,
+  decodeRegistryRows,
   type PreparedRegistryRunner,
   type RegistryRunner,
-  registryRows,
 } from "./registry-database.js";
 import { RegistryFault, registryFailure } from "./registry-failure.js";
 
@@ -47,7 +47,9 @@ type AdmissionRequest = typeof RepositoryIdentityAdmissionRequestSchema.Type;
 const trustDecisionRowsSchema = Schema.Array(RepositoryTrustDecisionSchema).check(
   Schema.isMaxLength(1),
 );
-const trustDecisionCellSchema = Schema.Tuple([Schema.Tuple([TrustDecisionValueSchema])]);
+const storedTrustDecisionRowsSchema = Schema.Array(
+  Schema.Struct({ decision: TrustDecisionValueSchema }),
+).check(Schema.isMaxLength(1));
 type ExecutableAuthority = Awaited<
   ReturnType<IdentityQueryConsentAuthority["resolveIdentityQueries"]>
 >;
@@ -107,15 +109,11 @@ async function readRepositorySelection(transaction: LocalLibsqlTransaction, sele
     sql: "SELECT directory_path AS directory, identity_json AS identityJson FROM registration_repository_selections WHERE selection_id = ?",
     args: [selectionId],
   });
-  const row = decodeStrict(selectionRowsSchema, registryRows(rows))[0];
+  const row = decodeRegistryRows(selectionRowsSchema, rows)[0];
   if (row === undefined) return undefined;
-  const identity = decodeStrictResult(PhysicalDirectoryKeySchema, JSON.parse(row.identityJson));
-  if (Result.isFailure(identity)) {
-    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-  }
   return {
     directory: row.directory,
-    identity: identity.success,
+    identity: decodeRegistryJson(PhysicalDirectoryKeySchema, row.identityJson),
   };
 }
 
@@ -150,7 +148,7 @@ async function decideTrust(
     sql: "SELECT trust_id AS trustId, selection_id AS repositorySelectionId, decision FROM registration_repository_trust WHERE trust_id = ?",
     args: [request.trustId],
   });
-  const previous = decodeStrict(trustDecisionRowsSchema, registryRows(rows))[0];
+  const previous = decodeRegistryRows(trustDecisionRowsSchema, rows)[0];
   if (previous !== undefined) {
     if (
       previous.repositorySelectionId !== request.repositorySelectionId ||
@@ -183,9 +181,9 @@ export async function authorizeQueries(
     sql: "SELECT decision FROM registration_repository_trust WHERE trust_id = ? AND selection_id = ?",
     args: [request.trustId, request.repositorySelectionId],
   });
-  if (rows.rows.length === 0) return trustRequired;
-  const decision = decodeStrict(trustDecisionCellSchema, rows.rows)[0][0];
-  if (decision === "declined") return { status: "cancelled" as const };
+  const stored = decodeRegistryRows(storedTrustDecisionRowsSchema, rows)[0];
+  if (stored === undefined) return trustRequired;
+  if (stored.decision === "declined") return { status: "cancelled" as const };
   const selection = await readRepositorySelection(transaction, request.repositorySelectionId);
   if (selection === undefined) return trustRequired;
   const observed = await observeRepositoryDirectory(selection.directory);

@@ -97,22 +97,33 @@ async function testOptions(config: string, enabled: "0" | "1") {
   return Object(Reflect.get(Object(loaded), "test"));
 }
 
+const errorEqualitySetup = expect.stringMatching(/[\\/]tests[\\/]error-equality\.ts$/);
+
 describe("#94 trace wiring in the integration configs", () => {
-  it.each(integrationConfigs)("adds no setup file or runner to %s when off", async (config) => {
-    const options = await testOptions(config, "0");
+  it.each(integrationConfigs)(
+    "adds no trace setup file or runner to %s when off",
+    async (config) => {
+      const options = await testOptions(config, "0");
 
-    expect(Object.keys(options)).not.toContain("setupFiles");
-    expect(Object.keys(options)).not.toContain("runner");
-  });
+      expect(options.setupFiles).toEqual([errorEqualitySetup]);
+      expect(Object.keys(options)).not.toContain("runner");
+    },
+  );
 
-  it.each(integrationConfigs)("adds the setup file and runner to %s when on", async (config) => {
-    const options = await testOptions(config, "1");
+  it.each(integrationConfigs)(
+    "adds the trace setup file after the error equality setup, and the runner, to %s when on",
+    async (config) => {
+      const options = await testOptions(config, "1");
 
-    expect(options).toMatchObject({
-      setupFiles: [expect.stringMatching(/trace-94-setup\.ts$/)],
-      runner: expect.stringMatching(/trace-94-runner\.ts$/),
-    });
-  });
+      expect(options.setupFiles).toEqual([
+        errorEqualitySetup,
+        expect.stringMatching(/[\\/]integration[\\/]trace-94-setup\.ts$/),
+      ]);
+      expect(options.runner).toEqual(
+        expect.stringMatching(/[\\/]integration[\\/]trace-94-runner\.ts$/),
+      );
+    },
+  );
 });
 
 describe("#94 trace helpers with tracing on", () => {

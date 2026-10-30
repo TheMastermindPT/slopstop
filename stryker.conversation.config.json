@@ -7,7 +7,7 @@
     "apps/harness/src/conversation/conversation-save.ts",
     "apps/harness/src/canonical-writer-conversation.ts",
     "apps/harness/src/canonical-project-writer.ts",
-    "apps/harness/src/storage/sqlite-busy.ts"
+    "apps/harness/src/storage/project-storage-node-errors.ts"
   ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],

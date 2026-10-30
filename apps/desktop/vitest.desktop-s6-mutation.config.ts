@@ -13,6 +13,7 @@ export default defineConfig({
       "apps/desktop/src/main/workspace-bridge.test.ts",
       "apps/desktop/src/main/canonical-writer-package-smoke.test.ts",
       "apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts",
+      "apps/desktop/src/main/writer-proof-report.test.ts",
     ],
   },
 });

@@ -42,6 +42,7 @@ import {
   transportFor,
 } from "./project-storage-create-fixture.js";
 import { silentHarnessLogger } from "./project-storage-runtime-fixture.js";
+import { silentRequestDiagnostics } from "./request-diagnostics-fixture.js";
 
 const unexpectedSettlementValue = (): never => {
   throw new Error("Unexpected activation-only settlement dependency.");
@@ -246,9 +247,10 @@ function activationTransport(
           delivered();
         }),
     },
+    requestDiagnostics: silentRequestDiagnostics,
     canonicalProjectApplication,
-    projectStorageApplication: createProjectStorageApplication(storage),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    projectStorageApplication: createProjectStorageApplication(storage, silentRequestDiagnostics),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(++id).padStart(12, "0")}`,
     now: () => sentAt,

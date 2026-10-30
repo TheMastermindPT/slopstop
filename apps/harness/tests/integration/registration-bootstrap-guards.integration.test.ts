@@ -10,6 +10,7 @@ import {
 } from "@slopstop/protocol";
 import { Schema } from "effect";
 import { expect, it, vi } from "vitest";
+import { REGISTRATION_CLEANUP_BUDGET_MS } from "../../src/registration/observer-limits.js";
 import { createProjectRegistrationOwner } from "../../src/registration/project-registration-owner.js";
 import { createProjectRegistrationPreparation } from "../../src/registration/project-registration-preparation.js";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
@@ -357,6 +358,53 @@ it.runIf(process.platform === "win32").each(["close", "remove-target"] as const)
 );
 
 it.runIf(process.platform === "win32")(
+  "answers cleanup unconfirmed when close outlasts a held operation after a completed creation",
+  async () => {
+    const entered = gate();
+    const release = gate();
+    const f = await fixture();
+    let work: Promise<unknown> = Promise.resolve();
+    try {
+      decodeStrict(RegisteredProjectSchema, await f.owner.confirm(f.request));
+      const createClient = databaseClients.createWorkerLocalLibsqlClient;
+      vi.spyOn(databaseClients, "createWorkerLocalLibsqlClient").mockImplementation((...args) => {
+        const client = createClient(...args);
+        return {
+          execute: async (statement, values) => {
+            entered.release();
+            await release.promise;
+            return client.execute(statement, values);
+          },
+          close: () => client.close(),
+          transaction: async (mode) => {
+            entered.release();
+            await release.promise;
+            return client.transaction(mode);
+          },
+        };
+      });
+      work = f.owner.prepare(f.request.preparation);
+      await entered.promise;
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      const closing = f.owner.close();
+      await vi.advanceTimersByTimeAsync(REGISTRATION_CLEANUP_BUDGET_MS - 1);
+      expect(await Promise.race([closing, Promise.resolve("still closing")])).toBe("still closing");
+      await vi.advanceTimersByTimeAsync(1);
+      const unconfirmed = { status: "pending-recovery", code: "OBSERVER_CLEANUP_UNCONFIRMED" };
+      expect(await closing).toEqual(unconfirmed);
+      vi.useRealTimers();
+      release.release();
+      expect(await work).toEqual({ status: "cancelled" });
+    } finally {
+      vi.useRealTimers();
+      release.release();
+      await work;
+      await f.dispose();
+    }
+  },
+);
+
+it.runIf(process.platform === "win32")(
   "competing composed owners create one generation and publish only the winner",
   async () => {
     const entered = gate();
@@ -421,6 +469,81 @@ it.runIf(process.platform === "win32")(
   },
 );
 
+type ReservationMode = "exact" | "mismatched-digest" | "foreign-witness";
+type Fixture = Awaited<ReturnType<typeof fixture>>;
+
+/** The seed binding built from the saved reservation, with a wrong digest when the mode asks. */
+function reservedSeed(f: Fixture, mode: ReservationMode) {
+  const row = f.rows("SELECT record_json, record_fingerprint FROM registration_reservations")[0];
+  if (typeof row?.["record_json"] !== "string" || typeof row["record_fingerprint"] !== "string")
+    throw new Error("Reservation missing");
+  const {
+    reservationFingerprint: _fingerprint,
+    registrationRequestId: _request,
+    ...identityFields
+  } = InitialRepositoryBindingSchema.fields;
+  const identity = Schema.decodeUnknownSync(Schema.Struct(identityFields))(
+    JSON.parse(row["record_json"]),
+  );
+  return decodeStrict(InitialRepositoryBindingSchema, {
+    ...identity,
+    registrationRequestId: f.request.requestId,
+    reservationFingerprint:
+      mode === "mismatched-digest" ? "0".repeat(64) : row["record_fingerprint"],
+  });
+}
+
+/** Creates the seed's project storage through a fresh storage owner, which is always stopped. */
+async function createSeededStorage(
+  f: Fixture,
+  seed: ReturnType<typeof reservedSeed>,
+): Promise<unknown> {
+  const owner = createProjectStorageOwner(
+    createNodeProjectStorageDependencies({
+      applicationStorageRoot: f.options.applicationStorageRoot,
+      migrationResourcesRoot: f.options.migrationResourcesRoot,
+      applicationVersion: "0.0.0",
+      initialRepositoryBinding: seed,
+    }),
+  );
+  try {
+    return await owner.create(
+      decodeStrict(ProjectStorageCreateRequestSchema, {
+        projectId: seed.projectId,
+        createRequestId: seed.createRequestId,
+      }),
+    );
+  } finally {
+    await owner.stop();
+  }
+}
+
+const blockedByWitness = {
+  status: "ready",
+  result: {
+    status: "blocked",
+    reason: "prior-state-witness",
+    diagnostic: { code: "PROJECT_STORAGE_PRIOR_STATE_WITNESS" },
+  },
+};
+const creationByMode: Record<ReservationMode, Record<string, unknown>> = {
+  exact: { status: "ready", result: { status: "created" } },
+  "mismatched-digest": blockedByWitness,
+  "foreign-witness": blockedByWitness,
+};
+
+/** One generation after an exact creation; otherwise none, and application.db unchanged. */
+async function expectRegistryAfter(f: Fixture, mode: ReservationMode, before: Buffer) {
+  if (mode === "exact") {
+    expect(f.rows("SELECT * FROM storage_generations")).toHaveLength(1);
+    return;
+  }
+  expect(f.rows("SELECT * FROM storage_generations")).toEqual([]);
+  expect(await readFile(path.join(f.options.applicationStorageRoot, "application.db"))).toEqual(
+    before,
+  );
+}
+
 it
   .runIf(process.platform === "win32")
   .each(["exact", "mismatched-digest", "foreign-witness"] as const)(
@@ -432,25 +555,7 @@ it
         status: "pending-recovery",
         code: "REGISTRATION_INCOMPLETE",
       });
-      const row = f.rows(
-        "SELECT record_json, record_fingerprint FROM registration_reservations",
-      )[0];
-      if (typeof row?.["record_json"] !== "string" || typeof row["record_fingerprint"] !== "string")
-        throw new Error("Reservation missing");
-      const {
-        reservationFingerprint: _fingerprint,
-        registrationRequestId: _request,
-        ...identityFields
-      } = InitialRepositoryBindingSchema.fields;
-      const identity = Schema.decodeUnknownSync(Schema.Struct(identityFields))(
-        JSON.parse(row["record_json"]),
-      );
-      const seed = decodeStrict(InitialRepositoryBindingSchema, {
-        ...identity,
-        registrationRequestId: f.request.requestId,
-        reservationFingerprint:
-          mode === "mismatched-digest" ? "0".repeat(64) : row["record_fingerprint"],
-      });
+      const seed = reservedSeed(f, mode);
       const projectRoot = path.join(f.options.applicationStorageRoot, "projects", seed.projectId);
       const witness = path.join(projectRoot, ".slopstop-repository");
       if (mode === "foreign-witness") {
@@ -458,42 +563,8 @@ it
         await writeFile(witness, "preserved unrelated bytes");
       }
       const before = await readFile(path.join(f.options.applicationStorageRoot, "application.db"));
-      const owner = createProjectStorageOwner(
-        createNodeProjectStorageDependencies({
-          applicationStorageRoot: f.options.applicationStorageRoot,
-          migrationResourcesRoot: f.options.migrationResourcesRoot,
-          applicationVersion: "0.0.0",
-          initialRepositoryBinding: seed,
-        }),
-      );
-      try {
-        const result = await owner.create(
-          decodeStrict(ProjectStorageCreateRequestSchema, {
-            projectId: seed.projectId,
-            createRequestId: seed.createRequestId,
-          }),
-        );
-        if (mode === "exact")
-          expect(result).toMatchObject({ status: "ready", result: { status: "created" } });
-        else
-          expect(result).toMatchObject({
-            status: "ready",
-            result: {
-              status: "blocked",
-              reason: "prior-state-witness",
-              diagnostic: { code: "PROJECT_STORAGE_PRIOR_STATE_WITNESS" },
-            },
-          });
-      } finally {
-        await owner.stop();
-      }
-      if (mode === "exact") expect(f.rows("SELECT * FROM storage_generations")).toHaveLength(1);
-      else {
-        expect(f.rows("SELECT * FROM storage_generations")).toEqual([]);
-        expect(
-          await readFile(path.join(f.options.applicationStorageRoot, "application.db")),
-        ).toEqual(before);
-      }
+      expect(await createSeededStorage(f, seed)).toMatchObject(creationByMode[mode]);
+      await expectRegistryAfter(f, mode, before);
       if (mode === "foreign-witness")
         expect(await readFile(witness, "utf8")).toBe("preserved unrelated bytes");
     } finally {

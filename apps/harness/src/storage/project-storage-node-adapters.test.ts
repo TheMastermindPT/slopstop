@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { createRequest } from "../../tests/integration/project-storage-create-request.js";
+import { silentRequestDiagnostics } from "../../tests/integration/request-diagnostics-fixture.js";
 import type { ProjectStorageOwnerPort } from "../project-storage-application.js";
 import { createProjectStorageApplication } from "../project-storage-application.js";
 import type { InStatement } from "./local-libsql-worker-client.js";
@@ -300,7 +301,9 @@ async function exerciseRollbackFailure(failurePoint: RollbackFailurePoint) {
     close: async () => ({ status: "unavailable", message: "Unused test operation." }),
     stop: () => Promise.resolve(),
   };
-  const result = await createProjectStorageApplication(owner).create(createRequest);
+  const result = await createProjectStorageApplication(owner, silentRequestDiagnostics).create(
+    createRequest,
+  );
   if (internalFailure === undefined) {
     throw new Error("Expected a Project Storage rollback failure.");
   }

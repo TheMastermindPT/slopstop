@@ -3,7 +3,12 @@ import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { builtDesktopCommand, launchBuiltDesktop, startingLines } from "./electron-launch.js";
+import {
+  builtDesktopCommand,
+  expectNoHarnessRequestFailure,
+  launchBuiltDesktop,
+  startingLines,
+} from "./electron-launch.js";
 
 /** A fresh proof directory holding its own `userData`. */
 async function proofDirectory() {
@@ -41,6 +46,7 @@ async function stopChild(child: ChildProcess): Promise<void> {
 test("quits a second launch and keeps the first usable", async () => {
   test.setTimeout(60_000);
   const first = await proofDirectory();
+  const elsewhere = await proofDirectory();
   const application = await launchBuiltDesktop(first.proof, first.userData);
   const others: ChildProcess[] = [];
   try {
@@ -61,7 +67,6 @@ test("quits a second launch and keeps the first usable", async () => {
     await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
     expect(await startingLines(first.userData)).toBe(1);
 
-    const elsewhere = await proofDirectory();
     const independent = await spawnDesktop(elsewhere.proof, elsewhere.userData);
     others.push(independent);
     expect(await exitWithin(independent, 10_000)).toBe("running");
@@ -70,4 +75,6 @@ test("quits a second launch and keeps the first usable", async () => {
     for (const child of others) await stopChild(child);
     await application.close();
   }
+  await expectNoHarnessRequestFailure(first.userData);
+  await expectNoHarnessRequestFailure(elsewhere.userData);
 });

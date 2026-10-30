@@ -36,10 +36,10 @@
           "leakingRequirements": "error",
           "scopeInLayerEffect": "error",
           "newPromise": "error",
-          "anyUnknownInErrorContext": "warning",
-          "schemaNumber": "warning",
-          "unnecessaryFailYieldableError": "warning",
-          "extendsNativeError": "warning"
+          "anyUnknownInErrorContext": "error",
+          "schemaNumber": "error",
+          "unnecessaryFailYieldableError": "error",
+          "extendsNativeError": "error"
         },
         "includeSuggestionsInTsc": false,
         "ignoreEffectSuggestionsInTscExitCode": true,

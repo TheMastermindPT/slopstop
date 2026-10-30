@@ -6,6 +6,11 @@ import {
 } from "@slopstop/protocol";
 import { describe, expect, it } from "vitest";
 import {
+  recordingRequestDiagnostics,
+  silentRequestDiagnostics,
+} from "../tests/integration/request-diagnostics-fixture.js";
+import type { HarnessRequestDiagnostics } from "./harness-request-diagnostics.js";
+import {
   type ConversationWorkspacePort,
   createUnavailableWorkspaceApplication,
   createWorkspaceApplication,
@@ -89,41 +94,46 @@ const intents = [
   }),
 ] as const;
 
-function outcomeApplication() {
-  return createWorkspaceApplication({
-    conversation: {
-      query: async () => ({
-        status: "ready" as const,
-        projection: {
-          projection: "conversation",
-          revision: 0,
-          scope: { kind: "project", projectId: ids.project },
-          conversationId: "00000000-0000-4000-8000-000000000003",
-          branches: [],
-          messages: { items: [], nextCursor: null },
-          contextProposal: null,
+const forwardingFailure = new Error("forwarding failed");
+
+function outcomeApplication(requestDiagnostics: HarnessRequestDiagnostics) {
+  return createWorkspaceApplication(
+    {
+      conversation: {
+        query: async () => ({
+          status: "ready" as const,
+          projection: {
+            projection: "conversation",
+            revision: 0,
+            scope: { kind: "project", projectId: ids.project },
+            conversationId: "00000000-0000-4000-8000-000000000003",
+            branches: [],
+            messages: { items: [], nextCursor: null },
+            contextProposal: null,
+          },
+        }),
+        submit: async () => {
+          throw forwardingFailure;
         },
-      }),
-      submit: async () => {
-        throw new Error("forwarding failed");
+        subscribe: () => () => undefined,
       },
-      subscribe: () => () => undefined,
+      frame: {
+        query: async () => ({ status: "unavailable" as const, message: "" }),
+        submit: async (intent) => ({
+          status: "broken" as const,
+          message:
+            intent.intent === "frame-review.annotate" ? "Frame owner rejected annotation." : "",
+        }),
+        subscribe: () => () => undefined,
+      },
+      memory: {
+        query: async () => ({ status: "broken" as const, message: "" }),
+        submit: async () => ({ status: "unavailable" as const, message: "" }),
+        subscribe: () => () => undefined,
+      },
     },
-    frame: {
-      query: async () => ({ status: "unavailable" as const, message: "" }),
-      submit: async (intent) => ({
-        status: "broken" as const,
-        message:
-          intent.intent === "frame-review.annotate" ? "Frame owner rejected annotation." : "",
-      }),
-      subscribe: () => () => undefined,
-    },
-    memory: {
-      query: async () => ({ status: "broken" as const, message: "" }),
-      submit: async () => ({ status: "unavailable" as const, message: "" }),
-      subscribe: () => () => undefined,
-    },
-  });
+    requestDiagnostics,
+  );
 }
 
 function ownerNotification<C extends "conversation" | "frame" | "memory">(
@@ -140,7 +150,7 @@ function ownerNotification<C extends "conversation" | "frame" | "memory">(
 
 describe("workspace application", () => {
   it("reports each unavailable owner through its exact query", async () => {
-    const application = createUnavailableWorkspaceApplication();
+    const application = createUnavailableWorkspaceApplication(silentRequestDiagnostics);
     const expectedOwners = ["Conversation", "Conversation", "Frame", "Memory"] as const;
 
     for (const [index, query] of queries.entries()) {
@@ -158,36 +168,41 @@ describe("workspace application", () => {
   });
 
   it("distinguishes thrown producers from invalid projections", async () => {
-    const application = createWorkspaceApplication({
-      conversation: {
-        query: async () => {
-          throw new Error("provider failed");
-        },
-        submit: async () => ({ status: "forwarded" as const }),
-        subscribe: () => () => undefined,
-      },
-      frame: {
-        query: async () => ({ status: "unavailable" as const, message: "unavailable" }),
-        submit: async () => ({ status: "forwarded" as const }),
-        subscribe: () => () => undefined,
-      },
-      memory: {
-        query: async () => ({
-          status: "ready" as const,
-          projection: {
-            projection: "conversation",
-            revision: 1,
-            scope: { kind: "project", projectId: ids.project },
-            conversationId: "00000000-0000-4000-8000-000000000003",
-            branches: [],
-            messages: { items: [], nextCursor: null },
-            contextProposal: null,
+    const providerFailure = new Error("provider failed");
+    const requests = recordingRequestDiagnostics();
+    const application = createWorkspaceApplication(
+      {
+        conversation: {
+          query: async () => {
+            throw providerFailure;
           },
-        }),
-        submit: async () => ({ status: "forwarded" as const }),
-        subscribe: () => () => undefined,
+          submit: async () => ({ status: "forwarded" as const }),
+          subscribe: () => () => undefined,
+        },
+        frame: {
+          query: async () => ({ status: "unavailable" as const, message: "unavailable" }),
+          submit: async () => ({ status: "forwarded" as const }),
+          subscribe: () => () => undefined,
+        },
+        memory: {
+          query: async () => ({
+            status: "ready" as const,
+            projection: {
+              projection: "conversation",
+              revision: 1,
+              scope: { kind: "project", projectId: ids.project },
+              conversationId: "00000000-0000-4000-8000-000000000003",
+              branches: [],
+              messages: { items: [], nextCursor: null },
+              contextProposal: null,
+            },
+          }),
+          submit: async () => ({ status: "forwarded" as const }),
+          subscribe: () => () => undefined,
+        },
       },
-    });
+      requests.diagnostics,
+    );
 
     const failed = await application.query(queries[0]);
     expect(failed).toEqual({
@@ -210,10 +225,14 @@ describe("workspace application", () => {
       },
     });
     expect(invalid).not.toHaveProperty("projection");
+    expect(requests.calls).toHaveLength(1);
+    expect(requests.calls[0]?.boundary).toBe("workspace.query");
+    expect(requests.calls[0]?.failure).toBe(providerFailure);
   });
 
   it("normalizes ready and explicit query outcomes", async () => {
-    const application = outcomeApplication();
+    const requests = recordingRequestDiagnostics();
+    const application = outcomeApplication(requests.diagnostics);
 
     await expect(application.query(queries[0])).resolves.toMatchObject({
       status: "ready",
@@ -236,10 +255,12 @@ describe("workspace application", () => {
         message: "Memory producer failed.",
       },
     });
+    expect(requests.calls).toEqual([]);
   });
 
   it("normalizes explicit intent outcomes", async () => {
-    const application = outcomeApplication();
+    const requests = recordingRequestDiagnostics();
+    const application = outcomeApplication(requests.diagnostics);
 
     await expect(application.submit(intents[0])).resolves.toEqual({
       status: "broken",
@@ -273,10 +294,13 @@ describe("workspace application", () => {
         message: "Memory producer is unavailable.",
       },
     });
+    expect(requests.calls).toHaveLength(1);
+    expect(requests.calls[0]?.boundary).toBe("workspace.intent");
+    expect(requests.calls[0]?.failure).toBe(forwardingFailure);
   });
 
   it("returns unavailable for intents with no owner adapter", async () => {
-    const application = createUnavailableWorkspaceApplication();
+    const application = createUnavailableWorkspaceApplication(silentRequestDiagnostics);
     const expected = [
       ["conversation", "Conversation"],
       ["conversation", "Conversation"],
@@ -308,11 +332,14 @@ describe("workspace application", () => {
       submit: async () => ({ status: "forwarded" as const }),
       subscribe: () => () => undefined,
     };
-    const application = createWorkspaceApplication({
-      conversation: forwardedPort,
-      frame: forwardedPort,
-      memory: forwardedPort,
-    });
+    const application = createWorkspaceApplication(
+      {
+        conversation: forwardedPort,
+        frame: forwardedPort,
+        memory: forwardedPort,
+      },
+      silentRequestDiagnostics,
+    );
 
     const cases = [
       [intents[0], "conversation"],
@@ -363,7 +390,10 @@ describe("workspace application", () => {
         };
       },
     };
-    const application = createWorkspaceApplication({ conversation, frame, memory });
+    const application = createWorkspaceApplication(
+      { conversation, frame, memory },
+      silentRequestDiagnostics,
+    );
     const received: unknown[] = [];
     const stop = application.subscribe((notification) => received.push(notification));
     const notifications = [

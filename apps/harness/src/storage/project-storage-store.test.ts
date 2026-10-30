@@ -11,6 +11,7 @@ import {
   StorageIdSchema,
 } from "@slopstop/protocol";
 import { expect, it, vi } from "vitest";
+import { UntypedRejection } from "../effect-rejection.js";
 import { createPermitLock, withPermit } from "./permit-lock.js";
 import {
   ProjectStorageApplicationClientInitializationError,
@@ -738,6 +739,30 @@ it.each([1, 2])(
     } else expect(f.owner.stop()).toBe(stop);
   },
 );
+
+it("keeps a drained operation's own rejection in the stop aggregate", async () => {
+  const fixture = lifecycleDependencies();
+  let refuse: (reason: unknown) => void = () => undefined;
+  const held = new Promise<never>((_resolve, reject) => {
+    refuse = reject;
+  });
+  const owner = createProjectStorageOwner({
+    ...fixture.dependencies,
+    locks: { ...fixture.dependencies.locks, forProject: () => held },
+  });
+  const upgrading = owner
+    .upgrade({ projectId: request.projectId })
+    .catch((error: unknown) => error);
+  const stopping = owner.stop().catch((error: unknown) => error);
+  refuse("upgrade refused");
+  expect(await upgrading).toBe("upgrade refused");
+  const error = await stopping;
+  expect(error).toBeInstanceOf(AggregateError);
+  if (!(error instanceof AggregateError)) throw new Error("Expected a shutdown aggregate.");
+  expect(error.message).toBe("Project Storage shutdown failed.");
+  expect(error.errors[0]).toBe("upgrade refused");
+  for (const failure of error.errors) expect(failure).not.toBeInstanceOf(UntypedRejection);
+});
 
 it("does not wait at stop for an operation whose lock threw before admission", async () => {
   const fixture = lifecycleDependencies();

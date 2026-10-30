@@ -11,14 +11,15 @@ import {
   ProjectConversationSaveResultSchema,
   ProjectUpgradeResultSchema,
 } from "@slopstop/protocol";
-import { Result, type Schema } from "effect";
+import { Data, Result, type Schema } from "effect";
 import type { ActiveProjectCoordinator } from "./active-project-coordinator.js";
 /** The coordinator's surface, with every result validated before it leaves the harness. */
 export type CanonicalProjectApplication = ActiveProjectCoordinator;
-export class CanonicalProjectApplicationError extends Error {
-  override readonly name = "CanonicalProjectApplicationError";
+export class CanonicalProjectApplicationError extends Data.TaggedError(
+  "CanonicalProjectApplicationError",
+)<{ readonly message: string }> {
   constructor() {
-    super("Canonical Project application returned an invalid result.");
+    super({ message: "Canonical Project application returned an invalid result." });
   }
 }
 

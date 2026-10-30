@@ -2,14 +2,20 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { decodeStrict, HarnessBootstrapSchema } from "@slopstop/protocol";
+import {
+  decodeStrict,
+  HarnessBootstrapSchema,
+  harnessReconciliationFailureCode,
+  harnessReconciliationFailureMessage,
+} from "@slopstop/protocol";
 import { Cause, Context, Data, Effect, Exit, Fiber, Layer, ManagedRuntime, Result } from "effect";
 import type { ActiveProjectCoordinatorWithHeld } from "./active-project-coordinator.js";
 import {
   type CanonicalProjectApplication,
   createCanonicalProjectApplication,
 } from "./canonical-project-application.js";
-import { untypedRejection } from "./effect-rejection.js";
+import { untypedRejection, unwrapRejection } from "./effect-rejection.js";
+import { createHarnessRequestDiagnostics } from "./harness-request-diagnostics.js";
 import {
   type HarnessTransport,
   type StopHarnessRuntime,
@@ -29,10 +35,7 @@ import { requirePhysicalRoot } from "./storage/physical-root.js";
 import { createNodeProjectStorageDependencies } from "./storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "./storage/project-storage-store.js";
 import type { ProjectStorageUpgradePort } from "./storage/project-storage-upgrade.js";
-import {
-  createUpgradeDiagnosticsLogger,
-  type UpgradeEventLogger,
-} from "./upgrade-diagnostics-logger.js";
+import { createUpgradeDiagnosticsLogger } from "./upgrade-diagnostics-logger.js";
 import { systemUtcClock, type UtcClock } from "./utc-clock.js";
 import { createUnavailableWorkspaceApplication } from "./workspace-application.js";
 
@@ -117,7 +120,9 @@ export function launchOnProcessRuntime<Services, LayerError>(
         ...(yield* boundedDispose(runtime, deadlineMs)),
       ];
       if (failures.length > 0) {
-        return yield* Effect.fail(combinedFailure(failures, "Harness process shutdown failed."));
+        return yield* untypedRejection(
+          combinedFailure(failures, "Harness process shutdown failed."),
+        );
       }
     });
   return Effect.runPromise(
@@ -127,24 +132,37 @@ export function launchOnProcessRuntime<Services, LayerError>(
       );
       if (Result.isSuccess(started)) return started.success;
       const disposeFailures = yield* boundedDispose(runtime, deadlineMs);
-      return yield* Effect.fail(
+      return yield* untypedRejection(
         combinedFailure([started.failure.cause, ...disposeFailures], "Harness startup failed."),
       );
     }),
-  ).then((stopHarness) => {
-    // Built at the Promise edge, after the startup ran: every call shares one stop outcome.
-    let disposal: Promise<void> | undefined;
-    return () => {
-      disposal ??= Effect.runPromise(shutdown(stopHarness));
-      return disposal;
-    };
-  });
+  ).then(
+    (stopHarness) => {
+      // Built at the Promise edge, after the startup ran: every call shares one stop outcome.
+      let disposal: Promise<void> | undefined;
+      return () => {
+        disposal ??= Effect.runPromise(shutdown(stopHarness)).catch((failure: unknown) => {
+          throw unwrapRejection(failure);
+        });
+        return disposal;
+      };
+    },
+    (failure: unknown) => {
+      throw unwrapRejection(failure);
+    },
+  );
 }
+
+/** The two Pino calls the harness process log is used through, each with an optional message. */
+export type HarnessProcessLogger = Readonly<{
+  info(fields: Readonly<Record<string, unknown>>, message?: string): void;
+  warn(fields: Readonly<Record<string, unknown>>, message?: string): void;
+}>;
 
 type HarnessRuntimeIo = Readonly<{
   transport: HarnessTransport;
-  /** The process log; upgrade diagnostics of the coordinator's Storage owner go here. */
-  logger: UpgradeEventLogger;
+  /** The process log: upgrade, reconciliation and request-failure diagnostics go here. */
+  logger: HarnessProcessLogger;
   /**
    * The clock for registration times and message `sentAt`; the system clock when absent.
    * Project Storage and the canonical coordinator read `systemUtcClock` directly.
@@ -189,10 +207,11 @@ export function launchHarnessProcessRuntime(
             registration: yield* ProjectRegistration,
             canonicalProjects: yield* CanonicalProjects,
             clock: yield* ProcessClock,
+            requestDiagnostics: createHarnessRequestDiagnostics(yield* HarnessLog),
           };
         }),
       );
-      const { registration } = services;
+      const { registration, requestDiagnostics } = services;
       return startHarnessRuntime({
         projectRegistration: withListRemoval(
           registration.flow,
@@ -204,9 +223,13 @@ export function launchHarnessProcessRuntime(
         projectListing: createRegistrationListing(registration),
         applicationDatabase: services.applicationDatabase,
         transport: input.transport,
+        requestDiagnostics,
         canonicalProjectApplication: services.canonicalProjects,
-        workspaceApplication: createUnavailableWorkspaceApplication(),
-        projectStorageApplication: createProjectStorageApplication(services.projectStorage),
+        workspaceApplication: createUnavailableWorkspaceApplication(requestDiagnostics),
+        projectStorageApplication: createProjectStorageApplication(
+          services.projectStorage,
+          requestDiagnostics,
+        ),
         harnessVersion: "0.0.0",
         createId: randomUUID,
         now: services.clock.now,
@@ -221,9 +244,12 @@ type HarnessRootPaths = Readonly<{
   migrationResourcesRoot: string;
 }>;
 
-/** Where the coordinator's Storage owner reports its upgrade diagnostics. */
-class UpgradeLog extends Context.Service<UpgradeLog, UpgradeEventLogger>()(
-  "slopstop/harness/UpgradeLog",
+/**
+ * The harness process log, built once by its Layer: the upgrade diagnostics, the start's
+ * reconciliation warning and the request diagnostics are all written through it.
+ */
+class HarnessLog extends Context.Service<HarnessLog, HarnessProcessLogger>()(
+  "slopstop/harness/HarnessLog",
 ) {}
 /** The clock for registration times and message `sentAt`, built by its Layer. */
 export class ProcessClock extends Context.Service<ProcessClock, UtcClock>()(
@@ -275,7 +301,7 @@ const projectStorageLayer = Layer.effect(
         ...roots,
         applicationVersion: "0.0.0",
         applicationDatabase: yield* ApplicationDatabase,
-        upgradeDiagnostics: createUpgradeDiagnosticsLogger(yield* UpgradeLog),
+        upgradeDiagnostics: createUpgradeDiagnosticsLogger(yield* HarnessLog),
       }),
     );
   }),
@@ -288,7 +314,7 @@ const projectStorageLayer = Layer.effect(
  */
 function reconcileLeftObservations(
   registry: Pick<RegistrationRegistry, "reconcileAtStart">,
-  input: Readonly<{ applicationStorageRoot: string; logger: UpgradeEventLogger }>,
+  input: Readonly<{ applicationStorageRoot: string; logger: HarnessProcessLogger }>,
 ) {
   return Effect.gen(function* () {
     const journal = path.join(input.applicationStorageRoot, "application.db");
@@ -301,7 +327,12 @@ function reconcileLeftObservations(
       ),
     );
     if (Result.isSuccess(outcome) && reconciliationAnswered(outcome.success.status)) return;
-    yield* Effect.sync(() => input.logger.warn({ code: "REGISTRATION_RECONCILIATION_FAILED" }));
+    yield* Effect.sync(() =>
+      input.logger.warn(
+        { code: harnessReconciliationFailureCode },
+        harnessReconciliationFailureMessage,
+      ),
+    );
   });
 }
 
@@ -326,7 +357,7 @@ const projectRegistrationLayer = Layer.effect(
     yield* Effect.forkScoped(
       reconcileLeftObservations(registry, {
         applicationStorageRoot: roots.applicationStorageRoot,
-        logger: yield* UpgradeLog,
+        logger: yield* HarnessLog,
       }),
     );
     const observer = createProjectRegistrationObserver(
@@ -383,14 +414,14 @@ const canonicalProjectsLayer = Layer.effect(
  */
 export function harnessServicesLayer(
   roots: HarnessRootPaths,
-  upgradeLog: UpgradeEventLogger,
+  log: HarnessProcessLogger,
   clock: UtcClock = systemUtcClock,
 ) {
   return canonicalProjectsLayer.pipe(
     Layer.provideMerge(Layer.mergeAll(projectStorageLayer, projectRegistrationLayer)),
     Layer.provideMerge(applicationDatabaseLayer),
     Layer.provideMerge(Layer.succeed(HarnessRoots, roots)),
-    Layer.provideMerge(Layer.succeed(UpgradeLog, upgradeLog)),
+    Layer.provideMerge(Layer.succeed(HarnessLog, log)),
     Layer.provideMerge(Layer.succeed(ProcessClock, clock)),
   );
 }

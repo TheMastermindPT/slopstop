@@ -1,5 +1,6 @@
 import path from "node:path";
 import { acceptsStrict } from "@slopstop/protocol";
+import { Data } from "effect";
 import * as koffi from "koffi";
 import type { ObserverFailureTrigger } from "../project-registration-observer.js";
 import {
@@ -29,14 +30,20 @@ import {
 type VersionChildRequest = Parameters<GitVersionChildPort["run"]>[0] | IdentityQueryChildRequest;
 type Pipe = { reader: bigint; writer: bigint; bytes: Buffer[]; size: number; eof: boolean };
 
-class ObserverLimitError extends Error {
-  constructor(readonly occurredAt: number) {
-    super("Windows observer limit exceeded.");
+class ObserverLimitError extends Data.TaggedError("ObserverLimitError")<{
+  readonly message: string;
+  readonly occurredAt: number;
+}> {
+  constructor(occurredAt: number) {
+    super({ message: "Windows observer limit exceeded.", occurredAt });
   }
 }
-class ObserverCancelledError extends Error {
-  constructor(readonly occurredAt: number) {
-    super("Windows observer cancelled.");
+class ObserverCancelledError extends Data.TaggedError("ObserverCancelledError")<{
+  readonly message: string;
+  readonly occurredAt: number;
+}> {
+  constructor(occurredAt: number) {
+    super({ message: "Windows observer cancelled.", occurredAt });
   }
 }
 

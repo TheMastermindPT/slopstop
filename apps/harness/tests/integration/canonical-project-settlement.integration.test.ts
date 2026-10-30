@@ -4,13 +4,17 @@ import {
   decodeStrict,
   ProjectIdSchema,
 } from "@slopstop/protocol";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
+import { createCanonicalProjectWriter } from "../../src/canonical-project-writer.js";
 import {
   appliedReceipt,
+  createSettlementFixture,
   expectAppliedRows,
+  orphanTheAppliedReceipt,
   settlementBarrier,
   settlementRequest,
 } from "./canonical-command-fixture.js";
+import { expectLedgerFailure, refused } from "./canonical-ledger-failure.js";
 import {
   admissionCases,
   busyCommand,
@@ -732,3 +736,58 @@ async function expectRetainedSwitchFailure(
   expect(f.calls).toEqual(calls);
   expect(f.releases).toEqual([]);
 }
+
+/** The production writer over a fixture's repository, with a lease that records its release. */
+function fixtureWriter(f: Awaited<ReturnType<typeof createSettlementFixture>>) {
+  return createCanonicalProjectWriter({
+    projectId: settlementRequest.projectId,
+    activationId: settlementRequest.activationId,
+    writerGeneration: f.repository.writerGeneration,
+    repository: f.repository,
+    lease: { release: vi.fn(async () => undefined) },
+  });
+}
+
+it("P3-B10 a ledger refusal rejects its writer submission and the next one is writer-unavailable", async () => {
+  const f = await createSettlementFixture();
+  try {
+    await orphanTheAppliedReceipt(f);
+    const writer = fixtureWriter(f);
+    const first = writer.settle(settlementRequest.command);
+    expect(first.status).toBe("pending");
+    const error = await Promise.resolve(first.result).then(
+      () => undefined,
+      (rejection: unknown) => rejection,
+    );
+    expectLedgerFailure(error, refused("ORIGINAL_RECEIPT_ORPHANED"));
+    expect(writer.settle(settlementRequest.command)).toEqual({
+      status: "completed",
+      result: unavailableCommand(),
+    });
+  } finally {
+    await f.close();
+  }
+});
+
+it("P3-B10 an incoherent fence answers the writer's fence check as broken with the refusal as cause", async () => {
+  const f = await createSettlementFixture();
+  try {
+    // The fence check reads through the client, not a transaction, so the damage is stored.
+    await f.raw.execute("UPDATE writer_fence SET activated_at='2026-09-05T12:00:00.500Z'");
+    const error = await f.repository.verifyFence().then(
+      () => undefined,
+      (rejection: unknown) => rejection,
+    );
+    expect(error).toMatchObject({ code: "WRITER_FENCE_CHECK_FAILED" });
+    expectLedgerFailure(
+      typeof error === "object" && error !== null ? Reflect.get(error, "cause") : undefined,
+      refused("SETTLEMENT_FENCE_INCOHERENT"),
+    );
+    expect(await fixtureWriter(f).verifyFence()).toEqual({
+      status: "broken",
+      code: "WRITER_FENCE_CHECK_FAILED",
+    });
+  } finally {
+    await f.close();
+  }
+});

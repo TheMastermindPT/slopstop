@@ -48,6 +48,7 @@ import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js
 import { createMigratedSettlement } from "./conformance-counter-command.js";
 import { checkedInMigrationRoot, switchDeferred } from "./project-storage-runtime-fixture.js";
 import { refusedConversationPorts } from "./refused-conversation-ports.js";
+import { silentRequestDiagnostics } from "./request-diagnostics-fixture.js";
 
 export {
   checkedInMigrationRoot,
@@ -606,14 +607,15 @@ export function switchEvent(sequence: number, causation: number, event: string, 
 export function switchRuntimeOptions(
   owner: ActiveProjectCoordinator,
   transport: HarnessTransport,
-  storage = createUnavailableProjectStorageApplication(),
+  storage = createUnavailableProjectStorageApplication(silentRequestDiagnostics),
 ) {
   let sequence = 400;
   return {
     transport,
+    requestDiagnostics: silentRequestDiagnostics,
     canonicalProjectApplication: createCanonicalProjectApplication(owner),
     projectStorageApplication: storage,
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     harnessVersion: "0.0.0",
     now: () => switchTimes.T4,
     createId: () => `99999999-9999-4999-8999-999999999${++sequence}`,
@@ -622,7 +624,7 @@ export function switchRuntimeOptions(
 
 export function switchChannel(
   owner: ActiveProjectCoordinator,
-  storage = createUnavailableProjectStorageApplication(),
+  storage = createUnavailableProjectStorageApplication(silentRequestDiagnostics),
 ) {
   const { port1, port2 } = new MessageChannel();
   const sent: unknown[] = [];
@@ -824,7 +826,11 @@ export function ordinarySwitchStorage(f: SwitchFixture) {
       await f.run(`${name}.storage.acquire`);
       return owner.acquireActivation({ projectId: switchProjects[name].projectId });
     });
-  return { application: createProjectStorageApplication(owner), ordinary, registryStop };
+  return {
+    application: createProjectStorageApplication(owner, silentRequestDiagnostics),
+    ordinary,
+    registryStop,
+  };
 }
 
 export const switchApplicationTargets = [
@@ -938,7 +944,7 @@ export async function expectInvalidSwitchRuntime(
   const f = switchFixture();
   const pending = switchDeferred<ProjectStorageOpenResult>();
   const storage = {
-    ...createUnavailableProjectStorageApplication(),
+    ...createUnavailableProjectStorageApplication(silentRequestDiagnostics),
     open: vi.fn(() => pending.promise),
     stop: vi.fn(async () => undefined),
   };

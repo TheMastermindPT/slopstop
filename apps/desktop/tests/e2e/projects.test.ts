@@ -1,7 +1,7 @@
 import { rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { launchBuiltDesktop } from "./electron-launch.js";
+import { expectNoHarnessRequestFailure, launchBuiltDesktop } from "./electron-launch.js";
 import { seedTwoProjects } from "./harness-seed.js";
 import { temporaryRoot } from "./temporary-root.js";
 
@@ -72,4 +72,5 @@ test("lists and switches real saved Projects through the sandboxed Electron prel
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });

@@ -11,7 +11,7 @@ import {
   readGenerationBaselines,
   serializeGenerationManifest,
 } from "./project-storage-generation-manifest.js";
-import { isBusyStorageError } from "./project-storage-node-errors.js";
+import { isRetryableStorageError } from "./project-storage-node-errors.js";
 import { classifyProjectStorageOpening } from "./project-storage-opening.js";
 import type { ProjectStorageStoreDependencies } from "./project-storage-store.js";
 import {
@@ -381,7 +381,7 @@ function upgradeProgram(
     );
     const switched = Result.isSuccess(settled) && settled.success.status === "upgraded";
     if (!switched) yield* discardAfterFailure(pipeline, upgrade);
-    if (Result.isFailure(settled)) return yield* Effect.fail(settled.failure);
+    if (Result.isFailure(settled)) return yield* settled.failure;
     // After the committed switch, an owner stop leaves the answer upgraded: this checkpoint
     // runs only while the owner runs and never asserts it afterwards.
     if (switched && isRunning(pipeline.lifecycle)) {
@@ -482,7 +482,7 @@ function stepFailureOutcome(failure: UpgradeStepError): ProjectStorageUpgradeOut
     return { status: "unavailable", reason: "unavailable", message: cause.message };
   }
   // A raw busy-class error from any step is busy too (D12); other unknown errors are rethrown.
-  if (isBusyStorageError({ error: cause })) return busy;
+  if (isRetryableStorageError({ error: cause })) return busy;
   if (cause instanceof ProjectStorageBrokenError)
     return { status: "broken", message: cause.message };
   throw cause;

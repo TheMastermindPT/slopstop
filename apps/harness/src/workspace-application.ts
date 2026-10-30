@@ -13,6 +13,7 @@ import {
   WorkspaceQueryResultSchema,
 } from "@slopstop/protocol";
 import { Result } from "effect";
+import type { HarnessRequestDiagnostics } from "./harness-request-diagnostics.js";
 
 type ConversationQuery = Extract<
   WorkspaceQuery,
@@ -125,6 +126,7 @@ async function queryOwner<Q extends WorkspaceQuery>(
   capability: WorkspaceCapability,
   port: Pick<WorkspaceOwnerPort<WorkspaceCapability, Q, WorkspaceIntent>, "query">,
   query: Q,
+  diagnostics: HarnessRequestDiagnostics,
 ): Promise<WorkspaceQueryResult> {
   try {
     const outcome = await port.query(query);
@@ -144,7 +146,8 @@ async function queryOwner<Q extends WorkspaceQuery>(
       case "broken":
         return brokenQueryResult(query, capability, "WORKSPACE_PRODUCER_FAILED", outcome.message);
     }
-  } catch {
+  } catch (failure) {
+    diagnostics.requestFailed("workspace.query", failure);
     return brokenQueryResult(
       query,
       capability,
@@ -186,10 +189,12 @@ async function submitOwner<I extends WorkspaceIntent>(
   capability: WorkspaceCapability,
   port: Pick<WorkspaceOwnerPort<WorkspaceCapability, WorkspaceQuery, I>, "submit">,
   intent: I,
+  diagnostics: HarnessRequestDiagnostics,
 ): Promise<WorkspaceIntentResult> {
   try {
     return intentResult(capability, await port.submit(intent));
-  } catch {
+  } catch (failure) {
+    diagnostics.requestFailed("workspace.intent", failure);
     return intentResult(capability, {
       status: "broken",
       message: `${capabilityLabels[capability]} producer failed.`,
@@ -199,30 +204,31 @@ async function submitOwner<I extends WorkspaceIntent>(
 
 export function createWorkspaceApplication(
   options: WorkspaceApplicationOptions,
+  diagnostics: HarnessRequestDiagnostics,
 ): WorkspaceApplication {
   return {
     query: (query) => {
       switch (query.query) {
         case "conversation.read":
         case "context-record.read":
-          return queryOwner("conversation", options.conversation, query);
+          return queryOwner("conversation", options.conversation, query, diagnostics);
         case "frame-review.read":
-          return queryOwner("frame", options.frame, query);
+          return queryOwner("frame", options.frame, query, diagnostics);
         case "memory-library.read":
-          return queryOwner("memory", options.memory, query);
+          return queryOwner("memory", options.memory, query, diagnostics);
       }
     },
     submit: (intent) => {
       switch (intent.intent) {
         case "conversation.message.submit":
         case "conversation.influence.select":
-          return submitOwner("conversation", options.conversation, intent);
+          return submitOwner("conversation", options.conversation, intent, diagnostics);
         case "frame-review.annotate":
         case "frame.decision.accept":
         case "frame.accept":
-          return submitOwner("frame", options.frame, intent);
+          return submitOwner("frame", options.frame, intent, diagnostics);
         case "memory.proposal.review":
-          return submitOwner("memory", options.memory, intent);
+          return submitOwner("memory", options.memory, intent, diagnostics);
       }
     },
     subscribe: (listener) => {
@@ -253,10 +259,15 @@ function unavailablePort<
   };
 }
 
-export function createUnavailableWorkspaceApplication(): WorkspaceApplication {
-  return createWorkspaceApplication({
-    conversation: unavailablePort("conversation"),
-    frame: unavailablePort("frame"),
-    memory: unavailablePort("memory"),
-  });
+export function createUnavailableWorkspaceApplication(
+  diagnostics: HarnessRequestDiagnostics,
+): WorkspaceApplication {
+  return createWorkspaceApplication(
+    {
+      conversation: unavailablePort("conversation"),
+      frame: unavailablePort("frame"),
+      memory: unavailablePort("memory"),
+    },
+    diagnostics,
+  );
 }

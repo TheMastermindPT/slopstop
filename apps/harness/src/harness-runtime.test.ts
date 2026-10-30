@@ -22,7 +22,7 @@ import {
   WorkspaceQueryResultSchema,
   WorkspaceQuerySchema,
 } from "@slopstop/protocol";
-import { Effect, Layer, ManagedRuntime } from "effect";
+import { Effect, Schema } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import {
   createCanonicalRuntimeApplicationFixture,
@@ -31,6 +31,11 @@ import {
 import { closesRuntimeAdmission } from "../tests/integration/command-admission-cases.js";
 import { TestTransport } from "../tests/integration/harness-test-transport.js";
 import {
+  recordingRequestDiagnostics,
+  silentRequestDiagnostics,
+} from "../tests/integration/request-diagnostics-fixture.js";
+import { UntypedRejection } from "./effect-rejection.js";
+import {
   createUnavailableProjectStorageApplication,
   createUnavailableWorkspaceApplication,
   type ProjectStorageApplication,
@@ -38,7 +43,6 @@ import {
   startHarnessRuntime,
   type WorkspaceApplication,
 } from "./index.js";
-import type { ProjectRegistrationFlow } from "./registration/project-registration-flow.js";
 
 const handshake = {
   protocolVersion,
@@ -99,7 +103,7 @@ const memoryNotification = decodeStrict(WorkspaceNotificationSchema, {
 function canonicalRuntimeFixture(
   holdsProject?: () => boolean,
   // A listing owner that does not write to `calls`, so the exact `calls` pins stay unchanged.
-  projectListing?: Readonly<{ list(): Promise<never>; stop: Effect.Effect<void, unknown> }>,
+  projectListing?: Readonly<{ list(): Promise<never>; stop: Effect.Effect<void, Error> }>,
 ) {
   const transport = new TestTransport();
   const calls: string[] = [];
@@ -111,7 +115,7 @@ function canonicalRuntimeFixture(
       }),
     });
   const storage = {
-    ...createUnavailableProjectStorageApplication(),
+    ...createUnavailableProjectStorageApplication(silentRequestDiagnostics),
     stop: vi.fn(async () => {
       calls.push("storage");
     }),
@@ -123,14 +127,16 @@ function canonicalRuntimeFixture(
     withhold: vi.fn(),
   };
   let sequence = 900;
+  const requests = recordingRequestDiagnostics();
   const options = {
     transport,
+    requestDiagnostics: requests.diagnostics,
     applicationDatabase,
     ...(projectListing === undefined ? {} : { projectListing }),
     canonicalProjectApplication:
       holdsProject === undefined ? application : { ...application, holdsProject },
     projectStorageApplication: storage,
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}`,
     now: () => "2026-09-04T12:00:00.000Z",
@@ -166,11 +172,14 @@ function canonicalRuntimeFixture(
     expected,
     activationResult,
     commandResult,
+    requests: requests.calls,
   };
 }
 
 it("round-trips canonical activation and contains canonical request failures", async () => {
   const f = canonicalRuntimeFixture();
+  const activationFailure = new Error("C:\\private\\project\\slopstop.db");
+  const commandFailure = new Error("secret command payload");
   try {
     f.transport.emit(f.activate);
     await nextTurn();
@@ -182,8 +191,9 @@ it("round-trips canonical activation and contains canonical request failures", a
     expect(f.transport.sent[1]).toEqual(
       f.expected("project.command.result", f.commandResult, 2, f.execute.messageId),
     );
-    f.application.activate.mockRejectedValueOnce(new Error("C:\\private\\project\\slopstop.db"));
-    f.application.execute.mockRejectedValueOnce(new Error("secret command payload"));
+    expect(f.requests).toEqual([]);
+    f.application.activate.mockRejectedValueOnce(activationFailure);
+    f.application.execute.mockRejectedValueOnce(commandFailure);
     for (const [index, message] of [f.activate, f.execute].entries()) {
       f.transport.emit(message);
       await nextTurn();
@@ -200,6 +210,11 @@ it("round-trips canonical activation and contains canonical request failures", a
         ),
       );
     }
+    expect(f.requests).toHaveLength(2);
+    expect(f.requests[0]?.boundary).toBe("harness.message");
+    expect(f.requests[0]?.failure).toBe(activationFailure);
+    expect(f.requests[1]?.boundary).toBe("harness.message");
+    expect(f.requests[1]?.failure).toBe(commandFailure);
   } finally {
     await f.stop();
   }
@@ -315,8 +330,34 @@ describe("shutdown failures while no Project is held", () => {
     expect(f.applicationDatabase.withhold).toHaveBeenCalledTimes(row.databaseStops ? 0 : 1);
   });
 
+  it("rejects with the runtime aggregate, never its wrapper, when two owners fail", async () => {
+    const error = await failingRuntime(["canonical", "listing"])
+      .stop()
+      .catch((caught: unknown) => caught);
+    expect(error).not.toBeInstanceOf(UntypedRejection);
+    expect(error).toBeInstanceOf(AggregateError);
+    if (!(error instanceof AggregateError)) return;
+    expect(error.message).toBe("Harness runtime shutdown failed.");
+    expect(error.errors[0]).toBe(canonicalFailure);
+    expect(error.errors[1]).toBe(listingFailure);
+  });
+
+  it("rejects with the very value a database stop rejected with", async () => {
+    const f = failingRuntime([]);
+    f.applicationDatabase.stop.mockRejectedValueOnce("database stop refused");
+    await expect(f.stop()).rejects.toBe("database stop refused");
+  });
+
+  it("rejects with the one failure, never its wrapper", async () => {
+    const error = await failingRuntime(["storage"])
+      .stop()
+      .catch((caught: unknown) => caught);
+    expect(error).not.toBeInstanceOf(UntypedRejection);
+    expect(error).toBe(storageFailure);
+  });
+
   /** A runtime with no Project held whose listing stop is `stop`. */
-  function listingStopRuntime(stop: Effect.Effect<void, unknown>) {
+  function listingStopRuntime(stop: Effect.Effect<void, Error>) {
     return canonicalRuntimeFixture(() => false, {
       list: () => Promise.reject(new Error("Listing is not used by this test.")),
       stop,
@@ -387,10 +428,30 @@ function unusedCanonicalApplication() {
 function startRuntime(transport: TestTransport): StopHarnessRuntime {
   let generatedId = 2;
   return startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport,
     canonicalProjectApplication: unusedCanonicalApplication(),
-    projectStorageApplication: createUnavailableProjectStorageApplication(),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    projectStorageApplication: createUnavailableProjectStorageApplication(silentRequestDiagnostics),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
+    harnessVersion: "0.0.0",
+    createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
+    now: () => "2026-08-14T12:00:01.000Z",
+  });
+}
+
+/** A runtime whose application under test is `workspaceApplication`; ids count from `firstId`. */
+function startWorkspaceRuntime(
+  transport: TestTransport,
+  workspaceApplication: WorkspaceApplication,
+  firstId: number,
+): StopHarnessRuntime {
+  let generatedId = firstId;
+  return startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
+    transport,
+    canonicalProjectApplication: unusedCanonicalApplication(),
+    projectStorageApplication: createUnavailableProjectStorageApplication(silentRequestDiagnostics),
+    workspaceApplication,
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
     now: () => "2026-08-14T12:00:01.000Z",
@@ -479,12 +540,15 @@ describe("harness runtime transport", () => {
         throw new Error("Notification subscriber was not registered.");
       };
       let notify = missingSubscriber;
+      const requests = recordingRequestDiagnostics();
       const stop = startHarnessRuntime({
         transport,
+        requestDiagnostics: requests.diagnostics,
         canonicalProjectApplication: unusedCanonicalApplication(),
-        projectStorageApplication: createUnavailableProjectStorageApplication(),
+        projectStorageApplication:
+          createUnavailableProjectStorageApplication(silentRequestDiagnostics),
         workspaceApplication: {
-          ...createUnavailableWorkspaceApplication(),
+          ...createUnavailableWorkspaceApplication(silentRequestDiagnostics),
           subscribe(listener) {
             notify = listener;
             return () => {
@@ -512,6 +576,13 @@ describe("harness runtime transport", () => {
             ...testCase.expected,
           },
         ]);
+        if (testCase.kind === "message") {
+          expect(requests.calls).toEqual([]);
+        } else {
+          expect(requests.calls).toHaveLength(1);
+          expect(requests.calls[0]?.boundary).toBe("harness.notification");
+          expect(requests.calls[0]?.failure).toBeInstanceOf(Schema.SchemaError);
+        }
       } finally {
         await stop();
       }
@@ -589,16 +660,7 @@ describe("harness runtime transport", () => {
       },
       subscribe: () => () => undefined,
     };
-    let generatedId = 11;
-    const stop = startHarnessRuntime({
-      transport,
-      canonicalProjectApplication: unusedCanonicalApplication(),
-      projectStorageApplication: createUnavailableProjectStorageApplication(),
-      workspaceApplication,
-      harnessVersion: "0.0.0",
-      createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
-      now: () => "2026-08-14T12:00:01.000Z",
-    });
+    const stop = startWorkspaceRuntime(transport, workspaceApplication, 11);
     const queryA = memoryQuery("00000000-0000-4000-8000-000000000010");
     const queryB = memoryQuery("00000000-0000-4000-8000-000000000011");
     transport.emit(
@@ -652,16 +714,7 @@ describe("harness runtime transport", () => {
         };
       },
     };
-    let generatedId = 2;
-    const stop = startHarnessRuntime({
-      transport,
-      canonicalProjectApplication: unusedCanonicalApplication(),
-      projectStorageApplication: createUnavailableProjectStorageApplication(),
-      workspaceApplication,
-      harnessVersion: "0.0.0",
-      createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
-      now: () => "2026-08-14T12:00:01.000Z",
-    });
+    const stop = startWorkspaceRuntime(transport, workspaceApplication, 2);
 
     transport.emit(
       createWorkspaceIntentCommand(
@@ -693,9 +746,11 @@ describe("harness runtime transport", () => {
 
   it("turns an unexpected application rejection into correlated harness failure", async () => {
     const transport = new TestTransport();
+    const failure = new Error("unexpected query failure");
+    const requests = recordingRequestDiagnostics();
     const workspaceApplication: WorkspaceApplication = {
       query: async () => {
-        throw new Error("unexpected query failure");
+        throw failure;
       },
       submit: async () => {
         throw new Error("Intents are not used by this test.");
@@ -704,8 +759,10 @@ describe("harness runtime transport", () => {
     };
     const stop = startHarnessRuntime({
       transport,
+      requestDiagnostics: requests.diagnostics,
       canonicalProjectApplication: unusedCanonicalApplication(),
-      projectStorageApplication: createUnavailableProjectStorageApplication(),
+      projectStorageApplication:
+        createUnavailableProjectStorageApplication(silentRequestDiagnostics),
       workspaceApplication,
       harnessVersion: "0.0.0",
       createId: () => "00000000-0000-4000-8000-000000000002",
@@ -727,6 +784,9 @@ describe("harness runtime transport", () => {
       ),
     );
     await vi.waitFor(() => expect(transport.sent).toHaveLength(1));
+    expect(requests.calls).toHaveLength(1);
+    expect(requests.calls[0]?.boundary).toBe("harness.message");
+    expect(requests.calls[0]?.failure).toBe(failure);
     expect(transport.sent[0]).toMatchObject({
       event: "request.failure",
       causationId: "00000000-0000-4000-8000-000000000001",
@@ -813,9 +873,11 @@ describe("harness runtime transport", () => {
   it("reports a neutral internal failure when Project dispatch throws", async () => {
     const transport = new TestTransport();
     const thrownMessage = "C:\\private\\project\\slopstop.db";
+    const thrown = new Error(thrownMessage);
+    const requests = recordingRequestDiagnostics();
     const projectStorageApplication: ProjectStorageApplication = {
       open: async () => {
-        throw new Error(thrownMessage);
+        throw thrown;
       },
       create: async () => {
         throw new Error("Create is not used by this test.");
@@ -827,8 +889,9 @@ describe("harness runtime transport", () => {
     };
     const stop = startHarnessRuntime({
       transport,
+      requestDiagnostics: requests.diagnostics,
       canonicalProjectApplication: unusedCanonicalApplication(),
-      workspaceApplication: createUnavailableWorkspaceApplication(),
+      workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
       projectStorageApplication,
       harnessVersion: "0.0.0",
       createId: () => "00000000-0000-4000-8000-000000000002",
@@ -858,6 +921,9 @@ describe("harness runtime transport", () => {
     const serialized = JSON.stringify(transport.sent);
     expect(serialized.toLowerCase()).not.toContain("workspace");
     expect(serialized).not.toContain(thrownMessage);
+    expect(requests.calls).toHaveLength(1);
+    expect(requests.calls[0]?.boundary).toBe("harness.message");
+    expect(requests.calls[0]?.failure).toBe(thrown);
     await stop();
   });
 
@@ -878,10 +944,13 @@ describe("harness runtime transport", () => {
         };
       },
     };
+    const requests = recordingRequestDiagnostics();
     const stop = startHarnessRuntime({
       transport,
+      requestDiagnostics: requests.diagnostics,
       canonicalProjectApplication: unusedCanonicalApplication(),
-      projectStorageApplication: createUnavailableProjectStorageApplication(),
+      projectStorageApplication:
+        createUnavailableProjectStorageApplication(silentRequestDiagnostics),
       workspaceApplication,
       harnessVersion: "0.0.0",
       createId: () => "00000000-0000-4000-8000-000000000002",
@@ -915,6 +984,9 @@ describe("harness runtime transport", () => {
         },
       },
     ]);
+    expect(requests.calls).toHaveLength(1);
+    expect(requests.calls[0]?.boundary).toBe("harness.notification");
+    expect(requests.calls[0]?.failure).toBeInstanceOf(Schema.SchemaError);
 
     await stop();
     expect(notificationSubscriber).toBeUndefined();
@@ -1117,10 +1189,11 @@ it("routes an upgrade to the canonical application and answers its result", asyn
   });
   const upgrade = vi.fn(async () => result);
   const stop = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport,
     canonicalProjectApplication: { ...unusedCanonicalApplication(), upgrade },
-    projectStorageApplication: createUnavailableProjectStorageApplication(),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    projectStorageApplication: createUnavailableProjectStorageApplication(silentRequestDiagnostics),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     harnessVersion: "0.0.0",
     createId: () => "00000000-0000-4000-8000-000000000901",
     now: () => "2026-10-06T12:00:00.000Z",
@@ -1200,14 +1273,15 @@ it("dispatches conversation commands to the coordinator (CNV-B39)", async () => 
   const conversationSave = vi.fn(async () => saveResult);
   let generatedId = 900;
   const stop = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport,
     canonicalProjectApplication: {
       ...unusedCanonicalApplication(),
       conversationRead,
       conversationSave,
     },
-    projectStorageApplication: createUnavailableProjectStorageApplication(),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    projectStorageApplication: createUnavailableProjectStorageApplication(silentRequestDiagnostics),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
     now: () => "2026-10-10T12:00:00.000Z",
@@ -1243,113 +1317,4 @@ it("dispatches conversation commands to the coordinator (CNV-B39)", async () => 
   } finally {
     await stop();
   }
-});
-
-describe("registration requests on the process runtime", () => {
-  const registrationRequest = createProjectRegistrationCommand(
-    { messageId: "00000000-0000-4000-8000-000000000041", sentAt: "2026-10-18T12:00:00.000Z" },
-    { step: "prepare-git" },
-  );
-
-  /** A process runtime over an empty Layer, built before the behaviour under test. */
-  function builtProcessRuntime() {
-    const runtime = ManagedRuntime.make(Layer.empty);
-    runtime.runSync(Effect.void);
-    return runtime;
-  }
-
-  function registrationRuntime(
-    transport: TestTransport,
-    handle: ProjectRegistrationFlow["handle"],
-    runtime: ManagedRuntime.ManagedRuntime<never, never>,
-  ) {
-    let generatedId = 2;
-    return startHarnessRuntime({
-      transport,
-      projectRegistration: { handle },
-      runtime,
-      canonicalProjectApplication: unusedCanonicalApplication(),
-      projectStorageApplication: createUnavailableProjectStorageApplication(),
-      workspaceApplication: createUnavailableWorkspaceApplication(),
-      harnessVersion: "0.0.0",
-      createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
-      now: () => "2026-10-18T12:00:01.000Z",
-    });
-  }
-
-  it("interrupts an in-flight registration request at dispose without a reply", async () => {
-    const calls: string[] = [];
-    const rejections: unknown[] = [];
-    const onRejection = (reason: unknown) => rejections.push(reason);
-    process.on("unhandledRejection", onRejection);
-    try {
-      const runtime = builtProcessRuntime();
-      const transport = new TestTransport();
-      const stop = registrationRuntime(
-        transport,
-        () =>
-          Effect.sync(() => calls.push("handle-started")).pipe(
-            Effect.andThen(Effect.never),
-            Effect.onInterrupt(() => Effect.sync(() => calls.push("handle-interrupted"))),
-          ),
-        runtime,
-      );
-      transport.emit(registrationRequest);
-      await vi.waitFor(() => expect(calls).toEqual(["handle-started"]));
-      await stop();
-      await runtime.dispose();
-      expect(calls).toEqual(["handle-started", "handle-interrupted"]);
-      expect(transport.sent).toEqual([]);
-      await nextTurn();
-      // A late reply to the interrupted request would arrive by now.
-      expect(transport.sent).toEqual([]);
-      expect(rejections).toEqual([]);
-    } finally {
-      process.off("unhandledRejection", onRejection);
-    }
-  });
-
-  // `sequence: 1`: the one reply, with no registration result attempted before it.
-  const internalFailure = {
-    event: "request.failure",
-    sequence: 1,
-    causationId: registrationRequest.messageId,
-    payload: {
-      code: "HARNESS_INTERNAL_FAILURE",
-      message: "Harness failed while handling a message.",
-      retryable: false,
-    },
-  };
-
-  it.each<{ name: string; handle: ProjectRegistrationFlow["handle"]; reply: unknown }>([
-    {
-      name: "handle succeeds",
-      handle: () => Effect.succeed({ status: "trust-recorded" }),
-      reply: {
-        event: "project.registration.result",
-        causationId: registrationRequest.messageId,
-        payload: { status: "trust-recorded" },
-      },
-    },
-    {
-      name: "handle dies",
-      handle: () => Effect.die(new Error("private registration defect")),
-      reply: internalFailure,
-    },
-    {
-      name: "handle interrupts itself before any stop",
-      handle: () => Effect.interrupt,
-      reply: internalFailure,
-    },
-  ])("answers registration exits on the process runtime: $name", async ({ handle, reply }) => {
-    const runtime = builtProcessRuntime();
-    const transport = new TestTransport();
-    const stop = registrationRuntime(transport, handle, runtime);
-    transport.emit(registrationRequest);
-    await vi.waitFor(() => expect(transport.sent).toHaveLength(1));
-    expect(transport.sent).toMatchObject([reply]);
-    await stop();
-    await runtime.dispose();
-    expect(transport.sent).toHaveLength(1);
-  });
 });

@@ -52,6 +52,7 @@ import {
   productionSettlementRows,
 } from "./conformance-counter-command.js";
 import { checkedInMigrationRoot, transportFor } from "./project-storage-create-fixture.js";
+import { silentRequestDiagnostics } from "./request-diagnostics-fixture.js";
 
 export const recoveryOtherProject = decodeStrict(
   ProjectIdSchema,
@@ -160,10 +161,11 @@ function recoveryWireClient(
   });
   let sequence = 600;
   const stop = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport: transportFor(port1),
     canonicalProjectApplication: application,
     projectStorageApplication: storage,
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     harnessVersion: "0.0.0",
     createId: () => `99999999-9999-4999-8999-999999999${++sequence}`,
     now: () => recoveryRuntimeTime,
@@ -285,21 +287,24 @@ export async function createRecoveryRuntime(
   const openEntered = settlementBarrier();
   const openRelease = settlementBarrier();
   const storage = realStorage
-    ? createProjectStorageApplication(realStorage)
-    : createProjectStorageApplication({
-        open: async (request) => {
-          openEntered.release();
-          await openRelease.promise;
-          return { status: "ready", result: { status: "not-registered", request } };
+    ? createProjectStorageApplication(realStorage, silentRequestDiagnostics)
+    : createProjectStorageApplication(
+        {
+          open: async (request) => {
+            openEntered.release();
+            await openRelease.promise;
+            return { status: "ready", result: { status: "not-registered", request } };
+          },
+          create: async () => {
+            throw new Error("Unexpected create.");
+          },
+          close: async () => {
+            throw new Error("Unexpected close.");
+          },
+          stop: async () => {},
         },
-        create: async () => {
-          throw new Error("Unexpected create.");
-        },
-        close: async () => {
-          throw new Error("Unexpected close.");
-        },
-        stop: async () => {},
-      });
+        silentRequestDiagnostics,
+      );
   return {
     ...recoveryWireClient({ ...application, execute }, storage),
     file,

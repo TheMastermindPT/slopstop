@@ -13,7 +13,7 @@ import {
   type WorkspaceQuery,
   WorkspaceQuerySchema,
 } from "@slopstop/protocol";
-import { Data, Effect } from "effect";
+import { Effect } from "effect";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
 import { runCanonicalWriterPackageSmoke } from "./canonical-writer-package-smoke.js";
@@ -60,6 +60,7 @@ import {
   workspaceIntentClosing,
   workspaceQueryClosing,
 } from "./workspace-bridge.js";
+import { writeWriterProofReport } from "./writer-proof-report.js";
 
 /** The main logger, which logs the start and crash reporting before any other owner exists. */
 function startMainLogger() {
@@ -115,25 +116,6 @@ const writerProofTerminalMessage = "Package smoke writer processes terminal.";
 const writerProofUnconfirmedMessage = "Package smoke writer process exit unconfirmed.";
 const packageSmokeLockHeldMessage =
   "Package smoke single-instance lock is held by another instance.";
-
-/** The Writer proof's terminal report could not be written. */
-class WriterProofReportFailed extends Data.TaggedError("WriterProofReportFailed")<{
-  readonly message: string;
-}> {}
-
-function writeWriterProofReport(text: string): Effect.Effect<void, WriterProofReportFailed> {
-  return Effect.callback<void, WriterProofReportFailed>((resume) => {
-    process.stderr.write(text, (error) => {
-      resume(
-        error
-          ? Effect.fail(
-              new WriterProofReportFailed({ message: "Writer proof terminal reporting failed." }),
-            )
-          : Effect.void,
-      );
-    });
-  });
-}
 
 function reportUnconfirmedWriterProof(): void {
   const text = `${writerProofUnconfirmedMessage}\nPackage smoke proof failed at writer-internal.\n`;

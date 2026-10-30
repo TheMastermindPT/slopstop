@@ -35,6 +35,7 @@ export async function launchBuiltDesktop(
 
 const startingMessage = "SlopStop desktop starting.";
 const forwardedUpgradeMessage = "Harness upgrade event.";
+const requestFailureMessage = "Harness request failure.";
 
 type LogLine = Readonly<Record<string, unknown>>;
 
@@ -79,5 +80,22 @@ export async function expectDesktopLog(
   const upgradeLines = lines.filter((line) => line["msg"] === forwardedUpgradeMessage);
   expect(upgradeLines).toEqual(forwarded.map((fields) => expect.objectContaining(fields)));
   expect(JSON.stringify(lines)).not.toContain("HARNESS_LOG_LINE_");
+  await expectNoHarnessRequestFailure(userData);
   return upgradeLines;
+}
+
+/** How many lines the desktop log under `userData` holds now; 0 before the log file exists. */
+export async function desktopLogLength(userData: string): Promise<number> {
+  return (await desktopLogLines(userData)).length;
+}
+
+/**
+ * No journey reaches a request boundary's catch: from line `fromLine` on, the desktop log under
+ * `userData` holds no forwarded request-failure line and no harness log-line fault code. Each
+ * journey that launches the built desktop calls it after its last close.
+ */
+export async function expectNoHarnessRequestFailure(userData: string, fromLine = 0) {
+  const lines = (await desktopLogLines(userData)).slice(fromLine);
+  expect(lines.filter((line) => line["msg"] === requestFailureMessage)).toEqual([]);
+  expect(JSON.stringify(lines)).not.toContain("HARNESS_LOG_LINE_");
 }

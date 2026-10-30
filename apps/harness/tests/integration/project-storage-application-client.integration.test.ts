@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
+import { UntypedRejection } from "../../src/effect-rejection.js";
 import type { LocalLibsqlClient } from "../../src/storage/local-libsql-worker-client.js";
 import { createApplicationClientManager } from "../../src/storage/project-storage-application-client.js";
 import {
@@ -145,4 +146,70 @@ it("keeps failed new-authority cleanup with the initialization failure", async (
     throw new Error("Expected application initialization and cleanup aggregate.");
   }
   expect(failure.cause.errors).toEqual([initializationFailure, cleanupFailure]);
+});
+
+/** A manager on an existing empty database whose initialization waits for `release`, then fails. */
+async function gatedFailingManager(prefix: string) {
+  const root = await mkdtemp(path.join(os.tmpdir(), prefix));
+  const databasePath = path.join(root, "application.db");
+  await writeFile(databasePath, "");
+  const failure = new ProjectStorageUnavailableError("Project Storage authority is unavailable.");
+  let release: () => void = () => undefined;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let markStarted: () => void = () => undefined;
+  const started = new Promise<void>((resolve) => {
+    markStarted = resolve;
+  });
+  const close = vi.fn(async () => undefined);
+  const manager = createApplicationClientManager({
+    applicationDatabasePath: databasePath,
+    applicationStorageRoot: root,
+    // Schema authority is outside these client-lifecycle cases.
+    ensureInitialized: async () => "present",
+    createClient: () => createClient(close),
+    initialize: async () => {
+      markStarted();
+      await released;
+      throw failure;
+    },
+  });
+  return { root, failure, release, started, close, manager };
+}
+
+it("rejects a caller joining a failing initialization with that initialization's failure", async () => {
+  const f = await gatedFailingManager("slopstop-application-join-failure-");
+  try {
+    const first = f.manager.existing().catch((error: unknown) => error);
+    await f.started;
+    const second = f.manager.existing().catch((error: unknown) => error);
+    f.release();
+    expect(await first).toBe(f.failure);
+    const joined = await second;
+    expect(joined).not.toBeInstanceOf(UntypedRejection);
+    expect(joined).toBe(f.failure);
+  } finally {
+    f.release();
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+it("rejects a stop awaiting a failing initialization with that failure, closing no client", async () => {
+  const f = await gatedFailingManager("slopstop-application-stop-failure-");
+  try {
+    const opening = f.manager.existing().catch((error: unknown) => error);
+    await f.started;
+    const stopping = f.manager.stop().catch((error: unknown) => error);
+    f.release();
+    expect(await opening).toBe(f.failure);
+    const stopped = await stopping;
+    expect(stopped).not.toBeInstanceOf(UntypedRejection);
+    expect(stopped).toBe(f.failure);
+    // Only the failed initialization's own cleanup closes its client; the stop closes none.
+    expect(f.close).toHaveBeenCalledOnce();
+  } finally {
+    f.release();
+    await rm(f.root, { recursive: true, force: true });
+  }
 });

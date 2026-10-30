@@ -1,6 +1,7 @@
 import { mkdir, readdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { Data, Deferred, Duration, Effect, type Scope, Semaphore } from "effect";
+import { type UntypedRejection, untypedRejection, unwrapRejection } from "../effect-rejection.js";
 import {
   ApplicationDatabaseFault,
   type ApplicationDatabaseMigrationFailures,
@@ -82,12 +83,12 @@ type DecisionPolicy = Readonly<{
 
 // An initialization in flight, completed with its exact outcome for every caller that joins.
 // A fresh creation on the registry's path is registered while its decision holds the permit.
-type Initialization = Deferred.Deferred<"absent" | "current", unknown>;
+type Initialization = Deferred.Deferred<"absent" | "current", UntypedRejection>;
 
 function publish(slot: Initialization, run: Promise<"absent" | "current">): void {
   void run.then(
     (state) => Deferred.doneUnsafe(slot, Effect.succeed(state)),
-    (error: unknown) => Deferred.doneUnsafe(slot, Effect.fail(error)),
+    (error: unknown) => Deferred.doneUnsafe(slot, Effect.fail(untypedRejection(error))),
   );
 }
 
@@ -274,7 +275,7 @@ function createAuthorityParts(
     if (accepted === 0) Deferred.doneUnsafe(closed, Effect.void);
     const bounded = Effect.timeoutOrElse(Deferred.await(closed), {
       duration: Duration.millis(closeDeadlineMs),
-      orElse: () => Effect.fail(new ApplicationDatabaseCloseUnconfirmed(closeDeadlineMs)),
+      orElse: () => new ApplicationDatabaseCloseUnconfirmed(closeDeadlineMs),
     });
     return Effect.flatMap(Effect.exit(bounded), (exit) =>
       Effect.andThen(Deferred.done(closeOutcome, exit), Deferred.await(closeOutcome)),
@@ -369,7 +370,7 @@ function createAuthorityParts(
     // authority is not yet observed, so concurrent initializers must not see a witness.
     createdEmpty = true;
     if (!policy.share) return "created";
-    const creation = Deferred.makeUnsafe<"absent" | "current", unknown>();
+    const creation = Deferred.makeUnsafe<"absent" | "current", UntypedRejection>();
     initialization = creation;
     return creation;
   };
@@ -451,8 +452,11 @@ function createAuthorityParts(
   ): Promise<"absent" | "current" | undefined> | undefined => {
     const inFlight = initialization;
     if (inFlight === undefined) return undefined;
-    return Effect.runPromise(Deferred.await(inFlight)).then((joined) =>
-      joined === "current" || !createIfMissing ? joined : undefined,
+    return Effect.runPromise(Deferred.await(inFlight)).then(
+      (joined) => (joined === "current" || !createIfMissing ? joined : undefined),
+      (failure: unknown) => {
+        throw unwrapRejection(failure);
+      },
     );
   };
 
@@ -482,7 +486,7 @@ function createAuthorityParts(
   };
 
   const sharing = async (run: Promise<"absent" | "current">): Promise<"absent" | "current"> => {
-    const slot = Deferred.makeUnsafe<"absent" | "current", unknown>();
+    const slot = Deferred.makeUnsafe<"absent" | "current", UntypedRejection>();
     initialization = slot;
     publish(slot, run);
     try {

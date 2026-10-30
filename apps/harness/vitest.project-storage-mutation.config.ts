@@ -1,9 +1,11 @@
 import { defineConfig } from "vitest/config";
+import { errorEqualitySetup } from "./vitest.setup-files.js";
 
 export default defineConfig({
   test: {
     name: "project-storage-mutation",
     environment: "node",
+    setupFiles: [errorEqualitySetup],
     // registration-bootstrap-guards spawns Git and harness children; its usual limit (decisions log §75).
     testTimeout: 15_000,
     include: [
@@ -32,6 +34,7 @@ export default defineConfig({
       "apps/harness/tests/integration/project-storage-node-adapters.integration.test.ts",
       "apps/harness/src/storage/application-database-authority.test.ts",
       "apps/harness/src/harness-runtime-shutdown.test.ts",
+      "apps/harness/src/harness-runtime-registration.test.ts",
       "apps/harness/src/harness-runtime.test.ts",
       "apps/harness/src/process-bootstrap.test.ts",
       "apps/harness/tests/integration/application-database-authority-cases.integration.test.ts",

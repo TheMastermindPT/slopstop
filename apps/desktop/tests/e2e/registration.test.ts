@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { type ElectronApplication, expect, test } from "@playwright/test";
-import { launchBuiltDesktop } from "./electron-launch.js";
+import { expectNoHarnessRequestFailure, launchBuiltDesktop } from "./electron-launch.js";
 import { temporaryRoot } from "./temporary-root.js";
 
 const installedGit = path.join(
@@ -15,7 +15,7 @@ async function launchWithFreshUserData() {
   const repository = path.join(proof, "repository");
   execFileSync(installedGit, ["init", "--quiet", repository]);
   const application = await launchBuiltDesktop(proof, userData);
-  return { application, repository };
+  return { application, repository, userData };
 }
 
 /** Replaces the main process's native folder dialog for this launch only. */
@@ -85,7 +85,7 @@ async function registerThroughPreload() {
 
 test("registers a repository chosen in the main-process dialog through the preload API", async () => {
   test.setTimeout(120_000);
-  const { application, repository } = await launchWithFreshUserData();
+  const { application, repository, userData } = await launchWithFreshUserData();
   try {
     const page = await application.firstWindow();
     await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
@@ -108,11 +108,12 @@ test("registers a repository chosen in the main-process dialog through the prelo
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });
 
 test("refuses a renderer-supplied directory without reaching the harness", async () => {
   test.setTimeout(60_000);
-  const { application, repository } = await launchWithFreshUserData();
+  const { application, repository, userData } = await launchWithFreshUserData();
   try {
     const page = await application.firstWindow();
     await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
@@ -135,11 +136,12 @@ test("refuses a renderer-supplied directory without reaching the harness", async
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });
 
 test("adds a repository through the add flow in the real window and opens it", async () => {
   test.setTimeout(120_000);
-  const { application, repository } = await launchWithFreshUserData();
+  const { application, repository, userData } = await launchWithFreshUserData();
   try {
     const page = await application.firstWindow();
     const errors: string[] = [];
@@ -173,11 +175,12 @@ test("adds a repository through the add flow in the real window and opens it", a
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });
 
 test("removes a Project from the list in the real window and brings it back by re-adding", async () => {
   test.setTimeout(120_000);
-  const { application, repository } = await launchWithFreshUserData();
+  const { application, repository, userData } = await launchWithFreshUserData();
   try {
     const page = await application.firstWindow();
     await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
@@ -216,4 +219,5 @@ test("removes a Project from the list in the real window and brings it back by r
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });

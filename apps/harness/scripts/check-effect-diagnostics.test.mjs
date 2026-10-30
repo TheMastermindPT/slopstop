@@ -42,8 +42,9 @@ function linkEffect(root) {
 
 /**
  * A temporary project at the folder's root that extends the repository base config and resolves
- * `effect` through its own link. Its own plugin entry makes the two planted rules `error`, so these
- * rows test the gate's classification apart from the curated repository configuration.
+ * `effect` through its own link. Its own plugin entry makes the two planted rules `error` and turns
+ * off the promoted `anyUnknownInErrorContext` the base config would add, so these rows test the
+ * gate's classification apart from the curated repository configuration.
  */
 function plantedProject(source, { linked = true } = {}) {
   const root = mkdtempSync(join(tmpdir(), "slopstop-effect-gate-"));
@@ -61,7 +62,11 @@ function plantedProject(source, { linked = true } = {}) {
         plugins: [
           {
             name: "@effect/language-service",
-            diagnosticSeverity: { unknownInEffectCatch: "error", newPromise: "error" },
+            diagnosticSeverity: {
+              unknownInEffectCatch: "error",
+              newPromise: "error",
+              anyUnknownInErrorContext: "off",
+            },
             includeSuggestionsInTsc: false,
             ignoreEffectSuggestionsInTscExitCode: true,
             ignoreEffectWarningsInTscExitCode: true,
@@ -128,6 +133,77 @@ it("fails on a file that resolves no Effect v4", () => {
     ok: false,
     code: "EFFECT_GATE_BROKEN",
     lines: [".: src/a.ts detects Effect unknown, not v4"],
+  });
+});
+
+/** The base the temporary gated package extends, as a JSON string literal. */
+const baseConfig = () => JSON.stringify(join(repository, "tsconfig.base.json"));
+
+/** A plugin entry that turns the promoted `schemaNumber` off, as a gated package would add it. */
+const ruleOff =
+  '[{ "name": "@effect/language-service", "diagnosticSeverity": { "schemaNumber": "off" } }]';
+
+/** A gated package's tsconfig text, its `compilerOptions` extended by `options` (JSONC allowed). */
+const gatedConfig = (options) =>
+  `{ "extends": ${baseConfig()}, "compilerOptions": { "noEmit": true, "types": []${options} }, "include": ["src"] }`;
+
+/**
+ * The gated package `packages/kernel` under a temporary root, with the tsconfig text `config` and
+ * a planted `schemaNumber` violation that the base config makes an error.
+ */
+function gatedPackage(config) {
+  const root = mkdtempSync(join(tmpdir(), "slopstop-effect-gate-"));
+  roots.push(root);
+  linkEffect(root);
+  const folder = join(root, "packages", "kernel");
+  mkdirSync(join(folder, "src"), { recursive: true });
+  writeFileSync(join(folder, "tsconfig.json"), config);
+  writeFileSync(
+    join(folder, "src", "a.ts"),
+    ['import { Schema } from "effect";', "export const unbounded = Schema.Number;"].join("\n"),
+  );
+  return root;
+}
+
+const declared = "packages/kernel/tsconfig.json declares compilerOptions.plugins";
+
+const overridingRows = [
+  { name: "a rule turned off", config: () => gatedConfig(`, "plugins": ${ruleOff}`) },
+  { name: "an empty list", config: () => gatedConfig(', "plugins": []') },
+  {
+    name: "commented JSONC with a trailing comma",
+    config: () => `// A gated package.\n${gatedConfig(`,\n /* off */ "plugins": ${ruleOff},\n`)}`,
+  },
+];
+
+it.each(overridingRows)("refuses a gated package that declares its own plugins: $name", (row) => {
+  const root = gatedPackage(row.config());
+  const projects = ["packages/kernel"];
+  expect(checkEffectDiagnostics({ root, projects })).toEqual({
+    ok: false,
+    code: "EFFECT_GATE_PLUGIN_OVERRIDE",
+    lines: [declared],
+  });
+  const cli = spawnSync(process.execPath, [checker, ...projects], { cwd: root, encoding: "utf8" });
+  expect(cli.status).toBe(1);
+  expect(cli.stderr).toBe(`EFFECT_GATE_PLUGIN_OVERRIDE\n${declared}\n`);
+});
+
+it("checks a commented gated package without plugins and blocks its violation", () => {
+  const root = gatedPackage(`// No plugins of its own.\n${gatedConfig(",\n")}`);
+  expect(checkEffectDiagnostics({ root, projects: ["packages/kernel"] })).toMatchObject({
+    ok: false,
+    code: "EFFECT_GATE_VIOLATIONS",
+    violations: [{ file: "packages/kernel/src/a.ts", line: 2, rule: "schemaNumber" }],
+  });
+});
+
+it("refuses a gated package whose tsconfig cannot be read", () => {
+  const root = gatedPackage("{ not a config");
+  expect(checkEffectDiagnostics({ root, projects: ["packages/kernel"] })).toEqual({
+    ok: false,
+    code: "EFFECT_GATE_BROKEN",
+    lines: ["packages/kernel/tsconfig.json is unreadable"],
   });
 });
 
@@ -639,9 +715,12 @@ const canaryFolder = "apps/harness/scripts/effect-diagnostics-canary";
 /** The canary's recorded entries under `root`, relative keys as `[file, line, column, severity, rule]`. */
 const canaryEntries = [
   ["src/canary.ts", 3, 24, "error", "newPromise"],
-  ["src/canary.ts", 4, 14, "warning", "anyUnknownInErrorContext"],
+  ["src/canary.ts", 4, 14, "error", "anyUnknownInErrorContext"],
   ["src/canary.ts", 4, 24, "error", "unknownInEffectCatch"],
-  ["src/canary.ts", 4, 24, "warning", "anyUnknownInErrorContext"],
+  ["src/canary.ts", 4, 24, "error", "anyUnknownInErrorContext"],
+  ["src/canary.ts", 8, 33, "error", "schemaNumber"],
+  ["src/canary.ts", 13, 10, "error", "unnecessaryFailYieldableError"],
+  ["src/canary.ts", 15, 14, "error", "extendsNativeError"],
 ];
 
 /** The canary's checked files as M2 lists them, each detecting Effect v4. */
@@ -699,10 +778,13 @@ it("runs the canary before any package: plugin removed, real compiler", () => {
 });
 
 const missingEverything = [
+  "missing src/canary.ts(13,10) error unnecessaryFailYieldableError",
+  "missing src/canary.ts(15,14) error extendsNativeError",
   "missing src/canary.ts(3,24) error newPromise",
-  "missing src/canary.ts(4,14) warning anyUnknownInErrorContext",
+  "missing src/canary.ts(4,14) error anyUnknownInErrorContext",
+  "missing src/canary.ts(4,24) error anyUnknownInErrorContext",
   "missing src/canary.ts(4,24) error unknownInEffectCatch",
-  "missing src/canary.ts(4,24) warning anyUnknownInErrorContext",
+  "missing src/canary.ts(8,33) error schemaNumber",
 ];
 
 const canaryRows = [
@@ -724,8 +806,8 @@ const canaryRows = [
   { name: "exit 0 with the expected set", status: 0, lines: ["canary exit 0"] },
   {
     name: "missing the last expected diagnostic",
-    edit: (entries) => entries.slice(0, 3),
-    lines: ["missing src/canary.ts(4,24) warning anyUnknownInErrorContext"],
+    edit: (entries) => entries.slice(0, -1),
+    lines: ["missing src/canary.ts(15,14) error extendsNativeError"],
   },
   {
     name: "inactive language service",
@@ -760,7 +842,7 @@ it.each(canaryRows)("runs the canary before any package: $name", (row) => {
 
 const [firstKey, secondKey] = [
   "src/canary.ts(3,24) error newPromise",
-  "src/canary.ts(4,14) warning anyUnknownInErrorContext",
+  "src/canary.ts(4,14) error anyUnknownInErrorContext",
 ];
 
 const differenceRows = [

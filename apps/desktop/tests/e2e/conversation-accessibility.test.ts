@@ -22,7 +22,7 @@ import {
   shadowLayers,
   streamAtEnd,
 } from "./conversation-window.js";
-import { launchBuiltDesktop } from "./electron-launch.js";
+import { expectNoHarnessRequestFailure, launchBuiltDesktop } from "./electron-launch.js";
 import { seedTwoProjects } from "./harness-seed.js";
 import { temporaryRoot } from "./temporary-root.js";
 
@@ -248,6 +248,7 @@ test("meets the accessibility checklist in the real window", async () => {
   } finally {
     await scaled.application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
   console.log(`S4b accessibility screenshots: ${shots}`);
 });
 
@@ -527,6 +528,7 @@ test.describe("reaches the states the seed cannot", () => {
       } finally {
         await launched.application.close();
       }
+      await expectNoHarnessRequestFailure(userData);
     });
   }
 });

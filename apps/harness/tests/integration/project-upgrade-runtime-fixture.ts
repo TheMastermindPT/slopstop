@@ -32,6 +32,7 @@ import {
   transportFor,
   type UpgradeOwnerOptions,
 } from "./project-storage-runtime-fixture.js";
+import { silentRequestDiagnostics } from "./request-diagnostics-fixture.js";
 
 type Envelope = Readonly<{ causationId?: unknown; event?: unknown; payload?: unknown }>;
 
@@ -185,11 +186,15 @@ export function startTestUpgradeRuntime(
     applicationVersion: "0.0.0",
   };
   const stopRuntime = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport: transport.harnessSide,
     canonicalProjectApplication: createCanonicalProjectApplication(admitting),
     // The upgrade fixture's owner, so the runtime stops it as the process runtime does.
-    projectStorageApplication: createProjectStorageApplication(fixture.owner),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    projectStorageApplication: createProjectStorageApplication(
+      fixture.owner,
+      silentRequestDiagnostics,
+    ),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     projectListing: {
       list: async () =>
         decodeStrict(

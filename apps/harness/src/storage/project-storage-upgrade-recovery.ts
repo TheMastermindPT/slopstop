@@ -4,7 +4,7 @@ import {
   ProjectStorageApplicationClientInitializationError,
   ProjectStorageBrokenError,
 } from "./project-storage-errors.js";
-import { isBusyStorageError } from "./project-storage-node-errors.js";
+import { isRetryableStorageError } from "./project-storage-node-errors.js";
 import type { ProjectStorageStoreDependencies } from "./project-storage-store.js";
 import {
   ProjectStorageUpgradeBusyError,
@@ -101,7 +101,7 @@ export async function discardKnownUpgrade(
     return outcome.success;
   }
   const { cause } = outcome.failure;
-  const kind = isBusyStorageError({ error: cause }) ? "busy" : "broken";
+  const kind = isRetryableStorageError({ error: cause }) ? "busy" : "broken";
   reportSafely(() => upgrades.discardFailed({ ...report, cause: kind }));
   throw failureError(cause, kind);
 }

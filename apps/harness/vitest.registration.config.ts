@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import { registrationIntegrationFiles } from "./vitest.registration-files.js";
+import { errorEqualitySetup } from "./vitest.setup-files.js";
 import { trace94TestOptions } from "./vitest.trace-94.js";
 
 // Registration cases spawn Git and harness children; under wide parallelism several cross 15 s.
@@ -14,5 +15,6 @@ export default defineConfig({
     maxWorkers: 2,
     sequence: { groupOrder: 1 },
     ...trace94TestOptions,
+    setupFiles: [errorEqualitySetup, ...(trace94TestOptions.setupFiles ?? [])],
   },
 });

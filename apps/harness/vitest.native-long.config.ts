@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import { nativeLongIntegrationFiles } from "./vitest.native-long-files.js";
+import { errorEqualitySetup } from "./vitest.setup-files.js";
 import { trace94TestOptions } from "./vitest.trace-94.js";
 
 // These files run for minutes and drive SQLite workers and harness children; overlapping them
@@ -15,5 +16,6 @@ export default defineConfig({
     maxWorkers: 2,
     sequence: { groupOrder: 2 },
     ...trace94TestOptions,
+    setupFiles: [errorEqualitySetup, ...(trace94TestOptions.setupFiles ?? [])],
   },
 });

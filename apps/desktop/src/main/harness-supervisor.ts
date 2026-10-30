@@ -204,7 +204,7 @@ export class HarnessSupervisor {
           message: "Harness shutdown timed out.",
         },
       });
-      return Effect.fail(new HarnessShutdownTimeout());
+      return new HarnessShutdownTimeout();
     });
     const graceful = Deferred.await(exited).pipe(
       Effect.timeoutOrElse({

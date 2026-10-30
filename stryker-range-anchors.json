@@ -1,0 +1,440 @@
+[
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/harness/src/active-project-coordinator.ts:522-548",
+    "first": "  const admit = (",
+    "last": ""
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/harness/src/active-project-coordinator.ts:718-721",
+    "first": "      const admission = admit(request, \"command\");",
+    "last": "      if (active.access === \"read-only\") return commandFailure(request, \"read-only\");"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/harness/src/active-project-coordinator.ts:728-737",
+    "first": "    conversationRead: (request) => {",
+    "last": "    },"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/harness/src/canonical-project-application.ts:91-102",
+    "first": "    conversationRead: async (request) =>",
+    "last": "      ),"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/harness/src/canonical-project-application.ts:108-119",
+    "first": "/** Whether a result echoes the exact request it answers, field by field. */",
+    "last": ""
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/harness/src/registration/project-registration-preparation.ts:272-319",
+    "first": "const pendingCreation = { status: \"pending-recovery\", code: \"REGISTRATION_INCOMPLETE\" } as const;",
+    "last": "}"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "packages/protocol/src/project-registration-protocol.ts:50-63",
+    "first": "export const registryBrokenCodes = [",
+    "last": "}"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/harness/src/registration/project-registration-preparation.ts:333-352",
+    "first": "  const listings = { running: 0, pending: pendingListing };",
+    "last": "    listing === undefined ? undefined : tracked(listings, listing, listingCleanupFailed);"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/harness/src/registration/project-registration-preparation.ts:400-415",
+    "first": "    close: () => {",
+    "last": "  };"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/desktop/src/main/project-entry-bridge.ts:103-103",
+    "first": "    if (isStopped()) return Promise.resolve(broken(unsent));",
+    "last": "    if (isStopped()) return Promise.resolve(broken(unsent));"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/desktop/src/main/project-entry-bridge.ts:189-202",
+    "first": "    readConversation: echoing({",
+    "last": "    }),"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/desktop/src/renderer/projects-list.tsx:50-56",
+    "first": "function canOpen(project: Entry): boolean {",
+    "last": "}"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:81-81",
+    "first": "    conversationMemory.newEpoch();",
+    "last": "    conversationMemory.newEpoch();"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:94-94",
+    "first": "  }, [ready, attempt, refresh, clearProblem, conversationMemory]);",
+    "last": "  }, [ready, attempt, refresh, clearProblem, conversationMemory]);"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:106-107",
+    "first": "        activationId: result.activationId,",
+    "last": "        readOnly: result.access === \"read-only\","
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:307-317",
+    "first": "      <ConversationMemoryProvider value={conversationMemory}>",
+    "last": "      </ConversationMemoryProvider>"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/desktop/src/renderer/workspace-view.tsx:46-58",
+    "first": "  const idle = flow.screen.kind === \"idle\" && !removing;",
+    "last": "      {idle ? ("
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/desktop/src/renderer/workspace-view.tsx:82-116",
+    "first": "  const upgradeProblem =",
+    "last": "          {upgradeProblem}"
+  },
+  {
+    "config": "stryker.config.json",
+    "entry": "apps/desktop/src/renderer/workspace-view.tsx:122-178",
+    "first": "",
+    "last": "}"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/project-entry-ipc.ts:43-43",
+    "first": "    if (!gate.accepting()) return Promise.resolve(projectListClosing);",
+    "last": "    if (!gate.accepting()) return Promise.resolve(projectListClosing);"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/project-entry-ipc.ts:48-48",
+    "first": "    if (!gate.accepting()) return Promise.resolve(projectActivationUnavailable(request));",
+    "last": "    if (!gate.accepting()) return Promise.resolve(projectActivationUnavailable(request));"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/project-entry-ipc.ts:53-53",
+    "first": "    if (!gate.accepting()) return Promise.resolve(projectSwitchUnavailable(request));",
+    "last": "    if (!gate.accepting()) return Promise.resolve(projectSwitchUnavailable(request));"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/project-entry-ipc.ts:58-58",
+    "first": "    if (!gate.accepting()) return Promise.resolve(projectUpgradeFailure(request, unsent));",
+    "last": "    if (!gate.accepting()) return Promise.resolve(projectUpgradeFailure(request, unsent));"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/project-entry-ipc.ts:63-63",
+    "first": "    if (!gate.accepting()) return Promise.resolve(readConversationFailure(request, unsent));",
+    "last": "    if (!gate.accepting()) return Promise.resolve(readConversationFailure(request, unsent));"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/project-entry-ipc.ts:68-68",
+    "first": "    if (!gate.accepting()) return Promise.resolve(saveConversationFailure(request, unsent));",
+    "last": "    if (!gate.accepting()) return Promise.resolve(saveConversationFailure(request, unsent));"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/project-registration-ipc.ts:35-35",
+    "first": "  if (!gate.accepting()) return projectRegistrationClosing;",
+    "last": "  if (!gate.accepting()) return projectRegistrationClosing;"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/project-registration-ipc.ts:43-43",
+    "first": "  if (!gate.accepting()) return projectRegistrationClosing;",
+    "last": "  if (!gate.accepting()) return projectRegistrationClosing;"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/project-registration-ipc.ts:62-62",
+    "first": "    if (!gate.accepting()) return Promise.resolve(projectRegistrationClosing);",
+    "last": "    if (!gate.accepting()) return Promise.resolve(projectRegistrationClosing);"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/main.ts:94-104",
+    "first": "let shutdownServices: DesktopServices | undefined;",
+    "last": "    servicesAtShutdown()?.logger.error({ err: error }, \"SlopStop shutdown failed.\"),"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/writer-proof-report.ts:4-18",
+    "first": "export class WriterProofReportFailed extends Data.TaggedError(\"WriterProofReportFailed\")<{",
+    "last": "}"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/main.ts:273-288",
+    "first": "export function registerWorkspaceIpc(",
+    "last": "}"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/main.ts:406-406",
+    "first": "  if (!desktopShutdown.accepting()) return;",
+    "last": "  if (!desktopShutdown.accepting()) return;"
+  },
+  {
+    "config": "stryker.desktop-s6.config.json",
+    "entry": "apps/desktop/src/main/canonical-writer-package-smoke.ts:300-341",
+    "first": "  async wait(predicate: () => boolean, options: Wait): Promise<void> {",
+    "last": "  }"
+  },
+  {
+    "config": "stryker.desktop-s7.config.json",
+    "entry": "apps/desktop/src/main/project-entry-bridge.ts:80-235",
+    "first": "export const unsent = { kind: \"unsent\" } as const;",
+    "last": "}"
+  },
+  {
+    "config": "stryker.desktop-s7.config.json",
+    "entry": "apps/desktop/src/main/project-storage-bridge.ts:38-167",
+    "first": "const stoppedText = \"Project Storage bridge is stopped.\";",
+    "last": "}"
+  },
+  {
+    "config": "stryker.desktop-s7.config.json",
+    "entry": "apps/desktop/src/main/workspace-bridge.ts:101-271",
+    "first": "const closingDiagnostic = {",
+    "last": "}"
+  },
+  {
+    "config": "stryker.desktop-s7.config.json",
+    "entry": "apps/desktop/src/main/project-upgrade-failure.ts:36-53",
+    "first": "  return Match.value(fault).pipe(",
+    "last": "  );"
+  },
+  {
+    "config": "stryker.desktop-s7.config.json",
+    "entry": "apps/desktop/src/main/project-conversation-failure.ts:35-48",
+    "first": "  return Match.value(fault).pipe(",
+    "last": "  );"
+  },
+  {
+    "config": "stryker.desktop-s7.config.json",
+    "entry": "apps/desktop/src/main/harness-session.ts:105-134",
+    "first": "  #emit(event: HarnessSessionEvent): void {",
+    "last": "  }"
+  },
+  {
+    "config": "stryker.desktop-s7.config.json",
+    "entry": "apps/desktop/src/main/desktop-runtime.ts:166-189",
+    "first": "  const bridgesLayer = Layer.effect(",
+    "last": "  );"
+  },
+  {
+    "config": "stryker.desktop-s8.config.json",
+    "entry": "apps/desktop/src/main/harness-supervisor.ts:61-73",
+    "first": "/**",
+    "last": "}"
+  },
+  {
+    "config": "stryker.desktop-s8.config.json",
+    "entry": "apps/desktop/src/main/harness-supervisor.ts:176-233",
+    "first": "  // Waits for the child's exit for one grace period, kills it, then waits one more grace",
+    "last": "  }"
+  },
+  {
+    "config": "stryker.desktop-s8.config.json",
+    "entry": "apps/desktop/src/main/harness-supervisor.ts:399-435",
+    "first": "  /** Logs the child's output and errors, and registers how to quiet and remove that logging. */",
+    "last": "  }"
+  },
+  {
+    "config": "stryker.ledger.config.json",
+    "entry": "apps/harness/src/storage/canonical-command-ledger.ts:63-122",
+    "first": "export function coherentCanonicalWriterRelease(",
+    "last": "}"
+  },
+  {
+    "config": "stryker.ledger.config.json",
+    "entry": "apps/harness/src/storage/canonical-command-ledger.ts:193-459",
+    "first": "async function readRejection(tx: LocalLibsqlTransaction, row: StoredReceipt) {",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/application-database-migration.ts:149-291",
+    "first": "/** One completed upgrade, as the chain rule reads it. */",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/project-storage-healthy-opening.ts:108-115",
+    "first": "function sameDirectories(",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/project-storage-healthy-opening.ts:147-153",
+    "first": "  const filesystemAgrees = [",
+    "last": "  ].every(Boolean);"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/project-storage-database-authority.ts:189-194",
+    "first": "    lastMigration === undefined ||",
+    "last": "    metadata.lastMigrationId !== lastMigration.migrationId"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/application-database-authority.ts:57-70",
+    "first": "/** How long a stop waits for accepted work to drain before it reports the close unconfirmed. */",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/application-database-authority.ts:165-183",
+    "first": "/**",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/application-database-authority.ts:194-200",
+    "first": "  const closeDeadlineMs = input.closeDeadlineMs ?? APPLICATION_DATABASE_CLOSE_DEADLINE_MS;",
+    "last": "  let stopped = false;"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/application-database-authority.ts:269-283",
+    "first": "  // Refuses new work at once and waits for the drain until the deadline. The first caller runs",
+    "last": "  });"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/application-database-authority.ts:499-502",
+    "first": "  // After stop or withhold it does nothing; otherwise it awaits the same bounded close as stop.",
+    "last": "  );"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/application-database-authority.ts:527-533",
+    "first": "    stop: () => {",
+    "last": "    },"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/harness-runtime.ts:188-191",
+    "first": "    if (storageOutcome.withheld) options.applicationDatabase?.withhold();",
+    "last": "      : yield* Effect.suspend(() => startStop(() => options.applicationDatabase?.stop()));"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/process-bootstrap.ts:285-293",
+    "first": "const applicationDatabaseLayer = Layer.effect(",
+    "last": ");"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/harness-runtime.ts:92-104",
+    "first": "function startStop(stop: () => Promise<void> | undefined): Effect.Effect<StopFailures> {",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/harness-runtime.ts:111-122",
+    "first": "function startEffectStop(",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/harness-runtime.ts:182-182",
+    "first": "  const listing = startEffectStop(runtime, options.projectListing?.stop);",
+    "last": "  const listing = startEffectStop(runtime, options.projectListing?.stop);"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/harness-runtime.ts:245-248",
+    "first": "  const runtime: HarnessEdgeRunner = options.runtime ?? {",
+    "last": "  };"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/harness-runtime.ts:339-356",
+    "first": "    const sendResult = (result: Parameters<typeof createProjectRegistrationResultEvent>[1]) =>",
+    "last": "  };"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/harness-runtime.ts:432-455",
+    "first": "  return () => {",
+    "last": "  };"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/process-bootstrap.ts:59-71",
+    "first": "const HARNESS_RUNTIME_DISPOSE_DEADLINE_MS = 500;",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/process-bootstrap.ts:73-78",
+    "first": "type CombinedFailureMessage = \"Harness process shutdown failed.\" | \"Harness startup failed.\";",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/process-bootstrap.ts:85-97",
+    "first": "function boundedDispose(",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/process-bootstrap.ts:104-154",
+    "first": "export function launchOnProcessRuntime<Services, LayerError>(",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/registration/registration-listing.ts:24-86",
+    "first": "class RegistrationCleanupUnconfirmed extends Data.TaggedError(REGISTRATION_CLEANUP_TAG)<{",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/project-registration-observer.ts:97-113",
+    "first": "function settleClose(",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/project-registration-observer.ts:147-162",
+    "first": "  const closeEffect = Effect.suspend(() => {",
+    "last": "    close: () => Effect.runPromise(closeEffect),"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/storage/project-storage-upgrade-node-adapter.ts:560-567",
+    "first": "function markerQueryFailure(error: unknown): Error {",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/registration/registry-database.ts:126-137",
+    "first": "export function stopStandaloneAuthority(",
+    "last": "}"
+  },
+  {
+    "config": "stryker.project-storage.config.json",
+    "entry": "apps/harness/src/registration/registration-registry.ts:209-227",
+    "first": "    stop: async () => {",
+    "last": "    },"
+  }
+]

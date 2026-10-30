@@ -48,6 +48,11 @@ function damageRegistry({ root }: ProjectRoot, sql: string): void {
   }
 }
 
+/** A failed query as the database worker client hands it over: a plain error, named and coded. */
+function workerQueryError(code: string, message: string): Error {
+  return Object.assign(new Error(message), { name: "LibsqlError", code });
+}
+
 async function withUpgradeSteps(
   { root }: ProjectRoot,
   run: (upgrades: Dependencies["upgrades"]) => Promise<void>,
@@ -148,7 +153,9 @@ it(
       await upgrades.findUnfinished(openRequest.projectId);
       damageRegistry({ root }, "ALTER TABLE storage_upgrades RENAME COLUMN upgrade_id TO lost_id");
       await expect(upgrades.findUnfinished(openRequest.projectId)).rejects.toThrow(
-        new ProjectStorageBrokenError("Project Storage upgrade marker could not be read."),
+        new ProjectStorageBrokenError("Project Storage upgrade marker could not be read.", {
+          cause: workerQueryError("SQLITE_ERROR", "SQLITE_ERROR: no such column: upgrade_id"),
+        }),
       );
     });
   },

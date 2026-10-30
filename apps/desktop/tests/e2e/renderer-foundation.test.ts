@@ -11,7 +11,7 @@ import {
   sizeContent,
   workspaceSelector,
 } from "./accessibility.js";
-import { launchBuiltDesktop } from "./electron-launch.js";
+import { expectNoHarnessRequestFailure, launchBuiltDesktop } from "./electron-launch.js";
 import { seedTwoProjects } from "./harness-seed.js";
 import { temporaryRoot } from "./temporary-root.js";
 
@@ -37,14 +37,14 @@ async function launch(userData?: string) {
   const page = await application.firstWindow();
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  return { proof, application, page, errors };
+  return { proof, userData: data, application, page, errors };
 }
 
 async function seededLaunch() {
   const proof = await temporaryRoot("s4a-seed-");
   const userData = path.join(proof, "user-data");
   const projects = await seedTwoProjects(userData);
-  return { ...(await launch(userData)), userData, projects };
+  return { ...(await launch(userData)), projects };
 }
 
 /** Loads each bundled face and returns how many faces each load resolved. */
@@ -69,7 +69,7 @@ async function openReadWrite(application: ElectronApplication, page: Page) {
 
 test("loads the bundled fonts under the unchanged CSP", async () => {
   test.setTimeout(150_000);
-  const { application, page, errors } = await launch();
+  const { application, page, errors, userData } = await launch();
   try {
     await recordCspViolations(page);
     const loads = await loadBundledFaces(page);
@@ -103,11 +103,12 @@ test("loads the bundled fonts under the unchanged CSP", async () => {
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });
 
 test("enforces the main-window CSP on the file:// renderer", async () => {
   test.setTimeout(150_000);
-  const { application, page, errors } = await launch();
+  const { application, page, errors, userData } = await launch();
   try {
     await recordCspViolations(page);
     await page.evaluate(async () => {
@@ -129,6 +130,7 @@ test("enforces the main-window CSP on the file:// renderer", async () => {
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });
 
 test("writes the CSP meta into the built page", async () => {
@@ -234,7 +236,7 @@ async function regionLook(page: Page, projectId: string) {
 
 test("gives the region frame its Seixo look", async () => {
   test.setTimeout(150_000);
-  const { application, page, errors, projects } = await seededLaunch();
+  const { application, page, errors, userData, projects } = await seededLaunch();
   try {
     await openReadWrite(application, page);
     const facts = await regionLook(page, projects[0].projectId);
@@ -255,11 +257,12 @@ test("gives the region frame its Seixo look", async () => {
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });
 
 test("passes the accessibility harness on the region frame", async () => {
   test.setTimeout(150_000);
-  const { application, page, errors, proof } = await seededLaunch();
+  const { application, page, errors, proof, userData } = await seededLaunch();
   try {
     await openReadWrite(application, page);
     const noteText = page.getByText(note, { exact: true });
@@ -302,6 +305,7 @@ test("passes the accessibility harness on the region frame", async () => {
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });
 
 /** The old shell's computed values on `main` at `6a41350`, which S4a must keep. */
@@ -393,6 +397,7 @@ test("keeps the old shell's look", async () => {
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });
 
 /** Opens the add flow on a chosen folder and cancels it, so the idle note sits above the region. */
@@ -444,7 +449,7 @@ function noteStripSeam(page: Page) {
 
 test("captures the region frame for the visual review", async () => {
   test.setTimeout(150_000);
-  const { application, page, errors, proof } = await seededLaunch();
+  const { application, page, errors, proof, userData } = await seededLaunch();
   try {
     const shots = path.join(proof, "s4a-visual");
     await openReadWrite(application, page);
@@ -477,4 +482,5 @@ test("captures the region frame for the visual review", async () => {
   } finally {
     await application.close();
   }
+  await expectNoHarnessRequestFailure(userData);
 });

@@ -1,5 +1,5 @@
 import { Deferred, Effect, Result } from "effect";
-import { unwrapRejection } from "../effect-rejection.js";
+import { type UntypedRejection, untypedRejection, unwrapRejection } from "../effect-rejection.js";
 import type {
   GitVersionInspectionRequest,
   GitVersionInspectionResult,
@@ -72,20 +72,20 @@ export function createRegistrationRegistry(
   let stopped = false;
   let nextAdmission = 0;
   // Completion of each admitted operation, failing with its rejection for the stop report.
-  const pending = new Map<number, Deferred.Deferred<void, unknown>>();
+  const pending = new Map<number, Deferred.Deferred<void, UntypedRejection>>();
   const track = async <Value>(operation: () => Promise<Value>): Promise<Value> => {
     if (stopped) throw new Error("Registration registry is stopped.");
     const work = operation();
     const admission = nextAdmission++;
-    const completion = Deferred.makeUnsafe<void, unknown>();
+    const completion = Deferred.makeUnsafe<void, UntypedRejection>();
     pending.set(admission, completion);
-    const settle = (outcome: Effect.Effect<void, unknown>) => {
+    const settle = (outcome: Effect.Effect<void, UntypedRejection>) => {
       Deferred.doneUnsafe(completion, outcome);
       pending.delete(admission);
     };
     void work.then(
       () => settle(Effect.void),
-      (error: unknown) => settle(Effect.fail(error)),
+      (error: unknown) => settle(Effect.fail(untypedRejection(error))),
     );
     return work;
   };

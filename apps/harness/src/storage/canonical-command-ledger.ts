@@ -32,6 +32,7 @@ import {
   hashCanonicalJson,
   parseCanonicalJson,
 } from "../canonical-json.js";
+import { canonicalLedgerRefusal } from "./canonical-ledger-refusal.js";
 import type { LocalLibsqlTransaction } from "./local-libsql-worker-client.js";
 
 export const canonicalWriterUtcInstantSchema = UtcInstantSchema;
@@ -116,7 +117,7 @@ export async function readCanonicalWriterFence(
     normalizedUtc(fence.activatedAt) === normalizedUtc(fence.generationAcquiredAt),
     coherentCanonicalWriterRelease(fence),
   ].every(Boolean);
-  if (!coherent) throw new Error("Canonical settlement fence authority is inconsistent.");
+  if (!coherent) throw canonicalLedgerRefusal("SETTLEMENT_FENCE_INCOHERENT");
   return fence;
 }
 
@@ -197,8 +198,7 @@ async function readRejection(tx: LocalLibsqlTransaction, row: StoredReceipt) {
     }),
   );
   if (row.outcome !== "rejected") {
-    if (rows.length !== 0)
-      throw new Error("Canonical non-rejected receipt has rejection children.");
+    if (rows.length !== 0) throw canonicalLedgerRefusal("NON_REJECTED_HAS_REJECTIONS");
     return {};
   }
   const child = canonicalExactlyOne(decodeStrict(storedRejectionRowsSchema, rows));
@@ -207,13 +207,13 @@ async function readRejection(tx: LocalLibsqlTransaction, row: StoredReceipt) {
     child.receiptId === row.receiptId,
     child.projectSequence === row.projectSequence,
   ].every(Boolean);
-  if (!bound) throw new Error("Canonical rejection source binding is inconsistent.");
+  if (!bound) throw canonicalLedgerRefusal("REJECTION_SOURCE_BINDING");
   const details = decodeStrict(rejectionDetailsSchema, parseCanonicalJson(child.detailsText));
   const intact = [
     canonicalJsonText(details) === child.detailsText,
     hashCanonicalJson(details) === child.detailsHash,
   ].every(Boolean);
-  if (!intact) throw new Error("Canonical rejection details integrity is inconsistent.");
+  if (!intact) throw canonicalLedgerRefusal("REJECTION_DETAILS_INTEGRITY");
   return {
     rejection: decodeStrict(CommandRejectionSchema, {
       code: child.code,
@@ -249,7 +249,7 @@ async function originalReceipt(
     ),
   );
   if (pointers.length === 0) {
-    if (count.receiptCount !== 0) throw new Error("Canonical original receipt is orphaned.");
+    if (count.receiptCount !== 0) throw canonicalLedgerRefusal("ORIGINAL_RECEIPT_ORPHANED");
     return undefined;
   }
   const pointer = canonicalExactlyOne(pointers);
@@ -278,7 +278,7 @@ async function originalReceipt(
     receipt.generationNumber === receipt.writerGeneration,
     receipt.generationProjectId === receipt.projectId,
   ].every(Boolean);
-  if (!coherent) throw new Error("Canonical original receipt authority is inconsistent.");
+  if (!coherent) throw canonicalLedgerRefusal("ORIGINAL_RECEIPT_AUTHORITY");
   return receipt;
 }
 
@@ -289,13 +289,13 @@ function readEventReference(event: typeof storedEventSchema.Type, row: StoredRec
     event.projectSequence === row.projectSequence,
     event.occurredAt === row.settledAt,
   ].every(Boolean);
-  if (!bound) throw new Error("Canonical event source binding is inconsistent.");
+  if (!bound) throw canonicalLedgerRefusal("EVENT_SOURCE_BINDING");
   const payload = parseCanonicalJson(event.payloadText);
   const intact = [
     canonicalJsonText(payload) === event.payloadText,
     hashCanonicalJson(payload) === event.payloadHash,
   ].every(Boolean);
-  if (!intact) throw new Error("Canonical event payload integrity is inconsistent.");
+  if (!intact) throw canonicalLedgerRefusal("EVENT_PAYLOAD_INTEGRITY");
   return { eventId: event.eventId, eventOrdinal: event.eventOrdinal };
 }
 
@@ -316,7 +316,7 @@ async function readOutcomeReceipt(tx: LocalLibsqlTransaction, row: StoredReceipt
     ),
   );
   if (row.outcome !== "applied" && events.length !== 0)
-    throw new Error("Canonical non-applied receipt has event children.");
+    throw canonicalLedgerRefusal("NON_APPLIED_HAS_EVENTS");
   const {
     fingerprint: _fingerprint,
     generationProjectId: _project,
@@ -362,10 +362,8 @@ export async function readCanonicalSettlement(
     writerGeneration,
     checkRequested: (row, conflict) => {
       if (row.commandType !== command.type || row.commandVersion !== command.version)
-        throw new Error(
-          conflict
-            ? "Canonical conflict receipt authority is inconsistent."
-            : "Canonical requested receipt authority is inconsistent.",
+        throw canonicalLedgerRefusal(
+          conflict ? "CONFLICT_RECEIPT_COMMAND" : "REQUESTED_RECEIPT_COMMAND",
         );
     },
   });
@@ -401,7 +399,7 @@ export async function readCheckedCanonicalSettlement(
     ),
   );
   const matchesRequest = canonicalJsonText(row) === canonicalJsonText(original);
-  if (!matchesRequest) throw new Error("Canonical requested receipt authority is inconsistent.");
+  if (!matchesRequest) throw canonicalLedgerRefusal("REQUESTED_RECEIPT_AUTHORITY");
   checkRequestedReceipt(lookup, row, false);
   return { status: "settled" as const, receipt };
 }
@@ -409,7 +407,7 @@ export async function readCheckedCanonicalSettlement(
 async function readOriginalReceiptOutcome(tx: LocalLibsqlTransaction, original: StoredReceipt) {
   const receipt = await readOutcomeReceipt(tx, original);
   if (receipt.outcome === "rejected" && receipt.rejection.code === "IDEMPOTENCY_CONFLICT")
-    throw new Error("Canonical original receipt authority is inconsistent.");
+    throw canonicalLedgerRefusal("ORIGINAL_RECEIPT_IS_CONFLICT");
   return receipt;
 }
 
@@ -448,11 +446,11 @@ async function readConflict(
     row.generationNumber === row.writerGeneration,
     row.generationProjectId === row.projectId,
   ].every(Boolean);
-  if (!coherent) throw new Error("Canonical conflict receipt authority is inconsistent.");
+  if (!coherent) throw canonicalLedgerRefusal("CONFLICT_RECEIPT_AUTHORITY");
   checkRequestedReceipt(lookup, row, true);
   const receipt = await readOutcomeReceipt(tx, row);
   if (receipt.outcome !== "rejected" || receipt.rejection.code !== "IDEMPOTENCY_CONFLICT")
-    throw new Error("Canonical conflict receipt outcome is inconsistent.");
+    throw canonicalLedgerRefusal("CONFLICT_RECEIPT_OUTCOME");
   return { status: "settled" as const, receipt };
 }
 

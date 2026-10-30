@@ -37,7 +37,7 @@ const reconcileSave = (input: ConversationSaveInput) =>
     Effect.mapError((cause) => new ConversationCommitUncertain({ cause })),
     Effect.flatMap((found) =>
       found === undefined
-        ? Effect.fail(new ConversationStorageBusy({ cause: "The save was not committed." }))
+        ? new ConversationStorageBusy({ cause: "The save was not committed." })
         : Effect.succeed(found.status === "saved" ? { ...found, replayed: false } : found),
     ),
   );

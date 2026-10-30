@@ -1,3 +1,4 @@
+import { Data } from "effect";
 import { sha256Hex } from "../sha256-text.js";
 import { requireDeclaredSchemaObjects, tableNames } from "./database-schema-verifier.js";
 import { type LocalLibsqlClient, withDatabase } from "./local-libsql-worker-client.js";
@@ -6,7 +7,7 @@ import {
   ProjectStorageBrokenError,
   type ProjectStorageUnavailableError,
 } from "./project-storage-errors.js";
-import { isBusyStorageError, isCorruptStorageError } from "./project-storage-node-errors.js";
+import { isCorruptStorageError, isRetryableStorageError } from "./project-storage-node-errors.js";
 import { resultObjects } from "./project-storage-node-schemas.js";
 import {
   type DatabaseHead,
@@ -32,9 +33,7 @@ export type StagedVerification = "verified" | "mismatch";
 export type BackupVerification = "verified" | "invalid";
 
 /** A copy that does not prove itself: reported as a failed result, never as a crash. */
-class StagedCopyMismatch extends Error {
-  override readonly name = "StagedCopyMismatch";
-}
+class StagedCopyMismatch extends Data.TaggedError("StagedCopyMismatch") {}
 
 function withReadOnly<Value>(
   databasePath: string,
@@ -104,7 +103,7 @@ function requireSameIdentity(
 }
 
 function isBusy(error: unknown): boolean {
-  return isBusyStorageError({ error });
+  return isRetryableStorageError({ error });
 }
 
 function busy(cause: unknown): ProjectStorageUnavailableError {

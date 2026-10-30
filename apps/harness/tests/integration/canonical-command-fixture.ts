@@ -32,6 +32,7 @@ import {
   settlementT1,
   settlementText,
 } from "./canonical-command-database-fixture.js";
+import { expectLedgerFailure, type LedgerFailure } from "./canonical-ledger-failure.js";
 import {
   type admissionCases,
   type CounterContext,
@@ -102,7 +103,10 @@ function expectedRejectionRow(
   ];
 }
 
-export async function expectMalformedSequenceState(value: string | number | null) {
+export async function expectMalformedSequenceState(
+  value: string | number | null,
+  expected: LedgerFailure,
+) {
   const f = await createSettlementFixture();
   try {
     f.observation.after = (sql, result) => {
@@ -111,7 +115,7 @@ export async function expectMalformedSequenceState(value: string | number | null
       if (value === "duplicate") return { ...result, rows: [...result.rows, ...result.rows] };
       return alterFence(result, { lastProjectSequence: value });
     };
-    await expectBrokenReplay(f);
+    await expectBrokenReplay(f, expected);
   } finally {
     await f.close();
   }
@@ -429,7 +433,10 @@ async function prepareConflict(f: Awaited<ReturnType<typeof createSettlementFixt
   return receipt;
 }
 
-export async function expectOriginalChildrenBeforeConflict(target: "events" | "rejections") {
+export async function expectOriginalChildrenBeforeConflict(
+  target: "events" | "rejections",
+  expected: LedgerFailure,
+) {
   const f = await createSettlementFixture();
   try {
     registerCounter(f);
@@ -438,7 +445,7 @@ export async function expectOriginalChildrenBeforeConflict(target: "events" | "r
       receipt: appliedReceipt,
     });
     corruptReplayResult(f, target, {}, "duplicate alias");
-    await expectBrokenReplay(f, conflictInput(conflictCases[2]));
+    await expectBrokenReplay(f, expected, conflictInput(conflictCases[2]));
   } finally {
     await f.close();
   }
@@ -513,12 +520,30 @@ export async function expectConflictHistory() {
 export async function expectCorruptedConflict(
   target: Parameters<typeof corruptReplayResult>[1],
   changes: Record<string, string | number | null>,
+  expected: LedgerFailure,
 ) {
   const f = await createSettlementFixture();
   try {
     await prepareConflict(f);
     corruptReplayResult(f, target, changes);
-    await expectBrokenReplay(f, conflictInput(conflictCases[0]));
+    await expectBrokenReplay(f, expected, conflictInput(conflictCases[0]));
+  } finally {
+    await f.close();
+  }
+}
+
+/** A conflict receipt read back as applied, with no rejection child: its outcome is wrong. */
+export async function expectAppliedConflictWithoutRejection(expected: LedgerFailure) {
+  const f = await createSettlementFixture();
+  try {
+    await prepareConflict(f);
+    f.observation.after = (sql, result) => {
+      if (sql.includes("FROM command_rejections")) return { ...result, rows: [] };
+      return sql.includes("FROM command_receipts") && sql.includes("command_fingerprint=?")
+        ? alterFence(result, { outcome: "applied" })
+        : result;
+    };
+    await expectBrokenReplay(f, expected, conflictInput(conflictCases[0]));
   } finally {
     await f.close();
   }
@@ -625,6 +650,7 @@ export async function expectRejectedReplay(retryable: boolean, replacement: bool
 
 export async function expectCorruptedRejectedReplay(
   changes: Record<string, string | number | null>,
+  expected: LedgerFailure,
   shape = "fields",
 ) {
   const f = await createSettlementFixture();
@@ -634,7 +660,7 @@ export async function expectCorruptedRejectedReplay(
     expect(await f.repository.settle(rejectedText)).toEqual({ status: "settled", receipt });
     expectRejectedRows(before, await f.snapshot(), false);
     corruptReplayResult(f, "rejections", changes, shape);
-    await expectBrokenReplay(f, rejectedText);
+    await expectBrokenReplay(f, expected, rejectedText);
   } finally {
     await f.close();
   }
@@ -657,7 +683,7 @@ export async function expectFirstRejected(retryable: boolean) {
   }
 }
 
-export async function expectRejectedEventExclusion() {
+export async function expectRejectedEventExclusion(expected: LedgerFailure) {
   const f = await createSettlementFixture();
   try {
     const receipt = await prepareRejected(f);
@@ -674,13 +700,16 @@ export async function expectRejectedEventExclusion() {
     expect(events?.rows.length).toBe(2);
     f.observation.after = (sql, result) =>
       sql.includes("FROM canonical_events") && events !== undefined ? events : result;
-    await expectBrokenReplay(f, rejectedText);
+    await expectBrokenReplay(f, expected, rejectedText);
   } finally {
     await f.close();
   }
 }
 
-export async function expectPersistedRejectionCorruption(mode: "hash" | "details") {
+export async function expectPersistedRejectionCorruption(
+  mode: "hash" | "details",
+  expected: LedgerFailure,
+) {
   const f = await createSettlementFixture();
   try {
     const receipt = await prepareRejected(f);
@@ -692,7 +721,7 @@ export async function expectPersistedRejectionCorruption(mode: "hash" | "details
         '{"version":2}',
         createHash("sha256").update('{"version":2}').digest("hex"),
       ]);
-    await expectBrokenReplay(f, rejectedText);
+    await expectBrokenReplay(f, expected, rejectedText);
   } finally {
     await f.close();
   }
@@ -748,22 +777,23 @@ export async function expectRejectedOutputRetention() {
   }
 }
 
-export async function expectRejectionInsertFault(mode: "throw" | 0 | 2) {
+/** The fault the rejection INSERT throws in the "throw" mode. */
+export const rejectionInsertFault = new Error("G8 rejection INSERT fault");
+
+export async function expectRejectionInsertFault(mode: "throw" | 0 | 2, expected: LedgerFailure) {
   const f = await createSettlementFixture();
   try {
     await prepareRejected(f);
     const before = await f.snapshot();
-    const fault = new Error("G8 rejection INSERT fault");
     let inserted = false;
     f.observation.after = (sql, result) => {
       if (!sql.startsWith("INSERT INTO command_rejections")) return result;
       inserted = true;
-      if (mode === "throw") throw fault;
+      if (mode === "throw") throw rejectionInsertFault;
       return { ...result, rowsAffected: mode };
     };
     const error = await f.repository.settle(rejectedText).catch((error: unknown) => error);
-    expect(error).toBeInstanceOf(Error);
-    if (mode === "throw") expect(error).toBe(fault);
+    expectLedgerFailure(error, expected);
     expect(inserted).toBe(true);
     expect(await f.snapshot()).toEqual(before);
     expect(f.calls.slice(-2)).toEqual(["rollback", "close"]);
@@ -1094,6 +1124,7 @@ function replayResultShape(
 export async function expectCorruptedAppliedReplay(
   target: Parameters<typeof corruptReplayResult>[1],
   changes: Record<string, string | number | null>,
+  expected: LedgerFailure,
   shape?: string,
 ) {
   const f = await createSettlementFixture();
@@ -1105,7 +1136,7 @@ export async function expectCorruptedAppliedReplay(
     });
     expectAppliedRows(await f.snapshot());
     corruptReplayResult(f, target, changes, shape);
-    await expectBrokenReplay(f);
+    await expectBrokenReplay(f, expected);
   } finally {
     await f.close();
   }
@@ -1141,8 +1172,34 @@ export function expectOtherProjectRows(
   });
 }
 
+/** Settles the counter once, then deletes its idempotency pointer: an orphaned original receipt. */
+export async function orphanTheAppliedReceipt(
+  f: Awaited<ReturnType<typeof createSettlementFixture>>,
+) {
+  registerCounter(f);
+  expect(await f.repository.settle(settlementText)).toEqual({
+    status: "settled",
+    receipt: appliedReceipt,
+  });
+  await f.raw.execute({
+    sql: "DELETE FROM command_idempotency WHERE project_id=? AND command_id=?",
+    args: [settlementRequest.projectId, appliedReceipt.commandId],
+  });
+}
+
+/** No settlement work ran: no handler, receipt, event or clock call. */
+export function expectNoSettlementWork(
+  f: Awaited<ReturnType<typeof createSettlementFixture>>,
+): void {
+  expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
+  expect(f.dependencies.createReceiptId).not.toHaveBeenCalled();
+  expect(f.dependencies.createEventId).not.toHaveBeenCalled();
+  expect(f.dependencies.now).not.toHaveBeenCalled();
+}
+
 export async function expectBrokenReplay(
   f: Awaited<ReturnType<typeof createSettlementFixture>>,
+  expected: LedgerFailure,
   commandText = settlementText,
 ) {
   const before = await f.snapshot();
@@ -1151,7 +1208,7 @@ export async function expectBrokenReplay(
     () => undefined,
     (error: unknown) => error,
   );
-  expect(error).toBeInstanceOf(Error);
+  expectLedgerFailure(error, expected);
   expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
   expect(f.dependencies.createReceiptId).not.toHaveBeenCalled();
   expect(f.dependencies.createEventId).not.toHaveBeenCalled();
@@ -1159,7 +1216,10 @@ export async function expectBrokenReplay(
   expect(await f.snapshot()).toEqual(before);
 }
 
-export async function expectForbiddenUnchangedChild(target: "events" | "rejections") {
+export async function expectForbiddenUnchangedChild(
+  target: "events" | "rejections",
+  expected: LedgerFailure,
+) {
   const f = await createSettlementFixture();
   try {
     await prepareUnchanged(f);
@@ -1171,7 +1231,7 @@ export async function expectForbiddenUnchangedChild(target: "events" | "rejectio
       sql.includes(`FROM ${target === "events" ? "canonical_events" : "command_rejections"}`)
         ? { ...result, rows: [result.columns.map(() => null)] }
         : result;
-    await expectBrokenReplay(f, unchangedText);
+    await expectBrokenReplay(f, expected, unchangedText);
   } finally {
     await f.close();
   }

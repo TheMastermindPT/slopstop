@@ -14,7 +14,7 @@ import type {
   StorageId,
 } from "@slopstop/protocol";
 import { Deferred, Effect, Result } from "effect";
-import { untypedRejection, unwrapRejection } from "../effect-rejection.js";
+import { type UntypedRejection, untypedRejection, unwrapRejection } from "../effect-rejection.js";
 import type {
   ProjectStorageActivationOutcome,
   ProjectStorageActivationSession,
@@ -136,7 +136,7 @@ type AdmittedProjectStorageSession = Readonly<{
 }>;
 
 // Completes once its admitted operation settles; fails only with a shutdown-relevant error.
-type AdmittedOperationCompletion = Deferred.Deferred<void, unknown>;
+type AdmittedOperationCompletion = Deferred.Deferred<void, UntypedRejection>;
 
 type ProjectStorageOperationResult =
   | ProjectStorageOpenResult
@@ -171,7 +171,10 @@ function drainAdmittedOperations(
     Effect.forEach(ordered, (completion) => Effect.result(Deferred.await(completion)), {
       concurrency: "unbounded",
     }),
-    (results) => results.flatMap(failureOf).map(shutdownOperationFailure),
+    (results) =>
+      results
+        .flatMap(failureOf)
+        .map((failure) => shutdownOperationFailure(unwrapRejection(failure))),
   );
 }
 
@@ -559,16 +562,17 @@ export function createProjectStorageOwner(
     nextOperationAdmissionOrder += 1;
     // Registered only once admitted: an operation that throws synchronously never started.
     const pendingOperation = operation();
-    const completion: AdmittedOperationCompletion = Deferred.makeUnsafe<void, unknown>();
+    const completion: AdmittedOperationCompletion = Deferred.makeUnsafe<void, UntypedRejection>();
     admittedOperations.set(admissionOrder, completion);
-    const settle = (outcome: Effect.Effect<void, unknown>) => {
+    const settle = (outcome: Effect.Effect<void, UntypedRejection>) => {
       Deferred.doneUnsafe(completion, outcome);
       admittedOperations.delete(admissionOrder);
     };
     void pendingOperation.then(
       () => settle(Effect.void),
       // A refusal because the owner stopped is expected during shutdown, not a failure.
-      (error: unknown) => settle(error === ownerStoppedError ? Effect.void : Effect.fail(error)),
+      (error: unknown) =>
+        settle(error === ownerStoppedError ? Effect.void : Effect.fail(untypedRejection(error))),
     );
     return pendingOperation;
   };

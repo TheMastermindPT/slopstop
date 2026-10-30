@@ -181,6 +181,10 @@ describe("G3 public command decision schema", () => {
   );
 });
 const payloadSchema = counterPayloadSchema;
+const payloadRejection = {
+  status: "rejected",
+  rejection: { code: "COMMAND_PAYLOAD_INVALID", retryable: false },
+} as const;
 // This unused SQL port permits registry execution, not the G5 real-facade proof.
 const transaction: CanonicalCommandTransaction = {
   execute: () => {
@@ -209,26 +213,50 @@ describe("binds typed payload definitions and rejects duplicate registrations", 
     expect(second).toHaveBeenCalledTimes(1);
   });
 
-  it("delivers schema-transformed numeric output", async () => {
-    const definition = defineCanonicalCommand({
+  /** A command whose string payload decodes to a number before `handle` sees it. */
+  function transformedNumberCommand(handle: (payload: number) => void) {
+    return defineCanonicalCommand({
       type: command.type,
       version: 1,
       payloadSchema: Schema.String.pipe(
         Schema.decodeTo(
-          Schema.Number,
+          Schema.Finite,
           SchemaTransformation.transform({ decode: Number, encode: String }),
         ),
       ),
       handle: ({ payload }) => {
         expectTypeOf(payload).toEqualTypeOf<number>();
-        expect(payload).toBe(7);
+        handle(payload);
         return { outcome: "unchanged" };
       },
     });
+  }
+
+  it("delivers schema-transformed numeric output", async () => {
+    const definition = transformedNumberCommand((payload) => expect(payload).toBe(7));
     const prepared = definition.prepare("7");
     expect(prepared.status).toBe("ready");
     if (prepared.status !== "ready") throw new Error("Preparation failed.");
     expect(await prepared.run({ projectId, transaction })).toEqual({ outcome: "unchanged" });
+  });
+
+  it("rejects a schema-transformed number that is not finite", () => {
+    const handle = vi.fn();
+    expect(transformedNumberCommand(handle).prepare("Infinity")).toEqual(payloadRejection);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: "meta.a", meta: { a: Infinity, b: 1 } },
+    { name: "meta.b", meta: { a: 1, b: -Infinity } },
+  ])("rejects a counter payload whose $name is not finite", ({ meta }) => {
+    const definition = defineCanonicalCommand({
+      type: command.type,
+      version: 1,
+      payloadSchema,
+      handle: () => ({ outcome: "unchanged" as const }),
+    });
+    expect(definition.prepare({ value: 1, meta })).toEqual(payloadRejection);
   });
 
   it.each([
@@ -303,7 +331,7 @@ describe("binds typed payload definitions and rejects duplicate registrations", 
     defineCanonicalCommand({
       type: command.type,
       version: 1,
-      payloadSchema: Schema.Number,
+      payloadSchema: Schema.Finite,
       handle: ({ payload, transaction: capability }) => {
         expectTypeOf(payload).toEqualTypeOf<number>();
         expectTypeOf(capability.execute).toEqualTypeOf<CanonicalCommandTransaction["execute"]>();
@@ -325,7 +353,7 @@ describe("binds typed payload definitions and rejects duplicate registrations", 
     defineCanonicalCommand({
       type: command.type,
       version: 2,
-      payloadSchema: Schema.Number,
+      payloadSchema: Schema.Finite,
       // @ts-expect-error A callback cannot widen numeric schema inference to a string union.
       handle: ({ payload }: { payload: string }) => {
         payload.toUpperCase();

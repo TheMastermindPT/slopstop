@@ -1,6 +1,7 @@
 import { lstatSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
+import { Data } from "effect";
 import {
   type ProjectStoragePackageSmokeScenario,
   parseProjectStoragePackageSmokeScenario,
@@ -10,11 +11,11 @@ const packageSmokeMarkerFilename = ".slopstop-package-smoke.json";
 const packageSmokeTokenPattern = /^[0-9a-f]{64}$/u;
 export const packageSmokeAuthorizationFailureMessage = "Package smoke authorization failed.";
 
-export class PackageSmokeAuthorizationError extends Error {
-  override readonly name = "PackageSmokeAuthorizationError";
-
+export class PackageSmokeAuthorizationError extends Data.TaggedError(
+  "PackageSmokeAuthorizationError",
+)<{ readonly message: string }> {
   constructor() {
-    super(packageSmokeAuthorizationFailureMessage);
+    super({ message: packageSmokeAuthorizationFailureMessage });
   }
 }
 

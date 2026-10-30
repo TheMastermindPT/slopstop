@@ -33,6 +33,7 @@ import {
   createCanonicalRuntimeApplicationFixture,
   unusedCanonicalApplication,
 } from "./canonical-runtime-application-fixture.js";
+import { silentRequestDiagnostics } from "./request-diagnostics-fixture.js";
 
 function transportFor(port: MessagePort): HarnessTransport {
   return {
@@ -87,11 +88,14 @@ async function unexpectedCanonicalSwitch(): Promise<never> {
 
 function startRuntimeFixture(
   workspaceApplication: WorkspaceApplication,
-  projectStorageApplication: ProjectStorageApplication = createUnavailableProjectStorageApplication(),
+  projectStorageApplication: ProjectStorageApplication = createUnavailableProjectStorageApplication(
+    silentRequestDiagnostics,
+  ),
 ) {
   const { port1, port2 } = new MessageChannel();
   let generatedId = 2;
   const stop = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     canonicalProjectApplication: unusedCanonicalApplication(unexpectedCanonicalSwitch),
     transport: transportFor(port1),
     projectStorageApplication,
@@ -167,12 +171,15 @@ describe("harness message channel integration", () => {
     }
   });
   it("round-trips a request handler failure without escalating the process", async () => {
-    const { port1, port2, stop } = startRuntimeFixture(createUnavailableWorkspaceApplication(), {
-      ...createUnavailableProjectStorageApplication(),
-      open: async () => {
-        throw new Error("sensitive failure");
+    const { port1, port2, stop } = startRuntimeFixture(
+      createUnavailableWorkspaceApplication(silentRequestDiagnostics),
+      {
+        ...createUnavailableProjectStorageApplication(silentRequestDiagnostics),
+        open: async () => {
+          throw new Error("sensitive failure");
+        },
       },
-    });
+    );
     try {
       const response = nextMessage(port2);
       port2.postMessage(
@@ -210,7 +217,9 @@ describe("harness message channel integration", () => {
   });
 
   it("round-trips an unavailable workspace query over structured clone", async () => {
-    const { port1, port2, stop } = startRuntimeFixture(createUnavailableWorkspaceApplication());
+    const { port1, port2, stop } = startRuntimeFixture(
+      createUnavailableWorkspaceApplication(silentRequestDiagnostics),
+    );
     const query = decodeStrict(WorkspaceQuerySchema, {
       query: "memory-library.read",
       projectId: "00000000-0000-4000-8000-000000000010",
@@ -318,7 +327,9 @@ describe("harness message channel integration", () => {
   });
 
   it("round-trips the versioned startup handshake over structured clone", async () => {
-    const { port1, port2, stop } = startRuntimeFixture(createUnavailableWorkspaceApplication());
+    const { port1, port2, stop } = startRuntimeFixture(
+      createUnavailableWorkspaceApplication(silentRequestDiagnostics),
+    );
     const response = nextMessage(port2);
 
     port2.postMessage({
@@ -347,7 +358,9 @@ describe("harness message channel integration", () => {
   });
 
   it("round-trips all unavailable Project Storage commands over structured clone", async () => {
-    const { port1, port2, stop } = startRuntimeFixture(createUnavailableWorkspaceApplication());
+    const { port1, port2, stop } = startRuntimeFixture(
+      createUnavailableWorkspaceApplication(silentRequestDiagnostics),
+    );
     const cases = projectStorageCommandCases();
 
     for (const [index, { command, event }] of cases.entries()) {
@@ -416,9 +429,10 @@ function canonicalChannelFixture() {
   const sentAt = "2026-09-04T12:00:00.000Z";
   const options = {
     transport,
+    requestDiagnostics: silentRequestDiagnostics,
     canonicalProjectApplication,
-    projectStorageApplication: createUnavailableProjectStorageApplication(),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    projectStorageApplication: createUnavailableProjectStorageApplication(silentRequestDiagnostics),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}`,
     now: () => sentAt,
@@ -526,7 +540,7 @@ it.each(["owner exception", "invalid result"])(
     const f = switchFixture();
     const pendingC = switchDeferred<ProjectStorageOpenResult>();
     const storage = {
-      ...createUnavailableProjectStorageApplication(),
+      ...createUnavailableProjectStorageApplication(silentRequestDiagnostics),
       open: vi.fn(() => pendingC.promise),
       stop: vi.fn(async () => undefined),
     };

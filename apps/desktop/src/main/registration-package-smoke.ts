@@ -1,14 +1,15 @@
 import path from "node:path";
 import type { ProjectRegistrationRequest, ProjectRegistrationResult } from "@slopstop/protocol";
+import { Data } from "effect";
 import { packageSmokeRepositoryDirectory } from "./package-smoke-authorization.js";
 
 type RegistrationSmokeStage = "select" | "register" | "list";
 
-export class RegistrationPackageSmokeError extends Error {
-  override readonly name = "RegistrationPackageSmokeError";
-
-  constructor(readonly stage: RegistrationSmokeStage) {
-    super("Packaged registration smoke failed.");
+export class RegistrationPackageSmokeError extends Data.TaggedError(
+  "RegistrationPackageSmokeError",
+)<{ readonly message: string; readonly stage: RegistrationSmokeStage }> {
+  constructor(stage: RegistrationSmokeStage) {
+    super({ message: "Packaged registration smoke failed.", stage });
   }
 }
 

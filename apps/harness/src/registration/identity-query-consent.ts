@@ -1,5 +1,5 @@
-import { decodeStrict, decodeStrictResult, IdentityQueryConsentIdSchema } from "@slopstop/protocol";
-import { Result, Schema } from "effect";
+import { decodeStrict, IdentityQueryConsentIdSchema } from "@slopstop/protocol";
+import { Schema } from "effect";
 import {
   GitVersionInspectionResultSchema,
   PreparedGitVersionSchema,
@@ -14,8 +14,12 @@ import {
   type ExecutableIdentityObservation,
   sameExecutableIdentity,
 } from "./executable-identity.js";
-import { type RegistryRunner, registryRows } from "./registry-database.js";
-import { RegistryFault, registryFailure } from "./registry-failure.js";
+import {
+  decodeRegistryJson,
+  decodeRegistryRows,
+  type RegistryRunner,
+} from "./registry-database.js";
+import { RegistryFault, registryCorrupt, registryFailure } from "./registry-failure.js";
 
 export const IdentityQueryConsentRequestSchema = Schema.Struct({
   selectionId: PreparedGitVersionSchema.fields.selectionId,
@@ -33,7 +37,9 @@ const versionRowsSchema = Schema.Array(Schema.Struct({ resultJson: Schema.String
   Schema.isMaxLength(1),
 );
 const decisionRowsSchema = Schema.Array(IdentityQueryDecisionSchema).check(Schema.isMaxLength(1));
-const decisionCellSchema = Schema.Tuple([Schema.Tuple([ConsentDecisionSchema])]);
+const storedDecisionRowsSchema = Schema.Array(
+  Schema.Struct({ decision: ConsentDecisionSchema }),
+).check(Schema.isMaxLength(1));
 type ConsentFailure =
   | ReturnType<typeof registryFailure>
   | Exclude<ExecutableIdentityObservation, { status: "observed" }>
@@ -65,19 +71,15 @@ async function readValidatedVersion(
     sql: "SELECT o.result_json AS resultJson FROM registration_observer_intents i JOIN registration_observer_outcomes o ON o.observation_id = i.observation_id WHERE i.observation_id = ? AND i.selection_id = ?",
     args: [request.observationId, request.selectionId],
   });
-  const row = decodeStrict(versionRowsSchema, registryRows(result))[0];
+  const row = decodeRegistryRows(versionRowsSchema, result)[0];
   if (row === undefined) return undefined;
-  const parsed = decodeStrictResult(GitVersionInspectionResultSchema, JSON.parse(row.resultJson));
-  if (Result.isFailure(parsed)) {
-    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
-  }
-  const version = parsed.success;
+  const version = decodeRegistryJson(GitVersionInspectionResultSchema, row.resultJson);
   if (version.status !== "prepared") return undefined;
   if (
     version.observationId !== request.observationId ||
     version.selectionId !== request.selectionId
   ) {
-    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+    throw registryCorrupt();
   }
   return version;
 }
@@ -91,7 +93,7 @@ async function recordDecision(
     sql: "SELECT consent_id AS consentId, selection_id AS selectionId, observation_id AS observationId, decision FROM registration_identity_consents WHERE consent_id = ?",
     args: [request.consentId],
   });
-  const existing = decodeStrict(decisionRowsSchema, registryRows(rows))[0];
+  const existing = decodeRegistryRows(decisionRowsSchema, rows)[0];
   if (existing !== undefined) {
     if (!sameDecision(existing, request)) {
       throw new RegistryFault({ status: "rejected", code: "REGISTRATION_IDEMPOTENCY_CONFLICT" });
@@ -128,9 +130,9 @@ export async function resolveIdentityQueryConsent(
     sql: "SELECT decision FROM registration_identity_consents WHERE consent_id = ? AND selection_id = ? AND observation_id = ?",
     args: [request.consentId, request.selectionId, request.observationId],
   });
-  if (rows.rows.length === 0) return unconfirmed;
-  const decision = decodeStrict(decisionCellSchema, rows.rows)[0][0];
-  if (decision === "declined") return { status: "cancelled" as const };
+  const stored = decodeRegistryRows(storedDecisionRowsSchema, rows)[0];
+  if (stored === undefined) return unconfirmed;
+  if (stored.decision === "declined") return { status: "cancelled" as const };
   const version = await readValidatedVersion(transaction, request);
   const selection = await readSelection(transaction, request.selectionId);
   if (version === undefined || selection === undefined) return unconfirmed;

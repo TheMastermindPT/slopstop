@@ -30,9 +30,15 @@ import {
   times,
   transformTransactionResults,
 } from "./canonical-command-repository-fixture.js";
+import {
+  decodeFailure,
+  expectLedgerFailure,
+  type LedgerFailure,
+  refused,
+} from "./canonical-ledger-failure.js";
 
 const sqliteScalars = Schema.Array(
-  Schema.Union([Schema.String, Schema.Number, Schema.BigInt, Schema.Null]),
+  Schema.Union([Schema.String, Schema.Finite, Schema.BigInt, Schema.Null]),
 );
 
 function memoryClient(db: DatabaseSync): LocalLibsqlClient {
@@ -191,20 +197,25 @@ function replayCounterCommand(commandId: ReturnType<typeof seedAppliedMemoryRece
   });
 }
 
-function expectGenuineReplayFailure(error: unknown): void {
+function expectGenuineReplayFailure(error: unknown, expected: LedgerFailure): void {
   expect(error).toBeInstanceOf(Error);
   expect(error).not.toEqual(new Error("Unexpected lifecycle settlement dependency."));
+  expectLedgerFailure(error, expected);
 }
 
 it.each([
-  { field: "projectSequence", value: 2 },
-  { field: "retryable", value: 2 },
-  { field: "detailsText", value: '{"version":2}' },
-  { field: "detailsHash", value: "a".repeat(64) },
-  { field: "receiptId", value: "66666666-6666-4666-8666-666666666502" },
+  { field: "projectSequence", value: 2, expected: refused("REJECTION_SOURCE_BINDING") },
+  { field: "retryable", value: 2, expected: decodeFailure },
+  { field: "detailsText", value: '{"version":2}', expected: decodeFailure },
+  { field: "detailsHash", value: "a".repeat(64), expected: refused("REJECTION_DETAILS_INTEGRITY") },
+  {
+    field: "receiptId",
+    value: "66666666-6666-4666-8666-666666666502",
+    expected: refused("REJECTION_SOURCE_BINDING"),
+  },
 ])(
   "rejects corrupted replay children and conflicting receipts: G8 unit $field",
-  async ({ field, value }) => {
+  async ({ field, value, expected }) => {
     const f = await memoryFixture();
     try {
       const commandId = seedRejectedMemoryReceipt(f.db);
@@ -212,7 +223,7 @@ it.each([
       const before = f.snapshot();
       const text = replayCounterCommand(commandId);
       const error = await f.repository.settle(text).catch((error: unknown) => error);
-      expectGenuineReplayFailure(error);
+      expectGenuineReplayFailure(error, expected);
       expect(f.snapshot()).toBe(before);
     } finally {
       await f.repository.close();
@@ -267,9 +278,12 @@ function seedAppliedMemoryReceipt(db: DatabaseSync) {
   return commandId;
 }
 
-it.each(["events", "rejections"])(
+it.each([
+  ["events", refused("NON_APPLIED_HAS_EVENTS")],
+  ["rejections", refused("NON_REJECTED_HAS_REJECTIONS")],
+] as const)(
   "rejects corrupted replay children and conflicting receipts: G7 unit unchanged %s",
-  async (child) => {
+  async (child, expected) => {
     const f = await memoryFixture();
     try {
       const commandId = seedAppliedMemoryReceipt(f.db);
@@ -294,7 +308,12 @@ it.each(["events", "rejections"])(
         version: 1,
         payload: { value: 7 },
       });
-      await expect(f.repository.settle(text)).rejects.toThrow(/children/);
+      const error = await f.repository.settle(text).then(
+        () => undefined,
+        (rejection: unknown) => rejection,
+      );
+      expect(error).toHaveProperty("message", expect.stringMatching(/children/));
+      expectLedgerFailure(error, expected);
       expect(f.snapshot()).toBe(before);
     } finally {
       await f.repository.close();
@@ -303,21 +322,52 @@ it.each(["events", "rejections"])(
 );
 
 it.each([
-  { query: "COUNT(*) AS receiptCount", field: "receiptCount", value: "1" },
-  { query: "FROM command_idempotency", field: "fingerprint", value: "bad" },
-  { query: "FROM command_receipts", field: "generationNumber", value: null },
+  { query: "COUNT(*) AS receiptCount", field: "receiptCount", value: "1", expected: decodeFailure },
+  {
+    query: "FROM command_idempotency",
+    field: "fingerprint",
+    value: "bad",
+    expected: decodeFailure,
+  },
+  {
+    query: "FROM command_receipts",
+    field: "generationNumber",
+    value: null,
+    expected: decodeFailure,
+  },
   {
     query: "FROM canonical_events",
     field: "aggregateId",
     value: "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    expected: decodeFailure,
   },
-  { query: "FROM canonical_events", field: "aggregateVersion", value: 0.5 },
-  { query: "FROM canonical_events", field: "receiptOutcome", value: "unchanged" },
-  { query: "FROM canonical_events", field: "projectSequence", value: 2 },
-  { query: "FROM canonical_events", field: "occurredAt", value: "2026-09-04T12:01Z" },
+  {
+    query: "FROM canonical_events",
+    field: "aggregateVersion",
+    value: 0.5,
+    expected: decodeFailure,
+  },
+  {
+    query: "FROM canonical_events",
+    field: "receiptOutcome",
+    value: "unchanged",
+    expected: decodeFailure,
+  },
+  {
+    query: "FROM canonical_events",
+    field: "projectSequence",
+    value: 2,
+    expected: refused("EVENT_SOURCE_BINDING"),
+  },
+  {
+    query: "FROM canonical_events",
+    field: "occurredAt",
+    value: "2026-09-04T12:01Z",
+    expected: decodeFailure,
+  },
 ])(
   "fails closed on broken original idempotency authority: G6 unit $query $field",
-  async ({ query, field, value }) => {
+  async ({ query, field, value, expected }) => {
     const f = await memoryFixture();
     try {
       const commandId = seedAppliedMemoryReceipt(f.db);
@@ -328,7 +378,7 @@ it.each([
         () => undefined,
         (error: unknown) => error,
       );
-      expectGenuineReplayFailure(error);
+      expectGenuineReplayFailure(error, expected);
       expect(f.snapshot()).toBe(before);
     } finally {
       await f.repository.close();

@@ -13,6 +13,7 @@ import {
   writerProofNativeBindingFilename,
   writerProofNativePackageVersion,
 } from "@slopstop/protocol";
+import { Data } from "effect";
 import { contentSecurityPolicy } from "../shared/content-security-policy.js";
 
 const smokeQuery = decodeStrict(WorkspaceQuerySchema, {
@@ -204,10 +205,12 @@ export type WriterProofStage =
   | "cleanup"
   | "internal";
 
-export class WriterProofError extends Error {
-  override readonly name = "WriterProofError";
-  constructor(readonly stage: WriterProofStage) {
-    super("Packaged Writer proof failed.");
+export class WriterProofError extends Data.TaggedError("WriterProofError")<{
+  readonly message: string;
+  readonly stage: WriterProofStage;
+}> {
+  constructor(stage: WriterProofStage) {
+    super({ message: "Packaged Writer proof failed.", stage });
   }
 }
 

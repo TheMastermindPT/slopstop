@@ -32,6 +32,7 @@ import {
   recordNoteCommand,
 } from "./project-storage-upgrade-fixture.js";
 import { causationTransport } from "./project-upgrade-runtime-fixture.js";
+import { silentRequestDiagnostics } from "./request-diagnostics-fixture.js";
 
 function metadata() {
   return {
@@ -184,10 +185,11 @@ export function startComposedConversationRuntime(root: string) {
   });
   const transport = causationTransport();
   const stopRuntime = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport: transport.harnessSide,
     canonicalProjectApplication: createCanonicalProjectApplication(coordinator),
-    projectStorageApplication: createProjectStorageApplication(storage),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    projectStorageApplication: createProjectStorageApplication(storage, silentRequestDiagnostics),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     harnessVersion: "0.0.0",
     createId: randomUUID,
     now: currentTime,

@@ -28,6 +28,8 @@ import {
 } from "@slopstop/protocol";
 import { Cause, Deferred, Effect, Exit, Fiber } from "effect";
 import type { CanonicalProjectApplication } from "./canonical-project-application.js";
+import { type UntypedRejection, untypedRejection, unwrapRejection } from "./effect-rejection.js";
+import type { HarnessRequestDiagnostics } from "./harness-request-diagnostics.js";
 import type { ProjectStorageApplication } from "./project-storage-application.js";
 import type { ProjectRegistrationFlow } from "./registration/project-registration-flow.js";
 import type { WorkspaceApplication } from "./workspace-application.js";
@@ -48,7 +50,7 @@ type HarnessEdgeRunner = Readonly<{
 type HarnessRuntimeOptions = Readonly<{
   projectListing?: Readonly<{
     list(): Promise<ProjectListResult>;
-    stop: Effect.Effect<void, unknown>;
+    stop: Effect.Effect<void, Error>;
   }>;
   /** Runs the shutdown program and the registration edge; the global runtime by default. */
   runtime?: HarnessEdgeRunner;
@@ -56,6 +58,8 @@ type HarnessRuntimeOptions = Readonly<{
   // The harness's shared application database authority, stopped last when Storage stopped.
   applicationDatabase?: Readonly<{ stop(): Promise<void>; withhold(): void }>;
   transport: HarnessTransport;
+  /** Reports each failure a request boundary answers with a fixed code. */
+  requestDiagnostics: HarnessRequestDiagnostics;
   canonicalProjectApplication: CanonicalProjectApplication;
   projectStorageApplication: ProjectStorageApplication;
   workspaceApplication: WorkspaceApplication;
@@ -106,7 +110,7 @@ function startStop(stop: () => Promise<void> | undefined): Effect.Effect<StopFai
  */
 function startEffectStop(
   runtime: HarnessEdgeRunner,
-  stop: Effect.Effect<void, unknown> | undefined,
+  stop: Effect.Effect<void, Error> | undefined,
 ): Effect.Effect<StopFailures> {
   if (stop === undefined) return Effect.succeed([]);
   const fiber = runtime.runFork(stop);
@@ -173,7 +177,7 @@ function shutdownAfterIntake(
   options: HarnessRuntimeOptions,
   runtime: HarnessEdgeRunner,
   intakeFailures: StopFailures,
-): Effect.Effect<void, unknown> {
+): Effect.Effect<void, UntypedRejection> {
   const storage = stopCanonicalThenStorage(options);
   const listing = startEffectStop(runtime, options.projectListing?.stop);
   return Effect.gen(function* () {
@@ -191,7 +195,7 @@ function shutdownAfterIntake(
       ...listingFailures,
       ...databaseFailures,
     ];
-    if (failures.length > 0) return yield* Effect.fail(runtimeShutdownFailure(failures));
+    if (failures.length > 0) return yield* untypedRejection(runtimeShutdownFailure(failures));
   });
 }
 
@@ -347,6 +351,7 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
     }
     // Once stop began, an interruption is the dispose ending this request: it gets no reply.
     if (stopPromise !== undefined && Cause.hasInterruptsOnly(exit.cause)) return;
+    options.requestDiagnostics.requestFailed("harness.registration", Cause.squash(exit.cause));
     sendInternalFailure(message.messageId);
   };
 
@@ -404,7 +409,8 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
   };
 
   const stopMessages = options.transport.subscribe((message) => {
-    void handleMessage(message).catch(() => {
+    void handleMessage(message).catch((failure: unknown) => {
+      options.requestDiagnostics.requestFailed("harness.message", failure);
       sendInternalFailure(readMessageId(message));
     });
   });
@@ -414,19 +420,22 @@ export function startHarnessRuntime(options: HarnessRuntimeOptions): StopHarness
       options.transport.send(
         createWorkspaceProjectionInvalidatedEvent(nextMetadata(null), validated),
       );
-    } catch {
+    } catch (failure) {
+      options.requestDiagnostics.requestFailed("harness.notification", failure);
       sendInternalFailure(null);
     }
   });
 
   // One completion shared by every stop request, published before any cleanup callback
   // runs so a callback that re-enters stop receives the same promise.
-  const completion = Deferred.makeUnsafe<void, unknown>();
+  const completion = Deferred.makeUnsafe<void, UntypedRejection>();
   return () => {
     if (stopPromise !== undefined) {
       return stopPromise;
     }
-    stopPromise = Effect.runPromise(Deferred.await(completion));
+    stopPromise = Effect.runPromise(Deferred.await(completion)).catch((failure: unknown) => {
+      throw unwrapRejection(failure);
+    });
     const intakeFailures: unknown[] = [];
     try {
       stopMessages();

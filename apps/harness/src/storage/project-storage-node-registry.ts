@@ -242,8 +242,8 @@ const activate = Effect.fn("ProjectStorage.activate")(function* (
   yield* step(() => input.databases.verifySealed(creationPaths.active, creation));
   const client = yield* step(() => input.existingApplicationClient());
   if (client === undefined) {
-    return yield* Effect.fail(
-      new ProjectStorageBrokenError("Project Storage application authority is missing."),
+    return yield* new ProjectStorageBrokenError(
+      "Project Storage application authority is missing.",
     );
   }
   yield* step(() => input.requireApplicationAuthority(client, "current"));

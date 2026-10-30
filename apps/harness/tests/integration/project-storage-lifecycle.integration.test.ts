@@ -40,6 +40,7 @@ import {
   fixedCreationIds,
   transportFor,
 } from "./project-storage-create-fixture.js";
+import { silentRequestDiagnostics } from "./request-diagnostics-fixture.js";
 
 const projectA = decodeStrict(ProjectStorageOpenRequestSchema, {
   projectId: "00000000-0000-4000-8000-000000000071",
@@ -374,6 +375,7 @@ function createCreateBoundaryTransportFixture(
   } satisfies ProjectStorageStoreDependencies;
   const storageApplication = createProjectStorageApplication(
     createProjectStorageOwner(dependencies),
+    silentRequestDiagnostics,
   );
   // The runtime stops Storage only after canonical release (2a shutdown contract), so
   // direct post-stop calls wait for that request instead of assuming the same turn.
@@ -392,9 +394,10 @@ function createCreateBoundaryTransportFixture(
   let generatedId = 600;
   let commandId = 700;
   const stop = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport: transportFor(port1),
     canonicalProjectApplication: unusedCanonicalApplication(),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     projectStorageApplication: application,
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,
@@ -481,11 +484,13 @@ function createStorageTransportFixture(
   let generatedId = 200;
   let commandId = 300;
   const stop = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport: transportFor(port1),
     canonicalProjectApplication: unusedCanonicalApplication(),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     projectStorageApplication: createProjectStorageApplication(
       createProjectStorageOwner(dependencies),
+      silentRequestDiagnostics,
     ),
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,

@@ -10,6 +10,7 @@ import {
 } from "../tests/integration/application-database-close-fixture.js";
 import { unusedCanonicalApplication as createUnusedCanonicalApplication } from "../tests/integration/canonical-runtime-application-fixture.js";
 import { switchDeferred } from "../tests/integration/project-storage-runtime-fixture.js";
+import { silentRequestDiagnostics } from "../tests/integration/request-diagnostics-fixture.js";
 import {
   createUnavailableProjectStorageApplication,
   createUnavailableWorkspaceApplication,
@@ -69,6 +70,7 @@ it("stops intake before exposing one observable Project Storage stop promise", a
     stop: stopProjectStorage,
   };
   const stop = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport,
     canonicalProjectApplication: {
       ...unusedCanonicalApplication(),
@@ -115,14 +117,15 @@ it("shares one stop promise when a cleanup callback re-enters stop", async () =>
     calls.push("projectStorageApplication.stop");
   });
   stop = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport: { send: () => undefined, subscribe: () => stopMessages },
     canonicalProjectApplication: { ...unusedCanonicalApplication(), stop: stopCanonical },
     workspaceApplication: {
-      ...createUnavailableWorkspaceApplication(),
+      ...createUnavailableWorkspaceApplication(silentRequestDiagnostics),
       subscribe: () => stopNotifications,
     },
     projectStorageApplication: {
-      ...createUnavailableProjectStorageApplication(),
+      ...createUnavailableProjectStorageApplication(silentRequestDiagnostics),
       stop: stopProjectStorage,
     },
     harnessVersion: "0.0.0",
@@ -151,6 +154,7 @@ function cleanupRecordingRuntime(
   }>,
 ) {
   return startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport: { send: () => undefined, subscribe: () => () => void stops.stopMessages() },
     canonicalProjectApplication: {
       ...unusedCanonicalApplication(),
@@ -159,11 +163,11 @@ function cleanupRecordingRuntime(
       },
     },
     workspaceApplication: {
-      ...createUnavailableWorkspaceApplication(),
+      ...createUnavailableWorkspaceApplication(silentRequestDiagnostics),
       subscribe: () => () => void stops.stopNotifications(),
     },
     projectStorageApplication: {
-      ...createUnavailableProjectStorageApplication(),
+      ...createUnavailableProjectStorageApplication(silentRequestDiagnostics),
       stop: stops.storageStop,
     },
     harnessVersion: "0.0.0",
@@ -248,10 +252,11 @@ function applicationDatabaseShutdownFixture(canonicalStop: () => Promise<void>) 
   const withhold = vi.fn();
   const listingRelease = switchDeferred<void>();
   const stop = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport: { send: () => undefined, subscribe: () => () => undefined },
     canonicalProjectApplication: { ...unusedCanonicalApplication(), stop: canonicalStop },
     projectStorageApplication: {
-      ...createUnavailableProjectStorageApplication(),
+      ...createUnavailableProjectStorageApplication(silentRequestDiagnostics),
       stop: async () => {
         calls.push("storage");
       },
@@ -272,7 +277,7 @@ function applicationDatabaseShutdownFixture(canonicalStop: () => Promise<void>) 
       },
       withhold,
     },
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     harnessVersion: "0.0.0",
     createId: () => "00000000-0000-4000-8000-000000000002",
     now: () => "2026-08-14T12:00:01.000Z",
@@ -316,9 +321,7 @@ it.each([
     await authority.admitClient(fakeClient()).transaction("write");
     const databaseStopCalled = switchDeferred<void>();
     const stop = startHarnessRuntime({
-      transport: { send: () => undefined, subscribe: () => () => undefined },
-      canonicalProjectApplication: unusedCanonicalApplication(),
-      projectStorageApplication: createUnavailableProjectStorageApplication(),
+      ...unusedRuntimeOptions(),
       projectListing: {
         list: async () => {
           throw new Error("Listing is not used by this test.");
@@ -332,10 +335,6 @@ it.each([
         },
         withhold: () => authority.withhold(),
       },
-      workspaceApplication: createUnavailableWorkspaceApplication(),
-      harnessVersion: "0.0.0",
-      createId: () => "00000000-0000-4000-8000-000000000002",
-      now: () => "2026-08-14T12:00:01.000Z",
     });
     const stopping = stop();
     const seen = track(stopping);
@@ -359,15 +358,27 @@ it.each([
   }
 });
 
+/** The runtime options a shutdown row does not read: a silent port and unused applications. */
+function unusedRuntimeOptions() {
+  return {
+    requestDiagnostics: silentRequestDiagnostics,
+    transport: { send: () => undefined, subscribe: () => () => undefined },
+    canonicalProjectApplication: unusedCanonicalApplication(),
+    projectStorageApplication: createUnavailableProjectStorageApplication(silentRequestDiagnostics),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
+    harnessVersion: "0.0.0",
+    createId: () => "00000000-0000-4000-8000-000000000002",
+    now: () => "2026-08-14T12:00:01.000Z",
+  };
+}
+
 /** A runtime whose only cleanup is `listingStop`, run on `runtime` when one is given. */
 function listingOnlyRuntime(
-  listingStop: Effect.Effect<void, unknown>,
+  listingStop: Effect.Effect<void, Error>,
   runtime?: ManagedRuntime.ManagedRuntime<never, never>,
 ) {
   return startHarnessRuntime({
-    transport: { send: () => undefined, subscribe: () => () => undefined },
-    canonicalProjectApplication: unusedCanonicalApplication(),
-    projectStorageApplication: createUnavailableProjectStorageApplication(),
+    ...unusedRuntimeOptions(),
     projectListing: {
       list: async () => {
         throw new Error("Listing is not used by this test.");
@@ -375,10 +386,6 @@ function listingOnlyRuntime(
       stop: listingStop,
     },
     ...(runtime === undefined ? {} : { runtime }),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
-    harnessVersion: "0.0.0",
-    createId: () => "00000000-0000-4000-8000-000000000002",
-    now: () => "2026-08-14T12:00:01.000Z",
   });
 }
 
@@ -453,14 +460,15 @@ it("settles the stop when the process runtime is disposed while Storage stops", 
   try {
     const runtime = builtProcessRuntime();
     const stop = startHarnessRuntime({
+      requestDiagnostics: silentRequestDiagnostics,
       transport: { send: () => undefined, subscribe: () => () => undefined },
       canonicalProjectApplication: { ...unusedCanonicalApplication(), holdsProject: () => false },
       projectStorageApplication: {
-        ...createUnavailableProjectStorageApplication(),
+        ...createUnavailableProjectStorageApplication(silentRequestDiagnostics),
         stop: () => new Promise<void>(() => undefined),
       },
       runtime,
-      workspaceApplication: createUnavailableWorkspaceApplication(),
+      workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
       harnessVersion: "0.0.0",
       createId: () => "00000000-0000-4000-8000-000000000002",
       now: () => "2026-08-14T12:00:01.000Z",
@@ -478,9 +486,11 @@ it("rejects a stop first called after the process runtime is disposed", async ()
     const stopMessages = vi.fn();
     const stopNotifications = vi.fn();
     const stop = startHarnessRuntime({
+      requestDiagnostics: silentRequestDiagnostics,
       transport: { send: () => undefined, subscribe: () => stopMessages },
       canonicalProjectApplication: unusedCanonicalApplication(),
-      projectStorageApplication: createUnavailableProjectStorageApplication(),
+      projectStorageApplication:
+        createUnavailableProjectStorageApplication(silentRequestDiagnostics),
       projectListing: {
         list: async () => {
           throw new Error("Listing is not used by this test.");
@@ -489,7 +499,7 @@ it("rejects a stop first called after the process runtime is disposed", async ()
       },
       runtime,
       workspaceApplication: {
-        ...createUnavailableWorkspaceApplication(),
+        ...createUnavailableWorkspaceApplication(silentRequestDiagnostics),
         subscribe: () => stopNotifications,
       },
       harnessVersion: "0.0.0",
@@ -525,13 +535,15 @@ it("leaves no unhandled rejection when a stop first called after the dispose mee
       return Promise.reject(canonicalFailure);
     };
     const stop = startHarnessRuntime({
+      requestDiagnostics: silentRequestDiagnostics,
       transport: { send: () => undefined, subscribe: () => () => undefined },
       canonicalProjectApplication: {
         ...unusedCanonicalApplication(),
         holdsProject: () => false,
         stop: canonicalStop,
       },
-      projectStorageApplication: createUnavailableProjectStorageApplication(),
+      projectStorageApplication:
+        createUnavailableProjectStorageApplication(silentRequestDiagnostics),
       projectListing: {
         list: async () => {
           throw new Error("Listing is not used by this test.");
@@ -539,7 +551,7 @@ it("leaves no unhandled rejection when a stop first called after the dispose mee
         stop: Effect.void,
       },
       runtime,
-      workspaceApplication: createUnavailableWorkspaceApplication(),
+      workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
       harnessVersion: "0.0.0",
       createId: () => "00000000-0000-4000-8000-000000000002",
       now: () => "2026-08-14T12:00:01.000Z",

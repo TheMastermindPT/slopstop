@@ -7,7 +7,7 @@ import type {
   WriterReleaseFailureCode,
 } from "@slopstop/protocol";
 import { CanonicalProjectCommandResultSchema, decodeStrict } from "@slopstop/protocol";
-import { Cause, Effect, Exit } from "effect";
+import { Cause, Data, Effect, Exit } from "effect";
 import { snapshotCanonicalCommand } from "./canonical-json.js";
 import {
   type ConversationWork,
@@ -24,6 +24,7 @@ import {
 import type { CanonicalWriterLease } from "./storage/canonical-writer-lease.js";
 import { CanonicalWriterLeaseError } from "./storage/canonical-writer-lease.js";
 import { createPermitLock, type PermitLock, withPermitEffect } from "./storage/permit-lock.js";
+import { type NativeErrorFields, nativeErrorFields } from "./storage/project-storage-errors.js";
 import { retryableAttempt } from "./storage/retryable-attempt.js";
 export type CanonicalProjectWriterReleaseFailureCode =
   | "WRITER_FENCE_STALE"
@@ -59,13 +60,11 @@ export type CanonicalProjectWriterInput = Readonly<{
   repository: CanonicalCommandRepository;
   lease: CanonicalWriterLease;
 }>;
-export class CanonicalProjectWriterReleaseError extends Error {
-  override readonly name = "CanonicalProjectWriterReleaseError";
-  constructor(
-    readonly code: CanonicalProjectWriterReleaseFailureCode,
-    options?: ErrorOptions,
-  ) {
-    super("Canonical Project Writer release failed.", options);
+export class CanonicalProjectWriterReleaseError extends Data.TaggedError(
+  "CanonicalProjectWriterReleaseError",
+)<NativeErrorFields & { readonly code: CanonicalProjectWriterReleaseFailureCode }> {
+  constructor(code: CanonicalProjectWriterReleaseFailureCode, options?: ErrorOptions) {
+    super({ ...nativeErrorFields("Canonical Project Writer release failed.", options), code });
   }
 }
 

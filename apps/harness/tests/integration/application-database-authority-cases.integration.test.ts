@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { expect, it } from "vitest";
+import { UntypedRejection } from "../../src/effect-rejection.js";
 import { createApplicationDatabaseAuthority } from "../../src/storage/application-database-authority.js";
 import { ApplicationDatabaseFault } from "../../src/storage/application-database-migration.js";
 import { createWorkerLocalLibsqlClient } from "../../src/storage/local-libsql-worker-client.js";
@@ -322,6 +323,10 @@ it.for(joiners)(
         const [created, joinedResult] = await Promise.allSettled([creator, joined]);
         expect(created).toEqual({ status: "rejected", reason: failure });
         expect(joinedResult).toEqual({ status: "rejected", reason: failure });
+        if (joinedResult.status === "rejected") {
+          expect(joinedResult.reason).not.toBeInstanceOf(UntypedRejection);
+          expect(joinedResult.reason).toBe(failure);
+        }
         expect(gated.opens()).toBe(1);
         await expect(lstat(gated.authority.applicationDatabasePath)).rejects.toMatchObject({
           code: "ENOENT",

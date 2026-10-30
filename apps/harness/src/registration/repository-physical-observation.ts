@@ -3,6 +3,7 @@ import type { BigIntStats } from "node:fs";
 import { type FileHandle, lstat, open, stat } from "node:fs/promises";
 import path from "node:path";
 import { decodeStrict } from "@slopstop/protocol";
+import { Data } from "effect";
 import { sha256Hex } from "../sha256-text.js";
 import { storageErrorCode } from "../storage/project-storage-node-errors.js";
 import { observeRepositoryDirectory } from "../storage/repository-identity-observer.js";
@@ -24,9 +25,12 @@ type PhysicalFailure =
       status: "rejected";
       code: "REPOSITORY_INVALID" | "REPOSITORY_IDENTITY_CHANGED";
     }>;
-class PhysicalFault extends Error {
-  constructor(readonly result: PhysicalFailure) {
-    super("Physical repository observation failed.");
+class PhysicalFault extends Data.TaggedError("PhysicalFault")<{
+  readonly message: string;
+  readonly result: PhysicalFailure;
+}> {
+  constructor(result: PhysicalFailure) {
+    super({ message: "Physical repository observation failed.", result });
   }
 }
 const changed = { status: "rejected", code: "REPOSITORY_IDENTITY_CHANGED" } as const;

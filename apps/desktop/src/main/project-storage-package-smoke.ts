@@ -4,6 +4,7 @@ import {
   ProjectIdSchema,
   ProjectStorageCreateRequestIdSchema,
 } from "@slopstop/protocol";
+import { Data } from "effect";
 import type { ProjectStorageBridgeClient } from "./project-storage-bridge.js";
 
 const absentProjectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000102");
@@ -42,11 +43,12 @@ type ProjectStoragePackageSmokeFailureStage =
   | "witness-project-create"
   | "witness-create-reason";
 
-class ProjectStoragePackageSmokeError extends Error {
-  override readonly name = "ProjectStoragePackageSmokeError";
-
-  constructor(readonly stage: ProjectStoragePackageSmokeFailureStage) {
-    super("Packaged Project Storage smoke failed.");
+class ProjectStoragePackageSmokeError extends Data.TaggedError("ProjectStoragePackageSmokeError")<{
+  readonly message: string;
+  readonly stage: ProjectStoragePackageSmokeFailureStage;
+}> {
+  constructor(stage: ProjectStoragePackageSmokeFailureStage) {
+    super({ message: "Packaged Project Storage smoke failed.", stage });
   }
 }
 

@@ -1,21 +1,23 @@
-import {
-  decodeStrictResult,
-  type ProjectId,
-  type ProjectRegistrationRequest,
-  type ProjectRegistrationResult,
+import type {
+  ProjectId,
+  ProjectRegistrationRequest,
+  ProjectRegistrationResult,
 } from "@slopstop/protocol";
-import { Effect, Result, Schema } from "effect";
+import { Effect, Schema } from "effect";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import type { UtcClock } from "../utc-clock.js";
 import type { ProjectRegistrationFlow } from "./project-registration-flow.js";
 import { readProjectRegistrationRecords } from "./registration-confirmation-store.js";
 import { failureOf } from "./registration-step.js";
 import type { RegistrationDatabaseOptions } from "./registry-database.js";
-import { registrationClock, registryRows } from "./registry-database.js";
-import { RegistryReadFailed, registryRead, withRegistryTransaction } from "./registry-effect.js";
+import { decodeRegistryRows, registrationClock } from "./registry-database.js";
+import {
+  type RegistryReadFailed,
+  registryRead,
+  withRegistryTransaction,
+} from "./registry-effect.js";
 
 const hiddenRowsSchema = Schema.Array(Schema.Struct({ projectId: Schema.String }));
-const corrupt = new RegistryReadFailed({ failure: { status: "broken", code: "REGISTRY_CORRUPT" } });
 
 const statement = (
   transaction: LocalLibsqlTransaction,
@@ -27,15 +29,12 @@ const statement = (
 export function readHiddenProjectIds(
   transaction: LocalLibsqlTransaction,
 ): Effect.Effect<ReadonlySet<string>, RegistryReadFailed> {
-  return Effect.flatMap(
-    statement(transaction, "SELECT project_id AS projectId FROM registration_list_visibility"),
-    (rows) => {
-      const decoded = decodeStrictResult(hiddenRowsSchema, registryRows(rows));
-      return Result.isSuccess(decoded)
-        ? Effect.succeed(new Set(decoded.success.map((row) => row.projectId)))
-        : Effect.fail(corrupt);
-    },
-  );
+  return registryRead(transaction, async (open) => {
+    const rows = await open.execute(
+      "SELECT project_id AS projectId FROM registration_list_visibility",
+    );
+    return new Set(decodeRegistryRows(hiddenRowsSchema, rows).map((row) => row.projectId));
+  });
 }
 
 /** Brings a removed Project back to the saved list. */

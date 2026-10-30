@@ -11,10 +11,10 @@ import {
   activateReplayRepository,
   alterFence,
   appliedReceipt,
-  authorityPassed,
   corruptReplayResult,
   createSettlementFixture,
   expectAdmissionRejection,
+  expectAppliedConflictWithoutRejection,
   expectAppliedRows,
   expectBrokenReplay,
   expectConflictHistory,
@@ -25,6 +25,7 @@ import {
   expectFirstRejected,
   expectForbiddenUnchangedChild,
   expectMalformedSequenceState,
+  expectNoSettlementWork,
   expectOriginalChildrenBeforeConflict,
   expectOtherProjectRows,
   expectPersistedRejectionCorruption,
@@ -42,8 +43,10 @@ import {
   interleavedSequenceCases,
   knownBodyFailure,
   observeIssuedSqlFailure,
+  orphanTheAppliedReceipt,
   prepareUnchanged,
   registerCounter,
+  rejectionInsertFault,
   settlementBarrier,
   settlementRequest,
   settlementText,
@@ -55,6 +58,13 @@ import {
   fixture as writerFixture,
   times as writerTimes,
 } from "./canonical-command-repository-fixture.js";
+import {
+  decodeFailure,
+  type LedgerFailure,
+  refused,
+  shapeFailures,
+  syntaxFailure,
+} from "./canonical-ledger-failure.js";
 import {
   admissionCases,
   applyCounter,
@@ -108,7 +118,15 @@ it.each([
   "allocates one safe Project sequence per first settlement and replays at the bound: G11 MAX prior conflict %s new conflict %s",
   expectSequenceBound,
 );
-it.each([-1, 0.5, 9007199254740992, "1", null, "duplicate", "missing"])(
+it.each([
+  [-1, decodeFailure],
+  [0.5, decodeFailure],
+  [9007199254740992, decodeFailure],
+  ["1", decodeFailure],
+  [null, decodeFailure],
+  ["duplicate", shapeFailures.exactlyOne],
+  ["missing", shapeFailures.exactlyOne],
+] as const)(
   "allocates one safe Project sequence per first settlement and replays at the bound: G11 malformed state %s",
   expectMalformedSequenceState,
 );
@@ -127,27 +145,40 @@ it(
   "persists distinct conflicts without changing original command authority: G9 replay complete history",
   expectConflictHistory,
 );
+const conflictAuthority = refused("CONFLICT_RECEIPT_AUTHORITY");
 it.each([
-  { outcome: "applied" },
-  { outcome: "unchanged" },
-  { receiptId: "66666666-6666-4666-8666-666666666501" },
-  { projectSequence: 1 },
-  { projectSequence: 3 },
-  { fingerprint: "a".repeat(64) },
-  { commandType: "conformance.counter.other" },
-  { commandVersion: 2 },
-  { commandId: "44444444-4444-4444-8444-444444444502" },
-  { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
-  { writerGeneration: 2, generationNumber: 2 },
-  { generationProjectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
-  { generationNumber: 2 },
-])(
+  [{ outcome: "applied" }, refused("NON_REJECTED_HAS_REJECTIONS")],
+  [{ outcome: "unchanged" }, refused("NON_REJECTED_HAS_REJECTIONS")],
+  [{ receiptId: "66666666-6666-4666-8666-666666666501" }, conflictAuthority],
+  [{ projectSequence: 1 }, conflictAuthority],
+  [{ projectSequence: 3 }, conflictAuthority],
+  [{ fingerprint: "a".repeat(64) }, conflictAuthority],
+  [{ commandType: "conformance.counter.other" }, refused("CONFLICT_RECEIPT_COMMAND")],
+  [{ commandVersion: 2 }, refused("CONFLICT_RECEIPT_COMMAND")],
+  // Project and generation Project agree with each other but not with the command (mutant 3).
+  [
+    {
+      projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2",
+      generationProjectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2",
+    },
+    conflictAuthority,
+  ],
+  // Both checks refuse this receipt; the authority check comes first (binding 6).
+  [{ commandType: "conformance.counter.other", projectSequence: 1 }, conflictAuthority],
+  [{ commandId: "44444444-4444-4444-8444-444444444502" }, conflictAuthority],
+  [{ projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" }, conflictAuthority],
+  [{ writerGeneration: 2, generationNumber: 2 }, conflictAuthority],
+  [{ generationProjectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" }, conflictAuthority],
+  [{ generationNumber: 2 }, conflictAuthority],
+] as const)(
   "rejects corrupted replay children and conflicting receipts: G9 conflict requested %j",
-  (changes) => expectCorruptedConflict("requested", changes),
+  (changes, expected) => expectCorruptedConflict("requested", changes, expected),
 );
+it("rejects corrupted replay children and conflicting receipts: G9 conflict applied without rejection", () =>
+  expectAppliedConflictWithoutRejection(refused("CONFLICT_RECEIPT_OUTCOME")));
 it.each(["TEST_COUNTER_REJECTED", "COMMAND_TYPE_UNSUPPORTED", "COMMAND_PAYLOAD_INVALID"])(
   "rejects corrupted replay children and conflicting receipts: G9 conflict code %s",
-  (code) => expectCorruptedConflict("rejections", { code }),
+  (code) => expectCorruptedConflict("rejections", { code }, refused("CONFLICT_RECEIPT_OUTCOME")),
 );
 
 it.each(["default", "transform"] as const)(
@@ -156,18 +187,19 @@ it.each(["default", "transform"] as const)(
 );
 it.each(["events", "rejections"] as const)(
   "rejects corrupted replay children and conflicting receipts: G9 original children before first conflict %s",
-  expectOriginalChildrenBeforeConflict,
+  (target) => expectOriginalChildrenBeforeConflict(target, shapeFailures.aliases),
 );
 
 it.each([false, true])(
   "rolls back rejected handler writes and hashes safe rejection metadata: G8 first %s",
   expectFirstRejected,
 );
-it(
-  "rejects corrupted replay children and conflicting receipts: G8 rejected events",
-  expectRejectedEventExclusion,
-);
-it.each(["hash", "details"] as const)(
+it("rejects corrupted replay children and conflicting receipts: G8 rejected events", () =>
+  expectRejectedEventExclusion(refused("NON_APPLIED_HAS_EVENTS")));
+it.each([
+  ["hash", refused("REJECTION_DETAILS_INTEGRITY")],
+  ["details", decodeFailure],
+] as const)(
   "rejects corrupted replay children and conflicting receipts: G8 persisted %s",
   expectPersistedRejectionCorruption,
 );
@@ -175,7 +207,11 @@ it(
   "revokes handler capabilities and observes swallowed or unawaited SQL failure: G8 retained rejection",
   expectRejectedOutputRetention,
 );
-it.each(["throw", 0, 2] as const)(
+it.each([
+  ["throw", { sentinel: rejectionInsertFault }],
+  [0, shapeFailures.changedOnce],
+  [2, shapeFailures.changedOnce],
+] as const)(
   "rolls back known settlement body faults at every mutation stage: G8 rejection INSERT %s",
   expectRejectionInsertFault,
 );
@@ -189,50 +225,71 @@ it.each([
   "replays exact receipts across repository and activation replacement: G8 retryable %s replacement %s",
   expectRejectedReplay,
 );
-it.each(["absent", "duplicate", "duplicate alias", "row width", "extra alias"])(
+it.each([
+  ["absent", shapeFailures.exactlyOne],
+  ["duplicate", shapeFailures.exactlyOne],
+  ["duplicate alias", shapeFailures.aliases],
+  ["row width", shapeFailures.width],
+  ["extra alias", decodeFailure],
+] as const)(
   "rejects corrupted replay children and conflicting receipts: G8 rejection shape %s",
-  (shape) => expectCorruptedRejectedReplay({}, shape),
+  (shape, expected) => expectCorruptedRejectedReplay({}, expected, shape),
 );
+const rejectionBinding = refused("REJECTION_SOURCE_BINDING");
 it.each([
-  { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
-  { receiptId: "66666666-6666-4666-8666-666666666502" },
-  { receiptOutcome: "applied" },
-  { projectSequence: 2 },
-  { retryable: -1 },
-  { retryable: 2 },
-  { retryable: 0.5 },
-  { retryable: "0" },
-  { retryable: null },
-  { code: "" },
-  { code: "lowercase" },
-  { code: "A".repeat(65) },
-  { code: "COMMAND_TYPE_UNSUPPORTED", retryable: 1 },
-  { code: "COMMAND_PAYLOAD_INVALID", retryable: 1 },
-  { code: "IDEMPOTENCY_CONFLICT", retryable: 1 },
-])(
+  [{ projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" }, rejectionBinding],
+  [{ receiptId: "66666666-6666-4666-8666-666666666502" }, rejectionBinding],
+  [{ receiptOutcome: "applied" }, decodeFailure],
+  [{ projectSequence: 2 }, rejectionBinding],
+  [{ retryable: -1 }, decodeFailure],
+  [{ retryable: 2 }, decodeFailure],
+  [{ retryable: 0.5 }, decodeFailure],
+  [{ retryable: "0" }, decodeFailure],
+  [{ retryable: null }, decodeFailure],
+  [{ code: "" }, decodeFailure],
+  [{ code: "lowercase" }, decodeFailure],
+  [{ code: "A".repeat(65) }, decodeFailure],
+  [{ code: "COMMAND_TYPE_UNSUPPORTED", retryable: 1 }, decodeFailure],
+  [{ code: "COMMAND_PAYLOAD_INVALID", retryable: 1 }, decodeFailure],
+  [{ code: "IDEMPOTENCY_CONFLICT", retryable: 1 }, decodeFailure],
+] as const)(
   "rejects corrupted replay children and conflicting receipts: G8 rejection fields %j",
-  (changes) => expectCorruptedRejectedReplay(changes),
+  (changes, expected) => expectCorruptedRejectedReplay(changes, expected),
 );
+const detailsIntegrity = refused("REJECTION_DETAILS_INTEGRITY");
 it.each([
-  ["malformed", "{"],
-  ["version", '{"version":2}'],
-  ["private", '{"private":"secret","version":1}'],
-  ["array", "[1]"],
-  ["empty", "{}"],
-  ["null", "null"],
-  ["whitespace", '{ "version":1}'],
-  ["duplicate key", '{"version":1,"version":1}'],
-])(
+  ["malformed", "{", syntaxFailure],
+  ["version", '{"version":2}', decodeFailure],
+  ["private", '{"private":"secret","version":1}', decodeFailure],
+  ["array", "[1]", decodeFailure],
+  ["empty", "{}", decodeFailure],
+  ["null", "null", decodeFailure],
+  ["whitespace", '{ "version":1}', detailsIntegrity],
+  ["duplicate key", '{"version":1,"version":1}', detailsIntegrity],
+] as const)(
   "rejects corrupted replay children and conflicting receipts: G8 rejection details %s",
-  (_name, text) =>
-    expectCorruptedRejectedReplay({
-      detailsText: text,
-      detailsHash: createHash("sha256").update(text).digest("hex"),
-    }),
+  (_name, text, expected) =>
+    expectCorruptedRejectedReplay(
+      { detailsText: text, detailsHash: createHash("sha256").update(text).digest("hex") },
+      expected,
+    ),
 );
-it.each(["a".repeat(64), "short", "A".repeat(64)])(
+// Noncanonical text stored with the hash of its canonical form: only the text check refuses it.
+it("rejects corrupted replay children and conflicting receipts: G8 rejection details noncanonical canonical hash", () =>
+  expectCorruptedRejectedReplay(
+    {
+      detailsText: '{ "version":1}',
+      detailsHash: createHash("sha256").update('{"version":1}').digest("hex"),
+    },
+    detailsIntegrity,
+  ));
+it.each([
+  ["a".repeat(64), detailsIntegrity],
+  ["short", decodeFailure],
+  ["A".repeat(64), decodeFailure],
+] as const)(
   "rejects corrupted replay children and conflicting receipts: G8 rejection hash %s",
-  (detailsHash) => expectCorruptedRejectedReplay({ detailsHash }),
+  (detailsHash, expected) => expectCorruptedRejectedReplay({ detailsHash }, expected),
 );
 
 it.each(["equal", "writes"])(
@@ -301,7 +358,10 @@ it.each(["same repository", "replacement"])(
   },
 );
 
-it.each(["events", "rejections"] as const)(
+it.each([
+  ["events", decodeFailure],
+  ["rejections", refused("NON_REJECTED_HAS_REJECTIONS")],
+] as const)(
   "rejects corrupted replay children and conflicting receipts: G7 unchanged %s",
   expectForbiddenUnchangedChild,
 );
@@ -347,78 +407,104 @@ it.each(["original", "reordered", "zero events"])(
   },
 );
 
-function expectNoSettlementWork(f: Awaited<ReturnType<typeof createSettlementFixture>>): void {
-  expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
-  expect(f.dependencies.createReceiptId).not.toHaveBeenCalled();
-  expect(f.dependencies.createEventId).not.toHaveBeenCalled();
-  expect(f.dependencies.now).not.toHaveBeenCalled();
-}
-
-function expectFenceFirst(f: Awaited<ReturnType<typeof createSettlementFixture>>): void {
-  expect(f.calls.slice(0, 2)).toEqual([
-    "begin:write",
-    expect.stringContaining("FROM writer_fence"),
-  ]);
-}
-
+const originalAuthority = refused("ORIGINAL_RECEIPT_AUTHORITY");
 const originalAuthorityCases: ReadonlyArray<
   readonly [
     string,
     "pointer" | "original" | "count",
     Record<string, string | number | null>,
+    LedgerFailure,
     string?,
   ]
 > = [
-  ["orphan receipt", "pointer", {}, "absent"],
-  ["duplicate pointer", "pointer", {}, "duplicate"],
-  ["pointer alias", "pointer", {}, "duplicate alias"],
-  ["pointer width", "pointer", {}, "row width"],
-  ["pointer extra", "pointer", {}, "extra alias"],
-  ["absent original", "original", {}, "absent"],
-  ["duplicate original", "original", {}, "duplicate"],
-  ["original alias", "original", {}, "duplicate alias"],
-  ["original width", "original", {}, "row width"],
-  ["original extra", "original", {}, "extra alias"],
-  ["pointer absent receipt ID", "pointer", { receiptId: "66666666-6666-4666-8666-666666666506" }],
-  ["pointer fingerprint mismatch", "pointer", { fingerprint: "a".repeat(64) }],
-  ["pointer fingerprint malformed", "pointer", { fingerprint: "bad" }],
-  ["pointer Project", "pointer", { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" }],
-  ["pointer command", "pointer", { commandId: "44444444-4444-4444-8444-444444444502" }],
-  ["pointer time", "pointer", { createdAt: "2026-09-05T12:00:02.000Z" }],
-  ["pointer time malformed", "pointer", { createdAt: "2026-09-05T12:00Z" }],
-  ["receipt Project", "original", { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" }],
-  ["receipt command", "original", { commandId: "44444444-4444-4444-8444-444444444502" }],
-  ["receipt identity", "original", { receiptId: "66666666-6666-4666-8666-666666666506" }],
-  ["receipt fingerprint", "original", { fingerprint: "a".repeat(64) }],
-  ["receipt fingerprint malformed", "original", { fingerprint: "bad" }],
-  ["receipt sequence above current", "original", { projectSequence: 2 }],
-  ["receipt generation above current", "original", { writerGeneration: 2, generationNumber: 2 }],
-  ["receipt missing generation", "original", { generationNumber: null }],
-  ["receipt wrong generation", "original", { generationNumber: 2 }],
+  ["orphan receipt", "pointer", {}, refused("ORIGINAL_RECEIPT_ORPHANED"), "absent"],
+  ["duplicate pointer", "pointer", {}, shapeFailures.exactlyOne, "duplicate"],
+  ["pointer alias", "pointer", {}, shapeFailures.aliases, "duplicate alias"],
+  ["pointer width", "pointer", {}, shapeFailures.width, "row width"],
+  ["pointer extra", "pointer", {}, decodeFailure, "extra alias"],
+  ["absent original", "original", {}, shapeFailures.exactlyOne, "absent"],
+  ["duplicate original", "original", {}, shapeFailures.exactlyOne, "duplicate"],
+  ["original alias", "original", {}, shapeFailures.aliases, "duplicate alias"],
+  ["original width", "original", {}, shapeFailures.width, "row width"],
+  ["original extra", "original", {}, decodeFailure, "extra alias"],
+  [
+    "pointer absent receipt ID",
+    "pointer",
+    { receiptId: "66666666-6666-4666-8666-666666666506" },
+    shapeFailures.exactlyOne,
+  ],
+  ["pointer fingerprint mismatch", "pointer", { fingerprint: "a".repeat(64) }, originalAuthority],
+  ["pointer fingerprint malformed", "pointer", { fingerprint: "bad" }, decodeFailure],
+  [
+    "pointer Project",
+    "pointer",
+    { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
+    originalAuthority,
+  ],
+  [
+    "pointer command",
+    "pointer",
+    { commandId: "44444444-4444-4444-8444-444444444502" },
+    originalAuthority,
+  ],
+  ["pointer time", "pointer", { createdAt: "2026-09-05T12:00:02.000Z" }, originalAuthority],
+  ["pointer time malformed", "pointer", { createdAt: "2026-09-05T12:00Z" }, decodeFailure],
+  [
+    "receipt Project",
+    "original",
+    { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
+    originalAuthority,
+  ],
+  [
+    "receipt command",
+    "original",
+    { commandId: "44444444-4444-4444-8444-444444444502" },
+    originalAuthority,
+  ],
+  [
+    "receipt identity",
+    "original",
+    { receiptId: "66666666-6666-4666-8666-666666666506" },
+    originalAuthority,
+  ],
+  ["receipt fingerprint", "original", { fingerprint: "a".repeat(64) }, originalAuthority],
+  ["receipt fingerprint malformed", "original", { fingerprint: "bad" }, decodeFailure],
+  ["receipt sequence above current", "original", { projectSequence: 2 }, originalAuthority],
+  [
+    "receipt generation above current",
+    "original",
+    { writerGeneration: 2, generationNumber: 2 },
+    originalAuthority,
+  ],
+  ["receipt missing generation", "original", { generationNumber: null }, decodeFailure],
+  ["receipt wrong generation", "original", { generationNumber: 2 }, originalAuthority],
   [
     "receipt generation other Project",
     "original",
     { generationProjectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
+    originalAuthority,
   ],
-  ...[null, "1", -1, 0.5, 9007199254740992, 0].map(
-    (value) => [`count ${value}`, "count", { receiptCount: value }] as const,
+  ...[null, "1", -1, 0.5, 9007199254740992].map(
+    (value) => [`count ${value}`, "count", { receiptCount: value }, decodeFailure] as const,
   ),
-  ["count absent", "count", {}, "absent"],
-  ["count duplicate", "count", {}, "duplicate"],
-  ["count alias", "count", {}, "duplicate alias"],
-  ["count width", "count", {}, "row width"],
+  ["count 0", "count", { receiptCount: 0 }, originalAuthority],
+  ["count absent", "count", {}, shapeFailures.exactlyOne, "absent"],
+  ["count duplicate", "count", {}, shapeFailures.exactlyOne, "duplicate"],
+  ["count alias", "count", {}, shapeFailures.aliases, "duplicate alias"],
+  ["count width", "count", {}, shapeFailures.width, "row width"],
 ];
 
 it.each(
-  originalAuthorityCases.map(([name, target, changes, shape]) => ({
+  originalAuthorityCases.map(([name, target, changes, expected, shape]) => ({
     name,
     target,
     changes,
+    expected,
     shape,
   })),
 )(
   "fails closed on broken original idempotency authority: G6 binding $name",
-  async ({ target, changes, shape }) => {
+  async ({ target, changes, expected, shape }) => {
     const f = await createSettlementFixture();
     try {
       registerCounter(f);
@@ -427,9 +513,10 @@ it.each(
         receipt: appliedReceipt,
       });
       corruptReplayResult(f, target, changes, shape);
-      await expectBrokenReplay(f);
+      await expectBrokenReplay(f, expected);
       await expectBrokenReplay(
         f,
+        expected,
         snapshotCanonicalCommand(settlementRequest.projectId, {
           ...settlementRequest.command,
           payload: { value: 8 },
@@ -441,28 +528,32 @@ it.each(
   },
 );
 
-const replayChildCases: ReadonlyArray<readonly [string, Record<string, string | number | null>]> = [
-  ["Project binding", { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" }],
-  ["receipt binding", { receiptId: "66666666-6666-4666-8666-666666666506" }],
-  ["outcome binding", { receiptOutcome: "unchanged" }],
-  ["sequence binding", { projectSequence: 2 }],
-  ["time binding", { occurredAt: "2026-09-05T12:00:01.000001Z" }],
-  ["time minute-only", { occurredAt: "2026-09-05T12:00Z" }],
-  ["aggregate malformed", { aggregateId: "invalid" }],
-  ["aggregate uppercase", { aggregateId: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAA1" }],
-  ["aggregate nil", { aggregateId: "00000000-0000-0000-0000-000000000000" }],
-  ["aggregate max", { aggregateId: "ffffffff-ffff-ffff-ffff-ffffffffffff" }],
-  ["aggregate blank type", { aggregateType: " " }],
-  ["event blank type", { eventType: " " }],
+const eventBinding = refused("EVENT_SOURCE_BINDING");
+const eventIntegrity = refused("EVENT_PAYLOAD_INTEGRITY");
+const replayChildCases: ReadonlyArray<
+  readonly [string, Record<string, string | number | null>, LedgerFailure]
+> = [
+  ["Project binding", { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" }, eventBinding],
+  ["receipt binding", { receiptId: "66666666-6666-4666-8666-666666666506" }, eventBinding],
+  ["outcome binding", { receiptOutcome: "unchanged" }, decodeFailure],
+  ["sequence binding", { projectSequence: 2 }, eventBinding],
+  ["time binding", { occurredAt: "2026-09-05T12:00:01.000001Z" }, eventBinding],
+  ["time minute-only", { occurredAt: "2026-09-05T12:00Z" }, decodeFailure],
+  ["aggregate malformed", { aggregateId: "invalid" }, decodeFailure],
+  ["aggregate uppercase", { aggregateId: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAA1" }, decodeFailure],
+  ["aggregate nil", { aggregateId: "00000000-0000-0000-0000-000000000000" }, decodeFailure],
+  ["aggregate max", { aggregateId: "ffffffff-ffff-ffff-ffff-ffffffffffff" }, decodeFailure],
+  ["aggregate blank type", { aggregateType: " " }, decodeFailure],
+  ["event blank type", { eventType: " " }, decodeFailure],
   ...[0, -1, 0.5, 9007199254740992].flatMap((value) => [
-    [`aggregate version ${value}`, { aggregateVersion: value }] as const,
-    [`event version ${value}`, { eventVersion: value }] as const,
+    [`aggregate version ${value}`, { aggregateVersion: value }, decodeFailure] as const,
+    [`event version ${value}`, { eventVersion: value }, decodeFailure] as const,
   ]),
 ];
 
 it.each(replayChildCases)(
   "rejects corrupted replay children and conflicting receipts: G6 child %s",
-  async (_name, changes) => expectCorruptedAppliedReplay("events", changes),
+  async (_name, changes, expected) => expectCorruptedAppliedReplay("events", changes, expected),
 );
 
 it("rejects corrupted replay children and conflicting receipts: G6 applied rejection child", async () => {
@@ -477,7 +568,7 @@ it("rejects corrupted replay children and conflicting receipts: G6 applied rejec
       sql.includes("FROM command_rejections")
         ? { ...result, columns: ["receiptId"], rows: [[appliedReceipt.receiptId]] }
         : result;
-    await expectBrokenReplay(f);
+    await expectBrokenReplay(f, refused("NON_REJECTED_HAS_REJECTIONS"));
   } finally {
     await f.close();
   }
@@ -486,36 +577,48 @@ it("rejects corrupted replay children and conflicting receipts: G6 applied rejec
 it.each([
   {
     name: "malformed JSON",
+    expected: syntaxFailure,
     payloadText: "{",
     payloadHash: createHash("sha256").update("{").digest("hex"),
   },
   {
     name: "noncanonical correct hash",
+    expected: eventIntegrity,
     payloadText: '{ "value":7}',
     payloadHash: createHash("sha256").update('{ "value":7}').digest("hex"),
   },
   {
     name: "reordered correct hash",
+    expected: eventIntegrity,
     payloadText: '{"value":7,"previous":0}',
     payloadHash: createHash("sha256").update('{"value":7,"previous":0}').digest("hex"),
   },
   {
     name: "duplicate key correct hash",
+    expected: eventIntegrity,
     payloadText: '{"value":7,"value":7}',
     payloadHash: createHash("sha256").update('{"value":7,"value":7}').digest("hex"),
   },
   {
     name: "nonfinite JSON",
+    expected: decodeFailure,
     payloadText: '{"value":1e999}',
     payloadHash: createHash("sha256").update('{"value":1e999}').digest("hex"),
   },
-  { name: "wrong digest", payloadHash: "a".repeat(64) },
-  { name: "short digest", payloadHash: "abcd" },
-  { name: "uppercase digest", payloadHash: "A".repeat(64) },
-  { name: "changed payload only", payloadText: '{"value":8}' },
-])(
+  { name: "wrong digest", expected: eventIntegrity, payloadHash: "a".repeat(64) },
+  { name: "short digest", expected: decodeFailure, payloadHash: "abcd" },
+  { name: "uppercase digest", expected: decodeFailure, payloadHash: "A".repeat(64) },
+  { name: "changed payload only", expected: eventIntegrity, payloadText: '{"value":8}' },
+  {
+    name: "noncanonical canonical hash",
+    expected: eventIntegrity,
+    payloadText: '{ "value":7}',
+    payloadHash: createHash("sha256").update('{"value":7}').digest("hex"),
+  },
+] satisfies ReadonlyArray<{ name: string; expected: LedgerFailure } & Record<string, unknown>>)(
   "rejects corrupted replay children and conflicting receipts: G6 JSON $name",
-  async ({ name: _name, ...changes }) => expectCorruptedAppliedReplay("events", changes),
+  async ({ name: _name, expected, ...changes }) =>
+    expectCorruptedAppliedReplay("events", changes, expected),
 );
 
 it("rejects corrupted replay children and conflicting receipts: G6 JSON persisted digest", async () => {
@@ -530,7 +633,7 @@ it("rejects corrupted replay children and conflicting receipts: G6 JSON persiste
       sql: "UPDATE canonical_events SET payload_hash=? WHERE project_id=? AND event_id=?",
       args: ["a".repeat(64), settlementRequest.projectId, appliedReceipt.events[0].eventId],
     });
-    await expectBrokenReplay(f);
+    await expectBrokenReplay(f, eventIntegrity);
   } finally {
     await f.close();
   }
@@ -608,18 +711,11 @@ it.each(["2026-09-05T12:00:00Z", "2026-09-05T12:00:00.123Z", "2026-09-05T12:00:0
 it("fails closed on broken original idempotency authority: G6 persisted orphan precedes differing request", async () => {
   const f = await createSettlementFixture();
   try {
-    registerCounter(f);
-    expect(await f.repository.settle(settlementText)).toEqual({
-      status: "settled",
-      receipt: appliedReceipt,
-    });
-    await f.raw.execute({
-      sql: "DELETE FROM command_idempotency WHERE project_id=? AND command_id=?",
-      args: [settlementRequest.projectId, appliedReceipt.commandId],
-    });
-    await expectBrokenReplay(f);
+    await orphanTheAppliedReceipt(f);
+    await expectBrokenReplay(f, refused("ORIGINAL_RECEIPT_ORPHANED"));
     await expectBrokenReplay(
       f,
+      refused("ORIGINAL_RECEIPT_ORPHANED"),
       snapshotCanonicalCommand(settlementRequest.projectId, {
         ...settlementRequest.command,
         payload: { value: 8 },
@@ -690,8 +786,28 @@ it.each([
   ["command", { commandId: "44444444-4444-4444-8444-444444444502" }],
 ] as const)(
   "rejects corrupted replay children and conflicting receipts: G6 requested %s",
-  async (_name, changes) => expectCorruptedAppliedReplay("requested", changes),
+  async (_name, changes) =>
+    expectCorruptedAppliedReplay("requested", changes, refused("REQUESTED_RECEIPT_AUTHORITY")),
 );
+
+it("rejects corrupted replay children and conflicting receipts: G6 requested stored type", async () => {
+  const f = await createSettlementFixture();
+  try {
+    registerCounter(f);
+    expect(await f.repository.settle(settlementText)).toEqual({
+      status: "settled",
+      receipt: appliedReceipt,
+    });
+    // Both receipt reads see the stored type, so they agree and only the command check refuses.
+    await f.raw.execute({
+      sql: "UPDATE command_receipts SET command_type=? WHERE project_id=? AND receipt_id=?",
+      args: ["conformance.counter.other", settlementRequest.projectId, appliedReceipt.receiptId],
+    });
+    await expectBrokenReplay(f, refused("REQUESTED_RECEIPT_COMMAND"));
+  } finally {
+    await f.close();
+  }
+});
 
 const replayMetadataCases: ReadonlyArray<
   readonly [string, Record<string, string | number | null>]
@@ -741,9 +857,10 @@ it.each(replayMetadataCases)(
           ? alterFence(result, changes)
           : result;
       };
-      await expectBrokenReplay(f);
+      await expectBrokenReplay(f, decodeFailure);
       await expectBrokenReplay(
         f,
+        decodeFailure,
         snapshotCanonicalCommand(settlementRequest.projectId, {
           ...settlementRequest.command,
           payload: { value: 8 },
@@ -755,14 +872,25 @@ it.each(replayMetadataCases)(
   },
 );
 
-it.each(["absent", "duplicate", "duplicate alias", "row width", "extra alias"])(
+it.each([
+  ["absent", shapeFailures.exactlyOne],
+  ["duplicate", shapeFailures.exactlyOne],
+  ["duplicate alias", shapeFailures.aliases],
+  ["row width", shapeFailures.width],
+  ["extra alias", decodeFailure],
+] as const)(
   "rejects corrupted replay children and conflicting receipts: G6 requested shape %s",
-  async (shape) => expectCorruptedAppliedReplay("requested", {}, shape),
+  async (shape, expected) => expectCorruptedAppliedReplay("requested", {}, expected, shape),
 );
 
-it.each(["duplicate", "duplicate alias", "row width", "extra alias"])(
+it.each([
+  ["duplicate", decodeFailure],
+  ["duplicate alias", shapeFailures.aliases],
+  ["row width", shapeFailures.width],
+  ["extra alias", decodeFailure],
+] as const)(
   "rejects corrupted replay children and conflicting receipts: G6 event shape %s",
-  async (shape) => expectCorruptedAppliedReplay("events", {}, shape),
+  async (shape, expected) => expectCorruptedAppliedReplay("events", {}, expected, shape),
 );
 
 it.each([
@@ -800,141 +928,11 @@ it.each([
             };
         return alterFence(result, changes);
       };
-      await expectBrokenReplay(f);
+      await expectBrokenReplay(f, decodeFailure);
     } finally {
       await f.close();
     }
   },
-);
-
-it.each(["missing", "released", "different-token"] as const)(
-  "fences settlement before mutations and distinguishes malformed authority: stale %s",
-  async (scenario) => {
-    const f = await createSettlementFixture();
-    try {
-      if (scenario === "released") await f.repository.releaseFence("2026-09-05T12:00:02Z");
-      f.observation.after = (sql, result) => {
-        if (!sql.includes("FROM writer_fence")) return result;
-        if (scenario === "missing") return { ...result, rows: [] };
-        return scenario === "different-token"
-          ? alterFence(result, {
-              tokenDigest: "2".repeat(64),
-              generationDigest: "2".repeat(64),
-            })
-          : result;
-      };
-      const before = await f.snapshot();
-      f.calls.length = 0;
-      await expect(f.repository.settle(settlementText)).resolves.toEqual({
-        status: "stale-writer",
-      });
-      expect(f.calls[0]).toBe("begin:write");
-      expectFenceFirst(f);
-      expectNoSettlementWork(f);
-      expect(await f.snapshot()).toEqual(before);
-    } finally {
-      await f.close();
-    }
-  },
-);
-
-const malformedFenceCases: ReadonlyArray<
-  readonly [string, Record<string, string | number | null>]
-> = [
-  ["generation zero", { generation: 0 }],
-  ["generation fractional", { generation: 1.5 }],
-  ["generation unsafe", { generation: 9007199254740992 }],
-  ["digest malformed", { tokenDigest: "not-a-digest" }],
-  ["digest uppercase", { tokenDigest: "A".repeat(64) }],
-  ["Project malformed", { projectId: "invalid" }],
-  ["Project mismatched", { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" }],
-  ["generation Project missing", { generationProjectId: null }],
-  [
-    "generation Project mismatched",
-    { generationProjectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
-  ],
-  ["generation activation malformed", { generationActivationId: "invalid" }],
-  ["generation activation missing", { generationActivationId: null }],
-  ["joined generation missing", { generationNumber: null }],
-  ["joined generation mismatched", { generationNumber: 2 }],
-  ["joined digest missing", { generationDigest: null }],
-  ["joined digest mismatched", { generationDigest: "2".repeat(64) }],
-  ["activation time minute-only", { activatedAt: "2026-09-05T12:00Z" }],
-  ["acquired time missing", { generationAcquiredAt: null }],
-  ["acquired time impossible", { generationAcquiredAt: "2026-02-30T12:00:00Z" }],
-  ["active released fence", { releasedAt: "2026-09-05T12:00:02Z" }],
-  ["active released generation", { generationReleasedAt: "2026-09-05T12:00:02Z" }],
-  ["released missing times", { state: "released" }],
-  ["released missing generation time", { state: "released", releasedAt: "2026-09-05T12:00:02Z" }],
-  ["state invalid", { state: "unknown" }],
-];
-
-it.each(malformedFenceCases)(
-  "fences settlement before mutations and distinguishes malformed authority: malformed %s",
-  async (_name, changes) => {
-    const f = await createSettlementFixture();
-    try {
-      f.observation.after = (sql, result) =>
-        sql.includes("FROM writer_fence") ? alterFence(result, changes) : result;
-      const before = await f.snapshot();
-      const error = await f.repository.settle(settlementText).then(
-        () => undefined,
-        (error: unknown) => error,
-      );
-      expect(error).toBeInstanceOf(Error);
-      expect(error).not.toBe(authorityPassed);
-      expectFenceFirst(f);
-      expectNoSettlementWork(f);
-      expect(await f.snapshot()).toEqual(before);
-    } finally {
-      await f.close();
-    }
-  },
-);
-
-it.each(["duplicates", "duplicate aliases", "row width", "SQL exception"])(
-  "fences settlement before mutations and distinguishes malformed authority: observation %s",
-  async (shape) => {
-    const f = await createSettlementFixture();
-    const sentinel = new Error("private fence SQL failure");
-    try {
-      f.observation.after = (sql, result) => {
-        if (!sql.includes("FROM writer_fence")) return result;
-        if (shape === "SQL exception") throw sentinel;
-        if (shape === "duplicates") return { ...result, rows: [...result.rows, ...result.rows] };
-        if (shape === "duplicate aliases")
-          return { ...result, columns: result.columns.map(() => "generation") };
-        return { ...result, rows: result.rows.map((row) => [...row, null]) };
-      };
-      const before = await f.snapshot();
-      const error = await f.repository.settle(settlementText).then(
-        () => undefined,
-        (error: unknown) => error,
-      );
-      expect(error).toBeInstanceOf(Error);
-      if (shape === "SQL exception") expect(error).toBe(sentinel);
-      expectFenceFirst(f);
-      expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
-      expect(await f.snapshot()).toEqual(before);
-    } finally {
-      await f.close();
-    }
-  },
-);
-
-const fractionalPairs = [
-  ["microsecond difference", "2026-09-05T12:00:00.123456Z", "2026-09-05T12:00:00.123457Z", false],
-  ["trailing fractional zero", "2026-09-05T12:00:00.123456Z", "2026-09-05T12:00:00.1234560Z", true],
-  ["omitted zero fraction", "2026-09-05T12:00:00Z", "2026-09-05T12:00:00.000Z", true],
-] as const;
-const authorityTimeCases = fractionalPairs.flatMap(([name, left, right, equal]) =>
-  (["active acquired", "released acquired", "released release"] as const).map((pair) => ({
-    name,
-    left,
-    right,
-    equal,
-    pair,
-  })),
 );
 
 async function expectRetainedTransactionCleanup(
@@ -967,7 +965,8 @@ it("fences settlement before mutations and distinguishes malformed authority: re
   }
 });
 
-// These composed variants reuse the earlier B14/F2, B6, B17 and B18 causal Reds.
+// These composed variants reuse the B14/F2 (now in canonical-command-fence.integration.test.ts),
+// B6, B17 and B18 causal Reds.
 it.each(["2026-09-05T12:00:00Z", "2026-09-05T12:00:00.123Z", "2026-09-05T12:00:00.123456Z"])(
   "requires seconds in settlement clocks and persisted receipt instants: preserves valid input %s",
   async (time) => {
@@ -1520,49 +1519,6 @@ it("freezes submission meaning before asynchronous repository work: handler payl
     await f.close();
   }
 });
-
-it.each(authorityTimeCases)(
-  "fences settlement before mutations and distinguishes malformed authority: F2 $pair $name",
-  async ({ left, right, equal, pair }) => {
-    const f = await createSettlementFixture();
-    try {
-      if (pair !== "active acquired") await f.repository.releaseFence("2026-09-05T12:00:02Z");
-      const changes =
-        pair === "released release"
-          ? { releasedAt: left, generationReleasedAt: right }
-          : { activatedAt: left, generationAcquiredAt: right };
-      f.observation.after = (sql, result) =>
-        sql.includes("FROM writer_fence") ? alterFence(result, changes) : result;
-      const before = await f.snapshot();
-      f.calls.length = 0;
-      if (equal && pair !== "active acquired") {
-        await expect(f.repository.settle(settlementText)).resolves.toEqual({
-          status: "stale-writer",
-        });
-      } else if (equal) {
-        await expect(f.repository.settle(settlementText)).rejects.toBe(authorityPassed);
-      } else {
-        const error = await f.repository.settle(settlementText).then(
-          () => undefined,
-          (error: unknown) => error,
-        );
-        expect(error).toBeInstanceOf(Error);
-        expect(error).not.toBe(authorityPassed);
-        expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();
-      }
-      expect(f.calls.slice(0, 2)).toEqual([
-        "begin:write",
-        expect.stringContaining("FROM writer_fence"),
-      ]);
-      expect(f.dependencies.createReceiptId).not.toHaveBeenCalled();
-      expect(f.dependencies.createEventId).not.toHaveBeenCalled();
-      expect(f.dependencies.now).not.toHaveBeenCalled();
-      expect(await f.snapshot()).toEqual(before);
-    } finally {
-      await f.close();
-    }
-  },
-);
 
 it.each([
   {

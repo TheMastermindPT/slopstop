@@ -255,3 +255,94 @@ const otherHarnessLines = [
 it.for(otherHarnessLines)("ignores other harness lines: $name", (other) => {
   expectOnlyCall(other.line, []);
 });
+
+const requestTime = 1_761_480_000_000;
+const requestFailureLine = (metadata: Readonly<Record<string, unknown>> = {}) =>
+  JSON.stringify({
+    level: 40,
+    time: requestTime,
+    service: "harness",
+    code: "HARNESS_REQUEST_FAILED",
+    msg: "Harness request failed.",
+    boundary: "project-storage.owner",
+    answered: "PROJECT_STORAGE_OWNER_FAILED",
+    failures: [{ tag: "CanonicalLedgerRefusal" }],
+    omittedFailures: 0,
+    ...metadata,
+  });
+
+it("forwards a valid harness request failure line", () => {
+  expectOnlyCall(requestFailureLine(), [
+    [
+      "warn",
+      {
+        source: "harness",
+        attempt: 1,
+        code: "HARNESS_REQUEST_FAILED",
+        boundary: "project-storage.owner",
+        answered: "PROJECT_STORAGE_OWNER_FAILED",
+        failures: [{ tag: "CanonicalLedgerRefusal" }],
+        omittedFailures: 0,
+        harnessTime: new Date(requestTime).toISOString(),
+      },
+      "Harness request failure.",
+    ],
+  ]);
+});
+
+it("rejects a harness request failure line with an extra key", () => {
+  expectOnlyCall(requestFailureLine({ message: "C:\\private\\project" }), [
+    [
+      "warn",
+      { code: "HARNESS_LOG_LINE_INVALID", attempt: 1, requestCode: "HARNESS_REQUEST_FAILED" },
+      "Harness request failure log line rejected.",
+    ],
+  ]);
+});
+
+it("drops a harness request failure line at another level", () => {
+  expectOnlyCall(requestFailureLine({ level: 30 }), []);
+});
+
+const reconciliationLine = (metadata: Readonly<Record<string, unknown>> = {}) =>
+  JSON.stringify({
+    level: 40,
+    time: requestTime,
+    service: "harness",
+    code: "REGISTRATION_RECONCILIATION_FAILED",
+    msg: "Registration reconciliation failed.",
+    ...metadata,
+  });
+
+it("forwards a valid registration reconciliation failure line", () => {
+  expectOnlyCall(reconciliationLine(), [
+    [
+      "warn",
+      {
+        source: "harness",
+        attempt: 1,
+        code: "REGISTRATION_RECONCILIATION_FAILED",
+        harnessTime: new Date(requestTime).toISOString(),
+      },
+      "Harness registration reconciliation failure.",
+    ],
+  ]);
+});
+
+it.each([50, 60])("drops a registration reconciliation line at level %i", (level) => {
+  expectOnlyCall(reconciliationLine({ level }), []);
+});
+
+it("rejects a registration reconciliation line with an extra key", () => {
+  expectOnlyCall(reconciliationLine({ message: "C:\\private\\registry" }), [
+    [
+      "warn",
+      {
+        code: "HARNESS_LOG_LINE_INVALID",
+        attempt: 1,
+        reconciliationCode: "REGISTRATION_RECONCILIATION_FAILED",
+      },
+      "Harness reconciliation log line rejected.",
+    ],
+  ]);
+});

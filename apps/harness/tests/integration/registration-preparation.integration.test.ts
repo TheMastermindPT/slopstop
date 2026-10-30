@@ -367,6 +367,24 @@ it
 );
 
 it.runIf(process.platform === "win32" && process.arch === "x64")(
+  "refuses confirmation of a preparation that was never saved before any observation",
+  async () => {
+    const f = await fixture();
+    try {
+      const dispatched = f.dispatches();
+      const unsaved = { proposalId: randomUUID(), proposalFingerprint: "0".repeat(64) };
+      expect(await f.validateConfirmation(confirmationRequest(f.request, unsaved))).toEqual({
+        status: "rejected",
+        code: "REGISTRATION_IDEMPOTENCY_CONFLICT",
+      });
+      expect(f.dispatches()).toBe(dispatched);
+    } finally {
+      await f.close();
+    }
+  },
+);
+
+it.runIf(process.platform === "win32" && process.arch === "x64")(
   "refuses missing registry replay without observing or recreating installation storage",
   async () => {
     const f = await fixture();

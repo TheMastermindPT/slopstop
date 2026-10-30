@@ -1,6 +1,9 @@
 import { Schema } from "effect";
 import { CanonicalProjectActivationDiagnosticCodeSchema } from "./canonical-project-protocol.js";
+import type { HarnessFailureCode } from "./harness-failure-protocol.js";
+import type { ProjectStorageDiagnosticCode } from "./project-storage-protocol.js";
 import { EpochMillisecondsSchema } from "./project-upgrade-protocol.js";
+import type { WorkspaceDiagnostic } from "./workspace-protocol.js";
 
 /** Fatal summaries stay bounded: failures past this many are only counted. */
 export const HARNESS_FATAL_SUMMARY_BOUND = 16;
@@ -122,3 +125,80 @@ export const HarnessFatalLogLineSchema = Schema.Union([
   Schema.Struct({ ...fatalLineOf("HARNESS_UNHANDLED_REJECTION"), valueKind: ValueKindSchema }),
 ]);
 export type HarnessFatalLogLine = typeof HarnessFatalLogLineSchema.Type;
+
+/** The request boundaries whose catch answers a fixed failure and logs one request-failure line. */
+export const HARNESS_REQUEST_BOUNDARIES = [
+  "harness.message",
+  "harness.notification",
+  "harness.registration",
+  "project-storage.owner",
+  "workspace.query",
+  "workspace.intent",
+] as const;
+export type HarnessRequestBoundary = (typeof HARNESS_REQUEST_BOUNDARIES)[number];
+
+/** The wire code vocabulary each request boundary answers from; every boundary has one. */
+type HarnessRequestBoundaryAnswerCodes = Record<HarnessRequestBoundary, string> &
+  Readonly<{
+    "harness.message": HarnessFailureCode;
+    "harness.notification": HarnessFailureCode;
+    "harness.registration": HarnessFailureCode;
+    "project-storage.owner": ProjectStorageDiagnosticCode;
+    "workspace.query": WorkspaceDiagnostic["code"];
+    "workspace.intent": WorkspaceDiagnostic["code"];
+  }>;
+
+/** The one owner of the code each request boundary answers with. */
+export const harnessRequestBoundaryAnswers = {
+  "harness.message": "HARNESS_INTERNAL_FAILURE",
+  "harness.notification": "HARNESS_INTERNAL_FAILURE",
+  "harness.registration": "HARNESS_INTERNAL_FAILURE",
+  "project-storage.owner": "PROJECT_STORAGE_OWNER_FAILED",
+  "workspace.query": "WORKSPACE_PRODUCER_FAILED",
+  "workspace.intent": "WORKSPACE_PRODUCER_FAILED",
+} as const satisfies HarnessRequestBoundaryAnswerCodes;
+
+/** The `code` of every harness request-failure line. */
+export const harnessRequestFailureCode = "HARNESS_REQUEST_FAILED";
+
+/** The one fixed message of a request-failure line; it carries no other text. */
+export const harnessRequestFailureMessage = "Harness request failed.";
+
+function requestFailureLineOf<const Boundary extends HarnessRequestBoundary>(boundary: Boundary) {
+  return Schema.Struct({
+    level: Schema.Literal(40),
+    time: EpochMillisecondsSchema,
+    service: Schema.Literal("harness"),
+    code: Schema.Literal(harnessRequestFailureCode),
+    msg: Schema.Literal(harnessRequestFailureMessage),
+    boundary: Schema.Literal(boundary),
+    answered: Schema.Literal(harnessRequestBoundaryAnswers[boundary]),
+    ...summaryFields,
+  });
+}
+
+/**
+ * Exactly what the harness logger serializes when a request boundary answers a fixed failure:
+ * the boundary, the code it answered, and the bounded failure summary the fatal lines use.
+ */
+export const HarnessRequestFailureLogLineSchema = Schema.Union(
+  HARNESS_REQUEST_BOUNDARIES.map(requestFailureLineOf),
+);
+export type HarnessRequestFailureLogLine = typeof HarnessRequestFailureLogLineSchema.Type;
+
+/** The `code` of the start's registration reconciliation warning. */
+export const harnessReconciliationFailureCode = "REGISTRATION_RECONCILIATION_FAILED";
+
+/** The one fixed message of the reconciliation warning; it carries no other text. */
+export const harnessReconciliationFailureMessage = "Registration reconciliation failed.";
+
+/** Exactly what the harness logger serializes when the start's reconciliation fails. */
+export const HarnessReconciliationFailureLogLineSchema = Schema.Struct({
+  level: Schema.Literal(40),
+  time: EpochMillisecondsSchema,
+  service: Schema.Literal("harness"),
+  code: Schema.Literal(harnessReconciliationFailureCode),
+  msg: Schema.Literal(harnessReconciliationFailureMessage),
+});
+export type HarnessReconciliationFailureLogLine =
+  typeof HarnessReconciliationFailureLogLineSchema.Type;

@@ -5,6 +5,10 @@ import {
   ProjectStorageOpenRequestSchema,
 } from "@slopstop/protocol";
 import { describe, expect, it, vi } from "vitest";
+import {
+  recordingRequestDiagnostics,
+  silentRequestDiagnostics,
+} from "../tests/integration/request-diagnostics-fixture.js";
 import type { ProjectStorageOwnerPort } from "./project-storage-application.js";
 import {
   createProjectStorageApplication,
@@ -41,31 +45,40 @@ function createOwner(overrides: Partial<ProjectStorageOwnerPort> = {}): ProjectS
 }
 
 async function expectUnavailableOwnerMapping(): Promise<void> {
+  const requests = recordingRequestDiagnostics();
   const explicit = createOwner({
     open: async () => ({ status: "unavailable", message: "Storage temporarily offline." }),
   });
-  await expect(createProjectStorageApplication(explicit).open(openRequest)).resolves.toMatchObject({
+  await expect(
+    createProjectStorageApplication(explicit, requests.diagnostics).open(openRequest),
+  ).resolves.toMatchObject({
     status: "unavailable",
     diagnostic: { message: "Storage temporarily offline." },
   });
   const blank = createOwner({
     open: async () => ({ status: "unavailable", message: "   " }),
   });
-  await expect(createProjectStorageApplication(blank).open(openRequest)).resolves.toEqual({
+  await expect(
+    createProjectStorageApplication(blank, requests.diagnostics).open(openRequest),
+  ).resolves.toEqual({
     status: "unavailable",
     request: openRequest,
     diagnostic: unavailableDiagnostic,
   });
+  expect(requests.calls).toEqual([]);
 }
 
 async function expectInvalidOwnerMapping(): Promise<void> {
+  const requests = recordingRequestDiagnostics();
   const wrongProject = createOwner({
     open: async () => ({
       status: "ready",
       result: { status: "not-registered", request: { projectId: anotherProjectId } },
     }),
   });
-  await expect(createProjectStorageApplication(wrongProject).open(openRequest)).resolves.toEqual({
+  await expect(
+    createProjectStorageApplication(wrongProject, requests.diagnostics).open(openRequest),
+  ).resolves.toEqual({
     status: "broken",
     request: openRequest,
     diagnostic: {
@@ -84,29 +97,34 @@ async function expectInvalidOwnerMapping(): Promise<void> {
     }),
   });
   await expect(
-    createProjectStorageApplication(wrongCreateRequest).create(createRequest),
+    createProjectStorageApplication(wrongCreateRequest, requests.diagnostics).create(createRequest),
   ).resolves.toMatchObject({
     status: "broken",
     request: createRequest,
     diagnostic: { code: "PROJECT_STORAGE_RESULT_INVALID" },
   });
   const malformed = createOwner({ open: async () => ({ status: "ready", result: null }) });
-  await expect(createProjectStorageApplication(malformed).open(openRequest)).resolves.toMatchObject(
-    {
-      status: "broken",
-      request: openRequest,
-      diagnostic: { code: "PROJECT_STORAGE_RESULT_INVALID" },
-    },
-  );
+  await expect(
+    createProjectStorageApplication(malformed, requests.diagnostics).open(openRequest),
+  ).resolves.toMatchObject({
+    status: "broken",
+    request: openRequest,
+    diagnostic: { code: "PROJECT_STORAGE_RESULT_INVALID" },
+  });
+  expect(requests.calls).toEqual([]);
 }
 
 async function expectFailedOwnerMapping(): Promise<void> {
+  const requests = recordingRequestDiagnostics();
+  const ownerFailure = new Error("private owner failure");
   const thrown = createOwner({
     open: async () => {
-      throw new Error("private owner failure");
+      throw ownerFailure;
     },
   });
-  await expect(createProjectStorageApplication(thrown).open(openRequest)).resolves.toEqual({
+  await expect(
+    createProjectStorageApplication(thrown, requests.diagnostics).open(openRequest),
+  ).resolves.toEqual({
     status: "broken",
     request: openRequest,
     diagnostic: {
@@ -117,7 +135,9 @@ async function expectFailedOwnerMapping(): Promise<void> {
   const explicit = createOwner({
     open: async () => ({ status: "broken", message: "Owner reported failure." }),
   });
-  await expect(createProjectStorageApplication(explicit).open(openRequest)).resolves.toMatchObject({
+  await expect(
+    createProjectStorageApplication(explicit, requests.diagnostics).open(openRequest),
+  ).resolves.toMatchObject({
     status: "broken",
     request: openRequest,
     diagnostic: {
@@ -125,6 +145,9 @@ async function expectFailedOwnerMapping(): Promise<void> {
       message: "Owner reported failure.",
     },
   });
+  expect(requests.calls).toHaveLength(1);
+  expect(requests.calls[0]?.boundary).toBe("project-storage.owner");
+  expect(requests.calls[0]?.failure).toBe(ownerFailure);
 }
 
 describe("Project Storage application", () => {
@@ -136,7 +159,10 @@ describe("Project Storage application", () => {
 
   it("echoes every unavailable request and delegates stop", async () => {
     const stop = vi.fn(async () => undefined);
-    const application = createProjectStorageApplication(createOwner({ stop }));
+    const application = createProjectStorageApplication(
+      createOwner({ stop }),
+      silentRequestDiagnostics,
+    );
     const [openResult, createResult, closeResult] = await Promise.all([
       application.open(openRequest),
       application.create(createRequest),
@@ -164,7 +190,8 @@ describe("Project Storage application", () => {
   });
 
   it("never invents absence for the truthful no-store application", async () => {
-    const result = await createUnavailableProjectStorageApplication().open(openRequest);
+    const result =
+      await createUnavailableProjectStorageApplication(silentRequestDiagnostics).open(openRequest);
     expect(result.status).toBe("unavailable");
     expect(result.status).not.toBe("not-registered");
   });

@@ -1,4 +1,6 @@
 import type { WriterReleaseFailureCode } from "@slopstop/protocol";
+import { Data } from "effect";
+import { type NativeErrorFields, nativeErrorFields } from "./project-storage-errors.js";
 import { retryableAttempt } from "./retryable-attempt.js";
 
 export type CanonicalWriterLeaseFailureCode = Extract<
@@ -35,13 +37,11 @@ const messages = {
   WRITER_LEASE_CLOSE_FAILED: "Writer lease file could not be closed.",
 } as const;
 
-export class CanonicalWriterLeaseError extends Error {
-  override readonly name = "CanonicalWriterLeaseError";
-  constructor(
-    readonly code: CanonicalWriterLeaseFailureCode,
-    options?: ErrorOptions,
-  ) {
-    super(messages[code], options);
+export class CanonicalWriterLeaseError extends Data.TaggedError("CanonicalWriterLeaseError")<
+  NativeErrorFields & { readonly code: CanonicalWriterLeaseFailureCode }
+> {
+  constructor(code: CanonicalWriterLeaseFailureCode, options?: ErrorOptions) {
+    super({ ...nativeErrorFields(messages[code], options), code });
   }
 }
 

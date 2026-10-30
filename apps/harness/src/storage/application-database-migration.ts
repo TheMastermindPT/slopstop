@@ -4,7 +4,7 @@ import {
   NonEmptyTextSchema,
   type RegistryBrokenCode,
 } from "@slopstop/protocol";
-import { Result, Schema } from "effect";
+import { Data, Result, Schema } from "effect";
 import { requireDeclaredSchemaObjects, tableNames } from "./database-schema-verifier.js";
 import { loadGeneratedMigrations } from "./generated-migration-resources.js";
 import type { GeneratedMigration } from "./generated-migrations.js";
@@ -24,7 +24,11 @@ import {
   previousReservationDatabaseSpec,
   previousVisibilityDatabaseSpec,
 } from "./project-storage-database-specs.js";
-import { ProjectStorageBrokenError } from "./project-storage-errors.js";
+import {
+  type NativeErrorFields,
+  nativeErrorFields,
+  ProjectStorageBrokenError,
+} from "./project-storage-errors.js";
 import {
   type ClassifiedWriteTransactionOutcome,
   runClassifiedWriteTransaction,
@@ -43,13 +47,14 @@ export const missingWithWitnessFailure = {
 } as const;
 
 // Typed refusal of the installation application database; owners map it to their own codes.
-export class ApplicationDatabaseFault extends Error {
-  constructor(
-    readonly failure: ApplicationDatabaseFailure,
-    options?: ErrorOptions,
-  ) {
-    super("Application database authority refused the operation.", options);
-    this.name = "ApplicationDatabaseFault";
+export class ApplicationDatabaseFault extends Data.TaggedError("ApplicationDatabaseFault")<
+  NativeErrorFields & { readonly failure: ApplicationDatabaseFailure }
+> {
+  constructor(failure: ApplicationDatabaseFailure, options?: ErrorOptions) {
+    super({
+      ...nativeErrorFields("Application database authority refused the operation.", options),
+      failure,
+    });
   }
 }
 

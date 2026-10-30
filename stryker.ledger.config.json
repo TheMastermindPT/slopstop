@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": [
+    "apps/harness/src/storage/canonical-ledger-refusal.ts",
+    "apps/harness/src/storage/canonical-command-ledger.ts:63-122",
+    "apps/harness/src/storage/canonical-command-ledger.ts:193-459"
+  ],
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "apps/harness/vitest.ledger-mutation.config.ts",
+    "related": true
+  },
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
+  "incremental": false,
+  "concurrency": 4,
+  "reporters": ["json", "html"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/ledger-harness.html"
+  },
+  "jsonReporter": {
+    "fileName": "reports/mutation/ledger-harness.json"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  }
+}

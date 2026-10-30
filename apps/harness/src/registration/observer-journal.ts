@@ -17,8 +17,12 @@ import { SqlIntegerSchema } from "../storage/sql-integer-schema.js";
 import type { UtcClock } from "../utc-clock.js";
 import { readConsent, readSelection } from "./executable-consent-store.js";
 import { sameExecutableIdentity } from "./executable-identity.js";
-import { type RegistryRunner, registryRows } from "./registry-database.js";
-import { RegistryFault, registryFailure } from "./registry-failure.js";
+import {
+  decodeRegistryJson,
+  decodeRegistryRows,
+  type RegistryRunner,
+} from "./registry-database.js";
+import { RegistryFault, registryCorrupt, registryFailure } from "./registry-failure.js";
 import type {
   ObserverAbsencePort,
   VersionDispatch,
@@ -65,7 +69,9 @@ const attemptRowsSchema = Schema.Array(
 const pendingChildRowsSchema = Schema.Array(
   Schema.Struct({ observationId: ObservationIdSchema, identityJson: Schema.String }),
 );
-const exitCodeCellSchema = Schema.Tuple([Schema.Tuple([SqlIntegerSchema])]);
+const exitCodeRowsSchema = Schema.Array(Schema.Struct({ exitCode: SqlIntegerSchema })).check(
+  Schema.isMaxLength(1),
+);
 
 export { childSchema as ObserverChildIdentitySchema, terminalSchema as ObserverTerminalSchema };
 
@@ -74,11 +80,11 @@ async function queryChildIsSettled(
   absence?: ObserverAbsencePort,
 ) {
   if (record.child === null) return false;
-  const child = decodeStrict(childSchema, JSON.parse(record.child));
+  const child = decodeRegistryJson(childSchema, record.child);
   if (child.jobName !== `Local\\SlopStop.Registration.Observer.${record.id}`)
-    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+    throw registryCorrupt();
   if (record.terminal !== null) {
-    decodeStrict(terminalSchema, JSON.parse(record.terminal));
+    decodeRegistryJson(terminalSchema, record.terminal);
     return true;
   }
   return (await absence?.inspect(child))?.status === "absent";
@@ -92,7 +98,7 @@ async function reconcileIdentityQueryAttempts(
   const rows = await transaction.execute(
     "SELECT observation_id AS id, child_json AS child, terminal_json AS terminal FROM registration_identity_query_attempts WHERE result_json IS NULL",
   );
-  const records = decodeStrict(attemptRowsSchema, registryRows(rows));
+  const records = decodeRegistryRows(attemptRowsSchema, rows);
   for (const record of records) {
     if (!(await queryChildIsSettled(record, absence))) continue;
     await transaction.execute({
@@ -153,15 +159,15 @@ async function readResult(
     sql: "SELECT i.observation_id AS observationId, o.result_json AS resultJson FROM registration_observer_intents i JOIN registration_observer_outcomes o ON o.observation_id = i.observation_id WHERE i.consent_id = ? AND i.selection_id = ?",
     args: [request.consentId, request.selectionId],
   });
-  const row = decodeStrict(resultRowsSchema, registryRows(result))[0];
+  const row = decodeRegistryRows(resultRowsSchema, result)[0];
   if (row === undefined) return undefined;
-  const decoded = decodeStrict(GitVersionInspectionResultSchema, JSON.parse(row.resultJson));
+  const decoded = decodeRegistryJson(GitVersionInspectionResultSchema, row.resultJson);
   if (decoded.status === "prepared") {
     if (
       decoded.observationId !== row.observationId ||
       decoded.selectionId !== request.selectionId
     ) {
-      throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+      throw registryCorrupt();
     }
   }
   return decoded;
@@ -172,11 +178,12 @@ async function confirmedExit(
   observationId: ObservationId,
 ): Promise<number> {
   const result = await transaction.execute({
-    sql: "SELECT exit_code FROM registration_observer_terminals WHERE observation_id = ? AND stdout_closed = 1 AND stderr_closed = 1 AND tree_empty = 1",
+    sql: "SELECT exit_code AS exitCode FROM registration_observer_terminals WHERE observation_id = ? AND stdout_closed = 1 AND stderr_closed = 1 AND tree_empty = 1",
     args: [observationId],
   });
-  if (result.rows.length === 0) return unsettled();
-  return decodeStrict(exitCodeCellSchema, result.rows)[0][0];
+  const terminal = decodeRegistryRows(exitCodeRowsSchema, result)[0];
+  if (terminal === undefined) return unsettled();
+  return terminal.exitCode;
 }
 
 async function writeOutcome(
@@ -243,11 +250,11 @@ async function reconcileStoredTerminals(transaction: LocalLibsqlTransaction, clo
     JOIN registration_observer_terminals t ON t.observation_id = i.observation_id
     LEFT JOIN registration_observer_outcomes o ON o.observation_id = i.observation_id
     WHERE o.observation_id IS NULL AND t.stdout_closed = 1 AND t.stderr_closed = 1 AND t.tree_empty = 1`);
-  const rows = decodeStrict(pendingChildRowsSchema, registryRows(pending));
+  const rows = decodeRegistryRows(pendingChildRowsSchema, pending);
   for (const row of rows) {
-    const child = decodeStrict(childSchema, JSON.parse(row.identityJson));
+    const child = decodeRegistryJson(childSchema, row.identityJson);
     if (child.jobName !== `Local\\SlopStop.Registration.Observer.${row.observationId}`) {
-      throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+      throw registryCorrupt();
     }
     await confirmedExit(transaction, row.observationId);
     // The unique terminal outcome fences any former publisher in this same transaction.
@@ -275,11 +282,11 @@ async function reconcileAbsentOwners(
     JOIN registration_observer_children c ON c.observation_id = i.observation_id
     LEFT JOIN registration_observer_outcomes o ON o.observation_id = i.observation_id
     WHERE o.observation_id IS NULL`);
-  const rows = decodeStrict(pendingChildRowsSchema, registryRows(pending));
+  const rows = decodeRegistryRows(pendingChildRowsSchema, pending);
   for (const row of rows) {
-    const child = decodeStrict(childSchema, JSON.parse(row.identityJson));
+    const child = decodeRegistryJson(childSchema, row.identityJson);
     if (child.jobName !== `Local\\SlopStop.Registration.Observer.${row.observationId}`) {
-      throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
+      throw registryCorrupt();
     }
     if ((await absence.inspect(child)).status !== "absent") continue;
     await writeOutcome(

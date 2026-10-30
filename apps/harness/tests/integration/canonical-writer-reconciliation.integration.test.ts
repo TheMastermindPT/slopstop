@@ -13,6 +13,7 @@ import {
   settlementText,
   unchangedText,
 } from "./canonical-command-fixture.js";
+import { expectLedgerFailure, refused } from "./canonical-ledger-failure.js";
 import {
   expectOtherProjectRecoveryIsolation,
   expectRecoveryFenceCase,
@@ -71,9 +72,17 @@ it.each([7, 8])(
       const before = await f.snapshot();
       forbidReplayWork(f);
       const start = f.calls.length;
-      await expect(
-        f.repository.settle(settlementText.replace('"value":7', `"value":${value}`)),
-      ).rejects.toThrow("Canonical original receipt authority is inconsistent.");
+      const error = await f.repository
+        .settle(settlementText.replace('"value":7', `"value":${value}`))
+        .then(
+          () => undefined,
+          (rejection: unknown) => rejection,
+        );
+      expect(error).toHaveProperty(
+        "message",
+        "Canonical original receipt authority is inconsistent.",
+      );
+      expectLedgerFailure(error, refused("ORIGINAL_RECEIPT_IS_CONFLICT"));
       expect(await f.snapshot()).toEqual(before);
       expect(f.calls.slice(start).filter((sql) => /^(INSERT|UPDATE|DELETE)/u.test(sql))).toEqual(
         [],
@@ -700,7 +709,7 @@ it("S6 G4 B11 rejects any recovery row at initial generation", async () => {
       sql.includes("FROM writer_recovery_records")
         ? { ...result, rows: [result.columns.map(() => null)] }
         : result;
-    await expectBrokenRecoveryActivation(f);
+    await expectBrokenRecoveryActivation(f, { shape: "Initial Writer has recovery records." });
   } finally {
     await f.raw.close();
   }
@@ -713,7 +722,11 @@ it("S6 G4 B11 rejects older unresolved generation without hiding it behind G2", 
     await seedRecoveryRecord(f);
     await f.repository.releaseFence("2026-09-05T12:00:06.000Z");
     forbidReplayWork(f);
-    await expectBrokenRecoveryActivation(f, 3);
+    await expectBrokenRecoveryActivation(
+      f,
+      { shape: "Canonical recovery source authority is inconsistent." },
+      3,
+    );
   } finally {
     await f.raw.close();
   }

@@ -33,6 +33,7 @@ import {
 } from "../../src/storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../../src/storage/project-storage-store.js";
 import { unusedCanonicalApplication } from "./canonical-runtime-application-fixture.js";
+import { silentRequestDiagnostics } from "./request-diagnostics-fixture.js";
 
 export const checkedInMigrationRoot = path.resolve(import.meta.dirname, "../../drizzle");
 export const projectStorageIntegrationTimeout = 15_000;
@@ -153,7 +154,10 @@ async function projectStorageApplicationForRoot(
       ? {}
       : { openProjectDatabaseClient: options.openProjectDatabaseClient }),
   });
-  return createProjectStorageApplication(createProjectStorageOwner(dependencies));
+  return createProjectStorageApplication(
+    createProjectStorageOwner(dependencies),
+    silentRequestDiagnostics,
+  );
 }
 
 export async function createStorageRuntimeForRoot(
@@ -163,11 +167,12 @@ export async function createStorageRuntimeForRoot(
   const { port1, port2 } = new MessageChannel();
   let generatedId = 100;
   const stopRuntime = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     canonicalProjectApplication: unusedCanonicalApplication(async () => {
       throw new Error("Unexpected canonical Project switch in this fixture.");
     }),
     transport: transportFor(port1),
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     projectStorageApplication: await projectStorageApplicationForRoot(root, options),
     harnessVersion: "0.0.0",
     createId: () => `00000000-0000-4000-8000-${String(generatedId++).padStart(12, "0")}`,

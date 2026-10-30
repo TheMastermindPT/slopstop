@@ -31,6 +31,7 @@ import {
   switchTimes,
   targetAcquireOrder,
 } from "./project-storage-create-fixture.js";
+import { silentRequestDiagnostics } from "./request-diagnostics-fixture.js";
 
 async function expectMigratedSwitchDrain(
   outcome: "current" | "stale" | "rejected",
@@ -861,7 +862,7 @@ import {
 it("round-trips safe switching through real runtime application coordinator and Writer", async () => {
   const f = switchFixture(true);
   const storage = {
-    ...createUnavailableProjectStorageApplication(),
+    ...createUnavailableProjectStorageApplication(silentRequestDiagnostics),
     stop: vi.fn(async () => f.touch("storage.stop")),
   };
   const channel = switchChannel(f.owner, storage);

@@ -364,9 +364,10 @@ async function invalidResult(operation: () => Promise<unknown>): Promise<void> {
   expect(error.name).toBe("CanonicalProjectApplicationError");
   expect(error.message).toBe("Canonical Project application returned an invalid result.");
   expect(error.cause).toBeUndefined();
-  expect(Object.keys(error)).toEqual(["name"]);
+  expect(Object.keys(error)).toEqual(["_tag"]);
   expect(error).toBeInstanceOf(applications.CanonicalProjectApplicationError);
-  expect(Object.getOwnPropertyNames(error).sort()).toEqual(["message", "name", "stack"]);
+  expect(Object.getOwnPropertyNames(error).sort()).toEqual(["_tag", "message", "stack"]);
+  expect(Reflect.get(error, "_tag")).toBe("CanonicalProjectApplicationError");
 }
 
 async function unexpectedSwitch(): Promise<never> {

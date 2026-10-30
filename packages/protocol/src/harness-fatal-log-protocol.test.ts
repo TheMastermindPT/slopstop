@@ -1,6 +1,9 @@
 import { Result } from "effect";
 import { expect, it } from "vitest";
-import { HarnessFatalLogLineSchema } from "./harness-fatal-log-protocol.js";
+import {
+  HarnessFatalLogLineSchema,
+  HarnessRequestFailureLogLineSchema,
+} from "./harness-fatal-log-protocol.js";
 import { decodeStrictResult } from "./schema-codec.js";
 
 type Line = Readonly<Record<string, unknown>>;
@@ -128,4 +131,78 @@ const textCarryingLines = [
 
 it.for(textCarryingLines)("rejects a fatal line that could carry text: $name", ({ line }) => {
   expect(Result.isFailure(decodeStrictResult(HarnessFatalLogLineSchema, line))).toBe(true);
+});
+
+/** Each request boundary with the code it answers, written out. */
+const boundaryAnswers = [
+  ["harness.message", "HARNESS_INTERNAL_FAILURE"],
+  ["harness.notification", "HARNESS_INTERNAL_FAILURE"],
+  ["harness.registration", "HARNESS_INTERNAL_FAILURE"],
+  ["project-storage.owner", "PROJECT_STORAGE_OWNER_FAILED"],
+  ["workspace.query", "WORKSPACE_PRODUCER_FAILED"],
+  ["workspace.intent", "WORKSPACE_PRODUCER_FAILED"],
+] as const;
+
+function requestLine(metadata: Line = {}): Line {
+  return {
+    level: 40,
+    time: 0,
+    service: "harness",
+    code: "HARNESS_REQUEST_FAILED",
+    msg: "Harness request failed.",
+    boundary: "harness.message",
+    answered: "HARNESS_INTERNAL_FAILURE",
+    failures: [{ kind: "error" }],
+    omittedFailures: 0,
+    ...metadata,
+  };
+}
+
+const acceptedRequestLines = [
+  ...boundaryAnswers.map(([boundary, answered]) => ({
+    name: `${boundary} answering ${answered}`,
+    line: requestLine({ boundary, answered }),
+  })),
+  { name: "a tag entry", line: requestLine({ failures: [{ tag: "CanonicalLedgerRefusal" }] }) },
+  { name: "a cleanup entry", line: requestLine({ failures: [cleanupEntry] }) },
+  {
+    name: "a release entry",
+    line: requestLine({
+      failures: [{ tag: "CanonicalProjectReleaseFailed", code: "WRITER_FENCE_STALE" }],
+    }),
+  },
+] as const;
+
+it.for(acceptedRequestLines)("accepts each harness request failure line: $name", ({ line }) => {
+  const decoded = decodeStrictResult(HarnessRequestFailureLogLineSchema, line);
+  expect(Result.isSuccess(decoded)).toBe(true);
+  if (Result.isSuccess(decoded)) expect(decoded.success).toEqual(line);
+});
+
+const refusedRequestLines = [
+  ...["message", "err", "stack", "cause", "messageId"].map((key) => ({
+    name: `an extra ${key} key`,
+    line: requestLine({ [key]: "C:\\private\\project" }),
+  })),
+  { name: "a msg other than the fixed message", line: requestLine({ msg: "Request failed." }) },
+  ...[30, 50, 60].map((level) => ({ name: `level ${level}`, line: requestLine({ level }) })),
+  { name: "an unknown boundary", line: requestLine({ boundary: "harness.other" }) },
+  {
+    name: "the answer of another boundary",
+    line: requestLine({ boundary: "project-storage.owner", answered: "HARNESS_INTERNAL_FAILURE" }),
+  },
+  {
+    name: "a tag that could hold a path",
+    line: requestLine({ failures: [{ tag: "C:\\private" }] }),
+  },
+  {
+    name: "17 failures",
+    line: requestLine({ failures: [...sixteenEntries, { kind: "error" }] }),
+  },
+  { name: "a negative omittedFailures", line: requestLine({ omittedFailures: -1 }) },
+  { name: "a fractional omittedFailures", line: requestLine({ omittedFailures: 0.5 }) },
+] as const;
+
+it.for(refusedRequestLines)("rejects a request failure line: $name", ({ line }) => {
+  expect(Result.isFailure(decodeStrictResult(HarnessRequestFailureLogLineSchema, line))).toBe(true);
 });

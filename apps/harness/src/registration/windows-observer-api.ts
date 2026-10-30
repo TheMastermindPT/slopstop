@@ -1,3 +1,4 @@
+import { Data } from "effect";
 import * as koffi from "koffi";
 
 type NativeCall = (...arguments_: readonly unknown[]) => unknown;
@@ -68,10 +69,12 @@ export function createWindowsObserverApi() {
 
 export type WindowsObserverApi = ReturnType<typeof createWindowsObserverApi>;
 
-export class WindowsObserverApiError extends Error {
-  constructor(readonly code: number) {
-    super(`Windows observer API failed (${code}).`);
-    this.name = "WindowsObserverApiError";
+export class WindowsObserverApiError extends Data.TaggedError("WindowsObserverApiError")<{
+  readonly message: string;
+  readonly code: number;
+}> {
+  constructor(code: number) {
+    super({ message: `Windows observer API failed (${code}).`, code });
   }
 }
 

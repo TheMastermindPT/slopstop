@@ -14,6 +14,7 @@ import {
   ProjectStorageOpenResultSchema,
 } from "@slopstop/protocol";
 import { type Schema, Result as SchemaResult } from "effect";
+import type { HarnessRequestDiagnostics } from "./harness-request-diagnostics.js";
 
 export type ProjectStorageOwnerOutcome =
   | Readonly<{ status: "ready"; result: unknown }>
@@ -111,10 +112,12 @@ async function invokeOwner<Request, Result>(
   operation: (request: Request) => Promise<ProjectStorageOwnerOutcome>,
   request: Request,
   contract: OperationContract<Request, Result>,
+  diagnostics: HarnessRequestDiagnostics,
 ): Promise<Result> {
   try {
     return mapOwnerOutcome(await operation(request), request, contract);
-  } catch {
+  } catch (failure) {
+    diagnostics.requestFailed("project-storage.owner", failure);
     return brokenResult(
       request,
       "PROJECT_STORAGE_OWNER_FAILED",
@@ -168,16 +171,22 @@ const closeContract: OperationContract<ProjectStorageCloseRequest, ProjectStorag
 
 export function createProjectStorageApplication(
   owner: ProjectStorageOwnerPort,
+  diagnostics: HarnessRequestDiagnostics,
 ): ProjectStorageApplication {
   return {
-    open: (request) => invokeOwner((value) => owner.open(value), request, openContract),
-    create: (request) => invokeOwner((value) => owner.create(value), request, createContract),
-    close: (request) => invokeOwner((value) => owner.close(value), request, closeContract),
+    open: (request) =>
+      invokeOwner((value) => owner.open(value), request, openContract, diagnostics),
+    create: (request) =>
+      invokeOwner((value) => owner.create(value), request, createContract, diagnostics),
+    close: (request) =>
+      invokeOwner((value) => owner.close(value), request, closeContract, diagnostics),
     stop: () => owner.stop(),
   };
 }
 
-export function createUnavailableProjectStorageApplication(): ProjectStorageApplication {
+export function createUnavailableProjectStorageApplication(
+  diagnostics: HarnessRequestDiagnostics,
+): ProjectStorageApplication {
   const message = "Project Storage owner is unavailable.";
   const owner: ProjectStorageOwnerPort = {
     open: async () => ({ status: "unavailable", message }),
@@ -185,5 +194,5 @@ export function createUnavailableProjectStorageApplication(): ProjectStorageAppl
     close: async () => ({ status: "unavailable", message }),
     stop: () => Promise.resolve(),
   };
-  return createProjectStorageApplication(owner);
+  return createProjectStorageApplication(owner, diagnostics);
 }

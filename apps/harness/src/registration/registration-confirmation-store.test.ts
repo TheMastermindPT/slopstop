@@ -193,11 +193,15 @@ const storedReservation = {
 type StoredReservation = typeof storedReservation;
 const proposal = decodeStrict(RegistrationProposalRecordSchema, storedReservation.proposal);
 
+/** How the reservation row reads back: absent, or with other stored record text. */
+type StoredRow = Readonly<{ absent?: true; recordJson?: string }>;
+
 /** Answers the common-directory lookup with the record's id, then the agreeing reservation row. */
 function reservationTransaction(
   record: StoredReservation,
+  stored: StoredRow = {},
 ): Pick<LocalLibsqlTransaction, "execute"> {
-  const recordJson = JSON.stringify(record);
+  const recordJson = stored.recordJson ?? JSON.stringify(record);
   const fingerprint = createHash("sha256").update(recordJson).digest("hex");
   const common = record.proposal.observation.physical.commonDirectory;
   return {
@@ -221,16 +225,18 @@ function reservationTransaction(
           "recordJson",
           "fingerprint",
         ],
-        rows: [
-          [
-            common.platform,
-            common.volumeIdentity,
-            common.fileIdentity,
-            common.birthIdentity,
-            recordJson,
-            fingerprint,
-          ],
-        ],
+        rows: stored.absent
+          ? []
+          : [
+              [
+                common.platform,
+                common.volumeIdentity,
+                common.fileIdentity,
+                common.birthIdentity,
+                recordJson,
+                fingerprint,
+              ],
+            ],
         rowsAffected: 0,
         lastInsertRowid: null,
       };
@@ -257,10 +263,13 @@ it.each([
     { confirmationPhaseId: upper(storedReservation.confirmationPhaseId) },
   ],
   ["createRequestId nil", { createRequestId: nil }],
+  // The reservation id row is found, but its reservation row is not.
+  ["reservation row absent", {}, { absent: true }],
+  ["recordJson not JSON", {}, { recordJson: "{" }],
 ] as const)(
   "classifies a stored reservation with a non-strict identity as corrupt (%s)",
-  async (_name, change) => {
-    const transaction = reservationTransaction({ ...storedReservation, ...change });
+  async (_name, change, stored?: StoredRow) => {
+    const transaction = reservationTransaction({ ...storedReservation, ...change }, stored);
     const rejection = await rejectionOf(findCommonReservation(transaction, proposal));
     expect(registryFailure(rejection)).toEqual({ status: "broken", code: "REGISTRY_CORRUPT" });
   },

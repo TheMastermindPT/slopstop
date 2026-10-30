@@ -1,10 +1,17 @@
 import { randomUUID } from "node:crypto";
+import { rm } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { expect, it } from "vitest";
 import { createRegistrationRegistry } from "../../src/registration/registration-registry.js";
+import { createRepositoryIdentityQueryOwner } from "../../src/registration/repository-identity-query-owner.js";
 import { checkedInMigrationRoot } from "./project-storage-runtime-fixture.js";
+import {
+  consentRegistryOptions,
+  createRepositoryTrustScenario,
+} from "./registration-consent-fixture.js";
 import { registerFolder, registrationSession } from "./registration-flow-fixture.js";
+import { temporaryRoot } from "./temporary-root.js";
 import { missing94 } from "./trace-94.js";
 
 const fixedInstant = "2026-10-24T12:00:00.000Z";
@@ -114,5 +121,55 @@ it.runIf(process.platform === "win32").each(storedTimes.map(([name]) => name))(
     const values = (await stamped).get(name) ?? [];
     expect(values.length).toBeGreaterThan(0);
     expect(values).toEqual(values.map(() => fixedInstant));
+  },
+);
+
+/** The stored identity query attempts, read before the test removes the root. */
+function storedAttempts(root: string) {
+  const db = new DatabaseSync(path.join(root, "installation/application.db"), { readOnly: true });
+  try {
+    return db
+      .prepare(
+        "SELECT child_json, settled_at, result_json FROM registration_identity_query_attempts",
+      )
+      .all();
+  } finally {
+    db.close();
+  }
+}
+
+it.runIf(process.platform === "win32")(
+  "stamps the no-dispatch settlement from the injected clock",
+  async () => {
+    const root = await temporaryRoot("p3-s2-no-dispatch-clock-");
+    try {
+      const scenario = await createRepositoryTrustScenario(root);
+      const unavailable = { status: "unavailable", code: "GIT_UNAVAILABLE" } as const;
+      // The child never reports an owned process, so the owner settles without a dispatch.
+      const owner = createRepositoryIdentityQueryOwner(
+        scenario.registry,
+        { ...consentRegistryOptions(root), clock },
+        root,
+        { run: async () => unavailable },
+      );
+      try {
+        expect(
+          await scenario.registry.decideRepositoryTrust({
+            ...scenario.trust,
+            decision: "accepted",
+          }),
+        ).toEqual({ status: "recorded" });
+        expect(await owner.inspectInsideWorkTree(scenario.admission)).toEqual(unavailable);
+      } finally {
+        await owner.close();
+        await scenario.observer.close();
+        await scenario.registry.stop();
+      }
+      expect(storedAttempts(root)).toEqual([
+        { child_json: null, settled_at: fixedInstant, result_json: JSON.stringify(unavailable) },
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   },
 );

@@ -3,7 +3,12 @@ import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { createProjectRegistrationCommand } from "@slopstop/protocol";
+import {
+  createHandshakeCommand,
+  createProjectRegistrationCommand,
+  decodeStrict,
+  HarnessRequestFailureLogLineSchema,
+} from "@slopstop/protocol";
 import { Context, Effect, Layer, ManagedRuntime } from "effect";
 import { afterEach, expect, it, vi } from "vitest";
 import {
@@ -12,6 +17,9 @@ import {
   track,
 } from "../tests/integration/application-database-close-fixture.js";
 import { silentHarnessLogger } from "../tests/integration/project-storage-runtime-fixture.js";
+import { memoryLogDestination } from "../tests/integration/request-diagnostics-fixture.js";
+import { UntypedRejection } from "./effect-rejection.js";
+import { createHarnessLogger } from "./harness-logger.js";
 import {
   ApplicationDatabase,
   HarnessRuntimeDisposeUnconfirmed,
@@ -221,6 +229,7 @@ const shutdownRows: readonly ShutdownRow[] = [
       program: () => Promise.reject(programFailure),
       check: (settled) => {
         expect(settled.state).toBe("rejected");
+        expect(settled.value).not.toBeInstanceOf(UntypedRejection);
         const second = expectAggregate(
           settled.value,
           "Harness process shutdown failed.",
@@ -340,10 +349,12 @@ const startupRows: readonly StartupRow[] = [
       const unconfirmed = new ApplicationDatabaseCloseUnconfirmed(1_000);
       return {
         release: Effect.die(unconfirmed),
-        check: (error) =>
+        check: (error) => {
+          expect(error).not.toBeInstanceOf(UntypedRejection);
           expect(expectAggregate(error, "Harness startup failed.", startupFailure)).toBe(
             unconfirmed,
-          ),
+          );
+        },
       };
     },
   },
@@ -393,6 +404,22 @@ it.each(startupRows)("reports a startup failure after a bounded dispose: $name",
   if (released !== undefined) expect(releasedAtRejection).toBe(true);
 });
 
+it("rejects a launch with the very value a start threw", async () => {
+  const launching = launchOnProcessRuntime({
+    layer: releasedLayer(Effect.void),
+    start: (runtime) => {
+      runtime.runSync(Released);
+      throw "startup refused";
+    },
+  });
+  await expect(launching).rejects.toBe("startup refused");
+});
+
+it("rejects a stop with the very value the program rejected with", async () => {
+  const stop = await launchProgram(Effect.void, () => Promise.reject("program refused"));
+  await expect(stop()).rejects.toBe("program refused");
+});
+
 it("routes the process runtime through its edges: unsubscribe throws", async () => {
   const base = path.join(os.tmpdir(), `slopstop-process-bootstrap-unit-${randomUUID()}`);
   const unsubscribeFailure = new Error("private unsubscribe failure");
@@ -429,5 +456,64 @@ it("routes the process runtime through its edges: unsubscribe throws", async () 
       payload: { code: "HARNESS_INTERNAL_FAILURE", retryable: false },
     },
   ]);
+  expect(existsSync(base)).toBe(false);
+});
+
+it("routes the process runtime through its edges: a failed ready answer writes one request-failure line", async () => {
+  const base = path.join(os.tmpdir(), `slopstop-process-bootstrap-unit-${randomUUID()}`);
+  const destination = memoryLogDestination();
+  const sent: unknown[] = [];
+  let failedReady = false;
+  let listener: ((message: unknown) => void) | undefined;
+  const stop = await startHarnessProcessRuntime({
+    bootstrap: {
+      kind: "harness.connect",
+      applicationStorageRootUrl: pathToFileURL(path.join(base, "storage")).href,
+      migrationResourcesRootUrl: pathToFileURL(path.join(base, "migrations")).href,
+    },
+    transport: {
+      send: (message) => {
+        if (!failedReady && Reflect.get(Object(message), "event") === "system.ready") {
+          failedReady = true;
+          throw new Error("C:\\private\\ready transport failure");
+        }
+        sent.push(message);
+      },
+      subscribe: (received) => {
+        listener = received;
+        return () => undefined;
+      },
+    },
+    logger: createHarnessLogger(destination.stream),
+  });
+  try {
+    const handshake = createHandshakeCommand(
+      { messageId: "00000000-0000-4000-8000-000000000061", sentAt: "2026-10-26T12:00:00.000Z" },
+      "0.0.0",
+    );
+    listener?.(handshake);
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent).toMatchObject([
+      {
+        event: "request.failure",
+        causationId: handshake.messageId,
+        payload: { code: "HARNESS_INTERNAL_FAILURE", retryable: false },
+      },
+    ]);
+    const requestLines = destination.lines.filter((line) =>
+      line.includes('"code":"HARNESS_REQUEST_FAILED"'),
+    );
+    expect(requestLines).toHaveLength(1);
+    expect(
+      decodeStrict(HarnessRequestFailureLogLineSchema, JSON.parse(requestLines[0] ?? "")),
+    ).toMatchObject({
+      boundary: "harness.message",
+      answered: "HARNESS_INTERNAL_FAILURE",
+      failures: [{ kind: "error" }],
+      omittedFailures: 0,
+    });
+  } finally {
+    await stop();
+  }
   expect(existsSync(base)).toBe(false);
 });

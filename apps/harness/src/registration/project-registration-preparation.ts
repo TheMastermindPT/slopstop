@@ -10,6 +10,7 @@ import { REGISTRATION_CLEANUP_BUDGET_MS } from "./observer-limits.js";
 import { samePhysicalIdentity } from "./physical-identity.js";
 import type { listRegisteredProjects } from "./project-listing.js";
 import {
+  type ConfirmationRequest,
   ConfirmationValidationRequestSchema,
   incomplete,
   type RegistrationBootstrap,
@@ -22,6 +23,7 @@ import {
   PrepareProjectRegistrationSchema,
   preparationFingerprint,
   preparedResult,
+  type RegistrationProposalRecord,
   RegistrationProposalRecordSchema,
   readProposal,
 } from "./registration-proposal-store.js";
@@ -92,21 +94,28 @@ async function observeProposal(
   return cleanup.status === "pending-recovery" ? cleanup : result;
 }
 
+function write<T>(
+  options: RegistrationDatabaseOptions,
+  operation: (transaction: LocalLibsqlTransaction) => Promise<T>,
+) {
+  return withRegistrationDatabase(
+    options,
+    (client) => withWriteTransaction(client, operation),
+    "existing-only",
+  );
+}
+
 async function prepare(dependencies: Dependencies, input: unknown, signal: AbortSignal) {
   try {
     const request = decodeStrict(PrepareProjectRegistrationSchema, input);
-    const write = <T>(operation: (transaction: LocalLibsqlTransaction) => Promise<T>) =>
-      withRegistrationDatabase(
-        dependencies.options,
-        (client) => withWriteTransaction(client, operation),
-        "existing-only",
-      );
-    const existing = await write((transaction) => readProposal(transaction, request));
+    const existing = await write(dependencies.options, (transaction) =>
+      readProposal(transaction, request),
+    );
     if (existing !== undefined) return preparedResult(existing);
     if (signal.aborted) return { status: "cancelled" } as const;
     const observed = await observeProposal(dependencies, request, signal);
     if (observed.status !== "captured") return observed;
-    return await write(async (transaction) => {
+    return await write(dependencies.options, async (transaction) => {
       const raced = await readProposal(transaction, request);
       if (raced !== undefined) return preparedResult(raced);
       if (signal.aborted) return { status: "cancelled" } as const;
@@ -115,6 +124,43 @@ async function prepare(dependencies: Dependencies, input: unknown, signal: Abort
   } catch (error) {
     return registryFailure(error);
   }
+}
+
+/** Whether the confirmation names the saved proposal, by its id and its fingerprint. */
+function isSavedProposal(
+  saved: RegistrationProposalRecord | undefined,
+  request: ConfirmationRequest,
+): saved is RegistrationProposalRecord {
+  return !(
+    saved === undefined ||
+    saved.proposalId !== request.proposalId ||
+    preparationFingerprint(saved) !== request.proposalFingerprint
+  );
+}
+
+/**
+ * The refusal when a fresh observation no longer matches the saved proposal, or `undefined`.
+ * The executable is compared first, then each physical directory.
+ */
+function identityRefusal(saved: RegistrationProposalRecord, observed: RegistrationProposalRecord) {
+  if (
+    !sameExecutableIdentity(
+      saved.authority.executable.executableIdentity,
+      observed.authority.executable.executableIdentity,
+    )
+  ) {
+    return { status: "unavailable", code: "GIT_CONFIRMATION_REQUIRED" } as const;
+  }
+  if (
+    !(["worktree", "gitDirectory", "commonDirectory"] as const).every((directory) => {
+      return samePhysicalIdentity(
+        saved.observation.physical[directory],
+        observed.observation.physical[directory],
+      );
+    })
+  )
+    return { status: "rejected", code: "REPOSITORY_IDENTITY_CHANGED" } as const;
+  return undefined;
 }
 
 // Internal pre-reservation validation. This result is neither a durable registration
@@ -126,41 +172,17 @@ async function inspectConfirmation(
 ) {
   try {
     const request = decodeStrict(ConfirmationValidationRequestSchema, input);
-    const saved = await withRegistrationDatabase(
-      dependencies.options,
-      (client) =>
-        withWriteTransaction(client, (transaction) =>
-          readProposal(transaction, request.preparation),
-        ),
-      "existing-only",
+    const saved = await write(dependencies.options, (transaction) =>
+      readProposal(transaction, request.preparation),
     );
-    if (
-      saved === undefined ||
-      saved.proposalId !== request.proposalId ||
-      preparationFingerprint(saved) !== request.proposalFingerprint
-    ) {
+    if (!isSavedProposal(saved, request)) {
       return { status: "rejected", code: "REGISTRATION_IDEMPOTENCY_CONFLICT" } as const;
     }
     if (signal.aborted) return { status: "cancelled" } as const;
     const observed = await observeProposal(dependencies, saved.request, signal);
     if (observed.status !== "captured") return observed;
-    if (
-      !sameExecutableIdentity(
-        saved.authority.executable.executableIdentity,
-        observed.record.authority.executable.executableIdentity,
-      )
-    ) {
-      return { status: "unavailable", code: "GIT_CONFIRMATION_REQUIRED" } as const;
-    }
-    if (
-      !(["worktree", "gitDirectory", "commonDirectory"] as const).every((directory) => {
-        return samePhysicalIdentity(
-          saved.observation.physical[directory],
-          observed.record.observation.physical[directory],
-        );
-      })
-    )
-      return { status: "rejected", code: "REPOSITORY_IDENTITY_CHANGED" } as const;
+    const refusal = identityRefusal(saved, observed.record);
+    if (refusal !== undefined) return refusal;
     return {
       status: "confirmation-observed" as const,
       request,
@@ -187,38 +209,58 @@ async function validateConfirmation(
   };
 }
 
+type Reserved = Extract<Awaited<ReturnType<typeof reserveConfirmation>>, { status: "reserved" }>;
+
+/** The bootstrap a reservation runs: only a newly created one, and only before an abort. */
+function bootstrapFor(dependencies: Dependencies, reserved: Reserved, signal: AbortSignal) {
+  const runs = reserved.created && dependencies.bootstrap !== undefined && !signal.aborted;
+  return runs ? dependencies.bootstrap : undefined;
+}
+
+/** Runs the reservation's bootstrap, or answers the stored confirmation. */
+async function completeConfirmation(
+  dependencies: Dependencies,
+  request: ConfirmationRequest,
+  reserved: Reserved,
+  signal: AbortSignal,
+) {
+  const bootstrap = bootstrapFor(dependencies, reserved, signal);
+  if (bootstrap !== undefined) {
+    const creation: Promise<Awaited<ReturnType<RegistrationBootstrap>>> = bootstrap(
+      reserved.reservation,
+      reserved.request,
+      signal,
+    );
+    return await creation;
+  }
+  return (
+    (await write(dependencies.options, (transaction) => readConfirmation(transaction, request))) ??
+    incomplete(request)
+  );
+}
+
 async function confirm(dependencies: Dependencies, input: unknown, signal: AbortSignal) {
   try {
     const request = decodeStrict(ConfirmationValidationRequestSchema, input);
-    const write = <T>(operation: (transaction: LocalLibsqlTransaction) => Promise<T>) =>
-      withRegistrationDatabase(
-        dependencies.options,
-        (client) => withWriteTransaction(client, operation),
-        "existing-only",
-      );
-    const previous = await write((transaction) => readConfirmation(transaction, request));
+    const previous = await write(dependencies.options, (transaction) =>
+      readConfirmation(transaction, request),
+    );
     if (previous !== undefined) return previous;
     if (signal.aborted) return { status: "cancelled" } as const;
     const observed = await inspectConfirmation(dependencies, request, signal);
     if (observed.status !== "confirmation-observed") return observed;
-    const reserved = await write((transaction) =>
+    const reserved = await write(dependencies.options, (transaction) =>
       reserveConfirmation(transaction, observed, registrationClock(dependencies.options), signal),
     );
     if (reserved.status !== "reserved") return reserved;
-    if (reserved.created && dependencies.bootstrap !== undefined && !signal.aborted) {
-      const creation: Promise<Awaited<ReturnType<RegistrationBootstrap>>> = dependencies.bootstrap(
-        reserved.reservation,
-        reserved.request,
-        signal,
-      );
-      return await creation;
-    }
-    return (
-      (await write((transaction) => readConfirmation(transaction, request))) ?? incomplete(request)
-    );
+    return await completeConfirmation(dependencies, request, reserved, signal);
   } catch (error) {
     return registryFailure(error);
   }
+}
+
+function bootstrapFailed(result: Awaited<ReturnType<RegistrationBootstrap>>): boolean {
+  return result.status === "broken";
 }
 
 type OperationResult =
@@ -287,36 +329,29 @@ export function createProjectRegistrationPreparation(
 ) {
   let closed = false;
   let unconfirmed: PendingClose | undefined;
-  let activeBootstraps = 0;
-  let activeListings = 0;
+  const bootstraps = { running: 0, pending: pendingCreation };
+  const listings = { running: 0, pending: pendingListing };
+  // Counts the running work and records its unconfirmed answer when its own failure test says so.
+  const tracked =
+    <Args extends unknown[], Answer>(
+      counter: { running: number; pending: PendingClose },
+      work: (...args: Args) => Promise<Answer>,
+      failed: (result: Answer) => boolean,
+    ) =>
+    async (...args: Args): Promise<Answer> => {
+      counter.running += 1;
+      try {
+        const result = await work(...args);
+        if (failed(result)) unconfirmed ??= counter.pending;
+        return result;
+      } finally {
+        counter.running -= 1;
+      }
+    };
   const trackedListing: Listing | undefined =
-    listing === undefined
-      ? undefined
-      : async (signal) => {
-          activeListings += 1;
-          try {
-            const work: Promise<Awaited<ReturnType<Listing>>> = listing(signal);
-            const result = await work;
-            if (listingCleanupFailed(result)) unconfirmed ??= pendingListing;
-            return result;
-          } finally {
-            activeListings -= 1;
-          }
-        };
+    listing === undefined ? undefined : tracked(listings, listing, listingCleanupFailed);
   const trackedBootstrap: RegistrationBootstrap | undefined =
-    bootstrap === undefined
-      ? undefined
-      : async (...args) => {
-          activeBootstraps += 1;
-          try {
-            const work: Promise<Awaited<ReturnType<RegistrationBootstrap>>> = bootstrap(...args);
-            const result = await work;
-            if (result.status === "broken") unconfirmed ??= pendingCreation;
-            return result;
-          } finally {
-            activeBootstraps -= 1;
-          }
-        };
+    bootstrap === undefined ? undefined : tracked(bootstraps, bootstrap, bootstrapFailed);
   let closing: ReturnType<typeof drainPreparations> | undefined;
   const active = new Map<AbortController, Promise<OperationResult>>();
   const run = async (
@@ -367,13 +402,12 @@ export function createProjectRegistrationPreparation(
       closed = true;
       for (const controller of active.keys()) controller.abort();
       closing = drainPreparations(active.values(), () =>
-        activeBootstraps > 0
+        bootstraps.running > 0
           ? pendingCreation
-          : activeListings > 0
+          : listings.running > 0
             ? pendingListing
             : pendingCleanup,
       ).then((result) => {
-        if (result.status === "pending-recovery") unconfirmed ??= result;
         return unconfirmed ?? result;
       });
       return closing;

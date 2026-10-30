@@ -18,6 +18,16 @@ export function isCorruptStorageError(input: { error: unknown }): boolean {
   return code === "SQLITE_CORRUPT" || code === "SQLITE_NOTADB";
 }
 
+/**
+ * The one busy classification for SQLite: the database is locked by another connection
+ * (`SQLITE_BUSY`) or by this one's shared cache (`SQLITE_LOCKED`). Every other code, extended
+ * codes included, is not busy; callers treat it as broken.
+ */
+export function isSqliteBusy(error: unknown): boolean {
+  const code = storageErrorCode({ error });
+  return code === "SQLITE_BUSY" || code === "SQLITE_LOCKED";
+}
+
 const unavailableExactCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
 const unavailableSqliteCodeFamilies = [
   "SQLITE_AUTH",
@@ -52,13 +62,18 @@ export function isUnavailableStorageError(input: { error: unknown }): boolean {
   return unavailableSqliteCodeFamilies.some((family) => belongsToErrorCodeFamily(code, family));
 }
 
-/** Busy-class storage errors, directly or as the cause another error wraps them in. */
-export function isBusyStorageError(input: { error: unknown }): boolean {
+/**
+ * A storage error worth retrying: busy or unavailable ({@link isUnavailableStorageError}, or a
+ * {@link ProjectStorageUnavailableError}), directly or as the cause another error wraps it in.
+ * Wider than {@link isSqliteBusy}: the staged upgrade waits out Windows file locks, access and
+ * I/O failures rather than abandon.
+ */
+export function isRetryableStorageError(input: { error: unknown }): boolean {
   if (input.error instanceof ProjectStorageUnavailableError) return true;
   if (isUnavailableStorageError(input)) return true;
   const { error } = input;
   // An undefined cause answers false in the recursion, so it needs no guard here.
-  return error instanceof Error && isBusyStorageError({ error: error.cause });
+  return error instanceof Error && isRetryableStorageError({ error: error.cause });
 }
 
 /** The storage failure an error stands for: a known one as is, else unavailable or broken. */

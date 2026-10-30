@@ -53,6 +53,7 @@ import {
   switchDeferred,
   transportFor,
 } from "./project-storage-runtime-fixture.js";
+import { silentRequestDiagnostics } from "./request-diagnostics-fixture.js";
 
 export const settlementNewEpoch = decodeStrict(
   ProjectActivationIdSchema,
@@ -642,7 +643,7 @@ export async function createSettlementComposition(extended = true) {
       return controls.alterResult?.(result) ?? result;
     },
   });
-  const ordinary = createProjectStorageApplication(storage);
+  const ordinary = createProjectStorageApplication(storage, silentRequestDiagnostics);
   const channel = settlementChannel(
     application,
     {
@@ -699,6 +700,7 @@ function settlementChannel(
   });
   let generated = 500;
   const stop = startHarnessRuntime({
+    requestDiagnostics: silentRequestDiagnostics,
     transport: {
       ...transportFor(port1),
       subscribe: (listener) =>
@@ -710,7 +712,7 @@ function settlementChannel(
     },
     canonicalProjectApplication: application,
     projectStorageApplication: storage,
-    workspaceApplication: createUnavailableWorkspaceApplication(),
+    workspaceApplication: createUnavailableWorkspaceApplication(silentRequestDiagnostics),
     harnessVersion: "0.0.0",
     createId: () => `99999999-9999-4999-8999-999999999${++generated}`,
     now: () => "2026-09-05T12:00:06.000Z",
@@ -758,7 +760,7 @@ export const counterPayloadSchema = Schema.Struct({
     Schema.isGreaterThanOrEqualTo(0),
     Schema.isLessThanOrEqualTo(10),
   ),
-  meta: Schema.optional(Schema.Struct({ a: Schema.Number, b: Schema.Number })),
+  meta: Schema.optional(Schema.Struct({ a: Schema.Finite, b: Schema.Finite })),
   tags: Schema.optional(Schema.Array(Schema.String)),
 });
 type CounterPayload = typeof counterPayloadSchema.Type;

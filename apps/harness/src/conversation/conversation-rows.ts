@@ -75,7 +75,7 @@ export function selectRows<S extends RowSchema>(
       const rows = decodedRows(schema, result);
       return Result.isSuccess(rows)
         ? Effect.succeed(rows.success)
-        : Effect.fail(new ConversationStorageBroken({ cause: rows.failure }));
+        : new ConversationStorageBroken({ cause: rows.failure });
     }),
   );
 }

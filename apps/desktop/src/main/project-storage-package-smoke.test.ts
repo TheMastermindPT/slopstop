@@ -15,6 +15,7 @@ import {
   projectStoragePackageSmokeFailureStage,
   runProjectStoragePackageSmoke,
 } from "./project-storage-package-smoke.js";
+import { RegistrationPackageSmokeError } from "./registration-package-smoke.js";
 
 function unexpectedCall(): never {
   throw new Error("Unexpected package smoke bridge call.");
@@ -143,6 +144,20 @@ it("classifies an unexpected absent-Project result before later bootstrap steps"
   );
 
   expect(projectStoragePackageSmokeFailureStage(failure)).toBe("absent-project-open");
+  expect(Reflect.get(Object(failure), "_tag")).toBe("ProjectStoragePackageSmokeError");
+  expect(failure).toBeInstanceOf(Error);
+  if (!(failure instanceof Error)) return;
+  expect(failure.name).toBe("ProjectStoragePackageSmokeError");
+  expect(failure.message).toBe("Packaged Project Storage smoke failed.");
+  expect(Reflect.get(failure, "stage")).toBe("absent-project-open");
+  expect(Object.hasOwn(failure, "cause")).toBe(false);
   expect(bridge.create).not.toHaveBeenCalled();
   expect(bridge.close).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["a registration smoke refusal", new RegistrationPackageSmokeError("list")],
+  ["a plain error with the storage text", new Error("Packaged Project Storage smoke failed.")],
+])("reports no storage stage for %s", (_name, error) => {
+  expect(projectStoragePackageSmokeFailureStage(error)).toBeUndefined();
 });

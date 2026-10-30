@@ -40,6 +40,7 @@ import {
   resolveCanonicalRecovery,
 } from "./canonical-writer-recovery.js";
 import type { LocalLibsqlClient, LocalLibsqlTransaction } from "./local-libsql-worker-client.js";
+import { type NativeErrorFields, nativeErrorFields } from "./project-storage-errors.js";
 import {
   type ClassifiedWriteTransactionOutcome,
   runClassifiedWriteTransaction,
@@ -123,13 +124,11 @@ const messages = {
   WRITER_FENCE_RELEASE_FAILED: "Canonical Writer fence release failed.",
   WRITER_REPOSITORY_CLOSE_FAILED: "Canonical Writer repository close failed.",
 } as const;
-export class CanonicalCommandRepositoryError extends Error {
-  override readonly name = "CanonicalCommandRepositoryError";
-  constructor(
-    readonly code: CanonicalCommandRepositoryFailureCode,
-    options?: ErrorOptions,
-  ) {
-    super(messages[code], options);
+export class CanonicalCommandRepositoryError extends Data.TaggedError(
+  "CanonicalCommandRepositoryError",
+)<NativeErrorFields & { readonly code: CanonicalCommandRepositoryFailureCode }> {
+  constructor(code: CanonicalCommandRepositoryFailureCode, options?: ErrorOptions) {
+    super({ ...nativeErrorFields(messages[code], options), code });
   }
 }
 

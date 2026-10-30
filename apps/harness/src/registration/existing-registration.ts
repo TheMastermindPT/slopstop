@@ -14,6 +14,7 @@ import {
 } from "./registration-proposal-store.js";
 import type { RegistrationDatabaseOptions } from "./registry-database.js";
 import { RegistryReadFailed, registryRead, withRegistryTransaction } from "./registry-effect.js";
+import { registryCorruptFailure } from "./registry-failure.js";
 
 /** How a prepared proposal relates to a Project already reserved for its common directory. */
 export type ExistingRegistration =
@@ -37,9 +38,7 @@ function relation(sameFolder: boolean, hidden: boolean) {
   return hidden ? ("restored-to-list" as const) : ("already-registered" as const);
 }
 
-const corrupt = new RegistryReadFailed({
-  failure: { status: "broken", code: "REGISTRY_CORRUPT" },
-});
+const corrupt = new RegistryReadFailed({ failure: registryCorruptFailure });
 
 /**
  * Reads a saved proposal and the reservation for its common directory without writing.
@@ -54,7 +53,7 @@ export function inspectProposal(
   return withRegistryTransaction(options, (transaction) =>
     Effect.gen(function* () {
       const proposal = yield* registryRead(transaction, (read) => readProposal(read, preparation));
-      if (proposal === undefined) return yield* Effect.fail(corrupt);
+      if (proposal === undefined) return yield* corrupt;
       const reservation = yield* registryRead(transaction, (read) =>
         findCommonReservation(read, proposal),
       );

@@ -32,6 +32,7 @@ import {
   settlementText,
   statementText,
 } from "./canonical-command-fixture.js";
+import { expectLedgerFailure, type LedgerFailure } from "./canonical-ledger-failure.js";
 import { unusedProjectUpgrade } from "./canonical-runtime-application-fixture.js";
 import { openedCanonicalStorageResult } from "./canonical-storage-selection-fixture.js";
 import { createConformanceCounterCommand } from "./conformance-counter-command.js";
@@ -143,7 +144,11 @@ export function expectRecoveryActivationRows(
   });
 }
 
-export async function expectBrokenRecoveryActivation(f: RecoveryFixture, generation = 2) {
+export async function expectBrokenRecoveryActivation(
+  f: RecoveryFixture,
+  expected: LedgerFailure,
+  generation = 2,
+) {
   const before = await f.snapshot();
   const start = f.calls.length;
   const result = await activateRecovery(f, generation);
@@ -154,6 +159,7 @@ export async function expectBrokenRecoveryActivation(f: RecoveryFixture, generat
       message: "Canonical Writer fence activation failed.",
     }),
   });
+  expectLedgerFailure(result.status === "broken" ? result.error.cause : undefined, expected);
   expect(await f.snapshot()).toEqual(before);
   expect(f.calls.slice(start).filter((sql) => /^(UPDATE|INSERT|DELETE)/u.test(sql))).toEqual([]);
   expect(f.dependencies.registry.prepare).not.toHaveBeenCalled();

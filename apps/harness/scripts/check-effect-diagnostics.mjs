@@ -189,14 +189,18 @@ const canaryProject = "apps/harness/scripts/effect-diagnostics-canary";
 
 /**
  * Every diagnostic the canary must produce, relative to the canary folder, and nothing else: the
- * planted `newPromise` and `unknownInEffectCatch` errors with their advisory warnings. The waived
- * line and the two planted test-file lines must be absent.
+ * planted `newPromise` and `unknownInEffectCatch` errors, and one `error` line for each of the
+ * four promoted rules (`anyUnknownInErrorContext` twice). The waived line and the two planted
+ * test-file lines must be absent.
  */
 const expectedCanary = [
   "src/canary.ts(3,24) error newPromise",
-  "src/canary.ts(4,14) warning anyUnknownInErrorContext",
+  "src/canary.ts(4,14) error anyUnknownInErrorContext",
   "src/canary.ts(4,24) error unknownInEffectCatch",
-  "src/canary.ts(4,24) warning anyUnknownInErrorContext",
+  "src/canary.ts(4,24) error anyUnknownInErrorContext",
+  "src/canary.ts(8,33) error schemaNumber",
+  "src/canary.ts(13,10) error unnecessaryFailYieldableError",
+  "src/canary.ts(15,14) error extendsNativeError",
 ];
 
 function canaryKey({ file, line, column, severity, rule }) {
@@ -217,8 +221,9 @@ function remainder(from, taken) {
 
 /**
  * Runs the canary; any added, missing, duplicated or moved diagnostic is a mismatch, never a
- * pass. A removed or changed plugin block shows up here as the defaults' diagnostics, which
- * differ from the expected set.
+ * pass. A changed severity in the base plugin block shows up here as a changed line. With
+ * `"plugins": []` the base severities stay, but the test-file override is lost, so its planted
+ * test-file lines appear. A package's own plugin entry is refused by `checkPluginOverrides`.
  */
 function checkCanary(context) {
   const run = spawnProject(context, canaryProject);
@@ -360,6 +365,44 @@ function checkWaivers(root) {
   return undefined;
 }
 
+/** The TypeScript JavaScript API, loaded only to read a gated package's JSONC tsconfig. */
+const typeScript = () => createRequire(import.meta.url)("typescript");
+
+/** A JSONC tsconfig's object, or undefined when its text does not parse to one. */
+function readConfig(path) {
+  // TypeScript's diagnostics assert a `/`-separated file name.
+  const { config, error } = typeScript().parseConfigFileTextToJson(
+    path.split("\\").join("/"),
+    readFileSync(path, "utf8"),
+  );
+  if (error !== undefined) return undefined;
+  return typeof config === "object" && config !== null ? config : undefined;
+}
+
+/**
+ * Gated packages whose own tsconfig declares `compilerOptions.plugins`, even as an empty list:
+ * that key replaces the base plugin list, so the package could turn a promoted rule off where the
+ * canary never looks. A tsconfig that cannot be read is broken, never clean; a missing one is left
+ * to its run, which fails on it.
+ */
+function checkPluginOverrides(root, projects) {
+  const unreadable = [];
+  const declared = [];
+  for (const project of projects.filter((name) => defaultProjects.includes(name))) {
+    const file = `${project}/tsconfig.json`;
+    const path = join(root, file);
+    if (!existsSync(path)) continue;
+    const config = readConfig(path);
+    if (config === undefined) {
+      unreadable.push(`${file} is unreadable`);
+    } else if (Object.hasOwn(config.compilerOptions ?? {}, "plugins")) {
+      declared.push(`${file} declares compilerOptions.plugins`);
+    }
+  }
+  if (unreadable.length > 0) return failure("EFFECT_GATE_BROKEN", unreadable);
+  return declared.length === 0 ? undefined : failure("EFFECT_GATE_PLUGIN_OVERRIDE", declared);
+}
+
 /**
  * Runs `effect-tsgo diagnostics --format json` (the Effect build of TypeScript-Go 7) over each
  * project and blocks on every
@@ -384,6 +427,8 @@ export function checkEffectDiagnostics({
   if (canaryFailure) return canaryFailure;
   const waivers = register ? checkWaivers(root) : undefined;
   if (waivers) return waivers;
+  const overrides = checkPluginOverrides(root, projects ?? defaultProjects);
+  if (overrides) return overrides;
   const result = checkProjects(context, projects ?? defaultProjects);
   return result.ok && canary ? { ...result, canary: "matched" } : result;
 }

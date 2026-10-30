@@ -75,6 +75,9 @@ export type {
   HarnessFatalLogLine,
   HarnessFatalMessage,
   HarnessFatalValueKind,
+  HarnessReconciliationFailureLogLine,
+  HarnessRequestBoundary,
+  HarnessRequestFailureLogLine,
   RegistrationCleanupPart,
 } from "./harness-fatal-log-protocol.js";
 export {
@@ -82,10 +85,18 @@ export {
   HARNESS_FAILURE_TAG_PATTERN,
   HARNESS_FATAL_SUMMARY_BOUND,
   HARNESS_FATAL_VALUE_KINDS,
+  HARNESS_REQUEST_BOUNDARIES,
   HarnessFatalLogLineSchema,
+  HarnessReconciliationFailureLogLineSchema,
+  HarnessRequestFailureLogLineSchema,
   harnessFatalCodeMessages,
   harnessFatalCodes,
   harnessFatalMessages,
+  harnessReconciliationFailureCode,
+  harnessReconciliationFailureMessage,
+  harnessRequestBoundaryAnswers,
+  harnessRequestFailureCode,
+  harnessRequestFailureMessage,
   REGISTRATION_CLEANUP_PARTS,
   REGISTRATION_CLEANUP_TAG,
 } from "./harness-fatal-log-protocol.js";

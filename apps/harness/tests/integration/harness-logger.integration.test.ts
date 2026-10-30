@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import path from "node:path";
-import { Writable } from "node:stream";
 import { pathToFileURL } from "node:url";
 import {
   decodeStrict,
@@ -20,6 +19,7 @@ import {
 } from "../../src/process-fatal-diagnostics.js";
 import { createHarnessPortCloseHandler } from "../../src/process-shutdown.js";
 import { createUpgradeDiagnosticsLogger } from "../../src/upgrade-diagnostics-logger.js";
+import { memoryLogDestination } from "./request-diagnostics-fixture.js";
 
 const projectId = decodeStrict(ProjectIdSchema, "00000000-0000-4000-8000-000000000010");
 const upgradeId = decodeStrict(
@@ -27,25 +27,8 @@ const upgradeId = decodeStrict(
   "00000000-0000-4000-8000-0000000000a1",
 );
 
-/** A destination that keeps every line the logger writes. */
-function memoryDestination() {
-  const lines: string[] = [];
-  const stream = new Writable({
-    write(chunk: Buffer, _encoding, done) {
-      lines.push(
-        ...chunk
-          .toString("utf8")
-          .split("\n")
-          .filter((line) => line !== ""),
-      );
-      done();
-    },
-  });
-  return { lines, stream };
-}
-
 it("writes upgrade log lines the desktop accepts", () => {
-  const destination = memoryDestination();
+  const destination = memoryLogDestination();
   const diagnostics = createUpgradeDiagnosticsLogger(createHarnessLogger(destination.stream));
   diagnostics.abandoned({ projectId, upgradeId, reason: "interrupted" });
   diagnostics.discardFailed({ projectId, upgradeId, cause: "busy" });
@@ -86,7 +69,7 @@ function recordingFatalSink(logger: ReturnType<typeof createHarnessLogger>) {
 }
 
 it("writes fatal lines the desktop accepts", () => {
-  const destination = memoryDestination();
+  const destination = memoryLogDestination();
   const logger = createHarnessLogger(destination.stream);
   const { sink, exits } = recordingFatalSink(logger);
   const privatePath = new Error("C:\\private\\project\\slopstop.db");
@@ -140,7 +123,7 @@ it("writes fatal lines the desktop accepts", () => {
 });
 
 it("writes the real call sites' fatal lines the desktop accepts", async () => {
-  const destination = memoryDestination();
+  const destination = memoryLogDestination();
   const { sink, exits } = recordingFatalSink(createHarnessLogger(destination.stream));
   const privateFailure = new Error("C:\\private\\project\\slopstop.db");
   await connectHarnessProcess({

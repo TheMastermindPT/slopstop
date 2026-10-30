@@ -1,13 +1,12 @@
 import {
   decodeStrict,
-  decodeStrictResult,
   ProjectIdSchema,
   ProjectListEntrySchema,
   ProjectListSchema,
   ProjectStorageCloseResultSchema,
   ProjectStorageOpenResultSchema,
 } from "@slopstop/protocol";
-import { Effect, Result, Schema } from "effect";
+import { Effect, Schema } from "effect";
 import type { LocalLibsqlTransaction } from "../storage/local-libsql-worker-client.js";
 import { createNodeProjectStorageDependencies } from "../storage/project-storage-node-adapters.js";
 import { createProjectStorageOwner } from "../storage/project-storage-store.js";
@@ -22,11 +21,12 @@ import {
 } from "./registration-confirmation-store.js";
 import {
   applicationDatabaseFor,
+  decodeRegistryRows,
   type RegistrationDatabaseOptions,
-  registryRows,
   withRegistrationDatabase,
 } from "./registry-database.js";
-import { RegistryFault, registryFailure } from "./registry-failure.js";
+import { registryReadRejection } from "./registry-effect.js";
+import { registryFailure } from "./registry-failure.js";
 
 const storedProjectRowsSchema = Schema.Array(Schema.Struct({ projectId: ProjectIdSchema }));
 
@@ -129,20 +129,18 @@ type Entry = typeof ProjectListEntrySchema.Type;
 
 async function readListingState(transaction: LocalLibsqlTransaction) {
   const records = await readProjectRegistrationRecords(transaction);
-  const hidden = await Effect.runPromise(readHiddenProjectIds(transaction));
-  const stored = decodeStrictResult(
+  const hidden = await Effect.runPromise(
+    Effect.mapError(readHiddenProjectIds(transaction), registryReadRejection),
+  );
+  const storedProjects = decodeRegistryRows(
     storedProjectRowsSchema,
-    registryRows(
-      await transaction.execute(
-        "SELECT project_id AS projectId FROM storage_registrations ORDER BY project_id",
-      ),
+    await transaction.execute(
+      "SELECT project_id AS projectId FROM storage_registrations ORDER BY project_id",
     ),
   );
-  if (Result.isFailure(stored))
-    throw new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
   return {
     records: visibleRecords(records, hidden),
-    storedProjects: stored.success,
+    storedProjects,
     hidden,
     hiddenCount: hiddenProjectCount(records, hidden),
   };

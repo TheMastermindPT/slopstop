@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
   decodeStrict,
-  decodeStrictResult,
   LowercaseDomainIdentityTextSchema,
   ProjectIdSchema,
   ProjectStorageCreateRequestIdSchema,
@@ -13,7 +12,7 @@ import {
   UtcInstantSchema,
   WorkspaceIdSchema,
 } from "@slopstop/protocol";
-import { Result, Schema } from "effect";
+import { Data, Schema } from "effect";
 import { sha256Hex } from "../sha256-text.js";
 import { receiptGenerationResolves } from "../storage/application-database-migration.js";
 import type {
@@ -30,8 +29,8 @@ import {
   RegistrationProposalRecordSchema,
   readProposal,
 } from "./registration-proposal-store.js";
-import { registryRows } from "./registry-database.js";
-import { RegistryFault } from "./registry-failure.js";
+import { decodeRegistryJson, decodeRegistryRows } from "./registry-database.js";
+import { RegistryFault, registryCorrupt } from "./registry-failure.js";
 import type { discoverSelectedPhysical } from "./repository-physical-observation.js";
 import type { RepositoryTrustOwner } from "./repository-trust.js";
 
@@ -107,7 +106,6 @@ export type RegistrationBootstrap = (
     >
 >;
 const digest = (value: unknown) => sha256Hex(JSON.stringify(value));
-const corrupt = () => new RegistryFault({ status: "broken", code: "REGISTRY_CORRUPT" });
 
 export function incomplete(request: ConfirmationRequest) {
   return {
@@ -142,14 +140,11 @@ async function readReservation(transaction: Pick<LocalLibsqlTransaction, "execut
     sql: "SELECT common_platform AS platform, common_volume_identity AS volumeIdentity, common_file_identity AS fileIdentity, common_birth_identity AS birthIdentity, record_json AS recordJson, record_fingerprint AS fingerprint FROM registration_reservations WHERE reservation_id = ?",
     args: [id],
   });
-  try {
-    const row = decodeStrict(reservationKeyRowsSchema, registryRows(result))[0];
-    const record = decodeStrict(reservationSchema, JSON.parse(row.recordJson));
-    if (!reservationRowAgrees({ record, row, id })) throw corrupt();
-    return record;
-  } catch {
-    throw corrupt();
-  }
+  // A one-row tuple: a missing reservation row does not decode, so it is corrupt too.
+  const row = decodeRegistryRows(reservationKeyRowsSchema, result)[0];
+  const record = decodeRegistryJson(reservationSchema, row.recordJson);
+  if (!reservationRowAgrees({ record, row, id })) throw registryCorrupt();
+  return record;
 }
 
 /** The stored request row for `requestId` with its strictly decoded, self-consistent request. */
@@ -161,12 +156,10 @@ async function readSavedConfirmation(
     sql: "SELECT input_fingerprint AS fingerprint, request_json AS requestJson, reservation_id AS reservationId FROM registration_requests WHERE request_id = ?",
     args: [requestId],
   });
-  const parsed = decodeStrictResult(requestRowsSchema, registryRows(result));
-  if (Result.isFailure(parsed)) throw corrupt();
-  const row = parsed.success[0];
+  const row = decodeRegistryRows(requestRowsSchema, result)[0];
   if (row === undefined) return undefined;
-  const saved = decodeSavedRequest(row.requestJson);
-  if (saved.requestId !== requestId || digest(saved) !== row.fingerprint) throw corrupt();
+  const saved = decodeRegistryJson(ConfirmationValidationRequestSchema, row.requestJson);
+  if (saved.requestId !== requestId || digest(saved) !== row.fingerprint) throw registryCorrupt();
   return { row, saved };
 }
 
@@ -179,20 +172,11 @@ export async function readConfirmation(
   const { row, saved } = stored;
   const reservation = await readReservation(transaction, row.reservationId);
   const proposal = await readProposal(transaction, saved.preparation);
-  if (!savedProposalAgrees({ proposal, saved, reservation })) throw corrupt();
+  if (!savedProposalAgrees({ proposal, saved, reservation })) throw registryCorrupt();
   if (digest(request) !== row.fingerprint) {
     throw new RegistryFault({ status: "rejected", code: "REGISTRATION_IDEMPOTENCY_CONFLICT" });
   }
   return confirmationOutcome(transaction, { request, reservation });
-}
-
-/** A stored confirmation request decodes strictly, or the registry is corrupt. */
-function decodeSavedRequest(requestJson: string): ConfirmationRequest {
-  try {
-    return decodeStrict(ConfirmationValidationRequestSchema, JSON.parse(requestJson));
-  } catch {
-    throw corrupt();
-  }
 }
 
 /** The saved request's proposal still exists, unchanged, at the reservation's directory. */
@@ -239,12 +223,7 @@ export async function findCommonReservation(
     sql: "SELECT reservation_id AS reservationId FROM registration_reservations WHERE common_platform = ? AND common_volume_identity = ? AND common_file_identity = ? AND common_birth_identity = ?",
     args: [key.platform, key.volumeIdentity, key.fileIdentity, key.birthIdentity],
   });
-  const rows = decodeStrictResult(
-    reservationIdRowsSchema.check(Schema.isMaxLength(1)),
-    registryRows(result),
-  );
-  if (Result.isFailure(rows)) throw corrupt();
-  const found = rows.success[0];
+  const found = decodeRegistryRows(reservationIdRowsSchema.check(Schema.isMaxLength(1)), result)[0];
   return found === undefined ? undefined : readReservation(transaction, found.reservationId);
 }
 
@@ -331,10 +310,12 @@ type PublishedReservation = Readonly<{
 }>;
 
 /** A failed SQL read inside the receipt check; it keeps the read's own failure. */
-class ReceiptReadFailed extends Error {
-  constructor(readonly failure: unknown) {
-    super("A receipt check read failed.");
-    this.name = "ReceiptReadFailed";
+class ReceiptReadFailed extends Data.TaggedError("ReceiptReadFailed")<{
+  readonly message: string;
+  readonly failure: unknown;
+}> {
+  constructor(failure: unknown) {
+    super({ message: "A receipt check read failed.", failure });
   }
 }
 
@@ -351,10 +332,10 @@ function markedReads(
 
 /** The decoded receipt of a publication row that agrees with it; it throws when they disagree. */
 function agreeingReceipt(result: LocalLibsqlResultSet, reservation: PublishedReservation) {
-  const row = decodeStrict(publicationRowsSchema, registryRows(result))[0];
+  const row = decodeRegistryRows(publicationRowsSchema, result)[0];
   if (row === undefined) return undefined;
-  const receipt = decodeStrict(RegisteredProjectSchema, JSON.parse(row.resultJson));
-  if (!receiptRowAgrees({ receipt, row, reservation })) throw corrupt();
+  const receipt = decodeRegistryJson(RegisteredProjectSchema, row.resultJson);
+  if (!receiptRowAgrees({ receipt, row, reservation })) throw registryCorrupt();
   return receipt;
 }
 
@@ -374,11 +355,11 @@ export async function readPublication(
     const receipt = agreeingReceipt(result, reservation);
     if (receipt === undefined) return undefined;
     const reads = markedReads(transaction);
-    if (!(await receiptGenerationAgrees(reads, reservation, receipt))) throw corrupt();
+    if (!(await receiptGenerationAgrees(reads, reservation, receipt))) throw registryCorrupt();
     return receipt;
   } catch (error) {
     if (error instanceof ReceiptReadFailed) throw error.failure;
-    throw corrupt();
+    throw registryCorrupt();
   }
 }
 
@@ -413,7 +394,9 @@ async function receiptGenerationAgrees(
   });
 }
 
-export class RegistrationPublicationCancelled extends Error {}
+export class RegistrationPublicationCancelled extends Data.TaggedError(
+  "RegistrationPublicationCancelled",
+) {}
 
 export async function publishRegistration(
   transaction: LocalLibsqlTransaction,
@@ -436,7 +419,7 @@ export async function publishRegistration(
   return (
     publication ??
     (() => {
-      throw corrupt();
+      throw registryCorrupt();
     })()
   );
 }
@@ -454,9 +437,8 @@ async function requireReservationRequests(
     sql: "SELECT request_id AS requestId, reservation_id AS reservationId, request_json AS requestJson FROM registration_requests WHERE reservation_id = ?",
     args: [reservationId],
   });
-  const rows = decodeStrictResult(reservationRequestRowsSchema, registryRows(requests));
-  if (Result.isFailure(rows)) throw corrupt();
-  for (const row of rows.success) await requireReservationRequest(transaction, row, reservationId);
+  const rows = decodeRegistryRows(reservationRequestRowsSchema, requests);
+  for (const row of rows) await requireReservationRequest(transaction, row, reservationId);
 }
 
 async function requireReservationRequest(
@@ -464,27 +446,24 @@ async function requireReservationRequest(
   row: (typeof reservationRequestRowsSchema.Type)[number],
   reservationId: string,
 ): Promise<void> {
-  const request = decodeSavedRequest(row.requestJson);
+  const request = decodeRegistryJson(ConfirmationValidationRequestSchema, row.requestJson);
   const belongs = request.requestId === row.requestId && row.reservationId === reservationId;
-  if (!belongs) throw corrupt();
-  if ((await readConfirmation(transaction, request)) === undefined) throw corrupt();
+  if (!belongs) throw registryCorrupt();
+  if ((await readConfirmation(transaction, request)) === undefined) throw registryCorrupt();
 }
 
 export async function readProjectRegistrationRecords(transaction: LocalLibsqlTransaction) {
-  const ids = decodeStrictResult(
+  const ids = decodeRegistryRows(
     reservationIdRowsSchema,
-    registryRows(
-      await transaction.execute(
-        "SELECT reservation_id AS reservationId FROM registration_reservations ORDER BY reservation_id",
-      ),
+    await transaction.execute(
+      "SELECT reservation_id AS reservationId FROM registration_reservations ORDER BY reservation_id",
     ),
   );
-  if (Result.isFailure(ids)) throw corrupt();
   const records = [];
   const projects = new Set<string>();
-  for (const { reservationId } of ids.success) {
+  for (const { reservationId } of ids) {
     const reservation = await readReservation(transaction, reservationId);
-    if (projects.has(reservation.projectId)) throw corrupt();
+    if (projects.has(reservation.projectId)) throw registryCorrupt();
     projects.add(reservation.projectId);
     await requireReservationRequests(transaction, reservationId);
     const publication = await readPublication(transaction, reservation);

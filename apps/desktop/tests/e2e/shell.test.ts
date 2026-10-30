@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { type ElectronApplication, _electron as electron, expect, test } from "@playwright/test";
 import { decodeStrict, WorkspaceIntentSchema, WorkspaceQuerySchema } from "@slopstop/protocol";
+import { desktopLogLength, expectNoHarnessRequestFailure } from "./electron-launch.js";
 
 const query = decodeStrict(WorkspaceQuerySchema, {
   query: "memory-library.read",
@@ -35,6 +36,9 @@ function developmentElectronExecutable(): string {
 
 test.describe("built desktop shell", () => {
   let application: ElectronApplication | undefined;
+  // This journey runs on the default userData, so only the log lines after its launch count.
+  let userData = "";
+  let fromLine = 0;
 
   test.beforeEach(async () => {
     application = await electron.launch({
@@ -45,10 +49,13 @@ test.describe("built desktop shell", () => {
         SLOPSTOP_E2E: "1",
       },
     });
+    userData = await application.evaluate(({ app }) => app.getPath("userData"));
+    fromLine = await desktopLogLength(userData);
   });
 
   test.afterEach(async () => {
     await application?.close();
+    await expectNoHarnessRequestFailure(userData, fromLine);
   });
 
   test("shows a real harness connection behind the strict renderer boundary", async () => {

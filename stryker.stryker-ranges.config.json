@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": ["apps/harness/scripts/check-stryker-ranges.mjs"],
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "apps/harness/vitest.stryker-ranges-mutation.config.ts",
+    "related": false
+  },
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": true,
+  "disableTypeChecks": false,
+  "incremental": false,
+  "concurrency": 4,
+  "reporters": ["json", "html"],
+  "jsonReporter": {
+    "fileName": "reports/mutation/stryker-ranges.json"
+  },
+  "htmlReporter": {
+    "fileName": "reports/mutation/stryker-ranges.html"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  }
+}

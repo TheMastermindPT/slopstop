@@ -1,7 +1,10 @@
 import { unlink } from "node:fs/promises";
-import { Deferred, Effect } from "effect";
+import { Data, Deferred, Effect } from "effect";
+import { type UntypedRejection, untypedRejection, unwrapRejection } from "../effect-rejection.js";
 import type { LocalLibsqlClient } from "./local-libsql-worker-client.js";
 import {
+  type NativeErrorFields,
+  nativeErrorFields,
   ProjectStorageApplicationClientInitializationError,
   ProjectStorageBrokenError,
   ProjectStorageUnavailableError,
@@ -16,8 +19,12 @@ import {
   initializeRetainedApplicationClient,
 } from "./retained-application-client.js";
 
-class ApplicationClientInitializationFailure extends Error {
-  override readonly name = "ApplicationClientInitializationFailure";
+class ApplicationClientInitializationFailure extends Data.TaggedError(
+  "ApplicationClientInitializationFailure",
+)<NativeErrorFields> {
+  constructor(message?: string, options?: ErrorOptions) {
+    super(nativeErrorFields(message, options));
+  }
 }
 
 export type ApplicationClientManager = Readonly<{
@@ -101,7 +108,9 @@ export function createApplicationClientManager(input: {
 }): ApplicationClientManager {
   let applicationClient: LocalLibsqlClient | undefined;
   // One in-flight initialization shared by concurrent callers, with its exact outcome.
-  let initialization: Deferred.Deferred<LocalLibsqlClient | undefined, unknown> | undefined;
+  let initialization:
+    | Deferred.Deferred<LocalLibsqlClient | undefined, UntypedRejection>
+    | undefined;
   let stopped = false;
 
   // The plain-file policy, then the shared authority's initialization.
@@ -143,14 +152,14 @@ export function createApplicationClientManager(input: {
   const initializeShared = async (
     createIfMissing: boolean,
   ): Promise<LocalLibsqlClient | undefined> => {
-    const candidate = Deferred.makeUnsafe<LocalLibsqlClient | undefined, unknown>();
+    const candidate = Deferred.makeUnsafe<LocalLibsqlClient | undefined, UntypedRejection>();
     initialization = candidate;
     try {
       const client = await initializeCandidate(createIfMissing);
       Deferred.doneUnsafe(candidate, Effect.succeed(client));
       return client;
     } catch (error) {
-      Deferred.doneUnsafe(candidate, Effect.fail(error));
+      Deferred.doneUnsafe(candidate, Effect.fail(untypedRejection(error)));
       throw error;
     } finally {
       if (initialization === candidate) initialization = undefined;
@@ -159,7 +168,11 @@ export function createApplicationClientManager(input: {
 
   const acquire = async (createIfMissing: boolean): Promise<LocalLibsqlClient | undefined> => {
     if (stopped) throw new ProjectStorageUnavailableError("Project Storage registry is stopped.");
-    if (initialization !== undefined) return Effect.runPromise(Deferred.await(initialization));
+    if (initialization !== undefined) {
+      return Effect.runPromise(Deferred.await(initialization)).catch((failure: unknown) => {
+        throw unwrapRejection(failure);
+      });
+    }
     return applicationClient ?? initializeShared(createIfMissing);
   };
 
@@ -195,7 +208,11 @@ export function createApplicationClientManager(input: {
       if (stopped) return;
       stopped = true;
       // An in-flight initialization finishes (or fails this stop) before the client closes.
-      if (initialization !== undefined) await Effect.runPromise(Deferred.await(initialization));
+      if (initialization !== undefined) {
+        await Effect.runPromise(Deferred.await(initialization)).catch((failure: unknown) => {
+          throw unwrapRejection(failure);
+        });
+      }
       const retained = applicationClient;
       applicationClient = undefined;
       await retained?.close();

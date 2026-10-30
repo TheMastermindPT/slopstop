@@ -1,5 +1,6 @@
 import path from "node:path";
-import { Effect } from "effect";
+import { decodeStrictResult } from "@slopstop/protocol";
+import { Effect, Result, type Schema } from "effect";
 import { type UntypedRejection, untypedRejection } from "../effect-rejection.js";
 import {
   type ApplicationDatabaseAuthority,
@@ -20,7 +21,7 @@ import {
   requirePlainEntry,
 } from "../storage/project-storage-filesystem-authority.js";
 import { systemUtcClock, type UtcClock } from "../utc-clock.js";
-import { RegistryFault } from "./registry-failure.js";
+import { RegistryFault, registryCorrupt } from "./registry-failure.js";
 
 export type RegistrationDatabaseOptions = Readonly<{
   applicationStorageRoot: string;
@@ -46,8 +47,36 @@ export type PreparedRegistryRunner = <Prepared, Result>(
   operation: (prepared: Prepared, reopen: RegistryRunner) => Promise<Result>,
 ) => Promise<Result>;
 
-export function registryRows(result: LocalLibsqlResultSet): unknown[] {
-  return applicationDatabaseRows(result);
+type StoredDecoder = Schema.ConstraintDecoder<unknown>;
+
+/**
+ * The named rows of `result`, strictly decoded by `schema`. Rows that do not decode are stored
+ * registry damage: it throws {@link registryCorrupt}, never the schema error.
+ */
+export function decodeRegistryRows<S extends StoredDecoder>(
+  schema: S,
+  result: LocalLibsqlResultSet,
+): S["Type"] {
+  const decoded = decodeStrictResult(schema, applicationDatabaseRows(result));
+  if (Result.isFailure(decoded)) throw registryCorrupt();
+  return decoded.success;
+}
+
+/**
+ * A stored JSON column, parsed and strictly decoded by `schema`. Text that is not JSON or does
+ * not decode is stored registry damage: it throws {@link registryCorrupt}, never the
+ * `SyntaxError` or the schema error.
+ */
+export function decodeRegistryJson<S extends StoredDecoder>(schema: S, text: string): S["Type"] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw registryCorrupt();
+  }
+  const decoded = decodeStrictResult(schema, parsed);
+  if (Result.isFailure(decoded)) throw registryCorrupt();
+  return decoded.success;
 }
 
 // Owners pass one options object to all of their helpers, so a default authority is

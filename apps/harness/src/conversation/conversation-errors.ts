@@ -1,5 +1,5 @@
 import { Data } from "effect";
-import { isSqliteBusy } from "../storage/sqlite-busy.js";
+import { isSqliteBusy } from "../storage/project-storage-node-errors.js";
 
 /** Another connection holds the Project database past the bounded wait; retryable. */
 export class ConversationStorageBusy extends Data.TaggedError("ConversationStorageBusy")<{

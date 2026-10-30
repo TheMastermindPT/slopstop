@@ -28,8 +28,8 @@ import {
   serializeProjectStorageBackupManifest,
 } from "./project-storage-manifest.js";
 import {
-  isBusyStorageError,
   isKnownStorageFailure,
+  isRetryableStorageError,
   normalizeStorageError,
 } from "./project-storage-node-errors.js";
 import {
@@ -559,7 +559,8 @@ async function unfinishedUpgradeRows(
  */
 function markerQueryFailure(error: unknown): Error {
   if (isKnownStorageFailure(error)) return error;
-  if (isBusyStorageError({ error })) return new ProjectStorageUpgradeBusyError({ cause: error });
+  if (isRetryableStorageError({ error }))
+    return new ProjectStorageUpgradeBusyError({ cause: error });
   return new ProjectStorageBrokenError("Project Storage upgrade marker could not be read.", {
     cause: error,
   });
