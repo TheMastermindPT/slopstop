@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-10-31T18:30:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "p4-s2 contract detailed (P4-B4, P4-B5); Q11 (a) recorded."
-content_hash: efa6d2f0ed77f72d027c3e977b1f0c1f3ffd00270290a55dfa4559b0f29d9b5f
+content_hash: 41b71fd3b28a35714535b012b6f548510ace6c7340a4f2849b53dd2d05403448
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -451,6 +451,10 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Inputs:** the implementer's read-only measurements at `20e198a`, relayed by the coordinator, re-read at `19b6166`. One correction: the two `stryker.config.json` entry-bridge ranges (`:103-103`, `:189-202`) do move by two lines, because the factory's two imports become unused.
   - **Red:** the slice changes no source behavior, so P4-B4 and P4-B5 are pins (they pass on the base source), and the factory deletion is TDD-exempt with structural checks. Bindings 1 to 3 prove the oracles tell standalone from shared composition.
   - **Lane:** normal (`lane.mjs --paths`: files 6 > 5). The label is recorded on approval.
+- **2026-10-31: p4-s2 accepted; afterStop survivors handed to s4 (coordinator decision; slice-verifier V1).**
+  - **Accepted identity:** candidate `3f80587` on `ab56351` (p4-s1, same patch as `8f7e883`) over main `73bacf3`. Slice-verifier round 1 of 1, no violation. Pins 210/210; bindings 1-3 red as predicted; `check:mutation-ranges` exit 0; `pnpm check` 3830/3830; CodeScene 10.
+  - **V1, for s4:** every bridge now gets `afterStop = keepCore`, so the call to `afterStop()` (entry:221, storage:148, workspace:254) and the `if (stopped) return` guard (entry:217, storage:144, workspace:248) are no longer observable; about 6 desktop-s7 survivors and 2 in the whole-file `workspace-bridge.ts` are expected. s4's contract removes `afterStop` and its "Settle first" comments (entry:219, storage:146, workspace:250), and either drops the re-entry guard or keeps it with a row that observes it. Any survivor left at the final mutation run is triaged there. No scoped Stryker run now (proportional; s4 changes these lines).
+  - **Corrections for later slices:** the desktop main tests run with `--config vitest.main.config.ts` (the Success Criteria command omits it). Current ranges: desktop-s7 entry 78-224, storage 30-151, workspace 93-257; `stryker.config.json` entry-bridge 101-101 and 187-200; the s4/s6 Deferred Work rows and the Stryker table cite the old ones.
 
 ## References
 
@@ -468,3 +472,4 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 
 - `p4-s1-harness-failure-row-owner`: `.rpiv/artifacts/evidence/2026-10-31_p4-s1-harness-failure-row-owner-tdd.md` (candidate `5570258`).
 - `p4-s1-harness-failure-row-owner`: accepted at `8f7e883` (base `2c0014d`, same code as `5570258`); preflight-2 clean; slice-verifier round 1 passed.
+- `p4-s2-bridge-test-composition`: `.rpiv/artifacts/evidence/2026-10-31_p4-s2-bridge-test-composition-tdd.md`; accepted at `3f80587`; preflight clean; slice-verifier round 1 passed.
