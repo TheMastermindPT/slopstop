@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: a84abd7cc92b6913819dc1549eabc3838ee0f8c77cdfa70bea570a16d4419a4c
+content_hash: 09f6bd5f9a119ae5c0086aa98cbf07aa8f73de459f6f77b5c0d37df6efeedc7a
 ---
 
 # Conversation — Human Decisions
@@ -2525,3 +2525,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Slice-verifier round 1 of 1 passed on `8f7e883` (rebased from `5570258` onto main `2c0014d`, same code); preflight-2 clean; C1-C14 found; 3 hypotheses refuted.
 - V1 (Decisions) closed by a coordinator-appended Developer Context entry in the brief (append-only keep against `approved-6ee6d0a4.md`): binding 1 reddens 4 rows; stale "33 whole files" now 34; s6 must source rows from an exported table or decide to export `harnessFailureRow`; accepted identity `8f7e883`. Correction to the entry above: the brief's binding 1 line said "every P4-B1 row", not "the 6 table rows".
 - Lane normal: the coordinator accepts the slice; Pedro's acceptance comes once on the combined Phase 4 result. Next: p4-s2-bridge-test-composition.
+
+## 2026-10-31 — p4-s2 contract approved (Q11 (a))
+
+- The implementer held p4-s2: the brief had no contract for it. Pedro chose (a): bridge tests build bridges the way `harness-bridges.ts` does, and the subscription-ending rows move to `createHarnessBridges(...).release()` with changed assertions; (b), a test helper keeping the standalone composition, was rejected.
+- The designer wrote P4-B4 and P4-B5 (both `none — pin`, no source behaviour change) with exact per-row oracles and 3 bindings; corrected the coordinator: the entry-bridge Stryker ranges `:103-103` and `:189-202` also move. Coordinator check: additions only (keep against `approved-6ee6d0a4.md`), and the release oracle matches `harness-bridges.ts:38-58` (stops all, unsubscribes once, rethrows the first failure, second release a no-op).
+- Pedro approved hash `efa6d2f0…9b5f`; status `ready`; approved copy `approved-efa6d2f0.md` (local).
