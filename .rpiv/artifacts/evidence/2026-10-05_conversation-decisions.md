@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: eb91b29bbc0e0ac6b18245363f72840474e7903d0e4a896c7b24aab76d2566c5
+content_hash: f78074b623fa9a1cee8daae6ed3b88a4eb6f135228fcc9bdbe468c3bf30e1999
 ---
 
 # Conversation — Human Decisions
@@ -2537,3 +2537,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Candidate `3f80587` (11 files), slice-verifier round 1 passed, no violation; pins 210/210, bindings 1-3 red as predicted, mutation ranges re-anchored (exit 0), `pnpm check` 3830/3830, CodeScene 10.
 - V1 (Cross-slice) handed to s4 by a coordinator-appended Developer Context entry (keep against `approved-efa6d2f0.md`): `afterStop` and the re-entry guard became unobservable; s4 removes `afterStop` and drops or tests the guard. No scoped Stryker run now (coordinator decision, proportional). Corrections recorded there: `--config vitest.main.config.ts`, current ranges.
 - Next: p4-s3-fault-meaning-owner (needs its contract).
+
+## 2026-10-31 — p4-s3 contract approved (Q12 (a))
+
+- The designer wrote p4-s3-fault-meaning-owner (P4-B6 protocol `harnessFailureRows` table, P4-B7 `request-fault-meaning.ts` owner, P4-B8 pins plus the real Stryker row; 3 bindings). Coordinator check: additions only (keep against `approved-efa6d2f0.md`); the two duplicate `harnessRows` maps confirmed at `project-conversation-failure.ts:13` and `project-upgrade-failure.ts:10`.
+- Pedro chose Q12 (a): the protocol exports the frozen table, read by both desktop mappers and later by s6 (settles p4-s1 D2). Pedro approved hash `e1e4976b…73a0`; approved copy `approved-e1e4976b.md`. A Developer Context line records the choice (append-only keep; brief hash now `b716fee4…6dae`).
