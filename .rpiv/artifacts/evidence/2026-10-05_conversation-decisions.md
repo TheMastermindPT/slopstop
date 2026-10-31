@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 89297db818661af823357ba7902880100b00bf9c9cfa37a3a65fa29c853dc87b
+content_hash: 8a752699704157ad9fba83a29e6b532df6b482cc4edb68723f647d470ab16ad8
 ---
 
 # Conversation — Human Decisions
@@ -2477,3 +2477,4 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - Push 2 (`b94f302..8990120`) passed the pre-push `check:deep`: check 3816, coverage 6050 passed / 6 skipped, integration 2234 passed / 6 skipped, e2e 27, launch-smoke validated. origin/main is `8990120` (546c18b acceptance log, 25780d1 Phase 3 squash, 8990120 the EPERM test fix).
 - Open with Pedro: close #129; file the follow-up issue on the product's staging-to-active rename having no transient retry; close #133, #96 and #105; update the roadmap doc. This log entry stays local until the next push.
+- Pedro authorised the GitHub actions (2026-10-31). Closed #129 (p3-s7, 25780d1), #133 (7d04277), #96 (4cf6541) and #105 (0b49cc0), each with a comment naming the resolving commit; all those commits are on origin/main. Opened #146 "storage: the staging-to-active rename gives up at once on a transient Windows EPERM/EACCES/EBUSY" (needs-triage, unscheduled).
