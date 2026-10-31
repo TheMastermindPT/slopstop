@@ -7,9 +7,9 @@ repository: slopstop
 topic: "Pending-work inventory and roadmap reference point"
 tags: [roadmap, inventory, pending-work, deferred]
 status: complete
-last_updated: 2026-10-19T14:40:00+0100
+last_updated: 2026-10-31T16:00:00+0000
 last_updated_by: coordenador-claude
-content_hash: 6bb8c30854d729d014b043cc8322d28043923895e13d7ae284ecf44e1efdb07b
+content_hash: efbb38119911f7254f57d0b4b88c90cd794f41b04aec63653d361e088dd5af46
 ---
 
 # Pending-work inventory and roadmap reference point (2026-10-10)
@@ -29,7 +29,7 @@ content_hash: 6bb8c30854d729d014b043cc8322d28043923895e13d7ae284ecf44e1efdb07b
 
 Revision 2 (2026-10-10), after an adversarial completeness and ordering review; status refreshed on 2026-10-19 (revision 3). Each phase starts when the previous one is done unless marked "in parallel"; reasons are in brackets. Sections 3-7 hold the detail and sources. ADR line numbers refer to the files after commits d601e5b and e44236d.
 
-**Where we are (2026-10-23):** Phases 0 and 1 are done. Phase 2: #99, the #105 research and #123 Part A are done; Part A was squash-merged as `4cf6541` and pushed (DL §142). The next Phase 2 item is not chosen yet (DL §129).
+**Where we are (2026-10-31):** Phases 0 and 1 are done. Phase 2: #99, #105 (the TS 7 switch `0b49cc0`), #123 Part A (`4cf6541`), #133 (`7d04277`) and architecture review Phases 1-3 are done and pushed (origin/main `8990120`). #96, #105, #129 and #133 are closed. Next: architecture review Phase 4 (bridge/IPC and R5, before C2) or another open Phase 2 item. The order is still for the user to choose (DL §129).
 
 ### Phase 0 — done
 1. **Done 2026-10-10:** C1 S1 + S2 squash-merged to local main as `ba4e15b` after review rounds 1-2 and a user-approved bounded round 3 (DL §32); final-head proof on ac6569c. The real `userData` was backed up first to `%APPDATA%SlopStop-backup-2026-10-10` (67 files, hashes verified).
@@ -51,21 +51,22 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review; 
 3. **#123 Effect unit 2b, Part A (**done 2026-10-23**, `4cf6541`, pushed; DL §142; G28 ends here, DL §46, §102):** one `ManagedRuntime` per process (harness and Electron main), services and Layers, explicit shutdown, the ApplicationDatabase finalizer, the #110 carry-forwards and the desktop bridge core; with **#96** (late harness log lines on quit). Brief `designs/2026-10-17_00-35-29_effect-unit2b-runtime-lifecycle-part-a.md`.
    - Done: s1 fair lock, s2, s3 bounded authority close, s4, s5 harness runtime (accepted, DL §105-§133), s5b Effect gate (done at `010ee05`; accepted with Part A).
    - Done: s6 desktop runtime, s7 bridge core, s8 stdout drain (#96), s9 harness fatal diagnostics (from the deep review), the combined mutation, the manual checks, the acceptance with named residuals (DL §142), integration and the push. The `slopstop-110` and `slopstop-123` worktrees are deleted.
-4. **#133** successful-upgrade log and the proven log link (small slice, queued after C1, DL §88).
+4. **Done 2026-10-23: #133** successful-upgrade log and the proven log link (`7d04277`, pushed; closed 2026-10-31).
 5. **#135** multi-process storage tests: the upgrade-vs-open race integration test, then a packaged upgrade-kill stage (DL §89).
 6. **#95, #97** C1-0 residuals.
 7. **Runtime-database cleanup (#93, after #105 and #123, before any new feature; user 2026-10-11, DL §55):** with Mastra withdrawn, decide whether a runtime database is still needed, then rename or remove `mastra.db` and `mastraMigrationHead` with a storage upgrade, red-green and review. [DL §55 predates the Part A/B split; confirm with the user whether Part A is enough as the trigger.]
-8. **Moved after C2: #123 Part B**, the module-by-module SQL-to-Effect pass with performance measured before and after, the remaining Promise facades, the EW1-EW3 races, and `project-registration-preparation.ts` to Code Health 10 (DL §102, §103.4). See Phase 5b.
+8. **Moved after C2: #123 Part B**, the module-by-module SQL-to-Effect pass with performance measured before and after, the remaining Promise facades, the EW1-EW3 races, and `project-registration-preparation.ts` to Code Health 10 (DL §102, §103.4). See Phase 5b. [The Code Health 10 refactor of `project-registration-preparation.ts` was done early, in review Phase 3 slice p3-s7 (#129 closed 2026-10-31).]
 
 9. **Done 2026-10-23: whole-project architecture review** (`/rpiv:architectural-review`), scheduled by the coordinator on the user's delegation (2026-10-22). It runs after #123 Part A is integrated and the TS 7 switch has landed, and before Phase 3 and C2. Why then: the runtime, lifecycle and bridge foundations are settled, and C2 will build streaming and cancellation on them, so structural problems are cheapest to fix now. Scope: all workspaces (kernel, protocol, harness, desktop), checking the AGENTS.md boundaries, the Effect rules, duplication and the Part B candidates. The findings become a phased polish plan. Each item is then scheduled with the user, and none starts on its own.
    - Result: `architecture-reviews/2026-10-23_16-18-48_whole-project.md`, with 60 findings (2 High, 20 Med, 38 Low). The user accepted its 6 phases as the plan (DL §144):
-     - **Review Phase 1**, 12 quick correctness fixes, comes right after #133.
-     - **Review Phase 2**, the vocabulary owners, starts with an identity-root ADR.
-     - **Review Phases 3-4**, failure classification and the bridge/IPC consolidation, come before C2.
+     - **Review Phase 1**, 12 quick correctness fixes: **done 2026-10-24** (`4dbd834`, pushed).
+     - **Review Phase 2**, the vocabulary owners, with the identity-root ADR 0023: **done 2026-10-25** (`316e596`, pushed).
+     - **Review Phase 3**, failure classification: **done 2026-10-31** (`25780d1`, plus the test fix `8990120` for a Windows rename race, pushed; #129 closed). The acceptance `check:deep` caught one real regression, fixed as p3-s8. It opened #145 (gate entry guard behind an aliased path) and #146 (no transient retry on the product's staging-to-active rename).
+     - **Review Phase 4**, the bridge/IPC consolidation and R5, comes before C2.
      - **Review Phase 5** folds into #123 Part B.
-     - **Review Phase 6** waits for its ADRs, C2 and Frame.
+     - **Review Phase 6** (R4, R9) waits for its ADRs, C2 and Frame.
 
-Item 2 (the TS 7 switch, `0b49cc0`) and item 9 are done; CI is being repaired under #142 and #143. In progress: #133 (worktree `slopstop-133`). Next: review Phase 1. Items 5, 6 and 7 and review Phases 2-4 have no fixed order; confirm the next item with the user before starting it (DL §129).
+Items 2, 3, 4 and 9 are done; CI was repaired under #142 (closed). Still open in Phase 2, in no fixed order: review Phase 4, #135, #95/#97, #93 (Mastra cleanup), #144, #143, #141, #140, #137, #139, #138, #145 and #146. Confirm the next item with the user before starting it (DL §129).
 
 ### Phase 3 — the new interface
 1. Decisions: the open visual items through a session with the ui-ux agent (#121); local Rive runtime; ADR note for the splash-window CSP; custom frameless title bar (Electron security review); Settings shell with the sounds toggle and first-install sound prompt (DL:292, :304). The Rive paid plan is a release gate (#103), not a prerequisite. **Added 2026-10-22 (user):** the ui-ux agent designs the initial repository-selection section (Project registration: choosing the repository) in Figma AND as HTML prototypes, in 3 distinct variants for the user to choose from, with the same anti-clone and rune rules.
@@ -145,8 +146,8 @@ Recalibrate provisional numbers from real use (ADRs 0004/0005/0009/0018/0019/002
 
 ## 6. Technical debt and residuals
 
-- **Open issues:** #92 journal; #93 Mastra head (after #101); #95 real-process quit during upgrade; #96 late harness log lines on quit (in #123 Part A s8); #97 mutation scope for C1-0 S5; #133 upgrade log and log link; #134 C1-gate deferred rows and the licence check; #135 multi-process storage tests. Closed: #94 (2026-10-11), #102 (fixed in C1 S3).
-- **Effect migration remainder:** the unit 2 lifecycle is #123 Part A (in progress); the existing SQL bodies are #123 Part B, after C2 (`research/2026-10-04_sql-code-to-effect-pros-cons.md:50-63`; DL §102).
+- **Open issues:** #92 journal; #93 Mastra head (after #101); #95 real-process quit during upgrade; #97 mutation scope for C1-0 S5; #134 C1-gate deferred rows and the licence check; #135 multi-process storage tests; #143 posix storage guarantees; #144 review residuals; #145 gate entry guard behind an aliased path; #146 staging-to-active rename retry. Closed: #94 (2026-10-11), #102 (fixed in C1 S3); #96, #105, #129 and #133 (2026-10-31).
+- **Effect migration remainder:** the unit 2 lifecycle was #123 Part A (done 2026-10-23, `4cf6541`); the existing SQL bodies are #123 Part B, after C2 (`research/2026-10-04_sql-code-to-effect-pros-cons.md:50-63`; DL §102).
 - **Mutation survivors not triaged:** C1-0 S1 scope (eligibility 13, generated-migrations 8, manifest 2), C1-0 S2 recovery; 41 out-of-scope C1-0 deep-review suggestions (DL:125).
 - **Measured numbers still provisional:** timeouts, heartbeats, retries, retention (ADRs 0004, 0005, 0009:163), artifact retention (ADR 0018), result limits (ADR 0019), convergence profile (ADR 0020); upgrade time target under 1 s once sizes are measured.
 - **Program handoff payload schemas** (Execution, Evidence, Frame, Memory, Language) left to the owning designs (#28).
