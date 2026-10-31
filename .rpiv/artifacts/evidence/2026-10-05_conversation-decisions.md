@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 8578ef2b2d2a28d1acb065997eb981fbbbdefed415170b1b41dd2b32892cf8df
+content_hash: 84245597ee79c5cf8b5ecc91094c5aaf7150bf1a11e742048feae3a28b217302
 ---
 
 # Conversation — Human Decisions
@@ -2484,3 +2484,27 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - The roadmap was refreshed and committed as `d2a365c`, local.
 - Pedro chose "Apagar". Before removal, the p3-only evidence was copied into the main checkout: the s1-s3 candidate patches, and `jev-lane-labels-p3wt.log`. Worktree `slopstop-p3`, branch `fix/eperm-case-rename` (`8990120`) and branch `fix/arch-review-phase-3` (`c234eda`) were then deleted.
 - Pedro chose "Revisão Fase 4" as the next item: the desktop bridge and IPC consolidation, plus R5, before C2. The rpiv designer (w3:p1S) drafts the brief from `architecture-reviews/2026-10-23_16-18-48_whole-project.md` (the findings accepted into Phase 4). The brief is approved with Pedro before any slice starts.
+
+## 2026-10-31 — Phase 4 brief: Pedro accepts Q1-Q10 (a)
+
+- The brief is `.rpiv/artifacts/designs/2026-10-31_15-28-02_arch-review-phase-4-bridge-ipc-consolidation.md` (draft hash `cdf66d04…dd55`, base `d34a025`). Scope: L1-01, L1-02, L1-03, L1-05, L1-07, L1-08, L1-10, L1-12 and L7-02, plus R5. 10 slices, s1-s10.
+- Coordinator spot-check: 13 `ipcMain.handle` calls (main 4, entry 6, registration 3); `main.ts` has 2 importers (the smoke main test and workspace-bridge.test.ts).
+- Pedro chose "Aceitar todas (a)", with the coordinator recommending (a) on each:
+  - Q1: harness failure rows become broken for activation and switch; protocol 9 → 10.
+  - Q2: the sender check compares frame identity.
+  - Q3: a refused call rejects with one fixed error and one redacted log line.
+  - Q4: L1-10 is narrowed and the depcruise rule excludes the smoke main path.
+  - Q5: invalid input to the entry bridge gets the invalid-command envelope.
+  - Q6: s6 and s9 are rigorous; s7 and s8 are normal by override.
+  - Q7: `harness-failure-protocol.ts` becomes a whole-file Stryker entry, red-first.
+  - Q8: the L1-12 co-change metric is re-measured at the next architecture review.
+  - Q9: R5 is fixed by having composers inject the Clock.
+  - Q10: the 10 slices in the stated order.
+- Next: the designer records the decisions in the brief and sets it to approved; the coordinator saves the approved copy and commits the brief on main. The implementer then starts p4-s1 in a new worktree `slopstop-p4` on branch `fix/arch-review-phase-4`, which Pedro approved in the option text.
+
+## 2026-10-31 — Phase 4 brief recorded and committed
+
+- The designer recorded Q1-Q10 as a Developer Context entry and set `status: ready`, the rpiv vocabulary for an approved document (statuses: in-progress, in-review, ready). New hash `16db782f36c3…a68d6`, validated `--finalizing --slice p4-s1-harness-failure-row-owner --stamp`, 0 WARN; append-only keep against the pre-edit copy `cdf66d04` checked by the designer. The coordinator did not rerun keep: the `cdf66d04` draft was never committed or saved, so no copy exists to diff against; the change is the one entry plus four frontmatter fields, as reported.
+- Coordinator decision (Pedro may contest): keep `ready`. Slice evidence appended later re-stamps the brief either way; Phase 3's `in-review` was not a rule.
+- Approved copy saved as `.rpiv/evidence/2026-10-31_15-28-02_arch-review-phase-4-bridge-ipc-consolidation/approved-16db782f.md` (git-ignored, local, like the earlier approved copies). Brief committed on main.
+- Next: worktree `slopstop-p4` on branch `fix/arch-review-phase-4` from main, then p4-s1 to the implementer (w3:p1K).
