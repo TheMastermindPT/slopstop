@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/architecture-reviews/2026-10-23_16-18-48_whole-project.m
 lane: normal
 lane_reasons: ["no upstream lane", "s6, s7, s8, s9 lane.mjs --paths: rigorous (sensitive word: ipc; files: 6 > 5)"]
 status: ready
-last_updated: 2026-10-31T18:30:00+0000
+last_updated: 2026-10-31T19:30:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "p4-s2 contract detailed (P4-B4, P4-B5); Q11 (a) recorded."
-content_hash: 41b71fd3b28a35714535b012b6f548510ace6c7340a4f2849b53dd2d05403448
+last_updated_note: "p4-s3 contract detailed (P4-B6 to P4-B8); Q12 open."
+content_hash: b716fee421125d63300872be2d01435922dd9ca16744aff49b150da31fb56dae
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -381,6 +381,128 @@ Automated (smallest first; each read by its real exit code):
 
 Manual: none.
 
+### Slice p4-s3-fault-meaning-owner
+
+- **`slice_id`:** `p4-s3-fault-meaning-owner`.
+- **Lane:** normal. `lane.mjs --paths` over the twelve planned paths answers normal (files: 9 > 5).
+- **Finding:** L1-03, part 1. There is one fault-meaning table, and the upgrade mapper consumes it. No answer changes. Part 2, activation and switch, is s6.
+- **Base:** candidate `3f80587` (p4-s2 accepted, on branch `fix/arch-review-phase-4`). Both failure modules are unchanged since `19b6166` (`git diff 19b6166 3f80587` is empty for them).
+- **Measured at `3f80587`:**
+  - `project-conversation-failure.ts:34-49`: `faultMeaning` maps each `ProjectRequestFault` to one of five meanings (G25):
+    - `unsent` → not-sent;
+    - `transport` and `stopped` → sent-then-lost;
+    - `protocol` → malformed-reply;
+    - `desktop` → defect;
+    - `harness` → harness, with its code;
+    - `send` → defect when the code is `HARNESS_SESSION_MESSAGE_INVALID`, otherwise not-sent.
+    
+    `readConversationFailure` (`:52-62`) and `saveConversationFailure` (`:69-81`) branch on the meaning.
+  - `project-upgrade-failure.ts:32-54` restates the same seven arms directly on `fault.kind`, arm for arm. Its answers equal "read's" answers, meaning by meaning: harness → broken with the harness row; not-sent and sent-then-lost → `unavailable` / `connectionLost`; malformed-reply and defect → broken / `protocolMessageInvalid`.
+  - Each file keeps its own `harnessRows` map (`:13-17`, `:10-14`). The map goes from `HarnessFailureCode` to that file's diagnostics table. Since p4-s1, every row of both tables equals `harnessFailureRow(code)` (P4-B1), so the two maps hold equal values under different names.
+  - `harnessFailureRow` is package-internal (p4-s1). `@slopstop/protocol` exports `harnessFailureMessages`, but no row table. s6 needs one too (Developer Context, p4-s1 D2).
+  - Callers: `project-entry-bridge.ts:185`, `:192`, `:199` (the bridge's `broken` mappers) and `project-entry-ipc.ts:58`, `:63`, `:68` (the closed-gate answers). Neither file changes.
+- **Q12 (open, for Pedro): where the one harness-row map comes from.** Today each mapper keeps its own copy.
+  - **(a), recommended:** `@slopstop/protocol` exports `harnessFailureRows`, a frozen `Record<HarnessFailureCode, row>` built with `harnessFailureRow`, next to the helper in `harness-failure-protocol.ts`. Both desktop mappers read it, and s6's activation and switch rows read it too.
+    - Cost: one new public export in `packages/protocol`. The helper itself stays internal.
+    - Gain: one row table from protocol to desktop, and s6's D2 is settled here.
+  - **(b):** the desktop owner builds its one map from `projectConversationDiagnostics`, and the upgrade mapper borrows conversation rows.
+    - Cost: no protocol change.
+    - Problem: the upgrade answers then depend on the conversation table by name; the values are equal only because of P4-B1. s6 would borrow it a third time.
+  - **(c):** only `faultMeaning` moves, and each mapper keeps its `harnessRows`. That leaves the duplicate the finding names, so it does not meet L1-03 part 1.
+  
+  The contract below is written on (a). Under (b), P4-B6 and the three protocol paths drop out, and the owner also exports the map.
+- **Deliverable (on Q12 (a)):**
+  - `packages/protocol/src/harness-failure-protocol.ts` exports `harnessFailureRows`, and `packages/protocol/src/index.ts` re-exports it.
+  - New `apps/desktop/src/main/request-fault-meaning.ts` exports `type FaultMeaning` and `faultMeaning(fault)` (the body moves unchanged, with its G25 TSDoc).
+  - `project-conversation-failure.ts` imports `faultMeaning` and `harnessFailureRows`, and deletes its copy and its `harnessRows`. Its two mappers keep their bodies.
+  - `project-upgrade-failure.ts` branches on `faultMeaning(fault)` and drops its `Match` on `fault.kind`:
+    - harness → `{ status: "broken", request, diagnostic: harnessFailureRows[code] }`;
+    - not-sent and sent-then-lost → `connectionLost`;
+    - malformed-reply and defect → `protocolInvalid`.
+    
+    It deletes its `harnessRows`.
+- **Non-goals:** no answer changes for any fault. Activation and switch are not touched (s6). `project-entry-bridge.ts` and `project-entry-ipc.ts` are not edited. The neutral texts stay in `harness-request-core.ts` (s5).
+- **Message and code ledger:** nothing added, removed or changed. No wire change; `protocolVersion` stays 9.
+- **Affected paths:**
+  - `apps/desktop/src/main/request-fault-meaning.ts` (new) and `request-fault-meaning.test.ts` (new);
+  - `apps/desktop/src/main/project-conversation-failure.ts`, `project-upgrade-failure.ts`;
+  - `packages/protocol/src/harness-failure-protocol.ts`, `harness-failure-protocol.test.ts`, `index.ts`;
+  - `stryker.desktop-s7.config.json`, `stryker.config.json`, `stryker-range-anchors.json`, `apps/desktop/vitest.desktop-s7-mutation.config.ts`, `apps/harness/scripts/check-stryker-ranges.test.mjs` (its real-repository row).
+- **Stryker re-anchoring (lesson 3, same slice).** `check:mutation-ranges` on the candidate is the authority.
+
+  | Config | Entry now (`3f80587`) | After | Anchor row |
+  |---|---|---|---|
+  | `stryker.desktop-s7.config.json` | `project-conversation-failure.ts:35-48` (the `faultMeaning` `Match` body) | removed; `apps/desktop/src/main/request-fault-meaning.ts` is added as a whole-file entry | `stryker-range-anchors.json:226` removed |
+  | `stryker.desktop-s7.config.json` | `project-upgrade-failure.ts:36-53` (its `Match` body) | re-pointed at the rewritten `projectUpgradeFailure` body, from its first to its last statement line, with both anchor texts rewritten | `:220` rewritten |
+  | `stryker.config.json` | `project-conversation-failure.ts`, `project-upgrade-failure.ts` (whole files) | unchanged; `request-fault-meaning.ts` is added as a whole file | none |
+  | `stryker.config.json` | `project-entry-bridge.ts:101-101`, `:187-200` | unchanged (the file is not edited) | `:58`, `:64` |
+  | `stryker.config.json` | `harness-failure-protocol.ts` (whole file) | unchanged (the new table is in that file) | none |
+
+  - **Real-repository row** (`check-stryker-ranges.test.mjs:446-449`), edited red-first as in p4-s1:
+    - `stryker.config.json`: `wholeFiles` 34 → 35;
+    - `stryker.desktop-s7.config.json`: `ranges` 7 → 6 and `wholeFiles` 2 → 3.
+  - `vitest.desktop-s7-mutation.config.ts` gains `apps/desktop/src/main/request-fault-meaning.test.ts`, so the owner's whole-file mutants meet its own table. `vitest.main.config.ts` already collects `src/main/**/*.test.ts`.
+- **Full-integration exposure:**
+  - e2e `apps/desktop/tests/e2e/project-upgrade.test.ts`, `conversation.test.ts` and `conversation-accessibility.test.ts` cover the answers through a real launch. Their fault paths are proven by the unit rows only; the e2e runs prove nothing moved, once, at the Phase 4 final `check:deep`.
+  - Harness integration decodes the same result rows, whose values do not change.
+  - `harnessFailureRows` is a new `@slopstop/protocol` export, which Knip counts as used by desktop.
+- **Dependencies:** after s2 (accepted) and s1 (the row helper). s6 reads `harnessFailureRows` for activation and switch.
+
+#### Test Contract: p4-s3-fault-meaning-owner
+
+Public seam: `harnessFailureRows` from `@slopstop/protocol` (`index.ts`); `faultMeaning` from `request-fault-meaning.ts`; and the answers of `projectUpgradeFailure`, `readConversationFailure` and `saveConversationFailure` through the project-entry bridge and as direct calls.
+
+- **Behavior P4-B6: `@slopstop/protocol` exports one harness failure row per code.**
+  - Test: `packages/protocol/src/harness-failure-protocol.test.ts`, through `harnessFailureRows` imported from `./index.js`.
+  - Rows:
+    - the key set, sorted, `toEqual` the three `HarnessFailureCode` values, sorted;
+    - for each code, `harnessFailureRows[code]` `toEqual` `harnessFailureRow(code)`;
+    - for each code and each of `projectUpgradeDiagnostics` and `projectConversationDiagnostics`, the table's row for that code `toEqual` `harnessFailureRows[code]` (6 rows);
+    - `Object.isFrozen(harnessFailureRows)` is true.
+  - Expected red: `harnessFailureRows` is not exported from `./index.js`. The import is `undefined`, and every row fails.
+- **Behavior P4-B7: one table gives every request fault its meaning.**
+  - Test: `apps/desktop/src/main/request-fault-meaning.test.ts` (new), through `faultMeaning`.
+  - Rows, one per fault value (17):
+    - `{ kind: "unsent" }` → `{ meaning: "not-sent" }`;
+    - `{ kind: "transport" }` and `{ kind: "stopped" }` → `{ meaning: "sent-then-lost" }`;
+    - `protocol` with each of `invalid-message`, `uncorrelated`, `system-failure` and `undecodable` → `{ meaning: "malformed-reply" }`;
+    - `desktop` with each of `invalid-command`, `identity-collision`, `mismatched-event` and `mismatched-echo` → `{ meaning: "defect" }`;
+    - `harness` with each code → `{ meaning: "harness", code }`;
+    - `send` with `HARNESS_SESSION_MESSAGE_INVALID` → `{ meaning: "defect" }`;
+    - `send` with `HARNESS_SESSION_UNAVAILABLE` or `HARNESS_SESSION_SEND_FAILED` → `{ meaning: "not-sent" }`.
+    
+    Each row uses `toEqual`, so an extra key fails.
+  - Expected red: the import fails, because `request-fault-meaning.ts` does not exist.
+- **Behavior P4-B8: every upgrade and conversation answer stays as it is.**
+  - Test: `answers every upgrade reply with one strict result: %s` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `answers every upgrade reply with one strict result: request.failure %s` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `answers every upgrade reply with one strict result: an invalid command at send` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `answers a conversation %s with one strict result: %s` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `answers a conversation %s request.failure %s as broken` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `maps a send refused as an invalid message to broken for both operations` in `apps/desktop/src/main/project-entry-bridge.test.ts`. The file is unedited and green before and after, with the same row count. Also `apps/harness/scripts/check-stryker-ranges.test.mjs`, through `checkStrykerRanges({ root: repository })` (the real-repository row).
+  - Expected red: none — pin. The bridge rows guard kept answers. The real Stryker row's red is observed in the slice's TDD evidence, as in p4-s1: edited to the new counts, it fails against the old configs and passes after the entries move. A pin behavior is not re-proved.
+
+**Bindings that bite (each on the candidate, each restored after):**
+1. In `request-fault-meaning.ts`, map `stopped` to `not-sent`. The P4-B7 `stopped` row fails, and so does the P4-B8 conversation row "a stop while pending" for save (`unconfirmed` becomes `lost`). This proves the save mapper reads the owner.
+2. In `request-fault-meaning.ts`, map `send` with `HARNESS_SESSION_SEND_FAILED` to `defect`. The P4-B7 row fails, and so does the P4-B8 upgrade row "a send that fails" (`connectionLost` becomes `protocolInvalid`). This proves the upgrade mapper reads the owner.
+3. In `harness-failure-protocol.ts`, build `harnessFailureRows.HARNESS_INTERNAL_FAILURE` as `harnessFailureRow("PROTOCOL_MESSAGE_INVALID")`. The P4-B6 rows fail, and so does the P4-B8 row `answers every upgrade reply with one strict result: request.failure %s` for `HARNESS_INTERNAL_FAILURE`. This proves the upgrade mapper reads the protocol table.
+
+**Structural checks (on the candidate):**
+- `rg -n "function faultMeaning|type FaultMeaning" apps/desktop/src`: only `request-fault-meaning.ts`.
+- `rg -n "harnessRows" apps/desktop/src --glob "!*.test.ts"`: nothing.
+- `rg -n "Match" apps/desktop/src/main/project-upgrade-failure.ts apps/desktop/src/main/project-conversation-failure.ts`: nothing.
+- `rg -n "harnessFailureRow\b" packages/protocol/src/index.ts`: nothing (the helper stays internal); `rg -n "harnessFailureRows" packages/protocol/src/index.ts`: one line.
+- `git diff 3f80587 --stat` lists only the affected paths and this brief's evidence.
+
+#### Success Criteria: p4-s3-fault-meaning-owner
+
+Automated (smallest first; each read by its real exit code):
+- Red then green: `pnpm --filter @slopstop/protocol exec vitest run src/harness-failure-protocol.test.ts`.
+- Red then green: `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/request-fault-meaning.test.ts`.
+- Green before (at `3f80587`) and after, with the same row count: `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/project-entry-bridge.test.ts`.
+- Each binding (1 to 3) observed red and then restored, with the commands above.
+- `pnpm check:mutation-ranges` exit 0. The real row is red first (new counts against the old configs), then green: `pnpm --filter @slopstop/harness exec vitest run scripts/check-stryker-ranges.test.mjs`.
+- `pnpm typecheck`, then `pnpm check` exit 0 (read CPU first, in its own call). `pnpm check:dead-code` (Knip) exit 0.
+- CodeScene 10 on the four desktop files, `harness-failure-protocol.ts` and both new or edited tests.
+- Mutation: none for this slice. The coordinator may ask for one scoped `stryker.desktop-s7.config.json` run on the owner file at the final Phase 4 candidate.
+
+Manual: none.
+
 ## Deferred Work
 
 Each slice gets its full contract when it becomes next. Behavior IDs continue from P4-B4; questions from Q11. Lanes come from `lane.mjs --paths` over the planned paths, raised to the feature lane (normal).
@@ -455,6 +577,14 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Accepted identity:** candidate `3f80587` on `ab56351` (p4-s1, same patch as `8f7e883`) over main `73bacf3`. Slice-verifier round 1 of 1, no violation. Pins 210/210; bindings 1-3 red as predicted; `check:mutation-ranges` exit 0; `pnpm check` 3830/3830; CodeScene 10.
   - **V1, for s4:** every bridge now gets `afterStop = keepCore`, so the call to `afterStop()` (entry:221, storage:148, workspace:254) and the `if (stopped) return` guard (entry:217, storage:144, workspace:248) are no longer observable; about 6 desktop-s7 survivors and 2 in the whole-file `workspace-bridge.ts` are expected. s4's contract removes `afterStop` and its "Settle first" comments (entry:219, storage:146, workspace:250), and either drops the re-entry guard or keeps it with a row that observes it. Any survivor left at the final mutation run is triaged there. No scoped Stryker run now (proportional; s4 changes these lines).
   - **Corrections for later slices:** the desktop main tests run with `--config vitest.main.config.ts` (the Success Criteria command omits it). Current ranges: desktop-s7 entry 78-224, storage 30-151, workspace 93-257; `stryker.config.json` entry-bridge 101-101 and 187-200; the s4/s6 Deferred Work rows and the Stryker table cite the old ones.
+
+- **2026-10-31: p4-s3 detailed (coordinator instruction); Q12 open.**
+  - **Base:** candidate `3f80587` on `fix/arch-review-phase-4`. The coordinator's corrections are folded in: desktop main tests run with `--config vitest.main.config.ts`, and the ranges are desktop-s7 entry 78-224, storage 30-151, workspace 93-257, and `stryker.config.json` entry-bridge 101-101 and 187-200. This slice moves none of them.
+  - **Q12 (for Pedro), where the one harness-row map comes from:** (a) `@slopstop/protocol` exports `harnessFailureRows` (recommended; it also settles s6's D2); (b) the desktop owner builds it from the conversation table; (c) keep both maps (does not meet L1-03 part 1). The contract is written on (a); the slice section says what (b) drops.
+  - **Red:** P4-B6 (the protocol export) and P4-B7 (the owner) are genuinely red, because the import fails. P4-B8 pins every upgrade and conversation answer. Bindings 1 to 3 prove that the save mapper, the upgrade mapper and the protocol table each read the owner.
+  - **Lane:** normal (`lane.mjs --paths`: files 9 > 5). The label is recorded on approval.
+  - **For s4:** its contract takes V1. It removes `afterStop` and its "Settle first" comments, and either drops the re-entry guard or keeps it with a row that observes it.
+- **2026-10-31: Q12 decided (a); p4-s3 contract approved (Pedro; coordinator).** Pedro chose (a): `@slopstop/protocol` exports the frozen `harnessFailureRows` table, read by both desktop mappers and later by s6. Pedro approved hash `e1e4976b776b…73a0`; approved copy `approved-e1e4976b.md`.
 
 ## References
 
