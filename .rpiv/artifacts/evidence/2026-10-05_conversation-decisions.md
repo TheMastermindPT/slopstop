@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 84245597ee79c5cf8b5ecc91094c5aaf7150bf1a11e742048feae3a28b217302
+content_hash: a4cabe9a000595f9255d2943277d73bee012181d0222c0b461869e6da277c14e
 ---
 
 # Conversation — Human Decisions
@@ -2508,3 +2508,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Coordinator decision (Pedro may contest): keep `ready`. Slice evidence appended later re-stamps the brief either way; Phase 3's `in-review` was not a rule.
 - Approved copy saved as `.rpiv/evidence/2026-10-31_15-28-02_arch-review-phase-4-bridge-ipc-consolidation/approved-16db782f.md` (git-ignored, local, like the earlier approved copies). Brief committed on main.
 - Next: worktree `slopstop-p4` on branch `fix/arch-review-phase-4` from main, then p4-s1 to the implementer (w3:p1K).
+
+## 2026-10-31 — C2 real-model tests use Pedro's subscription
+
+- Pedro does not have the $100 API credits noted on 2026-10-11; the API-key test budget is zero.
+- Pedro decided: C2's live-model test runs go through the governed-CLI billing mode on his subscription, not an API key. Automated tests use a fake model; each live run is manual, named and approved by Pedro. The C2 design records this.
