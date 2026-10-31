@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 25c545a351e5f42809bcd11fb4a0fecb44e2fdabeb4ac67c61eec989e290d9f8
+content_hash: a84abd7cc92b6913819dc1549eabc3838ee0f8c77cdfa70bea570a16d4419a4c
 ---
 
 # Conversation — Human Decisions
@@ -2519,3 +2519,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - p4-s1 candidate `5570258` (base `0fc425c`, 7 files). A first `pnpm check` ran under load at Pedro's order with League/TFT open: 3 timeouts in untouched files (CNV-B31 5136 ms; two `check-effect-diagnostics` rows 11.5 s and 16 s), CPU 88%. Not rerun until Pedro closed the game and said "livre"; then `pnpm check` 3830/3830 on the same patch digest, so the failures were load timeouts. knip, jscpd, mutation ranges, CodeScene 10 clean.
 - Coordinator decision (Pedro may contest): binding 1 (`retryable: true`) turns 4 rows red, not the 6 table rows the brief named, because the tables derive from the same owner the oracle compares; binding 3 (local copy) covers them.
 - rpiv preflight flagged P4-B3's two unedited result-schema tests as `untouched-test-file`. Pedro chose a wording fix. The designer marked P4-B3 Expected red `none — pin` and added `## TDD Evidence (implement)`; append-only answered reopen (one Test Contract line changed). Pedro was offered splitting the Stryker row into its own re-proved behavior and chose to approve hash `6ee6d0a4…15f3` as it is: the Stryker row's red (Q7) rests on `p4-s1-stryker-red.log`, not on validate's re-proof. Status `ready`; approved copy `approved-6ee6d0a4.md` (local).
+
+## 2026-10-31 — p4-s1 accepted
+
+- Slice-verifier round 1 of 1 passed on `8f7e883` (rebased from `5570258` onto main `2c0014d`, same code); preflight-2 clean; C1-C14 found; 3 hypotheses refuted.
+- V1 (Decisions) closed by a coordinator-appended Developer Context entry in the brief (append-only keep against `approved-6ee6d0a4.md`): binding 1 reddens 4 rows; stale "33 whole files" now 34; s6 must source rows from an exported table or decide to export `harnessFailureRow`; accepted identity `8f7e883`. Correction to the entry above: the brief's binding 1 line said "every P4-B1 row", not "the 6 table rows".
+- Lane normal: the coordinator accepts the slice; Pedro's acceptance comes once on the combined Phase 4 result. Next: p4-s2-bridge-test-composition.
