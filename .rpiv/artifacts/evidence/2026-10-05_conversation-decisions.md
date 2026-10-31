@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: a4cabe9a000595f9255d2943277d73bee012181d0222c0b461869e6da277c14e
+content_hash: 25c545a351e5f42809bcd11fb4a0fecb44e2fdabeb4ac67c61eec989e290d9f8
 ---
 
 # Conversation — Human Decisions
@@ -2513,3 +2513,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - Pedro does not have the $100 API credits noted on 2026-10-11; the API-key test budget is zero.
 - Pedro decided: C2's live-model test runs go through the governed-CLI billing mode on his subscription, not an API key. Automated tests use a fake model; each live run is manual, named and approved by Pedro. The C2 design records this.
+
+## 2026-10-31 — p4-s1 candidate; P4-B3 marked as a pin
+
+- p4-s1 candidate `5570258` (base `0fc425c`, 7 files). A first `pnpm check` ran under load at Pedro's order with League/TFT open: 3 timeouts in untouched files (CNV-B31 5136 ms; two `check-effect-diagnostics` rows 11.5 s and 16 s), CPU 88%. Not rerun until Pedro closed the game and said "livre"; then `pnpm check` 3830/3830 on the same patch digest, so the failures were load timeouts. knip, jscpd, mutation ranges, CodeScene 10 clean.
+- Coordinator decision (Pedro may contest): binding 1 (`retryable: true`) turns 4 rows red, not the 6 table rows the brief named, because the tables derive from the same owner the oracle compares; binding 3 (local copy) covers them.
+- rpiv preflight flagged P4-B3's two unedited result-schema tests as `untouched-test-file`. Pedro chose a wording fix. The designer marked P4-B3 Expected red `none — pin` and added `## TDD Evidence (implement)`; append-only answered reopen (one Test Contract line changed). Pedro was offered splitting the Stryker row into its own re-proved behavior and chose to approve hash `6ee6d0a4…15f3` as it is: the Stryker row's red (Q7) rests on `p4-s1-stryker-red.log`, not on validate's re-proof. Status `ready`; approved copy `approved-6ee6d0a4.md` (local).
