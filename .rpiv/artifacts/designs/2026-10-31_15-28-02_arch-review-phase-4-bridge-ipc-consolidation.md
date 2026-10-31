@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/architecture-reviews/2026-10-23_16-18-48_whole-project.m
 lane: normal
 lane_reasons: ["no upstream lane", "s6, s7, s8, s9 lane.mjs --paths: rigorous (sensitive word: ipc; files: 6 > 5)"]
 status: ready
-last_updated: 2026-10-31T17:22:25+0000
+last_updated: 2026-10-31T18:30:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "P4-B3 marked as a pin; TDD Evidence section added (p4-s1 preflight finding)."
-content_hash: fe69b40ec83ef061d19c0c17f05d717e5192db1168b39629311943663975fae3
+last_updated_note: "p4-s2 contract detailed (P4-B4, P4-B5); Q11 (a) recorded."
+content_hash: efa6d2f0ed77f72d027c3e977b1f0c1f3ffd00270290a55dfa4559b0f29d9b5f
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -267,6 +267,120 @@ Automated (smallest first; each read by its real exit code):
 
 Manual: none.
 
+### Slice p4-s2-bridge-test-composition
+
+- **`slice_id`:** `p4-s2-bridge-test-composition`.
+- **Lane:** normal. `lane.mjs --paths` over the ten planned paths answers normal (files: 6 > 5).
+- **Finding:** L1-08. Acceptance: the three test-only standalone factories are gone, and the bridge tests compose bridges as production does. Q11 (a), Pedro's choice.
+- **Base:** main `19b6166` (p4-s1 accepted). The implementer's read-only measurements were taken at `20e198a`; every source fact below was re-read at `19b6166`.
+- **Measured at `19b6166`:**
+  - Each factory builds a private core and passes its unsubscribe as `afterStop`, so a standalone `bridge.stop()` also ends the session subscription:
+    - `createProjectEntryBridge` at `project-entry-bridge.ts:229-235`;
+    - `createProjectStorageBridge` at `project-storage-bridge.ts:161-167`;
+    - `createWorkspaceBridge` at `workspace-bridge.ts:267-271`.
+  - Production composes the bridges only through `createHarnessBridges` (`harness-bridges.ts:25-59`).
+    - It passes a no-op `keepCore`, so only `release()` unsubscribes the core, once.
+    - `release()` first stops each bridge, isolating each failure, and only then unsubscribes.
+    - It runs `core.failAll({ kind: "transport" })` in `finally`, and throws the first failure only after every step has run.
+  - Callers are test-only:
+    - `project-entry-bridge.test.ts:78` (`setup`) and `:658` (`scripted`);
+    - `harness-supervisor.test.ts:1254`;
+    - `project-storage-bridge.test.ts:174` (`bridgeWith`);
+    - `workspace-bridge.test.ts:271` (`bridgeWith`).
+  - Only the factories use the two option types, `ProjectStorageBridgeOptions` (`project-storage-bridge.ts:32-36`) and `WorkspaceBridgeOptions` (`workspace-bridge.ts:32-36`).
+  - With the factories gone, the `makeHarnessRequestCore` import and the `HarnessSessionClient` import also become unused in all three bridge files.
+- **Deliverable:**
+  - The test helpers build the bridges with `createHarnessBridges({ session, createId, now })`: `setup`, `scripted`, both `bridgeWith`, and the supervisor row's bridge. Each takes its own bridge (`projectEntry`, `projectStorage` or `workspace`) and also returns the bundle's `release`.
+  - Five rows move from "`bridge.stop()` ends the subscription" to `release()`. P4-B5 gives the exact oracle for each.
+  - These are deleted: the three factories, the two option types and the imports that become unused.
+  - The TSDoc on `projectEntryBridgeOver`, `projectStorageBridgeOver` and `workspaceBridgeOver` loses its "standalone bridge ends its private core" sentence. The `afterStop` parameter stays (see Non-goals).
+- **Non-goals:**
+  - No production composition, answer, text or signature changes. `harness-bridges.ts` and `main.ts` are not edited.
+  - `afterStop` keeps one caller, which passes a no-op. Removing the parameter would change three signatures and `harness-bridges.ts`, which is s4 skeleton work; s4 decides it.
+  - `harness-bridges.test.ts` is not edited. Its rows already prove the bundle (`release settles before unsubscribe fails`, `release twice`, `stop scoped to its bridge`). The moved rows keep each bridge's own pending answers in its own file.
+- **Message and code ledger:** nothing added, removed or changed. No wire change.
+- **Affected paths:**
+  - `apps/desktop/src/main/{project-entry-bridge,project-storage-bridge,workspace-bridge}.ts`;
+  - `apps/desktop/src/main/{project-entry-bridge,project-storage-bridge,workspace-bridge,harness-supervisor}.test.ts`;
+  - `stryker.desktop-s7.config.json`, `stryker.config.json`, `stryker-range-anchors.json`.
+- **Stryker re-anchoring (lesson 3, same slice).** Deleting the factories, the option types and the unused imports moves these ranges. The values below are predicted; the candidate's `pnpm check:mutation-ranges` is the authority. Every `first` and `last` anchor text stays as it is.
+
+  | Config | Entry now | Predicted entry | Anchor row | Why |
+  |---|---|---|---|---|
+  | `stryker.desktop-s7.config.json` | `project-entry-bridge.ts:80-235` | `:78-223` | `stryker-range-anchors.json:202` | 2 import lines go (`:39`, `:42`). The range now ends at the `}` that closes `projectEntryBridgeOver` (now `:225`), not at the factory. |
+  | `stryker.desktop-s7.config.json` | `project-storage-bridge.ts:38-167` | `:30-151` | `:208` | 8 lines go before the range (`:26`, `:30`, `:32-37`). The range ends at the `}` that closes `projectStorageBridgeOver` (now `:159`). |
+  | `stryker.desktop-s7.config.json` | `workspace-bridge.ts:101-271` | `:93-257` | `:214` | 8 lines go before the range (`:26`, `:30`, `:32-37`). The range ends at the `}` that closes `workspaceBridgeOver` (now `:265`). |
+  | `stryker.config.json` | `project-entry-bridge.ts:103-103` | `:101-101` | `:58` | Shifted by the two import lines. |
+  | `stryker.config.json` | `project-entry-bridge.ts:189-202` | `:187-200` | `:64` | Shifted by the two import lines. |
+
+  **Correction to the coordinator's input:** the two `stryker.config.json` entry-bridge ranges do move. Two import lines above them go, because `makeHarnessRequestCore` and `HarnessSessionClient` become unused once the factory is deleted.
+  - The number of ranges and whole files does not change (19 ranges; 34 whole files after p4-s1). So the real-repository row in `check-stryker-ranges.test.mjs` is not edited.
+  - No test file moves or splits, so `vitest.desktop-s7-mutation.config.ts` does not change, and neither do the `-s6-` and `-s8-` configs.
+- **Full-integration exposure:** none in production. The bridges are composed only by `createHarnessBridges`, which this slice does not touch. The exposure is Knip (the deleted exports) and the desktop unit project. There is nothing for e2e or `package:launch-smoke` to prove here; the Phase 4 final `check:deep` covers them as usual.
+- **Dependencies:** after s1 (accepted). s4 rebuilds the bridges over this test composition.
+
+#### Test Contract: p4-s2-bridge-test-composition
+
+Public seam: `createHarnessBridges` (`harness-bridges.ts`) and the bridge clients it returns (`projectEntry`, `projectStorage`, `workspace`, `release`), over each test file's own fake session.
+
+- **Behavior P4-B4: bridge tests build their bridges the way production does, and every other row's assertions stay unchanged.**
+  - Test: `apps/desktop/src/main/project-entry-bridge.test.ts`, `apps/desktop/src/main/project-storage-bridge.test.ts`, `apps/desktop/src/main/workspace-bridge.test.ts` and `apps/desktop/src/main/harness-supervisor.test.ts`, through `createHarnessBridges`. Only the helpers and the five P4-B5 rows change: `setup`, `scripted`, both `bridgeWith`, and the supervisor row's construction. Every other row's assertions stay character for character and pass before and after.
+  - Expected red: none — pin. The production composition already behaves this way; these rows prove it and add no behavior.
+- **Behavior P4-B5: a bridge's own stop keeps the shared subscription; `release()` ends it once, after every pending operation is settled, and surfaces an unsubscribe failure.**
+  - Test: `rejects mismatched, uncorrelated, disconnected, and stopped requests` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `settles pending operations even when session unsubscribe throws` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `stops once and rejects later requests without observing the session` in `apps/desktop/src/main/workspace-bridge.test.ts`; `settles pending work even when session unsubscribe throws` in `apps/desktop/src/main/workspace-bridge.test.ts`; `settles pending work even when session unsubscribe throws` in `apps/desktop/src/main/project-entry-bridge.test.ts`.
+  - Oracle per row. Titles stay; each "was" is the row at `19b6166`.
+    1. **Storage, `rejects mismatched, uncorrelated, disconnected, and stopped requests`** (`:312`; tail `:348-353`). Earlier assertions are unchanged. Then:
+       - `bridge.stop()` twice;
+       - `bridge.open(openRequest)` resolves `transportBrokenOpenResult("Project Storage bridge is stopped.")` (unchanged);
+       - `unsubscribeCalls` is **0** (was 1: a bridge's stop leaves the shared subscription);
+       - `release()` does not throw;
+       - `unsubscribeCalls` is **1**.
+    2. **Storage, `settles pending operations even when session unsubscribe throws`** (`:299-310`). The session's `unsubscribeError` is `new Error("unsubscribe failed")`, and `pending = bridge.create(createRequest)`.
+       - `expect(() => release()).toThrow("unsubscribe failed")`, where it was `bridge.stop()`;
+       - `pending` resolves `transportBrokenCreateResult("Project Storage bridge is stopped.")` (unchanged: `release()` stops the bridge before it unsubscribes);
+       - a second `release()` does not throw;
+       - `unsubscribeCalls` is **1**.
+    3. **Workspace, `stops once and rejects later requests without observing the session`** (`:465-480`). Before the stop, `listenerCount` is 1 (unchanged).
+       - `bridge.stop()` twice; then `listenerCount` is **1** and `unsubscribeCalls` is **0** (they were 0 and 1);
+       - the later `query` still resolves its broken answer (unchanged);
+       - `release()`; then `listenerCount` is **0** and `unsubscribeCalls` is **1**.
+    4. **Workspace, `settles pending work even when session unsubscribe throws`** (`:1040-1054`). The session's `unsubscribeError` is `failure`, and one query is pending.
+       - `expect(() => release()).toThrow(failure)`, where it was `bridge.stop()`;
+       - after the microtask flush, the query's answer is `workspaceQueryClosing(memoryQuery())` (unchanged);
+       - a second `release()` does not throw;
+       - `unsubscribeCalls` is **1**.
+    5. **Entry, `settles pending work even when session unsubscribe throws`** (`:754-766`). The session has `failUnsubscribe = 1`, with `readConversation(s7Read)` and `list()` pending.
+       - `expect(() => release()).toThrow(session.unsubscribeError)`, where it was `bridge.stop()`;
+       - after `flushMicrotasks()`, both are settled: `read.value` is `readLost`, and `list.value` is `{ status: "unavailable", code: "PROJECT_LIST_UNAVAILABLE" }` (unchanged);
+       - a second `release()` does not throw;
+       - `unsubscribeCalls` is **1**.
+    - **Supervisor row** `answers broken for a read during $failure` (`harness-supervisor.test.ts:1248-1286`): the assertions are unchanged. Its cleanup `bridge.stop()` (`:1283`) becomes the bundle's `release()`, so the test ends the subscription it opened.
+  - Expected red: none — pin. These rows pass on the base source, because `createHarnessBridges` already composes this way and the slice changes no source behavior. A rewritten test applied to the base cannot turn red. Bindings 1 to 3 show that the oracles bite.
+- **TDD-exempt**: deleting `createProjectEntryBridge`, `createProjectStorageBridge`, `createWorkspaceBridge`, `ProjectStorageBridgeOptions`, `WorkspaceBridgeOptions` and their now-unused imports - removing test-only code changes no behavior. The proof is structural: the `rg` checks below, Knip, `pnpm typecheck`, and P4-B4 and P4-B5 green.
+
+**Bindings that bite (each on the candidate, each restored after):**
+1. A test helper in `project-storage-bridge.test.ts` returns a bridge built as `projectStorageBridgeOver(core, clock, core.unsubscribe)` over `makeHarnessRequestCore(session)`: the standalone composition. Oracle 1 fails because `unsubscribeCalls` is 1 where 0 is expected. So the rows tell the standalone composition from the production one.
+2. In `harness-bridges.ts`, pass `core.unsubscribe` instead of `keepCore` for the workspace bridge. Oracle 3 fails: after `bridge.stop()`, `listenerCount` is 0 and `unsubscribeCalls` is 1. So the per-bridge rows guard production's composition.
+3. In `release()`, move `core.unsubscribe()` (and its `finally`) before the bridge-stop loop. Oracle 2 fails: `failAll` settles `pending` with the transport text before the storage bridge stops, not with `"Project Storage bridge is stopped."`.
+
+**Structural checks (on the candidate):**
+- `rg -n "createProjectEntryBridge|createProjectStorageBridge|createWorkspaceBridge|ProjectStorageBridgeOptions|WorkspaceBridgeOptions" apps/desktop`: nothing.
+- `rg -n "makeHarnessRequestCore" apps/desktop/src/main --glob "!*.test.ts"`: only `harness-request-core.ts` and `harness-bridges.ts`.
+- `rg -n "standalone" apps/desktop/src/main/project-entry-bridge.ts apps/desktop/src/main/project-storage-bridge.ts apps/desktop/src/main/workspace-bridge.ts`: nothing.
+- `git diff 19b6166 --stat` lists only the affected paths and this brief's evidence.
+
+#### Success Criteria: p4-s2-bridge-test-composition
+
+Automated (smallest first; each read by its real exit code):
+- Green before (at `19b6166`) and after, with the same row count: `pnpm --filter @slopstop/desktop exec vitest run src/main/project-entry-bridge.test.ts src/main/project-storage-bridge.test.ts src/main/workspace-bridge.test.ts src/main/harness-supervisor.test.ts src/main/harness-bridges.test.ts`.
+- Each binding (1 to 3) observed red and then restored, with the same command scoped to its file.
+- `pnpm check:mutation-ranges` exit 0. The real-repository row stays green: `pnpm --filter @slopstop/harness exec vitest run scripts/check-stryker-ranges.test.mjs`.
+- `pnpm typecheck`, then `pnpm check` exit 0 (read CPU first, in its own call). `pnpm check:dead-code` (Knip) exit 0, with no unused export left.
+- CodeScene 10 on the three bridge files and the four test files.
+- Mutation: none for this slice (no source logic changed). The scoped `desktop-s7` run belongs to the final Phase 4 candidate, with the coordinator's GO.
+
+Manual: none.
+
 ## Deferred Work
 
 Each slice gets its full contract when it becomes next. Behavior IDs continue from P4-B4; questions from Q11. Lanes come from `lane.mjs --paths` over the planned paths, raised to the feature lane (normal).
@@ -329,6 +443,14 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Stale counts:** where this brief says `stryker.config.json` has 33 whole files or the owner file is not mutated, p4-s1 made it 34 whole files with `harness-failure-protocol.ts` a whole-file entry (Q7). Later slices start from 34.
   - **For s6 (D2):** `harnessFailureRow` is package-internal, so the desktop cannot call it. s6 sources the activation and switch rows from an exported table, or a new decision exports the helper.
   - **Accepted identity:** candidate `8f7e883` on main `2c0014d` (rebased from `5570258` on `0fc425c`, same code). Slice-verifier round 1 of 1, no violation.
+
+- **2026-10-31: p4-s2 detailed; Q11 decided (a) (Pedro, confirmed by the coordinator).**
+  - **Q11:** how the bridge tests compose bridges once the three standalone factories go. A factory passes `core.unsubscribe` as `afterStop`, so its `stop()` ends the subscription. `createHarnessBridges` passes `keepCore` and ends the core only in `release()`.
+    - **(a), chosen:** the tests build bridges through `createHarnessBridges`, and the five rows that pinned "stop ends the subscription" move to `release()` with changed assertions (P4-B5 oracles 1 to 5). The tests then prove what production composes.
+    - **(b), rejected:** a test helper rebuilds `xBridgeOver(core, clock, core.unsubscribe)` inline and every assertion stays. That keeps proving a composition production never builds, which is the finding itself (L1-08) moved into the tests.
+  - **Inputs:** the implementer's read-only measurements at `20e198a`, relayed by the coordinator, re-read at `19b6166`. One correction: the two `stryker.config.json` entry-bridge ranges (`:103-103`, `:189-202`) do move by two lines, because the factory's two imports become unused.
+  - **Red:** the slice changes no source behavior, so P4-B4 and P4-B5 are pins (they pass on the base source), and the factory deletion is TDD-exempt with structural checks. Bindings 1 to 3 prove the oracles tell standalone from shared composition.
+  - **Lane:** normal (`lane.mjs --paths`: files 6 > 5). The label is recorded on approval.
 
 ## References
 
