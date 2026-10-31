@@ -1,4 +1,4 @@
-import { mkdir, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { decodeStrict, StorageGenerationIdSchema } from "@slopstop/protocol";
@@ -29,6 +29,7 @@ import {
   sourceFileHashes,
   stopDuringUpgrade,
 } from "./project-storage-upgrade-recovery-fixture.js";
+import { renameWhenReleased } from "./rename-when-released.js";
 
 type ProjectRoot = Readonly<{ root: string }>;
 
@@ -296,7 +297,7 @@ it.for(caseVariantNames)(
     await stopped.stopping;
     // The staged copy holds only generation files: letter case is the only reason to refuse.
     const project = generationPaths(root).project;
-    await rename(
+    await renameWhenReleased(
       path.join(project, `.staging-${letteredTarget}`),
       path.join(project, variantCase.entry),
     );

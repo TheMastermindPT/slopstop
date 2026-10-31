@@ -21,6 +21,7 @@ import {
 } from "../../src/storage/project-storage-errors.js";
 import { createProjectStorageFileAdapter } from "../../src/storage/project-storage-file-adapter.js";
 import { pathExists } from "./project-storage-runtime-fixture.js";
+import { renameWhenReleased } from "./rename-when-released.js";
 
 const projectId = "00000000-0000-4000-8000-000000000010";
 const uuid = "00000000-0000-4000-8000-0000000000c1";
@@ -258,7 +259,7 @@ it.runIf(process.platform === "win32")(
     ] as const;
     for (const [exact, variantName] of variants) {
       const variant = await upgradeOutputInstallation();
-      await rename(
+      await renameWhenReleased(
         path.join(variant.projectRoot, exact),
         path.join(variant.projectRoot, variantName),
       );
