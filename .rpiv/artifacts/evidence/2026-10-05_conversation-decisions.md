@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 09f6bd5f9a119ae5c0086aa98cbf07aa8f73de459f6f77b5c0d37df6efeedc7a
+content_hash: eb91b29bbc0e0ac6b18245363f72840474e7903d0e4a896c7b24aab76d2566c5
 ---
 
 # Conversation — Human Decisions
@@ -2531,3 +2531,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - The implementer held p4-s2: the brief had no contract for it. Pedro chose (a): bridge tests build bridges the way `harness-bridges.ts` does, and the subscription-ending rows move to `createHarnessBridges(...).release()` with changed assertions; (b), a test helper keeping the standalone composition, was rejected.
 - The designer wrote P4-B4 and P4-B5 (both `none — pin`, no source behaviour change) with exact per-row oracles and 3 bindings; corrected the coordinator: the entry-bridge Stryker ranges `:103-103` and `:189-202` also move. Coordinator check: additions only (keep against `approved-6ee6d0a4.md`), and the release oracle matches `harness-bridges.ts:38-58` (stops all, unsubscribes once, rethrows the first failure, second release a no-op).
 - Pedro approved hash `efa6d2f0…9b5f`; status `ready`; approved copy `approved-efa6d2f0.md` (local).
+
+## 2026-10-31 — p4-s2 accepted
+
+- Candidate `3f80587` (11 files), slice-verifier round 1 passed, no violation; pins 210/210, bindings 1-3 red as predicted, mutation ranges re-anchored (exit 0), `pnpm check` 3830/3830, CodeScene 10.
+- V1 (Cross-slice) handed to s4 by a coordinator-appended Developer Context entry (keep against `approved-efa6d2f0.md`): `afterStop` and the re-entry guard became unobservable; s4 removes `afterStop` and drops or tests the guard. No scoped Stryker run now (coordinator decision, proportional). Corrections recorded there: `--config vitest.main.config.ts`, current ranges.
+- Next: p4-s3-fault-meaning-owner (needs its contract).
