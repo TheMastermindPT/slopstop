@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-10-31T17:22:25+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "P4-B3 marked as a pin; TDD Evidence section added (p4-s1 preflight finding)."
-content_hash: 6ee6d0a4e291763379fccf647fb94fea0501d6a4ca1da83cade49eb4741d15f3
+content_hash: fe69b40ec83ef061d19c0c17f05d717e5192db1168b39629311943663975fae3
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -324,6 +324,11 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Cost, stated plainly:** the grammar marks a whole behavior as a pin, and pins are never re-proved. So validate no longer re-proves the Stryker row's red (Q7); that red rests on the slice's TDD evidence (`p4-s1-stryker-red.log`). Naming a test title in each pinned file instead was tried and rejected: the preflight then lists those titles for red re-proof, and they are green by design.
   - **Approval:** the approved copy `approved-16db782f.md` holds the old Expected red line, which sits outside the sections the append-only check lets grow. So `append-only.mjs` answers `reopen` for this revision, and `status` is back to `in-review` until Pedro approves the new hash.
   - **Added:** `## TDD Evidence (implement)` at the end, which the implement workflow links to.
+- **2026-10-31: p4-s1 accepted; binding 1 outcome and stale counts (coordinator decision; slice-verifier V1).**
+  - **Binding 1:** `retryable: true` turns 4 rows red (the 3 direct P4-B1 rows and "rejects a retryable row"), not every P4-B1 row as the Bindings line says. The table rows derive from the same owner the oracle compares against, so they stay green under binding 1; binding 3 (a local copy with a different message) reddens them. Recorded before the run; accepted by the coordinator.
+  - **Stale counts:** where this brief says `stryker.config.json` has 33 whole files or the owner file is not mutated, p4-s1 made it 34 whole files with `harness-failure-protocol.ts` a whole-file entry (Q7). Later slices start from 34.
+  - **For s6 (D2):** `harnessFailureRow` is package-internal, so the desktop cannot call it. s6 sources the activation and switch rows from an exported table, or a new decision exports the helper.
+  - **Accepted identity:** candidate `8f7e883` on main `2c0014d` (rebased from `5570258` on `0fc425c`, same code). Slice-verifier round 1 of 1, no violation.
 
 ## References
 
@@ -340,3 +345,4 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 ## TDD Evidence (implement)
 
 - `p4-s1-harness-failure-row-owner`: `.rpiv/artifacts/evidence/2026-10-31_p4-s1-harness-failure-row-owner-tdd.md` (candidate `5570258`).
+- `p4-s1-harness-failure-row-owner`: accepted at `8f7e883` (base `2c0014d`, same code as `5570258`); preflight-2 clean; slice-verifier round 1 passed.
