@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/architecture-reviews/2026-10-23_16-18-48_whole-project.m
 lane: normal
 lane_reasons: ["no upstream lane", "s6, s7, s8, s9 lane.mjs --paths: rigorous (sensitive word: ipc; files: 6 > 5)"]
 status: ready
-last_updated: 2026-10-31T17:00:00+0000
+last_updated: 2026-10-31T17:22:25+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "Phase 4 brief approved; Q1-Q10 (a) recorded in Developer Context."
-content_hash: 16db782f36c301c9e17d5411a3e98f673c1aa513363cf9e3a26fa8d3ec7a68d6
+last_updated_note: "P4-B3 marked as a pin; TDD Evidence section added (p4-s1 preflight finding)."
+content_hash: 6ee6d0a4e291763379fccf647fb94fea0501d6a4ca1da83cade49eb4741d15f3
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -243,7 +243,7 @@ Public seam: the exports of `harness-failure-protocol.ts`, and the exported `pro
   - Expected red: as P4-B1, the import fails.
 - **Behavior P4-B3: the result schemas and mutation coverage stay as they are.**
   - Test: `packages/protocol/src/project-conversation-protocol.test.ts` and `packages/protocol/src/protocol.test.ts` (the upgrade result rows), through the exported result schemas, unedited and green before and after. Also `apps/harness/scripts/check-stryker-ranges.test.mjs`, through `checkStrykerRanges({ root: repository })` (the real-repository row, Q7).
-  - Expected red, observed (Q7 (a)): the real row is edited to `wholeFiles: 34` for `stryker.config.json` and fails with 33. It passes after the config entry is added.
+  - Expected red: none — pin. The two result-schema files stay unedited and green before and after. The real Stryker row is the one red, observed (Q7 (a)): it is edited to `wholeFiles: 34` for `stryker.config.json` and fails with 33. It passes after the config entry is added. Its proof is the slice's TDD evidence, because a pin behavior is not re-proved.
 
 **Bindings that bite (each restored after):**
 1. `harnessFailureRow` answers `retryable: true`. Every P4-B1 row fails.
@@ -318,6 +318,12 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
     - **Q10 (a):** the 10 slices and their order stand as in Deferred Work.
   - No answer changes a slice. The Deferred Work table already shows the Q6 overrides.
   - Lane labels for the approved lanes are recorded when each slice is detailed and approved.
+- **2026-10-31: P4-B3 marked as a pin (Pedro approved a wording-only fix; coordinator instruction).**
+  - **Trigger:** the rpiv preflight of p4-s1 candidate `5570258` (base `0fc425c`) answered `untouched-test-file: P4-B3 packages/protocol/src/project-conversation-protocol.test.ts` and `... packages/protocol/src/protocol.test.ts`. Evidence: `.rpiv/evidence/2026-10-31_15-28-02_arch-review-phase-4-bridge-ipc-consolidation/p4-s1-harness-failure-row-owner-preflight.log`. Without the pin marker, a whole-file Test means "the slice changed this file"; P4-B3 means the opposite for those two files.
+  - **Change:** the P4-B3 Expected red line now starts with `none — pin`, the contract grammar's pin marker, and keeps the observed red of the real Stryker row as prose. The Test line is unchanged. Meaning is unchanged: same files, same seam, same "unedited" promise.
+  - **Cost, stated plainly:** the grammar marks a whole behavior as a pin, and pins are never re-proved. So validate no longer re-proves the Stryker row's red (Q7); that red rests on the slice's TDD evidence (`p4-s1-stryker-red.log`). Naming a test title in each pinned file instead was tried and rejected: the preflight then lists those titles for red re-proof, and they are green by design.
+  - **Approval:** the approved copy `approved-16db782f.md` holds the old Expected red line, which sits outside the sections the append-only check lets grow. So `append-only.mjs` answers `reopen` for this revision, and `status` is back to `in-review` until Pedro approves the new hash.
+  - **Added:** `## TDD Evidence (implement)` at the end, which the implement workflow links to.
 
 ## References
 
@@ -331,3 +337,6 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - `apps/harness/tests/integration/rename-when-released.ts`, #146.
 - Commits `8a0658d` (correlated request failures), `e55b35b` (missed consumer), `ff162f5` (chunk order).
 - Electron security tutorial via Context7 `/electron/electron`.
+## TDD Evidence (implement)
+
+- `p4-s1-harness-failure-row-owner`: `.rpiv/artifacts/evidence/2026-10-31_p4-s1-harness-failure-row-owner-tdd.md` (candidate `5570258`).
