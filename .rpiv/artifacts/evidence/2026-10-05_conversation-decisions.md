@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 8a752699704157ad9fba83a29e6b532df6b482cc4edb68723f647d470ab16ad8
+content_hash: 8578ef2b2d2a28d1acb065997eb981fbbbdefed415170b1b41dd2b32892cf8df
 ---
 
 # Conversation — Human Decisions
@@ -2478,3 +2478,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Push 2 (`b94f302..8990120`) passed the pre-push `check:deep`: check 3816, coverage 6050 passed / 6 skipped, integration 2234 passed / 6 skipped, e2e 27, launch-smoke validated. origin/main is `8990120` (546c18b acceptance log, 25780d1 Phase 3 squash, 8990120 the EPERM test fix).
 - Open with Pedro: close #129; file the follow-up issue on the product's staging-to-active rename having no transient retry; close #133, #96 and #105; update the roadmap doc. This log entry stays local until the next push.
 - Pedro authorised the GitHub actions (2026-10-31). Closed #129 (p3-s7, 25780d1), #133 (7d04277), #96 (4cf6541) and #105 (0b49cc0), each with a comment naming the resolving commit; all those commits are on origin/main. Opened #146 "storage: the staging-to-active rename gives up at once on a transient Windows EPERM/EACCES/EBUSY" (needs-triage, unscheduled).
+
+## 2026-10-31 — roadmap refreshed; Phase 3 worktree removed; Phase 4 next
+
+- The roadmap was refreshed and committed as `d2a365c`, local.
+- Pedro chose "Apagar". Before removal, the p3-only evidence was copied into the main checkout: the s1-s3 candidate patches, and `jev-lane-labels-p3wt.log`. Worktree `slopstop-p3`, branch `fix/eperm-case-rename` (`8990120`) and branch `fix/arch-review-phase-3` (`c234eda`) were then deleted.
+- Pedro chose "Revisão Fase 4" as the next item: the desktop bridge and IPC consolidation, plus R5, before C2. The rpiv designer (w3:p1S) drafts the brief from `architecture-reviews/2026-10-23_16-18-48_whole-project.md` (the findings accepted into Phase 4). The brief is approved with Pedro before any slice starts.
