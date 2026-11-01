@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-11-01T10:00:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "p4-s4 contract detailed (P4-B9 to P4-B11); Q13 open."
-content_hash: 0fb96a63a3331e628cd2ff517ef74cb6e5c06ea287659314468e80849d1dea85
+content_hash: bd93fb2cc7947e804ffc258be30bf87f52b3f2614e1e98731222cac8053eb42b
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -707,6 +707,11 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Red:** P4-B9 (invalid request, 22 rows) and P4-B10 (workspace echo baseline) are red at `87f09e8`. P4-B11 pins every other bridge answer, including the `8a0658d` rows. Bindings 1 to 3 prove the echo baseline, the stopped guard and their order live in the skeleton.
   - **Lane:** normal (`lane.mjs --paths`: files 8 > 5). The label is recorded on approval.
 - **2026-11-01: Q13 decided (a); p4-s4 contract approved; no s4 e2e run (Pedro; coordinator).** Pedro chose (a): an invalid request is a caller defect; every bridge, running or stopped, rejects with the fixed `Invalid <bridge> request.` text, no synchronous throw, nothing sent, none of the input. This replaces Q5 (a)'s premise. Pedro approved hash `f224f3addd8f…0b02`; approved copy `approved-f224f3ad.md`. Pedro chose no e2e run on the s4 candidate: s6's own e2e and the final check:deep cover it.
+- **2026-11-01: p4-s4 accepted (coordinator; lane normal).**
+  - **Accepted identity:** `1a82fb6` plus follow-up `603298b`, on `9649ef3` (p4-s3 polish) over main `c721b4c`. `pnpm check` 3881/3881; preflight clean; slice-verifier round 1 of 1 passed with one warning (V1). Red 23 failed, green 244/244; bindings 1-3 red (B2 one extra row, same guard).
+  - **V1, base premise corrected:** at the base, an invalid workspace intent with a valid discriminator (`memory.proposal.review` with an invalid `projectId`) resolved a broken envelope (running: the invalid-command text; stopped: the stopped text). The statements above that no bridge answered an envelope for an invalid request are wrong for that case. Q13 (a) covers it: it now rejects `Invalid workspace request.`. Follow-up `603298b` adds two P4-B9 rows for it (running, stopped), red at `9649ef3` (2 failed: resolved a broken `WORKSPACE_TRANSPORT_FAILED` envelope) and green at the candidate (52/52); `withInvalid` now takes any `PropertyKey`.
+  - **Accepted deviations:** `decodeReply`, `answerRequest` and `EchoRule` are no longer exported (Knip: unused after the move; bodies unchanged), against the non-goal wording "no change to decodeReply or answerRequest". `project-entry-bridge.ts` split `catalogOperations`/runner out of `entryOperations` for CodeScene 10 (was 9.58), re-anchored. The `harness-bridges.ts` TSDoc now says `release()` stops every bridge.
+  - **For a later slice:** `desktop-runtime.ts:48`, `:164-165` and `desktop-runtime.test.ts:21`, `:66` still say "latched stop"; the slice that next touches `desktop-runtime.ts` rewords it.
 
 ## References
 
@@ -726,3 +731,4 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - `p4-s1-harness-failure-row-owner`: accepted at `8f7e883` (base `2c0014d`, same code as `5570258`); preflight-2 clean; slice-verifier round 1 passed.
 - `p4-s2-bridge-test-composition`: `.rpiv/artifacts/evidence/2026-10-31_p4-s2-bridge-test-composition-tdd.md`; accepted at `3f80587`; preflight clean; slice-verifier round 1 passed.
 - `p4-s3-fault-meaning-owner`: `.rpiv/artifacts/evidence/2026-10-31_p4-s3-fault-meaning-owner-tdd.md`; accepted at `e94fd75` + `87f09e8`; preflight clean; slice-verifier round 1 passed.
+- `p4-s4-request-skeleton`: `.rpiv/artifacts/evidence/2026-11-01_p4-s4-request-skeleton-tdd.md`; accepted at `1a82fb6` + `603298b`; preflight clean; slice-verifier round 1 passed.
