@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 12b04895945b6522ac1130d39325825a0b2f6926e75c6db64ccd11f024c4c4e3
+content_hash: e7eeca361933e14c9ca357138b990707f6ef7f0348611dd2e3e2ebca8ab78bdb
 ---
 
 # Conversation — Human Decisions
@@ -2560,3 +2560,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Candidate `1a82fb6`: `pnpm check` 3881/3881, preflight clean, slice-verifier round 1 passed with V1 (Decisions): an invalid workspace intent with a valid discriminator resolved a broken envelope at the base, against the brief's premise.
 - Coordinator decisions: V1 closed by follow-up `603298b` (two P4-B9 rows, red at `9649ef3`, green at the candidate; `harness-bridges.ts` TSDoc fixed), diff reviewed by the coordinator, no second verifier round. Accepted deviations: three un-exports for Knip; the CodeScene split of `project-entry-bridge.ts`. The "latched stop" wording in `desktop-runtime.ts` is left for the slice that next touches it. All recorded in the brief (append-only keep against `approved-f224f3ad.md`).
 - Next: p4-s5-bridge-fault-text contract.
+
+## 2026-11-01 — p4-s5 contract approved
+
+- The designer wrote p4-s5-bridge-fault-text: `bridgeFaultText(fault, { noun, stopped, echo })` in `harness-request-core.ts` owns the shared text arms; storage and workspace drop their own tables; no text changes. P4-B12 (17 rows, red by missing export), P4-B13 pins (16 rows plus `harness-bridges.test.ts`), 3 bindings; Stryker ranges re-pointed by line only. No question for Pedro. Coordinator check: additions only (keep against `approved-f224f3ad.md`), validate OK.
+- Pedro approved hash `c75516dc…77f7`; status `ready`; approved copy `approved-c75516dc.md` (local). No heavy run on this candidate; the final check:deep covers it.
