@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: f78074b623fa9a1cee8daae6ed3b88a4eb6f135228fcc9bdbe468c3bf30e1999
+content_hash: 98d289a0bd6057b0dc93b5261f5291c38ae96fa43e75660cba3faced23ae4f03
 ---
 
 # Conversation — Human Decisions
@@ -2542,3 +2542,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The designer wrote p4-s3-fault-meaning-owner (P4-B6 protocol `harnessFailureRows` table, P4-B7 `request-fault-meaning.ts` owner, P4-B8 pins plus the real Stryker row; 3 bindings). Coordinator check: additions only (keep against `approved-efa6d2f0.md`); the two duplicate `harnessRows` maps confirmed at `project-conversation-failure.ts:13` and `project-upgrade-failure.ts:10`.
 - Pedro chose Q12 (a): the protocol exports the frozen table, read by both desktop mappers and later by s6 (settles p4-s1 D2). Pedro approved hash `e1e4976b…73a0`; approved copy `approved-e1e4976b.md`. A Developer Context line records the choice (append-only keep; brief hash now `b716fee4…6dae`).
+
+## 2026-11-01 — p4-s3 accepted
+
+- Candidate `e94fd75` (13 files): `pnpm check` 3858/3858 after Pedro said "livre" (CPU 7-10%), preflight clean, slice-verifier round 1 passed with no finding.
+- Coordinator decision on the verifier's 4 polish items: (2) `satisfies Record<HarnessFailureCode, DiagnosticRow>` and (3) the not-sent TSDoc applied as `87f09e8`, reviewed by the coordinator (diff read; focused gates and CodeScene 10), no second verifier round; (1) the "both desktop mappers" TSDoc left for s6; (4) the P4-B6 frozen-row red recorded in the brief's Developer Context (append-only keep against `approved-e1e4976b.md`).
+- Next: p4-s4-request-skeleton contract (takes p4-s2 V1: remove `afterStop`, drop or observe the re-entry guard).
