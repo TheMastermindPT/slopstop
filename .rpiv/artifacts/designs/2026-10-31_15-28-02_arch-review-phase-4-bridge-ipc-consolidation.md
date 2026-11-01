@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-10-31T19:30:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "p4-s3 contract detailed (P4-B6 to P4-B8); Q12 open."
-content_hash: b716fee421125d63300872be2d01435922dd9ca16744aff49b150da31fb56dae
+content_hash: 8c089bfff78b9d7d14281ab5da81ab68e7d515be2dfc64c4d03d2861808a47f0
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -585,6 +585,10 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Lane:** normal (`lane.mjs --paths`: files 9 > 5). The label is recorded on approval.
   - **For s4:** its contract takes V1. It removes `afterStop` and its "Settle first" comments, and either drops the re-entry guard or keeps it with a row that observes it.
 - **2026-10-31: Q12 decided (a); p4-s3 contract approved (Pedro; coordinator).** Pedro chose (a): `@slopstop/protocol` exports the frozen `harnessFailureRows` table, read by both desktop mappers and later by s6. Pedro approved hash `e1e4976b776b…73a0`; approved copy `approved-e1e4976b.md`.
+- **2026-11-01: p4-s3 accepted (coordinator; lane normal).**
+  - **Accepted identity:** `e94fd75` plus the polish commit `87f09e8`, on `ab33543` (p4-s2) over main `a0ca406`. `pnpm check` 3858/3858; preflight clean; slice-verifier round 1 of 1 passed, no finding. The polish (coordinator-reviewed, no second verifier round): `harnessFailureRows` now `satisfies Record<HarnessFailureCode, DiagnosticRow>`; the `projectUpgradeFailure` TSDoc names not-sent. Gates on it: both typechecks, Biome, 25/25 and 128/128, knip, mutation ranges, CodeScene 10.
+  - **P4-B6 Expected red, observed:** not every row failed on the missing export: the frozen row passed on `undefined` (`Object.isFrozen(undefined)` is true). It got its own red by exporting the table unfrozen first (1 failed). Recorded in the TDD evidence.
+  - **For s6:** the `harness-failure-protocol.ts` TSDoc says "both desktop mappers"; s6 rewrites it when activation and switch become readers.
 
 ## References
 
@@ -603,3 +607,4 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - `p4-s1-harness-failure-row-owner`: `.rpiv/artifacts/evidence/2026-10-31_p4-s1-harness-failure-row-owner-tdd.md` (candidate `5570258`).
 - `p4-s1-harness-failure-row-owner`: accepted at `8f7e883` (base `2c0014d`, same code as `5570258`); preflight-2 clean; slice-verifier round 1 passed.
 - `p4-s2-bridge-test-composition`: `.rpiv/artifacts/evidence/2026-10-31_p4-s2-bridge-test-composition-tdd.md`; accepted at `3f80587`; preflight clean; slice-verifier round 1 passed.
+- `p4-s3-fault-meaning-owner`: `.rpiv/artifacts/evidence/2026-10-31_p4-s3-fault-meaning-owner-tdd.md`; accepted at `e94fd75` + `87f09e8`; preflight clean; slice-verifier round 1 passed.
