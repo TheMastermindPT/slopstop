@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e7eeca361933e14c9ca357138b990707f6ef7f0348611dd2e3e2ebca8ab78bdb
+content_hash: d206722fe2604892a265ff143426e0da6df10f9e3928f819e3ae18f3a5f748dd
 ---
 
 # Conversation — Human Decisions
@@ -2565,3 +2565,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The designer wrote p4-s5-bridge-fault-text: `bridgeFaultText(fault, { noun, stopped, echo })` in `harness-request-core.ts` owns the shared text arms; storage and workspace drop their own tables; no text changes. P4-B12 (17 rows, red by missing export), P4-B13 pins (16 rows plus `harness-bridges.test.ts`), 3 bindings; Stryker ranges re-pointed by line only. No question for Pedro. Coordinator check: additions only (keep against `approved-f224f3ad.md`), validate OK.
 - Pedro approved hash `c75516dc…77f7`; status `ready`; approved copy `approved-c75516dc.md` (local). No heavy run on this candidate; the final check:deep covers it.
+
+## 2026-11-01 — p4-s5 accepted
+
+- Candidate `bb61356`: P4-B12 red 17 failed then green; pins 84/84 unedited; bindings 5/4/6 red as predicted; `pnpm check` 3900/3900; preflight clean; slice-verifier round 1 passed, no finding. One process slip recorded by the implementer: the first ranges-red run had no saved prediction, so it was marked not counted and repeated with the prediction first.
+- Coordinator decision: take the verifier's polish. `d885c9b` adds `workspaceFaultText` inside `workspaceBridgeOver`, used by both broken answers, with no text change and the desktop-s7 workspace range re-pointed to 91-200. The coordinator read the diff; focused gates and CodeScene 10 passed; no second verifier round.
+- The s5 acceptance entry for the brief goes in with the designer's s6 edit, so the brief is not edited twice at once. s6 (rigorous) is based on `d885c9b`.
