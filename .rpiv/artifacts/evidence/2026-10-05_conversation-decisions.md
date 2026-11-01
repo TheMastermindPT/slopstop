@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 98d289a0bd6057b0dc93b5261f5291c38ae96fa43e75660cba3faced23ae4f03
+content_hash: 167a4d6e1ba57ee384aeb3c786ff3c967b6ef0482128f6f79099d940c7be3d3d
 ---
 
 # Conversation — Human Decisions
@@ -2548,3 +2548,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Candidate `e94fd75` (13 files): `pnpm check` 3858/3858 after Pedro said "livre" (CPU 7-10%), preflight clean, slice-verifier round 1 passed with no finding.
 - Coordinator decision on the verifier's 4 polish items: (2) `satisfies Record<HarnessFailureCode, DiagnosticRow>` and (3) the not-sent TSDoc applied as `87f09e8`, reviewed by the coordinator (diff read; focused gates and CodeScene 10), no second verifier round; (1) the "both desktop mappers" TSDoc left for s6; (4) the P4-B6 frozen-row red recorded in the brief's Developer Context (append-only keep against `approved-e1e4976b.md`).
 - Next: p4-s4-request-skeleton contract (takes p4-s2 V1: remove `afterStop`, drop or observe the re-entry guard).
+
+## 2026-11-01 — p4-s4 contract approved (Q13 (a)); no s4 e2e
+
+- The designer wrote p4-s4-request-skeleton (P4-B9 invalid-request rows, P4-B10 workspace echo against the validated query, P4-B11 pins; 3 bindings). It takes p4-s2 V1: `afterStop`, `keepCore` and the "Settle first" comments go; the per-bridge re-entry guard is dropped (every stop step is idempotent without `afterStop`, so its mutants are equivalent); `release()` keeps its guard.
+- Q13 reopened Q5's premise. Coordinator check at `87f09e8`: storage and workspace echo and `decodeStrict` the request in their broken answers (`project-storage-bridge.ts:68`, the stopped guard at `:101`), so an invalid request rejects with a schema error, or throws synchronously after stop; entry throws at `project-entry-bridge.ts:121`. Pedro chose (a): fixed `Invalid <bridge> request.` rejection, no throw, nothing sent, no input in the text.
+- Pedro approved hash `f224f3ad…0b02` (copy `approved-f224f3ad.md`); a Developer Context line records Q13 and the e2e choice (brief hash `0fb96a63…ea85`, keep). Pedro chose no e2e run on the s4 candidate; s6's e2e and the final check:deep cover it.
