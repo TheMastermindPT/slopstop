@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/architecture-reviews/2026-10-23_16-18-48_whole-project.m
 lane: normal
 lane_reasons: ["no upstream lane", "s6, s7, s8, s9 lane.mjs --paths: rigorous (sensitive word: ipc; files: 6 > 5)"]
 status: ready
-last_updated: 2026-10-31T19:30:00+0000
+last_updated: 2026-11-01T10:00:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "p4-s3 contract detailed (P4-B6 to P4-B8); Q12 open."
-content_hash: 8c089bfff78b9d7d14281ab5da81ab68e7d515be2dfc64c4d03d2861808a47f0
+last_updated_note: "p4-s4 contract detailed (P4-B9 to P4-B11); Q13 open."
+content_hash: 0fb96a63a3331e628cd2ff517ef74cb6e5c06ea287659314468e80849d1dea85
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -503,6 +503,117 @@ Automated (smallest first; each read by its real exit code):
 
 Manual: none.
 
+### Slice p4-s4-request-skeleton
+
+- **`slice_id`:** `p4-s4-request-skeleton`.
+- **Lane:** normal. `lane.mjs --paths` over the planned paths answers normal (files: 8 > 5).
+- **Finding:** L1-01, plus the structural half of L1-12 (Q8 (a)). One request skeleton in the core; the three bridges supply their schemas, echo rule and answers. Also p4-s2's V1: `afterStop` and its comments go.
+- **Base:** candidate `87f09e8` (p4-s3 accepted plus its polish, on branch `fix/arch-review-phase-4`). Every line number below is read at `87f09e8`.
+- **Measured at `87f09e8`:**
+  - The per-request skeleton is written three times:
+    - `project-storage-bridge.ts:93-120` (`operation`): the stopped guard (`:101`), the command build (`:104-108`), `core.request`, `decodeReply`, the echo check against `command?.payload` (`:113`), `answerRequest` (`:109`);
+    - `workspace-bridge.ts:185-207` (`request`): the stopped guard (`:194`), `core.request`, `decodeReply`, a per-operation `check` (`:199`), `answerRequest` (`:195`). The query `check` compares the reply against the **caller's** `query` object (`:216`); the intent `check` compares capability only (`:231`);
+    - `project-entry-bridge.ts:93-136` (`entryRequests`): `request` (`:95-106`) with the stopped guard (`:101`), and `echoing` (`:108-134`), which decodes the input with `decodeStrict` **outside** the promise (`:121`) and compares the echo against that decoded copy (`:127`). `register` decodes its input the same way (`:152`); `list` has no input and no echo.
+  - **Invalid input today (static read; this corrects the Architecture table and Q5's premise):**
+    - Entry: `activate`, `switchProject`, `upgrade`, `readConversation`, `saveConversationMessage` and `register` throw synchronously (`decodeStrict`, `:121`, `:152`), running or stopped.
+    - Storage and workspace: an invalid request fails in the command builder as `desktop` `invalid-command`, but the broken answer then decodes a result that echoes the invalid request (`brokenResult` `:68`, `brokenQuery` `workspace-bridge.ts:51`, `brokenIntent` `:61`, all `decodeStrict`). Every broken arm requires a valid request (`project-storage-protocol.ts:106` `brokenResultSchema(request)`). So that decode throws: inside `Effect.catch` the promise rejects with a schema error; after stop the guard calls `broken` synchronously (`:101`, `:194`) and the call throws.
+    - So no bridge answers an envelope for an invalid request today. The `desktop invalid-command` envelope that the storage and workspace rows show (`project-storage-bridge.test.ts` "rejects invalid local metadata…", `workspace-bridge.test.ts` "rejects invalid locally generated command metadata before send") comes from invalid **metadata** with a valid request. Q13 reopens Q5 on this fact.
+  - **V1 (p4-s2):** `createHarnessBridges` passes `keepCore = () => {}` as every bridge's `afterStop` (`harness-bridges.ts:28-31`), so the `afterStop()` calls (entry `:221`, storage `:148`, workspace `:254`) do nothing. Their "Settle first" comments are at entry `:219`, storage `:146`, workspace `:250`. The re-entry guards `if (stopped) return` are at entry `:217`, storage `:144`, workspace `:248`.
+  - `unsent` is exported from `project-entry-bridge.ts:78` and read by `project-entry-ipc.ts:21`, `:58`, `:63`, `:68`; it stays where it is.
+- **V1 decision: the re-entry guard is dropped.** Once `afterStop` is gone, every step of a bridge's `stop()` is idempotent on its own: `stopped = true`; `core.failBridge(tag, stopped)` finds no entry the second time, because a request after stop never reaches the core; the workspace's `removeObserver()` is a `Set.delete`; `notificationListeners.clear()` empties an empty set. A second `stop()` therefore does exactly what the first left behind, and no row can tell the guard from its absence: its mutants are equivalent. Keeping it would need an invented observable. `release()` keeps its own `released` guard (`harness-bridges.ts:38`), which is observable (`unsubscribeCalls` stays 1).
+- **Q13 (open, for Pedro): what an invalid request answers.** Q5 (a) chose "the `desktop invalid-command` envelope, as the storage and workspace bridges already answer". They do not (above), and they cannot without a wire change: every result that could carry `invalid-command` must echo a valid request (or capability), and the request is the invalid part.
+  - **(a), recommended:** an invalid request is a caller defect. In every bridge it never throws synchronously, never reaches the core and never sends: the call's promise rejects with one fixed error, `Invalid <bridge> request.` (`project-entry`, `project-storage` or `workspace`), which carries none of the input. The IPC handlers decode first, so the renderer never reaches it; only direct callers (tests, the smokes) can. Fixed text, because a schema error quotes the input, and a registration request holds a full local path.
+  - **(b):** a wire change: each result gains a request-free `invalid-request` arm, so an envelope is possible. `protocolVersion` 9 → 10 here, or folded into s6's bump (Q1). Large blast for a path production never takes.
+  - **(c):** keep each bridge's current behaviour. The skeleton then needs a per-bridge invalid-input hook, which is the duplication L1-01 removes.
+
+  The contract below is written on (a). Under (b), P4-B9 changes its oracle to the new arm and the slice gains the protocol paths. Under (c), P4-B9 drops out.
+- **Deliverable (on Q13 (a)):**
+  - `harness-request-core.ts` exports one bridge-request function. A bridge passes its tag, its stopped check, the input and its request schema (none for `list`), the command builder over the validated request, the reply event, the result schema, an echo rule (what the reply echoes and what the command sent; none for `list` and `register`) and its broken answer over the validated request. The function owns, in this order:
+    1. input validation with `decodeStrictResult`; a failure rejects with the fixed error, before anything else;
+    2. the stopped guard, answering `broken(request, unsent)`;
+    3. the request through the core and `decodeReply`;
+    4. the echo check with `isDeepStrictEqual` against the command's validated payload (`command.payload`), never the caller's object;
+    5. `answerRequest` at the end.
+  - The workspace query check keeps `acceptQueryResult` (the revision floor) after the echo check, as today.
+  - `projectEntryBridgeOver`, `projectStorageBridgeOver` and `workspaceBridgeOver` lose their `afterStop` parameter, its TSDoc sentence and the "Settle first" comment; `createHarnessBridges` loses `keepCore`. Each `stop()` loses its re-entry guard and keeps the rest.
+  - The three bridges keep their public clients, their texts and their `faultText` tables (s5 merges those).
+- **Non-goals:** no fault text changes (s5). No change to `ProjectRequestFault`, `makeHarnessRequestCore`, `decodeReply` or `answerRequest`. Activation and switch keep their unavailable answers (s6). `project-entry-ipc.ts`, `project-storage-bootstrap.ts`, `desktop-runtime.ts`, `main.ts` and the package smokes are not edited (`createHarnessBridges` keeps its signature).
+- **Message and code ledger:** one new text, `Invalid <bridge> request.` (three values), on a promise rejection only; no wire change; `protocolVersion` stays 9.
+- **Affected paths:**
+  - `apps/desktop/src/main/harness-request-core.ts`, `harness-bridges.ts`;
+  - `apps/desktop/src/main/project-entry-bridge.ts`, `project-storage-bridge.ts`, `workspace-bridge.ts`;
+  - `apps/desktop/src/main/project-entry-bridge.test.ts`, `project-storage-bridge.test.ts`, `workspace-bridge.test.ts` (new rows only; existing rows unedited);
+  - `stryker.desktop-s7.config.json`, `stryker.config.json`, `stryker-range-anchors.json`, `apps/harness/scripts/check-stryker-ranges.test.mjs` (its real-repository row).
+- **Stryker re-anchoring (lesson 3, same slice).** `pnpm check:mutation-ranges` on the candidate is the authority; it answered exit 0 at `87f09e8` (`p4-s3-polish-mutation-ranges.log`). These entries supersede the citations in the Deferred Work row and the Stryker table.
+
+  | Config | Entry now (`87f09e8`) | After | Anchor row |
+  |---|---|---|---|
+  | `stryker.desktop-s7.config.json` | `project-entry-bridge.ts:78-224` | re-pointed from `export const unsent` to the file's last line | `stryker-range-anchors.json:202` (line numbers only; `first`/`last` texts unchanged) |
+  | `stryker.desktop-s7.config.json` | `project-storage-bridge.ts:30-151` | re-pointed from `const stoppedText` to the file's last line | `:208` |
+  | `stryker.desktop-s7.config.json` | `workspace-bridge.ts:93-257` | re-pointed from `const closingDiagnostic` to the file's last line | `:214` |
+  | `stryker.desktop-s7.config.json` | `harness-request-core.ts`, `harness-bridges.ts` (whole files) | unchanged; the skeleton lands in a whole-file entry | none |
+  | `stryker.config.json` | `project-entry-bridge.ts:101-101` (the entry stopped guard) | **removed**: the line moves into the core, which is a whole-file entry (`stryker.config.json:31`) | `:58` removed |
+  | `stryker.config.json` | `project-entry-bridge.ts:187-200` (`readConversation: echoing({` … `}),`) | re-pointed at the `readConversation` and `saveConversationMessage` operations in their new form, with both anchor texts rewritten | `:64` rewritten |
+  | `stryker.config.json` | `workspace-bridge.ts`, `harness-request-core.ts`, `harness-bridges.ts` (whole files) | unchanged | none |
+
+  - **Real-repository row** (`check-stryker-ranges.test.mjs:446`), edited red-first as in p4-s1 and p4-s3: `stryker.config.json` `ranges` 19 → 18. `desktop-s7` stays 6 ranges, 3 whole files.
+  - `vitest.desktop-s7-mutation.config.ts` already names the three bridge tests, the core test and `harness-bridges.test.ts`; no change.
+- **Full-integration exposure:** every renderer request goes through the new skeleton.
+  - e2e: every journey that makes a bridge request: `projects.test.ts`, `registration.test.ts`, `conversation.test.ts`, `conversation-accessibility.test.ts`, `project-upgrade.test.ts`, `shell.test.ts`.
+  - `package:launch-smoke`: `project-storage-package-smoke.ts` drives the storage bridge, and the writer proof goes through the bridges.
+  - Harness integration: unaffected (no wire change).
+  - Default: one run of each at the Phase 4 final `check:deep`. The coordinator may ask for one e2e run on this candidate, because this is the slice with the widest runtime reach before s6.
+- **Dependencies:** after s3 (accepted). s5 (`bridgeFaultText`) builds on this skeleton's broken answers.
+
+#### Test Contract: p4-s4-request-skeleton
+
+Public seam: the three bridge clients built through `createHarnessBridges` (as since p4-s2), over a scripted session or port.
+
+- **Behavior P4-B9: an invalid request rejects with one fixed error, in every bridge, running or stopped.**
+  - Test: `rejects an invalid %s request without throwing or sending: %s` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `rejects an invalid %s request without throwing or sending: %s` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `rejects an invalid %s request without throwing or sending: %s` in `apps/desktop/src/main/workspace-bridge.test.ts`.
+  - Rows (operation × running, stopped):
+    - entry: `activate`, `switchProject`, `upgrade`, `readConversation`, `saveConversationMessage`, `register` (12 rows), message `Invalid project-entry request.`;
+    - storage: `open`, `create`, `close` (6 rows), message `Invalid project-storage request.`;
+    - workspace: `query`, `submit` (4 rows), message `Invalid workspace request.`
+  - Oracle, per row: the input is the operation's valid fixture with one field replaced by a marker string that its schema rejects (the `register` marker is path-shaped). The call itself does not throw (`expect(() => …).not.toThrow()` around the call that captures the promise); the promise rejects with exactly the fixed message (`rejects.toThrow(new Error(…))`); the rejection's text does not contain the marker; and the session or port recorded no sent command.
+  - Expected red: every row fails at `87f09e8`. Entry rows throw synchronously (`decodeStrict`). Stopped storage and workspace rows throw synchronously in the broken builder. Running storage and workspace rows reject with a schema error, not the fixed message.
+- **Behavior P4-B10: the workspace query echo is checked against the validated query.**
+  - Test: `correlates a query against the validated command payload instead of caller mutation` in `apps/desktop/src/main/workspace-bridge.test.ts`.
+  - Rows:
+    - the caller mutates its query object (`Reflect.set` on `projectId`) after `query()`; a reply echoing the original query answers that ready result (`toEqual`);
+    - the caller mutates its query object; then the session disconnects; the broken answer's `query` `toEqual` the original query.
+  - Expected red: the first row answers broken with "Harness returned a mismatched workspace query." (the check compares against the caller's object, `:216`); the second echoes the mutated object.
+- **Behavior P4-B11: every other bridge answer stays as it is.**
+  - Test: `request failure settles only its correlated Project Storage operation` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `correlates against the validated command payload instead of caller mutation` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `rejects mismatched, uncorrelated, disconnected, and stopped requests` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `rejects invalid local metadata and identity collision without losing the original` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `request failure settles only its correlated Workspace request` in `apps/desktop/src/main/workspace-bridge.test.ts`; `rejects invalid response correlation` in `apps/desktop/src/main/workspace-bridge.test.ts`; `stops once and rejects later requests without observing the session` in `apps/desktop/src/main/workspace-bridge.test.ts`; `answers the stopped text for a request made after stop` in `apps/desktop/src/main/workspace-bridge.test.ts`; `rejects invalid locally generated command metadata before send` in `apps/desktop/src/main/workspace-bridge.test.ts`; `settles pending work on malformed input and rejects calls after stop` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `rejects activation replies for a different Project even with a matching message correlation` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `answers every upgrade reply with one strict result: %s` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `answers a conversation %s with one strict result: %s` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `apps/desktop/src/main/harness-bridges.test.ts`; `apps/desktop/src/main/harness-request-core.test.ts`; `apps/desktop/src/main/harness-supervisor.test.ts`. Also `apps/harness/scripts/check-stryker-ranges.test.mjs`, through `checkStrykerRanges({ root: repository })` (the real-repository row).
+  - Expected red: none — pin. The named rows and the three whole files are unedited and green before (`87f09e8`) and after, with the same row counts. They include the `8a0658d` cross-bridge correlation rows (storage and workspace "request failure settles only its correlated …", supervisor "keeps request failure status-neutral and reserves recovery for system failure"). The real Stryker row's red is observed in the slice's TDD evidence: edited to 18 ranges, it fails against the old config and passes after the entry moves. A pin behavior is not re-proved.
+
+**Bindings that bite (each on the candidate, each restored after):**
+1. In the skeleton, check the echo against the caller's input instead of `command.payload`. The P4-B10 first row fails, and so does the storage pin `correlates against the validated command payload instead of caller mutation`. This proves both bridges take the skeleton's echo baseline.
+2. In the skeleton, answer the stopped guard with `{ kind: "stopped" }` instead of `unsent`. The workspace pin `answers the stopped text for a request made after stop` fails (the closing envelope answers), and so does the entry pin `settles pending work on malformed input and rejects calls after stop` (`list` answers its closing `unavailable`). This proves the workspace and entry bridges take the skeleton's guard.
+3. In the skeleton, run the stopped guard before input validation. The P4-B9 stopped rows fail (the broken answer decodes the invalid request). This proves the order.
+
+**Structural checks (on the candidate):**
+- `rg -n "answerRequest\(" apps/desktop/src/main --glob "!*.test.ts"`: only `harness-request-core.ts`.
+- `rg -n "afterStop|keepCore|Settle first" apps/desktop/src`: nothing.
+- `rg -n "isDeepStrictEqual|if \(stopped\)|isStopped\(\)" apps/desktop/src/main/project-entry-bridge.ts apps/desktop/src/main/project-storage-bridge.ts apps/desktop/src/main/workspace-bridge.ts`: nothing.
+- `rg -n "decodeStrict\([A-Za-z.]*RequestSchema" apps/desktop/src/main/project-entry-bridge.ts`: nothing (no synchronous input decode).
+- `git diff 87f09e8 --stat` lists only the affected paths and this brief's evidence.
+
+#### Success Criteria: p4-s4-request-skeleton
+
+Automated (smallest first; each read by its real exit code; desktop main tests with `--config vitest.main.config.ts`):
+- Green at `87f09e8` with row counts recorded (the P4-B11 baseline): `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/project-entry-bridge.test.ts src/main/project-storage-bridge.test.ts src/main/workspace-bridge.test.ts src/main/harness-bridges.test.ts src/main/harness-request-core.test.ts src/main/harness-supervisor.test.ts`.
+- Red then green: the P4-B9 and P4-B10 rows, with the same command.
+- The same command green after, with the pinned rows unchanged in count.
+- Each binding (1 to 3) observed red and then restored.
+- `pnpm check:mutation-ranges` exit 0. The real row is red first (18 ranges against the old config), then green: `pnpm --filter @slopstop/harness exec vitest run scripts/check-stryker-ranges.test.mjs`.
+- `pnpm typecheck`, then `pnpm check` exit 0 (read CPU first, in its own call). `pnpm check:dead-code` (Knip) exit 0; `pnpm check:duplicates` reads no new clone among the three bridges.
+- CodeScene 10 on the core, `harness-bridges.ts`, the three bridges and the three edited tests.
+- Mutation: none for this slice. V1's survivors (the dropped guard and `afterStop()` lines) leave with the code; any `desktop-s7` survivor is triaged at the final Phase 4 mutation run.
+- e2e and `package:launch-smoke`: at the Phase 4 final `check:deep`, unless the coordinator gives a GO for one run on this candidate.
+
+Manual: none.
+
 ## Deferred Work
 
 Each slice gets its full contract when it becomes next. Behavior IDs continue from P4-B4; questions from Q11. Lanes come from `lane.mjs --paths` over the planned paths, raised to the feature lane (normal).
@@ -589,6 +700,13 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Accepted identity:** `e94fd75` plus the polish commit `87f09e8`, on `ab33543` (p4-s2) over main `a0ca406`. `pnpm check` 3858/3858; preflight clean; slice-verifier round 1 of 1 passed, no finding. The polish (coordinator-reviewed, no second verifier round): `harnessFailureRows` now `satisfies Record<HarnessFailureCode, DiagnosticRow>`; the `projectUpgradeFailure` TSDoc names not-sent. Gates on it: both typechecks, Biome, 25/25 and 128/128, knip, mutation ranges, CodeScene 10.
   - **P4-B6 Expected red, observed:** not every row failed on the missing export: the frozen row passed on `undefined` (`Object.isFrozen(undefined)` is true). It got its own red by exporting the table unfrozen first (1 failed). Recorded in the TDD evidence.
   - **For s6:** the `harness-failure-protocol.ts` TSDoc says "both desktop mappers"; s6 rewrites it when activation and switch become readers.
+- **2026-11-01: p4-s4 detailed (coordinator instruction); Q13 open.**
+  - **Base:** candidate `87f09e8` on `fix/arch-review-phase-4`. Ranges re-measured there: desktop-s7 entry 78-224, storage 30-151, workspace 93-257; `stryker.config.json` entry-bridge 101-101 and 187-200 (`check:mutation-ranges` exit 0, `p4-s3-polish-mutation-ranges.log`).
+  - **V1 taken:** `afterStop`, `keepCore` and the "Settle first" comments go. The re-entry guard is dropped, not kept: after `afterStop` goes, every step of `stop()` is idempotent, so no row can observe the guard (its mutants are equivalent).
+  - **Q13 (for Pedro), reopening Q5's premise:** Q5 (a) said the storage and workspace bridges already answer an invalid request with the `desktop invalid-command` envelope. A static read at `87f09e8` shows they do not: their broken answers echo the request and decode it strictly, so an invalid request rejects (running) or throws (stopped). The envelope rows in their tests come from invalid metadata. An envelope for an invalid request needs a wire change. Options: (a) one fixed rejection, `Invalid <bridge> request.`, in every bridge (recommended); (b) a request-free `invalid-request` arm on the wire; (c) keep each bridge's behaviour. The contract is written on (a).
+  - **Red:** P4-B9 (invalid request, 22 rows) and P4-B10 (workspace echo baseline) are red at `87f09e8`. P4-B11 pins every other bridge answer, including the `8a0658d` rows. Bindings 1 to 3 prove the echo baseline, the stopped guard and their order live in the skeleton.
+  - **Lane:** normal (`lane.mjs --paths`: files 8 > 5). The label is recorded on approval.
+- **2026-11-01: Q13 decided (a); p4-s4 contract approved; no s4 e2e run (Pedro; coordinator).** Pedro chose (a): an invalid request is a caller defect; every bridge, running or stopped, rejects with the fixed `Invalid <bridge> request.` text, no synchronous throw, nothing sent, none of the input. This replaces Q5 (a)'s premise. Pedro approved hash `f224f3addd8f…0b02`; approved copy `approved-f224f3ad.md`. Pedro chose no e2e run on the s4 candidate: s6's own e2e and the final check:deep cover it.
 
 ## References
 
