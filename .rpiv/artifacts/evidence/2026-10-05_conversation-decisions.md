@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 167a4d6e1ba57ee384aeb3c786ff3c967b6ef0482128f6f79099d940c7be3d3d
+content_hash: 12b04895945b6522ac1130d39325825a0b2f6926e75c6db64ccd11f024c4c4e3
 ---
 
 # Conversation — Human Decisions
@@ -2554,3 +2554,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - The designer wrote p4-s4-request-skeleton (P4-B9 invalid-request rows, P4-B10 workspace echo against the validated query, P4-B11 pins; 3 bindings). It takes p4-s2 V1: `afterStop`, `keepCore` and the "Settle first" comments go; the per-bridge re-entry guard is dropped (every stop step is idempotent without `afterStop`, so its mutants are equivalent); `release()` keeps its guard.
 - Q13 reopened Q5's premise. Coordinator check at `87f09e8`: storage and workspace echo and `decodeStrict` the request in their broken answers (`project-storage-bridge.ts:68`, the stopped guard at `:101`), so an invalid request rejects with a schema error, or throws synchronously after stop; entry throws at `project-entry-bridge.ts:121`. Pedro chose (a): fixed `Invalid <bridge> request.` rejection, no throw, nothing sent, no input in the text.
 - Pedro approved hash `f224f3ad…0b02` (copy `approved-f224f3ad.md`); a Developer Context line records Q13 and the e2e choice (brief hash `0fb96a63…ea85`, keep). Pedro chose no e2e run on the s4 candidate; s6's e2e and the final check:deep cover it.
+
+## 2026-11-01 — p4-s4 accepted
+
+- Candidate `1a82fb6`: `pnpm check` 3881/3881, preflight clean, slice-verifier round 1 passed with V1 (Decisions): an invalid workspace intent with a valid discriminator resolved a broken envelope at the base, against the brief's premise.
+- Coordinator decisions: V1 closed by follow-up `603298b` (two P4-B9 rows, red at `9649ef3`, green at the candidate; `harness-bridges.ts` TSDoc fixed), diff reviewed by the coordinator, no second verifier round. Accepted deviations: three un-exports for Knip; the CodeScene split of `project-entry-bridge.ts`. The "latched stop" wording in `desktop-runtime.ts` is left for the slice that next touches it. All recorded in the brief (append-only keep against `approved-f224f3ad.md`).
+- Next: p4-s5-bridge-fault-text contract.
