@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/architecture-reviews/2026-10-23_16-18-48_whole-project.m
 lane: normal
 lane_reasons: ["no upstream lane", "s6, s7, s8, s9 lane.mjs --paths: rigorous (sensitive word: ipc; files: 6 > 5)"]
 status: ready
-last_updated: 2026-11-01T10:00:00+0000
+last_updated: 2026-11-01T14:00:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "p4-s4 contract detailed (P4-B9 to P4-B11); Q13 open."
-content_hash: bd93fb2cc7947e804ffc258be30bf87f52b3f2614e1e98731222cac8053eb42b
+last_updated_note: "p4-s5 contract detailed (P4-B12, P4-B13); no open question."
+content_hash: c75516dcd4c465cab766be302e6d87cafec42b9c0ed5cffafcd37086bfeb77f7
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -614,6 +614,92 @@ Automated (smallest first; each read by its real exit code; desktop main tests w
 
 Manual: none.
 
+### Slice p4-s5-bridge-fault-text
+
+- **`slice_id`:** `p4-s5-bridge-fault-text`.
+- **Lane:** normal. `lane.mjs --paths` over the planned paths answers fast (within fast limits), raised to the feature lane.
+- **Finding:** L1-02, plus the rest of L1-12's structure (Q8 (a)). One fault-text function in the core; the storage and workspace bridges pass only their noun, their stopped text and their echo text. No text changes.
+- **Base:** candidate `603298b` (p4-s4 accepted, on branch `fix/arch-review-phase-4`). Every line number below is read at `603298b`.
+- **Measured at `603298b`:**
+  - `project-storage-bridge.ts:30-61`: `stoppedText`, `desktopText`, `protocolText` and `faultText`, a `Match` over the seven fault kinds.
+  - `workspace-bridge.ts:108-139`: `desktopText`, `protocolText` and `faultText(fault, echo)`, the same `Match` without the `stopped` arm (a stopped request answers the closing envelope, `:190`, `:208`).
+  - Shared arm for arm, character for character: `transport` (`bridgeNeutralText.transport`), `protocol` `invalid-message` and `system-failure` (`bridgeNeutralText.protocol`), `harness` (the row's own message), `send` (`harnessSendFailureMessage`), `desktop` `invalid-command` (`harnessSendFailureMessage` for `HARNESS_SESSION_MESSAGE_INVALID`) and `identity-collision` (`bridgeNeutralText.desktop`).
+  - Templated on the bridge's noun (`Project Storage`, `workspace`): `uncorrelated` "Harness returned an uncorrelated <noun> response.", `undecodable` "Harness returned an invalid <noun> response.", `mismatched-event` "Harness returned a mismatched <noun> response."
+  - Per bridge, by design (S7-R14, P-S7-2 (a)): the stopped text (storage "Project Storage bridge is stopped." for `unsent` and `stopped`; workspace "Workspace bridge is stopped." for `unsent` only) and the mismatched-echo text (storage "Harness returned a mismatched Project Storage request."; workspace one per operation, query and capability, `:190`, `:208`).
+  - `bridgeNeutralText` (`harness-request-core.ts:35-46`) is read only by these two bridges. The entry bridge has no fault text (each operation maps faults itself) and is not touched.
+  - Stryker runs with `ignoreStatic: true`, so a text built in a module-load constant is not mutated. The workspace stopped text sits inside its arm on purpose (`workspace-bridge.ts:134` comment).
+- **Deliverable:**
+  - `harness-request-core.ts` exports `bridgeFaultText(fault, texts)`, with `texts` = `{ noun, stopped, echo }`. It owns every arm above: the shared texts, the three noun templates, `texts.stopped` for `unsent` and `stopped`, and `texts.echo` for `mismatched-echo`. Each text is built inside the function, never in a module-load constant.
+  - `bridgeNeutralText` folds into it and is no longer exported. `harnessSendFailureMessage` is imported by the core instead of the two bridges.
+  - `project-storage-bridge.ts` deletes `desktopText`, `protocolText` and `faultText`; its broken answer calls `bridgeFaultText(fault, { noun: "Project Storage", stopped: stoppedText, echo: "Harness returned a mismatched Project Storage request." })`.
+  - `workspace-bridge.ts` deletes `desktopText`, `protocolText` and `faultText`; its two broken answers call `bridgeFaultText` with noun `workspace`, the stopped text inline and their own echo text. The `stopped` fault still answers the closing envelope before any text is asked for.
+- **Non-goals:** no text changes, no new code or diagnostic. The entry bridge, `harness-bridges.ts`, the IPC files and `desktop-runtime.ts` are not edited, so the "latched stop" rewording (p4-s4 acceptance) stays for the next slice that touches `desktop-runtime.ts`. `ProjectRequestFault` is unchanged.
+- **Message and code ledger:** nothing added, removed or changed.
+- **Affected paths:**
+  - `apps/desktop/src/main/harness-request-core.ts`, `harness-request-core.test.ts`;
+  - `apps/desktop/src/main/project-storage-bridge.ts`, `workspace-bridge.ts`;
+  - `stryker.desktop-s7.config.json`, `stryker-range-anchors.json`.
+- **Stryker re-anchoring (lesson 3, same slice).** `pnpm check:mutation-ranges` on the candidate is the authority; it answered exit 0 at `603298b` (`p4-s4-v1-mutation-ranges.log`: `stryker.config.json` 18 ranges, 35 whole files; `desktop-s7` 6 ranges, 3 whole files).
+
+  | Config | Entry now (`603298b`) | After | Anchor row |
+  |---|---|---|---|
+  | `stryker.desktop-s7.config.json` | `project-storage-bridge.ts:30-131` | re-pointed from `const stoppedText` (kept) to the file's last line | `stryker-range-anchors.json:202` (line numbers only; texts unchanged) |
+  | `stryker.desktop-s7.config.json` | `workspace-bridge.ts:93-229` | re-pointed from `const closingDiagnostic` to the file's last line | `:208` |
+  | `stryker.desktop-s7.config.json`, `stryker.config.json` | `harness-request-core.ts` (whole file) | unchanged; `bridgeFaultText` lands in it | none |
+  | `stryker.config.json` | `workspace-bridge.ts` (whole file) | unchanged | none |
+  | `stryker.config.json` | `project-entry-bridge.ts:165-180`; `desktop-s7` `project-entry-bridge.ts:75-194` | unchanged (the file is not edited) | none |
+
+  - Counts do not change, so the real-repository row (`check-stryker-ranges.test.mjs:446`, `:449`) is not edited.
+  - `vitest.desktop-s7-mutation.config.ts` already names the core test and both bridge tests.
+- **Full-integration exposure:** texts only, and none changes.
+  - e2e: the journeys that show a storage or workspace fault text (`conversation.test.ts`, `conversation-accessibility.test.ts`, `projects.test.ts`); their fault paths are proven by the unit rows only.
+  - `package:launch-smoke` (the storage bridge).
+  - Default: one run of each at the Phase 4 final `check:deep`; no run on this candidate.
+- **Dependencies:** after s4 (accepted). Phase 4 then leaves the bridges for the IPC slices (s6 to s9).
+
+#### Test Contract: p4-s5-bridge-fault-text
+
+Public seam: `bridgeFaultText` from `harness-request-core.ts`; the answers of the storage and workspace bridge clients built through `createHarnessBridges`.
+
+- **Behavior P4-B12: one function names every request fault in a bridge's own words.**
+  - Test: `names every request fault in the bridge's words: %s` in `apps/desktop/src/main/harness-request-core.test.ts`, through `bridgeFaultText` with the texts `{ noun: "Sample", stopped: "Sample stopped.", echo: "Sample echo." }`.
+  - Rows, one per fault value (17), each `toBe` the exact text:
+    - `transport` → "Harness session disconnected.";
+    - `protocol` `invalid-message` → "Harness session received an invalid protocol message."; `system-failure` → "Harness reported a failure."; `uncorrelated` → "Harness returned an uncorrelated Sample response."; `undecodable` → "Harness returned an invalid Sample response.";
+    - `harness` with each `HarnessFailureCode` and a marker message → that marker;
+    - `send` `HARNESS_SESSION_UNAVAILABLE` → "Harness session is unavailable."; `HARNESS_SESSION_MESSAGE_INVALID` → "Desktop created an invalid harness message."; `HARNESS_SESSION_SEND_FAILED` → "Harness session send failed.";
+    - `unsent` and `stopped` → "Sample stopped.";
+    - `desktop` `invalid-command` → "Desktop created an invalid harness message."; `identity-collision` → "Harness request identity collided."; `mismatched-event` → "Harness returned a mismatched Sample response."; `mismatched-echo` → "Sample echo."
+  - Expected red: `bridgeFaultText` is not exported from `harness-request-core.ts`; the call is not a function, and every row fails.
+- **Behavior P4-B13: every storage and workspace fault answer keeps its text.**
+  - Test: `maps %s to a Storage transport failure` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `rejects mismatched, uncorrelated, disconnected, and stopped requests` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `fails pending operations once for $type` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `rejects invalid local metadata and identity collision without losing the original` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `fails all pending work as protocol on $case` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `settles an undecodable reply as protocol` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `request failure settles only its correlated Project Storage operation` in `apps/desktop/src/main/project-storage-bridge.test.ts`; `maps %s without blaming producers` in `apps/desktop/src/main/workspace-bridge.test.ts`; `fails all pending work on %s` in `apps/desktop/src/main/workspace-bridge.test.ts`; `rejects invalid response correlation` in `apps/desktop/src/main/workspace-bridge.test.ts`; `rejects invalid locally generated command metadata before send` in `apps/desktop/src/main/workspace-bridge.test.ts`; `answers its own envelope when send throws` in `apps/desktop/src/main/workspace-bridge.test.ts`; `settles an undecodable reply as protocol` in `apps/desktop/src/main/workspace-bridge.test.ts`; `answers the stopped text for a request made after stop` in `apps/desktop/src/main/workspace-bridge.test.ts`; `answers the closing envelope for work in flight at stop: $operation` in `apps/desktop/src/main/workspace-bridge.test.ts`; `request failure settles only its correlated Workspace request` in `apps/desktop/src/main/workspace-bridge.test.ts`; `apps/desktop/src/main/harness-bridges.test.ts`.
+  - Expected red: none — pin. Both bridge test files and `harness-bridges.test.ts` are unedited and green before (`603298b`) and after, with the same row counts. A pin behavior is not re-proved.
+
+**Bindings that bite (each on the candidate, each restored after):**
+1. In `bridgeFaultText`, build the `uncorrelated` text without the noun ("Harness returned an uncorrelated response."). The P4-B12 row fails, and so do the storage pins `rejects mismatched, uncorrelated, disconnected, and stopped requests` and `fails all pending work as protocol on $case` (their uncorrelated rows) and the workspace pin `rejects invalid response correlation` (its uncorrelated reply). This proves both bridges read the owner's template.
+2. In `bridgeFaultText`, answer `unsent` with `texts.echo`. The P4-B12 `unsent` row fails, and so do the storage pin `rejects mismatched, uncorrelated, disconnected, and stopped requests` (open after stop) and the workspace pin `answers the stopped text for a request made after stop`. This proves both bridges pass their stopped text to the owner.
+3. In `bridgeFaultText`, change the `transport` text. The P4-B12 row fails, and so does the storage pin `rejects mismatched, uncorrelated, disconnected, and stopped requests` (disconnected) and the workspace pin `fails all pending work on %s` (disconnect row). This proves the shared arms live only in the owner.
+
+**Structural checks (on the candidate):**
+- `rg -n "Match|faultText\b|desktopText|protocolText|bridgeNeutralText|harnessSendFailureMessage" apps/desktop/src/main/project-storage-bridge.ts apps/desktop/src/main/workspace-bridge.ts`: nothing.
+- `rg -n "bridgeNeutralText" apps/desktop/src --glob "!harness-request-core.ts"`: nothing; `rg -n "export const bridgeNeutralText" apps/desktop/src`: nothing.
+- `rg -n "export function bridgeFaultText" apps/desktop/src/main/harness-request-core.ts`: one line.
+- `git diff 603298b --stat` lists only the affected paths and this brief's evidence.
+
+#### Success Criteria: p4-s5-bridge-fault-text
+
+Automated (smallest first; each read by its real exit code; desktop main tests with `--config vitest.main.config.ts`):
+- Green at `603298b` with row counts recorded (the P4-B13 baseline): `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/project-storage-bridge.test.ts src/main/workspace-bridge.test.ts src/main/harness-bridges.test.ts`.
+- Red then green: `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/harness-request-core.test.ts`.
+- The P4-B13 command green after, with the same row counts.
+- Each binding (1 to 3) observed red and then restored.
+- `pnpm check:mutation-ranges` exit 0.
+- `pnpm typecheck`, then `pnpm check` exit 0 (read CPU first, in its own call). `pnpm check:dead-code` (Knip) exit 0; `pnpm check:duplicates` finds no clone between the two bridges' text tables.
+- CodeScene 10 on the core, both bridges and the core test.
+- Mutation: none for this slice; `bridgeFaultText` is in the whole-file core entry of the final Phase 4 mutation run.
+
+Manual: none.
+
 ## Deferred Work
 
 Each slice gets its full contract when it becomes next. Behavior IDs continue from P4-B4; questions from Q11. Lanes come from `lane.mjs --paths` over the planned paths, raised to the feature lane (normal).
@@ -712,6 +798,12 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **V1, base premise corrected:** at the base, an invalid workspace intent with a valid discriminator (`memory.proposal.review` with an invalid `projectId`) resolved a broken envelope (running: the invalid-command text; stopped: the stopped text). The statements above that no bridge answered an envelope for an invalid request are wrong for that case. Q13 (a) covers it: it now rejects `Invalid workspace request.`. Follow-up `603298b` adds two P4-B9 rows for it (running, stopped), red at `9649ef3` (2 failed: resolved a broken `WORKSPACE_TRANSPORT_FAILED` envelope) and green at the candidate (52/52); `withInvalid` now takes any `PropertyKey`.
   - **Accepted deviations:** `decodeReply`, `answerRequest` and `EchoRule` are no longer exported (Knip: unused after the move; bodies unchanged), against the non-goal wording "no change to decodeReply or answerRequest". `project-entry-bridge.ts` split `catalogOperations`/runner out of `entryOperations` for CodeScene 10 (was 9.58), re-anchored. The `harness-bridges.ts` TSDoc now says `release()` stops every bridge.
   - **For a later slice:** `desktop-runtime.ts:48`, `:164-165` and `desktop-runtime.test.ts:21`, `:66` still say "latched stop"; the slice that next touches `desktop-runtime.ts` rewords it.
+- **2026-11-01: p4-s5 detailed (coordinator instruction); no open question.**
+  - **Base:** candidate `603298b` on `fix/arch-review-phase-4`. Ranges re-measured there: desktop-s7 entry 75-194, storage 30-131, workspace 93-229; `stryker.config.json` entry-bridge 165-180 (`check:mutation-ranges` exit 0, `p4-s4-v1-mutation-ranges.log`). s5 re-points the storage and workspace ranges by line only; counts stay.
+  - **Shape:** `bridgeFaultText(fault, { noun, stopped, echo })` in the core, as the Architecture section proposed; `bridgeNeutralText` folds into it. Texts are built inside the function, because Stryker's `ignoreStatic` skips module-load constants.
+  - **Red:** P4-B12 (the owner's 17-row table) is red on the missing export. P4-B13 pins every storage and workspace text row. Bindings 1 to 3 prove the noun template, the stopped text and the shared arms each come from the owner.
+  - **Not taken:** the "latched stop" rewording; s5 does not touch `desktop-runtime.ts`.
+  - **Lane:** normal (`lane.mjs --paths`: fast, raised to the feature lane). The label is recorded on approval.
 
 ## References
 
