@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/architecture-reviews/2026-10-23_16-18-48_whole-project.m
 lane: normal
 lane_reasons: ["no upstream lane", "s6, s7, s8, s9 lane.mjs --paths: rigorous (sensitive word: ipc; files: 6 > 5)"]
 status: ready
-last_updated: 2026-11-01T14:00:00+0000
+last_updated: 2026-11-01T15:00:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "p4-s5 contract detailed (P4-B12, P4-B13); no open question."
-content_hash: c75516dcd4c465cab766be302e6d87cafec42b9c0ed5cffafcd37086bfeb77f7
+last_updated_note: "p4-s6 intent review round 1 folded in (P4-B14 to P4-B18, bindings 1-7); Q14 open."
+content_hash: 5ce0d79b8503cb91826b598a2870f62f96eb2d71604e98641115cd3436a4e52c
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -700,6 +700,128 @@ Automated (smallest first; each read by its real exit code; desktop main tests w
 
 Manual: none.
 
+### Slice p4-s6-activation-switch-broken
+
+- **`slice_id`:** `p4-s6-activation-switch-broken`.
+- **Lane:** rigorous (Q6 (a): s6 changes the wire). `lane.mjs --paths` over the planned paths answers normal (files 11 > 5; weak sensitive word `schema`); Q6 raises it. An intent review runs before approval, and Pedro accepts the candidate.
+- **Finding:** L1-03 part 2, on Q1 (a) and Q12 (a). Activation and switch answer a malformed reply, a defect or a harness failure as **broken** with a harness failure row, read from `harnessFailureRows`. Only a request that was not sent, or was sent and then lost, stays unavailable. `protocolVersion` goes 9 → 10.
+- **Base:** `d885c9b` (p4-s5 accepted at `bb61356` plus its polish `d885c9b`, on `fix/arch-review-phase-4`). The polish touches only `workspace-bridge.ts` and its range, no s6 path. Line numbers below were read at `bb61356` and are the same at `d885c9b` for every s6 path; the Stryker rows were re-read at `d885c9b`.
+- **Measured at `bb61356`:**
+  - `project-entry-bridge.ts:44-72`: `unavailable` builds `PROJECT_COORDINATOR_UNAVAILABLE` with `projectAvailabilityMessages.connectionLost`. `projectActivationUnavailable` (`unavailable`, retryable `true`) and `projectSwitchUnavailable` (`coordinator-unavailable`, retryable `false`) are the `broken` answers of `activate` (`:147`) and `switchProject` (`:155`) for **every** fault. The `:44` comment says so.
+  - `project-entry-ipc.ts:48`, `:53` use the same two answers at the closed IPC gate. They stay: a closing gate sends nothing.
+  - `request-fault-meaning.ts` `faultMeaning`: `unsent` and `send` (other than `HARNESS_SESSION_MESSAGE_INVALID`) are not-sent; `transport` and `stopped` are sent-then-lost; `protocol` is malformed-reply; `desktop` and a send refused as invalid are defect; `harness` keeps its code. `project-upgrade-failure.ts` maps them: harness → broken with `harnessFailureRows[code]`; not-sent and sent-then-lost → unavailable; everything else → broken with the protocol-invalid row.
+  - **The "protocol-invalid row" of Q1 is a harness row.** `projectUpgradeDiagnostics.protocolMessageInvalid` and `projectConversationDiagnostics.protocolMessageInvalid` are both `harnessFailureRow("PROTOCOL_MESSAGE_INVALID")` (`project-upgrade-protocol.ts:63`, `project-conversation-protocol.ts:78`), which equals `harnessFailureRows.PROTOCOL_MESSAGE_INVALID`. So Q1's "three harness rows and the protocol-invalid row" are three distinct rows.
+  - `canonical-project-protocol.ts:241-247`: the activation `broken` arm is `diagnosticSchema(Schema.Literals(codes), Schema.Boolean)`: listed codes, any non-empty message, any retryability. The codes come from `canonicalProjectActivationDiagnosticCodes` (`:154-163`).
+  - That code tuple is also the harness fatal-log vocabulary: `CanonicalProjectActivationDiagnosticCodeSchema` is read by `harness-fatal-log-protocol.ts:58` and by `process-fatal-diagnostics.ts:87` (`isReleaseCode`). Adding the harness codes to it would widen the fatal log and make `isReleaseCode` accept them. So the harness rows join the `broken` arm as exact rows, never as codes in that tuple.
+  - `canonical-project-protocol.ts:412-437`: the switch result has `target-result` (whose `target` is a whole `CanonicalProjectActivationResultSchema`), four `switchOutcomeSchema` arms (`inactive`, `project-mismatch`, `stale-activation`, `coordinator-unavailable`) and `release-failed`. It has no `broken`.
+  - `harness-failure-protocol.ts` owns `harnessFailureRow`, `harnessFailureRows` (TSDoc: "the one table both desktop mappers read") and `exactRowSchema`. The last two are package-internal except `harnessFailureRows` (`index.ts:73`).
+  - Renderer: `projects-workspace.tsx:98-123` shows `code: message` for any activation result with a diagnostic; `:138-161` shows `diagnostic.message` and clears the view for every switch status but `target-result` and `release-failed`. A new switch `broken` lands in that branch, as `coordinator-unavailable` does today for the same faults, so no renderer branch changes.
+  - **Version literal `9`** (`rg -n "protocolVersion\"?\s*[:=]\s*9\b|\b9 as const" apps packages`): 12 files. `protocol.ts:87` is the constant. The 11 pins are: protocol tests `protocol.test.ts` (9 sites: `:235`, `:270`, `:295`, `:345`, `:351`, `:659`, `:713`, `:732`, `:1008`), `canonical-writer-smoke-protocol.test.ts:224`, `schema-boundary-characterization.test.ts:67`, `project-conversation-protocol.test.ts:12`; harness unit `harness-runtime.test.ts` (10 sites); harness integration `canonical-project-activation.integration.test.ts:299`, `harness-runtime.integration.test.ts` (3 sites), and the fixtures `canonical-writer-recovery-runtime-fixture.ts` (2), `conformance-counter-command.ts:99`, `project-storage-create-fixture.ts:597`; desktop `canonical-writer-package-smoke-test-peers.ts:73`. No e2e file, smoke script or doc pins it. ADR 0023 names version 9 as history and is not edited.
+  - **Version forms the literal regex misses** (intent review V2): `protocol.test.ts` also holds four `expect(protocolVersion).toBe(9)` (`:342`, `:358`, `:518`, `:1047`; `:1047` sits in `encodes and decodes the upgrade request and result strictly`) and four titles that name a version (`:293` "parses only correctly scoped failure events at protocol version 9", `:339` and `:357` "… under protocol version 9", `:500` "refuses a version-8 peer as an unsupported version"). `rg -n "toBe\(9\)|protocol version 9" apps packages` finds nothing else that pins the version (`canonical-project-settlement.integration.test.ts:358` `toBe(9)` is a counter value).
+  - `project-entry-bridge.test.ts:335` (`keeps the activation result unchanged on %s`) and `:348` (`keeps the switch result unchanged on %s`) pin today's flattening over three faults: a harness `request.failure`, a session protocol error and a wrong-event reply. All three become broken.
+  - A third test pins it (intent review V1): `project-entry-bridge.test.ts:102-119`, `rejects activation replies for a different Project even with a matching message correlation`, asserts `toMatchObject({ status: "unavailable", request })` for an echo mismatch (`desktop` `mismatched-echo`, a defect), which becomes broken.
+  - Reading `faultMeaning` and classifying by `fault.kind` differ on one fault only: a send refused as `HARNESS_SESSION_MESSAGE_INVALID` (`request-fault-meaning.ts:29`: defect, not not-sent). `ScriptedHarnessSession.sendResult` produces it through the bridge.
+- **Deliverable:**
+  - **Wire (`canonical-project-protocol.ts`).** The activation `broken` arm's `diagnostic` becomes a union of today's diagnostic (same codes, message and retryability) and the three exact rows `exactRowSchema(harnessFailureRows[code])`. The switch result gains `{ status: "broken", request: CanonicalProjectSwitchRequestSchema, diagnostic: <the same three exact rows> }`. `canonicalProjectActivationDiagnosticCodes` does not change. Because `target-result.target` is the activation schema, a switch `target-result` whose target is a broken activation with a harness row is also accepted at version 10; P4-B15 pins it on purpose. The module imports `exactRowSchema` and `harnessFailureRows` from `harness-failure-protocol.ts` (package-internal). Nothing new is exported from `index.ts`.
+  - **Version (`protocol.ts`).** `protocolVersion = 10 as const`. The 11 pins move their literal from `9` to `10`, and the four `expect(protocolVersion).toBe(9)` move to `toBe(10)`, with no other assertion change (precedent: Phase 2 moved `8` to `9` this way). The four `protocol.test.ts` titles that name a version are renamed (see P4-B16).
+  - **Desktop (`project-entry-bridge.ts`).** Two module-private mappers beside the unavailable answers, `projectActivationFailure(request, fault)` and `projectSwitchFailure(request, fault)`, read `faultMeaning`:
+    - `harness` → `{ status: "broken", request, diagnostic: harnessFailureRows[code] }`;
+    - not-sent or sent-then-lost → today's answer (`projectActivationUnavailable(request)`, `projectSwitchUnavailable(request)`), unchanged;
+    - malformed-reply or defect → `{ status: "broken", request, diagnostic: harnessFailureRows.PROTOCOL_MESSAGE_INVALID }`.
+
+    `activate` and `switchProject` take them as their `broken` answers. The `:44` comment is rewritten: the coordinator-unavailable answer is for the closed IPC gate and for a request that was not sent or was lost. `projectActivationUnavailable` and `projectSwitchUnavailable` keep their names, exports and values.
+  - **TSDoc (`harness-failure-protocol.ts`).** `harnessFailureRows` is "the one table every desktop fault mapper reads: upgrade, conversation, activation and switch". No code change there.
+  - **Tests.** `project-entry-bridge.test.ts` deletes the two `keeps the … result unchanged on %s` tests; their three faults move into the P4-B14 table with the broken answer. It also deletes `rejects activation replies for a different Project even with a matching message correlation` (`:102-119`): the P4-B14 `activate` row "a reply for another Project" covers the same fault with a whole-answer `toEqual`.
+- **Non-goals:** no renderer, preload or IPC change (`project-entry-ipc.ts` is not edited, so the `desktop-s6` single-line entries do not move). No change to the upgrade or conversation answers, to `faultMeaning`, or to the fatal-log code vocabulary. The harness never sends a switch `broken`, an activation harness row, or a `target-result` whose target carries one; the wire allows them, and nothing produces them. No shared mapper owner for upgrade, activation and switch: `project-upgrade-failure.ts` is not edited (intent review suggestion; the refactor gate takes it if `pnpm check:duplicates` reports a clone). `desktop-runtime.ts` is not touched, so the "latched stop" rewording (p4-s4 acceptance) stays for the slice that next touches it.
+- **Message and code ledger:** no new code or message. The activation `broken` arm and the new switch `broken` status carry the three existing harness rows (`PROTOCOL_MESSAGE_INVALID`, `PROTOCOL_VERSION_UNSUPPORTED`, `HARNESS_INTERNAL_FAILURE`, each with its `harnessFailureMessages` text and `retryable: false`).
+- **Affected paths:**
+  - `packages/protocol/src/canonical-project-protocol.ts`, `canonical-project-protocol.test.ts`, `protocol.ts`, `protocol.test.ts`, `harness-failure-protocol.ts`;
+  - `apps/desktop/src/main/project-entry-bridge.ts`, `project-entry-bridge.test.ts`;
+  - the other 10 version pins listed above;
+  - `stryker.desktop-s7.config.json`, `stryker.config.json`, `stryker-range-anchors.json`.
+- **Stryker re-anchoring (lesson 3, same slice).** `pnpm check:mutation-ranges` on the candidate is the authority, red-first as in p3-s7.
+
+  | Config | Entry now (`d885c9b`) | After | Anchor row |
+  |---|---|---|---|
+  | `stryker.desktop-s7.config.json` | `project-entry-bridge.ts:75-194` (from `export const unsent`) | starts at the first new mapper, ends at the closing line of `projectEntryBridgeOver`, so both mappers are mutated | `stryker-range-anchors.json:196` (start text changes) |
+  | `stryker.config.json` | `project-entry-bridge.ts:165-180` (`readConversation`, `saveConversationMessage`) | the same two operations, shifted by the mappers' lines | `:58` (line numbers only) |
+  | `stryker.config.json` | `protocol.ts`, `harness-failure-protocol.ts` (whole files) | unchanged | none |
+  | none | `canonical-project-protocol.ts` | not added: it holds schema definitions built at module load, which `ignoreStatic` never mutates; the P4-B15 rows guard it | none |
+
+  - Counts do not change, so the real-repository rows (`check-stryker-ranges.test.mjs:446`, `:449`) are not edited.
+  - `vitest.desktop-s7-mutation.config.ts` already names `project-entry-bridge.test.ts`.
+- **Full-integration exposure:**
+  - **Every handshake carries the version.** Every e2e journey (`projects`, `registration`, `conversation`, `conversation-accessibility`, `project-upgrade`, `shell`, `renderer-foundation`, `single-instance`) launches the real harness at version 10. A missed pin breaks the launch.
+  - **Activation and switch through the real wire:** e2e `projects.test.ts`.
+  - **Harness integration:** `canonical-project-activation.integration.test.ts`, `harness-runtime.integration.test.ts`, and every integration file that builds its messages through the three edited fixtures (`project-storage-create-fixture.ts` alone serves the storage, switch and lifecycle files). So the whole harness `test:integration` is exposed.
+  - **Smokes:** `package:launch-smoke` (the packaged handshake). The writer-proof peers (`canonical-writer-package-smoke-test-peers.ts`) are read by unit tests only.
+  - **The run s6 asks for (Phase 4 approval: "the wire version (s6) asks for its own e2e run"):** on the candidate, after `pnpm check`, with the coordinator's GO, one run each of `pnpm test:e2e`, the harness `test:integration` and `package:launch-smoke`. Its scope is Q14.
+- **Dependencies:** after s5 (accepted) and s3 (`faultMeaning`, `harnessFailureRows`). s7 to s9 do not depend on it.
+
+#### Test Contract: p4-s6-activation-switch-broken
+
+Public seams: the project-entry bridge built through `createHarnessBridges` (its `activate` and `switchProject` answers); `CanonicalProjectActivationResultSchema` and `CanonicalProjectSwitchResultSchema` through `decodeStrict`; `protocolVersion`, `parseHarnessMessage` and `parseDesktopMessage` from `@slopstop/protocol`.
+
+- **Behavior P4-B14: activation and switch answer a malformed reply, a defect or a harness failure as broken with its harness row.**
+  - Test: `answers a broken %s with its harness row: %s` in `apps/desktop/src/main/project-entry-bridge.test.ts`, one row per operation (`activate`, `switchProject`) and fault.
+  - Rows (each `toEqual` the whole answer, `request` being the call's validated request):
+    - `request.failure` with `HARNESS_INTERNAL_FAILURE`, `PROTOCOL_MESSAGE_INVALID` and `PROTOCOL_VERSION_UNSUPPORTED`, each sent with a message that is not the protocol text → `{ status: "broken", request, diagnostic: harnessFailureRows[code] }` (the row's own message, not the sent one);
+    - a session protocol error (an invalid payload on the reply event, a `protocol` `invalid-message` fault), a wrong-event reply, a reply for another Project (the echo), an invalid local message id, and a send refused as `HARNESS_SESSION_MESSAGE_INVALID` (through `ScriptedHarnessSession` with `sendResult = { ok: false, error: { code: "HARNESS_SESSION_MESSAGE_INVALID" } }`) → `{ status: "broken", request, diagnostic: harnessFailureRows.PROTOCOL_MESSAGE_INVALID }`;
+    - each row also asserts that `decodeStrict` of the answer through its result schema (`CanonicalProjectActivationResultSchema` or `CanonicalProjectSwitchResultSchema`, the schemas the preload decodes with) equals the answer.
+  - Expected red: at the base every row answers `unavailable` (activation) or `coordinator-unavailable` (switch) with `PROJECT_COORDINATOR_UNAVAILABLE` and the connection-lost message, so all 16 rows fail.
+- **Behavior P4-B15: the wire carries exactly the three harness rows in a broken activation and a broken switch.**
+  - Test: `carries an exact harness row in a broken %s: %s` in `packages/protocol/src/canonical-project-protocol.test.ts`, one row per result (`activation`, `switch`) and `HarnessFailureCode` (6 rows).
+  - Oracle, per row:
+    - `decodeStrict` of `{ status: "broken", request, diagnostic: harnessFailureRows[code] }` equals its input;
+    - the same result is rejected with the row's message changed, with `retryable: true`, and with an extra diagnostic key;
+    - the exact row is rejected under any other status of the same result (activation `unavailable`; switch `coordinator-unavailable`);
+    - switch rows only: a switch `broken` with today's activation broken diagnostic (`{ code: "PROJECT_STORAGE_BROKEN", message: "Project Storage activation failed.", retryable: false }`) and with the connection-lost `PROJECT_COORDINATOR_UNAVAILABLE` row is rejected: the switch arm holds only the three rows;
+    - activation rows only: a switch `target-result` whose `target` is that broken activation decodes to its input (the nested acceptance the Deliverable states);
+    - `Schema.is(CanonicalProjectActivationDiagnosticCodeSchema)(code)` is `false`: the fatal-log vocabulary does not grow.
+  - Expected red: at the base the activation `broken` arm rejects every harness code and the switch result has no `broken` status, so the first assertion fails in all 6 rows.
+- **Behavior P4-B16: the protocol is version 10, and a version-9 peer is refused.**
+  - Test: `refuses a version-9 peer as an unsupported version` in `packages/protocol/src/protocol.test.ts`, renamed from `refuses a version-8 peer as an unsupported version`: `protocolVersion` is `10`, and a harness failure and a handshake at version `9` each answer `PROTOCOL_VERSION_UNSUPPORTED` with the `unsupported_value` issue on `protocolVersion`; `parses workspace commands and correlated result events under protocol version 10` in `packages/protocol/src/protocol.test.ts`, renamed from "… version 9", its literals moved to `10`; `round-trips Project Storage envelopes under protocol version 10` in `packages/protocol/src/protocol.test.ts`, renamed the same way; `parses only correctly scoped failure events at protocol version 10` in `packages/protocol/src/protocol.test.ts`, renamed from "… version 9", its literal moved to `10`; `encodes and decodes the upgrade request and result strictly` in `packages/protocol/src/protocol.test.ts`, its `:1047` `toBe(9)` moved to `toBe(10)`.
+  - Expected red: at the base `protocolVersion` is `9`. Four tests fail at `expect(protocolVersion).toBe(10)`; `parses only correctly scoped failure events at protocol version 10` fails because its version-10 event is refused as `PROTOCOL_VERSION_UNSUPPORTED`.
+- **Behavior P4-B17: every peer and fixture speaks version 10.**
+  - Test: `packages/protocol/src/canonical-writer-smoke-protocol.test.ts`, `packages/protocol/src/schema-boundary-characterization.test.ts`, `packages/protocol/src/project-conversation-protocol.test.ts`, `apps/harness/src/harness-runtime.test.ts`, `apps/harness/tests/integration/canonical-project-activation.integration.test.ts`, `apps/harness/tests/integration/harness-runtime.integration.test.ts`, `apps/harness/tests/integration/canonical-writer-recovery-runtime-fixture.ts`, `apps/harness/tests/integration/conformance-counter-command.ts`, `apps/harness/tests/integration/project-storage-create-fixture.ts` and `apps/desktop/src/main/canonical-writer-package-smoke-test-peers.ts`, each with its `protocolVersion: 9` literals moved to `10` and no other change.
+  - Expected red: the literal move alone. Over the base source, a row that sends a version-10 envelope through the strict parser answers `PROTOCOL_VERSION_UNSUPPORTED`. These files are whole-file clauses, so validate checks that the slice changed them and does not re-prove a red. The integration files run in the harness `test:integration` (Q14).
+- **Behavior P4-B18: every other activation, switch and closing answer is unchanged.**
+  - Test: `keeps a %s unavailable when it was not sent or was lost: %s` in `apps/desktop/src/main/project-entry-bridge.test.ts` (new): `activate` and `switchProject` × a call after stop, a send that fails, a lost connection while pending and a stop while pending → today's `unavailable` (retryable `true`) or `coordinator-unavailable` (retryable `false`) answer with `PROJECT_COORDINATOR_UNAVAILABLE` and the connection-lost message; `answers the closing envelope for work in flight at stop: $operation` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `answers every upgrade reply with one strict result: %s` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `answers a conversation %s with one strict result: %s` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `answers its own decoded reply: $operation` in `apps/desktop/src/main/project-entry-bridge.test.ts`; `validates switch result branches and destination correlation` in `packages/protocol/src/canonical-project-protocol.test.ts`; `apps/desktop/src/main/project-entry-ipc.test.ts`; `apps/desktop/src/main/request-fault-meaning.test.ts`; `packages/protocol/src/harness-fatal-log-protocol.test.ts`; `apps/harness/src/process-fatal-diagnostics.test.ts`; `apps/desktop/src/renderer/app.test.tsx`.
+  - Expected red: none — pin. The new `keeps a %s unavailable …` test is green at the base by design: it characterizes the answers s6 keeps, and binding 3 proves it bites. Every other named test and whole file is green at the base and after; the whole files are unedited, with the same row counts.
+
+**Bindings that bite (each on the candidate, each restored after):**
+1. In `projectActivationFailure`, answer a defect with `projectActivationUnavailable(request)`. The P4-B14 `activate` rows for the wrong-event reply, the reply for another Project and the invalid message id fail; the `switchProject` rows stay green. This proves the defect arm is per operation and read from `faultMeaning`.
+2. In `projectSwitchFailure`, answer `harness` with `projectSwitchUnavailable(request)`. The three P4-B14 `switchProject` `request.failure` rows fail. This proves the switch carries the harness row.
+3. In `projectSwitchFailure`, answer not-sent as broken with the protocol-invalid row. The P4-B18 rows `keeps a switchProject unavailable …: a call after stop` and `…: a send that fails` fail. This proves the kept-unavailable pin bites.
+4. In `canonical-project-protocol.ts`, put the three harness codes into the activation `broken` arm's code list instead of the exact rows. The P4-B15 activation rows fail on the changed-message and `retryable: true` rejections (the free arm accepts them). This proves the arm holds exact rows. (`CanonicalProjectActivationDiagnosticCodeSchema` stays unchanged in this binding, so its assertion stays green; the exactness assertions catch it. The mutant breaks `activationFailureSchema`'s `CanonicalProjectActivationDiagnosticCode` type constraint, so it exists only under Vitest, which does not typecheck.)
+5. In both mappers, classify by `fault.kind` instead of `faultMeaning` (every `send` as not-sent). The two P4-B14 rows for a send refused as `HARNESS_SESSION_MESSAGE_INVALID` fail. This proves the mappers read the owner, not a second fault table.
+6. In `canonical-project-protocol.ts`, build the switch `broken` diagnostic from the activation broken union. The P4-B15 switch rows fail on the `PROJECT_STORAGE_BROKEN` rejection. This proves the switch arm holds only the three rows.
+7. In `canonical-project-protocol.ts`, add the three harness codes to `canonicalProjectActivationDiagnosticCodes` while keeping the exact rows. All 6 P4-B15 rows fail on the `Schema.is` assertion. This proves the fatal-log guard bites.
+
+**Structural checks (on the candidate):**
+- `rg -n "keeps the (activation|switch) result unchanged|rejects activation replies for a different Project" apps/desktop/src`: nothing.
+- `rg -n "protocolVersion\"?\s*[:=]\s*9\b|\b9 as const|protocolVersion\)\.toBe\(9\)|protocol version 9" apps packages`: only the version-9 peer in `refuses a version-9 peer as an unsupported version` (`protocol.test.ts`).
+- `rg -n "both desktop mappers" packages apps`: nothing.
+- `rg -n "harnessFailureRows" apps/desktop/src/main/project-entry-bridge.ts`: the import and the two mappers. `rg -n "faultMeaning\(" apps/desktop/src/main/project-entry-bridge.ts`: the two mappers.
+- In `stryker-range-anchors.json`, the `stryker.desktop-s7.config.json` entry-bridge row's `first` text is the first mapper's declaration (`rg -n '"first": "function projectActivationFailure' stryker-range-anchors.json`: one hit), and the range starts at that line. `check:mutation-ranges` checks only anchor texts, so a range left at `export const unsent` would pass it while mutating neither mapper.
+- `git diff <base> -- apps/desktop/src/main/project-entry-ipc.ts apps/desktop/src/renderer apps/desktop/src/preload packages/protocol/src/index.ts`: empty.
+- `git diff <base> --stat` lists only the affected paths and this slice's evidence.
+
+#### Success Criteria: p4-s6-activation-switch-broken
+
+Automated (smallest first; each read by its real exit code; desktop main tests with `--config vitest.main.config.ts`):
+- Green at `d885c9b`, with row counts recorded (the P4-B18 baseline): `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/project-entry-ipc.test.ts src/main/request-fault-meaning.test.ts`, `pnpm --filter @slopstop/protocol exec vitest run src/harness-fatal-log-protocol.test.ts`, `pnpm --filter @slopstop/harness exec vitest run src/process-fatal-diagnostics.test.ts`, and `pnpm --filter @slopstop/desktop exec vitest run src/renderer/app.test.tsx`.
+- Red then green: `pnpm --filter @slopstop/protocol exec vitest run src/canonical-project-protocol.test.ts src/protocol.test.ts` (P4-B15, P4-B16) and `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/project-entry-bridge.test.ts` (P4-B14; P4-B18's new test green at both).
+- The P4-B17 unit files green at the candidate: the three protocol test files and `pnpm --filter @slopstop/harness exec vitest run src/harness-runtime.test.ts`.
+- Each binding (1 to 7) observed red and then restored.
+- `pnpm check:mutation-ranges` exit 0.
+- `pnpm typecheck`, then `pnpm check` exit 0 (read CPU first, in its own call). Knip exit 0; `pnpm check:duplicates` reports no clone between the three mappers.
+- CodeScene 10 on `project-entry-bridge.ts`, `canonical-project-protocol.ts` and both test files.
+- The run Q14 settles, with the coordinator's GO, each read by its real exit code: `pnpm test:e2e`, the harness `test:integration`, `package:launch-smoke`.
+- Mutation: none for this slice; the mappers are in the `desktop-s7` entry-bridge range of the final Phase 4 mutation run.
+
+Manual: none. Pedro accepts the candidate (rigorous lane).
+
 ## Deferred Work
 
 Each slice gets its full contract when it becomes next. Behavior IDs continue from P4-B4; questions from Q11. Lanes come from `lane.mjs --paths` over the planned paths, raised to the feature lane (normal).
@@ -804,6 +926,29 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Red:** P4-B12 (the owner's 17-row table) is red on the missing export. P4-B13 pins every storage and workspace text row. Bindings 1 to 3 prove the noun template, the stopped text and the shared arms each come from the owner.
   - **Not taken:** the "latched stop" rewording; s5 does not touch `desktop-runtime.ts`.
   - **Lane:** normal (`lane.mjs --paths`: fast, raised to the feature lane). The label is recorded on approval.
+- **2026-11-01: p4-s5 accepted (coordinator; lane normal).**
+  - **Accepted identity:** `bb61356` plus the polish `d885c9b`. `pnpm check` 3900/3900; preflight clean; slice-verifier round 1 of 1 passed with no finding.
+  - **Polish:** `d885c9b` adds `workspaceFaultText` inside `workspaceBridgeOver` (no text change); the `desktop-s7` workspace range is now 91-200. The coordinator reviewed it, with no second verifier round.
+- **2026-11-01: p4-s6 detailed (coordinator instruction); Q14 open.**
+  - **Base:** `d885c9b` on `fix/arch-review-phase-4`. Every s6 line number was read at `bb61356` and is unchanged at `d885c9b`; the Stryker rows were re-read there (desktop-s7 entry 75-194, `stryker.config.json` entry 165-180).
+  - **Shape, settled by evidence:** the harness rows join the activation `broken` arm as exact rows, not as codes in `canonicalProjectActivationDiagnosticCodes`, because that tuple is also the harness fatal-log vocabulary (`harness-fatal-log-protocol.ts:58`, `process-fatal-diagnostics.ts:87`). The two mappers sit in `project-entry-bridge.ts` beside the unavailable answers, so `project-entry-ipc.ts` and its six `desktop-s6` entries do not move and no Stryker count changes. Q1's "protocol-invalid row" is `harnessFailureRows.PROTOCOL_MESSAGE_INVALID`, so three distinct rows.
+  - **Q14 (for Pedro), the scope of s6's own run (Phase 4 approval):** (a) on the candidate, one run each of `pnpm test:e2e`, the harness `test:integration` and `package:launch-smoke` (recommended: the version is on every handshake, and the edited fixtures serve most harness integration files); (b) only e2e `projects.test.ts` and `package:launch-smoke`, the rest at the Phase 4 final `check:deep`. The contract is written on (a).
+  - **Red:** P4-B14 (14 bridge rows), P4-B15 (6 wire rows) and P4-B16 (3 version rows) are red at the base. P4-B17 moves the version literal in 10 files (whole-file, not re-proved). P4-B18 pins every kept answer; its new kept-unavailable test is green by design, and binding 3 proves it bites.
+  - **Taken:** the `harness-failure-protocol.ts` TSDoc "both desktop mappers" is rewritten. **Not taken:** the "latched stop" rewording; s6 does not touch `desktop-runtime.ts`.
+  - **Lane:** rigorous (Q6 (a)); `lane.mjs --paths` answers normal (files 11 > 5). The intent review (slice-verifier, code and coverage reviewers) runs on the coordinator's GO, before Pedro's approval. The label is recorded on approval.
+- **2026-11-01: p4-s6 intent review, round 1 of 1 (coordinator GO; hash `78d28a0a`).**
+  - **Outcomes:** slice-verifier failed (V1 violation, V2 warning); code reviewer failed (1 blocker, 2 concerns, 1 suggestion); coverage reviewer failed (4 concerns, 2 suggestions). All three completed a static read at `d885c9b`; none ran anything.
+  - **Fixed (folded into the s6 section):**
+    - V1, code blocker, coverage concern: `rejects activation replies for a different Project even with a matching message correlation` (`project-entry-bridge.test.ts:102-119`) pinned the flattened echo answer; s6 deletes it (P4-B14's echo row supersedes it), with a structural check.
+    - V2, code polish: the version inventory missed `protocol.test.ts:1047` `toBe(9)` and the `:293` title; both join P4-B16 (5 tests); the site count is 9, not 10; the structural regex now covers `toBe(9)` and "protocol version 9".
+    - Code and coverage concern: a mapper classifying by `fault.kind` passed every row. P4-B14 adds a send refused as `HARNESS_SESSION_MESSAGE_INVALID` per operation (16 rows), binding 5 and an `rg "faultMeaning\("` check.
+    - Code concern: the nested `target-result.target` also accepts the harness rows at version 10. Stated in the Deliverable and Non-goals and pinned in P4-B15.
+    - Coverage concerns: the switch `broken` exactness against the activation union (P4-B15 rejection, binding 6); the desktop-s7 first anchor must move to the first mapper (structural check).
+    - Coverage suggestions: binding 7 for the fatal-log guard; each P4-B14 row also decodes the answer through its result schema.
+  - **Not taken:** the shared `faultAnswer` owner over upgrade, activation and switch (code suggestion), left to the refactor gate if `check:duplicates` reports a clone, so `project-upgrade-failure.ts` stays out of s6. Alternatives (advisory): a desktop-only answer schema with no wire change (it reopens Q1 (a) and would add a second result schema family next to the one the preload decodes with); a full fault-matrix table; a renderer check of the broken text (needs a renderer edit, a non-goal).
+  - **Stale approved text, not edited (append-only):** Verification Notes' "19 ranges and 33 whole files" (now 18 and 35); the Deferred Work s6 row (`project-entry-ipc.ts` is not edited; `project-list-runtime.integration` is not a version pin); Architecture's `project-entry-bridge.ts:49-77` cite. The s6 section is authoritative.
+  - **Q14:** unchanged.
+- **2026-11-01: p4-s6 contract approved; Q1 (a) kept; Q14 decided (a) (Pedro; coordinator).** After the rigorous intent review (round 1 of 1, findings folded in), Pedro approved hash `77d46ce16203…0cd7` (copy `approved-77d46ce1.md`). He kept Q1 (a) over the reviewer's desktop-only schema alternative. Q14 (a): on the s6 candidate, one run each of `pnpm test:e2e`, the harness `test:integration` and `package:launch-smoke`, alone, after Pedro's "livre".
 
 ## References
 
@@ -824,3 +969,4 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - `p4-s2-bridge-test-composition`: `.rpiv/artifacts/evidence/2026-10-31_p4-s2-bridge-test-composition-tdd.md`; accepted at `3f80587`; preflight clean; slice-verifier round 1 passed.
 - `p4-s3-fault-meaning-owner`: `.rpiv/artifacts/evidence/2026-10-31_p4-s3-fault-meaning-owner-tdd.md`; accepted at `e94fd75` + `87f09e8`; preflight clean; slice-verifier round 1 passed.
 - `p4-s4-request-skeleton`: `.rpiv/artifacts/evidence/2026-11-01_p4-s4-request-skeleton-tdd.md`; accepted at `1a82fb6` + `603298b`; preflight clean; slice-verifier round 1 passed.
+- `p4-s5-bridge-fault-text`: `.rpiv/artifacts/evidence/2026-11-01_p4-s5-bridge-fault-text-tdd.md`; accepted at `bb61356` + `d885c9b`; preflight clean; slice-verifier round 1 passed.
