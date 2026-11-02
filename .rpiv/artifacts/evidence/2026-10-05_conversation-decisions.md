@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: d206722fe2604892a265ff143426e0da6df10f9e3928f819e3ae18f3a5f748dd
+content_hash: 9553a549a506dc0bb4da4592b6ac02e30a0e40123c11f6a05f2ee8f5b05295ac
 ---
 
 # Conversation — Human Decisions
@@ -2571,3 +2571,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Candidate `bb61356`: P4-B12 red 17 failed then green; pins 84/84 unedited; bindings 5/4/6 red as predicted; `pnpm check` 3900/3900; preflight clean; slice-verifier round 1 passed, no finding. One process slip recorded by the implementer: the first ranges-red run had no saved prediction, so it was marked not counted and repeated with the prediction first.
 - Coordinator decision: take the verifier's polish. `d885c9b` adds `workspaceFaultText` inside `workspaceBridgeOver`, used by both broken answers, with no text change and the desktop-s7 workspace range re-pointed to 91-200. The coordinator read the diff; focused gates and CodeScene 10 passed; no second verifier round.
 - The s5 acceptance entry for the brief goes in with the designer's s6 edit, so the brief is not edited twice at once. s6 (rigorous) is based on `d885c9b`.
+
+## 2026-11-01 — p4-s6 contract approved (rigorous); Q14 (a)
+
+- Rigorous intent review, round 1 of 1, with the coordinator's GO for 3 read-only reviewers (slice-verifier intent, code, coverage). Findings: 1 blocker (a pinned bridge row asserted unavailable for the echo fault that becomes broken; deleted, the B14 echo row supersedes it), 1 warning (version inventory missed `protocol.test.ts:1047` and `:293`), and 6 concerns, all folded in. Bindings are now 1-7. One suggestion was not taken: a shared `faultAnswer` owner across upgrade, activation and switch.
+- Pedro approved hash `77d46ce1…0cd7` (copy `approved-77d46ce1.md`). He kept Q1 (a), protocol 9 -> 10, over the code reviewer's advisory alternative of a desktop-only schema with no wire change.
+- Q14 (a), Pedro: on the s6 candidate, one run each of `pnpm test:e2e`, the harness `test:integration` and `package:launch-smoke`, each alone and after "livre".
