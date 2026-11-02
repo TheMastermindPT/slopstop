@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 9553a549a506dc0bb4da4592b6ac02e30a0e40123c11f6a05f2ee8f5b05295ac
+content_hash: 7cb8360cfea0f9afafb4cf9271821735276321ce00d90e3abe78c32485817cb5
 ---
 
 # Conversation — Human Decisions
@@ -2577,3 +2577,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Rigorous intent review, round 1 of 1, with the coordinator's GO for 3 read-only reviewers (slice-verifier intent, code, coverage). Findings: 1 blocker (a pinned bridge row asserted unavailable for the echo fault that becomes broken; deleted, the B14 echo row supersedes it), 1 warning (version inventory missed `protocol.test.ts:1047` and `:293`), and 6 concerns, all folded in. Bindings are now 1-7. One suggestion was not taken: a shared `faultAnswer` owner across upgrade, activation and switch.
 - Pedro approved hash `77d46ce1…0cd7` (copy `approved-77d46ce1.md`). He kept Q1 (a), protocol 9 -> 10, over the code reviewer's advisory alternative of a desktop-only schema with no wire change.
 - Q14 (a), Pedro: on the s6 candidate, one run each of `pnpm test:e2e`, the harness `test:integration` and `package:launch-smoke`, each alone and after "livre".
+
+## 2026-11-02 — Phase 4 lane labels recorded late
+
+- `jev-lane-labels.log` held only p4-s1. The labels for p4-s2..p4-s5 had not been recorded on approval, which was a process gap. The designer added them on 2026-11-02, so they carry today's timestamp. The tool's row has no hash field, so the mapping lives here: p4-s2 normal at `efa6d2f0`, p4-s3 normal at `e1e4976b` (joined shadow row 2026-10-31T21:22:21Z, jev none), p4-s4 normal at `f224f3ad`, p4-s5 normal at `c75516dc`, p4-s6 rigorous (Q6) at `77d46ce1`.
+- From now on, the label is recorded together with the approval of each slice.
