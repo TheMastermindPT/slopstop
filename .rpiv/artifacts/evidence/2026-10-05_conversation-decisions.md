@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 7cb8360cfea0f9afafb4cf9271821735276321ce00d90e3abe78c32485817cb5
+content_hash: a56e46ec18ebb140bce374a94307512a3a6f6c070de09c3cdf9aa2d0070a4183
 ---
 
 # Conversation — Human Decisions
@@ -2582,3 +2582,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - `jev-lane-labels.log` held only p4-s1. The labels for p4-s2..p4-s5 had not been recorded on approval, which was a process gap. The designer added them on 2026-11-02, so they carry today's timestamp. The tool's row has no hash field, so the mapping lives here: p4-s2 normal at `efa6d2f0`, p4-s3 normal at `e1e4976b` (joined shadow row 2026-10-31T21:22:21Z, jev none), p4-s4 normal at `f224f3ad`, p4-s5 normal at `c75516dc`, p4-s6 rigorous (Q6) at `77d46ce1`.
 - From now on, the label is recorded together with the approval of each slice.
+
+## 2026-11-03 — p4-s6 heavy runs green; Pedro triages the candidate review
+
+- After Pedro's "livre", the Q14 (a) runs on `b0a4cc3` passed: e2e 27/27, harness integration 2234 passed / 6 skipped / 0 failed, launch-smoke exit 0. Preflight clean.
+- Earlier coordinator decisions (2026-11-02): GO for the `wholeUnion` fix (`activationBrokenDiagnosticSchema`; the pin was unchanged; 70/74 boundary summaries identical, and the 4 that changed are the new switch broken arm). The two mappers were joined into `entryFailure` for CodeScene 10 (9.38 was not accepted). The malformed message on `b0a4cc3` stays, since the branch is squashed.
+- Pedro's triage of candidate review round 1: (1) concern on code/message pairing: fix it with a reject row, red-first against a cross-product mutant, and make `harnessRowSchema` an explicit tuple; (2) warning on `entryFailure`: accepted as a deviation and recorded in the brief; (3) suggestion: run the sent-then-lost binding. No second review round; the coordinator reviews the fix diff and Pedro accepts the slice.
