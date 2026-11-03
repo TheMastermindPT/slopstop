@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-11-01T15:00:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "p4-s6 intent review round 1 folded in (P4-B14 to P4-B18, bindings 1-7); Q14 open."
-content_hash: 454b1c1ff75a65f08be6b24bd77d005f2af14709f830343a75d202648b9eb5f8
+content_hash: 83c5222354bf788373b3e241892cced80577b07d0a0c2d649f9b6229ca69e0e3
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -954,6 +954,9 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Concern, fix:** P4-B15 did not pin code/message pairing; a cross-product schema would pass. A reject row (one code with another code's message, activation and switch) is added, red against a cross-product mutant first; `harnessRowSchema` becomes an explicit tuple of the three `exactRowSchema` calls. Fix commit reviewed by the coordinator; no second review round.
   - **Warning V1, accepted deviation (Pedro):** the two approved mappers `projectActivationFailure`/`projectSwitchFailure` share one `entryFailure(unavailableAnswer)` (CodeScene 9.38 -> 10 on `project-entry-bridge.ts`). Behavior unchanged. Bindings 1/2/3/5 now bite both operations (8, 6, 4, 2 failed). The structural checks naming two mappers read as one `entryFailure` holding `faultMeaning(` and `harnessFailureRows`. The desktop-s7 entry anchor `first` is the `entryFailure` line (`project-entry-bridge.ts:83-216`).
   - **Suggestion, run (Pedro):** a binding drops `|| sent-then-lost`; predicted 6 failed.
+- **2026-11-03: p4-s6 accepted by Pedro (rigorous).**
+  - **Accepted identity:** `b0a4cc3` + `7f43278` (cross-message reject rows, red 6 against a cross-product mutant; sent-then-lost binding 6 failed) + `e2b1d48` (completeness), on `be54239`. The coordinator reviewed both fix commits. `7f43278` made `harnessRowSchema` an explicit tuple on the coordinator's instruction; that lost completeness for a future code, so `e2b1d48` restored `wholeUnion(Object.values(harnessFailureRows).map(exactRowSchema))` (equal to `b0a4cc3`) and pinned `codes` against `Object.keys(harnessFailureRows)` (red 2 with a hypothetical extra key). Protocol 362/362; CodeScene 10; `pnpm check` 3923/3923 at `7f43278`.
+  - **Mutation:** Pedro chose one Stryker run on the final Phase 4 candidate, not one per slice.
 
 ## References
 
