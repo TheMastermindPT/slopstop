@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: be63b4814870ee2be7720d4c5b9d8d28803980238c852f049ad9dad9754fb4db
+content_hash: e6faa328ee8e6bbbc983a6844effc5fabcea8993268bdc224d01c04370f6b2e4
 ---
 
 # Conversation — Human Decisions
@@ -2594,3 +2594,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Final candidate is `b0a4cc3` + `7f43278` + `e2b1d48`. The coordinator reviewed `7f43278` and found that its own instruction, an explicit tuple for `harnessRowSchema`, lost completeness for a future harness code; `e2b1d48` put back the table-derived form and pinned the test's `codes` against the table (red-first).
 - Pedro accepted p4-s6 (rigorous). Mutation runs once on the final Phase 4 candidate (Pedro).
 - Next: p4-s7-workspace-ipc-module contract (normal by override, Q6).
+
+## 2026-11-03 — p4-s7 contract approved (Q15 (a))
+
+- The designer wrote p4-s7-workspace-ipc-module. `registerWorkspaceIpc` and `broadcastWorkspaceNotification` move to `workspace-ipc.ts` with their bodies unchanged, and their 2 tests move with them. `main.ts` exports nothing. The depcruise rule `no-import-of-electron-entry` excludes the smoke-main test (Q4 (a)). The contract adds a shared test-only `workspace-test-peers.ts` (jscpd threshold 0) and the mutation-config updates. 4 bindings. Coordinator check: additions only (keep against `approved-77d46ce1.md`).
+- Pedro approved hash `043dddf9…3938` (copy `approved-043dddf9.md`), lane normal by the Q6 override; lane.mjs answers rigorous. Q15 (a): no per-slice heavy run.
