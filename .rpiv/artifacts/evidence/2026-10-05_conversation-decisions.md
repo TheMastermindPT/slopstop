@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: a56e46ec18ebb140bce374a94307512a3a6f6c070de09c3cdf9aa2d0070a4183
+content_hash: be63b4814870ee2be7720d4c5b9d8d28803980238c852f049ad9dad9754fb4db
 ---
 
 # Conversation — Human Decisions
@@ -2588,3 +2588,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - After Pedro's "livre", the Q14 (a) runs on `b0a4cc3` passed: e2e 27/27, harness integration 2234 passed / 6 skipped / 0 failed, launch-smoke exit 0. Preflight clean.
 - Earlier coordinator decisions (2026-11-02): GO for the `wholeUnion` fix (`activationBrokenDiagnosticSchema`; the pin was unchanged; 70/74 boundary summaries identical, and the 4 that changed are the new switch broken arm). The two mappers were joined into `entryFailure` for CodeScene 10 (9.38 was not accepted). The malformed message on `b0a4cc3` stays, since the branch is squashed.
 - Pedro's triage of candidate review round 1: (1) concern on code/message pairing: fix it with a reject row, red-first against a cross-product mutant, and make `harnessRowSchema` an explicit tuple; (2) warning on `entryFailure`: accepted as a deviation and recorded in the brief; (3) suggestion: run the sent-then-lost binding. No second review round; the coordinator reviews the fix diff and Pedro accepts the slice.
+
+## 2026-11-03 — p4-s6 accepted by Pedro
+
+- Final candidate is `b0a4cc3` + `7f43278` + `e2b1d48`. The coordinator reviewed `7f43278` and found that its own instruction, an explicit tuple for `harnessRowSchema`, lost completeness for a future harness code; `e2b1d48` put back the table-derived form and pinned the test's `codes` against the table (red-first).
+- Pedro accepted p4-s6 (rigorous). Mutation runs once on the final Phase 4 candidate (Pedro).
+- Next: p4-s7-workspace-ipc-module contract (normal by override, Q6).
