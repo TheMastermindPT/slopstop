@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-11-01T15:00:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "p4-s6 intent review round 1 folded in (P4-B14 to P4-B18, bindings 1-7); Q14 open."
-content_hash: 5ce0d79b8503cb91826b598a2870f62f96eb2d71604e98641115cd3436a4e52c
+content_hash: 454b1c1ff75a65f08be6b24bd77d005f2af14709f830343a75d202648b9eb5f8
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -949,6 +949,11 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Stale approved text, not edited (append-only):** Verification Notes' "19 ranges and 33 whole files" (now 18 and 35); the Deferred Work s6 row (`project-entry-ipc.ts` is not edited; `project-list-runtime.integration` is not a version pin); Architecture's `project-entry-bridge.ts:49-77` cite. The s6 section is authoritative.
   - **Q14:** unchanged.
 - **2026-11-01: p4-s6 contract approved; Q1 (a) kept; Q14 decided (a) (Pedro; coordinator).** After the rigorous intent review (round 1 of 1, findings folded in), Pedro approved hash `77d46ce16203…0cd7` (copy `approved-77d46ce1.md`). He kept Q1 (a) over the reviewer's desktop-only schema alternative. Q14 (a): on the s6 candidate, one run each of `pnpm test:e2e`, the harness `test:integration` and `package:launch-smoke`, alone, after Pedro's "livre".
+- **2026-11-03: p4-s6 candidate review triaged by Pedro (rigorous).**
+  - **Candidate:** `b0a4cc3` on `be54239`. Q14 (a) runs passed: e2e 27/27, harness `test:integration` 2234 passed / 6 skipped (host-gated) / 0 failed, `package:launch-smoke` exit 0. `pnpm check` 3923/3923. Preflight clean. Candidate review round 1: 0 blockers, 1 concern, 1 warning, 1 suggestion.
+  - **Concern, fix:** P4-B15 did not pin code/message pairing; a cross-product schema would pass. A reject row (one code with another code's message, activation and switch) is added, red against a cross-product mutant first; `harnessRowSchema` becomes an explicit tuple of the three `exactRowSchema` calls. Fix commit reviewed by the coordinator; no second review round.
+  - **Warning V1, accepted deviation (Pedro):** the two approved mappers `projectActivationFailure`/`projectSwitchFailure` share one `entryFailure(unavailableAnswer)` (CodeScene 9.38 -> 10 on `project-entry-bridge.ts`). Behavior unchanged. Bindings 1/2/3/5 now bite both operations (8, 6, 4, 2 failed). The structural checks naming two mappers read as one `entryFailure` holding `faultMeaning(` and `harnessFailureRows`. The desktop-s7 entry anchor `first` is the `entryFailure` line (`project-entry-bridge.ts:83-216`).
+  - **Suggestion, run (Pedro):** a binding drops `|| sent-then-lost`; predicted 6 failed.
 
 ## References
 
