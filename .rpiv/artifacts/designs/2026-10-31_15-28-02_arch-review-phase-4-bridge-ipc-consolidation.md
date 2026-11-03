@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/architecture-reviews/2026-10-23_16-18-48_whole-project.m
 lane: normal
 lane_reasons: ["no upstream lane", "s6, s7, s8, s9 lane.mjs --paths: rigorous (sensitive word: ipc; files: 6 > 5)"]
 status: ready
-last_updated: 2026-11-01T15:00:00+0000
+last_updated: 2026-11-03T15:30:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "p4-s6 intent review round 1 folded in (P4-B14 to P4-B18, bindings 1-7); Q14 open."
-content_hash: 83c5222354bf788373b3e241892cced80577b07d0a0c2d649f9b6229ca69e0e3
+last_updated_note: "p4-s7 contract added (P4-B19 to P4-B22, bindings 1-4); Q15 open."
+content_hash: 69d7a53c6ee0b98c02c333a60270595c551898280f1f93e52370181233683e89
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -822,6 +822,113 @@ Automated (smallest first; each read by its real exit code; desktop main tests w
 
 Manual: none. Pedro accepts the candidate (rigorous lane).
 
+### Slice p4-s7-workspace-ipc-module
+
+- **`slice_id`:** `p4-s7-workspace-ipc-module`.
+- **Lane:** normal by override (Q6 (a): a move under unchanged tests). `lane.mjs --paths` over the eleven planned paths answers rigorous (files: 8 > 5; sensitive word `ipc` in `workspace-ipc.ts` and its test); Q6 lowers it. No intent review. Pedro approves this contract; the coordinator accepts the candidate, and Pedro accepts the combined Phase 4 result.
+- **Finding:** L1-10, narrowed by Q4 (a). `registerWorkspaceIpc` and `broadcastWorkspaceNotification` move out of the Electron entry into `workspace-ipc.ts`, beside `project-entry-ipc.ts`. `workspace-bridge.test.ts` stops importing `main.ts`. The depcruise rule `no-import-of-electron-entry` forbids every other import of `main.ts`, with `canonical-writer-package-smoke-main.test.ts` excluded by name.
+- **Base:** `e2b1d48` (p4-s6 accepted at `b0a4cc3` + `7f43278` + `e2b1d48`, on `fix/arch-review-phase-4`). Every line below was read at `e2b1d48`.
+- **Measured at `e2b1d48`:**
+  - `main.ts` (494 lines) exports exactly two functions: `broadcastWorkspaceNotification` (`:264-271`) and `registerWorkspaceIpc` (`:273-288`). `bootstrap()` calls them at `:419` (`registerWorkspaceIpc(workspace.owner, desktopShutdown)`) and `:421` (`workspace.owner.subscribe(broadcastWorkspaceNotification)`). Only those two functions use the protocol imports `WorkspaceIntent`, `WorkspaceIntentSchema`, `WorkspaceNotification`, `WorkspaceNotificationSchema`, `WorkspaceQuery`, `WorkspaceQuerySchema` (`:9-14`) and the whole `./workspace-bridge.js` import (`:57-62`). `ipcMain` and `BrowserWindow` stay in use (`registerHarnessIpc`, `broadcastHarnessStatus`, the window code).
+  - **`main.ts` importers** (`git grep` and `depcruise --include-only`): `workspace-bridge.test.ts:28` (static `import`) and `canonical-writer-package-smoke-main.test.ts:264` (`await import("./main.js")`, resolved by depcruise as `dynamic-import`). Nothing else.
+  - `workspace-bridge.test.ts` (39 tests) imports `main.js` only for two tests: `keeps workspace IPC handlers narrow and validated` (`:921-973`, inside `describe("WorkspaceBridge")`) and `answers workspace unavailable after the IPC gate closes: $channel` (`:978-1014`, 2 rows). Five `vi.mock` calls (`electron`, `./crash-reporting.js`, `./harness-supervisor.js`, `./logger.js`, `./security.js`, `:41-58`) and the `mainMocks` hoist (`:35-39`, reset at `:285-286`) exist only to neutralise the entry's bootstrap and observe those two tests. No other import of the file reaches `electron` (`harness-bridges.ts`, `harness-request-core.ts`, `harness-session.ts`, `harness-session-test-peers.ts`, `workspace-bridge.ts`).
+  - The two tests use the fixtures `id` (`:63-68`), `memoryQuery` (`:70-76`), `memoryIntent` (`:120-128`), `unavailableQueryResult` (`:167-176`) and `readyResult` (`:178`, only as the closed-gate fake's never-awaited answer). Copying the first four into a new file is about 35 lines, over `jscpd.json`'s `minLines: 10` / `minTokens: 60` with `threshold: 0`.
+  - `canonical-writer-package-smoke-main.test.ts` (80 tests) loads the real `main.ts` with electron mocked (`ipcMain.handle`, `BrowserWindow.getAllWindows`) and drives `answers unavailable after quit starts: $channel` (`:764-800`), whose `queryWorkspace` row calls the registered handler after `before-quit` and expects the literal closing envelope. It is the one unit pin that `main.ts` still registers the workspace handlers behind `desktopShutdown`. The broadcast subscription (`:421`) has no unit pin; only the e2e notification paths reach it.
+  - The closing answers `workspaceQueryClosing` / `workspaceIntentClosing` (`workspace-bridge.ts:91-104`, inside the `desktop-s7` range `workspace-bridge.ts:91-200`) are asserted with their literal text only by the two moved tests and by that smoke-main row. The other `workspace-bridge.test.ts` rows compare against the functions themselves.
+  - `dependency-cruiser.config.cjs` has 8 `forbidden` rules and none names `main.ts`. `apps/harness/scripts/check-boundaries-parse.test.mjs` cruises a temp fixture through the real config (`cruiseFixture`) and asserts `{ rule, from, to }` violations. It runs from the repository root (`pnpm exec vitest run apps/harness/scripts/check-boundaries-parse.test.mjs`: 2 passed); through `pnpm --filter @slopstop/harness` it fails with `ENOENT … apps\harness\tsconfig.base.json`, a cwd artefact, not a red.
+  - `pnpm check:mutation-ranges` at `e2b1d48`: exit 0; `stryker.desktop-s6.config.json` 14 ranges, 2 whole files. Its `main.ts` entries are `:94-104` (`stryker-range-anchors.json:166`), `:273-288` (`:178`, first `export function registerWorkspaceIpc(`, last `}`) and `:406-406` (`:184`).
+  - `vitest.desktop-s6-mutation.config.ts` names `workspace-bridge.test.ts` only to reach `main.ts:273-288`. `vitest.desktop-s7-mutation.config.ts` names `workspace-bridge.test.ts` and `canonical-writer-package-smoke-main.test.ts`.
+- **Deliverable:**
+  - **`workspace-ipc.ts` (new).** It holds `broadcastWorkspaceNotification` and `registerWorkspaceIpc`, moved with their bodies and signatures unchanged, and the imports they need. It has one TSDoc in the style of `project-entry-ipc.ts`: each handler strictly decodes the renderer's value, and once the gate closes it answers the closing envelope without calling the bridge.
+  - **`main.ts`.** Both functions and their now-unused imports go. It imports them from `./workspace-ipc.js`; `:419` and `:421` keep their calls. `main.ts` exports nothing.
+  - **`workspace-test-peers.ts` (new), test-only.** `id`, `memoryQuery`, `memoryIntent` and `unavailableQueryResult` move there from `workspace-bridge.test.ts`, unchanged, beside `harness-session-test-peers.ts`. Both test files import them, so `pnpm check:duplicates` finds no clone.
+  - **`workspace-ipc.test.ts` (new).** The two tests move here with their titles and assertions unchanged. One hoisted electron mock (`ipcMain.handle`, `BrowserWindow.getAllWindows`), reset before each test; no other `vi.mock`. The closed-gate fake bridge answers `unavailableQueryResult(memoryQuery())` instead of `readyResult(memoryQuery(), 1)`: it is never called (the test asserts that), so no assertion changes, and `readyResult` stays in `workspace-bridge.test.ts`.
+  - **`workspace-bridge.test.ts`.** It loses the `main.js` import, the five `vi.mock` calls, the `mainMocks` hoist and its two resets, the two moved tests, the four moved fixtures (now imported) and the imports only they used. No remaining test body changes: 36 tests.
+  - **`dependency-cruiser.config.cjs`.** A ninth rule: `{ name: "no-import-of-electron-entry", severity: "error", from: { pathNot: "^apps/desktop/src/main/canonical-writer-package-smoke-main\\.test\\.ts$" }, to: { path: "^apps/desktop/src/main/main\\.ts$" } }`, with a comment naming Q4 (a) and why the one test is excluded.
+  - **Mutation configs.** `vitest.desktop-s6-mutation.config.ts` names `workspace-ipc.test.ts` in place of `workspace-bridge.test.ts`, which no longer reaches a `desktop-s6` entry. `vitest.desktop-s7-mutation.config.ts` adds `workspace-ipc.test.ts`, so the literal closing-answer rows still run against the `workspace-bridge.ts:91-200` mutants.
+- **Non-goals:** no handler, gate or envelope change (s8 builds the helper, s9 the sender check). No change to `project-entry-ipc.ts`, `project-registration-ipc.ts`, the preload, the renderer or any channel. The smoke wiring stays in `main.ts` (Q4 (a); moving it is L2-01, Phase 6). `desktop-runtime.ts` is not touched, so the "latched stop" rewording (p4-s4 acceptance) stays for the slice that next touches it. No unit pin is added for the broadcast subscription; it is a call that stays in place.
+- **Message and code ledger:** none. No text, code or channel changes.
+- **Affected paths:**
+  - `apps/desktop/src/main/main.ts`, `workspace-ipc.ts` (new), `workspace-ipc.test.ts` (new), `workspace-test-peers.ts` (new), `workspace-bridge.test.ts`;
+  - `dependency-cruiser.config.cjs`, `apps/harness/scripts/check-boundaries-parse.test.mjs`;
+  - `apps/desktop/vitest.desktop-s6-mutation.config.ts`, `apps/desktop/vitest.desktop-s7-mutation.config.ts`;
+  - `stryker.desktop-s6.config.json`, `stryker-range-anchors.json`.
+- **Stryker re-anchoring (lesson 3, same slice).** `pnpm check:mutation-ranges` on the candidate is the authority, red-first: after the move and before the re-point it fails on the three `main.ts` entries.
+
+  | Config | Entry now (`e2b1d48`) | After | Anchor row |
+  |---|---|---|---|
+  | `stryker.desktop-s6.config.json` | `main.ts:273-288` (`registerWorkspaceIpc`) | `workspace-ipc.ts:<first>-<last>`, the same function from `export function registerWorkspaceIpc(` to its closing `}`; the same mutants | `stryker-range-anchors.json:178` (entry path and lines; anchor texts unchanged) |
+  | `stryker.desktop-s6.config.json` | `main.ts:94-104` (shutdown services) | shifted up by the import lines `main.ts` loses | `:166` (line numbers only) |
+  | `stryker.desktop-s6.config.json` | `main.ts:406-406` (the readiness gate) | shifted up by those lines and the 25 moved lines | `:184` (line numbers only) |
+
+  - Counts do not change (14 ranges, 2 whole files), so the real-repository row (`check-stryker-ranges.test.mjs:448`) is not edited.
+  - Not taken: a whole-file `workspace-ipc.ts` entry. It would add `broadcastWorkspaceNotification`'s mutants and edit the real-repository row; s8 reshapes the file around the helper and gives the helper its own entry.
+- **Full-integration exposure:**
+  - **In-process:** `canonical-writer-package-smoke-main.test.ts` loads the real `main.ts`, now with `workspace-ipc.ts` beneath it (unit run).
+  - **e2e:** every journey registers the workspace handlers; `conversation.test.ts`, `conversation-accessibility.test.ts`, `projects.test.ts` and `renderer-foundation.test.ts` query the workspace, and the notification paths are the only proof of the broadcast subscription.
+  - **Smoke:** `package:launch-smoke` (bundle chunk order, precedent `ff162f5`). `workspace-ipc.ts` imports only modules already in the main bundle (`electron`, `@slopstop/protocol`, `../shared/desktop-api.js`, `./workspace-bridge.js`): no native addon and no dynamic import. The `package-smoke-load-order` guard is not edited.
+  - **Harness integration:** none.
+  - **The run:** Q15.
+- **Q15 (open, for Pedro): does s7 get its own run?**
+  - (a) **Recommended.** No per-slice heavy run. The Phase 4 final `check:deep` carries `test:e2e` and `package:launch-smoke` once, as for s4 and s5. The move adds one static import of a module whose own imports are already bundled, and the in-process smoke-main test loads the real entry.
+  - (b) One `package:launch-smoke` on the s7 candidate, with the coordinator's GO, because the Verification Notes name the chunk-order risk for s7.
+- **Dependencies:** after s6 (accepted). s8 depends on it (the helper serves `workspace-ipc.ts`).
+
+#### Test Contract: p4-s7-workspace-ipc-module
+
+Public seams: the depcruise rule set through `cruise` with the real `dependency-cruiser.config.cjs` (the `cruiseFixture` of `check-boundaries-parse.test.mjs`); the workspace IPC handlers registered through `registerWorkspaceIpc` on a mocked `ipcMain.handle`, and `broadcastWorkspaceNotification` on mocked windows; the real `main.ts` loaded with mocked Electron (`canonical-writer-package-smoke-main.test.ts`).
+
+- **Behavior P4-B19: no file may import the Electron entry.**
+  - Test: `forbids importing the Electron entry: $name` in `apps/harness/scripts/check-boundaries-parse.test.mjs` (new).
+  - Rows, over a fixture that also writes `apps/desktop/src/main/main.ts`:
+    - a static import from a desktop main test (`apps/desktop/src/main/workspace-bridge.test.ts` importing `./main.ts`);
+    - a dynamic `await import("./main.ts")` from another desktop main file (`apps/desktop/src/main/project-entry-ipc.test.ts`).
+    - each row expects exactly `[{ rule: "no-import-of-electron-entry", from: <the importer>, to: "apps/desktop/src/main/main.ts" }]`.
+  - Expected red: at the base the config has no such rule, so `violationsOf(output)` is `[]` and both rows fail.
+- **Behavior P4-B20: only the smoke wiring test may import it.**
+  - Test: `allows only the smoke wiring test to import the Electron entry` in `apps/harness/scripts/check-boundaries-parse.test.mjs` (new): `apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts` with `await import("./main.ts")` gives no violation, and the module graph contains `apps/desktop/src/main/main.ts`; `reports a forbidden TypeScript import: $name` in `apps/harness/scripts/check-boundaries-parse.test.mjs`, unedited.
+  - Expected red: none — pin. The new test is green at the base by design (no rule yet); binding 2 proves it bites.
+- **Behavior P4-B21: the workspace handlers and broadcast live in `workspace-ipc.ts`, with today's answers.**
+  - Test: `apps/desktop/src/main/workspace-ipc.test.ts` (new): `keeps workspace IPC handlers narrow and validated` and `answers workspace unavailable after the IPC gate closes: $channel`, moved from `workspace-bridge.test.ts` with titles and assertions unchanged, importing from `./workspace-ipc.js`.
+  - Expected red: at the base `./workspace-ipc.js` does not exist, so the file fails at import. It is a whole-file clause, so validate checks that the slice added it and does not re-prove a red.
+- **Behavior P4-B22: the entry still wires the workspace handlers behind the shutdown gate.**
+  - Test: `apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts`, unedited (80 tests; its `answers unavailable after quit starts: $channel` `queryWorkspace` row calls the handler `main.ts` registered and expects the literal closing envelope); `apps/desktop/src/main/project-entry-ipc.test.ts`, unedited.
+  - Expected red: none — pin. Both files are green at the base and after, with the same row counts; binding 3 proves the smoke-main row bites on the wiring.
+
+**Bindings that bite (each on the candidate, each restored after):**
+1. Delete the `no-import-of-electron-entry` rule. Both P4-B19 rows fail. This proves the rule, not the fixture, reports the import.
+2. Drop the rule's `pathNot` exception. P4-B20's new test fails, and `pnpm check:boundaries` names `canonical-writer-package-smoke-main.test.ts → apps/desktop/src/main/main.ts`. This proves the exception is by name and needed.
+3. In `main.ts`, register the workspace handlers with an always-open gate (`registerWorkspaceIpc(workspace.owner, { accepting: () => true })`). The smoke-main `answers unavailable after quit starts: queryWorkspace` row fails (the fake bridge is called). This proves P4-B22 bites on the entry's wiring of the moved function.
+4. In `workspace-ipc.ts`, drop the query handler's closed-gate branch. `answers workspace unavailable after the IPC gate closes: queryWorkspace` in `workspace-ipc.test.ts` fails. This proves the moved test exercises the moved module.
+
+**Order (red first):** P4-B19 and P4-B20 tests first (P4-B19 red). Then the rule: P4-B19 green, and `pnpm check:boundaries` red, naming `apps/desktop/src/main/workspace-bridge.test.ts → apps/desktop/src/main/main.ts` (the real-repository red). Then the move: `check:boundaries` green; `check:mutation-ranges` red on the three `main.ts` entries; then the re-point: green.
+
+**Structural checks (on the candidate):**
+- `rg -n "^export " apps/desktop/src/main/main.ts`: nothing.
+- `rg -n "registerWorkspaceIpc|broadcastWorkspaceNotification" apps/desktop/src/main/main.ts`: the import and the two calls in `bootstrap()`.
+- `rg -n "vi\.mock|mainMocks|\./main\.js|registerWorkspaceIpc|broadcastWorkspaceNotification" apps/desktop/src/main/workspace-bridge.test.ts`: nothing.
+- `rg -n "main\.js" apps/desktop/src`: only `canonical-writer-package-smoke-main.test.ts`.
+- `rg -n "workspace-ipc\.test\.ts" apps/desktop/vitest.desktop-s6-mutation.config.ts apps/desktop/vitest.desktop-s7-mutation.config.ts`: one hit each; `rg -n "workspace-bridge\.test\.ts" apps/desktop/vitest.desktop-s6-mutation.config.ts`: nothing.
+- In `stryker-range-anchors.json`, the row whose `first` is `export function registerWorkspaceIpc(` names `apps/desktop/src/main/workspace-ipc.ts`, and the range starts at that line.
+- `git diff <base> -- apps/desktop/src/main/project-entry-ipc.ts apps/desktop/src/main/project-registration-ipc.ts apps/desktop/src/main/desktop-runtime.ts apps/desktop/src/preload apps/desktop/src/renderer apps/desktop/src/shared`: empty.
+- `git diff <base> --stat` lists only the affected paths and this slice's evidence.
+
+#### Success Criteria: p4-s7-workspace-ipc-module
+
+Automated (smallest first; each read by its real exit code; desktop main tests with `--config vitest.main.config.ts`):
+- Green at `e2b1d48`, with row counts recorded: `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/workspace-bridge.test.ts src/main/canonical-writer-package-smoke-main.test.ts src/main/project-entry-ipc.test.ts` (measured: 39 and 80 for the first two), and `pnpm exec vitest run apps/harness/scripts/check-boundaries-parse.test.mjs` from the repository root (2).
+- Red then green: `pnpm exec vitest run apps/harness/scripts/check-boundaries-parse.test.mjs` from the root (P4-B19; P4-B20 green at both).
+- Green at the candidate: `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/workspace-ipc.test.ts src/main/workspace-bridge.test.ts src/main/canonical-writer-package-smoke-main.test.ts src/main/project-entry-ipc.test.ts`: 3 + 36 = 39 workspace tests, 80 smoke-main tests, `project-entry-ipc.test.ts` at its base count.
+- `pnpm check:boundaries` red then green, as in Order.
+- Each binding (1 to 4) observed red and then restored.
+- `pnpm check:mutation-ranges` red then exit 0.
+- `pnpm typecheck`, then `pnpm check` exit 0 (read CPU first, in its own call). Knip exit 0. `pnpm check:duplicates` reports no clone between `workspace-ipc.test.ts` and `workspace-bridge.test.ts`.
+- CodeScene 10 on `main.ts`, `workspace-ipc.ts` and both test files.
+- The run Q15 settles, with the coordinator's GO.
+- Mutation: none for this slice; the moved range is in the `desktop-s6` config of the final Phase 4 mutation run.
+
+Manual: none. The coordinator accepts the candidate (normal lane).
+
 ## Deferred Work
 
 Each slice gets its full contract when it becomes next. Behavior IDs continue from P4-B4; questions from Q11. Lanes come from `lane.mjs --paths` over the planned paths, raised to the feature lane (normal).
@@ -957,6 +1064,14 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - **2026-11-03: p4-s6 accepted by Pedro (rigorous).**
   - **Accepted identity:** `b0a4cc3` + `7f43278` (cross-message reject rows, red 6 against a cross-product mutant; sent-then-lost binding 6 failed) + `e2b1d48` (completeness), on `be54239`. The coordinator reviewed both fix commits. `7f43278` made `harnessRowSchema` an explicit tuple on the coordinator's instruction; that lost completeness for a future code, so `e2b1d48` restored `wholeUnion(Object.values(harnessFailureRows).map(exactRowSchema))` (equal to `b0a4cc3`) and pinned `codes` against `Object.keys(harnessFailureRows)` (red 2 with a hypothetical extra key). Protocol 362/362; CodeScene 10; `pnpm check` 3923/3923 at `7f43278`.
   - **Mutation:** Pedro chose one Stryker run on the final Phase 4 candidate, not one per slice.
+- **2026-11-03: p4-s7 detailed (coordinator instruction); Q15 open.**
+  - **Base:** `e2b1d48`. Static reads, plus two read-only runs in the Phase 4 worktree: `check:mutation-ranges` (exit 0; `desktop-s6` 14 ranges, 2 whole files) and the baselines of `workspace-bridge.test.ts` (39), `canonical-writer-package-smoke-main.test.ts` (80) and `check-boundaries-parse.test.mjs` (2, from the root). `depcruise --include-only` confirmed the two `main.ts` importers (static and dynamic).
+  - **Facts not in the Deferred Work row:** the two moved tests need four fixtures shared with `workspace-bridge.test.ts`, which a copy would make a jscpd clone, so a `workspace-test-peers.ts` joins the slice. `vitest.desktop-s7-mutation.config.ts` must also name `workspace-ipc.test.ts`: the moved rows are the literal pins of the `workspace-bridge.ts` closing answers in the `desktop-s7` range. The `desktop-s6` entries `main.ts:94-104` and `:406-406` shift with the move, not only `:273-288`. The boundaries test runs from the root only.
+  - **Settled in the contract (not asked):** the `desktop-s6` entry moves as a range over the same function, so counts and the real-repository row stay; a whole-file entry is left to s8.
+  - **Q15 (for Pedro), the s7 run:** (a) none per slice; the final `check:deep` carries e2e and `package:launch-smoke` (recommended); (b) one `package:launch-smoke` on the s7 candidate.
+  - **Not taken:** the "latched stop" rewording; s7 does not touch `desktop-runtime.ts`.
+  - **Lane:** normal by override (Q6 (a)); `lane.mjs --paths` answers rigorous (files 8 > 5; `ipc`). The label is recorded on approval.
+- **2026-11-03: p4-s7 contract approved; Q15 decided (a) (Pedro; coordinator).** Pedro approved hash `043dddf9ef6e…3938` (copy `approved-043dddf9.md`), lane normal by the Q6 override (lane.mjs answers rigorous). Q15 (a): no per-slice heavy run; the final check:deep carries `test:e2e` and `package:launch-smoke`.
 
 ## References
 
