@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: c8e8be0a56961f92cababb73c714c89d9564d70589cd33a83a2c30ba575e7775
+content_hash: e5959ad4f3da0a2c41efd970d1f91a2df0500588f20ae49b3de243011a2b0ead
 ---
 
 # Conversation — Human Decisions
@@ -2605,3 +2605,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - The p4-s7 approval on 2026-11-03 was not followed by a dispatch: the session stopped after the commit. On 2026-11-12 the implementer received p4-s7 on base 29b46a6.
 - The designer recorded the lane label p4-s7-workspace-ipc-module as normal (the Q6 override; approved at `043dddf9`). It joined shadow row 2026-11-03T15:05:03Z with rule rigorous and jev none.
 - The coordinator's append-only keep script was lost with the old session scratchpad and was recreated. It gives the same answers as before: every approved copy keeps, except `approved-16db782f.md`, which Pedro superseded with the P4-B3 pin approval.
+
+## 2026-11-12 — p4-s7 accepted (coordinator, normal lane)
+
+- Candidate `e34a84f` on `0a67690` (the branch rebased onto main `29b46a6`, no conflict). Red-first for P4-B19, the real-repository `check:boundaries` and the ranges; bindings 1-4 bite; `pnpm check` exit 0 (3927 tests); CodeScene 10, knip, jscpd clean; preflight clean; slice-verifier round 1 passed with no findings. The coordinator read the diff: a byte-identical move, and the new rule excludes only the smoke wiring test.
+- Brief on main: the p4-s7 acceptance entry plus the p4-s6 and p4-s7 TDD Evidence lines (the p4-s6 line existed only on the branch). New hash `e923f064…d22b`; keep holds against every approved copy except the superseded `approved-16db782f.md`. At the squash, the brief on main wins, because the branch's brief only lacks these appends.
+- Next: the p4-s8-gated-ipc-helper contract on `e34a84f` (normal by the Q6 override; it takes the whole-file `workspace-ipc.ts` Stryker entry).
