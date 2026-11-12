@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e5959ad4f3da0a2c41efd970d1f91a2df0500588f20ae49b3de243011a2b0ead
+content_hash: 23b42a6f8ed3cf47387394253eddadeccb2554194970e694b8733d129c94be2b
 ---
 
 # Conversation — Human Decisions
@@ -2611,3 +2611,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Candidate `e34a84f` on `0a67690` (the branch rebased onto main `29b46a6`, no conflict). Red-first for P4-B19, the real-repository `check:boundaries` and the ranges; bindings 1-4 bite; `pnpm check` exit 0 (3927 tests); CodeScene 10, knip, jscpd clean; preflight clean; slice-verifier round 1 passed with no findings. The coordinator read the diff: a byte-identical move, and the new rule excludes only the smoke wiring test.
 - Brief on main: the p4-s7 acceptance entry plus the p4-s6 and p4-s7 TDD Evidence lines (the p4-s6 line existed only on the branch). New hash `e923f064…d22b`; keep holds against every approved copy except the superseded `approved-16db782f.md`. At the squash, the brief on main wins, because the branch's brief only lacks these appends.
 - Next: the p4-s8-gated-ipc-helper contract on `e34a84f` (normal by the Q6 override; it takes the whole-file `workspace-ipc.ts` Stryker entry).
+
+## 2026-11-12 — p4-s8 contract approved (Q16 (a), Q17 (a))
+
+- The designer wrote p4-s8-gated-ipc-helper on `e34a84f`. A new plain helper, `handleGatedIpc` in `ipc-gate.ts`, owns the decode, gate, closing answer and forward steps for the nine gated handlers; it decodes synchronously before it reads the gate, which the unchanged closed-gate rows pin. One `IpcGate` type. No existing test is edited. `desktop-s6` goes from 14/2 to 7/5, red-first (P4-B25). 4 bindings. Coordinator check: additions only (keep against `approved-043dddf9.md`).
+- Pedro approved hash `8b17cdf5…530b` (copy `approved-8b17cdf5.md`), lane normal by the Q6 override; lane.mjs answers rigorous. Q16 (a): the non-gated variant lands in s9. Q17 (a): no per-slice run.
