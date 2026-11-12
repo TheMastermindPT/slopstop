@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e6faa328ee8e6bbbc983a6844effc5fabcea8993268bdc224d01c04370f6b2e4
+content_hash: c8e8be0a56961f92cababb73c714c89d9564d70589cd33a83a2c30ba575e7775
 ---
 
 # Conversation — Human Decisions
@@ -2599,3 +2599,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The designer wrote p4-s7-workspace-ipc-module. `registerWorkspaceIpc` and `broadcastWorkspaceNotification` move to `workspace-ipc.ts` with their bodies unchanged, and their 2 tests move with them. `main.ts` exports nothing. The depcruise rule `no-import-of-electron-entry` excludes the smoke-main test (Q4 (a)). The contract adds a shared test-only `workspace-test-peers.ts` (jscpd threshold 0) and the mutation-config updates. 4 bindings. Coordinator check: additions only (keep against `approved-77d46ce1.md`).
 - Pedro approved hash `043dddf9…3938` (copy `approved-043dddf9.md`), lane normal by the Q6 override; lane.mjs answers rigorous. Q15 (a): no per-slice heavy run.
+
+## 2026-11-12 — p4-s7 dispatched; lane label recorded
+
+- The p4-s7 approval on 2026-11-03 was not followed by a dispatch: the session stopped after the commit. On 2026-11-12 the implementer received p4-s7 on base 29b46a6.
+- The designer recorded the lane label p4-s7-workspace-ipc-module as normal (the Q6 override; approved at `043dddf9`). It joined shadow row 2026-11-03T15:05:03Z with rule rigorous and jev none.
+- The coordinator's append-only keep script was lost with the old session scratchpad and was recreated. It gives the same answers as before: every approved copy keeps, except `approved-16db782f.md`, which Pedro superseded with the P4-B3 pin approval.
