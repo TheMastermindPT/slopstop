@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-11-03T15:30:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "p4-s7 contract added (P4-B19 to P4-B22, bindings 1-4); Q15 open."
-content_hash: 69d7a53c6ee0b98c02c333a60270595c551898280f1f93e52370181233683e89
+content_hash: e923f064b7c5c40d9968adce92d060db1e93c9b8031cb139f84ce8b8c800d22b
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -1072,6 +1072,9 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Not taken:** the "latched stop" rewording; s7 does not touch `desktop-runtime.ts`.
   - **Lane:** normal by override (Q6 (a)); `lane.mjs --paths` answers rigorous (files 8 > 5; `ipc`). The label is recorded on approval.
 - **2026-11-03: p4-s7 contract approved; Q15 decided (a) (Pedro; coordinator).** Pedro approved hash `043dddf9ef6e…3938` (copy `approved-043dddf9.md`), lane normal by the Q6 override (lane.mjs answers rigorous). Q15 (a): no per-slice heavy run; the final check:deep carries `test:e2e` and `package:launch-smoke`.
+- **2026-11-12: p4-s7 accepted (coordinator; normal lane).** Candidate `e34a84f` on `0a67690` (rebased onto main `29b46a6`; s1-s6 code identical to `e2b1d48`). Red-first: P4-B19 2 failed / 3 passed; real-repository `check:boundaries` red on exactly `workspace-bridge.test.ts -> main.ts`, then green; ranges red on exactly the 3 `main.ts` entries, re-pointed to `main.ts:83-93`, `workspace-ipc.ts:32-47` and `main.ts:369-369` (counts 18/35, desktop-s6 14/2, desktop-s7 6/3). Bindings 1-4 bite and were restored by digest. `pnpm check` exit 0 (121 files, 3927 tests); typecheck, knip and jscpd (0 clones) exit 0; CodeScene 10 on the 5 source files; preflight clean; slice-verifier round 1 passed with no findings. Coordinator diff read: both functions moved byte-identical, the rule excludes only the smoke wiring test, `workspace-test-peers.ts` follows the `harness-session-test-peers.ts` precedent.
+  - **Noted, not changed:** the moved `keeps workspace IPC handlers narrow and validated` test sits at file level in `workspace-ipc.test.ts` (its `describe('WorkspaceBridge')` prefix is gone; the it-title is unchanged); both moved tests are now top-level, which fits a file without a `WorkspaceBridge`. The `main.ts` line cites in the approved p4-s7 text (`419/421`, `94-104`, `406`) are pre-move measurements and stay as written (append-only); the entries in `stryker-range-anchors.json` are authoritative.
+  - **needs-run (planned):** `package:launch-smoke`, `test:e2e` and the desktop-s6/s7 Stryker run on the final Phase 4 candidate (Q15 (a)).
 
 ## References
 
@@ -1093,3 +1096,5 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - `p4-s3-fault-meaning-owner`: `.rpiv/artifacts/evidence/2026-10-31_p4-s3-fault-meaning-owner-tdd.md`; accepted at `e94fd75` + `87f09e8`; preflight clean; slice-verifier round 1 passed.
 - `p4-s4-request-skeleton`: `.rpiv/artifacts/evidence/2026-11-01_p4-s4-request-skeleton-tdd.md`; accepted at `1a82fb6` + `603298b`; preflight clean; slice-verifier round 1 passed.
 - `p4-s5-bridge-fault-text`: `.rpiv/artifacts/evidence/2026-11-01_p4-s5-bridge-fault-text-tdd.md`; accepted at `bb61356` + `d885c9b`; preflight clean; slice-verifier round 1 passed.
+- `p4-s6-activation-switch-broken`: `.rpiv/artifacts/evidence/2026-11-02_p4-s6-activation-switch-broken-tdd.md`; candidate `b0a4cc3` + the review fix commit after it (base `be54239`); Q14 runs green at `b0a4cc3`; preflight clean; candidate review round 1 (0 blockers), triaged by Pedro; review table `p4-s6-candidate-review.md`.
+- `p4-s7-workspace-ipc-module`: `.rpiv/artifacts/evidence/2026-11-12_p4-s7-workspace-ipc-module-tdd.md`; accepted at `e34a84f` (base `0a67690`); preflight clean; slice-verifier round 1 passed.
