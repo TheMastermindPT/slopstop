@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-11-12T09:30:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "p4-s8 contract added (P4-B23 to P4-B25, bindings 1-4); Q16, Q17 open."
-content_hash: 81973d30f979c33c058a348e7c0015faa43d52388466f07eb1216fa5edb7e507
+content_hash: 360dcc626fc60630e5d8a433ed5900f4abe17bc9227271e3d9ec3c4d36e237b2
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -1195,6 +1195,10 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Not taken:** the "latched stop" rewording; s8 does not touch `desktop-runtime.ts`.
   - **Lane:** normal by override (Q6 (a)); `lane.mjs --paths` answers rigorous (files 7 > 5; `ipc`). The label is recorded on approval.
 - **2026-11-12: p4-s8 contract approved; Q16 (a), Q17 (a) (Pedro; coordinator).** Pedro approved hash `8b17cdf5b1ac…530b` (copy `approved-8b17cdf5.md`), lane normal by the Q6 override (lane.mjs answers rigorous). Q16 (a): the non-gated variant lands in s9 with the sender check. Q17 (a): no per-slice run; the final `check:deep` carries `test:e2e` and `package:launch-smoke`.
+- **2026-11-12: p4-s8 accepted (coordinator; normal lane).** Candidate `91669c2` on `fe86793` (the branch rebased onto main `b5501d3`; the code is the same as `e34a84f`). The slice text still says Q16 and Q17 are open; both were decided (a) in the approval entry above. Red-first: P4-B25 1 failed (14/2 against 7/5), then green; P4-B23 red at import, then 6/6. P4-B24 counts unchanged (9/8/3/80). `check:mutation-ranges` green, 7 ranges and 5 whole files. Before the re-point, the check named only `workspace-ipc.ts:32-47` (BROKEN) and none of the 7 drifted entries, because `checkStrykerRanges` reports only the first problem class (`check-stryker-ranges.mjs:231`). That was a prediction miss, not a weaker proof: the coordinator chose to take P4-B25 as the red-first and the green run as the check over every entry. `pnpm check` exit 0 (122 files, 3933 tests); typecheck, biome, knip and jscpd (0 clones) exit 0; CodeScene 10 on the 5 files; preflight clean; slice-verifier round 1 passed with no findings. Coordinator diff read: `handleGatedIpc` decodes, then reads the gate, then answers closing or forward; the nine handlers keep their channel, schema, closing answer and forward; `chooseRepository` and the capability handler are unchanged.
+  - **Bindings, differences from the contract lists (predicted with reasons before the runs):** binding 1 fails 9 rows, not every closed row: 4 of the 6 project-entry closed rows, the `registerProject` row, the 2 workspace closed rows and the 2 helper invalid-value rows. The activation and switch closing answers decode their request strictly themselves, so an invalid value still throws there. P4-B23 pins the decode-before-gate order for every handler, because all nine share the one helper. Binding 2 fails 14 rows, binding 3 fails 1, and binding 4 fails 2 (the closed `submitWorkspaceIntent` row also decodes an intent).
+  - **For s9 (implementer note):** s9 must decide how the expected window identity reaches the helper: through the gate object, a new parameter, or module state. That choice may touch `project-entry-ipc.ts`, `workspace-ipc.ts` or the `{ accepting }` literals in their tests, which the s9 Deferred Work row does not list.
+  - **needs-run (planned):** the final `check:deep`, and the desktop-s6 Stryker run, whose scope grew to 3 more whole files.
 
 ## References
 
@@ -1218,3 +1222,4 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - `p4-s5-bridge-fault-text`: `.rpiv/artifacts/evidence/2026-11-01_p4-s5-bridge-fault-text-tdd.md`; accepted at `bb61356` + `d885c9b`; preflight clean; slice-verifier round 1 passed.
 - `p4-s6-activation-switch-broken`: `.rpiv/artifacts/evidence/2026-11-02_p4-s6-activation-switch-broken-tdd.md`; candidate `b0a4cc3` + the review fix commit after it (base `be54239`); Q14 runs green at `b0a4cc3`; preflight clean; candidate review round 1 (0 blockers), triaged by Pedro; review table `p4-s6-candidate-review.md`.
 - `p4-s7-workspace-ipc-module`: `.rpiv/artifacts/evidence/2026-11-12_p4-s7-workspace-ipc-module-tdd.md`; accepted at `e34a84f` (base `0a67690`); preflight clean; slice-verifier round 1 passed.
+- `p4-s8-gated-ipc-helper`: `.rpiv/artifacts/evidence/2026-11-12_p4-s8-gated-ipc-helper-tdd.md`; accepted at `91669c2` (base `fe86793`); preflight clean; slice-verifier round 1 passed.
