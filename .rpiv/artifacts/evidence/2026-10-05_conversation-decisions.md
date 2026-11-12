@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: e93f4dbb9474eafdb2b05111f5e348deaea34bbca24616ca381d197c46b42526
+content_hash: 56b6d36becd525b939bb654c264f957af79ff9957bb89ecb8f16a98e445460be
 ---
 
 # Conversation — Human Decisions
@@ -2622,3 +2622,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Candidate `91669c2` on `fe86793` (the branch rebased onto main `b5501d3`). Red-first: P4-B25 and P4-B23; P4-B24 counts unchanged; bindings 1-4 bite (binding 1 fails 9 rows, because the activation and switch closing answers decode strictly; P4-B23 pins the order for all nine handlers). `check:mutation-ranges` 7/5; `pnpm check` exit 0 (3933 tests); CodeScene 10; preflight clean; slice-verifier round 1 passed with no findings.
 - `check:mutation-ranges` reports only the first problem class, so before the re-point it named 1 of the 8 failing entries. The coordinator took P4-B25 as the red-first proof.
 - Next: the p4-s9-ipc-sender-check contract (RIGOROUS; Q2 frame identity, Q3 fixed error plus redacted log; Q16 (a) puts the non-gated variant there). An open choice for s9: how the expected window identity reaches the helper.
+
+## 2026-11-12 — p4-s9 intent review triaged; contract approved
+
+- The designer wrote p4-s9-ipc-sender-check (RIGOROUS). A new `ipc-sender.ts` (`createIpcSender`) admits a call only from the main frame of a tracked window, compared by frame identity (`processId` + `routingId`), not by origin. A refused call gets a fixed error, and the log line names the channel only (Q2 (a), Q3 (a)). `handleGatedIpc` checks the sender first; the new `handleIpc` serves the 4 non-gated handlers (Q16 (a)).
+- Q18 (a), Pedro: a new `sender` parameter beside the gate. Grouping `{ gate, sender }` into one argument is the implementer's choice (R12).
+- Intent review round 1 on `c738013c…b345` (3 read-only reviewers): 1 blocker (R1: the entry seam did not prove the refusal on every channel), 9 concerns or warnings, 4 suggestions. Pedro's triage: fix everything in one edit, no second round; R11 ratified (a closure-state factory at the IPC edge, as `createDesktopShutdown` is, under the non-goal); the stateless `BrowserWindow.fromWebContents` alternative is not taken. Table: `p4-s9-intent-review.md`.
+- Pedro approved hash `8aaf8757…99bf` (copy `approved-8aaf8757.md`), lane rigorous. Bindings 1-17. The s9 run (`test:e2e`, `package:launch-smoke`) runs on the candidate after "livre".
