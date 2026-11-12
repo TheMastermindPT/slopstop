@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-11-12T18:00:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "p4-s9 intent review folded (Q18 (a); P4-B26 to P4-B32, bindings 1-17); awaiting approval."
-content_hash: 91ddf80a43d3f1292ff571ca71e583c256d16bee465255afcb178fa1cfc623ec
+content_hash: 59951c1b7def88a48f393fcc8ab3ad5ffa4ce4400447ec5715372ccd696e11ed
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -1375,6 +1375,10 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Behavior IDs** (renumbered inside this unapproved slice): P4-B26 rule, P4-B27 helpers, P4-B28 module channels, P4-B29 entry refusals, P4-B30 entry admissions (pin), P4-B31 unchanged answers (pin), P4-B32 Stryker row.
   - **No second review round** (Pedro). The s10 Deferred row's missing `main.ts` `desktop-s6` ranges are left to s10's contract.
 - **2026-11-12: p4-s9 contract approved (Pedro; coordinator).** Pedro approved hash `8aaf8757597d…99bf` (copy `approved-8aaf8757.md`), lane rigorous (lane.mjs agrees). Q18 (a), R11 and R12 ratified; the stateless alternative is not taken. The s9 run (`test:e2e`, `package:launch-smoke`) runs alone on the candidate, after Pedro says "livre" and the coordinator gives GO. Pedro accepts the candidate.
+- **2026-11-12: p4-s9 accepted by Pedro (rigorous).** Final candidate `9192e45` + `d7a4902` (docs) + `eeae135` (review fix round), on `8db84db` (the branch rebased onto main `d2d8e3f`). Reds at the named Order steps; bindings 1-17 bite (row sets for 2, 3, 6 and 14 differ from the contract lists, each predicted with its reason before the run). `pnpm check` exit 0 (123 files, 3985 tests). The s9 run on `9192e45`: `pnpm test:e2e` 27 passed, and `package:launch-smoke` exit 0 (logs `p4-s9-e2e.log`, `p4-s9-launch-smoke.log`); the fix round changed only tests and TSDoc, so there was no rerun. Preflight clean.
+  - **Candidate review round 1** (`p4-s9-candidate-review.md`): slice-verifier passed with 2 warnings, code reviewer passed with 1 suggestion, coverage reviewer failed with 1 concern and 3 suggestions; no blocker. Pedro fixed all of them in one round, and the coordinator reviewed the fix diff: every fake frame carries a URL and the refusal log matches exactly; events copy the frame; a two-window closed row; invoke channels derived from `desktopIpcChannels`; TSDoc on both register functions.
+  - **Deviations accepted by Pedro:** V1, `ipcSenderRefusedMessage` is not exported, because Knip fails an export no test may import (text and assertions unchanged). V2, the P4-B31 dialog-owner row was written after step 6; it was then run once against the base sources and passed, as predicted.
+  - **Known debt (Pedro, option (a)):** `canonical-writer-package-smoke-main.test.ts` scores CodeScene 9.68, the same as at the base (Primitive Obsession, pre-existing). The slice added a Large Method and removed it again (`answerOpenPaths`). Raising the file to 10 is left for a later slice.
 
 ## References
 
@@ -1399,3 +1403,4 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - `p4-s6-activation-switch-broken`: `.rpiv/artifacts/evidence/2026-11-02_p4-s6-activation-switch-broken-tdd.md`; candidate `b0a4cc3` + the review fix commit after it (base `be54239`); Q14 runs green at `b0a4cc3`; preflight clean; candidate review round 1 (0 blockers), triaged by Pedro; review table `p4-s6-candidate-review.md`.
 - `p4-s7-workspace-ipc-module`: `.rpiv/artifacts/evidence/2026-11-12_p4-s7-workspace-ipc-module-tdd.md`; accepted at `e34a84f` (base `0a67690`); preflight clean; slice-verifier round 1 passed.
 - `p4-s8-gated-ipc-helper`: `.rpiv/artifacts/evidence/2026-11-12_p4-s8-gated-ipc-helper-tdd.md`; accepted at `91669c2` (base `fe86793`); preflight clean; slice-verifier round 1 passed.
+- `p4-s9-ipc-sender-check`: `.rpiv/artifacts/evidence/2026-11-12_p4-s9-ipc-sender-check-tdd.md`; accepted by Pedro at `9192e45` + `d7a4902` + `eeae135` (base `8db84db`); test:e2e 27 passed, package:launch-smoke exit 0; preflight clean; candidate review round 1 (0 blockers), triaged by Pedro; review table `p4-s9-candidate-review.md`.
