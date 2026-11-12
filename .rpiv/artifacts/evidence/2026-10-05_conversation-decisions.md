@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 23b42a6f8ed3cf47387394253eddadeccb2554194970e694b8733d129c94be2b
+content_hash: e93f4dbb9474eafdb2b05111f5e348deaea34bbca24616ca381d197c46b42526
 ---
 
 # Conversation — Human Decisions
@@ -2616,3 +2616,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - The designer wrote p4-s8-gated-ipc-helper on `e34a84f`. A new plain helper, `handleGatedIpc` in `ipc-gate.ts`, owns the decode, gate, closing answer and forward steps for the nine gated handlers; it decodes synchronously before it reads the gate, which the unchanged closed-gate rows pin. One `IpcGate` type. No existing test is edited. `desktop-s6` goes from 14/2 to 7/5, red-first (P4-B25). 4 bindings. Coordinator check: additions only (keep against `approved-043dddf9.md`).
 - Pedro approved hash `8b17cdf5…530b` (copy `approved-8b17cdf5.md`), lane normal by the Q6 override; lane.mjs answers rigorous. Q16 (a): the non-gated variant lands in s9. Q17 (a): no per-slice run.
+
+## 2026-11-12 — p4-s8 accepted (coordinator, normal lane)
+
+- Candidate `91669c2` on `fe86793` (the branch rebased onto main `b5501d3`). Red-first: P4-B25 and P4-B23; P4-B24 counts unchanged; bindings 1-4 bite (binding 1 fails 9 rows, because the activation and switch closing answers decode strictly; P4-B23 pins the order for all nine handlers). `check:mutation-ranges` 7/5; `pnpm check` exit 0 (3933 tests); CodeScene 10; preflight clean; slice-verifier round 1 passed with no findings.
+- `check:mutation-ranges` reports only the first problem class, so before the re-point it named 1 of the 8 failing entries. The coordinator took P4-B25 as the red-first proof.
+- Next: the p4-s9-ipc-sender-check contract (RIGOROUS; Q2 frame identity, Q3 fixed error plus redacted log; Q16 (a) puts the non-gated variant there). An open choice for s9: how the expected window identity reaches the helper.
