@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/architecture-reviews/2026-10-23_16-18-48_whole-project.m
 lane: normal
 lane_reasons: ["no upstream lane", "s6, s7, s8, s9 lane.mjs --paths: rigorous (sensitive word: ipc; files: 6 > 5)"]
 status: ready
-last_updated: 2026-11-03T15:30:00+0000
+last_updated: 2026-11-12T09:30:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "p4-s7 contract added (P4-B19 to P4-B22, bindings 1-4); Q15 open."
-content_hash: e923f064b7c5c40d9968adce92d060db1e93c9b8031cb139f84ce8b8c800d22b
+last_updated_note: "p4-s8 contract added (P4-B23 to P4-B25, bindings 1-4); Q16, Q17 open."
+content_hash: 81973d30f979c33c058a348e7c0015faa43d52388466f07eb1216fa5edb7e507
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -929,6 +929,117 @@ Automated (smallest first; each read by its real exit code; desktop main tests w
 
 Manual: none. The coordinator accepts the candidate (normal lane).
 
+### Slice p4-s8-gated-ipc-helper
+
+- **`slice_id`:** `p4-s8-gated-ipc-helper`.
+- **Lane:** normal by override (Q6 (a): a helper extraction under unchanged tests). `lane.mjs --paths` over the nine planned paths answers rigorous (files: 7 > 5; sensitive word `ipc` in the helper, its test and the three IPC modules); Q6 lowers it. No intent review. Pedro approves this contract; the coordinator accepts the candidate, and Pedro accepts the combined Phase 4 result.
+- **Finding:** L1-07. The nine gated handlers each write out the same decode, gate, closing-answer and forward shape. One plain helper at the IPC edge owns that shape; each handler supplies its channel, schema, closing answer and forward.
+- **Base:** `e34a84f` (p4-s7 accepted, on `fix/arch-review-phase-4`). Every line below was read at `e34a84f`.
+- **Measured at `e34a84f`:**
+  - **Handlers** (`rg -n "ipcMain\.(handle|on)\(" apps/desktop/src`, non-test): 13. The nine with the shared shape are `project-entry-ipc.ts:41-70` (`listProjects`, `activateProject`, `switchProject`, `upgradeProject`, `readConversation`, `saveConversationMessage`), `workspace-ipc.ts:36-46` (`queryWorkspace`, `submitWorkspaceIntent`) and `project-registration-ipc.ts:60-64` (`registerProject`). Each is: `decodeStrict(<schema>, value)`; `if (!gate.accepting()) return Promise.resolve(<closing answer of the decoded request>)`; `return <bridge call>(request)`. `listProjects` decodes and discards its value; its closing answer is the constant `projectListClosing` and its forward takes no argument. `submitWorkspaceIntent` closes with `workspaceIntentClosing(capabilityForIntent(intent))`.
+  - The other four are not gated in that shape: `main.ts:247-250` (`getHarnessStatus`, `retryHarness`, no gate), `project-registration-ipc.ts:54-56` (`getRegistrationCapability`, no gate) and `:57-59` (`chooseRepository`, no value; it checks the gate twice inside `chooseRepository`, `:35` and `:43`, around the dialog).
+  - **The gate type is written three times:** `project-entry-ipc.ts:39` and `workspace-ipc.ts:34` inline `Readonly<{ accepting(): boolean }>`; `project-registration-ipc.ts:17` names it `IpcGate`. `desktop-shutdown.ts:18` declares the `accepting()` the gate is built on (not edited).
+  - **What the unchanged tests pin** (base counts: `project-entry-ipc.test.ts` 9, `project-registration-ipc.test.ts` 8, `workspace-ipc.test.ts` 3, `canonical-writer-package-smoke-main.test.ts` 80):
+    - the decode runs before the gate and throws synchronously: every closed-gate row also calls the handler with an extra key and expects `expect(() => call(…)).toThrow()` (`project-entry-ipc.test.ts:236`, `project-registration-ipc.test.ts:90`, `workspace-ipc.test.ts` closed rows). A helper that reads the gate first, or decodes inside a Promise, fails them;
+    - each channel's closing answer, whole, with the bridge fake never called (`answers unavailable after the IPC gate closes: $channel`, 6 rows in `project-entry-ipc.test.ts`; the `registerProject` row in `project-registration-ipc.test.ts:83-93`; 2 rows in `workspace-ipc.test.ts`);
+    - the open path forwards the decoded request and answers the bridge's result (`registers strict Project IPC handlers: …`, `registers strict conversation IPC handlers`, `keeps workspace IPC handlers narrow and validated`);
+    - the entry wires the handlers behind `desktopShutdown` (`answers unavailable after quit starts: $channel` in the smoke-main test: `listProjects`, `registerProject`, `queryWorkspace`).
+  - `decodeStrict` (`packages/protocol/src/schema-codec.ts:29`) is `decodeStrict<S extends StrictDecoder>(schema: S, input: unknown): S["Type"]`, synchronous; `StrictDecoder` is package-internal.
+  - `pnpm check:mutation-ranges` at `e34a84f`: exit 0; `stryker.desktop-s6.config.json` 14 ranges, 2 whole files. Its IPC entries: `project-entry-ipc.ts:43`, `:48`, `:53`, `:58`, `:63`, `:68` (the six gate lines, anchors `stryker-range-anchors.json:112-142`), `project-registration-ipc.ts:35`, `:43` (`chooseRepository`'s gates, `:148`, `:154`) and `:62` (`registerProject`'s gate, `:160`), and `workspace-ipc.ts:32-47` (`registerWorkspaceIpc`, `:178`; s7 left the whole-file entry to s8). The real-repository row is `passes on the repository's own configs and anchors` (`check-stryker-ranges.test.mjs`, `desktop-s6` at `:448`: `ranges: 14, wholeFiles: 2`). No other Stryker config names an IPC file. `vitest.desktop-s6-mutation.config.ts` names the three IPC tests and the smoke-main test.
+- **Deliverable:**
+  - **`ipc-gate.ts` (new), a plain function at the IPC edge** (AGENTS.md: the IPC helper is a plain function; `answerRequest` stays the Promise facade).
+    - It exports the gate type `IpcGate` (`Readonly<{ accepting(): boolean }>`) and one helper, `handleGatedIpc(channel, schema, gate, { closing, forward })`.
+    - The helper registers one `ipcMain.handle(channel, …)` whose handler, per call: decodes the value with `decodeStrict(schema, value)` first and synchronously (an invalid value throws before the gate is read and before either function is called); then reads `gate.accepting()`; when closed, returns `Promise.resolve(closing(request))`; when open, returns `forward(request)`.
+    - The schema parameter is typed by what `decodeStrict` accepts, with the request type derived from it; no new export from `@slopstop/protocol`.
+  - **The nine handlers use it.** `registerProjectEntryIpc`, `registerWorkspaceIpc` and the `registerProject` handler of `registerProjectRegistrationIpc` each pass their channel, schema, closing answer and forward, with today's values. `listProjects` keeps its constant closing answer and its argument-free forward. The three modules type their gate parameter as `IpcGate`; `project-registration-ipc.ts` drops its local `IpcGate` and imports it. Their TSDoc stays true as written.
+  - **Not in the helper:** `chooseRepository` (no value; two gate reads around the dialog) and `getRegistrationCapability` keep their own `ipcMain.handle`, unchanged. `main.ts` is not edited.
+- **Q16 (open, for Pedro): where the non-gated variant lands.** The Architecture names "a non-gated variant" for the four other handlers.
+  - (a) **Recommended.** In s9. Today it would only wrap `ipcMain.handle` with nothing to add; s9 gives it its job (the sender check) and already edits `main.ts`'s two handlers and `project-registration-ipc.ts`.
+  - (b) In s8, as a pass-through over the four handlers, which adds `main.ts` to s8.
+- **Q17 (open, for Pedro): does s8 get its own run?**
+  - (a) **Recommended.** None per slice (as Q15 (a)). Every one of the nine handlers keeps its unit rows unedited, and the smoke-main test drives three of them through the real entry; the final `check:deep` carries `test:e2e` and `package:launch-smoke`.
+  - (b) One `pnpm test:e2e` on the s8 candidate, with the coordinator's GO: every renderer call goes through the new helper.
+- **Non-goals:** no answer, channel, schema, preload or renderer change. No sender check (s9). `main.ts`, `desktop-shutdown.ts` and `desktop-runtime.ts` are not edited, so the "latched stop" rewording (p4-s4 acceptance) stays for the slice that next touches `desktop-runtime.ts`. No existing test is edited.
+- **Message and code ledger:** none.
+- **Affected paths:**
+  - `apps/desktop/src/main/ipc-gate.ts` (new), `ipc-gate.test.ts` (new);
+  - `apps/desktop/src/main/project-entry-ipc.ts`, `project-registration-ipc.ts`, `workspace-ipc.ts`;
+  - `apps/desktop/vitest.desktop-s6-mutation.config.ts`;
+  - `stryker.desktop-s6.config.json`, `stryker-range-anchors.json`, `apps/harness/scripts/check-stryker-ranges.test.mjs` (its real-repository row).
+- **Stryker re-anchoring (lesson 3, same slice).** The gate lines move into the helper, so the `desktop-s6` IPC entries change shape. `pnpm check:mutation-ranges` on the candidate is the authority, red-first: the real-repository row is edited before the configs (P4-B25).
+
+  | Config | Entry now (`e34a84f`) | After | Anchor rows |
+  |---|---|---|---|
+  | `stryker.desktop-s6.config.json` | none | `ipc-gate.ts` (whole file): the decode-then-gate order and the closing/forward choice for all nine handlers | none |
+  | `stryker.desktop-s6.config.json` | `project-entry-ipc.ts:43`, `:48`, `:53`, `:58`, `:63`, `:68` (6 single lines) | `project-entry-ipc.ts` (whole file): the six channel/schema/closing/forward choices | `:112-142` removed |
+  | `stryker.desktop-s6.config.json` | `workspace-ipc.ts:32-47` | `workspace-ipc.ts` (whole file), the entry s7 deferred; adds `broadcastWorkspaceNotification`'s mutants, which `keeps workspace IPC handlers narrow and validated` asserts | `:178` removed |
+  | `stryker.desktop-s6.config.json` | `project-registration-ipc.ts:62` (`registerProject`'s gate) | the `registerProject` helper call, first to last line, so its closing answer and forward stay mutated | `:160` (texts and lines change) |
+  | `stryker.desktop-s6.config.json` | `project-registration-ipc.ts:35`, `:43` (`chooseRepository`) | the same two lines, shifted only if the `IpcGate` import changes the line count | `:148`, `:154` (line numbers only) |
+
+  - Counts: `desktop-s6` goes from 14 ranges and 2 whole files to **7 ranges and 5 whole files**; the other configs do not change.
+  - Not taken: `project-registration-ipc.ts` as a whole file. It would add `registrationCapability`'s and the dialog path's mutants, which were never in `desktop-s6`.
+  - `vitest.desktop-s6-mutation.config.ts` adds `ipc-gate.test.ts`. `vitest.desktop-s7-mutation.config.ts` is not edited (`desktop-s7` mutates no IPC file).
+- **Full-integration exposure:**
+  - **In-process:** `canonical-writer-package-smoke-main.test.ts` loads the real `main.ts` and calls `listProjects`, `registerProject` and `queryWorkspace` through the helper (unit run).
+  - **e2e:** every journey: every renderer call to the nine channels goes through the helper (`projects`, `registration`, `conversation`, `conversation-accessibility`, `project-upgrade`, `renderer-foundation`, `shell`).
+  - **Smoke:** `package:launch-smoke` (the packaged renderer calls through the preload). The helper imports only `electron`, `@slopstop/protocol` and modules already bundled.
+  - **Harness integration:** none.
+  - **The run:** Q17.
+- **Dependencies:** after s7 (accepted; `workspace-ipc.ts`). s9 builds on the helper.
+
+#### Test Contract: p4-s8-gated-ipc-helper
+
+Public seams: `handleGatedIpc` registered on a mocked `ipcMain.handle` and called as Electron calls a handler (`(event, value)`); the nine handlers through `registerProjectEntryIpc`, `registerWorkspaceIpc` and `registerProjectRegistrationIpc` on the same mock; the real `main.ts` with mocked Electron; `checkStrykerRanges` over the repository.
+
+- **Behavior P4-B23: one helper decodes strictly, then gates, then answers closing or forwards.**
+  - Test: `apps/desktop/src/main/ipc-gate.test.ts` (new).
+  - Rows (each title its own `it`, over a test schema and spy `closing`, `forward` and `accepting`):
+    - `registers one handler on its channel`: one `ipcMain.handle` call, with the given channel;
+    - `forwards the decoded request while the gate is open`: the handler returns `forward`'s promise, resolving to its answer; `forward` gets the decoded request once; `closing` is not called;
+    - `answers the closing result once the gate closes`: resolves to `closing(request)` for the decoded request; `forward` is not called;
+    - `rejects an invalid value before reading the gate: $gate`, open and closed: calling the handler with an extra key throws synchronously (`toThrow`), and `accepting`, `closing` and `forward` are not called;
+    - `reads the gate on every call`: one registration, the gate open for the first call and closed for the second → `forward` once, then `closing` once.
+  - Expected red: at the base `./ipc-gate.js` does not exist, so the file fails at import. It is a whole-file clause, so validate checks that the slice added it and does not re-prove a red.
+- **Behavior P4-B24: the nine handlers answer exactly as before.**
+  - Test: `apps/desktop/src/main/project-entry-ipc.test.ts`, `apps/desktop/src/main/project-registration-ipc.test.ts`, `apps/desktop/src/main/workspace-ipc.test.ts` and `apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts`, each unedited.
+  - Expected red: none — pin. All four are green at the base and after with the same counts (9, 8, 3, 80); bindings 1, 3 and 4 prove they bite on the helper's order and on each module's per-channel choices.
+- **Behavior P4-B25: the `desktop-s6` mutation set follows the helper.**
+  - Test: `passes on the repository's own configs and anchors` in `apps/harness/scripts/check-stryker-ranges.test.mjs`, its `desktop-s6` row edited to `{ config: "stryker.desktop-s6.config.json", ranges: 7, wholeFiles: 5 }`.
+  - Expected red: at the base the repository has 14 ranges and 2 whole files in `desktop-s6`, so the test fails on that row.
+
+**Bindings that bite (each on the candidate, each restored after):**
+1. In `handleGatedIpc`, read the gate before decoding (closed → closing answer without decoding). The closed-gate rows' invalid-value assertions fail: `answers unavailable after the IPC gate closes: $channel` in `project-entry-ipc.test.ts` (6), the `registerProject` row in `project-registration-ipc.test.ts`, the 2 closed rows in `workspace-ipc.test.ts`, and P4-B23's `rejects an invalid value before reading the gate: closed`. This proves the unchanged tests pin decode-before-gate through the helper.
+2. In `handleGatedIpc`, forward whatever the gate says. P4-B23's closed rows fail, and so do the 9 closed-gate rows of the three IPC tests (the bridge fake is called) and the smoke-main `answers unavailable after quit starts: $channel` rows.
+3. In `registerProjectEntryIpc`, give `switchProject` the activation closing answer. `answers unavailable after the IPC gate closes: switchProject` fails. This proves each channel's closing answer stays pinned.
+4. In `registerWorkspaceIpc`, decode the intent with `WorkspaceQuerySchema`. `keeps workspace IPC handlers narrow and validated` fails (a valid intent is refused). This proves each channel's schema stays pinned.
+
+**Order (red first):** P4-B25's row first (red), then the helper test (red at import), then the helper (P4-B23 green), then the nine handlers onto it (P4-B24 green throughout), then the Stryker and anchor edits (`check:mutation-ranges` and P4-B25 green).
+
+**Structural checks (on the candidate):**
+- `rg -n "ipcMain\.handle\(" apps/desktop/src --glob '!*.test.ts'`: `ipc-gate.ts` (1), `project-registration-ipc.ts` (2: `getRegistrationCapability`, `chooseRepository`), `main.ts` (2).
+- `rg -n "gate\.accepting\(\)" apps/desktop/src/main --glob '!*.test.ts'`: `ipc-gate.ts` and the two in `chooseRepository`.
+- `rg -n "accepting\(\): boolean" apps/desktop/src/main`: `ipc-gate.ts` and `desktop-shutdown.ts:18` only.
+- `rg -n "decodeStrict\(" apps/desktop/src/main/project-entry-ipc.ts apps/desktop/src/main/workspace-ipc.ts`: only `broadcastWorkspaceNotification`'s.
+- `stryker.desktop-s6.config.json` names `ipc-gate.ts`, `project-entry-ipc.ts` and `workspace-ipc.ts` as whole files and has no `project-entry-ipc.ts:` or `workspace-ipc.ts:` range; `stryker-range-anchors.json` has no row for them.
+- `rg -n "ipc-gate\.test\.ts" apps/desktop/vitest.desktop-s6-mutation.config.ts`: one hit.
+- `git diff <base> -- apps/desktop/src/main/main.ts apps/desktop/src/main/desktop-shutdown.ts apps/desktop/src/main/desktop-runtime.ts apps/desktop/src/main/project-entry-ipc.test.ts apps/desktop/src/main/project-registration-ipc.test.ts apps/desktop/src/main/workspace-ipc.test.ts apps/desktop/src/preload apps/desktop/src/renderer apps/desktop/src/shared packages`: empty.
+- `git diff <base> --stat` lists only the affected paths and this slice's evidence.
+
+#### Success Criteria: p4-s8-gated-ipc-helper
+
+Automated (smallest first; each read by its real exit code; desktop main tests with `--config vitest.main.config.ts`):
+- Green at `e34a84f`, counts recorded: `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/project-entry-ipc.test.ts src/main/project-registration-ipc.test.ts src/main/workspace-ipc.test.ts src/main/canonical-writer-package-smoke-main.test.ts` (measured: 9, 8, 3, 80).
+- Red then green: `pnpm exec vitest run apps/harness/scripts/check-stryker-ranges.test.mjs` from the repository root (P4-B25) and `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/ipc-gate.test.ts` (P4-B23).
+- Green at the candidate with the same counts: the four P4-B24 files.
+- Each binding (1 to 4) observed red and then restored.
+- `pnpm check:mutation-ranges` exit 0 (`desktop-s6` 7 ranges, 5 whole files).
+- `pnpm typecheck`, then `pnpm check` exit 0 (read CPU first, in its own call). Knip exit 0. `pnpm check:duplicates` reports no clone.
+- CodeScene 10 on `ipc-gate.ts`, `project-entry-ipc.ts`, `project-registration-ipc.ts`, `workspace-ipc.ts` and `ipc-gate.test.ts`.
+- The run Q17 settles, with the coordinator's GO.
+- Mutation: none for this slice; `desktop-s6` runs in the final Phase 4 mutation run.
+
+Manual: none. The coordinator accepts the candidate (normal lane).
+
 ## Deferred Work
 
 Each slice gets its full contract when it becomes next. Behavior IDs continue from P4-B4; questions from Q11. Lanes come from `lane.mjs --paths` over the planned paths, raised to the feature lane (normal).
@@ -1075,6 +1186,15 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - **2026-11-12: p4-s7 accepted (coordinator; normal lane).** Candidate `e34a84f` on `0a67690` (rebased onto main `29b46a6`; s1-s6 code identical to `e2b1d48`). Red-first: P4-B19 2 failed / 3 passed; real-repository `check:boundaries` red on exactly `workspace-bridge.test.ts -> main.ts`, then green; ranges red on exactly the 3 `main.ts` entries, re-pointed to `main.ts:83-93`, `workspace-ipc.ts:32-47` and `main.ts:369-369` (counts 18/35, desktop-s6 14/2, desktop-s7 6/3). Bindings 1-4 bite and were restored by digest. `pnpm check` exit 0 (121 files, 3927 tests); typecheck, knip and jscpd (0 clones) exit 0; CodeScene 10 on the 5 source files; preflight clean; slice-verifier round 1 passed with no findings. Coordinator diff read: both functions moved byte-identical, the rule excludes only the smoke wiring test, `workspace-test-peers.ts` follows the `harness-session-test-peers.ts` precedent.
   - **Noted, not changed:** the moved `keeps workspace IPC handlers narrow and validated` test sits at file level in `workspace-ipc.test.ts` (its `describe('WorkspaceBridge')` prefix is gone; the it-title is unchanged); both moved tests are now top-level, which fits a file without a `WorkspaceBridge`. The `main.ts` line cites in the approved p4-s7 text (`419/421`, `94-104`, `406`) are pre-move measurements and stay as written (append-only); the entries in `stryker-range-anchors.json` are authoritative.
   - **needs-run (planned):** `package:launch-smoke`, `test:e2e` and the desktop-s6/s7 Stryker run on the final Phase 4 candidate (Q15 (a)).
+- **2026-11-12: p4-s8 detailed (coordinator instruction); Q16 and Q17 open.**
+  - **Base:** `e34a84f`. Static reads, plus read-only runs in the Phase 4 worktree: `check:mutation-ranges` (exit 0; `desktop-s6` 14 ranges, 2 whole files) and the IPC test baselines (`project-entry-ipc` 9, `project-registration-ipc` 8, `workspace-ipc` 3, smoke-main 80).
+  - **Facts the contract rests on:** the unchanged closed-gate rows call each handler with an invalid value and expect a synchronous throw, so the helper must decode synchronously and before the gate. The gate type is written three times (two inline, one local `IpcGate`); the helper module owns it.
+  - **Stryker, settled in the contract:** `ipc-gate.ts`, `project-entry-ipc.ts` and `workspace-ipc.ts` become whole-file `desktop-s6` entries (the last closes s7's deferral, replacing `workspace-ipc.ts:32-47`); `registerProject`'s gate line becomes the range of its helper call; `chooseRepository`'s two lines stay. `desktop-s6` goes 14/2 → 7/5, red-first through the real-repository row (P4-B25). `project-registration-ipc.ts` is not made a whole file (its dialog path was never in `desktop-s6`).
+  - **Q16 (for Pedro), the non-gated variant:** (a) in s9, where the sender check gives it a job (recommended); (b) in s8 as a pass-through, adding `main.ts` to s8.
+  - **Q17 (for Pedro), the s8 run:** (a) none per slice; the final `check:deep` carries e2e and `package:launch-smoke` (recommended); (b) one `pnpm test:e2e` on the s8 candidate.
+  - **Not taken:** the "latched stop" rewording; s8 does not touch `desktop-runtime.ts`.
+  - **Lane:** normal by override (Q6 (a)); `lane.mjs --paths` answers rigorous (files 7 > 5; `ipc`). The label is recorded on approval.
+- **2026-11-12: p4-s8 contract approved; Q16 (a), Q17 (a) (Pedro; coordinator).** Pedro approved hash `8b17cdf5b1ac…530b` (copy `approved-8b17cdf5.md`), lane normal by the Q6 override (lane.mjs answers rigorous). Q16 (a): the non-gated variant lands in s9 with the sender check. Q17 (a): no per-slice run; the final `check:deep` carries `test:e2e` and `package:launch-smoke`.
 
 ## References
 
