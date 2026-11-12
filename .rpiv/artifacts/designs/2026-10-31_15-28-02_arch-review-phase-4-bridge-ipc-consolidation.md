@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/architecture-reviews/2026-10-23_16-18-48_whole-project.m
 lane: normal
 lane_reasons: ["no upstream lane", "s6, s7, s8, s9 lane.mjs --paths: rigorous (sensitive word: ipc; files: 6 > 5)"]
 status: ready
-last_updated: 2026-11-12T09:30:00+0000
+last_updated: 2026-11-12T18:00:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "p4-s8 contract added (P4-B23 to P4-B25, bindings 1-4); Q16, Q17 open."
-content_hash: 360dcc626fc60630e5d8a433ed5900f4abe17bc9227271e3d9ec3c4d36e237b2
+last_updated_note: "p4-s9 intent review folded (Q18 (a); P4-B26 to P4-B32, bindings 1-17); awaiting approval."
+content_hash: 91ddf80a43d3f1292ff571ca71e583c256d16bee465255afcb178fa1cfc623ec
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -1040,6 +1040,165 @@ Automated (smallest first; each read by its real exit code; desktop main tests w
 
 Manual: none. The coordinator accepts the candidate (normal lane).
 
+### Slice p4-s9-ipc-sender-check
+
+- **`slice_id`:** `p4-s9-ipc-sender-check`.
+- **Lane:** rigorous (Q6 (a): s9 is the security check). `lane.mjs --paths` over the sixteen planned paths answers rigorous (files: 9 > 5; sensitive word `ipc`). The intent review ran (round 1 of 1, folded below), and Pedro accepts the candidate.
+- **Finding:** L1-05, on Q2 (a), Q3 (a), Q16 (a) and Q18 (a). Every renderer-to-main IPC handler admits a call only from the main frame of a window SlopStop created. Any other call rejects with one fixed error and writes one log line naming the channel only. The non-gated variant of the s8 helper lands here and serves the four handlers that have no gate.
+- **Base:** `91669c2` (p4-s8 accepted, on `fix/arch-review-phase-4`). Every line below was read at `91669c2`; static reads only (no test, gate or Stryker run for this contract).
+- **Measured at `91669c2`:**
+  - **Handlers** (non-test `rg -n "ipcMain\.handle\("`): `ipc-gate.ts:26` (the nine gated handlers through `handleGatedIpc`), `project-registration-ipc.ts:54` (`getRegistrationCapability`) and `:57` (`chooseRepository`, which reads `event.sender` for the dialog owner through `BrowserWindow.fromWebContents`), `main.ts:247` (`getHarnessStatus`) and `:248` (`retryHarness`). None reads `event.senderFrame` (`rg senderFrame apps`: nothing).
+  - **Order in `main.ts` `bootstrap()`:** the handlers are registered at `:379-382`, before the window exists; the window is created at `:388` (`smokeWindow = await createActiveWindow()`). `createApplicationWindow` (`:262-294`) constructs the `BrowserWindow` at `:263`, then awaits `loadURL` (`:286`) or `loadFile` (`:290`). The renderer's preload and React code run during that load, so they can invoke a channel before `createActiveWindow()` resolves. A window recorded after the `await` would refuse those first calls.
+  - **More than one window over time:** `app.on("activate")` (`:391-396`) reopens a window through `create: createActiveWindow` when none is open (`window-reopen.ts`), and `focusExistingWindow` reuses `getAllWindows()[0]`. So the identity is per created window, not fixed at boot. Popups are denied (`security.ts`), so every window comes from `createApplicationWindow`.
+  - **The renderer is `file://` under `loadFile`** (`:290`), so an origin check alone admits any `file:` frame (Q2's reason for frame identity).
+  - **Electron** (Context7 `/electron/electron`): `event.senderFrame` is resolved on each read and is `null` once the frame has navigated or gone; read it synchronously at handler entry, before any `await`. The main-frame check compares the sending frame with `event.sender.mainFrame`, read per call (a reload can replace the main frame, `tests/e2e/accessibility.ts:36`); `WebFrameMain` exposes `processId` and `routingId`, which identify a frame. A window is not used after its `closed` event.
+  - **The gate literals the implementer asked about:** `registerProjectEntryIpc(projects, { accepting })` (`project-entry-ipc.test.ts:48`), `registerProjectRegistrationIpc({ register }, { accepting })` (`project-registration-ipc.test.ts:36`), `registerWorkspaceIpc(bridge, { accepting })` (`workspace-ipc.test.ts:32`, `:106`), `handleGatedIpc(…, gate, …)` (`ipc-gate.test.ts:26`); `main.ts:379-382` passes `desktopShutdown` as the gate. Unit tests call handlers with `{}` or `{ sender: {} }` as the event.
+  - **The in-process entry test's doubles** (`canonical-writer-package-smoke-main.test.ts`): `BrowserWindow` is a class with `once`, `loadFile` and one shared shape `webContents = { executeJavaScript }` (`:27-33`), plus `getAllWindows` (`:63`), and no `fromWebContents`; the electron mock has no `dialog`; the logger returns `{ info, error }` only (`:345-348`); the `HarnessSupervisor` mock has no `getStatus` or `retry` (`:86-99`); `ipcHandler` calls with `{ sender: {} }` (`:698-703`). No unit test calls `getHarnessStatus` or `retryHarness`.
+  - **e2e handler replacement:** the conversation journeys replace some channels with a bare `ipcMain.handle` (`tests/e2e/conversation-window.ts:256-269`, `replaceHandlers`), so for those channels the e2e run proves the preload path, not the sender rule.
+  - **Logger:** `bootstrap()` has `logger` from `readDesktopServices` (`:376`) before the registrations.
+  - **Stryker** (`stryker.desktop-s6.config.json`, `check-stryker-ranges.test.mjs:448`: 7 ranges, 5 whole files): `ipc-gate.ts`, `project-entry-ipc.ts`, `workspace-ipc.ts` whole; `project-registration-ipc.ts:35-35`, `:43-43`, `:60-63` (anchors `stryker-range-anchors.json:112`, `:118`, `:124`); `main.ts:83-93` (`:130`), `:369-369` (`:142`). `vitest.desktop-s6-mutation.config.ts` names the four IPC tests and the smoke-main test.
+- **Q18 (decided (a), Pedro): how the sender rule reaches the handlers.** A new `sender` parameter beside the gate, in both helpers and the three register functions; `main.ts` builds one rule and passes it to all. The shutdown gate and the sender rule stay two concerns, and the four non-gated handlers take a sender without a gate. Not taken: (b) widen `IpcGate` with `admit` (mixes shutdown with identity); (c) module state set by `main.ts` (a hidden, order-dependent global). Within (a), grouping the gate and the sender into one argument object (`{ gate, sender }`) is the implementer's choice (for example to keep CodeScene's argument count); the sender stays its own rule.
+- **Deliverable (on Q18 (a)):**
+  - **`ipc-sender.ts` (new): the sender rule.** `createIpcSender({ logger })` returns `{ track(window), admit(channel, event) }`; the `admit` side is typed `IpcSender`.
+    - **Kind of owner (R11, ratified by Pedro).** The rule keeps state (the tracked ids) and listens to `closed`, which AGENTS.md would make a Layer-built service. It is instead a closure-state factory at the IPC edge, as `createDesktopShutdown` is (precedent, `desktop-shutdown.ts`), under the approved non-goal of not moving the IPC edge onto the Effect runtime.
+    - **Structural types** (no double casts in tests): `logger: Pick<Logger, "warn">`; `track(window)` takes `Readonly<{ webContents: Readonly<{ id: number }>; once(event: "closed", listener: () => void): unknown }>`; `admit(channel: string, event)` takes `Readonly<{ sender: Readonly<{ id: number; mainFrame: FrameId }>; senderFrame: FrameId | null }>`, with `FrameId = Readonly<{ processId: number; routingId: number }>`. Electron's `BrowserWindow` and `IpcMainInvokeEvent` satisfy them.
+    - `track(window)` reads `window.webContents.id` once, at track time, and subscribes with `window.once("closed", …)`. The listener forgets that stored id and does not read the window or its `webContents` (a destroyed window may throw).
+    - `admit(channel, event)` reads `event.senderFrame` synchronously. It admits the call only when `event.sender.id` is a tracked id, `event.senderFrame` is not `null`, and the frame's `processId` and `routingId` equal those of `event.sender.mainFrame` as read on this call (never ids stored at `track`). Every refusal, whatever the reason, writes exactly one log line, `logger.warn({ channel }, "IPC call refused: unknown sender.")`, and throws `new Error(ipcSenderRefusedMessage)` with the exported fixed text `"IPC call refused: unknown sender."` and nothing appended. An admitted call logs nothing. The log carries the channel only: no URL, origin, frame id, path or value (AGENTS.md privacy; a `file://` URL holds a local path).
+    - A throw at the `ipcMain.handle` edge is how Electron rejects an invoke; this is a plain function at the IPC edge, as `decodeStrict`'s throw already is.
+  - **`ipc-gate.ts`.** `handleGatedIpc(channel, schema, gate, sender, answers)` (or with `{ gate, sender }` grouped) calls `sender.admit(channel, event)` first, with its own `channel` and the exact event object it received, then decodes, gates and answers as in s8. A new `handleIpc(channel, sender, handler)` registers one handler that calls `sender.admit(channel, event)` first, then `handler(event)`. Both check the sender before anything else, so a refused call is never decoded, gated or forwarded.
+  - **The thirteen handlers.** The nine gated handlers pass the sender through their register functions. `getRegistrationCapability` and `chooseRepository` use `handleIpc`; `chooseRepository` keeps `BrowserWindow.fromWebContents(event.sender)` as the dialog owner and its two gate reads. In `main.ts`, `registerHarnessIpc(supervisor, sender)` uses `handleIpc` for `getHarnessStatus` and `retryHarness`.
+  - **`main.ts`.** `bootstrap()` builds `const sender = createIpcSender({ logger })` from the main logger after the services, passes it to the four register calls, and every window `createApplicationWindow` creates is tracked with `sender.track(window)` right after `new BrowserWindow(…)`, before `loadURL`/`loadFile`, so the first renderer calls are admitted. The reopen path (`create` on `activate`) and `smokeWindow` both go through that tracking. How `createApplicationWindow` reaches the sender (an argument, or a closure built in `bootstrap()`) is the implementer's choice, as long as the reopen path tracks too; module state is not.
+  - **Tests, scaffolding (no existing assertion changes).**
+    - Each register call in the IPC tests gains a sender fake that admits; `ipc-gate.test.ts`'s `register` gains one.
+    - Test files other than `ipc-sender.test.ts` use the literal text `"IPC call refused: unknown sender."` and import nothing from `ipc-sender.ts` at runtime (type-only imports are allowed), so they still load at the base.
+    - `canonical-writer-package-smoke-main.test.ts`: the window mock gives each instance its own `webContents` with a counter `id` and its own `mainFrame` (`processId`, `routingId`); `BrowserWindow` gains `fromWebContents`; the electron mock gains `dialog.showOpenDialog` (a spy); the logger mock gains `warn: ports.logWarn`; the `HarnessSupervisor` mock gains `getStatus` and `retry` spies; `ipcHandler` calls with `{ sender: window.webContents, senderFrame: window.webContents.mainFrame }` from the constructed window.
+- **Non-goals:** no origin allowlist (Q2 (b)); no change to the custom protocol or the file-protocol fuse (L1-06, Phase 6). No channel, preload, renderer or answer change; the renderer never sees the fixed error, because its own calls are admitted. `desktop-shutdown.ts` and `desktop-runtime.ts` are not edited, so the "latched stop" rewording (p4-s4 acceptance) stays for the slice that next touches `desktop-runtime.ts`. Main-to-renderer sends (`broadcastHarnessStatus`, `broadcastWorkspaceNotification`) are not handlers and do not change.
+- **Not taken:** a stateless rule that admits any `event.sender` for which `BrowserWindow.fromWebContents` is non-null, plus the frame check, with no `track` (intent-review alternative, Pedro). It makes the allowlist implicit (any window in the process is admitted, including a future second window kind), and whether DevTools or `WebContentsView` contents resolve to a window there is unverified; the explicit set of created windows is the stronger defence in depth.
+- **Message and code ledger:** one new fixed text, `"IPC call refused: unknown sender."`, used as the rejection message and the log message. No protocol code.
+- **Affected paths:**
+  - `apps/desktop/src/main/ipc-sender.ts` (new), `ipc-sender.test.ts` (new);
+  - `apps/desktop/src/main/ipc-gate.ts`, `ipc-gate.test.ts`;
+  - `apps/desktop/src/main/project-entry-ipc.ts`, `project-entry-ipc.test.ts`, `project-registration-ipc.ts`, `project-registration-ipc.test.ts`, `workspace-ipc.ts`, `workspace-ipc.test.ts`;
+  - `apps/desktop/src/main/main.ts`, `canonical-writer-package-smoke-main.test.ts`;
+  - `apps/desktop/vitest.desktop-s6-mutation.config.ts`;
+  - `stryker.desktop-s6.config.json`, `stryker-range-anchors.json`, `apps/harness/scripts/check-stryker-ranges.test.mjs` (its real-repository row).
+- **Stryker re-anchoring (lesson 3, same slice).** `pnpm check:mutation-ranges` on the candidate is the authority, red-first through the real-repository row (P4-B32).
+
+  | Config | Entry now (`91669c2`) | After | Anchor rows |
+  |---|---|---|---|
+  | `stryker.desktop-s6.config.json` | none | `ipc-sender.ts` (whole file) | none |
+  | `stryker.desktop-s6.config.json` | `project-registration-ipc.ts:60-63` (`registerProject`) | the same call, now with the sender | `:124` (text and lines) |
+  | `stryker.desktop-s6.config.json` | `project-registration-ipc.ts:35`, `:43` (`chooseRepository`'s gates) | the same lines, shifted by the import and handler edits | `:112`, `:118` (lines only) |
+  | `stryker.desktop-s6.config.json` | `main.ts:83-93`, `:369-369` | shifted by the `main.ts` edits | `:130`, `:142` (lines only) |
+  | `stryker.desktop-s6.config.json` | `ipc-gate.ts`, `project-entry-ipc.ts`, `workspace-ipc.ts` (whole) | unchanged | none |
+
+  - Counts: `desktop-s6` goes from 7 ranges and 5 whole files to **7 ranges and 6 whole files**.
+  - No range on the `sender.track(window)` line (intent review): StrykerJS has no mutator for a bare call statement, so a one-line range would hold no mutant. P4-B30 and bindings 12 and 13 guard that line.
+  - `vitest.desktop-s6-mutation.config.ts` adds `ipc-sender.test.ts`.
+- **Full-integration exposure:**
+  - **e2e, every journey** (`projects`, `registration`, `conversation`, `conversation-accessibility`, `project-upgrade`, `renderer-foundation`, `shell`, `single-instance`): only a real Electron launch proves that the real window's main frame is admitted, including the calls made while the page is still loading and after the `accessibility.ts:36` reload. A wrong identity refuses every call. Exception: the channels a conversation journey swaps with `replaceHandlers` run a bare handler, so that journey proves those channels' preload path, not the rule; the other journeys call them through the rule.
+  - **Smoke:** `package:launch-smoke`: the packaged `file://` renderer, and the registration scenario's `executeJavaScript` in the window's main frame.
+  - **In-process:** `canonical-writer-package-smoke-main.test.ts` (unit run).
+  - **Harness integration:** none.
+  - **The s9 run (Phase 4 approval: "a slice whose exposure is the real Electron frame (s9) asks for its own e2e run on its candidate"):** on the candidate, after `pnpm check`, with the coordinator's GO and Pedro's "livre", one run each of `pnpm test:e2e` and `package:launch-smoke`, alone.
+- **Intent review:** done, round 1 of 1, on `c738013c…b345` (slice-verifier passed with 4 warnings; code reviewer 5 concerns, 1 suggestion; coverage reviewer 1 blocker, 5 concerns, 3 suggestions). Pedro's triage: fix all, R11 and R12 ratified, the stateless alternative not taken. Table and triage: `.rpiv/evidence/2026-10-31_15-28-02_arch-review-phase-4-bridge-ipc-consolidation/p4-s9-intent-review.md`. No second round.
+- **Dependencies:** after s8 (accepted; `handleGatedIpc`). s10 also edits `main.ts` and comes after; its contract re-anchors the `main.ts` `desktop-s6` ranges s9 shifts.
+
+#### Test Contract: p4-s9-ipc-sender-check
+
+Public seams: `createIpcSender` with structural fake windows, webContents, frames and a spy logger; `handleGatedIpc` and `handleIpc` on a mocked `ipcMain.handle`; the three register functions on the same mock; the real `main.ts` with mocked Electron (`canonical-writer-package-smoke-main.test.ts`); `checkStrykerRanges` over the repository.
+
+Every refusal assertion matches the whole text, `/^IPC call refused: unknown sender\.$/`, never a substring.
+
+- **Behavior P4-B26: the sender rule admits only the current main frame of a tracked window, and logs every refusal by channel only.**
+  - Test: `apps/desktop/src/main/ipc-sender.test.ts` (new).
+  - Rows (each title its own `it`; the spy logger has every pino level; each refusal event differs from the admitted event in exactly one property):
+    - `admits the main frame of a tracked window`: no throw, and no logger level is called;
+    - `refuses a call with no sender frame` (tracked webContents, `senderFrame: null`); `refuses a subframe of a tracked window` (tracked webContents, same `processId`, other `routingId`); `refuses a frame from another process with the main frame's routing id` (tracked webContents, same `routingId`, other `processId`); `refuses a window it never tracked` (an untracked webContents sending from its own main frame); each throws the fixed text, and the logger has exactly one call, `warn({ channel }, "IPC call refused: unknown sender.")`, and no other level;
+    - `refuses a tracked window after it closed, without reading it`: the fake window's `webContents` (and its `id`) throws "Object has been destroyed" once its `closed` listeners have run; emitting `closed` does not throw, and a later call carrying the old id is refused with the one `warn`;
+    - `admits the new main frame after it is replaced`: after `track`, the tracked webContents' `mainFrame` gets a new `processId` and `routingId`; a call from the new frame is admitted, and one from the old frame identity is refused;
+    - `logs only the channel of a refused call`: for an event whose frame carries a `url` and an `origin`, the one `warn` call's fields are exactly `{ channel }`.
+  - Expected red: at the base `./ipc-sender.js` does not exist, so the file fails at import. It is a whole-file clause, so validate checks that the slice added it and does not re-prove a red; bindings 4 to 11 give each security row its own observed red.
+- **Behavior P4-B27: both helpers check the sender first, with their own channel and event.**
+  - Test: `refuses an unadmitted call before decoding or gating: $helper` in `apps/desktop/src/main/ipc-gate.test.ts` (new).
+  - Rows: `handleGatedIpc` with a valid value, `handleGatedIpc` with an invalid value, and `handleIpc`. Over a refusing spy sender, the handler throws the fixed text synchronously; `admit` was called exactly once, with `("test:channel", <the same event object the handler received>)`; `accepting`, `closing`, `forward` and the plain handler are not called.
+  - Expected red: observed at the scaffold state of the Order (the helpers take the sender and ignore it; `handleIpc` registers its handler without `admit`): the valid row forwards, the invalid row throws the decode error, the `handleIpc` row calls the handler, and no row sees `admit` called. At the base itself the rows also fail (the 4-parameter helper reads the sender fake as `answers`; `handleIpc` does not exist).
+- **Behavior P4-B28: each module registers every channel behind the sender rule.**
+  - Test: `refuses every channel from an unadmitted sender: $channel` in `apps/desktop/src/main/project-entry-ipc.test.ts` (new); `refuses every channel from an unadmitted sender: $channel` in `apps/desktop/src/main/project-registration-ipc.test.ts` (new); `refuses every channel from an unadmitted sender: $channel` in `apps/desktop/src/main/workspace-ipc.test.ts` (new).
+  - Rows: the six project-entry channels; `getRegistrationCapability`, `chooseRepository` and `registerProject`; the two workspace channels (11 rows).
+  - Oracle: each call rejects or throws the fixed text; no bridge fake or dialog is called.
+  - Expected red: observed right after `ipc-sender.ts` exists and before the helpers change (Order step 3): the register functions ignore the extra sender argument and every handler answers, so all 11 rows fail for the intended reason.
+- **Behavior P4-B29: the composed entry refuses every invoke channel from a frame that is not an application window.**
+  - Test: `refuses a call from a frame that is not the application window: $channel` in `apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts` (new).
+  - Rows: every invoke channel of `desktopIpcChannels` (the 13 handled channels; the main-to-renderer event channels are excluded), after `ordinaryLaunch()`, each called with an event whose `sender` is another webContents (another `id`, its own main frame).
+  - Oracle: each call rejects or throws the fixed text; the channel's port spy (`entryList`, `entryRegister`, the other entry fakes, `workspaceQuery`, `dialog.showOpenDialog`, the supervisor's `getStatus`/`retry`) is not called; `ports.logWarn` has exactly one call per row, `({ channel }, "IPC call refused: unknown sender.")`.
+  - Expected red: observed with the scaffolding in place and before the `main.ts` wiring (Order step 3): every channel answers whatever its sender, so all 13 rows fail.
+- **Behavior P4-B30: the composed entry admits every window it creates, from the first call.**
+  - Test: `admits the application window on every channel before its page finishes loading: $channel` in `apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts` (new); `admits a window reopened on activate` in `apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts` (new).
+  - Oracle, first test: with the first window's `loadFile` held pending, each invoke channel called from that window's main frame reaches its port spy once and is not refused; the `listProjects` row resolves exactly to the `entryList` fake's answer.
+  - Oracle, second test: after `ordinaryLaunch()`, with `getAllWindows` returning `[]`, the `activate` listener creates a second window; a `listProjects` call from `ports.window.mock.instances[1]`'s main frame resolves exactly to the `entryList` fake's answer.
+  - Expected red: none — pin. At the base nothing is refused, so both are green by design; bindings 12 and 13 prove they bite.
+- **Behavior P4-B31: admitted calls answer exactly as before.**
+  - Test: `answers unavailable after the IPC gate closes: $channel` in `apps/desktop/src/main/project-entry-ipc.test.ts`; `answers registration unavailable after the IPC gate closes: $channel` in `apps/desktop/src/main/project-registration-ipc.test.ts`; `forwards registration while the IPC gate is open: $channel` in `apps/desktop/src/main/project-registration-ipc.test.ts`; `opens the folder dialog owned by the calling window` in `apps/desktop/src/main/project-registration-ipc.test.ts` (new); `keeps workspace IPC handlers narrow and validated` in `apps/desktop/src/main/workspace-ipc.test.ts`; `answers workspace unavailable after the IPC gate closes: $channel` in `apps/desktop/src/main/workspace-ipc.test.ts`; `answers unavailable after quit starts: $channel` in `apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts`; `rejects an invalid value before reading the gate: $gate` in `apps/desktop/src/main/ipc-gate.test.ts`; `reads the gate on every call` in `apps/desktop/src/main/ipc-gate.test.ts`.
+  - The new `opens the folder dialog owned by the calling window`: `BrowserWindow.fromWebContents` returns a sentinel window for the event's sender, and `dialog.showOpenDialog` receives `(sentinel, options)`.
+  - Expected red: none — pin. Each is green at the base and after with unchanged assertions; only its register call or event gains an admitting sender. The new dialog-owner row is green at the base by design (the owner is computed today); binding 17 proves it bites. The other rows of the four IPC test files and the smoke-main file keep their counts.
+- **Behavior P4-B32: the `desktop-s6` mutation set covers the sender rule.**
+  - Test: `passes on the repository's own configs and anchors` in `apps/harness/scripts/check-stryker-ranges.test.mjs`, its `desktop-s6` row edited to `{ config: "stryker.desktop-s6.config.json", ranges: 7, wholeFiles: 6 }`.
+  - Expected red: at the base `desktop-s6` has 7 ranges and 5 whole files, so the test fails on that row.
+
+**Bindings that bite (each on the candidate, each restored after):**
+1. In `handleGatedIpc`, call `sender.admit` after decoding. P4-B27's invalid-value row fails (the decode error is thrown instead of the fixed text).
+2. In `handleGatedIpc`, call `sender.admit` after `gate.accepting()`. P4-B27's valid-value row fails (`accepting` was called).
+3. In both helpers, call `sender.admit("ipc", event)`. Every P4-B27 row fails on the `admit` arguments.
+4. In `admit`, compare `routingId` only. `refuses a frame from another process with the main frame's routing id` fails.
+5. In `admit`, compare `processId` only. `refuses a subframe of a tracked window` fails.
+6. In `admit`, drop the tracked-id check. `refuses a window it never tracked` fails.
+7. In `admit`, admit a `null` sender frame when the webContents is tracked. `refuses a call with no sender frame` fails.
+8. In `track`, store the main frame's ids and compare against them. `admits the new main frame after it is replaced` fails.
+9. In the `closed` listener, read `window.webContents.id`. `refuses a tracked window after it closed, without reading it` fails.
+10. In `admit`'s null-frame branch, throw without logging. `refuses a call with no sender frame` fails on the `warn` assertion.
+11. In `admit`, add the frame's `url` to the log fields. `logs only the channel of a refused call` fails.
+12. In `createApplicationWindow`, track the window after the `await` of `loadFile`. P4-B30's `before its page finishes loading` rows fail.
+13. Track only the window `bootstrap()` creates (the reopen path does not track). `admits a window reopened on activate` fails.
+14. In `main.ts`, give `registerProjectEntryIpc` an admit-all sender. P4-B29's `listProjects` row fails.
+15. In `main.ts`, register `getHarnessStatus` with `ipcMain.handle` directly. P4-B29's `getHarnessStatus` row fails.
+16. In `main.ts`, build the rule with a no-op logger. P4-B29's `ports.logWarn` assertions fail.
+17. In `chooseRepository`'s registration, pass `undefined` as the dialog owner. `opens the folder dialog owned by the calling window` fails.
+
+**Order (red first):**
+1. P4-B32's row: red.
+2. `ipc-sender.test.ts`: red at import; then the rule: P4-B26 green.
+3. The scaffolding of the smoke-main doubles; P4-B28's module rows and P4-B29's entry rows written: red for the intended reason (every handler answers whatever its sender).
+4. Scaffold state: the helpers take the sender (or `{ gate, sender }`) and ignore it; `handleIpc` registers without `admit`; every call site and every existing test's register call is updated in the same step (existing tests green). P4-B27 written: red.
+5. The helpers call `admit` first: P4-B27 and P4-B28 green.
+6. `main.ts` builds the rule from the main logger, tracks every created window before its load, and passes the rule to all four registrations: P4-B29 green; P4-B30 green throughout.
+7. The Stryker and anchor edits: P4-B32 and `check:mutation-ranges` green.
+
+**Structural checks (on the candidate):**
+- `rg -n "ipcMain\.handle\(" apps/desktop/src --glob '!*.test.ts'`: only `ipc-gate.ts` (2: `handleGatedIpc`, `handleIpc`).
+- `rg -n "senderFrame" apps/desktop/src --glob '!*.test.ts'`: only `ipc-sender.ts`.
+- `rg -n "\.(url|origin)\b" apps/desktop/src/main/ipc-sender.ts`: nothing (identity, not origin: Q2 (a)).
+- `rg -n "\.track\(" apps/desktop/src/main/main.ts`: one call, in `createApplicationWindow`, before its `loadURL`/`loadFile` lines.
+- `rg -n "IPC call refused: unknown sender\." apps/desktop/src --glob '!*.test.ts'`: one definition, in `ipc-sender.ts`.
+- `rg -n "from \"\./ipc-sender\.js\"" apps/desktop/src/main --glob '*.test.ts'`: only `ipc-sender.test.ts`, or `import type` elsewhere.
+- `stryker.desktop-s6.config.json` names `ipc-sender.ts` as a whole file and has no `main.ts` range on the `track` line; `rg -n "ipc-sender\.test\.ts" apps/desktop/vitest.desktop-s6-mutation.config.ts`: one hit.
+- `git diff <base> -- apps/desktop/src/preload apps/desktop/src/renderer apps/desktop/src/shared apps/desktop/src/main/desktop-shutdown.ts apps/desktop/src/main/desktop-runtime.ts packages`: empty.
+- `git diff <base> --stat` lists only the affected paths and this slice's evidence.
+
+#### Success Criteria: p4-s9-ipc-sender-check
+
+Automated (smallest first; each read by its real exit code; desktop main tests with `--config vitest.main.config.ts`):
+- Green at `91669c2`, counts recorded: `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/ipc-gate.test.ts src/main/project-entry-ipc.test.ts src/main/project-registration-ipc.test.ts src/main/workspace-ipc.test.ts src/main/canonical-writer-package-smoke-main.test.ts`.
+- Red then green, each red observed at its Order step: `pnpm exec vitest run apps/harness/scripts/check-stryker-ranges.test.mjs` from the repository root (P4-B32); the same desktop command plus `src/main/ipc-sender.test.ts` (P4-B26 at step 2, P4-B28 and P4-B29 at step 3, P4-B27 at step 4). P4-B30 and P4-B31 green at the base and at the candidate.
+- Each binding (1 to 17) observed red and then restored.
+- `pnpm check:mutation-ranges` exit 0 (`desktop-s6` 7 ranges, 6 whole files).
+- `pnpm typecheck`, then `pnpm check` exit 0 (read CPU first, in its own call). Knip exit 0. `pnpm check:duplicates` reports no clone.
+- CodeScene 10 on `ipc-sender.ts`, `ipc-gate.ts`, `project-entry-ipc.ts`, `project-registration-ipc.ts`, `workspace-ipc.ts`, `main.ts` and `ipc-sender.test.ts`.
+- The s9 run, with the coordinator's GO and Pedro's "livre", each read by its real exit code: `pnpm test:e2e`, `package:launch-smoke`.
+- Mutation: none for this slice; `desktop-s6` runs in the final Phase 4 mutation run.
+
+Manual: none. Pedro accepts the candidate (rigorous lane).
+
 ## Deferred Work
 
 Each slice gets its full contract when it becomes next. Behavior IDs continue from P4-B4; questions from Q11. Lanes come from `lane.mjs --paths` over the planned paths, raised to the feature lane (normal).
@@ -1199,6 +1358,23 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Bindings, differences from the contract lists (predicted with reasons before the runs):** binding 1 fails 9 rows, not every closed row: 4 of the 6 project-entry closed rows, the `registerProject` row, the 2 workspace closed rows and the 2 helper invalid-value rows. The activation and switch closing answers decode their request strictly themselves, so an invalid value still throws there. P4-B23 pins the decode-before-gate order for every handler, because all nine share the one helper. Binding 2 fails 14 rows, binding 3 fails 1, and binding 4 fails 2 (the closed `submitWorkspaceIntent` row also decodes an intent).
   - **For s9 (implementer note):** s9 must decide how the expected window identity reaches the helper: through the gate object, a new parameter, or module state. That choice may touch `project-entry-ipc.ts`, `workspace-ipc.ts` or the `{ accepting }` literals in their tests, which the s9 Deferred Work row does not list.
   - **needs-run (planned):** the final `check:deep`, and the desktop-s6 Stryker run, whose scope grew to 3 more whole files.
+- **2026-11-12: p4-s9 detailed (coordinator instruction; static reads only); Q18 open.**
+  - **Base:** `91669c2`. No test, gate, Stryker or agent run (Pedro needed the machine). Stryker counts are read from the configs and the real-repository row (`desktop-s6` 7/5), not re-run.
+  - **Facts the contract rests on:** the handlers are registered before the window exists, and the renderer can invoke while `loadFile` is still pending, so the window must be tracked right after `new BrowserWindow`, before the load (binding 4). Windows can be recreated (`activate`), so identity is per created window. `senderFrame` is read synchronously (Electron: `null` after navigation). Under `loadFile` the origin is `file://`, so the rule compares frame identity (`processId`, `routingId` against `event.sender.mainFrame`), never the origin (Q2 (a)). The smoke-main test calls handlers with `{ sender: {} }`, so its window mock and `ipcHandler` gain a real-shaped sender; no assertion changes.
+  - **Q18 (for Pedro), the implementer's open point, how the sender rule reaches the handlers:** (a) a new `sender` parameter beside the gate, in both helpers and the three register functions (recommended; the contract is written on it); (b) widen `IpcGate` with `admit`; (c) module state set by `main.ts`. Each option edits the tests' register calls; only (a) keeps shutdown and identity apart and serves the non-gated handlers without a gate.
+  - **Approach check (rigorous):** rejected (b) and (c) above; rejected an origin allowlist (Q2 (b), settled); rejected an e2e foreign-frame row (the preload exposes the API to the main frame only, so a real foreign frame cannot reach a channel; the refusal is proven by unit rows, the admission by the e2e run).
+  - **Intent review:** planned on the coordinator's GO, three read-only agents on this hash, one round (section "Intent review plan").
+  - **Not taken:** the "latched stop" rewording; s9 does not touch `desktop-runtime.ts`.
+  - **Lane:** rigorous (Q6 (a)); `lane.mjs --paths` answers rigorous (files 9 > 5; `ipc`). The label is recorded on approval.
+- **2026-11-12: p4-s9 Q18 decided (a); intent review round 1 of 1 triaged and folded (Pedro; coordinator).**
+  - **Q18 (a):** a new `sender` parameter beside the gate, in both helpers and the three register functions; grouping `{ gate, sender }` in one argument is the implementer's choice (R12); the sender stays its own rule.
+  - **Review (on `c738013c…b345`, static only):** slice-verifier passed (4 warnings); code reviewer failed (5 concerns, 1 suggestion); coverage reviewer failed (1 blocker, 5 concerns, 3 suggestions). Table and triage: `.rpiv/evidence/2026-10-31_15-28-02_arch-review-phase-4-bridge-ipc-consolidation/p4-s9-intent-review.md`.
+  - **Pedro's triage: fix all.** R1 blocker (an admit-all sender in `main.ts` passed every check): the entry-seam table over every invoke channel (P4-B29) and the admission table (P4-B30), with bindings 13 and 14. R2 smoke-main scaffolding (logger `warn`, supervisor `getStatus`/`retry`, `dialog`, `fromWebContents`, per-instance windows; `track` uses `once("closed")`). R3 reds at named Order steps, literal text in module tests, binding 2. R4 closed window never read (binding 9). R5 main frame read per call (binding 8). R6 reopened window tracked (binding 13). R7 every refusal logs once (binding 10). R8 one-property fakes with bindings 4-6. R9 `admit` gets the helper's own channel and event (binding 3). R10 no Stryker range on the `track` line (`desktop-s6` 7/6). R13 structural types. R14 whole-text match. R15 dialog-owner row (binding 17). R16 main logger asserted (binding 16). Polish folded.
+  - **R11 ratified:** the sender rule is a closure-state factory at the IPC edge (precedent `createDesktopShutdown`), under the non-goal of not moving the IPC edge onto the Effect runtime; recorded in the Deliverable.
+  - **Not taken:** the stateless `BrowserWindow.fromWebContents` rule (implicit allowlist; DevTools/`WebContentsView` ownership unverified); coverage alternative A2 (a 32-row truth table; the one-property rows and bindings cover it). Coverage alternative A1 taken (R1).
+  - **Behavior IDs** (renumbered inside this unapproved slice): P4-B26 rule, P4-B27 helpers, P4-B28 module channels, P4-B29 entry refusals, P4-B30 entry admissions (pin), P4-B31 unchanged answers (pin), P4-B32 Stryker row.
+  - **No second review round** (Pedro). The s10 Deferred row's missing `main.ts` `desktop-s6` ranges are left to s10's contract.
+- **2026-11-12: p4-s9 contract approved (Pedro; coordinator).** Pedro approved hash `8aaf8757597d…99bf` (copy `approved-8aaf8757.md`), lane rigorous (lane.mjs agrees). Q18 (a), R11 and R12 ratified; the stateless alternative is not taken. The s9 run (`test:e2e`, `package:launch-smoke`) runs alone on the candidate, after Pedro says "livre" and the coordinator gives GO. Pedro accepts the candidate.
 
 ## References
 
