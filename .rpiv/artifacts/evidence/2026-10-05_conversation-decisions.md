@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 56b6d36becd525b939bb654c264f957af79ff9957bb89ecb8f16a98e445460be
+content_hash: 3c0c90bb9bec3fe93c7b1e0f357e6403d6d6b5ac6bef8fd20f9a5ea530a1f19d
 ---
 
 # Conversation — Human Decisions
@@ -2629,3 +2629,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Q18 (a), Pedro: a new `sender` parameter beside the gate. Grouping `{ gate, sender }` into one argument is the implementer's choice (R12).
 - Intent review round 1 on `c738013c…b345` (3 read-only reviewers): 1 blocker (R1: the entry seam did not prove the refusal on every channel), 9 concerns or warnings, 4 suggestions. Pedro's triage: fix everything in one edit, no second round; R11 ratified (a closure-state factory at the IPC edge, as `createDesktopShutdown` is, under the non-goal); the stateless `BrowserWindow.fromWebContents` alternative is not taken. Table: `p4-s9-intent-review.md`.
 - Pedro approved hash `8aaf8757…99bf` (copy `approved-8aaf8757.md`), lane rigorous. Bindings 1-17. The s9 run (`test:e2e`, `package:launch-smoke`) runs on the candidate after "livre".
+
+## 2026-11-12 — p4-s9 accepted by Pedro
+
+- Final candidate `9192e45` + `d7a4902` + `eeae135`. `pnpm check` exit 0 (3985 tests); `test:e2e` 27 passed and `package:launch-smoke` exit 0 on `9192e45`; bindings 1-17 bite; preflight clean.
+- Candidate review round 1 had no blocker. Pedro's triage: fix the coverage concern and the 3 suggestions in one round (only tests and TSDoc changed; the coordinator reviewed the diff); accept V1 (`ipcSenderRefusedMessage` not exported, because of Knip); V2: run the late dialog-owner pin once at the base sources (it passed).
+- CodeScene: `canonical-writer-package-smoke-main.test.ts` stays at 9.68, its base level (Primitive Obsession, pre-existing). Pedro chose (a): record it as known debt.
+- Next: the p4-s10-desktop-clock contract (R5, Q9 injected Clock).
