@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 96f5472042ec64be691397e57790cea952e1a840d1eacf8f24e8e126c94a8bab
+content_hash: 22a35f4ae29984baf41e8640ea3a81bde472d1ad3c662b15ad39e52e27d43c98
 ---
 
 # Conversation — Human Decisions
@@ -2648,3 +2648,11 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Candidate `6a86a32` on `83ff857`. P4-B33 to P4-B38 red-first; bindings 1-6 bite; `pnpm check` exit 0 (3991 tests); CodeScene 10 (the smoke-main test stays at 9.68, Q20 (a)); preflight clean; slice-verifier round 1 passed with 1 warning, recorded in the brief.
 - The new rows pushed `harness-supervisor.test.ts` to 9.38. Pedro chose (c): move the upgrade-log-lines describe, byte-identical, to `harness-supervisor-log-lines.test.ts`, with the helpers in a test-only peers file, and add it to the s7, s8 and project-storage mutation Vitest configs. The coordinator advised against (a), moving the clock rows, because it would reopen the contract's Test lines.
 - Next: the Phase 4 end. One Stryker run on the final candidate and `pnpm check:deep`, each run alone after Pedro says "livre"; then Pedro's combined acceptance, the squash into main (ask first), and the push.
+
+## 2026-11-13 — Phase 4 final mutation run cut short; issue #147
+
+- Pedro confirmed "livre" and the scope (5 configs). Four finished on `14d6e5a`: desktop-s6 95.06, desktop-s7 97.96, desktop-s8 98.41, project-storage-desktop 90.04. None scored lower than its earlier recorded run.
+- Pedro then decided to skip the rest of the mutation work, because it was taking too long. `stryker.config.json` was stopped at 2171 of 3517 mutants and has no score. The coordinator told him the cost: the survivors stay untriaged and the protocol changes have no mutation run.
+- Pedro's triage: kill only `ipc-sender.ts:41` (the `closed` event name; test-only commit `cab5002`, red with the manual mutant, `pnpm check` exit 0); everything else is debt in GitHub issue #147 (`needs-triage`), which Pedro approved before it was opened.
+- Also on the branch: `14d6e5a`, the ADR 0023 pointer to the desktop clock (docs only).
+- Next: `pnpm check:deep` on `cab5002`, alone; then Pedro's combined acceptance.
