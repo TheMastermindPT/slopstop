@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 3c0c90bb9bec3fe93c7b1e0f357e6403d6d6b5ac6bef8fd20f9a5ea530a1f19d
+content_hash: 21ce6fb7765380c54ababd1452a769efc69e3a85d3a1c30bdace4e08a2340341
 ---
 
 # Conversation — Human Decisions
@@ -2636,3 +2636,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Candidate review round 1 had no blocker. Pedro's triage: fix the coverage concern and the 3 suggestions in one round (only tests and TSDoc changed; the coordinator reviewed the diff); accept V1 (`ipcSenderRefusedMessage` not exported, because of Knip); V2: run the late dialog-owner pin once at the base sources (it passed).
 - CodeScene: `canonical-writer-package-smoke-main.test.ts` stays at 9.68, its base level (Primitive Obsession, pre-existing). Pedro chose (a): record it as known debt.
 - Next: the p4-s10-desktop-clock contract (R5, Q9 injected Clock).
+
+## 2026-11-12 — p4-s10 contract approved (Q19 (b), Q20 (a), Q21 (a))
+
+- The designer wrote p4-s10-desktop-clock (R5, Q9 (a)): the supervisor's handshake and the writer proof's command metadata take the desktop `Clock` instead of reading `randomUUID` and `Date` inline. `main.ts` holds the one clock.
+- Pedro's answers: Q19 (b), the runtime's `createSupervisor` port gains the clock and the runtime passes its own `createId`/`now`, as it does for the bridges. The coordinator recommended (b) against the designer's (a): with (a) the clock would reach the supervisor by a second path, and the "latched stop" rewording would be left with no slice, since s10 is the last. (b) takes the rewording. Q20 (a): the smoke-main test stays at its debt, and must not score lower than 9.68. Q21 (a): no per-slice run.
+- Pedro approved the contract on the condition that it was written on (b). The coordinator checked the folded hash `4a04fb87…aae6` (copy `approved-4a04fb87.md`), lane normal. P4-B33 to P4-B38; bindings 1-6.
