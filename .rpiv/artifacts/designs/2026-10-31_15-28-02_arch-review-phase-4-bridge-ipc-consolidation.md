@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-11-12T21:00:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "p4-s10 folded on Q19 (b), Q20 (a), Q21 (a): P4-B33 to P4-B38, bindings 1-6; awaiting approval of this hash."
-content_hash: d861a935fb446baf55a04bd1e1842794ed72e73d98be79adfbe893f3a2f2e03f
+content_hash: a257a3191aabdd851665a153f1551bfef7dcae4057361becbd9b06265a8d5725
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -1521,6 +1521,13 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - **2026-11-13: the final mutation run was cut short (Pedro); one survivor killed; the rest is issue #147.** On `14d6e5a`, four configs finished: desktop-s6 95.06 (earlier 94.23), desktop-s7 97.96 (earlier 97.76), desktop-s8 98.41 (earlier 98.41) and project-storage-desktop 90.04 (no earlier run). Pedro stopped `stryker.config.json` at 2171 of 3517 mutants, because the run was taking too long; it has no score, so the Phase 4 protocol changes have no mutation run. No regression: no config scored lower, and the p4-s10 test split lost no killer. This replaces the earlier plan (survivors killed or argued) for everything but one mutant.
   - **Killed (Pedro's triage):** `ipc-sender.ts:41`, the `closed` event name. The fake window ignored the name. Commit `cab5002` (test only) makes the fake fire only `closed` listeners; the manual mutant `window.once("")` failed exactly the 2 predicted rows; `pnpm check` exit 0 (3991 tests); `p4-s10` polish `14d6e5a` (ADR 0023 pointer) sits under it.
   - **Left as debt, GitHub issue #147 (`needs-triage`):** the unfinished `stryker.config.json` run; 5 survivors in code Phase 4 wrote or moved (`harness-request-core.ts:49`, `:76`, `:253`; `project-entry-bridge.ts:83`; `workspace-bridge.ts:171`), probably equivalent or static but not confirmed; the `logger.ts` redaction survivors (privacy, older code); and the older survivors in `desktop-runtime.ts`, `writer-proof-report.ts`, `bounded-log-destination.ts`, `crash-reporting.ts` and `harness-supervisor.ts`. Logs: `p4-final-mutation-*`.
+- **2026-11-13: the final `check:deep` passed on its third run, and Pedro accepted Phase 4 (combined acceptance).** All runs were on `cab5002`, clean worktree, each alone after Pedro said "livre".
+  - **Run 1, void:** exit 1 in `test:coverage`; 91 vitest fork workers exited unexpectedly, no test failed, 1650s instead of about 428s. Pedro confirmed he opened a game during the run, which breaks the CPU rule. The Windows event logs for the window show no Defender detection, no node crash and no resource-exhaustion event. The cause of the worker exits is not proven.
+  - **Coverage diagnostic:** `pnpm test:coverage` alone, sampled every 5s: exit 0, 205 files passed and 3 skipped, no worker exit, 427.61s, free memory never under 8.8 GB.
+  - **Run 2, failed:** exit 1 in `test:unit`; the `clean` row of `scripts/check-effect-diagnostics.test.mjs` timed out at 5000ms (5576ms) with the unit run itself holding the CPU at 82-100% and no game open. The row family has timed out before (2026-10-23, p4-s1) and Phase 4 did not touch it. Recorded as GitHub issue #148 (`needs-triage`). No test, timeout or config was changed.
+  - **Run 3, passed (a repeat, by Pedro's decision):** exit 0 in about 20.6 min. `check` (124 unit files, 3991 tests; depcruise clean, 597 modules); `test:coverage` (205 passed and 3 skipped files, 6225 tests, thresholds met); `test:integration` (81 passed and 3 skipped files, 2234 tests); `check:deep:shared` (knip clean, golden SQL verified, jscpd 0 clones, likec4 0 errors); `test:e2e` (27 passed); `package:launch-smoke` passed. No game in any of the 171 samples. The coordinator checked each run against its log.
+  - **Accepted with these open items:** the unfinished mutation run and its survivors (#147) and the load-sensitive Effect gate rows (#148). Logs, local and git-ignored: `p4-final-check-deep.log`, `-2.log`, `-3.log`, `p4-final-coverage-diagnostic.log` and their samples.
+  - **Next:** squash `fix/arch-review-phase-4` into main (Pedro approved the local squash); the push needs its own approval.
 
 ## References
 
