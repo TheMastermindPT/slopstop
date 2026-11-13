@@ -6,7 +6,7 @@ branch: main
 commit: 43bc303
 status: in-progress
 tags: [conversation, decisions, context, waypoint]
-content_hash: 21ce6fb7765380c54ababd1452a769efc69e3a85d3a1c30bdace4e08a2340341
+content_hash: 96f5472042ec64be691397e57790cea952e1a840d1eacf8f24e8e126c94a8bab
 ---
 
 # Conversation — Human Decisions
@@ -2642,3 +2642,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - The designer wrote p4-s10-desktop-clock (R5, Q9 (a)): the supervisor's handshake and the writer proof's command metadata take the desktop `Clock` instead of reading `randomUUID` and `Date` inline. `main.ts` holds the one clock.
 - Pedro's answers: Q19 (b), the runtime's `createSupervisor` port gains the clock and the runtime passes its own `createId`/`now`, as it does for the bridges. The coordinator recommended (b) against the designer's (a): with (a) the clock would reach the supervisor by a second path, and the "latched stop" rewording would be left with no slice, since s10 is the last. (b) takes the rewording. Q20 (a): the smoke-main test stays at its debt, and must not score lower than 9.68. Q21 (a): no per-slice run.
 - Pedro approved the contract on the condition that it was written on (b). The coordinator checked the folded hash `4a04fb87…aae6` (copy `approved-4a04fb87.md`), lane normal. P4-B33 to P4-B38; bindings 1-6.
+
+## 2026-11-13 — p4-s10 accepted (coordinator, normal lane); all ten Phase 4 slices accepted
+
+- Candidate `6a86a32` on `83ff857`. P4-B33 to P4-B38 red-first; bindings 1-6 bite; `pnpm check` exit 0 (3991 tests); CodeScene 10 (the smoke-main test stays at 9.68, Q20 (a)); preflight clean; slice-verifier round 1 passed with 1 warning, recorded in the brief.
+- The new rows pushed `harness-supervisor.test.ts` to 9.38. Pedro chose (c): move the upgrade-log-lines describe, byte-identical, to `harness-supervisor-log-lines.test.ts`, with the helpers in a test-only peers file, and add it to the s7, s8 and project-storage mutation Vitest configs. The coordinator advised against (a), moving the clock rows, because it would reopen the contract's Test lines.
+- Next: the Phase 4 end. One Stryker run on the final candidate and `pnpm check:deep`, each run alone after Pedro says "livre"; then Pedro's combined acceptance, the squash into main (ask first), and the push.
