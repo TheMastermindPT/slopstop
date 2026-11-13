@@ -13,7 +13,7 @@ status: ready
 last_updated: 2026-11-12T21:00:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "p4-s10 folded on Q19 (b), Q20 (a), Q21 (a): P4-B33 to P4-B38, bindings 1-6; awaiting approval of this hash."
-content_hash: 299a575a3e5dda6b0ecc35176f50c7ad6033cb68125428be8a63b585d66d9803
+content_hash: 301c3b651aa3a77fd57c1a46418708cdc26fdd055d3b8b0190fc5f153658f350
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -1513,6 +1513,11 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Lane:** normal; `lane.mjs --paths` over the eleven paths answers normal (files 7 > 5). The label is recorded on approval.
   - **Approval:** Pedro said he approves the contract once it is written on (b), relayed by the coordinator. The approval of this exact hash is recorded when the coordinator confirms it.
 - **2026-11-12: p4-s10 contract approved (Pedro; coordinator).** Pedro approved the contract on the condition that it was written on Q19 (b). The coordinator checked the folded hash `4a04fb87f902…aae6` (copy `approved-4a04fb87.md`): additions only, validate OK, and Q19 (b), Q20 (a) and Q21 (a) recorded. That hash is the approved one. Lane normal.
+- **2026-11-13: p4-s10 accepted (coordinator; normal lane).** Candidate `6a86a32` on `83ff857` (the branch rebased onto main `92a772f`; the code is the same as `eeae135`). The 6 rows P4-B33 to P4-B38 were red as predicted and then green; bindings 1-6 bite. `check:mutation-ranges` exit 0: 6 entries re-pointed by line, counts unchanged. `pnpm check` exit 0 (124 files, 3991 tests); biome, typecheck, knip and jscpd (0 clones) exit 0; preflight clean; slice-verifier round 1 passed with 1 warning (V1, below). Coordinator diff read: `HarnessSupervisor` and the writer proof stamp from the injected `Clock`; `main.ts` holds one `desktopClock`; the runtime hands the supervisor its own `createId`/`now`; the "latched stop" comments are reworded and no identifier is renamed.
+  - **Deviation (c), chosen by Pedro.** The P4-B33/B34 rows pushed `harness-supervisor.test.ts` over the CodeScene file-size threshold (9.38; it was 10 at the base). The coordinator recommended against moving the clock rows, because the contract's Test lines name that file. Pedro chose to move `describe("harness upgrade log lines")` byte-identical to `harness-supervisor-log-lines.test.ts`, with the shared helpers in the test-only `harness-supervisor-test-peers.ts`. The rows split 25 + 16 = 41, with identical titles, and CodeScene is back to 10. The new file joins `vitest.desktop-s7-mutation`, `vitest.desktop-s8-mutation` and `vitest.project-storage-mutation`, so the desktop-s8 and project-storage killers stay in the run.
+  - **Approved statements that the deviation makes literally false (V1; they stay as written, append-only):** the `new HarnessSupervisor(` structural check (`!*.test.ts`) also hits the test-only peers file; `--stat` lists 5 more paths; "mutation Vitest configs not edited"; and the one-file count 41 is now 25 + 16. The Lane line says "eleven planned paths", but the list has twelve; the lane answer is the same.
+  - **CodeScene:** 10 on every touched file except `canonical-writer-package-smoke-main.test.ts`, which stays at 9.68 (Q20 (a)).
+  - **needs-run:** the final mutation run (the desktop-s8 and project-storage killers now live in the log-lines file) and the final `check:deep` (`test:e2e` for the handshake, `package:launch-smoke` for the writer proof).
 
 ## References
 
@@ -1538,3 +1543,4 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
 - `p4-s7-workspace-ipc-module`: `.rpiv/artifacts/evidence/2026-11-12_p4-s7-workspace-ipc-module-tdd.md`; accepted at `e34a84f` (base `0a67690`); preflight clean; slice-verifier round 1 passed.
 - `p4-s8-gated-ipc-helper`: `.rpiv/artifacts/evidence/2026-11-12_p4-s8-gated-ipc-helper-tdd.md`; accepted at `91669c2` (base `fe86793`); preflight clean; slice-verifier round 1 passed.
 - `p4-s9-ipc-sender-check`: `.rpiv/artifacts/evidence/2026-11-12_p4-s9-ipc-sender-check-tdd.md`; accepted by Pedro at `9192e45` + `d7a4902` + `eeae135` (base `8db84db`); test:e2e 27 passed, package:launch-smoke exit 0; preflight clean; candidate review round 1 (0 blockers), triaged by Pedro; review table `p4-s9-candidate-review.md`.
+- `p4-s10-desktop-clock`: `.rpiv/artifacts/evidence/2026-11-13_p4-s10-desktop-clock-tdd.md`; accepted at `6a86a32` (base `83ff857`); preflight clean; slice-verifier round 1 passed (1 warning, recorded).
