@@ -2656,3 +2656,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Pedro's triage: kill only `ipc-sender.ts:41` (the `closed` event name; test-only commit `cab5002`, red with the manual mutant, `pnpm check` exit 0); everything else is debt in GitHub issue #147 (`needs-triage`), which Pedro approved before it was opened.
 - Also on the branch: `14d6e5a`, the ADR 0023 pointer to the desktop clock (docs only).
 - Next: `pnpm check:deep` on `cab5002`, alone; then Pedro's combined acceptance.
+
+## 2026-11-13 — Phase 4 final `check:deep` failed; run void, diagnostic first
+
+- The final `pnpm check:deep` on `cab5002` exited 1 at stage 2 (`test:coverage`): 117 files passed, 91 vitest fork workers "exited unexpectedly", no test failed, and every coverage threshold then failed because those files never reported. The stage took 1650s (428s in the Phase 3 acceptance run). Stages 3 to 6 did not run. The implementer did not rerun.
+- The coordinator checked the log and the Windows event logs for 13:30-14:20: no Defender detection, no node crash event, no resource-exhaustion or power event. Pedro confirmed he opened a game during the run, so the run is void under the CPU rule. The cause of the worker exits is still not proven.
+- Pedro chose: run only `pnpm test:coverage` once as a measured diagnostic (CPU, memory and node processes sampled every 5s), not as the gate run. If it passes, the full `check:deep` that counts runs afterwards, after he is asked.
