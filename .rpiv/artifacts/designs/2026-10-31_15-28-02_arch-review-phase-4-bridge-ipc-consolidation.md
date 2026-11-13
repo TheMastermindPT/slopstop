@@ -10,10 +10,10 @@ parent: .rpiv/artifacts/architecture-reviews/2026-10-23_16-18-48_whole-project.m
 lane: normal
 lane_reasons: ["no upstream lane", "s6, s7, s8, s9 lane.mjs --paths: rigorous (sensitive word: ipc; files: 6 > 5)"]
 status: ready
-last_updated: 2026-11-12T18:00:00+0000
+last_updated: 2026-11-12T21:00:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "p4-s9 intent review folded (Q18 (a); P4-B26 to P4-B32, bindings 1-17); awaiting approval."
-content_hash: 59951c1b7def88a48f393fcc8ab3ad5ffa4ce4400447ec5715372ccd696e11ed
+last_updated_note: "p4-s10 folded on Q19 (b), Q20 (a), Q21 (a): P4-B33 to P4-B38, bindings 1-6; awaiting approval of this hash."
+content_hash: 299a575a3e5dda6b0ecc35176f50c7ad6033cb68125428be8a63b585d66d9803
 ---
 
 # Design: Architecture review Phase 4, desktop bridge and IPC consolidation
@@ -1199,6 +1199,124 @@ Automated (smallest first; each read by its real exit code; desktop main tests w
 
 Manual: none. Pedro accepts the candidate (rigorous lane).
 
+### Slice p4-s10-desktop-clock
+
+- **`slice_id`:** `p4-s10-desktop-clock`.
+- **Lane:** normal. `lane.mjs --paths` over the eleven planned paths answers normal (files: 7 > 5); no sensitive word. No intent review. Pedro approves this contract; the coordinator accepts the candidate, and Pedro accepts the combined Phase 4 result.
+- **Finding:** R5 (Phase 2 residual, homed in Phase 4). Two desktop sites read the time and a fresh id inline instead of the injected `Clock`: the supervisor's handshake and the writer proof's command metadata. Q9 (a): both take the desktop `Clock` from their composer, and `main.ts` stays the desktop's one clock. Q19 (b): the runtime hands the supervisor the clock it was given, as it does for the bridges.
+- **Base:** `eeae135` (p4-s9 accepted, on `fix/arch-review-phase-4`). Every line below was read at `eeae135`.
+- **Measured at `eeae135`:**
+  - **The one clock:** `main.ts:76-77` passes `createId: randomUUID` and `now: () => new Date().toISOString()` into `makeDesktopRuntime`; the runtime hands them to the bridges (`desktop-runtime.ts:173`). `Clock` is `Readonly<{ createId(): string; now(): string }>` (`harness-request-core.ts:34`).
+  - **The two inline reads:**
+    - `harness-supervisor.ts:497-498`, in `#connectChild`: the handshake's `messageId: randomUUID()` and `sentAt: new Date().toISOString()`. It runs once per connected child, so a restart sends a new handshake. The constructor is `constructor(entryPath, logger, bootstrap)` (`:96`). `main.ts:78-79` builds it through the runtime's `createSupervisor(logger, entryPath, bootstrap)` port (`desktop-runtime.ts:30-34`); the only other caller is `harness-supervisor.test.ts:190` (`supervisorWith`).
+    - `canonical-writer-package-smoke.ts:84`: the module-level `metadata = () => ({ messageId: randomUUID(), sentAt: new Date().toISOString() })`, used by the four protocol commands (`:466` handshake, `:573` activate, `:592` project command, `:715` switch). `runCanonicalWriterPackageSmoke(input: ProofInput)` (`:907`) takes `{ bootstrap, mainBundleDirectory, resourcesPath, signal }` (`:71-76`). `main.ts:125-135` calls it; the test calls it through `run()` (`canonical-writer-package-smoke.test.ts:56-62`) and records every message posted to the harness port in `sent` (`:124-127`).
+  - **Not clock reads:** `canonical-writer-package-smoke.ts:740` (`proofId`) and `:761` (`requestId`) are writer-proof control ids, not protocol message metadata. The `performance.now()` deadlines are monotonic timers. `harness-log-lines.ts:83-136` formats a harness-supplied time. None changes.
+  - **Tests at the base (green, measured):** `harness-supervisor.test.ts` 39, `canonical-writer-package-smoke.test.ts` 151, `canonical-writer-package-smoke-main.test.ts` 108, `desktop-runtime.test.ts` 10. The smoke-main test mocks `HarnessSupervisor` as a class whose constructor records nothing (`:108-122`), runs the real `makeDesktopRuntime` (`:149-163`), and mocks the writer runner (`ports.runner`, `:87-89`).
+  - **CodeScene at the base:** 10 for `harness-supervisor.ts`, `canonical-writer-package-smoke.ts`, `main.ts`, `desktop-runtime.ts`, `harness-supervisor.test.ts`, `canonical-writer-package-smoke.test.ts` and `desktop-runtime.test.ts`; 9.68 for `canonical-writer-package-smoke-main.test.ts` (Primitive Obsession, known debt from p4-s9; Q20).
+  - **Stryker at the base** (`stryker-range-anchors.json` rows): `desktop-s6` `main.ts:85-95` (row 21), `main.ts:379-379` (row 23), `canonical-writer-package-smoke.ts:300-341` (row 24); `desktop-s8` `harness-supervisor.ts:61-73`, `:176-233`, `:399-435` (rows 31-33); `harness-supervisor.ts` whole file in `stryker.project-storage-desktop.config.json` and `stryker.config.json`; `desktop-runtime.ts` whole file in `desktop-s6`, and `desktop-runtime.ts:166-189` (`bridgesLayer`, row 30) in `desktop-s7`. `desktop-runtime.test.ts` is in `vitest.desktop-s6-mutation.config.ts` and `vitest.desktop-s7-mutation.config.ts`; its fake ports are at `:98-110` (`createId`, `now`, `createSupervisor`). The coordinator's note named the `main.ts` ranges `83-93` and `369`; at `eeae135` they are `85-95` and `379-379`.
+- **Deliverable (Q19 (b)):**
+  - **`HarnessSupervisor` takes the clock.** The constructor gains a fourth parameter, `clock: Clock` (the type from `harness-request-core.ts`). `#connectChild` stamps each handshake with `clock.createId()` and `clock.now()`, read at that send, never cached. `randomUUID` leaves the file.
+  - **The writer proof takes the clock.** `ProofInput` gains `clock: Clock`. Every protocol command the proof builds takes its `messageId` and `sentAt` from `input.clock`, read per command. The module-level `metadata` no longer reads `randomUUID` or `Date`. `proofId` and `requestId` keep `randomUUID`.
+  - **The runtime hands the supervisor its clock.** `DesktopRuntimePorts.createSupervisor` gains a fourth parameter, `clock: Clock`. The supervision Layer calls it with the runtime's own `createId` and `now` ports, the same functions it gives `createHarnessBridges` (`desktop-runtime.ts:173`).
+  - **"Latched stop" rewording (p4-s4 acceptance), comments only.** `desktop-runtime.ts:48` ("each with its own latched stop") and `:164-165` ("skips the bridges whose latched stop already ran") are rewritten to what the bridges do since p4-s4: each bridge's stop is idempotent (a second stop does nothing), and `release()` stops every bridge, then ends the core (`harness-bridges.ts:20-23`). `desktop-runtime.test.ts:21` and `:66` are reworded to match. `desktop-runtime.ts:122` ("one latched stop", the `owned` helper's `once`) is accurate and stays. Identifiers (`latch`, `latched`) are not renamed.
+  - **`main.ts` owns the one clock.** One `Clock` value holds `randomUUID` and `() => new Date().toISOString()`. `main.ts` gives its `createId` and `now` to `makeDesktopRuntime`, its `createSupervisor` port passes the runtime's `clock` argument on to `new HarnessSupervisor`, and `main.ts` passes the same value as `clock` to `runCanonicalWriterPackageSmoke`. After the slice, `main.ts` is the only desktop main source that reads `new Date()` for a timestamp it sends.
+  - **Tests:** scaffold edits with no assertion change: `supervisorWith` passes a fake clock; `run()` passes a fake clock; the smoke-main supervisor mock's constructor passes its arguments to `ports.supervisorCreated`, and the runtime mock records the ports it was given. `desktop-runtime.test.ts` needs none (its `createSupervisor` is a `vi.fn`). Then the rows below.
+- **Q19 (decided (b), Pedro):** the runtime's `createSupervisor` port gains the clock, and the runtime passes its own `createId`/`now`, as for the bridges. Not taken: (a) `main.ts` closing over its clock in the port (the runtime would then not be the one distributor of its own clock ports).
+- **Q20 (decided (a), Pedro):** `canonical-writer-package-smoke-main.test.ts` keeps its known debt (Primitive Obsession); the criterion is no lower than 9.68. Not taken: (b) refactoring it to 10 in this slice.
+- **Q21 (decided (a), Pedro):** no per-slice run. The unit rows prove each stamp; the final `check:deep` carries `test:e2e` (every journey sends the handshake) and `package:launch-smoke` (the writer proof).
+- **Non-goals:** no protocol, wire, IPC, preload or renderer change. No Effect `Clock` service or `DateTime` (Q9 (a) chose the desktop `Clock` port; the supervisor and the writer proof are not migrated to Effect here). No change to `proofId`, `requestId`, the `performance.now()` deadlines or `harness-log-lines.ts`. In `desktop-runtime.ts`, nothing changes but the supervisor's clock argument and the reworded comments; the bridge wiring, the Layers and `owned` are unchanged. The `Clock` type does not move. Under Q20 (a), no refactor of `canonical-writer-package-smoke-main.test.ts` beyond the scaffold.
+- **Message and code ledger:** none.
+- **Affected paths:**
+  - `apps/desktop/src/main/harness-supervisor.ts`, `harness-supervisor.test.ts`;
+  - `apps/desktop/src/main/canonical-writer-package-smoke.ts`, `canonical-writer-package-smoke.test.ts`;
+  - `apps/desktop/src/main/desktop-runtime.ts`, `desktop-runtime.test.ts`;
+  - `apps/desktop/src/main/main.ts`, `canonical-writer-package-smoke-main.test.ts`;
+  - `stryker.desktop-s6.config.json`, `stryker.desktop-s7.config.json`, `stryker.desktop-s8.config.json`, `stryker-range-anchors.json` (line numbers only).
+- **Stryker re-anchoring (lesson 3, same slice).** No entry is added or removed, and the counts do not change, so `check-stryker-ranges.test.mjs` is not edited. `pnpm check:mutation-ranges` on the candidate is the authority: it names each drifted entry, which is re-pointed by line (its first and last texts unchanged).
+
+  | Config | Entry at `eeae135` | Why it may move | Anchor row |
+  |---|---|---|---|
+  | `stryker.desktop-s6.config.json` | `main.ts:85-95`, `main.ts:379-379` | the clock value and the `createSupervisor` change sit above both | 21, 23 |
+  | `stryker.desktop-s6.config.json` | `canonical-writer-package-smoke.ts:300-341` | `ProofInput`, `metadata` and imports sit above it | 24 |
+  | `stryker.desktop-s6.config.json` | `desktop-runtime.ts` (whole file) | does not move; it gains the supervisor clock argument's mutants, which P4-B38 kills (`desktop-runtime.test.ts` is in `vitest.desktop-s6-mutation.config.ts`) | none |
+  | `stryker.desktop-s7.config.json` | `desktop-runtime.ts:166-189` (`bridgesLayer`) | the port type, the supervision call and the reworded `:164-165` comment sit above it | 30 |
+  | `stryker.desktop-s8.config.json` | `harness-supervisor.ts:61-73`, `:176-233`, `:399-435` | the import change shifts all three; the clock field and constructor shift the last two | 31-33 |
+  | `stryker.project-storage-desktop.config.json`, `stryker.config.json` | `harness-supervisor.ts` (whole file) | does not move; the new handshake stamp is mutated there, and P4-B33 kills its mutants | none |
+
+  - Counts: `desktop-s6` stays 7 ranges and 6 whole files (`desktop-runtime.ts` is already whole); `desktop-s7` and `desktop-s8` keep theirs.
+  - The mutation Vitest configs are not edited (no test file is added or moved).
+- **Full-integration exposure:**
+  - **In-process:** `canonical-writer-package-smoke-main.test.ts` loads the real `main.ts` (unit run).
+  - **e2e:** every journey: the supervisor sends the handshake on every launch (`projects`, `registration`, `conversation`, `conversation-accessibility`, `project-upgrade`, `renderer-foundation`, `shell`). A malformed stamp fails the strict handshake decode in the harness.
+  - **Smoke:** `package:launch-smoke` (handshake and writer proof in the packaged app); `package:smoke` runs the same writer proof.
+  - **Harness integration:** none (the harness is not edited).
+  - **The run:** none per slice (Q21 (a)).
+- **Dependencies:** after s9 (accepted; shares `main.ts`). Last slice of Phase 4.
+
+#### Test Contract: p4-s10-desktop-clock
+
+Public seams: `HarnessSupervisor` with mocked Electron, observed through the port it posts the handshake on; `runCanonicalWriterPackageSmoke` with scripted children, observed through the messages it posts; `makeDesktopRuntime` with fake ports, observed through the arguments its `createSupervisor` port receives; the real `main.ts` with mocked Electron, observed through the ports it hands the runtime, the supervisor and the writer runner.
+
+The fake clock in each test is a counter: the n-th `createId()` returns a fixed valid UUID ending in `n` and the n-th `now()` returns `2001-01-01T00:00:0n.000Z`, values no real read can produce.
+
+- **Behavior P4-B33: the supervisor stamps each handshake with its injected clock.**
+  - Test: `stamps the handshake with the injected clock` in `apps/desktop/src/main/harness-supervisor.test.ts`.
+  - Oracle: after `start()` and `spawn`, the one message posted on the channel's `port2` is the handshake, with `messageId` and `sentAt` equal to the clock's first id and first time.
+  - Expected red: at the base the handshake carries `randomUUID()` and the real time, so both equalities fail.
+- **Behavior P4-B34: each child's handshake reads the clock afresh.**
+  - Test: `reads the clock afresh for each child's handshake` in `apps/desktop/src/main/harness-supervisor.test.ts`.
+  - Oracle: a first child exits and the supervisor restarts a second (the restart path the existing rows drive); the second child's handshake carries the clock's second id and second time, and `createId` and `now` were each called exactly twice.
+  - Expected red: at the base neither handshake reads the clock, so the values and the call counts fail.
+- **Behavior P4-B35: the writer proof stamps every protocol command with its injected clock.**
+  - Test: `stamps every protocol command with the injected clock` in `apps/desktop/src/main/canonical-writer-package-smoke.test.ts`.
+  - Oracle: on the full passing sequence (`fullSequence()`, then `settle()`, status `passed`), every message in `sent` that has a `command` field carries a `messageId` the fake `createId` returned and a `sentAt` the fake `now` returned; no two share a `messageId`; and `createId` was called exactly as many times as there are such messages.
+  - Expected red: at the base `metadata` reads `randomUUID()` and the real time, so no message carries a fake value.
+- **Behavior P4-B36: `main.ts` gives the supervisor the runtime's clock.**
+  - Test: `gives the supervisor the runtime clock` in `apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts`.
+  - Oracle: in a normal launch, the supervisor's fourth constructor argument has `createId` and `now` identical (`toBe`) to the ports `makeDesktopRuntime` received; its `now()` returns an RFC 3339 UTC string between the times read before and after the call, and two `createId()` calls return two different UUIDs.
+  - Expected red: at the base the supervisor gets three arguments, so the fourth is `undefined`.
+- **Behavior P4-B37: `main.ts` gives the writer proof the runtime's clock.**
+  - Test: `gives the writer proof the runtime clock` in `apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts`.
+  - Oracle: in a writer-proof launch, the runner's `clock` input has `createId` and `now` identical (`toBe`) to that launch's runtime ports, with the same time bounds and distinct ids as P4-B36.
+  - Expected red: at the base the runner input has no `clock`.
+- **Behavior P4-B38: the runtime hands the supervisor the clock it was given.**
+  - Test: `hands the supervisor the clock it was given` in `apps/desktop/src/main/desktop-runtime.test.ts`.
+  - Oracle: once the services are built, `createSupervisor` was called once, and its fourth argument's `createId` and `now` are identical (`toBe`) to the `createId` and `now` ports the runtime received.
+  - Expected red: at the base the port is called with three arguments, so the fourth is `undefined`.
+
+**Bindings that bite (each on the candidate, each restored after):**
+1. In `HarnessSupervisor`, read the clock once in the constructor and reuse that stamp. P4-B34 fails (the second handshake repeats the first id and time).
+2. In `#connectChild`, keep `sentAt: new Date().toISOString()` beside `clock.createId()`. P4-B33 fails on `sentAt`.
+3. In the writer proof, keep `randomUUID()` for `messageId`. P4-B35 fails.
+4. In `main.ts`'s `createSupervisor` port, ignore the runtime's clock argument and give `new HarnessSupervisor` a second inline clock with the same functions' bodies. `gives the supervisor the runtime clock` fails on identity.
+5. In `main.ts`, give the writer runner a clock whose `now` returns a fixed time. `gives the writer proof the runtime clock` fails (identity and the time bounds).
+6. In `desktop-runtime.ts`, give `createSupervisor` `{ createId: ports.createId, now: () => new Date().toISOString() }`. P4-B38 fails on `now`.
+
+**Order (red first):** the scaffold edits (all base counts unchanged: 39, 151, 108, 10), then the six P4-B33 to P4-B38 rows (red), then the supervisor (P4-B33, P4-B34 green), the writer proof (P4-B35 green), the runtime port (P4-B38 green), `main.ts` (P4-B36, P4-B37 green), the comment rewording, then the Stryker re-pointing (`check:mutation-ranges` green).
+
+**Structural checks (on the candidate):**
+- `rg -n "randomUUID|new Date\(" apps/desktop/src/main/harness-supervisor.ts`: no hit.
+- `rg -n "new Date\(" apps/desktop/src/main/canonical-writer-package-smoke.ts`: no hit; `rg -n "randomUUID\(" apps/desktop/src/main/canonical-writer-package-smoke.ts`: `proofId` and `requestId` only.
+- `rg -n "new HarnessSupervisor\(" apps/desktop/src --glob '!*.test.ts'`: `main.ts` only, with four arguments.
+- `git diff <base> -- packages apps/harness apps/desktop/src/preload apps/desktop/src/renderer apps/desktop/src/shared apps/desktop/src/main/harness-log-lines.ts apps/desktop/src/main/harness-request-core.ts apps/desktop/src/main/harness-bridges.ts apps/harness/scripts/check-stryker-ranges.test.mjs`: empty.
+- `rg -n "latched stop" apps/desktop/src/main/desktop-runtime.ts apps/desktop/src/main/desktop-runtime.test.ts`: `desktop-runtime.ts:122`'s `owned` TSDoc only.
+- `git diff <base> -- stryker-range-anchors.json`: only line numbers change.
+- `git diff <base> --stat` lists only the affected paths and this slice's evidence.
+
+#### Success Criteria: p4-s10-desktop-clock
+
+Automated (smallest first; each read by its real exit code; desktop main tests with `--config vitest.main.config.ts`):
+- Green at `eeae135`, counts recorded: `pnpm --filter @slopstop/desktop exec vitest run --config vitest.main.config.ts src/main/harness-supervisor.test.ts src/main/canonical-writer-package-smoke.test.ts src/main/canonical-writer-package-smoke-main.test.ts src/main/desktop-runtime.test.ts` (measured: 39, 151, 108, 10).
+- After the scaffold edits, the same counts green; then each new row red for the predicted reason; then green at the candidate (41, 152, 110, 11).
+- Each binding (1 to 6) observed red and then restored.
+- `pnpm check:mutation-ranges` exit 0, counts unchanged.
+- `pnpm typecheck`, then `pnpm check` exit 0 (read CPU first, in its own call). Knip exit 0. `pnpm check:duplicates` reports no clone.
+- CodeScene 10 on `harness-supervisor.ts`, `canonical-writer-package-smoke.ts`, `main.ts`, `desktop-runtime.ts`, `harness-supervisor.test.ts`, `canonical-writer-package-smoke.test.ts` and `desktop-runtime.test.ts`; `canonical-writer-package-smoke-main.test.ts` no lower than 9.68 (Q20 (a)).
+- No per-slice e2e or smoke run (Q21 (a)).
+- Mutation: none for this slice; `desktop-s6`, `desktop-s7`, `desktop-s8` and `project-storage-desktop` run in the final Phase 4 mutation run.
+
+Manual: none. The coordinator accepts the candidate (normal lane).
+
 ## Deferred Work
 
 Each slice gets its full contract when it becomes next. Behavior IDs continue from P4-B4; questions from Q11. Lanes come from `lane.mjs --paths` over the planned paths, raised to the feature lane (normal).
@@ -1379,6 +1497,22 @@ Heavy runs (e2e, `package:launch-smoke`, `package:smoke`, mutation) are never ru
   - **Candidate review round 1** (`p4-s9-candidate-review.md`): slice-verifier passed with 2 warnings, code reviewer passed with 1 suggestion, coverage reviewer failed with 1 concern and 3 suggestions; no blocker. Pedro fixed all of them in one round, and the coordinator reviewed the fix diff: every fake frame carries a URL and the refusal log matches exactly; events copy the frame; a two-window closed row; invoke channels derived from `desktopIpcChannels`; TSDoc on both register functions.
   - **Deviations accepted by Pedro:** V1, `ipcSenderRefusedMessage` is not exported, because Knip fails an export no test may import (text and assertions unchanged). V2, the P4-B31 dialog-owner row was written after step 6; it was then run once against the base sources and passed, as predicted.
   - **Known debt (Pedro, option (a)):** `canonical-writer-package-smoke-main.test.ts` scores CodeScene 9.68, the same as at the base (Primitive Obsession, pre-existing). The slice added a Large Method and removed it again (`answerOpenPaths`). Raising the file to 10 is left for a later slice.
+- **2026-11-12: p4-s10 detailed (coordinator instruction); Q19, Q20, Q21 open.**
+  - **Base:** `eeae135` (p4-s9 accepted). Read there, and the three touched test files run green there (39, 151, 108; `desktop-runtime.test.ts` 10). CodeScene read at the base: 10 on the five source and test files, 9.68 on `canonical-writer-package-smoke-main.test.ts`.
+  - **Shape:** Q9 (a) as approved: the supervisor and the writer proof take the desktop `Clock`; `main.ts` holds the one clock value. The contract is written on Q19 (a).
+  - **Facts the contract rests on:** the supervisor is built through the runtime's `createSupervisor` port, which `main.ts` writes, so (a) reaches it without editing the runtime. The handshake runs once per connected child, so the stamp is read per send (P4-B34). `proofId` and `requestId` are writer-proof control ids, not protocol metadata, and keep `randomUUID`.
+  - **The `main.ts` `desktop-s6` ranges** the s10 Deferred row omitted are taken here: `main.ts:85-95` and `:379-379` at `eeae135` (the coordinator's `83-93` and `369` were older lines).
+  - **"Latched stop" rewording:** taken only under Q19 (b), which edits `desktop-runtime.ts`; not taken under (a). `desktop-runtime.ts:122` is accurate and stays either way.
+  - **Known debt:** `canonical-writer-package-smoke-main.test.ts` (9.68) is named as Q20, an option, not a commitment.
+  - **Approach check:** rejected an Effect `Clock` service (Q9 (a) settled the desktop port); rejected moving the `Clock` type out of `harness-request-core.ts` (no second consumer needs it moved); rejected clocking `proofId`/`requestId` (not message metadata).
+  - **Lane:** normal; `lane.mjs --paths` answers normal (files 6 > 5). The label is recorded on approval.
+- **2026-11-12: p4-s10 Q19 (b), Q20 (a), Q21 (a) decided; contract folded on (b) (Pedro; coordinator).**
+  - **Q19 (b):** the runtime's `createSupervisor` port gains the clock and the runtime passes its own `createId`/`now`, as for the bridges. This adds `desktop-runtime.ts` and `desktop-runtime.test.ts` (P4-B38, binding 6) and takes the "latched stop" rewording (`desktop-runtime.ts:48`, `:164-165`; test `:21`, `:66`; `:122` stays). Stryker: `desktop-runtime.ts` is already a whole file in `desktop-s6` (counts stay 7/6); `desktop-s7`'s `desktop-runtime.ts:166-189` (row 30) may shift and is re-pointed by line.
+  - **Q20 (a):** `canonical-writer-package-smoke-main.test.ts` keeps its debt; criterion no lower than 9.68.
+  - **Q21 (a):** no per-slice run; the final `check:deep` carries `test:e2e` and `package:launch-smoke`.
+  - **Lane:** normal; `lane.mjs --paths` over the eleven paths answers normal (files 7 > 5). The label is recorded on approval.
+  - **Approval:** Pedro said he approves the contract once it is written on (b), relayed by the coordinator. The approval of this exact hash is recorded when the coordinator confirms it.
+- **2026-11-12: p4-s10 contract approved (Pedro; coordinator).** Pedro approved the contract on the condition that it was written on Q19 (b). The coordinator checked the folded hash `4a04fb87f902…aae6` (copy `approved-4a04fb87.md`): additions only, validate OK, and Q19 (b), Q20 (a) and Q21 (a) recorded. That hash is the approved one. Lane normal.
 
 ## References
 
