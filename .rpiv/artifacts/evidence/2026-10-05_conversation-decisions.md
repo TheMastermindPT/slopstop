@@ -2687,3 +2687,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - `git push origin main` passed the pre-push `check:deep` on the first try (3991 unit, 6225 coverage, 2234 integration tests, 27 e2e, launch smoke) and moved origin/main from `8990120` to `b758737`. Log: `p4-push-main.log`.
 - Phase 4 closes no GitHub issue: #144 is residual R7, not R5, and stays open. #147 and #148 stay open.
 - The roadmap is refreshed. Left: remove the `slopstop-p4` worktree and the local branch, after Pedro approves.
+
+## 2026-11-14 — Phase 4 cleanup
+
+- Pedro approved removing the `slopstop-p4` worktree and deleting the local branch `fix/arch-review-phase-4` (head `cab5002`, never pushed). Both are gone. The Stryker HTML reports from the worktree were first copied to the evidence folder (`p4-final-mutation-reports/`) for #147.
+- Pedro chose to leave the roadmap commit `6d1b132` and this entry for the next push.
+- Phase 4 is finished. Next item: for Pedro to choose (DL §129).
