@@ -2675,3 +2675,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Run 3 on `cab5002` exited 0 in about 20.6 min: all six stages passed (3991 unit tests, coverage thresholds met, 2234 integration tests, knip, golden SQL, jscpd, likec4, 27 e2e, launch smoke). No game in any sample. The coordinator checked the log.
 - Pedro accepted Phase 4 as a whole (10 slices), knowing the open items: the mutation run cut short (#147), run 1 void because of a game, and run 2 failing on a known load-sensitive row (#148).
 - Pedro approved the local squash of `fix/arch-review-phase-4` into main. The push is a separate approval.
+
+## 2026-11-14 — Phase 4 squashed into main; push approved
+
+- `fix/arch-review-phase-4` (head `cab5002`) was squashed into local main as `0f89b88`. The code under `apps`, `packages`, `scripts` and `docs` is identical to the branch; the brief and this log keep main's version. `pnpm check` on main with the squash staged exited 0 (3991 tests; log `p4-squash-main-check.log`).
+- Coordinator mistake, fixed: commit `1a74ae2` staged the whole artifacts folder and picked up four untracked handoff files. Commit `0aff06c` untracks them again; they stay on disk. Nothing had been pushed.
+- Pedro said "livre" and approved `git push origin main` with the normal pre-push hook. If the hook fails, the coordinator stops and reports; no rerun without a new decision.
