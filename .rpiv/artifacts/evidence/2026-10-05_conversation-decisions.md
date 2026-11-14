@@ -2681,3 +2681,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - `fix/arch-review-phase-4` (head `cab5002`) was squashed into local main as `0f89b88`. The code under `apps`, `packages`, `scripts` and `docs` is identical to the branch; the brief and this log keep main's version. `pnpm check` on main with the squash staged exited 0 (3991 tests; log `p4-squash-main-check.log`).
 - Coordinator mistake, fixed: commit `1a74ae2` staged the whole artifacts folder and picked up four untracked handoff files. Commit `0aff06c` untracks them again; they stay on disk. Nothing had been pushed.
 - Pedro said "livre" and approved `git push origin main` with the normal pre-push hook. If the hook fails, the coordinator stops and reports; no rerun without a new decision.
+
+## 2026-11-14 — Phase 4 pushed
+
+- `git push origin main` passed the pre-push `check:deep` on the first try (3991 unit, 6225 coverage, 2234 integration tests, 27 e2e, launch smoke) and moved origin/main from `8990120` to `b758737`. Log: `p4-push-main.log`.
+- Phase 4 closes no GitHub issue: #144 is residual R7, not R5, and stays open. #147 and #148 stay open.
+- The roadmap is refreshed. Left: remove the `slopstop-p4` worktree and the local branch, after Pedro approves.

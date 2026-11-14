@@ -29,7 +29,7 @@ content_hash: efbb38119911f7254f57d0b4b88c90cd794f41b04aec63653d361e088dd5af46
 
 Revision 2 (2026-10-10), after an adversarial completeness and ordering review; status refreshed on 2026-10-19 (revision 3). Each phase starts when the previous one is done unless marked "in parallel"; reasons are in brackets. Sections 3-7 hold the detail and sources. ADR line numbers refer to the files after commits d601e5b and e44236d.
 
-**Where we are (2026-10-31):** Phases 0 and 1 are done. Phase 2: #99, #105 (the TS 7 switch `0b49cc0`), #123 Part A (`4cf6541`), #133 (`7d04277`) and architecture review Phases 1-3 are done and pushed (origin/main `8990120`). #96, #105, #129 and #133 are closed. Next: architecture review Phase 4 (bridge/IPC and R5, before C2) or another open Phase 2 item. The order is still for the user to choose (DL §129).
+**Where we are (2026-11-14):** Phases 0 and 1 are done. Phase 2: #99, #105 (the TS 7 switch `0b49cc0`), #123 Part A (`4cf6541`), #133 (`7d04277`) and architecture review Phases 1-4 are done and pushed (origin/main `b758737`). #96, #105, #129 and #133 are closed. Next: C2 or another open Phase 2 item. The order is still for the user to choose (DL §129).
 
 ### Phase 0 — done
 1. **Done 2026-10-10:** C1 S1 + S2 squash-merged to local main as `ba4e15b` after review rounds 1-2 and a user-approved bounded round 3 (DL §32); final-head proof on ac6569c. The real `userData` was backed up first to `%APPDATA%SlopStop-backup-2026-10-10` (67 files, hashes verified).
@@ -62,11 +62,11 @@ Revision 2 (2026-10-10), after an adversarial completeness and ordering review; 
      - **Review Phase 1**, 12 quick correctness fixes: **done 2026-10-24** (`4dbd834`, pushed).
      - **Review Phase 2**, the vocabulary owners, with the identity-root ADR 0023: **done 2026-10-25** (`316e596`, pushed).
      - **Review Phase 3**, failure classification: **done 2026-10-31** (`25780d1`, plus the test fix `8990120` for a Windows rename race, pushed; #129 closed). The acceptance `check:deep` caught one real regression, fixed as p3-s8. It opened #145 (gate entry guard behind an aliased path) and #146 (no transient retry on the product's staging-to-active rename).
-     - **Review Phase 4**, the bridge/IPC consolidation and R5, comes before C2.
+     - **Review Phase 4**, the bridge/IPC consolidation and R5: **done 2026-11-14** (`0f89b88`, pushed). It closed no issue. The final mutation run was cut short by the user; its unfinished config and survivors are #147. The final `check:deep` passed on its third run (run 1 void because a game was open, run 2 failed on a load-sensitive Effect gate test row, now #148).
      - **Review Phase 5** folds into #123 Part B.
      - **Review Phase 6** (R4, R9) waits for its ADRs, C2 and Frame.
 
-Items 2, 3, 4 and 9 are done; CI was repaired under #142 (closed). Still open in Phase 2, in no fixed order: review Phase 4, #135, #95/#97, #93 (Mastra cleanup), #144, #143, #141, #140, #137, #139, #138, #145 and #146. Confirm the next item with the user before starting it (DL §129).
+Items 2, 3, 4 and 9 are done; CI was repaired under #142 (closed). Still open in Phase 2, in no fixed order: #135, #95/#97, #93 (Mastra cleanup), #144, #143, #141, #140, #137, #139, #138, #145, #146, #147 and #148. Confirm the next item with the user before starting it (DL §129).
 
 ### Phase 3 — the new interface
 1. Decisions: the open visual items through a session with the ui-ux agent (#121); local Rive runtime; ADR note for the splash-window CSP; custom frameless title bar (Electron security review); Settings shell with the sounds toggle and first-install sound prompt (DL:292, :304). The Rive paid plan is a release gate (#103), not a prerequisite. **Added 2026-10-22 (user):** the ui-ux agent designs the initial repository-selection section (Project registration: choosing the repository) in Figma AND as HTML prototypes, in 3 distinct variants for the user to choose from, with the same anti-clone and rune rules.
@@ -146,7 +146,7 @@ Recalibrate provisional numbers from real use (ADRs 0004/0005/0009/0018/0019/002
 
 ## 6. Technical debt and residuals
 
-- **Open issues:** #92 journal; #93 Mastra head (after #101); #95 real-process quit during upgrade; #97 mutation scope for C1-0 S5; #134 C1-gate deferred rows and the licence check; #135 multi-process storage tests; #143 posix storage guarantees; #144 review residuals; #145 gate entry guard behind an aliased path; #146 staging-to-active rename retry. Closed: #94 (2026-10-11), #102 (fixed in C1 S3); #96, #105, #129 and #133 (2026-10-31).
+- **Open issues:** #92 journal; #93 Mastra head (after #101); #95 real-process quit during upgrade; #97 mutation scope for C1-0 S5; #134 C1-gate deferred rows and the licence check; #135 multi-process storage tests; #143 posix storage guarantees; #144 review residuals; #145 gate entry guard behind an aliased path; #146 staging-to-active rename retry; #147 Phase 4 mutation run and survivors; #148 Effect gate test rows time out under load. Closed: #94 (2026-10-11), #102 (fixed in C1 S3); #96, #105, #129 and #133 (2026-10-31).
 - **Effect migration remainder:** the unit 2 lifecycle was #123 Part A (done 2026-10-23, `4cf6541`); the existing SQL bodies are #123 Part B, after C2 (`research/2026-10-04_sql-code-to-effect-pros-cons.md:50-63`; DL §102).
 - **Mutation survivors not triaged:** C1-0 S1 scope (eligibility 13, generated-migrations 8, manifest 2), C1-0 S2 recovery; 41 out-of-scope C1-0 deep-review suggestions (DL:125).
 - **Measured numbers still provisional:** timeouts, heartbeats, retries, retention (ADRs 0004, 0005, 0009:163), artifact retention (ADR 0018), result limits (ADR 0019), convergence profile (ADR 0020); upgrade time target under 1 s once sizes are measured.
