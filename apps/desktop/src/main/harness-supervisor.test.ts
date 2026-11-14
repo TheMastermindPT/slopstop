@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { EventEmitter } from "node:events";
 import path from "node:path";
 import {
   createProjectCloseResultEvent,
@@ -11,9 +10,7 @@ import {
   createWorkspaceProjectionInvalidatedEvent,
   createWorkspaceQueryResultEvent,
   decodeStrict,
-  HarnessBootstrapSchema,
   type HarnessStatus,
-  HarnessUpgradeLogLineSchema,
   MessageIdSchema,
   ProjectConversationReadRequestSchema,
   ProjectStorageCloseRequestSchema,
@@ -26,7 +23,6 @@ import {
   WorkspaceQueryResultSchema,
   WorkspaceQuerySchema,
 } from "@slopstop/protocol";
-import type { Logger } from "pino";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const electronMocks = vi.hoisted(() => ({
@@ -48,65 +44,23 @@ vi.mock("electron", () => ({
 
 vi.mock("./crash-reporting.js", () => crashReportingMocks);
 
+import { createHarnessBridges } from "./harness-bridges.js";
 import type { HarnessSessionEvent } from "./harness-session.js";
+import { harnessEntryPath } from "./harness-supervisor.js";
 import {
-  HarnessShutdownTimeout,
-  HarnessSupervisor,
-  harnessEntryPath,
-} from "./harness-supervisor.js";
-import { createProjectEntryBridge } from "./project-entry-bridge.js";
+  bootstrap,
+  channels,
+  clockId,
+  clockTime,
+  counterClock,
+  eventMetadata,
+  expectShutdownTimeout,
+  FakeChild,
+  logger,
+  resetSupervisorDoubles,
+  supervisorWith,
+} from "./harness-supervisor-test-peers.js";
 
-class FakePort extends EventEmitter {
-  readonly close = vi.fn();
-  readonly postMessage = vi.fn();
-  readonly start = vi.fn();
-}
-
-class FakeChild extends EventEmitter {
-  readonly kill = vi.fn();
-  readonly postMessage = vi.fn();
-  readonly stderr: EventEmitter | undefined;
-  readonly stdout: EventEmitter | undefined;
-
-  constructor(withOutput = true) {
-    super();
-    this.stderr = withOutput ? new EventEmitter() : undefined;
-    this.stdout = withOutput ? new EventEmitter() : undefined;
-  }
-}
-
-type FakeChannel = Readonly<{
-  port1: FakePort;
-  port2: FakePort;
-}>;
-
-/** The supervisor's shutdown timeout: a typed failure that keeps its message (P-S5B-1). */
-function expectShutdownTimeout(outcome: unknown) {
-  expect(outcome).toBeInstanceOf(HarnessShutdownTimeout);
-  expect(outcome).toBeInstanceOf(Error);
-  expect(outcome).toMatchObject({
-    _tag: "HarnessShutdownTimeout",
-    message: "Harness shutdown timed out.",
-  });
-}
-
-const logger = {
-  error: vi.fn(),
-  info: vi.fn(),
-  warn: vi.fn(),
-} as unknown as Logger;
-
-const eventMetadata = {
-  messageId: decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000002"),
-  sentAt: "2026-08-14T12:00:01.000Z",
-  sequence: 1,
-  causationId: decodeStrict(MessageIdSchema, "00000000-0000-4000-8000-000000000001"),
-};
-const bootstrap = decodeStrict(HarnessBootstrapSchema, {
-  kind: "harness.connect",
-  applicationStorageRootUrl: "file:///C:/Users/example/AppData/SlopStop/storage",
-  migrationResourcesRootUrl: "file:///C:/app/harness-migrations",
-});
 const projectStorageProjectId = "00000000-0000-4000-8000-000000000101";
 const projectStorageOpenRequest = decodeStrict(ProjectStorageOpenRequestSchema, {
   projectId: projectStorageProjectId,
@@ -162,44 +116,12 @@ const projectStorageResultEvents = [
   ),
 ] as const;
 
-let channels: FakeChannel[];
 let failPortPost: boolean;
 
-function createChannel(): FakeChannel {
-  const channel = {
-    port1: new FakePort(),
-    port2: new FakePort(),
-  };
-  if (failPortPost) {
-    channel.port2.postMessage.mockImplementation(() => {
-      throw new Error("send failed");
-    });
-  }
-  channels.push(channel);
-  return channel;
-}
-
-function supervisorWith(children: FakeChild[]): HarnessSupervisor {
-  electronMocks.fork.mockImplementation(() => {
-    const child = children.shift();
-    if (child === undefined) {
-      throw new Error("Test did not provide a child process.");
-    }
-    return child;
-  });
-  return new HarnessSupervisor("C:/app/harness.cjs", logger, bootstrap);
-}
-
 beforeEach(() => {
-  channels = [];
   failPortPost = false;
-  electronMocks.MessageChannelMain.mockImplementation(electronMocks.createChannel);
-  electronMocks.createChannel.mockImplementation(createChannel);
-  electronMocks.fork.mockReset();
+  resetSupervisorDoubles(electronMocks, () => failPortPost);
   crashReportingMocks.reportHarnessCrash.mockReset();
-  vi.mocked(logger.error).mockReset();
-  vi.mocked(logger.info).mockReset();
-  vi.mocked(logger.warn).mockReset();
 });
 
 afterEach(() => {
@@ -390,6 +312,44 @@ describe("HarnessSupervisor", () => {
     ]);
     expect(logs).not.toContain(bootstrap.applicationStorageRootUrl);
     expect(logs).not.toContain(bootstrap.migrationResourcesRootUrl);
+    void supervisor.stop();
+  });
+
+  it("stamps the handshake with the injected clock", () => {
+    vi.useFakeTimers();
+    const child = new FakeChild();
+    const supervisor = supervisorWith([child], counterClock());
+
+    supervisor.start();
+    child.emit("spawn");
+    expect(channels[0]?.port2.postMessage).toHaveBeenCalledOnce();
+    expect(channels[0]?.port2.postMessage.mock.calls[0]?.[0]).toMatchObject({
+      command: "system.handshake",
+      messageId: clockId(1),
+      sentAt: clockTime(1),
+    });
+    void supervisor.stop();
+  });
+
+  it("reads the clock afresh for each child's handshake", () => {
+    vi.useFakeTimers();
+    const first = new FakeChild();
+    const second = new FakeChild();
+    const clock = counterClock();
+    const supervisor = supervisorWith([first, second], clock);
+
+    supervisor.start();
+    first.emit("spawn");
+    first.emit("exit", 1);
+    vi.advanceTimersByTime(250);
+    second.emit("spawn");
+    expect(channels[1]?.port2.postMessage.mock.calls[0]?.[0]).toMatchObject({
+      command: "system.handshake",
+      messageId: clockId(2),
+      sentAt: clockTime(2),
+    });
+    expect(clock.createId).toHaveBeenCalledTimes(2);
+    expect(clock.now).toHaveBeenCalledTimes(2);
     void supervisor.stop();
   });
 
@@ -935,323 +895,13 @@ describe("HarnessSupervisor", () => {
   });
 });
 
-describe("harness upgrade log lines", () => {
-  const time = Date.UTC(2026, 9, 6, 12, 0, 0);
-  const harnessTime = new Date(time).toISOString();
-  const ids = {
-    projectId: "00000000-0000-4000-8000-000000000010",
-    upgradeId: "00000000-0000-4000-8000-0000000000a1",
-  };
-  const abandoned = (reason: string) => ({
-    level: 30,
-    time,
-    service: "harness",
-    event: "project-storage.upgrade.abandoned",
-    ...ids,
-    reason,
-  });
-  const discardFailed = (cause: string) => ({
-    level: 40,
-    time,
-    service: "harness",
-    event: "project-storage.upgrade.discard-failed",
-    ...ids,
-    cause,
-  });
-  const valid = [
-    abandoned("failed"),
-    abandoned("interrupted"),
-    discardFailed("busy"),
-    discardFailed("broken"),
-    discardFailed("unproven"),
-  ].map((line) => decodeStrict(HarnessUpgradeLogLineSchema, line));
-  const json = (value: unknown) => JSON.stringify(value);
-  const exactly16KiB = "x".repeat(16 * 1024);
-  const overlong = "y".repeat(20 * 1024);
-  const lines = [
-    ...valid.map(json),
-    json({ ...abandoned("failed"), extra: true }),
-    json({ ...abandoned("failed"), projectId: "not-a-uuid" }),
-    json(abandoned("restarted")),
-    json({ level: 30, time, service: "harness", event: "other.event" }),
-    "not json",
-    exactly16KiB,
-    overlong,
-    json(abandoned("failed")),
-  ];
-  const text = `${lines.join("\n")}\n{"partial":`;
-
-  const observation = "Harness process output observed.";
-  /** The stream cut into 1000-byte chunks, none ending on a newline. */
-  function chunksOf(value: string): Buffer[] {
-    const bytes = Buffer.from(value);
-    return Array.from({ length: Math.ceil(bytes.byteLength / 1000) }, (_, index) =>
-      bytes.subarray(index * 1000, (index + 1) * 1000),
-    );
-  }
-  /** Every desktop log call, in order, as `[level, object, message]`. */
-  function recordLogCalls(): unknown[][] {
-    const recorded: unknown[][] = [];
-    for (const level of ["info", "warn", "error"] as const) {
-      vi.mocked(logger[level]).mockImplementation((object: unknown, message?: unknown) => {
-        recorded.push([level, object, message]);
-      });
-    }
-    return recorded;
-  }
-  const forwarded = (line: Readonly<Record<string, unknown>>) => [
-    line["level"] === 30 ? "info" : "warn",
-    {
-      source: "harness",
-      event: line["event"],
-      ...ids,
-      ...("reason" in line ? { reason: line["reason"] } : { cause: line["cause"] }),
-      harnessTime,
-    },
-    "Harness upgrade event.",
-  ];
-  const invalid = (event: string) => [
-    "warn",
-    { code: "HARNESS_LOG_LINE_INVALID", attempt: 1, event },
-    "Harness upgrade log line rejected.",
-  ];
-
-  it("forwards harness upgrade log lines and drops other output lines", () => {
-    const recorded = recordLogCalls();
-    const child = new FakeChild();
-    supervisorWith([child]).start();
-    const chunks = chunksOf(text);
-    expect(chunks.every((chunk) => !chunk.toString().endsWith("\n"))).toBe(true);
-    for (const chunk of chunks) child.stdout?.emit("data", chunk);
-    child.stdout?.emit("end");
-    child.emit("exit", 0);
-
-    expect(recorded.filter((entry) => entry[2] === observation)).toEqual(
-      chunks.map((chunk) => [
-        "info",
-        { attempt: 1, stream: "stdout", bytes: chunk.byteLength },
-        observation,
-      ]),
-    );
-    expect(recorded.filter((entry) => entry[2] !== observation)).toEqual([
-      ...valid.map(forwarded),
-      invalid("project-storage.upgrade.abandoned"),
-      invalid("project-storage.upgrade.abandoned"),
-      invalid("project-storage.upgrade.abandoned"),
-      ["warn", { code: "HARNESS_LOG_LINE_TOO_LONG", attempt: 1 }, "Harness output line dropped."],
-      forwarded(abandoned("failed")),
-      [
-        "warn",
-        { code: "HARNESS_LOG_LINE_INCOMPLETE", attempt: 1 },
-        "Harness output line incomplete.",
-      ],
-      ["error", { exitCode: 0, attempt: 1 }, "Harness process exited."],
-    ]);
-  });
-
-  it("forwards upgrade lines written during shutdown until stdout ends", () => {
-    vi.useFakeTimers();
-    const recorded = recordLogCalls();
-    const child = new FakeChild();
-    const supervisor = supervisorWith([child]);
-    supervisor.start();
-    void supervisor.stop();
-    child.stdout?.emit(
-      "data",
-      Buffer.from(`${json(abandoned("interrupted"))}
-`),
-    );
-    child.stderr?.emit("data", Buffer.from("secret-token"));
-    child.emit("exit", 0);
-    child.stdout?.emit("end");
-    child.stdout?.emit(
-      "data",
-      Buffer.from(`${json(abandoned("failed"))}
-`),
-    );
-
-    expect(recorded.filter((entry) => entry[2] !== "Harness process exited.")).toEqual([
-      forwarded(abandoned("interrupted")),
-    ]);
-    expect(child.stdout?.listenerCount("data")).toBe(0);
-  });
-
-  it("forwards an upgrade line that arrives after exit until stdout ends", () => {
-    const recorded = recordLogCalls();
-    const child = new FakeChild();
-    supervisorWith([child]).start();
-    child.emit("exit", 0);
-    child.stdout?.emit(
-      "data",
-      Buffer.from(`${json(abandoned("interrupted"))}
-`),
-    );
-    child.stdout?.emit("end");
-    child.stdout?.emit(
-      "data",
-      Buffer.from(`${json(abandoned("failed"))}
-`),
-    );
-
-    expect(recorded.filter((entry) => entry[2] === "Harness upgrade event.")).toEqual([
-      forwarded(abandoned("interrupted")),
-    ]);
-    expect(child.stdout?.listenerCount("data")).toBe(0);
-  });
-
-  it("stops forwarding when a stopping child never exits", async () => {
-    vi.useFakeTimers();
-    const child = new FakeChild();
-    const supervisor = supervisorWith([child]);
-    supervisor.start();
-    const stopped = supervisor.stop().catch((error: unknown) => error);
-    await vi.advanceTimersByTimeAsync(10_000);
-    const outcome = await stopped;
-    expectShutdownTimeout(outcome);
-    expect(child.stdout?.listenerCount("data")).toBe(0);
-  });
-
-  /** A started, ready child whose stop is watched through a settled flag, under fake time. */
-  function stoppingReadyChild(child = new FakeChild()) {
-    vi.useFakeTimers();
-    const supervisor = supervisorWith([child]);
-    supervisor.start();
-    child.emit("spawn");
-    channels[0]?.port2.emit("message", { data: createReadyEvent(eventMetadata, "0.0.0") });
-    const outcome: { settled: boolean; error?: unknown } = { settled: false };
-    void supervisor.stop().then(
-      () => Object.assign(outcome, { settled: true }),
-      (error: unknown) => Object.assign(outcome, { settled: true, error }),
-    );
-    return { child, supervisor, outcome };
-  }
-  const upgradeLine = () => Buffer.from(`${json(abandoned("interrupted"))}\n`);
-  const upgradeEvents = (recorded: unknown[][]) =>
-    recorded.filter((entry) => entry[2] === "Harness upgrade event.");
-
-  it.each([{ event: "end" }, { event: "close" }] as const)(
-    "waits after exit until stdout $event before the stop resolves",
-    async ({ event }) => {
-      const recorded = recordLogCalls();
-      const { child, supervisor, outcome } = stoppingReadyChild();
-      child.emit("exit", 0);
-      await vi.advanceTimersByTimeAsync(500);
-      expect(outcome.settled).toBe(false);
-      expect(supervisor.getStatus()).not.toEqual({ state: "stopped" });
-      supervisor.start();
-      expect(electronMocks.fork).toHaveBeenCalledOnce();
-      child.stdout?.emit("data", upgradeLine());
-      expect(upgradeEvents(recorded)).toEqual([forwarded(abandoned("interrupted"))]);
-      child.stdout?.emit(event);
-      await vi.advanceTimersByTimeAsync(0);
-      expect(outcome).toEqual({ settled: true });
-      expect(supervisor.getStatus()).toEqual({ state: "stopped" });
-      expect(child.stdout?.listenerCount("data")).toBe(0);
-    },
-  );
-
-  it("resolves the stop at the drain bound when stdout never ends", async () => {
-    const recorded = recordLogCalls();
-    const { child, supervisor, outcome } = stoppingReadyChild();
-    child.emit("exit", 0);
-    await vi.advanceTimersByTimeAsync(999);
-    expect(outcome.settled).toBe(false);
-    expect(child.stdout?.listenerCount("data")).toBe(1);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(outcome).toEqual({ settled: true });
-    expect(supervisor.getStatus()).toEqual({ state: "stopped" });
-    expect(child.stdout?.listenerCount("data")).toBe(0);
-    child.stdout?.emit("data", upgradeLine());
-    expect(upgradeEvents(recorded)).toEqual([]);
-  });
-
-  it.each([{ case: "absent" }, { case: "already ended" }, { case: "already closed" }] as const)(
-    "resolves at exit when stdout is $case",
-    async ({ case: stdout }) => {
-      const { child, supervisor, outcome } = stoppingReadyChild(new FakeChild(stdout !== "absent"));
-      if (stdout === "already ended") child.stdout?.emit("end");
-      if (stdout === "already closed") child.stdout?.emit("close");
-      child.emit("exit", 0);
-      await vi.advanceTimersByTimeAsync(0);
-      expect(outcome).toEqual({ settled: true });
-      expect(supervisor.getStatus()).toEqual({ state: "stopped" });
-    },
-  );
-
-  it.each([{ event: "end" }, { event: "close" }] as const)(
-    "removes every stdout listener when stdout $event arrives",
-    ({ event }) => {
-      const child = new FakeChild();
-      supervisorWith([child]).start();
-      child.stdout?.emit(event);
-      expect(child.stdout?.eventNames()).toEqual([]);
-    },
-  );
-
-  it("bounds the worst-case quit at the kill grace plus the drain", async () => {
-    const { child, outcome } = stoppingReadyChild();
-    await vi.advanceTimersByTimeAsync(5_000);
-    expect(child.kill).toHaveBeenCalledOnce();
-    await vi.advanceTimersByTimeAsync(4_999);
-    child.emit("exit", 0);
-    await vi.advanceTimersByTimeAsync(999);
-    expect(outcome.settled).toBe(false);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(outcome).toEqual({ settled: true });
-  });
-
-  it.for(["end", "close"] as const)(
-    "keeps stderr logging and the error listener when stdout %s arrives before exit",
-    (event) => {
-      const recorded = recordLogCalls();
-      const child = new FakeChild();
-      supervisorWith([child]).start();
-      child.stdout?.emit(event);
-      expect(child.stdout?.listenerCount("data")).toBe(0);
-      expect(child.listenerCount("error")).toBe(1);
-      child.stderr?.emit("data", Buffer.from("err"));
-      expect(() => child.emit("error", new Error("late failure"))).not.toThrow();
-      child.stdout?.emit(
-        "data",
-        Buffer.from(`${json(abandoned("failed"))}
-`),
-      );
-      expect(recorded.filter((entry) => entry[2] !== "Harness process exited.")).toEqual([
-        ["error", { attempt: 1, stream: "stderr", bytes: 3 }, observation],
-        [
-          "error",
-          { attempt: 1, code: "HARNESS_PROCESS_ERROR" },
-          "Harness process reported a fatal error.",
-        ],
-      ]);
-    },
-  );
-
-  it("rejects an upgrade line whose time is no date", () => {
-    const recorded = recordLogCalls();
-    const child = new FakeChild();
-    supervisorWith([child]).start();
-    const line = json({ ...abandoned("failed"), time: 9_000_000_000_000_000 });
-    expect(() =>
-      child.stdout?.emit(
-        "data",
-        Buffer.from(`${line}
-`),
-      ),
-    ).not.toThrow();
-    expect(recorded.filter((entry) => entry[2] !== observation)).toEqual([
-      invalid("project-storage.upgrade.abandoned"),
-    ]);
-  });
-});
-
 it.each([{ failure: "a protocol error" }, { failure: "a system failure" }] as const)(
   "answers broken for a read during $failure",
   async ({ failure }) => {
     vi.useFakeTimers();
     const child = new FakeChild();
     const supervisor = supervisorWith([child]);
-    const bridge = createProjectEntryBridge({
+    const { projectEntry: bridge, release } = createHarnessBridges({
       session: supervisor.getSession(),
       createId: randomUUID,
       now: () => "2026-10-19T12:00:00.000Z",
@@ -1280,7 +930,7 @@ it.each([{ failure: "a protocol error" }, { failure: "a system failure" }] as co
       request,
       diagnostic: projectConversationDiagnostics.protocolMessageInvalid,
     });
-    bridge.stop();
+    release();
     void supervisor.stop();
   },
 );

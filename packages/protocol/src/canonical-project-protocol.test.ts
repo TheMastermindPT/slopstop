@@ -968,3 +968,74 @@ describe("writer release codes", () => {
     ).toBe(true);
   });
 });
+
+describe("harness rows in a broken activation and switch", () => {
+  const codes = [
+    "PROTOCOL_MESSAGE_INVALID",
+    "PROTOCOL_VERSION_UNSUPPORTED",
+    "HARNESS_INTERNAL_FAILURE",
+  ] as const satisfies readonly protocol.HarnessFailureCode[];
+  const activationRequest = { projectId: targetProjectId };
+  const results = [
+    {
+      result: "activation",
+      schemaName: "CanonicalProjectActivationResultSchema",
+      request: activationRequest,
+      otherStatus: "unavailable",
+    },
+    {
+      result: "switch",
+      schemaName: "CanonicalProjectSwitchResultSchema",
+      request: switchRequest,
+      otherStatus: "coordinator-unavailable",
+    },
+  ] as const;
+  const rows = results.flatMap((entry) =>
+    codes.map((code) => [entry.result, code, entry] as const),
+  );
+  const rejects = (target: PublicSchema, value: object) =>
+    expect(decodeWithIssues(target, value).success).toBe(false);
+
+  it("covers every harness failure row", () => {
+    expect([...codes].sort()).toEqual(Object.keys(protocol.harnessFailureRows).sort());
+  });
+
+  it.each(rows)("carries an exact harness row in a broken %s: %s", (result, code, entry) => {
+    const target = schema(entry.schemaName);
+    const row = protocol.harnessFailureRows[code];
+    const broken = { status: "broken", request: entry.request, diagnostic: row };
+    expect(decodeStrict(target, broken)).toEqual(broken);
+    rejects(target, { ...broken, diagnostic: { ...row, message: "Harness failed." } });
+    for (const other of codes.filter((candidate) => candidate !== code)) {
+      rejects(target, {
+        ...broken,
+        diagnostic: { ...row, message: protocol.harnessFailureRows[other].message },
+      });
+    }
+    rejects(target, { ...broken, diagnostic: { ...row, retryable: true } });
+    rejects(target, { ...broken, diagnostic: { ...row, extra: true } });
+    rejects(target, { ...broken, status: entry.otherStatus });
+    if (result === "switch") {
+      for (const diagnostic of [
+        {
+          code: "PROJECT_STORAGE_BROKEN",
+          message: "Project Storage activation failed.",
+          retryable: false,
+        },
+        {
+          code: "PROJECT_COORDINATOR_UNAVAILABLE",
+          message: protocol.projectAvailabilityMessages.connectionLost,
+          retryable: false,
+        },
+      ]) {
+        rejects(target, { ...broken, diagnostic });
+      }
+    } else {
+      const switched = { status: "target-result", request: switchRequest, target: broken };
+      expect(decodeStrict(schema("CanonicalProjectSwitchResultSchema"), switched)).toEqual(
+        switched,
+      );
+    }
+    expect(Schema.is(protocol.CanonicalProjectActivationDiagnosticCodeSchema)(code)).toBe(false);
+  });
+});

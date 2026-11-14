@@ -232,7 +232,7 @@ describe("desktop protocol parsing", () => {
     const activation = { ...validHandshake, command: "project.activate", payload: request };
     expect(parseDesktopMessage(activation)).toEqual({ ok: true, value: activation });
     const result = {
-      protocolVersion: 9,
+      protocolVersion: 10,
       messageType: "event",
       messageId: "00000000-0000-4000-8000-000000000002",
       sentAt: validHandshake.sentAt,
@@ -267,7 +267,7 @@ describe("desktop protocol parsing", () => {
     "rejects a non-UTC or minute-only message timestamp (%s)",
     (sentAt) => {
       const event = {
-        protocolVersion: 9,
+        protocolVersion: 10,
         messageType: "event",
         messageId: "00000000-0000-4000-8000-000000000101",
         sentAt: "2026-09-04T12:00:00.000Z",
@@ -290,9 +290,9 @@ describe("desktop protocol parsing", () => {
       });
     },
   );
-  it("parses only correctly scoped failure events at protocol version 9", () => {
+  it("parses only correctly scoped failure events at protocol version 10", () => {
     const requestFailure = {
-      protocolVersion: 9,
+      protocolVersion: 10,
       messageType: "event",
       messageId: "00000000-0000-4000-8000-000000000101",
       sentAt: "2026-09-04T12:00:00.000Z",
@@ -336,26 +336,26 @@ describe("desktop protocol parsing", () => {
     });
   });
 
-  it("parses workspace commands and correlated result events under protocol version 9", () => {
+  it("parses workspace commands and correlated result events under protocol version 10", () => {
     const { command, event, query, result } = workspaceExchange();
 
-    expect(protocolVersion).toBe(9);
+    expect(protocolVersion).toBe(10);
     expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
     expect(command).toMatchObject({
-      protocolVersion: 9,
+      protocolVersion: 10,
       messageId: "00000000-0000-4000-8000-000000000001",
       payload: query,
     });
     expect(parseHarnessMessage(event)).toEqual({ ok: true, value: event });
     expect(event).toMatchObject({
-      protocolVersion: 9,
+      protocolVersion: 10,
       causationId: command.messageId,
       payload: result,
     });
   });
 
-  it("round-trips Project Storage envelopes under protocol version 9", () => {
-    expect(protocolVersion).toBe(9);
+  it("round-trips Project Storage envelopes under protocol version 10", () => {
+    expect(protocolVersion).toBe(10);
     for (const { command, commandName, event, eventName } of projectStorageExchanges()) {
       expect(parseDesktopMessage(command)).toEqual({ ok: true, value: command });
       expect(parseHarnessMessage(event)).toEqual({ ok: true, value: event });
@@ -497,7 +497,7 @@ describe("desktop protocol parsing", () => {
     });
   });
 
-  it("refuses a version-8 peer as an unsupported version", () => {
+  it("refuses a version-9 peer as an unsupported version", () => {
     const unsupported = {
       ok: false,
       error: {
@@ -515,9 +515,9 @@ describe("desktop protocol parsing", () => {
       { code: "HARNESS_INTERNAL_FAILURE", message: "Startup failed.", retryable: false },
     );
 
-    expect(protocolVersion).toBe(9);
-    expect(parseHarnessMessage({ ...failure, protocolVersion: 8 })).toEqual(unsupported);
-    expect(parseDesktopMessage({ ...validHandshake, protocolVersion: 8 })).toEqual(unsupported);
+    expect(protocolVersion).toBe(10);
+    expect(parseHarnessMessage({ ...failure, protocolVersion: 9 })).toEqual(unsupported);
+    expect(parseDesktopMessage({ ...validHandshake, protocolVersion: 9 })).toEqual(unsupported);
   });
 
   it("reports an unknown command as an invalid message", () => {
@@ -656,7 +656,7 @@ describe("S5 G2 receipt envelopes", () => {
     receipt,
   };
   const envelope = {
-    protocolVersion: 9,
+    protocolVersion: 10,
     messageType: "event",
     messageId: "99999999-9999-4999-8999-999999999501",
     sentAt: "2026-09-05T12:00:06.000Z",
@@ -710,7 +710,7 @@ const switchRequest = {
   to: { projectId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2" },
 };
 const switchCommandEnvelope = {
-  protocolVersion: 9,
+  protocolVersion: 10,
   messageType: "command",
   messageId: "11111111-1111-4111-8111-111111111402",
   sentAt: "2026-09-05T12:00:00.000Z",
@@ -729,7 +729,7 @@ const switchResult = {
   },
 };
 const switchEventEnvelope = {
-  protocolVersion: 9,
+  protocolVersion: 10,
   messageType: "event",
   messageId: "99999999-9999-4999-8999-999999999402",
   sentAt: "2026-09-05T12:00:04.000Z",
@@ -1005,7 +1005,7 @@ describe("project.upgrade", () => {
       decodeStrict(protocol.ProjectUpgradeRequestSchema, request),
     );
     expect(command).toEqual({
-      protocolVersion: 9,
+      protocolVersion: 10,
       messageType: "command",
       ...commandMetadata,
       command: "project.upgrade",
@@ -1044,7 +1044,7 @@ describe("project.upgrade", () => {
       ok: false,
       error: { code: "PROTOCOL_MESSAGE_INVALID" },
     });
-    expect(protocolVersion).toBe(9);
+    expect(protocolVersion).toBe(10);
     expect(parseDesktopMessage({ ...command, protocolVersion: 5 })).toEqual({
       ok: false,
       error: {

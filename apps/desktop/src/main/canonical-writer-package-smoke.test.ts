@@ -53,12 +53,23 @@ let reply: (port: ScriptedPort, command: Record<string, unknown>) => void;
 let timeline: string[];
 let spawnDelay: number | undefined;
 let closeChild: (child: ScriptedChild) => void;
+/** The n-th id and time of a counter clock: values no real read gives. */
+const clockId = (n: number) => `10000000-2001-4000-8000-${String(n).padStart(12, "0")}`;
+const clockTime = (n: number) => new Date(Date.UTC(2001, 0, 1) + n * 1000).toISOString();
+/** A counter clock: the n-th `createId()` returns `clockId(n)`, the n-th `now()` `clockTime(n)`. */
+function counterClock() {
+  let ids = 0;
+  let times = 0;
+  return { createId: vi.fn(() => clockId(++ids)), now: vi.fn(() => clockTime(++times)) };
+}
+let clock: ReturnType<typeof counterClock>;
 function run() {
   return runCanonicalWriterPackageSmoke({
     bootstrap,
     mainBundleDirectory: "C:/proof/resources/app.asar/.vite/build",
     resourcesPath: "C:/proof/resources",
     signal: abort.signal,
+    clock,
   });
 }
 async function settle() {
@@ -91,6 +102,7 @@ beforeEach(() => {
   vi.setSystemTime(0);
   children = [];
   sent = [];
+  clock = counterClock();
   timeline = [];
   abort = new AbortController();
   spawnDelay = 0;
@@ -309,6 +321,21 @@ describe("scripted full sequence", () => {
       expect(sent).toHaveLength(requestsAtFailure);
     },
   );
+  it("stamps every protocol command with the injected clock", async () => {
+    fullSequence();
+    expect(await settle()).toEqual({ status: "passed", cleanupSafe: true });
+    const commands = sent.map(record).filter((message) => "command" in message);
+    const ids = clock.createId.mock.results.map((result) => result.value);
+    const times = clock.now.mock.results.map((result) => result.value);
+
+    expect(commands.length).toBeGreaterThan(0);
+    for (const command of commands) {
+      expect(ids).toContain(command["messageId"]);
+      expect(times).toContain(command["sentAt"]);
+    }
+    expect(new Set(commands.map((command) => command["messageId"])).size).toBe(commands.length);
+    expect(clock.createId).toHaveBeenCalledTimes(commands.length);
+  });
   it("permits only source-qualified same-Project takeover after 100ms", async () => {
     let first = true;
     let contendedAt = 0;

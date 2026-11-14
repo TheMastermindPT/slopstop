@@ -2,18 +2,23 @@ import { randomUUID } from "node:crypto";
 import type { ProjectRegistrationResult } from "@slopstop/protocol";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
+import type { IpcSender } from "./ipc-sender.js";
 import { registerProjectRegistrationIpc } from "./project-registration-ipc.js";
 
 type DialogAnswer = Readonly<{ canceled: boolean; filePaths: string[] }>;
 
+/** A sender rule that admits every call, so these rows see only the gate. */
+const admittingSender: IpcSender = { admit: () => undefined };
+
 const electronMocks = vi.hoisted(() => ({
   handle: vi.fn(),
   showOpenDialog: vi.fn<(...args: unknown[]) => Promise<DialogAnswer>>(),
+  fromWebContents: vi.fn<(contents: unknown) => unknown>(),
 }));
 vi.mock("electron", () => ({
   ipcMain: { handle: electronMocks.handle },
   dialog: { showOpenDialog: electronMocks.showOpenDialog },
-  BrowserWindow: { fromWebContents: () => undefined },
+  BrowserWindow: { fromWebContents: electronMocks.fromWebContents },
 }));
 
 const selectionId = randomUUID();
@@ -25,7 +30,7 @@ function pinPlatform(platform: NodeJS.Platform): void {
 }
 
 /** Registers the handlers over a gate the row controls and a fake with an open-path answer. */
-function registered(open: boolean) {
+function registered(open: boolean, sender: IpcSender = admittingSender) {
   let accepting = open;
   const register = vi.fn(
     async (): Promise<ProjectRegistrationResult> => ({
@@ -33,7 +38,7 @@ function registered(open: boolean) {
       repositorySelectionId: selectionId,
     }),
   );
-  registerProjectRegistrationIpc({ register }, { accepting: () => accepting });
+  registerProjectRegistrationIpc({ register }, { accepting: () => accepting }, sender);
   const handlers = new Map(
     electronMocks.handle.mock.calls.map(([channel, handler]) => [channel as string, handler]),
   );
@@ -72,6 +77,7 @@ async function closeWhileDialogOpen(dialogAnswer: DialogAnswer): Promise<void> {
 beforeEach(() => {
   electronMocks.handle.mockReset();
   electronMocks.showOpenDialog.mockReset();
+  electronMocks.fromWebContents.mockReset();
   electronMocks.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ["C:/repo"] });
   pinPlatform("win32");
 });
@@ -162,4 +168,44 @@ it.each([
   },
 ])("forwards registration while the IPC gate is open: $channel", async ({ run }) => {
   await run();
+});
+
+/** A sender rule that refuses every call, as the real rule refuses an unknown frame. */
+const refusingSender: IpcSender = {
+  admit: () => {
+    throw new Error("IPC call refused: unknown sender.");
+  },
+};
+
+it.each([
+  { channel: "getRegistrationCapability", value: undefined },
+  { channel: "chooseRepository", value: undefined },
+  { channel: "registerProject", value: { step: "prepare-git" } },
+] as const)(
+  "refuses every channel from an unadmitted sender: $channel",
+  async ({ channel, value }) => {
+    const { register, handler } = registered(true, refusingSender);
+    const call = handler(desktopIpcChannels[channel]);
+    await expect(async () => call(value)).rejects.toThrow(/^IPC call refused: unknown sender\.$/);
+    expect(register).not.toHaveBeenCalled();
+    expect(electronMocks.showOpenDialog).not.toHaveBeenCalled();
+  },
+);
+
+it("opens the folder dialog owned by the calling window", async () => {
+  const owner = { window: "the calling window" };
+  const event = { sender: { id: 7 } };
+  electronMocks.fromWebContents.mockImplementation((contents) =>
+    contents === event.sender ? owner : undefined,
+  );
+  registered(true);
+  const choose = electronMocks.handle.mock.calls.find(
+    ([channel]) => channel === desktopIpcChannels.chooseRepository,
+  )?.[1];
+
+  await choose?.(event);
+
+  expect(electronMocks.showOpenDialog).toHaveBeenCalledExactlyOnceWith(owner, {
+    properties: ["openDirectory"],
+  });
 });

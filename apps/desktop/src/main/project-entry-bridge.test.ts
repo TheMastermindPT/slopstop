@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
+import { inspect } from "node:util";
 import {
   CanonicalProjectActivationRequestSchema,
   CanonicalProjectActivationResultSchema,
@@ -17,10 +18,12 @@ import {
   decodeStrict,
   type HarnessFailureCode,
   harnessFailureMessages,
+  harnessFailureRows,
   ProjectConversationReadRequestSchema,
   ProjectConversationReadResultSchema,
   ProjectConversationSaveRequestSchema,
   ProjectConversationSaveResultSchema,
+  ProjectRegistrationRequestSchema,
   ProjectRegistrationResultSchema,
   ProjectUpgradeRequestSchema,
   type ProjectUpgradeResult,
@@ -31,6 +34,7 @@ import {
 } from "@slopstop/protocol";
 import { expect, it } from "vitest";
 import { upgradeResultForRow } from "../shared/upgrade-result-fixtures.js";
+import { createHarnessBridges } from "./harness-bridges.js";
 import { HarnessSession } from "./harness-session.js";
 import {
   flushMicrotasks,
@@ -45,7 +49,7 @@ import {
   readConversationFailure,
   saveConversationFailure,
 } from "./project-conversation-failure.js";
-import { createProjectEntryBridge } from "./project-entry-bridge.js";
+import type { ProjectEntryBridge } from "./project-entry-bridge.js";
 import { projectUpgradeFailure } from "./project-upgrade-failure.js";
 
 const now = () => "2026-10-03T12:00:00.000Z";
@@ -75,8 +79,8 @@ function setup(createId: () => string = randomUUID) {
   const session = new HarnessSession();
   const port = new Port();
   session.attach(port);
-  const bridge = createProjectEntryBridge({ session, createId, now });
-  return { session, port, bridge };
+  const { projectEntry: bridge, release } = createHarnessBridges({ session, createId, now });
+  return { session, port, bridge, release };
 }
 
 it("returns a real list response and does not confuse disconnect with an empty installation", async () => {
@@ -93,25 +97,6 @@ it("returns a real list response and does not confuse disconnect with an empty i
   const pending = bridge.list();
   session.detach();
   expect(await pending).toEqual({ status: "broken", code: "PROJECT_LIST_TRANSPORT_FAILED" });
-  bridge.stop();
-});
-
-it("rejects activation replies for a different Project even with a matching message correlation", async () => {
-  const { port, bridge } = setup();
-  const request = decodeStrict(CanonicalProjectActivationRequestSchema, {
-    projectId: randomUUID(),
-  });
-  const result = bridge.activate(request);
-  port.emit("message", {
-    data: createProjectActivateResultEvent(
-      port.metadata(),
-      decodeStrict(CanonicalProjectActivationResultSchema, {
-        status: "not-registered",
-        request: { projectId: randomUUID() },
-      }),
-    ),
-  });
-  expect(await result).toMatchObject({ status: "unavailable", request });
   bridge.stop();
 });
 
@@ -309,53 +294,201 @@ it("answers every upgrade reply with one strict result: an invalid command at se
   ).toEqual(protocolInvalid);
 });
 
-const projectConnectionUnavailable = {
+const entryProject = { projectId: upgradeRequest.projectId };
+const otherProject = { projectId: otherRequest.projectId };
+const sourceActivation = { projectId: randomUUID(), activationId: randomUUID() };
+const coordinatorUnavailable = (retryable: boolean) => ({
   code: "PROJECT_COORDINATOR_UNAVAILABLE",
-  message: "The Project connection is unavailable.",
-} as const;
+  message: projectAvailabilityMessages.connectionLost,
+  retryable,
+});
 
-const legacyFaults: ReadonlyArray<readonly [string, (port: Port) => void]> = [
+/** Activation and switch: request, result schema, reply event and coordinator-unavailable status. */
+const entryOperations = {
+  activate: {
+    request: decodeStrict(CanonicalProjectActivationRequestSchema, entryProject),
+    other: decodeStrict(CanonicalProjectActivationRequestSchema, otherProject),
+    resultSchema: CanonicalProjectActivationResultSchema,
+    event: "project.activate.result",
+    unavailable: "unavailable",
+    retryable: true,
+  },
+  switchProject: {
+    request: decodeStrict(CanonicalProjectSwitchRequestSchema, {
+      from: sourceActivation,
+      to: entryProject,
+    }),
+    other: decodeStrict(CanonicalProjectSwitchRequestSchema, {
+      from: sourceActivation,
+      to: otherProject,
+    }),
+    resultSchema: CanonicalProjectSwitchResultSchema,
+    event: "project.switch.result",
+    unavailable: "coordinator-unavailable",
+    retryable: false,
+  },
+} as const;
+type EntryOperation = keyof typeof entryOperations;
+const entryOperationNames = ["activate", "switchProject"] as const satisfies EntryOperation[];
+
+function unavailableAnswer(operation: EntryOperation, request: object) {
+  const { unavailable, retryable } = entryOperations[operation];
+  return { status: unavailable, request, diagnostic: coordinatorUnavailable(retryable) };
+}
+
+function entryCall(bridge: ProjectEntryBridge, operation: EntryOperation): Promise<unknown> {
+  return operation === "activate"
+    ? bridge.activate(entryOperations.activate.request)
+    : bridge.switchProject(entryOperations.switchProject.request);
+}
+
+/** The reply for another Project, a decodable answer whose echo does not match. */
+function foreignEntryReply(port: Port, operation: EntryOperation) {
+  const metadata = port.metadata();
+  return operation === "activate"
+    ? createProjectActivateResultEvent(
+        metadata,
+        decodeStrict(
+          CanonicalProjectActivationResultSchema,
+          unavailableAnswer(operation, entryOperations.activate.other),
+        ),
+      )
+    : createProjectSwitchResultEvent(
+        metadata,
+        decodeStrict(
+          CanonicalProjectSwitchResultSchema,
+          unavailableAnswer(operation, entryOperations.switchProject.other),
+        ),
+      );
+}
+
+type EntryAct = (fixture: Fixture, operation: EntryOperation) => Promise<unknown>;
+
+const brokenFaults: ReadonlyArray<readonly [string, HarnessFailureCode, EntryAct]> = [
+  ...harnessRows.map(
+    ([code]) =>
+      [
+        `request.failure ${code}`,
+        code,
+        (fixture, operation) => {
+          const answer = entryCall(fixture.bridge, operation);
+          fixture.port.failLast(code, `Not the protocol message: ${harnessFailureMessages[code]}`);
+          return answer;
+        },
+      ] as const satisfies readonly [string, HarnessFailureCode, EntryAct],
+  ),
   [
-    "request.failure",
-    (port) => port.failLast("HARNESS_INTERNAL_FAILURE", "Harness failed while handling a message."),
+    "a session protocol error",
+    "PROTOCOL_MESSAGE_INVALID",
+    (fixture, operation) => {
+      const answer = entryCall(fixture.bridge, operation);
+      const { event } = entryOperations[operation];
+      fixture.port.emit("message", { data: { event, payload: [] } });
+      return answer;
+    },
   ],
-  ["a session protocol error", (port) => port.emit("message", { data: { event: "nope" } })],
   [
     "a wrong-event reply",
-    (port) =>
-      port.emit("message", {
-        data: createProjectUpgradeResultEvent(port.metadata(), notRequired),
-      }),
+    "PROTOCOL_MESSAGE_INVALID",
+    (fixture, operation) => {
+      const answer = entryCall(fixture.bridge, operation);
+      fixture.port.emit("message", {
+        data: createProjectUpgradeResultEvent(fixture.port.metadata(), notRequired),
+      });
+      return answer;
+    },
+  ],
+  [
+    "a reply for another Project",
+    "PROTOCOL_MESSAGE_INVALID",
+    (fixture, operation) => {
+      const answer = entryCall(fixture.bridge, operation);
+      fixture.port.emit("message", { data: foreignEntryReply(fixture.port, operation) });
+      return answer;
+    },
   ],
 ];
 
-it.for(legacyFaults)("keeps the activation result unchanged on %s", async ([, fault]) => {
-  const { port, bridge } = setup();
-  const request = { projectId: upgradeRequest.projectId };
-  const activated = bridge.activate(request);
-  fault(port);
-  expect(await activated).toEqual({
-    status: "unavailable",
-    request,
-    diagnostic: { ...projectConnectionUnavailable, retryable: true },
-  });
-  bridge.stop();
+/** The whole broken answer, checked again through the result schema the preload decodes with. */
+function expectBroken(answer: unknown, operation: EntryOperation, code: HarnessFailureCode) {
+  const { request, resultSchema } = entryOperations[operation];
+  expect(answer).toEqual({ status: "broken", request, diagnostic: harnessFailureRows[code] });
+  expect(decodeStrict(resultSchema, answer)).toEqual(answer);
+}
+
+it.for(
+  entryOperationNames.flatMap((operation) =>
+    brokenFaults.map(([name, code, act]) => [operation, name, code, act] as const),
+  ),
+)("answers a broken %s with its harness row: %s", async ([operation, , code, act]) => {
+  const fixture = setup();
+  expectBroken(await act(fixture, operation), operation, code);
+  fixture.bridge.stop();
 });
 
-it.for(legacyFaults)("keeps the switch result unchanged on %s", async ([, fault]) => {
-  const { port, bridge } = setup();
-  const request = decodeStrict(CanonicalProjectSwitchRequestSchema, {
-    from: { projectId: randomUUID(), activationId: randomUUID() },
-    to: { projectId: upgradeRequest.projectId },
-  });
-  const switched = bridge.switchProject(request);
-  fault(port);
-  expect(await switched).toEqual({
-    status: "coordinator-unavailable",
-    request,
-    diagnostic: { ...projectConnectionUnavailable, retryable: false },
-  });
-  bridge.stop();
+it.for(entryOperationNames)(
+  "answers a broken %s with its harness row: an invalid local message id",
+  async (operation) => {
+    const fixture = setup(() => "not-a-uuid");
+    expectBroken(await entryCall(fixture.bridge, operation), operation, "PROTOCOL_MESSAGE_INVALID");
+    expect(fixture.port.sent).toEqual([]);
+    fixture.bridge.stop();
+  },
+);
+
+it.for(entryOperationNames)(
+  "answers a broken %s with its harness row: a send refused as an invalid message",
+  async (operation) => {
+    const session = new ScriptedHarnessSession();
+    session.sendResult = { ok: false, error: { code: "HARNESS_SESSION_MESSAGE_INVALID" } };
+    const { projectEntry: bridge } = createHarnessBridges({ session, createId: randomUUID, now });
+    expectBroken(await entryCall(bridge, operation), operation, "PROTOCOL_MESSAGE_INVALID");
+    bridge.stop();
+  },
+);
+
+const keptFaults: ReadonlyArray<readonly [string, EntryAct]> = [
+  [
+    "a call after stop",
+    (fixture, operation) => {
+      fixture.bridge.stop();
+      return entryCall(fixture.bridge, operation);
+    },
+  ],
+  [
+    "a send that fails",
+    (fixture, operation) => {
+      fixture.port.postFails = true;
+      return entryCall(fixture.bridge, operation);
+    },
+  ],
+  [
+    "a lost connection while pending",
+    (fixture, operation) => {
+      const answer = entryCall(fixture.bridge, operation);
+      fixture.session.detach();
+      return answer;
+    },
+  ],
+  [
+    "a stop while pending",
+    (fixture, operation) => {
+      const answer = entryCall(fixture.bridge, operation);
+      fixture.bridge.stop();
+      return answer;
+    },
+  ],
+];
+
+it.for(
+  entryOperationNames.flatMap((operation) =>
+    keptFaults.map(([name, act]) => [operation, name, act] as const),
+  ),
+)("keeps a %s unavailable when it was not sent or was lost: %s", async ([operation, , act]) => {
+  const fixture = setup();
+  const answer = await act(fixture, operation);
+  expect(answer).toEqual(unavailableAnswer(operation, entryOperations[operation].request));
+  fixture.bridge.stop();
 });
 
 it("keeps list and registration transport results unchanged on request.failure", async () => {
@@ -655,8 +788,12 @@ it("maps a send refused as an invalid message to broken for both operations", ()
 function scripted() {
   const session = new ScriptedHarnessSession();
   let next = 100;
-  const bridge = createProjectEntryBridge({ session, createId: () => messageId(next++), now });
-  return { session, bridge };
+  const { projectEntry: bridge, release } = createHarnessBridges({
+    session,
+    createId: () => messageId(next++),
+    now,
+  });
+  return { session, bridge, release };
 }
 
 const s7Activation = { projectId: randomUUID(), activationId: randomUUID() };
@@ -752,16 +889,16 @@ it.each([
 });
 
 it("settles pending work even when session unsubscribe throws", async () => {
-  const { session, bridge } = scripted();
+  const { session, bridge, release } = scripted();
   session.failUnsubscribe = 1;
   const read = watch(bridge.readConversation(s7Read));
   const list = watch(bridge.list());
-  expect(() => bridge.stop()).toThrow(session.unsubscribeError as Error);
+  expect(() => release()).toThrow(session.unsubscribeError as Error);
   await flushMicrotasks();
   expect([read.settled, list.settled]).toEqual([true, true]);
   expect(read.value).toEqual(readLost);
   expect(list.value).toEqual({ status: "unavailable", code: "PROJECT_LIST_UNAVAILABLE" });
-  expect(() => bridge.stop()).not.toThrow();
+  expect(() => release()).not.toThrow();
   expect(session.unsubscribeCalls).toBe(1);
 });
 
@@ -876,4 +1013,53 @@ it.each([
   port.emit("message", { data: row.reply(port.metadata()) });
   await expect(pending).resolves.toEqual(row.result);
   bridge.stop();
+});
+
+/** A path-shaped marker: an invalid request must reject without quoting it. */
+const invalidMarker = "C:/Users/someone/private-invalid-marker";
+
+function withMarker<Request extends object>(request: Request, field: keyof Request): Request {
+  const invalid = { ...request };
+  Reflect.set(invalid, field, invalidMarker);
+  return invalid;
+}
+
+const s7Register = decodeStrict(ProjectRegistrationRequestSchema, {
+  step: "select-repository",
+  directory: "C:/repo",
+});
+const invalidEntryCalls = {
+  activate: (bridge: ProjectEntryBridge) => bridge.activate(withMarker(s7Activate, "projectId")),
+  switchProject: (bridge: ProjectEntryBridge) => bridge.switchProject(withMarker(s7Switch, "to")),
+  upgrade: (bridge: ProjectEntryBridge) => bridge.upgrade(withMarker(s7Upgrade, "projectId")),
+  readConversation: (bridge: ProjectEntryBridge) =>
+    bridge.readConversation(withMarker(s7Read, "projectId")),
+  saveConversationMessage: (bridge: ProjectEntryBridge) =>
+    bridge.saveConversationMessage(withMarker(s7Save, "saveId")),
+  register: (bridge: ProjectEntryBridge) => bridge.register(withMarker(s7Register, "step")),
+} as const;
+
+const invalidEntryOperations = [
+  "activate",
+  "switchProject",
+  "upgrade",
+  "readConversation",
+  "saveConversationMessage",
+  "register",
+] as const;
+
+it.each(
+  invalidEntryOperations.flatMap((operation) =>
+    (["running", "stopped"] as const).map((state) => [operation, state] as const),
+  ),
+)("rejects an invalid %s request without throwing or sending: %s", async (operation, state) => {
+  const { port, bridge } = setup();
+  if (state === "stopped") bridge.stop();
+  let pending: Promise<unknown> | undefined;
+  expect(() => {
+    pending = invalidEntryCalls[operation](bridge);
+  }).not.toThrow();
+  await expect(pending).rejects.toThrow(new Error("Invalid project-entry request."));
+  expect(inspect(await pending?.catch((error: unknown) => error))).not.toContain(invalidMarker);
+  expect(port.sent).toEqual([]);
 });

@@ -37,6 +37,7 @@ import {
   utilityProcess,
 } from "electron";
 import { type UntypedRejection, untypedRejection } from "./effect-rejection.js";
+import type { Clock } from "./harness-request-core.js";
 import {
   requireWriterProof,
   verifyPackagedWriterNative,
@@ -73,6 +74,7 @@ type ProofInput = Readonly<{
   mainBundleDirectory: string;
   resourcesPath: string;
   signal: AbortSignal;
+  clock: Clock;
 }>;
 type Wait = Readonly<{
   deadline: number;
@@ -81,7 +83,7 @@ type Wait = Readonly<{
   terminal?: boolean;
 }>;
 type StreamState = { ended: boolean; broken: boolean; bytes: number };
-const metadata = () => ({ messageId: randomUUID(), sentAt: new Date().toISOString() });
+const metadata = (clock: Clock) => ({ messageId: clock.createId(), sentAt: clock.now() });
 
 class Proof {
   readonly owned: OwnedUtility[] = [];
@@ -463,7 +465,7 @@ async function spawn(
   if (!fixture)
     await call(
       owner,
-      createHandshakeCommand(metadata(), "0.0.0"),
+      createHandshakeCommand(metadata(proof.input.clock), "0.0.0"),
       "system.ready",
       "handshake",
       maximum,
@@ -570,7 +572,7 @@ async function activate(
 ): Promise<CanonicalProjectActivationResult> {
   const event = await call(
     owner,
-    createProjectActivateCommand(metadata(), { projectId }),
+    createProjectActivateCommand(metadata(owner.proof.input.clock), { projectId }),
     "project.activate.result",
     "activate",
     maximum,
@@ -589,7 +591,7 @@ async function command(
     typeof wait === "string" ? { stage: wait, maximum: owner.proof.deadline } : wait;
   const event = await call(
     owner,
-    createProjectCommand(metadata(), {
+    createProjectCommand(metadata(owner.proof.input.clock), {
       projectId: writerProofProjectId,
       activationId,
       command: value,
@@ -712,7 +714,7 @@ async function takeover(owner: OwnedUtility, maximum: number): Promise<Writable>
     }
     const event = await call(
       owner,
-      createProjectSwitchCommand(metadata(), {
+      createProjectSwitchCommand(metadata(owner.proof.input.clock), {
         from,
         to: { projectId: writerProofProjectId },
       }),

@@ -1,3 +1,4 @@
+import { inspect } from "node:util";
 import {
   createProjectCloseResultEvent,
   createProjectCreateResultEvent,
@@ -19,13 +20,14 @@ import {
   ProjectStorageOpenResultSchema,
 } from "@slopstop/protocol";
 import { expect, it } from "vitest";
+import { createHarnessBridges } from "./harness-bridges.js";
 import type {
   HarnessSessionClient,
   HarnessSessionEvent,
   HarnessSessionSendResult,
 } from "./harness-session.js";
 import { systemFailure, undecodableReply } from "./harness-session-test-peers.js";
-import { createProjectStorageBridge } from "./project-storage-bridge.js";
+import type { ProjectStorageBridgeClient } from "./project-storage-bridge.js";
 
 function messageId(value: number): string {
   return decodeStrict(
@@ -169,13 +171,20 @@ class FakeHarnessSession implements HarnessSessionClient {
   }
 }
 
-function bridgeWith(session: FakeHarnessSession, ids = [messageId(1), messageId(2), messageId(3)]) {
+function bridgesWith(
+  session: FakeHarnessSession,
+  ids = [messageId(1), messageId(2), messageId(3)],
+) {
   let index = 0;
-  return createProjectStorageBridge({
+  return createHarnessBridges({
     session,
     createId: () => ids[index++] ?? messageId(999),
     now: () => "2026-08-14T12:00:00.000Z",
   });
+}
+
+function bridgeWith(session: FakeHarnessSession, ids?: string[]) {
+  return bridgesWith(session, ids).projectStorage;
 }
 
 it("request failure settles only its correlated Project Storage operation", async () => {
@@ -298,14 +307,14 @@ it("correlates against the validated command payload instead of caller mutation"
 
 it("settles pending operations even when session unsubscribe throws", async () => {
   const session = new FakeHarnessSession({ unsubscribeError: new Error("unsubscribe failed") });
-  const bridge = bridgeWith(session, [messageId(1)]);
+  const { projectStorage: bridge, release } = bridgesWith(session, [messageId(1)]);
   const pending = bridge.create(createRequest);
 
-  expect(() => bridge.stop()).toThrow("unsubscribe failed");
+  expect(() => release()).toThrow("unsubscribe failed");
   await expect(pending).resolves.toEqual(
     transportBrokenCreateResult("Project Storage bridge is stopped."),
   );
-  expect(() => bridge.stop()).not.toThrow();
+  expect(() => release()).not.toThrow();
   expect(session.unsubscribeCalls).toBe(1);
 });
 
@@ -333,7 +342,10 @@ it("rejects mismatched, uncorrelated, disconnected, and stopped requests", async
   );
 
   const pendingSession = new FakeHarnessSession();
-  const pendingBridge = bridgeWith(pendingSession, [messageId(2), messageId(3)]);
+  const { projectStorage: pendingBridge, release } = bridgesWith(pendingSession, [
+    messageId(2),
+    messageId(3),
+  ]);
   const uncorrelated = pendingBridge.create(createRequest);
   pendingSession.emitProjectResult(null, { kind: "create", result: createdResult });
   await expect(uncorrelated).resolves.toEqual(
@@ -350,6 +362,8 @@ it("rejects mismatched, uncorrelated, disconnected, and stopped requests", async
   await expect(pendingBridge.open(openRequest)).resolves.toEqual(
     transportBrokenOpenResult("Project Storage bridge is stopped."),
   );
+  expect(pendingSession.unsubscribeCalls).toBe(0);
+  expect(() => release()).not.toThrow();
   expect(pendingSession.unsubscribeCalls).toBe(1);
 });
 
@@ -447,4 +461,37 @@ it("settles an undecodable reply as protocol", async () => {
     result: closedResult,
   });
   await expect(other).resolves.toEqual(closedResult);
+});
+
+const invalidMarker = "not-a-project-id-invalid-marker";
+
+/** A copy of a valid request whose `projectId` its schema rejects. */
+function withInvalidProjectId<Request extends object>(request: Request): Request {
+  const invalid = { ...request };
+  Reflect.set(invalid, "projectId", invalidMarker);
+  return invalid;
+}
+
+const invalidStorageCalls = {
+  open: (bridge: ProjectStorageBridgeClient) => bridge.open(withInvalidProjectId(openRequest)),
+  create: (bridge: ProjectStorageBridgeClient) =>
+    bridge.create(withInvalidProjectId(createRequest)),
+  close: (bridge: ProjectStorageBridgeClient) => bridge.close(withInvalidProjectId(closeRequest)),
+} as const;
+
+it.each(
+  (["open", "create", "close"] as const).flatMap((operation) =>
+    (["running", "stopped"] as const).map((state) => [operation, state] as const),
+  ),
+)("rejects an invalid %s request without throwing or sending: %s", async (operation, state) => {
+  const session = new FakeHarnessSession();
+  const bridge = bridgeWith(session);
+  if (state === "stopped") bridge.stop();
+  let pending: Promise<unknown> | undefined;
+  expect(() => {
+    pending = invalidStorageCalls[operation](bridge);
+  }).not.toThrow();
+  await expect(pending).rejects.toThrow(new Error("Invalid project-storage request."));
+  expect(inspect(await pending?.catch((error: unknown) => error))).not.toContain(invalidMarker);
+  expect(session.sent).toEqual([]);
 });

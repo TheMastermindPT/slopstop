@@ -84,7 +84,7 @@ import {
   WorkspaceQuerySchema,
 } from "./workspace-protocol.js";
 
-export const protocolVersion = 9 as const;
+export const protocolVersion = 10 as const;
 
 export const MessageIdSchema = LowercaseDomainIdentityTextSchema.pipe(Schema.brand("MessageId"));
 export type MessageId = typeof MessageIdSchema.Type;

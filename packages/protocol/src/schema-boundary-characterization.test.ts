@@ -64,7 +64,7 @@ describe("schema boundary characterization", () => {
     "2026-10-03",
   ])("rejects a non-UTC or minute-only message timestamp (%s)", (sentAt) => {
     const handshake = (at: string) => ({
-      protocolVersion: 9,
+      protocolVersion: 10,
       messageType: "command",
       messageId: "00000000-0000-4000-8000-000000000001",
       sentAt: at,

@@ -6,15 +6,9 @@ import {
   type HarnessStatus,
   HarnessStatusSchema,
   RetryHarnessResultSchema,
-  type WorkspaceIntent,
-  WorkspaceIntentSchema,
-  type WorkspaceNotification,
-  WorkspaceNotificationSchema,
-  type WorkspaceQuery,
-  WorkspaceQuerySchema,
 } from "@slopstop/protocol";
 import { Effect } from "effect";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow } from "electron";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
 import { runCanonicalWriterPackageSmoke } from "./canonical-writer-package-smoke.js";
 import { initializeCrashReporting } from "./crash-reporting.js";
@@ -27,7 +21,10 @@ import {
 } from "./desktop-runtime.js";
 import { createDesktopShutdown } from "./desktop-shutdown.js";
 import { createHarnessBridges } from "./harness-bridges.js";
+import type { Clock } from "./harness-request-core.js";
 import { HarnessSupervisor, harnessEntryPath } from "./harness-supervisor.js";
+import { handleIpc } from "./ipc-gate.js";
+import { createIpcSender, type IpcSender } from "./ipc-sender.js";
 import { createMainLogger } from "./logger.js";
 import {
   applyPackageSmokeAuthorization,
@@ -54,12 +51,7 @@ import {
 import { runRegistrationPackageSmoke } from "./registration-package-smoke.js";
 import { configureSessionSecurity, lockNavigation } from "./security.js";
 import { reopenWindowWhenNoneIsOpen } from "./window-reopen.js";
-import {
-  capabilityForIntent,
-  type WorkspaceBridgeClient,
-  workspaceIntentClosing,
-  workspaceQueryClosing,
-} from "./workspace-bridge.js";
+import { broadcastWorkspaceNotification, registerWorkspaceIpc } from "./workspace-ipc.js";
 import { writeWriterProofReport } from "./writer-proof-report.js";
 
 /** The main logger, which logs the start and crash reporting before any other owner exists. */
@@ -68,6 +60,9 @@ function startMainLogger() {
   logger.info({ crashReporting: initializeCrashReporting() }, "SlopStop desktop starting.");
   return logger;
 }
+
+/** The desktop's one clock: the runtime, the supervisor and the writer proof read it. */
+const desktopClock: Clock = { createId: randomUUID, now: () => new Date().toISOString() };
 
 // Built lazily: the first read of its services, in `bootstrap()`, builds the owners.
 const runtime = makeDesktopRuntime({
@@ -82,10 +77,10 @@ const runtime = makeDesktopRuntime({
         mainBundleDirectory: __dirname,
       }),
     }),
-  createId: randomUUID,
-  now: () => new Date().toISOString(),
-  createSupervisor: (logger, entryPath, bootstrap) =>
-    new HarnessSupervisor(entryPath, logger, bootstrap),
+  createId: desktopClock.createId,
+  now: desktopClock.now,
+  createSupervisor: (logger, entryPath, bootstrap, clock) =>
+    new HarnessSupervisor(entryPath, logger, bootstrap, clock),
   createHarnessBridges,
 });
 let packageSmokeState: "inactive" | "pending" | "passed" = "inactive";
@@ -143,6 +138,7 @@ async function runPrivateWriterProof(
     mainBundleDirectory: __dirname,
     resourcesPath: process.resourcesPath,
     signal: controller.signal,
+    clock: desktopClock,
   });
   if (result.cleanupSafe) await publishRuntime();
   const terminal = result.cleanupSafe ? writerProofTerminalMessage : writerProofUnconfirmedMessage;
@@ -254,38 +250,15 @@ function broadcastHarnessStatus(status: HarnessStatus): void {
   }
 }
 
-function registerHarnessIpc(harnessSupervisor: DesktopSupervisor): void {
-  ipcMain.handle(desktopIpcChannels.getHarnessStatus, () => harnessSupervisor.getStatus());
-  ipcMain.handle(desktopIpcChannels.retryHarness, () => {
+function registerHarnessIpc(harnessSupervisor: DesktopSupervisor, sender: IpcSender): void {
+  handleIpc(desktopIpcChannels.getHarnessStatus, sender, () => harnessSupervisor.getStatus());
+  handleIpc(desktopIpcChannels.retryHarness, sender, () => {
     return decodeStrict(RetryHarnessResultSchema, harnessSupervisor.retry());
   });
 }
 
-export function broadcastWorkspaceNotification(notification: WorkspaceNotification): void {
-  const validated = decodeStrict(WorkspaceNotificationSchema, notification);
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) {
-      window.webContents.send(desktopIpcChannels.workspaceNotification, validated);
-    }
-  }
-}
-
-export function registerWorkspaceIpc(
-  bridge: WorkspaceBridgeClient,
-  gate: Readonly<{ accepting(): boolean }>,
-): void {
-  ipcMain.handle(desktopIpcChannels.queryWorkspace, (_event, value: unknown) => {
-    const query = decodeStrict(WorkspaceQuerySchema, value) satisfies WorkspaceQuery;
-    if (!gate.accepting()) return Promise.resolve(workspaceQueryClosing(query));
-    return bridge.query(query);
-  });
-  ipcMain.handle(desktopIpcChannels.submitWorkspaceIntent, (_event, value: unknown) => {
-    const intent = decodeStrict(WorkspaceIntentSchema, value) satisfies WorkspaceIntent;
-    if (!gate.accepting())
-      return Promise.resolve(workspaceIntentClosing(capabilityForIntent(intent)));
-    return bridge.submit(intent);
-  });
-}
+/** The IPC sender rule `bootstrap()` builds: every window it creates is tracked by it. */
+type IpcSenderRule = ReturnType<typeof createIpcSender>;
 
 type WindowOptions = Readonly<{
   width: number;
@@ -296,7 +269,10 @@ type WindowOptions = Readonly<{
   preload: string;
 }>;
 
-async function createApplicationWindow(options: WindowOptions): Promise<BrowserWindow> {
+async function createApplicationWindow(
+  options: WindowOptions,
+  sender: IpcSenderRule,
+): Promise<BrowserWindow> {
   const window = new BrowserWindow({
     width: options.width,
     height: options.height,
@@ -313,6 +289,8 @@ async function createApplicationWindow(options: WindowOptions): Promise<BrowserW
       preload: options.preload,
     },
   });
+  // Tracked before the page loads: the renderer calls IPC while it is still loading.
+  sender.track(window);
 
   window.once("ready-to-show", () => {
     window.show();
@@ -330,7 +308,7 @@ async function createApplicationWindow(options: WindowOptions): Promise<BrowserW
   return window;
 }
 
-function createActiveWindow(): Promise<BrowserWindow> {
+function createActiveWindow(sender: IpcSenderRule): Promise<BrowserWindow> {
   const options: WindowOptions = {
     width: 1120,
     height: 720,
@@ -339,7 +317,7 @@ function createActiveWindow(): Promise<BrowserWindow> {
     viteName: MAIN_WINDOW_VITE_NAME,
     preload: path.join(__dirname, "preload.js"),
   };
-  return createApplicationWindow(options);
+  return createApplicationWindow(options, sender);
 }
 
 /** In package-smoke mode, checks its authorization and moves `userData` to its root. */
@@ -413,21 +391,23 @@ async function bootstrap(): Promise<void> {
   const { logger, harness, projectEntry, workspace } = runtime.runSync(readDesktopServices);
 
   const supervisor = harness.owner;
-  registerProjectEntryIpc(projectEntry.owner, desktopShutdown);
-  registerHarnessIpc(supervisor);
-  registerProjectRegistrationIpc(projectEntry.owner, desktopShutdown);
-  registerWorkspaceIpc(workspace.owner, desktopShutdown);
+  const sender = createIpcSender({ logger });
+  const createWindow = () => createActiveWindow(sender);
+  registerProjectEntryIpc(projectEntry.owner, desktopShutdown, sender);
+  registerHarnessIpc(supervisor, sender);
+  registerProjectRegistrationIpc(projectEntry.owner, desktopShutdown, sender);
+  registerWorkspaceIpc(workspace.owner, desktopShutdown, sender);
   supervisor.subscribe(broadcastHarnessStatus);
   workspace.owner.subscribe(broadcastWorkspaceNotification);
   if (packageSmoke) awaitSmokeHarnessReady(supervisor);
   supervisor.start();
 
-  smokeWindow = await createActiveWindow();
+  smokeWindow = await createWindow();
   runPackageSmokeIfReady();
 
   const reopen = reopenWindowWhenNoneIsOpen({
     windowCount: () => BrowserWindow.getAllWindows().length,
-    create: createActiveWindow,
+    create: createWindow,
     logger,
   });
   app.on("activate", () => void Effect.runPromise(reopen));

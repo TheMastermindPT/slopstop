@@ -19,16 +19,15 @@ export type HarnessBridges = Readonly<{
 
 /**
  * The three bridges over one shared request core, so the session has one subscription. A bridge's
- * own stop settles only its requests and leaves the core alone; `release()` stops the bridges
- * still running and then ends the core.
+ * own stop settles only its requests and leaves the core alone; `release()` stops every bridge
+ * (a stop of an already-stopped bridge does nothing) and then ends the core.
  */
 export function createHarnessBridges(input: HarnessBridgesInput): HarnessBridges {
   // The core subscribes first; a failed subscribe leaves nothing behind.
   const core = makeHarnessRequestCore(input.session);
-  const keepCore = () => {};
-  const projectEntry = projectEntryBridgeOver(core, input, keepCore);
-  const projectStorage = projectStorageBridgeOver(core, input, keepCore);
-  const workspace = workspaceBridgeOver(core, input, keepCore);
+  const projectEntry = projectEntryBridgeOver(core, input);
+  const projectStorage = projectStorageBridgeOver(core, input);
+  const workspace = workspaceBridgeOver(core, input);
   let released = false;
   return {
     projectEntry,

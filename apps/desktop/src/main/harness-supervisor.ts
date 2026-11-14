@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import path from "node:path";
 import {
   createHandshakeCommand,
@@ -15,6 +14,7 @@ import { MessageChannelMain, type UtilityProcess, utilityProcess } from "electro
 import type { Logger } from "pino";
 import { reportHarnessCrash } from "./crash-reporting.js";
 import { createHarnessLogLineForwarder } from "./harness-log-lines.js";
+import type { Clock } from "./harness-request-core.js";
 import {
   HarnessSession,
   type HarnessSessionClient,
@@ -74,6 +74,7 @@ function drainOutput(observation: ChildObservation | undefined): Effect.Effect<v
 
 export class HarnessSupervisor {
   readonly #bootstrap: HarnessBootstrap;
+  readonly #clock: Clock;
   readonly #entryPath: string;
   readonly #errorGuards = new Map<UtilityProcess, () => void>();
   readonly #logger: Logger;
@@ -95,10 +96,11 @@ export class HarnessSupervisor {
   #stopPromise: Promise<void> | undefined;
   #stopping = false;
 
-  constructor(entryPath: string, logger: Logger, bootstrap: HarnessBootstrap) {
+  constructor(entryPath: string, logger: Logger, bootstrap: HarnessBootstrap, clock: Clock) {
     this.#entryPath = entryPath;
     this.#logger = logger;
     this.#bootstrap = decodeStrict(HarnessBootstrapSchema, bootstrap);
+    this.#clock = clock;
     this.#session.subscribe((event) => {
       this.#handleSessionEvent(event);
     });
@@ -494,8 +496,8 @@ export class HarnessSupervisor {
     const handshake = this.#session.send(
       createHandshakeCommand(
         {
-          messageId: randomUUID(),
-          sentAt: new Date().toISOString(),
+          messageId: this.#clock.createId(),
+          sentAt: this.#clock.now(),
         },
         "0.0.0",
       ),

@@ -11,7 +11,11 @@ import {
 } from "@slopstop/protocol";
 import { Effect, Fiber, Result } from "effect";
 import { describe, expect, it } from "vitest";
-import { makeHarnessRequestCore } from "./harness-request-core.js";
+import {
+  bridgeFaultText,
+  makeHarnessRequestCore,
+  type ProjectRequestFault,
+} from "./harness-request-core.js";
 import {
   listReply,
   messageId,
@@ -211,4 +215,83 @@ describe("harness request core", () => {
       expect(await request.result).toEqual(Result.succeed(listed));
     },
   );
+});
+
+describe("bridge fault text", () => {
+  const texts = { noun: "Sample", stopped: "Sample stopped.", echo: "Sample echo." };
+  const rows: ReadonlyArray<readonly [string, ProjectRequestFault, string]> = [
+    ["transport", { kind: "transport" }, "Harness session disconnected."],
+    [
+      "protocol invalid-message",
+      { kind: "protocol", reason: "invalid-message" },
+      "Harness session received an invalid protocol message.",
+    ],
+    [
+      "protocol system-failure",
+      { kind: "protocol", reason: "system-failure" },
+      "Harness reported a failure.",
+    ],
+    [
+      "protocol uncorrelated",
+      { kind: "protocol", reason: "uncorrelated" },
+      "Harness returned an uncorrelated Sample response.",
+    ],
+    [
+      "protocol undecodable",
+      { kind: "protocol", reason: "undecodable" },
+      "Harness returned an invalid Sample response.",
+    ],
+    [
+      "harness PROTOCOL_MESSAGE_INVALID",
+      { kind: "harness", code: "PROTOCOL_MESSAGE_INVALID", message: "marker one" },
+      "marker one",
+    ],
+    [
+      "harness PROTOCOL_VERSION_UNSUPPORTED",
+      { kind: "harness", code: "PROTOCOL_VERSION_UNSUPPORTED", message: "marker two" },
+      "marker two",
+    ],
+    [
+      "harness HARNESS_INTERNAL_FAILURE",
+      { kind: "harness", code: "HARNESS_INTERNAL_FAILURE", message: "marker three" },
+      "marker three",
+    ],
+    [
+      "send HARNESS_SESSION_UNAVAILABLE",
+      { kind: "send", code: "HARNESS_SESSION_UNAVAILABLE" },
+      "Harness session is unavailable.",
+    ],
+    [
+      "send HARNESS_SESSION_MESSAGE_INVALID",
+      { kind: "send", code: "HARNESS_SESSION_MESSAGE_INVALID" },
+      "Desktop created an invalid harness message.",
+    ],
+    [
+      "send HARNESS_SESSION_SEND_FAILED",
+      { kind: "send", code: "HARNESS_SESSION_SEND_FAILED" },
+      "Harness session send failed.",
+    ],
+    ["unsent", { kind: "unsent" }, "Sample stopped."],
+    ["stopped", { kind: "stopped" }, "Sample stopped."],
+    [
+      "desktop invalid-command",
+      { kind: "desktop", reason: "invalid-command" },
+      "Desktop created an invalid harness message.",
+    ],
+    [
+      "desktop identity-collision",
+      { kind: "desktop", reason: "identity-collision" },
+      "Harness request identity collided.",
+    ],
+    [
+      "desktop mismatched-event",
+      { kind: "desktop", reason: "mismatched-event" },
+      "Harness returned a mismatched Sample response.",
+    ],
+    ["desktop mismatched-echo", { kind: "desktop", reason: "mismatched-echo" }, "Sample echo."],
+  ];
+
+  it.each(rows)("names every request fault in the bridge's words: %s", (_name, fault, text) => {
+    expect(bridgeFaultText(fault, texts)).toBe(text);
+  });
 });

@@ -1,14 +1,14 @@
 import {
   CanonicalProjectActivationRequestSchema,
   CanonicalProjectSwitchRequestSchema,
-  decodeStrict,
   ProjectConversationReadRequestSchema,
   ProjectConversationSaveRequestSchema,
   ProjectListRequestSchema,
   ProjectUpgradeRequestSchema,
 } from "@slopstop/protocol";
-import { ipcMain } from "electron";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
+import { handleGatedIpc, type IpcGate } from "./ipc-gate.js";
+import type { IpcSender } from "./ipc-sender.js";
 import {
   readConversationFailure,
   saveConversationFailure,
@@ -23,8 +23,9 @@ import {
 import { projectUpgradeFailure } from "./project-upgrade-failure.js";
 
 /**
- * The Project handlers: each strictly decodes the renderer's value before the bridge sees it.
- * Once the gate closes, each answers its `unavailable` result without calling the bridge.
+ * The Project handlers: each first admits only a call from SlopStop's own window (the sender
+ * rule), then strictly decodes the renderer's value before the bridge sees it. Once the gate
+ * closes, each answers its `unavailable` result without calling the bridge.
  */
 export function registerProjectEntryIpc(
   projects: Pick<
@@ -36,36 +37,61 @@ export function registerProjectEntryIpc(
     | "readConversation"
     | "saveConversationMessage"
   >,
-  gate: Readonly<{ accepting(): boolean }>,
+  gate: IpcGate,
+  sender: IpcSender,
 ): void {
-  ipcMain.handle(desktopIpcChannels.listProjects, (_event, value: unknown) => {
-    decodeStrict(ProjectListRequestSchema, value);
-    if (!gate.accepting()) return Promise.resolve(projectListClosing);
-    return projects.list();
-  });
-  ipcMain.handle(desktopIpcChannels.activateProject, (_event, value: unknown) => {
-    const request = decodeStrict(CanonicalProjectActivationRequestSchema, value);
-    if (!gate.accepting()) return Promise.resolve(projectActivationUnavailable(request));
-    return projects.activate(request);
-  });
-  ipcMain.handle(desktopIpcChannels.switchProject, (_event, value: unknown) => {
-    const request = decodeStrict(CanonicalProjectSwitchRequestSchema, value);
-    if (!gate.accepting()) return Promise.resolve(projectSwitchUnavailable(request));
-    return projects.switchProject(request);
-  });
-  ipcMain.handle(desktopIpcChannels.upgradeProject, (_event, value: unknown) => {
-    const request = decodeStrict(ProjectUpgradeRequestSchema, value);
-    if (!gate.accepting()) return Promise.resolve(projectUpgradeFailure(request, unsent));
-    return projects.upgrade(request);
-  });
-  ipcMain.handle(desktopIpcChannels.readConversation, (_event, value: unknown) => {
-    const request = decodeStrict(ProjectConversationReadRequestSchema, value);
-    if (!gate.accepting()) return Promise.resolve(readConversationFailure(request, unsent));
-    return projects.readConversation(request);
-  });
-  ipcMain.handle(desktopIpcChannels.saveConversationMessage, (_event, value: unknown) => {
-    const request = decodeStrict(ProjectConversationSaveRequestSchema, value);
-    if (!gate.accepting()) return Promise.resolve(saveConversationFailure(request, unsent));
-    return projects.saveConversationMessage(request);
-  });
+  handleGatedIpc(
+    desktopIpcChannels.listProjects,
+    ProjectListRequestSchema,
+    { gate, sender },
+    {
+      closing: () => projectListClosing,
+      forward: () => projects.list(),
+    },
+  );
+  handleGatedIpc(
+    desktopIpcChannels.activateProject,
+    CanonicalProjectActivationRequestSchema,
+    { gate, sender },
+    {
+      closing: projectActivationUnavailable,
+      forward: (request) => projects.activate(request),
+    },
+  );
+  handleGatedIpc(
+    desktopIpcChannels.switchProject,
+    CanonicalProjectSwitchRequestSchema,
+    { gate, sender },
+    {
+      closing: projectSwitchUnavailable,
+      forward: (request) => projects.switchProject(request),
+    },
+  );
+  handleGatedIpc(
+    desktopIpcChannels.upgradeProject,
+    ProjectUpgradeRequestSchema,
+    { gate, sender },
+    {
+      closing: (request) => projectUpgradeFailure(request, unsent),
+      forward: (request) => projects.upgrade(request),
+    },
+  );
+  handleGatedIpc(
+    desktopIpcChannels.readConversation,
+    ProjectConversationReadRequestSchema,
+    { gate, sender },
+    {
+      closing: (request) => readConversationFailure(request, unsent),
+      forward: (request) => projects.readConversation(request),
+    },
+  );
+  handleGatedIpc(
+    desktopIpcChannels.saveConversationMessage,
+    ProjectConversationSaveRequestSchema,
+    { gate, sender },
+    {
+      closing: (request) => saveConversationFailure(request, unsent),
+      forward: (request) => projects.saveConversationMessage(request),
+    },
+  );
 }

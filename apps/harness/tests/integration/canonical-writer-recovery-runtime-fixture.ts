@@ -92,7 +92,7 @@ export function recoveryEnvelope(
   payload: unknown,
 ) {
   return {
-    protocolVersion: 9,
+    protocolVersion: 10,
     messageType: "event",
     messageId: `99999999-9999-4999-8999-999999999${600 + sequence}`,
     sentAt: recoveryRuntimeTime,
@@ -177,7 +177,7 @@ function recoveryWireClient(
       if (pending.has(messageId)) throw new Error("Duplicate pending transport identity.");
       const response = new Promise<unknown>((resolve) => pending.set(messageId, resolve));
       port2.postMessage({
-        protocolVersion: 9,
+        protocolVersion: 10,
         messageType: "command",
         messageId,
         sentAt: recoveryRuntimeTime,

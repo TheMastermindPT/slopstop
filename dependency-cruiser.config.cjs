@@ -54,6 +54,14 @@ module.exports = {
         path: "^(@mastra/|drizzle-orm$)",
       },
     },
+    {
+      // Q4 (a): the Electron entry only wires; nothing imports it. The smoke wiring test is the one
+      // exception, because it loads the real entry to prove what main.ts itself registers.
+      name: "no-import-of-electron-entry",
+      severity: "error",
+      from: { pathNot: "^apps/desktop/src/main/canonical-writer-package-smoke-main\\.test\\.ts$" },
+      to: { path: "^apps/desktop/src/main/main\\.ts$" },
+    },
   ],
   options: {
     doNotFollow: { path: "node_modules" },

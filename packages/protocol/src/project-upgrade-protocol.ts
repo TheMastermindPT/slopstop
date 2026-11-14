@@ -1,16 +1,11 @@
 import { Schema } from "effect";
 import { projectAvailabilityMessages as messages } from "./availability-messages.js";
 import { ProjectIdSchema } from "./domain-identity-schema.js";
-import { type HarnessFailureCode, harnessFailureMessages } from "./harness-failure-protocol.js";
+import { exactRowSchema, harnessFailureRow } from "./harness-failure-protocol.js";
 import {
   ProjectStorageCreateRequestIdSchema,
   StorageGenerationIdSchema,
 } from "./project-storage-protocol.js";
-
-/** A harness failure passed on inside an upgrade result: its own code and message, final. */
-function harnessFailureRow<const Code extends HarnessFailureCode>(code: Code) {
-  return { code, message: harnessFailureMessages[code], retryable: false } as const;
-}
 
 /**
  * Every (code, message, retryable) row a `project.upgrade` result can carry. Each producer —
@@ -78,15 +73,6 @@ type UpgradeDiagnosticRow =
   (typeof projectUpgradeDiagnostics)[keyof typeof projectUpgradeDiagnostics];
 export type ProjectUpgradeDiagnostic = UpgradeDiagnosticRow;
 
-/** One exact row: its code, message and retryability, nothing else. */
-function rowSchema<const Row extends UpgradeDiagnosticRow>(row: Row) {
-  return Schema.Struct({
-    code: Schema.Literal(row.code),
-    message: Schema.Literal(row.message),
-    retryable: Schema.Literal(row.retryable),
-  });
-}
-
 export const ProjectUpgradeRequestSchema = Schema.Struct({ projectId: ProjectIdSchema });
 export type ProjectUpgradeRequest = typeof ProjectUpgradeRequestSchema.Type;
 
@@ -106,36 +92,39 @@ export const ProjectUpgradeResultSchema = Schema.Union([
   Schema.Struct({
     status: Schema.Literal("refused"),
     ...base,
-    diagnostic: Schema.Union([rowSchema(rows.unsupported), rowSchema(rows.notEligible)]),
+    diagnostic: Schema.Union([exactRowSchema(rows.unsupported), exactRowSchema(rows.notEligible)]),
   }),
   Schema.Struct({
     status: Schema.Literal("failed"),
     ...base,
-    diagnostic: Schema.Union([rowSchema(rows.backupInvalid), rowSchema(rows.verificationFailed)]),
+    diagnostic: Schema.Union([
+      exactRowSchema(rows.backupInvalid),
+      exactRowSchema(rows.verificationFailed),
+    ]),
   }),
   Schema.Struct({
     status: Schema.Literal("rejected"),
     ...base,
-    diagnostic: rowSchema(rows.alreadyActive),
+    diagnostic: exactRowSchema(rows.alreadyActive),
   }),
   Schema.Struct({
     status: Schema.Literal("unavailable"),
     ...base,
     diagnostic: Schema.Union([
-      rowSchema(rows.storageUnavailable),
-      rowSchema(rows.storageBusy),
-      rowSchema(rows.coordinatorStopped),
-      rowSchema(rows.connectionLost),
+      exactRowSchema(rows.storageUnavailable),
+      exactRowSchema(rows.storageBusy),
+      exactRowSchema(rows.coordinatorStopped),
+      exactRowSchema(rows.connectionLost),
     ]),
   }),
   Schema.Struct({
     status: Schema.Literal("broken"),
     ...base,
     diagnostic: Schema.Union([
-      rowSchema(rows.storageBroken),
-      rowSchema(rows.harnessInternalFailure),
-      rowSchema(rows.protocolMessageInvalid),
-      rowSchema(rows.protocolVersionUnsupported),
+      exactRowSchema(rows.storageBroken),
+      exactRowSchema(rows.harnessInternalFailure),
+      exactRowSchema(rows.protocolMessageInvalid),
+      exactRowSchema(rows.protocolVersionUnsupported),
     ]),
   }),
 ]);

@@ -5,6 +5,9 @@ export default defineConfig({
   test: {
     name: "desktop-s8-mutation",
     environment: "node",
-    include: ["apps/desktop/src/main/harness-supervisor.test.ts"],
+    include: [
+      "apps/desktop/src/main/harness-supervisor.test.ts",
+      "apps/desktop/src/main/harness-supervisor-log-lines.test.ts",
+    ],
   },
 });

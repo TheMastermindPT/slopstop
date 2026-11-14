@@ -3,13 +3,13 @@
   "mutate": [
     "apps/desktop/src/main/harness-request-core.ts",
     "apps/desktop/src/main/harness-bridges.ts",
-    "apps/desktop/src/main/project-entry-bridge.ts:80-235",
-    "apps/desktop/src/main/project-storage-bridge.ts:38-167",
-    "apps/desktop/src/main/workspace-bridge.ts:101-271",
-    "apps/desktop/src/main/project-upgrade-failure.ts:36-53",
-    "apps/desktop/src/main/project-conversation-failure.ts:35-48",
+    "apps/desktop/src/main/request-fault-meaning.ts",
+    "apps/desktop/src/main/project-entry-bridge.ts:83-216",
+    "apps/desktop/src/main/project-storage-bridge.ts:28-107",
+    "apps/desktop/src/main/workspace-bridge.ts:91-200",
+    "apps/desktop/src/main/project-upgrade-failure.ts:31-36",
     "apps/desktop/src/main/harness-session.ts:105-134",
-    "apps/desktop/src/main/desktop-runtime.ts:166-189"
+    "apps/desktop/src/main/desktop-runtime.ts:173-196"
   ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],

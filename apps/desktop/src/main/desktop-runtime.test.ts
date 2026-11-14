@@ -18,7 +18,7 @@ const session: HarnessSessionClient = {
 /** Owners whose constructor throws the given error. */
 type Throws = Partial<Record<"supervisor" | "bridges", Error>>;
 
-/** A stop that runs its owner stop once, as a shared bridge's latched stop does. */
+/** An idempotent stop, as a shared bridge's is: it runs its owner stop once, then nothing. */
 function latch(stop: () => void) {
   let ran = false;
   return {
@@ -63,7 +63,7 @@ function fakes(faults: Faults = {}, throws: Throws = {}) {
     submit: vi.fn(),
     subscribe: vi.fn(() => () => undefined),
   };
-  /** The faked shared bridges: three latched stops, and a release that runs the rest, isolated. */
+  /** The faked shared bridges: three idempotent stops, and a release that stops every bridge. */
   const release = vi.fn();
   const createHarnessBridges = vi.fn(() => {
     if (throws.bridges !== undefined) throw throws.bridges;
@@ -262,4 +262,12 @@ it("passes the bridges their session, id and clock", () => {
     createId: ports.createId,
     now: ports.now,
   });
+});
+
+it("hands the supervisor the clock it was given", () => {
+  const { ports } = fakes();
+  makeDesktopRuntime(ports).runSync(readDesktopServices);
+  const calls: unknown[][] = ports.createSupervisor.mock.calls;
+  expect(calls).toHaveLength(1);
+  expect(calls[0]?.[3]).toStrictEqual({ createId: ports.createId, now: ports.now });
 });

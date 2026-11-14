@@ -8,9 +8,11 @@ export default defineConfig({
     include: [
       "apps/desktop/src/main/desktop-shutdown.test.ts",
       "apps/desktop/src/main/desktop-runtime.test.ts",
+      "apps/desktop/src/main/ipc-gate.test.ts",
+      "apps/desktop/src/main/ipc-sender.test.ts",
       "apps/desktop/src/main/project-entry-ipc.test.ts",
       "apps/desktop/src/main/project-registration-ipc.test.ts",
-      "apps/desktop/src/main/workspace-bridge.test.ts",
+      "apps/desktop/src/main/workspace-ipc.test.ts",
       "apps/desktop/src/main/canonical-writer-package-smoke.test.ts",
       "apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts",
       "apps/desktop/src/main/writer-proof-report.test.ts",

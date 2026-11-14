@@ -2,6 +2,7 @@ import type { HarnessBootstrap } from "@slopstop/protocol";
 import { Context, Effect, Layer, ManagedRuntime, Scope } from "effect";
 import type { Logger } from "pino";
 import type { HarnessBridgesInput, HarnessBridges as SharedBridges } from "./harness-bridges.js";
+import type { Clock } from "./harness-request-core.js";
 import type { HarnessSessionClient } from "./harness-session.js";
 import type { HarnessSupervisor } from "./harness-supervisor.js";
 import type { ProjectEntryBridge as ProjectEntryBridgeClient } from "./project-entry-bridge.js";
@@ -31,6 +32,7 @@ export type DesktopRuntimePorts = Readonly<{
     logger: Logger,
     entryPath: string,
     bootstrap: HarnessBootstrap,
+    clock: Clock,
   ): DesktopSupervisor;
   createHarnessBridges(input: DesktopBridgeInput): SharedBridges;
 }>;
@@ -45,7 +47,7 @@ class HarnessSupervision extends Context.Service<
   HarnessSupervision,
   Owned<DesktopSupervisor, Promise<void>> & Readonly<{ session: HarnessSessionClient }>
 >()("slopstop/desktop/HarnessSupervision") {}
-/** The three bridges over one shared core, each with its own latched stop (S6-I15). */
+/** The three bridges over one shared core, each with an idempotent stop (S6-I15). */
 class HarnessBridges extends Context.Service<
   HarnessBridges,
   Readonly<{
@@ -155,14 +157,19 @@ function desktopLayer(ports: DesktopRuntimePorts, owners: Scope.Scope) {
       const logger = yield* DesktopLogger;
       const supervision = yield* owned(
         owners,
-        () => ports.createSupervisor(logger, ports.harnessEntryPath(), ports.harnessBootstrap()),
+        () =>
+          ports.createSupervisor(logger, ports.harnessEntryPath(), ports.harnessBootstrap(), {
+            createId: ports.createId,
+            now: ports.now,
+          }),
         (supervisor) => supervisor.stop(),
       );
       return { ...supervision, session: supervision.owner.getSession() };
     }),
   );
   // The bridges depend on the supervision, so they release first. The release always runs
-  // `release()` once at dispose; it skips the bridges whose latched stop already ran (S7-S4).
+  // `release()` once at dispose: it stops every bridge, where a second stop does nothing, then
+  // ends the core (S7-S4).
   const bridgesLayer = Layer.effect(
     HarnessBridges,
     Effect.gen(function* () {

@@ -296,7 +296,7 @@ function activationTransport(
       fail = true;
     },
     envelope: (event: string, sequence: number, causationId: string, payload: unknown) => ({
-      protocolVersion: 9,
+      protocolVersion: 10,
       messageType: "event",
       messageId: `00000000-0000-4000-8000-${String(900 + sequence).padStart(12, "0")}`,
       sentAt,

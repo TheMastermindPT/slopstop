@@ -5,6 +5,7 @@ import {
 } from "@slopstop/kernel";
 import { Schema } from "effect";
 import { LowercaseDomainIdentityTextSchema, ProjectIdSchema } from "./domain-identity-schema.js";
+import { exactRowSchema, harnessFailureRows } from "./harness-failure-protocol.js";
 import {
   type RegisteredProjectSelectionCode,
   registeredProjectSelectionCodes,
@@ -173,7 +174,7 @@ export type CanonicalProjectActivationRequest = typeof CanonicalProjectActivatio
 const activationBase = { request: CanonicalProjectActivationRequestSchema };
 
 function activationFailureSchema<
-  const Status extends "rejected" | "unavailable" | "broken",
+  const Status extends "rejected" | "unavailable",
   const Codes extends readonly [
     CanonicalProjectActivationDiagnosticCode,
     ...CanonicalProjectActivationDiagnosticCode[],
@@ -182,13 +183,40 @@ function activationFailureSchema<
   return Schema.Struct({
     status: Schema.Literal(status),
     ...activationBase,
-    diagnostic: diagnosticSchema(Schema.Literals(codes), Schema.Boolean),
+    diagnostic: activationDiagnosticSchema(codes),
   });
+}
+
+function activationDiagnosticSchema<
+  const Codes extends readonly [
+    CanonicalProjectActivationDiagnosticCode,
+    ...CanonicalProjectActivationDiagnosticCode[],
+  ],
+>(codes: Codes) {
+  return diagnosticSchema(Schema.Literals(codes), Schema.Boolean);
 }
 
 const selectionCodes = <const Codes extends readonly RegisteredProjectSelectionCode[]>(
   codes: Codes,
 ) => codes;
+
+/**
+ * The three harness failure rows, each exact. A broken activation or switch passes one on; they are
+ * never activation diagnostic codes, which are also the harness fatal-log vocabulary.
+ */
+const harnessRowSchema = wholeUnion(Object.values(harnessFailureRows).map(exactRowSchema));
+
+/** A broken activation: its own diagnostic, or a harness failure row. */
+const activationBrokenDiagnosticSchema = wholeUnion([
+  activationDiagnosticSchema([
+    "PROJECT_STORAGE_BROKEN",
+    ...selectionCodes([...registryBrokenCodes, "INTERNAL_FAILURE"]),
+    "WRITER_FENCE_ACTIVATION_FAILED",
+    "WRITER_FENCE_STALE",
+    ...writerReleaseFailureCodes,
+  ]),
+  harnessRowSchema,
+]);
 
 export const CanonicalProjectActivationResultSchema = wholeUnion([
   Schema.Struct({
@@ -238,13 +266,11 @@ export const CanonicalProjectActivationResultSchema = wholeUnion([
       "OBSERVATION_LIMIT_EXCEEDED",
     ]),
   ]),
-  activationFailureSchema("broken", [
-    "PROJECT_STORAGE_BROKEN",
-    ...selectionCodes([...registryBrokenCodes, "INTERNAL_FAILURE"]),
-    "WRITER_FENCE_ACTIVATION_FAILED",
-    "WRITER_FENCE_STALE",
-    ...writerReleaseFailureCodes,
-  ]),
+  Schema.Struct({
+    status: Schema.Literal("broken"),
+    ...activationBase,
+    diagnostic: activationBrokenDiagnosticSchema,
+  }),
 ]);
 export type CanonicalProjectActivationResult = typeof CanonicalProjectActivationResultSchema.Type;
 
@@ -424,6 +450,11 @@ export const CanonicalProjectSwitchResultSchema = Schema.Union([
     status: Schema.Literal("release-failed"),
     request: CanonicalProjectSwitchRequestSchema,
     diagnostic: switchReleaseDiagnosticSchema,
+  }),
+  Schema.Struct({
+    status: Schema.Literal("broken"),
+    request: CanonicalProjectSwitchRequestSchema,
+    diagnostic: harnessRowSchema,
   }),
 ]).check(
   Schema.makeFilter(

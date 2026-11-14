@@ -70,6 +70,7 @@ export {
   writerProofStaleProjectId,
 } from "./canonical-writer-smoke-protocol.js";
 export { LowercaseDomainIdentityTextSchema } from "./domain-identity-schema.js";
+export { harnessFailureRows } from "./harness-failure-protocol.js";
 export type {
   HarnessFatalCode,
   HarnessFatalLogLine,

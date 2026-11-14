@@ -27,10 +27,19 @@ const ports = vi.hoisted(() => ({
   window: vi.fn(
     class {
       once = vi.fn();
-      loadFile = vi.fn().mockResolvedValue(undefined);
-      webContents = { executeJavaScript: vi.fn().mockResolvedValue({}) };
+      // While `loadHold` is set, every load stays pending (P4-B30).
+      loadFile = vi.fn(() => ports.loadHold ?? Promise.resolve());
+      webContents = ((id) => ({
+        id,
+        mainFrame: { processId: 100, routingId: id },
+        executeJavaScript: vi.fn().mockResolvedValue({}),
+      }))(++ports.webContentsCount);
     },
   ),
+  webContentsCount: 0,
+  loadHold: undefined as Promise<void> | undefined,
+  fromWebContents: vi.fn(),
+  showOpenDialog: vi.fn(),
   storageSmoke: vi.fn(),
   start: vi.fn(),
   stop: vi.fn(),
@@ -39,10 +48,20 @@ const ports = vi.hoisted(() => ({
   entryStop: vi.fn(),
   entryList: vi.fn(),
   entryRegister: vi.fn(),
+  entryActivate: vi.fn(),
+  entrySwitch: vi.fn(),
+  entryUpgrade: vi.fn(),
+  entryRead: vi.fn(),
+  entrySave: vi.fn(),
   workspaceQuery: vi.fn(),
+  workspaceSubmit: vi.fn(),
+  getStatus: vi.fn(),
+  retry: vi.fn(),
   supervisorCreated: vi.fn(),
+  runtimePorts: vi.fn(),
   logInfo: vi.fn(),
   logError: vi.fn(),
+  logWarn: vi.fn(),
   bootstrapArgs: vi.fn(),
   order: [] as string[],
   /** While set, the real runtime dispose waits for it (B1 main row). */
@@ -60,7 +79,11 @@ vi.mock("node:fs/promises", () => ({
 vi.mock("electron", () => ({
   app: ports.app,
   ipcMain: { handle: ports.ipc },
-  BrowserWindow: Object.assign(ports.window, { getAllWindows: () => [] }),
+  BrowserWindow: Object.assign(ports.window, {
+    getAllWindows: () => [],
+    fromWebContents: ports.fromWebContents,
+  }),
+  dialog: { showOpenDialog: ports.showOpenDialog },
 }));
 vi.mock("./canonical-writer-package-smoke.js", () => ({
   runCanonicalWriterPackageSmoke: ports.runner,
@@ -86,12 +109,14 @@ vi.mock("./project-storage-bootstrap.js", () => ({
 vi.mock("./harness-supervisor.js", () => ({
   harnessEntryPath: () => "harness.cjs",
   HarnessSupervisor: class {
-    constructor() {
-      ports.supervisorCreated();
+    constructor(...args: unknown[]) {
+      ports.supervisorCreated(...args);
     }
     start = ports.start;
     stop = ports.stop;
     subscribe = ports.subscribe;
+    getStatus = ports.getStatus;
+    retry = ports.retry;
     getSession() {
       return {};
     }
@@ -104,11 +129,11 @@ vi.mock("./harness-bridges.js", () => ({
     projectEntry: {
       list: ports.entryList,
       register: ports.entryRegister,
-      activate: vi.fn(),
-      switchProject: vi.fn(),
-      upgrade: vi.fn(),
-      readConversation: vi.fn(),
-      saveConversationMessage: vi.fn(),
+      activate: ports.entryActivate,
+      switchProject: ports.entrySwitch,
+      upgrade: ports.entryUpgrade,
+      readConversation: ports.entryRead,
+      saveConversationMessage: ports.entrySave,
       stop: ports.entryStop,
     },
     projectStorage: { open: vi.fn(), create: vi.fn(), close: vi.fn(), stop: ports.storageStop },
@@ -116,7 +141,7 @@ vi.mock("./harness-bridges.js", () => ({
       stop: ports.workspaceStop,
       subscribe: vi.fn(),
       query: ports.workspaceQuery,
-      submit: vi.fn(),
+      submit: ports.workspaceSubmit,
     },
     release: vi.fn(),
   }),
@@ -127,6 +152,7 @@ vi.mock("./desktop-runtime.js", async (original) => {
   return {
     ...actual,
     makeDesktopRuntime: (runtimePorts: Parameters<typeof actual.makeDesktopRuntime>[0]) => {
+      ports.runtimePorts(runtimePorts);
       const runtime = actual.makeDesktopRuntime(runtimePorts);
       const dispose = runtime.dispose.bind(runtime);
       vi.spyOn(runtime, "dispose").mockImplementation(async () => {
@@ -316,6 +342,26 @@ function configureReportingException(mode: string): void {
       break;
   }
 }
+/** Every window loads at once, and every open-path port answers unlike any gated envelope. */
+function answerOpenPaths() {
+  ports.loadHold = undefined;
+  for (const bridge of [
+    ports.entryList,
+    ports.entryRegister,
+    ports.entryActivate,
+    ports.entrySwitch,
+    ports.entryUpgrade,
+    ports.entryRead,
+    ports.entrySave,
+    ports.workspaceQuery,
+    ports.workspaceSubmit,
+  ])
+    bridge.mockResolvedValue({ status: "open-path" });
+  ports.getStatus.mockReturnValue({ state: "ready", attempt: 1, harnessVersion: "0.0.0" });
+  ports.retry.mockReturnValue({ ok: true });
+  ports.fromWebContents.mockReturnValue(undefined);
+  ports.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+}
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
@@ -339,12 +385,10 @@ beforeEach(() => {
   ports.runner.mockReset().mockResolvedValue({ status: "passed", cleanupSafe: true });
   ports.order.length = 0;
   ports.disposeHold = undefined;
-  // Open-path answers that differ from every gated envelope.
-  for (const bridge of [ports.entryList, ports.entryRegister, ports.workspaceQuery])
-    bridge.mockResolvedValue({ status: "open-path" });
+  answerOpenPaths();
   ports.log.mockImplementation(() => {
     ports.order.push("createMainLogger");
-    return { info: ports.logInfo, error: ports.logError };
+    return { info: ports.logInfo, error: ports.logError, warn: ports.logWarn };
   });
   ports.app.setAppLogsPath.mockImplementation(() => {
     ports.order.push("setAppLogsPath");
@@ -694,12 +738,28 @@ async function ordinaryLaunch() {
   await flush();
 }
 
+/** The handler main registered for a channel, called with an explicit event. */
+function registeredHandler(channel: keyof typeof desktopIpcChannels) {
+  const name = desktopIpcChannels[channel];
+  const handler = ports.ipc.mock.calls.find((call) => call[0] === name)?.[1];
+  if (typeof handler !== "function") throw new Error(`Missing IPC handler: ${name}`);
+  return (event: unknown, value: unknown) => handler(event, value);
+}
+
+/**
+ * An invoke event from the main frame of the window main created at `index`: an equal copy of
+ * the frame, never the same object, as Electron does not promise one.
+ */
+function windowEvent(index: number) {
+  const window = ports.window.mock.instances[index];
+  if (window === undefined) throw new Error(`Missing window: ${index}`);
+  return { sender: window.webContents, senderFrame: { ...window.webContents.mainFrame } };
+}
+
 /** The handler main registered for the row's channel, called as the renderer would. */
 function ipcHandler(row: Readonly<{ channel: keyof typeof desktopIpcChannels }>) {
-  const channel = desktopIpcChannels[row.channel];
-  const handler = ports.ipc.mock.calls.find((call) => call[0] === channel)?.[1];
-  if (typeof handler !== "function") throw new Error(`Missing IPC handler: ${channel}`);
-  return (value: unknown) => handler({ sender: {} }, value);
+  const handler = registeredHandler(row.channel);
+  return (value: unknown) => handler(windowEvent(0), value);
 }
 
 function noDesktopRuntime() {
@@ -896,5 +956,188 @@ describe("desktop runtime in main", () => {
     expect(ports.bootstrapArgs).toHaveBeenCalledWith(
       expect.objectContaining({ userDataRoot: runtimeRoot }),
     );
+  });
+});
+
+const activation = {
+  projectId: "00000000-0000-4000-8000-000000000020",
+  activationId: "00000000-0000-4000-8000-000000000021",
+};
+/** Every invoke channel, with a valid value and the port its open path reaches. */
+const invokeRows = [
+  { channel: "listProjects", value: {}, port: ports.entryList },
+  {
+    channel: "activateProject",
+    value: { projectId: activation.projectId },
+    port: ports.entryActivate,
+  },
+  {
+    channel: "switchProject",
+    value: { from: activation, to: { projectId: "00000000-0000-4000-8000-000000000022" } },
+    port: ports.entrySwitch,
+  },
+  {
+    channel: "upgradeProject",
+    value: { projectId: activation.projectId },
+    port: ports.entryUpgrade,
+  },
+  { channel: "readConversation", value: { ...activation, after: null }, port: ports.entryRead },
+  {
+    channel: "saveConversationMessage",
+    value: {
+      ...activation,
+      saveId: "00000000-0000-4000-8000-000000000023",
+      expectedRevision: 0,
+      text: "Hello",
+    },
+    port: ports.entrySave,
+  },
+  { channel: "getHarnessStatus", value: undefined, port: ports.getStatus },
+  { channel: "retryHarness", value: undefined, port: ports.retry },
+  {
+    channel: "queryWorkspace",
+    value: {
+      query: "memory-library.read",
+      projectId: "00000000-0000-4000-8000-000000000010",
+      cursor: null,
+    },
+    port: ports.workspaceQuery,
+  },
+  {
+    channel: "submitWorkspaceIntent",
+    value: {
+      intent: "memory.proposal.review",
+      projectId: "00000000-0000-4000-8000-000000000010",
+      proposalId: "00000000-0000-4000-8000-000000000030",
+      decision: "accept",
+      expectedProjectionRevision: 0,
+    },
+    port: ports.workspaceSubmit,
+  },
+  { channel: "getRegistrationCapability", value: undefined, port: undefined },
+  { channel: "chooseRepository", value: undefined, port: ports.showOpenDialog },
+  { channel: "registerProject", value: { step: "prepare-git" }, port: ports.entryRegister },
+] as const;
+
+/** A webContents main never created, sending from its own main frame. */
+const foreignEvent = {
+  sender: { id: 999_999, mainFrame: { processId: 1, routingId: 1 } },
+  senderFrame: { processId: 1, routingId: 1 },
+};
+
+/** The renderer-to-main channels: every channel but the two main-to-renderer events. */
+const invokeChannels = Object.values(desktopIpcChannels).filter(
+  (channel) =>
+    channel !== desktopIpcChannels.harnessStatusChanged &&
+    channel !== desktopIpcChannels.workspaceNotification,
+);
+
+/** The channels in a fixed order, so two lists compare as sets of names. */
+const sorted = (channels: readonly string[]) => [...channels].sort((a, b) => a.localeCompare(b));
+
+describe("the IPC sender rule in main", () => {
+  const originalPlatform = Object.getOwnPropertyDescriptor(process, "platform");
+  beforeEach(() => {
+    // The folder dialog is offered on Windows only, so its row reaches the dialog there.
+    Object.defineProperty(process, "platform", { configurable: true, value: "win32" });
+  });
+  afterEach(() => {
+    if (originalPlatform !== undefined)
+      Object.defineProperty(process, "platform", originalPlatform);
+  });
+
+  it.each(invokeRows)(
+    "refuses a call from a frame that is not the application window: $channel",
+    async (row) => {
+      await ordinaryLaunch();
+      const handler = registeredHandler(row.channel);
+
+      await expect(async () => handler(foreignEvent, row.value)).rejects.toThrow(
+        /^IPC call refused: unknown sender\.$/,
+      );
+      if (row.port !== undefined) expect(row.port).not.toHaveBeenCalled();
+      expect(ports.logWarn).toHaveBeenCalledExactlyOnceWith(
+        { channel: desktopIpcChannels[row.channel] },
+        "IPC call refused: unknown sender.",
+      );
+    },
+  );
+
+  it.each(invokeRows)(
+    "admits the application window on every channel before its page finishes loading: $channel",
+    async (row) => {
+      ports.loadHold = new Promise<void>(() => undefined);
+      await ordinaryLaunch();
+      const answer = await registeredHandler(row.channel)(windowEvent(0), row.value);
+
+      if (row.port !== undefined) expect(row.port).toHaveBeenCalledOnce();
+      if (row.channel === "listProjects") expect(answer).toEqual({ status: "open-path" });
+      expect(ports.logWarn).not.toHaveBeenCalled();
+    },
+  );
+
+  it("registers every invoke channel, and only those, behind the sender rule", async () => {
+    await ordinaryLaunch();
+    const registered = ports.ipc.mock.calls.map(([channel]) => channel);
+
+    expect(sorted(registered)).toEqual(sorted(invokeChannels));
+    expect(sorted(invokeRows.map((row) => desktopIpcChannels[row.channel]))).toEqual(
+      sorted(invokeChannels),
+    );
+    for (const [, handler] of ports.ipc.mock.calls) {
+      await expect(async () => handler(foreignEvent, undefined)).rejects.toThrow(
+        /^IPC call refused: unknown sender\.$/,
+      );
+    }
+    expect(sorted(ports.logWarn.mock.calls.map(([fields]) => fields.channel))).toEqual(
+      sorted(invokeChannels),
+    );
+  });
+
+  it("admits a window reopened on activate", async () => {
+    await ordinaryLaunch();
+    event("activate");
+    await flush();
+    expect(ports.window).toHaveBeenCalledTimes(2);
+
+    const answer = await registeredHandler("listProjects")(windowEvent(1), {});
+
+    expect(answer).toEqual({ status: "open-path" });
+  });
+});
+
+/**
+ * The clock main gave a launch: the runtime's own `createId` and `now`, and a real clock, whose
+ * time is RFC 3339 UTC between the reads around it and whose ids are distinct UUIDs.
+ */
+function expectRuntimeClock(clock: Readonly<{ createId(): string; now(): string }>) {
+  const runtimePorts = ports.runtimePorts.mock.lastCall?.[0];
+  expect(clock.createId).toBe(runtimePorts.createId);
+  expect(clock.now).toBe(runtimePorts.now);
+  const before = Date.now();
+  const time = clock.now();
+  const after = Date.now();
+  expect(time).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+  expect(Date.parse(time)).toBeGreaterThanOrEqual(before);
+  expect(Date.parse(time)).toBeLessThanOrEqual(after);
+  const ids = [clock.createId(), clock.createId()];
+  for (const id of ids)
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  expect(ids[0]).not.toBe(ids[1]);
+}
+
+describe("the desktop clock in main", () => {
+  it("gives the supervisor the runtime clock", async () => {
+    await ordinaryLaunch();
+    expect(ports.supervisorCreated).toHaveBeenCalledOnce();
+    expectRuntimeClock(ports.supervisorCreated.mock.calls[0]?.[3]);
+  });
+
+  it("gives the writer proof the runtime clock", async () => {
+    await load();
+    ready();
+    await flush();
+    expect(ports.runner).toHaveBeenCalledOnce();
+    expectRuntimeClock(ports.runner.mock.calls[0]?.[0].clock);
   });
 });

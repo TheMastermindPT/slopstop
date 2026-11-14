@@ -5,17 +5,12 @@ import {
   ProjectActivationIdSchema,
 } from "./canonical-project-protocol.js";
 import { LowercaseDomainIdentityTextSchema, ProjectIdSchema } from "./domain-identity-schema.js";
-import { type HarnessFailureCode, harnessFailureMessages } from "./harness-failure-protocol.js";
+import { exactRowSchema, harnessFailureRow } from "./harness-failure-protocol.js";
 import {
   ConversationBranchIdSchema,
   ConversationIdSchema,
   ConversationMessageIdSchema,
 } from "./workspace-protocol.js";
-
-/** A harness failure passed on inside a conversation result: its own code and message, final. */
-function harnessFailureRow<const Code extends HarnessFailureCode>(code: Code) {
-  return { code, message: harnessFailureMessages[code], retryable: false } as const;
-}
 
 /**
  * Every (code, message, retryable) row a conversation result can carry. `retryable` says
@@ -138,14 +133,6 @@ export const ProjectConversationSaveRequestSchema = Schema.Struct({
 });
 export type ProjectConversationSaveRequest = typeof ProjectConversationSaveRequestSchema.Type;
 
-function rowSchema<const Row extends ProjectConversationDiagnostic>(row: Row) {
-  return Schema.Struct({
-    code: Schema.Literal(row.code),
-    message: Schema.Literal(row.message),
-    retryable: Schema.Literal(row.retryable),
-  });
-}
-
 const rows = projectConversationDiagnostics;
 
 type ConversationRequestSchema =
@@ -160,7 +147,7 @@ function failure<const Status extends string, Request extends ConversationReques
   return Schema.Struct({
     status: Schema.Literal(status),
     request,
-    diagnostic: Schema.Union(diagnostics.map(rowSchema)),
+    diagnostic: Schema.Union(diagnostics.map(exactRowSchema)),
   });
 }
 

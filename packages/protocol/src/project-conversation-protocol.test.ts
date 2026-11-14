@@ -9,7 +9,7 @@ const saveId = "00000000-0000-4000-8000-000000000012";
 const readRequest = { projectId, activationId, after: null };
 const saveRequest = { projectId, activationId, saveId, expectedRevision: 0, text: "Hello" };
 const envelope = {
-  protocolVersion: 9,
+  protocolVersion: 10,
   messageType: "command",
   messageId: "00000000-0000-4000-8000-000000000013",
   sentAt: "2026-10-10T12:00:00.000Z",

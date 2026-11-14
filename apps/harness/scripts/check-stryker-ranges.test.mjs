@@ -443,10 +443,10 @@ it("passes on the repository's own configs and anchors", () => {
   expect(checkStrykerRanges({ root: repository })).toEqual({
     ok: true,
     configs: [
-      { config: "stryker.config.json", ranges: 19, wholeFiles: 33 },
+      { config: "stryker.config.json", ranges: 18, wholeFiles: 35 },
       { config: "stryker.conversation.config.json", ranges: 0, wholeFiles: 7 },
-      { config: "stryker.desktop-s6.config.json", ranges: 14, wholeFiles: 2 },
-      { config: "stryker.desktop-s7.config.json", ranges: 7, wholeFiles: 2 },
+      { config: "stryker.desktop-s6.config.json", ranges: 7, wholeFiles: 6 },
+      { config: "stryker.desktop-s7.config.json", ranges: 6, wholeFiles: 3 },
       { config: "stryker.desktop-s8.config.json", ranges: 3, wholeFiles: 0 },
       { config: "stryker.effect-gate.config.json", ranges: 0, wholeFiles: 1 },
       { config: "stryker.ledger-table.config.json", ranges: 0, wholeFiles: 1 },

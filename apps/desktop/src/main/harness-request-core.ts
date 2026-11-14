@@ -1,10 +1,12 @@
+import { isDeepStrictEqual } from "node:util";
 import {
   type DesktopMessage,
   decodeStrictResult,
   type HarnessFailureCode,
   type HarnessMessage,
 } from "@slopstop/protocol";
-import { Deferred, Effect, Result, type Schema } from "effect";
+import { Deferred, Effect, Match, Result, type Schema } from "effect";
+import { harnessSendFailureMessage } from "./harness-send-failure.js";
 import type { HarnessSessionClient, HarnessSessionSendResult } from "./harness-session.js";
 
 type SendErrorCode = Extract<HarnessSessionSendResult, { ok: false }>["error"]["code"];
@@ -31,18 +33,54 @@ export type ProjectRequestFault =
 /** The `{ createId, now }` clock a bridge stamps its commands with. */
 export type Clock = Readonly<{ createId(): string; now(): string }>;
 
+/** The words a bridge's fault texts use: its noun, its stopped text and its mismatched-echo text. */
+export type BridgeFaultTexts = Readonly<{ noun: string; stopped: string; echo: string }>;
+
 /**
- * The fault texts that name no bridge, shared by the Project Storage and workspace bridges. The
- * bridge-specific texts (uncorrelated, undecodable, mismatched, stopped) stay with each bridge.
+ * The fixed text a bridge request answers for each fault, in that bridge's words. Every text is
+ * built per answer (not a module-load static).
  */
-export const bridgeNeutralText = {
-  transport: "Harness session disconnected.",
-  protocol: {
-    "invalid-message": "Harness session received an invalid protocol message.",
-    "system-failure": "Harness reported a failure.",
-  },
-  desktop: { "identity-collision": "Harness request identity collided." },
-} as const;
+export function bridgeFaultText(fault: ProjectRequestFault, texts: BridgeFaultTexts): string {
+  return Match.value(fault).pipe(
+    Match.discriminatorsExhaustive("kind")({
+      transport: () => "Harness session disconnected.",
+      protocol: ({ reason }) => protocolFaultText(reason, texts.noun),
+      harness: ({ message }) => message,
+      send: ({ code }) => harnessSendFailureMessage({ ok: false, error: { code } }),
+      unsent: () => texts.stopped,
+      stopped: () => texts.stopped,
+      desktop: ({ reason }) => desktopFaultText(reason, texts),
+    }),
+  );
+}
+
+function protocolFaultText(
+  reason: Extract<ProjectRequestFault, { kind: "protocol" }>["reason"],
+  noun: string,
+): string {
+  return Match.value(reason).pipe(
+    Match.when("invalid-message", () => "Harness session received an invalid protocol message."),
+    Match.when("system-failure", () => "Harness reported a failure."),
+    Match.when("uncorrelated", () => `Harness returned an uncorrelated ${noun} response.`),
+    Match.when("undecodable", () => `Harness returned an invalid ${noun} response.`),
+    Match.exhaustive,
+  );
+}
+
+function desktopFaultText(
+  reason: Extract<ProjectRequestFault, { kind: "desktop" }>["reason"],
+  texts: BridgeFaultTexts,
+): string {
+  return Match.value(reason).pipe(
+    Match.when("invalid-command", () =>
+      harnessSendFailureMessage({ ok: false, error: { code: "HARNESS_SESSION_MESSAGE_INVALID" } }),
+    ),
+    Match.when("identity-collision", () => "Harness request identity collided."),
+    Match.when("mismatched-event", () => `Harness returned a mismatched ${texts.noun} response.`),
+    Match.when("mismatched-echo", () => texts.echo),
+    Match.exhaustive,
+  );
+}
 
 /** The bridge a request belongs to, so a bridge stop settles only its own requests. */
 type HarnessBridgeTag = "project-entry" | "project-storage" | "workspace";
@@ -165,7 +203,7 @@ export function makeHarnessRequestCore(session: HarnessSessionClient): HarnessRe
 }
 
 /** Decodes a reply payload; a payload that does not decode is a `protocol` `undecodable` fault. */
-export function decodeReply<A>(
+function decodeReply<A>(
   schema: Schema.Decoder<A>,
   value: unknown,
 ): Effect.Effect<A, ProjectRequestFault> {
@@ -182,9 +220,71 @@ export function decodeReply<A>(
  * Temporary Promise facade (P-S7-1 (b)): remove when C2 streaming moves the IPC edge and the
  * package-smoke callers onto the runtime.
  */
-export function answerRequest<A>(
+function answerRequest<A>(
   request: Effect.Effect<A, ProjectRequestFault>,
   onFault: (fault: ProjectRequestFault) => A,
 ): Promise<A> {
   return Effect.runPromise(request.pipe(Effect.catch((fault) => Effect.succeed(onFault(fault)))));
+}
+
+/** What a reply must echo: `reply` reads it from the result, `sent` from the command sent. */
+type EchoRule<Result> = Readonly<{
+  reply(result: Result): unknown;
+  sent?(command: DesktopMessage): unknown;
+}>;
+
+/**
+ * One bridge operation: its request schema, its command over the validated request, the reply
+ * event and schema, an optional echo rule and revision floor (`accept`), and its broken answer.
+ */
+export type BridgeOperation<Request, Result> = Readonly<{
+  requestSchema: Schema.Decoder<Request>;
+  command(request: Request): DesktopMessage;
+  event: HarnessMessage["event"];
+  resultSchema: Schema.Decoder<Result>;
+  echo?: EchoRule<Result>;
+  accept?(result: Result): Result;
+  broken(request: Request, fault: ProjectRequestFault): Result;
+}>;
+
+/** The bridge a request runs for: its tag and whether it has stopped. */
+export type BridgeHandle = Readonly<{ tag: HarnessBridgeTag; isStopped(): boolean }>;
+
+const sentPayload = (command: DesktopMessage): unknown => command.payload;
+
+/**
+ * The one request skeleton. An invalid request rejects with a fixed error that quotes none of the
+ * input, before anything is sent (Q13 (a)); a stopped bridge answers `unsent`; otherwise the
+ * request runs through the core, its reply decodes, its echo is compared with what the command
+ * sent (never the caller's object), and every fault becomes the operation's broken answer.
+ */
+export function bridgeRequest<Request, Result>(
+  core: HarnessRequestCore,
+  bridge: BridgeHandle,
+  operation: BridgeOperation<Request, Result>,
+  input: unknown,
+): Promise<Result> {
+  const validated = decodeStrictResult(operation.requestSchema, input);
+  if (!Result.isSuccess(validated))
+    return Promise.reject(new Error(`Invalid ${bridge.tag} request.`));
+  const request = validated.success;
+  if (bridge.isStopped()) return Promise.resolve(operation.broken(request, { kind: "unsent" }));
+  const sentOf = operation.echo?.sent ?? sentPayload;
+  let sentEcho: unknown;
+  const createCommand = () => {
+    const command = operation.command(request);
+    sentEcho = sentOf(command);
+    return command;
+  };
+  return answerRequest(
+    core.request(bridge.tag, createCommand, operation.event).pipe(
+      Effect.flatMap((value) => decodeReply(operation.resultSchema, value)),
+      Effect.flatMap((result) =>
+        operation.echo === undefined || isDeepStrictEqual(operation.echo.reply(result), sentEcho)
+          ? Effect.succeed(operation.accept?.(result) ?? result)
+          : Effect.fail({ kind: "desktop", reason: "mismatched-echo" } as const),
+      ),
+    ),
+    (fault) => operation.broken(request, fault),
+  );
 }

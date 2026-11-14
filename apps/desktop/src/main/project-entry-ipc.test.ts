@@ -6,12 +6,16 @@ import {
 } from "@slopstop/protocol";
 import { beforeEach, expect, it, vi } from "vitest";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
+import type { IpcSender } from "./ipc-sender.js";
 import { registerProjectEntryIpc } from "./project-entry-ipc.js";
 
 const electronMocks = vi.hoisted(() => ({ handle: vi.fn() }));
 vi.mock("electron", () => ({ ipcMain: { handle: electronMocks.handle } }));
 
 type Projects = Parameters<typeof registerProjectEntryIpc>[0];
+
+/** A sender rule that admits every call, so these rows see only the gate. */
+const admittingSender: IpcSender = { admit: () => undefined };
 
 const projectId = randomUUID();
 const listed = { status: "listed", projects: [], hiddenCount: 0 } as const;
@@ -25,7 +29,11 @@ const connectionUnavailable = {
  * Bridge fakes that answer each forwarded request with a result echoing it, registered behind a
  * gate that stays open or closed.
  */
-function registeredWith(switchProject: Projects["switchProject"], accepting: boolean) {
+function registeredWith(
+  switchProject: Projects["switchProject"],
+  accepting: boolean,
+  sender: IpcSender = admittingSender,
+) {
   const projects = {
     list: vi.fn<Projects["list"]>(async () => listed),
     activate: vi.fn<Projects["activate"]>(async (request) => ({
@@ -45,7 +53,7 @@ function registeredWith(switchProject: Projects["switchProject"], accepting: boo
       currentRevision: 0,
     })),
   } satisfies Projects;
-  registerProjectEntryIpc(projects, { accepting: () => accepting });
+  registerProjectEntryIpc(projects, { accepting: () => accepting }, sender);
   const handlers = new Map(
     electronMocks.handle.mock.calls.map(([channel, handler]) => [channel as string, handler]),
   );
@@ -234,6 +242,38 @@ it.each(gatedRows)(
     const call = handler(desktopIpcChannels[channel]);
     await expect(call(value)).resolves.toEqual(envelope);
     expect(() => call({ ...value, extra: true })).toThrow();
+    expect(projects[fake]).not.toHaveBeenCalled();
+  },
+);
+
+/** A sender rule that refuses every call, as the real rule refuses an unknown frame. */
+const refusingSender: IpcSender = {
+  admit: () => {
+    throw new Error("IPC call refused: unknown sender.");
+  },
+};
+
+it.each([
+  { channel: "listProjects", fake: "list", value: {} },
+  { channel: "activateProject", fake: "activate", value: { projectId } },
+  { channel: "switchProject", fake: "switchProject", value: switchRequest },
+  { channel: "upgradeProject", fake: "upgrade", value: { projectId } },
+  { channel: "readConversation", fake: "readConversation", value: readRequest },
+  { channel: "saveConversationMessage", fake: "saveConversationMessage", value: saveRequest },
+] as const)(
+  "refuses every channel from an unadmitted sender: $channel",
+  async ({ channel, fake, value }) => {
+    const { projects, handler } = registeredWith(
+      async (request) => ({
+        status: "coordinator-unavailable",
+        request,
+        diagnostic: connectionUnavailable,
+      }),
+      true,
+      refusingSender,
+    );
+    const call = handler(desktopIpcChannels[channel]);
+    await expect(async () => call(value)).rejects.toThrow(/^IPC call refused: unknown sender\.$/);
     expect(projects[fake]).not.toHaveBeenCalled();
   },
 );

@@ -55,14 +55,8 @@
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/main/project-entry-bridge.ts:103-103",
-    "first": "    if (isStopped()) return Promise.resolve(broken(unsent));",
-    "last": "    if (isStopped()) return Promise.resolve(broken(unsent));"
-  },
-  {
-    "config": "stryker.config.json",
-    "entry": "apps/desktop/src/main/project-entry-bridge.ts:189-202",
-    "first": "    readConversation: echoing({",
+    "entry": "apps/desktop/src/main/project-entry-bridge.ts:187-202",
+    "first": "    readConversation: run({",
     "last": "    }),"
   },
   {
@@ -115,61 +109,25 @@
   },
   {
     "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/project-entry-ipc.ts:43-43",
-    "first": "    if (!gate.accepting()) return Promise.resolve(projectListClosing);",
-    "last": "    if (!gate.accepting()) return Promise.resolve(projectListClosing);"
-  },
-  {
-    "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/project-entry-ipc.ts:48-48",
-    "first": "    if (!gate.accepting()) return Promise.resolve(projectActivationUnavailable(request));",
-    "last": "    if (!gate.accepting()) return Promise.resolve(projectActivationUnavailable(request));"
-  },
-  {
-    "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/project-entry-ipc.ts:53-53",
-    "first": "    if (!gate.accepting()) return Promise.resolve(projectSwitchUnavailable(request));",
-    "last": "    if (!gate.accepting()) return Promise.resolve(projectSwitchUnavailable(request));"
-  },
-  {
-    "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/project-entry-ipc.ts:58-58",
-    "first": "    if (!gate.accepting()) return Promise.resolve(projectUpgradeFailure(request, unsent));",
-    "last": "    if (!gate.accepting()) return Promise.resolve(projectUpgradeFailure(request, unsent));"
-  },
-  {
-    "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/project-entry-ipc.ts:63-63",
-    "first": "    if (!gate.accepting()) return Promise.resolve(readConversationFailure(request, unsent));",
-    "last": "    if (!gate.accepting()) return Promise.resolve(readConversationFailure(request, unsent));"
-  },
-  {
-    "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/project-entry-ipc.ts:68-68",
-    "first": "    if (!gate.accepting()) return Promise.resolve(saveConversationFailure(request, unsent));",
-    "last": "    if (!gate.accepting()) return Promise.resolve(saveConversationFailure(request, unsent));"
-  },
-  {
-    "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/project-registration-ipc.ts:35-35",
+    "entry": "apps/desktop/src/main/project-registration-ipc.ts:36-36",
     "first": "  if (!gate.accepting()) return projectRegistrationClosing;",
     "last": "  if (!gate.accepting()) return projectRegistrationClosing;"
   },
   {
     "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/project-registration-ipc.ts:43-43",
+    "entry": "apps/desktop/src/main/project-registration-ipc.ts:44-44",
     "first": "  if (!gate.accepting()) return projectRegistrationClosing;",
     "last": "  if (!gate.accepting()) return projectRegistrationClosing;"
   },
   {
     "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/project-registration-ipc.ts:62-62",
-    "first": "    if (!gate.accepting()) return Promise.resolve(projectRegistrationClosing);",
-    "last": "    if (!gate.accepting()) return Promise.resolve(projectRegistrationClosing);"
+    "entry": "apps/desktop/src/main/project-registration-ipc.ts:65-73",
+    "first": "  handleGatedIpc(",
+    "last": "  );"
   },
   {
     "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/main.ts:94-104",
+    "entry": "apps/desktop/src/main/main.ts:89-99",
     "first": "let shutdownServices: DesktopServices | undefined;",
     "last": "    servicesAtShutdown()?.logger.error({ err: error }, \"SlopStop shutdown failed.\"),"
   },
@@ -181,51 +139,39 @@
   },
   {
     "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/main.ts:273-288",
-    "first": "export function registerWorkspaceIpc(",
-    "last": "}"
-  },
-  {
-    "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/main.ts:406-406",
+    "entry": "apps/desktop/src/main/main.ts:384-384",
     "first": "  if (!desktopShutdown.accepting()) return;",
     "last": "  if (!desktopShutdown.accepting()) return;"
   },
   {
     "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/canonical-writer-package-smoke.ts:300-341",
+    "entry": "apps/desktop/src/main/canonical-writer-package-smoke.ts:302-343",
     "first": "  async wait(predicate: () => boolean, options: Wait): Promise<void> {",
     "last": "  }"
   },
   {
     "config": "stryker.desktop-s7.config.json",
-    "entry": "apps/desktop/src/main/project-entry-bridge.ts:80-235",
-    "first": "export const unsent = { kind: \"unsent\" } as const;",
+    "entry": "apps/desktop/src/main/project-entry-bridge.ts:83-216",
+    "first": "function entryFailure<Request, Result>(unavailableAnswer: (request: Request) => Result) {",
     "last": "}"
   },
   {
     "config": "stryker.desktop-s7.config.json",
-    "entry": "apps/desktop/src/main/project-storage-bridge.ts:38-167",
+    "entry": "apps/desktop/src/main/project-storage-bridge.ts:28-107",
     "first": "const stoppedText = \"Project Storage bridge is stopped.\";",
     "last": "}"
   },
   {
     "config": "stryker.desktop-s7.config.json",
-    "entry": "apps/desktop/src/main/workspace-bridge.ts:101-271",
+    "entry": "apps/desktop/src/main/workspace-bridge.ts:91-200",
     "first": "const closingDiagnostic = {",
     "last": "}"
   },
   {
     "config": "stryker.desktop-s7.config.json",
-    "entry": "apps/desktop/src/main/project-upgrade-failure.ts:36-53",
-    "first": "  return Match.value(fault).pipe(",
-    "last": "  );"
-  },
-  {
-    "config": "stryker.desktop-s7.config.json",
-    "entry": "apps/desktop/src/main/project-conversation-failure.ts:35-48",
-    "first": "  return Match.value(fault).pipe(",
-    "last": "  );"
+    "entry": "apps/desktop/src/main/project-upgrade-failure.ts:31-36",
+    "first": "  const meaning = faultMeaning(fault);",
+    "last": "  return protocolInvalid(request);"
   },
   {
     "config": "stryker.desktop-s7.config.json",
@@ -235,7 +181,7 @@
   },
   {
     "config": "stryker.desktop-s7.config.json",
-    "entry": "apps/desktop/src/main/desktop-runtime.ts:166-189",
+    "entry": "apps/desktop/src/main/desktop-runtime.ts:173-196",
     "first": "  const bridgesLayer = Layer.effect(",
     "last": "  );"
   },
@@ -247,13 +193,13 @@
   },
   {
     "config": "stryker.desktop-s8.config.json",
-    "entry": "apps/desktop/src/main/harness-supervisor.ts:176-233",
+    "entry": "apps/desktop/src/main/harness-supervisor.ts:178-235",
     "first": "  // Waits for the child's exit for one grace period, kills it, then waits one more grace",
     "last": "  }"
   },
   {
     "config": "stryker.desktop-s8.config.json",
-    "entry": "apps/desktop/src/main/harness-supervisor.ts:399-435",
+    "entry": "apps/desktop/src/main/harness-supervisor.ts:401-437",
     "first": "  /** Logs the child's output and errors, and registers how to quiet and remove that logging. */",
     "last": "  }"
   },

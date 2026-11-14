@@ -7,14 +7,15 @@ import {
   type RepositoryChoiceResult,
   RepositoryChoiceResultSchema,
 } from "@slopstop/protocol";
-import { BrowserWindow, dialog, ipcMain } from "electron";
+import { BrowserWindow, dialog } from "electron";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
+import { handleGatedIpc, handleIpc, type IpcGate } from "./ipc-gate.js";
+import type { IpcSender } from "./ipc-sender.js";
 import { projectRegistrationClosing } from "./project-entry-bridge.js";
 
 type RegistrationBridge = Readonly<{
   register(request: ProjectRegistrationRequest): Promise<ProjectRegistrationResult>;
 }>;
-type IpcGate = Readonly<{ accepting(): boolean }>;
 
 /** PC-S1 adds repositories on Windows only (B4); the platform is known before any dialog. */
 function registrationCapability(platform: NodeJS.Platform): RegistrationCapability {
@@ -50,16 +51,24 @@ async function chooseRepository(
   );
 }
 
-export function registerProjectRegistrationIpc(bridge: RegistrationBridge, gate: IpcGate): void {
-  ipcMain.handle(desktopIpcChannels.getRegistrationCapability, () =>
+export function registerProjectRegistrationIpc(
+  bridge: RegistrationBridge,
+  gate: IpcGate,
+  sender: IpcSender,
+): void {
+  handleIpc(desktopIpcChannels.getRegistrationCapability, sender, () =>
     registrationCapability(process.platform),
   );
-  ipcMain.handle(desktopIpcChannels.chooseRepository, (event) =>
+  handleIpc(desktopIpcChannels.chooseRepository, sender, (event) =>
     chooseRepository(bridge, gate, BrowserWindow.fromWebContents(event.sender) ?? undefined),
   );
-  ipcMain.handle(desktopIpcChannels.registerProject, (_event, value: unknown) => {
-    const request = decodeStrict(RendererRegistrationRequestSchema, value);
-    if (!gate.accepting()) return Promise.resolve(projectRegistrationClosing);
-    return bridge.register(request);
-  });
+  handleGatedIpc(
+    desktopIpcChannels.registerProject,
+    RendererRegistrationRequestSchema,
+    { gate, sender },
+    {
+      closing: () => projectRegistrationClosing,
+      forward: (request) => bridge.register(request),
+    },
+  );
 }

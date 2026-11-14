@@ -65,3 +65,44 @@ it.each([
   expect(violationsOf(output)).toEqual(violations);
   expect(output.modules.map(({ source }) => source)).toContain(target);
 });
+
+const electronEntry = "apps/desktop/src/main/main.ts";
+
+function writeElectronEntry() {
+  write(electronEntry, "export const entry = 1;\n");
+}
+
+it.each([
+  {
+    name: "a static import from a desktop main test",
+    from: "apps/desktop/src/main/workspace-bridge.test.ts",
+    source: 'import { entry } from "./main.ts";\nexport const z = entry;\n',
+  },
+  {
+    name: "a dynamic import from another desktop main file",
+    from: "apps/desktop/src/main/project-entry-ipc.test.ts",
+    source: 'export async function load() {\n  return await import("./main.ts");\n}\n',
+  },
+])("forbids importing the Electron entry: $name", async ({ from, source }) => {
+  writeElectronEntry();
+  write(from, source);
+
+  const output = await cruiseFixture();
+
+  expect(violationsOf(output)).toEqual([
+    { rule: "no-import-of-electron-entry", from, to: electronEntry },
+  ]);
+});
+
+it("allows only the smoke wiring test to import the Electron entry", async () => {
+  writeElectronEntry();
+  write(
+    "apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts",
+    'export async function load() {\n  return await import("./main.ts");\n}\n',
+  );
+
+  const output = await cruiseFixture();
+
+  expect(violationsOf(output)).toEqual([]);
+  expect(output.modules.map(({ source }) => source)).toContain(electronEntry);
+});

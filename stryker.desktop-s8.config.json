@@ -2,8 +2,8 @@
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "mutate": [
     "apps/desktop/src/main/harness-supervisor.ts:61-73",
-    "apps/desktop/src/main/harness-supervisor.ts:176-233",
-    "apps/desktop/src/main/harness-supervisor.ts:399-435"
+    "apps/desktop/src/main/harness-supervisor.ts:178-235",
+    "apps/desktop/src/main/harness-supervisor.ts:401-437"
   ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],
