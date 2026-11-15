@@ -2708,3 +2708,7 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Coordinator rulings, both shown to Pedro and accepted with the slice: the baseline record goes in a separate docs commit (`57489a4`), outside the 4 paths; the sabotage failing 3 rows where the contract named 1 is inside the proof's intent.
 - Not claimed: the timeout was never reproduced; the proofs show margin, not a failure seen to stop.
 - Pedro accepted the slice, approved a fast-forward of main to the branch (2 commits, no squash), and chose to push later. The push `check:deep` is still to run and is the first run of the new file under the coverage config. #148 stays open until then. The local branch `fix/effect-gate-real-rows-148` still exists; deleting it needs his approval.
+
+## 2026-11-15 — #148 closed and its branch deleted (Pedro)
+
+- Pedro told the coordinator to close #148 and delete the local branch `fix/effect-gate-real-rows-148`. Both done. The issue was closed before the push; the closing comment says the push `check:deep` is still to run. If that run fails on the moved file, the issue is reopened.
