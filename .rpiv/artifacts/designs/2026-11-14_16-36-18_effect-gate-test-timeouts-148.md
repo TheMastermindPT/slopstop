@@ -12,7 +12,7 @@ status: in-review
 last_updated: 2026-11-15T05:00:00+0000
 last_updated_by: Pedro Mesquita
 last_updated_note: "TDD Evidence appended for i148-s1 (proofs 1-7, M3). Earlier: two corrections; contract approved by Pedro at 9a8c8e9b; M1 and M2 recorded; Q1-Q5 decided; draft."
-content_hash: ba5d1290297aec837f83a2d61a41ce36275e24de0a3a06f23bdc44a152134221
+content_hash: 5ce61b17e64bafdf8d1c6e18e3a9f3b622f10f0aea8a68dadf6de07a3d74e1b3
 ---
 
 # Design: #148 Effect gate test rows that time out under the unit run's load
@@ -244,6 +244,13 @@ Public seam: `checkEffectDiagnostics` and the `check-effect-diagnostics.mjs` CLI
 - **2026-11-15: two corrections from the candidate (coordinator; implementer's proofs 1-5 pass, M3 running).**
   - **Correction to Verification Notes.** The note "`repository` resolves with `../../../` from both folders" is wrong. From `apps/harness/scripts` the repository root is `../../../`; from `apps/harness/tests/integration` it is `../../../../`. The new file's `repository` therefore differs from the unit file's by that one path, as the Deliverable already allows ("the two path constants (`repository`, `checker`) change"). The note stays as written (append-only); this line corrects it.
   - **The baseline record is outside the slice commit (coordinator's ruling).** The Deliverable says the move is recorded in `.rpiv/artifacts/evidence/2026-10-04_vitest-coverage-worker-crash-and-gate-baseline.md` with M1-M3; that file is not one of the four Affected paths. It is documentation: it goes in a separate docs commit after M3, not in the slice commit. The entry is drafted there now with M1 and M2, M3 left to fill, uncommitted.
+- **2026-11-15: Pedro accepted `i148-s1-effect-gate-real-rows` (fast lane, combined acceptance).** Candidate `f3c89bb` (the 4 contract paths) plus the docs commit `57489a4`.
+  - **Checked by the coordinator:** the M3 numbers in `m3-1..3.json` (0 failed; slowest moved row other than `passes on the repository` 1470, 1201 and 1381ms; that row 16324, 15269 and 13573ms), the three proof-7 logs, the two includes, the unchanged gate script and the kept 30000ms bound. `slice-preflight` clean; slice-verifier round 1 passed with 1 warning and no violation.
+  - **V1 (warning), resolved:** the baseline record was not in `f3c89bb`. The coordinator ruled that it is documentation and belongs in a separate docs commit outside the 4 paths (`57489a4`). Pedro accepted that ruling with the slice.
+  - **Proof 5 differs from the contract's words:** the contract named one failing row (`newPromise`); the sabotage failed 3 moved rows, that one among them, as predicted before the run. Accepted by Pedro.
+  - **Not claimed:** the timeout was never reproduced. The proofs show margin (about 1.5 s against 15000ms), not a failure seen to stop.
+  - **Polish left as is:** the copied `fakeRoot` TSDoc still says "fake" (moved text); the Constraint's wording of the reclassification rule; the #139 hand-off of `canaryFolder` sits in Verification Notes only.
+  - **needs-run:** `check:deep` on main before the push, which is also the first run of the new file under the coverage config. Pedro chose to push later. Main was fast-forwarded to `57489a4` with his approval.
 
 ## References
 

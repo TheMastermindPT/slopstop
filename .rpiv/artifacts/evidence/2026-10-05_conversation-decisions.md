@@ -2701,3 +2701,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - M1 and M2 (10 runs each, after "livre"; two earlier starts were refused because another session's suite was running): the planted rows take about 1 s alone and at most 3452ms under the full unit run; no run failed. The recorded failures (5576, 7272ms) are contention spikes, so (a) stands.
 - The coordinator found one gap (a shared module would be a fifth path). Pedro chose to copy the four small shared fragments into the new file; the third statement of the canary path is parked for #139, and he was told it touches shared-vocab-union.
 - Pedro approved the contract of `i148-s1-effect-gate-real-rows` at hash `9a8c8e9b`, and a branch `fix/effect-gate-real-rows-148` in the main checkout, with no worktree.
+
+## 2026-11-15 — #148 slice accepted; main fast-forwarded; push later
+
+- `i148-s1-effect-gate-real-rows` is done: `f3c89bb` moves the 12 real-compiler rows of `check-effect-diagnostics.test.mjs` to `apps/harness/tests/integration/effect-gate-real-compiler.integration.test.mjs` (4 paths, no assertion or title changed; the unit file alone now takes about 0.4 s). Proofs 1-7 passed. M3 (three `pnpm test:integration` runs after "livre"): slowest moved row 1470ms against the 7500ms rule; `passes on the repository` 13573-16324ms within its 30000ms bound. `pnpm check` exit 0 with 3979 unit tests. Preflight clean; slice-verifier passed with 1 warning.
+- Coordinator rulings, both shown to Pedro and accepted with the slice: the baseline record goes in a separate docs commit (`57489a4`), outside the 4 paths; the sabotage failing 3 rows where the contract named 1 is inside the proof's intent.
+- Not claimed: the timeout was never reproduced; the proofs show margin, not a failure seen to stop.
+- Pedro accepted the slice, approved a fast-forward of main to the branch (2 commits, no squash), and chose to push later. The push `check:deep` is still to run and is the first run of the new file under the coverage config. #148 stays open until then. The local branch `fix/effect-gate-real-rows-148` still exists; deleting it needs his approval.
