@@ -9,7 +9,10 @@ export default defineConfig({
   test: {
     name: "harness-integration",
     environment: "node",
-    include: ["tests/integration/**/*.test.ts"],
+    include: [
+      "tests/integration/**/*.test.ts",
+      "tests/integration/effect-gate-real-compiler.integration.test.mjs",
+    ],
     exclude: [
       ...configDefaults.exclude,
       ...registrationIntegrationFiles,
