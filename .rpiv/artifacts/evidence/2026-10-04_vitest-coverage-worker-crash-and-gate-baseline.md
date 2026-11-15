@@ -145,3 +145,40 @@ Long-file wall time, coverage (integration): reconciliation 351 → 259 s (316 �
 One run on each side cannot prove that the stalls are gone. The next pre-push runs are the check.
 
 **Correction (2026-10-07, S3b review round 1).** The "2017 → 2025" above compares a run total with a `vitest list` count. On the same basis, the integration run total went from 2017 to 2026 (2017 − 2 split tests + 11 rows), and `vitest list` shows 2025, because it omits the env-gated UI seed. The name comparison output is saved in `C:/Users/pedro/AppData/Local/Temp/claude/C--Users-pedro-Documents-GitHub-slopstop/338a4bae-a42a-40dc-9e1f-30ad2d4bf69d/scratchpad/s1/name-comparison.txt`.
+
+## Effect gate real-compiler rows become integration tests (#148, 2026-11-15)
+
+Decided by Pedro on 2026-11-14 (Q1 (a) of `.rpiv/artifacts/designs/2026-11-14_16-36-18_effect-gate-test-timeouts-148.md`), under the standing reclassification rule above. The contract was approved at `9a8c8e9b`.
+
+- **What moved.** 12 tests of `apps/harness/scripts/check-effect-diagnostics.test.mjs` that reach the real `effect-tsgo` compiler or spawn the gate's CLI now live in `apps/harness/tests/integration/effect-gate-real-compiler.integration.test.mjs` (`harness-integration`, 15000ms; `passes on the repository` keeps its own 30000ms). The other 58 tests stay in the unit file and start no process.
+- **Why.** Rows with two compiler runs timed out at Vitest's default 5000ms when the unit run saturated the CPU: 7272ms (2026-10-23), two rows in Phase 4 s1, 5576ms (2026-11-13). No timeout value was changed by hand.
+- **No test lost; assertions unchanged.** `vitest list`: 70 names before; 58 in the unit file and 12 in the new file after, the same multiset. The mutation Vitest config (`apps/harness/vitest.effect-gate-mutation.config.ts`) names both files and lists the same 70. The 12 tests and their fixtures are moved text; the only other differences in the new file are the `node:path` import, the checker's import path, and the `repository` (`../../../../`) and `checker` constants. Biome collapsed the unit file's `node:fs` import to one line. Confirmed by the implementer's proofs 1-3 and the coordinator's read. The whole unit run lists 3979 tests (3991 − 12).
+- **The moved rows still bite.** With the gate script sabotaged at `check-effect-diagnostics.mjs:254` (a run with violations answers `ok: true`), exactly 3 moved rows fail: planted `newPromise`, planted `unknownInEffectCatch` and the commented gated package. Restored by sha256; 12 passed after.
+- **Mutation ranges.** No Stryker config or anchor changed; `stryker.effect-gate.config.json` mutates the whole gate script.
+
+Measured on main `fe4d32d` before the move (10 runs each, all green, no game or foreign suite; M1 CPU average 28.2%, max 51%; M2 average 66.2%, max 100%). Median / max in ms:
+
+| Row | M1: file alone | M2: full unit run | M3: full integration run, after the move (max of 3 runs) |
+|---|---|---|---|
+| planted `clean` | 939 / 984 | 2697 / 3452 | 1470 |
+| planted `newPromise` | 967 / 1011 | 2598 / 3136 | 1433 |
+| planted `unknownInEffectCatch` | 933 / 1282 | 2436 / 3191 | 1406 |
+| no Effect v4 | 385 / 435 | 1101 / 1394 | 601 |
+| plugins `a rule turned off` | 341 / 610 | 834 / 965 | 545 |
+| plugins `an empty list` | 199 / 249 | 451 / 570 | 395 |
+| plugins `commented JSONC with a trailing comma` | 200 / 247 | 441 / 758 | 323 |
+| commented gated package | 438 / 480 | 1152 / 1491 | 740 |
+| unreadable tsconfig | 7 / 10 | 9 / 12 | 18 |
+| real canary | 454 / 538 | 620 / 1021 | 688 |
+| canary, plugin removed | 437 / 498 | 511 / 561 | 683 |
+| `passes on the repository` (30000ms) | 8976 / 15620 | 9162 / 11960 | 16324 |
+
+- **File total:** M1 median 14517ms; M2 median 22977ms in a unit run of median 38.6 s. After the move the unit file alone takes 378ms for its 58 tests, and the new file took 24617, 21778 and 20638ms in the three integration runs.
+- **Reading.** Alone the 5000ms rows take about 1 s; the unit run multiplies them by about 2.8 (up to 3.7). The timeout was not reproduced in 20 runs; the recorded failures are 6 to 8 times the time alone.
+- **Acceptance rule (Q5 (a)).** In each of the three M3 runs the slowest moved row other than `passes on the repository` is at most 7500ms. Met in every run: 1470ms (`clean`), 1201ms and 1381ms (`unknownInEffectCatch`); the worst is 20% of 7500ms. The time of `passes on the repository` in each run: 16324, 15269 and 13573ms (at most 54% of its bound).
+- **M3 runs** (`pnpm test:integration`, candidate on `ea4e81f`): all exit 0; 85 files, 2246 passed and 6 skipped; wall 368.8, 381.3 and 338.8 s; CPU average / max 37.8 / 88, 37.6 / 87 and 24.2 / 74; no game or foreign suite.
+- **Gates on the candidate:** `pnpm check` exit 0 (3979 unit tests; depcruise 599 modules); `check:duplicates` 0 clones in 547 files; knip clean.
+- **`passes on the repository`** reached 15620ms alone on a cold start (52% of its bound); the bound is unchanged.
+- **Evidence:** `.rpiv/evidence/2026-11-14_16-36-18_effect-gate-test-timeouts-148/` (local, git-ignored): `m1-m2-summary.txt`, the per-run JSON files, `m3-1` to `m3-3` (`.log`, `.json`, `-samples.csv`, `-summary.txt`), `proof7-*.log`, `i148-s1-proofs.md`.
+
+M1 and M2 are measurements of this one file; they do not close #122.

@@ -9,10 +9,10 @@ tags: [design, effect-gate, vitest, test-reclassification, timeouts, issue-148]
 lane: fast
 lane_reasons: ["no upstream lane", "lane.mjs --paths: within fast limits"]
 status: in-review
-last_updated: 2026-11-15T01:30:00+0000
+last_updated: 2026-11-15T05:00:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "Contract approved by Pedro at 9a8c8e9b (approval entry appended). Earlier: M1 and M2 recorded; shared fixtures settled; Q1-Q5 decided; draft."
-content_hash: a7c2c86b35becb8a7bc19b79adb9a39d421357c95d6ec2da6e9b34c9599bc5e6
+last_updated_note: "TDD Evidence appended for i148-s1 (proofs 1-7, M3). Earlier: two corrections; contract approved by Pedro at 9a8c8e9b; M1 and M2 recorded; Q1-Q5 decided; draft."
+content_hash: ba5d1290297aec837f83a2d61a41ce36275e24de0a3a06f23bdc44a152134221
 ---
 
 # Design: #148 Effect gate test rows that time out under the unit run's load
@@ -241,6 +241,9 @@ Public seam: `checkEffectDiagnostics` and the `check-effect-diagnostics.mjs` CLI
   - **Shared fragments, decided (a):** the four small things are copied into the new file; no helper module. The third statement of `canaryFolder` is parked for #139; Pedro was told it touches shared-vocab-union.
   - **Workspace:** branch `fix/effect-gate-real-rows-148` in the main checkout, no worktree; the coordinator creates it after this record is committed.
   - **Lane label:** fast, recorded over the four paths.
+- **2026-11-15: two corrections from the candidate (coordinator; implementer's proofs 1-5 pass, M3 running).**
+  - **Correction to Verification Notes.** The note "`repository` resolves with `../../../` from both folders" is wrong. From `apps/harness/scripts` the repository root is `../../../`; from `apps/harness/tests/integration` it is `../../../../`. The new file's `repository` therefore differs from the unit file's by that one path, as the Deliverable already allows ("the two path constants (`repository`, `checker`) change"). The note stays as written (append-only); this line corrects it.
+  - **The baseline record is outside the slice commit (coordinator's ruling).** The Deliverable says the move is recorded in `.rpiv/artifacts/evidence/2026-10-04_vitest-coverage-worker-crash-and-gate-baseline.md` with M1-M3; that file is not one of the four Affected paths. It is documentation: it goes in a separate docs commit after M3, not in the slice commit. The entry is drafted there now with M1 and M2, M3 left to fill, uncommitted.
 
 ## References
 
@@ -248,3 +251,20 @@ Public seam: `checkEffectDiagnostics` and the `check-effect-diagnostics.mjs` CLI
 - `apps/harness/scripts/check-effect-diagnostics.test.mjs`, `check-effect-diagnostics.mjs`.
 - `apps/harness/vitest.config.ts`, `vitest.integration.config.ts`, `vitest.effect-gate-mutation.config.ts`; `vitest.config.ts`, `vitest.coverage.config.ts`; `stryker.effect-gate.config.json`; `.github/workflows/ci.yml`.
 - `.rpiv/artifacts/evidence/2026-10-04_vitest-coverage-worker-crash-and-gate-baseline.md` (reclassification record).
+## TDD Evidence (implement)
+
+### i148-s1-effect-gate-real-rows (2026-11-15; implementer's proofs, verified by the coordinator in the JSON and proof logs; the designer read `i148-s1-proofs.md`)
+
+Candidate: parent `ea4e81f`, branch `fix/effect-gate-real-rows-148`, exactly the four contract paths. Evidence: `.rpiv/evidence/2026-11-14_16-36-18_effect-gate-test-timeouts-148/`.
+
+- **TDD-exempt (Q3 (a)):** no red test; the seven proofs below stand in for it.
+- **G148-B1, G148-B2 (pins):** the 12 moved tests pass in `harness-integration`; the 58 remaining tests pass in the unit file in 378ms.
+1. **Nothing lost: passed.** Unit file 58 names, new file 12; the multiset equals the 70 at the base, no overlap. The whole unit run lists 3979 (3991 − 12).
+2. **Mutation test set: passed.** The mutation config lists 70 names at the base and 70 on the candidate, the same multiset.
+3. **Bodies unchanged: passed.** The moved blocks are verbatim. The only differing lines: the `node:path` import, the checker's import path, `repository` (`../../../../`) and `checker`; Biome collapsed the unit file's `node:fs` import.
+4. **No process left in the unit file: passed.** Two `rg` hits, neither a process: the `fakeSpawn` doc comment and the recorded-run key `"canaryWithoutPlugin"`. The unit file imports no `node:child_process`.
+5. **Sabotage: passed, with a difference from the contract's wording.** The contract named one row (`newPromise`). The sabotage at `check-effect-diagnostics.mjs:254` failed exactly 3 moved rows, as the implementer predicted before running it: planted `newPromise`, planted `unknownInEffectCatch` and the commented gated package. Restored by sha256; 12 passed after.
+6. **M3 and the Q5 rule: met in every run.** Three `pnpm test:integration` runs, all exit 0 (85 files, 2246 passed, 6 skipped; 368.8, 381.3, 338.8 s). Slowest moved row other than `passes on the repository`: 1470, 1201, 1381ms (worst 20% of 7500ms). `passes on the repository`: 16324, 15269, 13573ms (at most 54% of 30000ms). Max per row over the three runs: `clean` 1470, `newPromise` 1433, `unknownInEffectCatch` 1406, commented gated package 740, real canary 688, canary plugin removed 683, no Effect v4 601, `a rule turned off` 545, `an empty list` 395, `commented JSONC` 323, unreadable tsconfig 18.
+7. **Gates: passed.** `pnpm check` exit 0 (3979 unit tests; depcruise 599 modules); `check:duplicates` 0 clones in 547 files; knip clean. The final `check:deep` before push is still to run.
+- **Baseline record:** drafted and filled in `.rpiv/artifacts/evidence/2026-10-04_vitest-coverage-worker-crash-and-gate-baseline.md`, for a separate docs commit.
+- **Not claimed:** the timeout was never reproduced, so these proofs show the rows now run with a wide margin (1.5 s against 15 s), not that the old failure was observed and then seen to stop.
