@@ -2693,3 +2693,11 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Pedro approved removing the `slopstop-p4` worktree and deleting the local branch `fix/arch-review-phase-4` (head `cab5002`, never pushed). Both are gone. The Stryker HTML reports from the worktree were first copied to the evidence folder (`p4-final-mutation-reports/`) for #147.
 - Pedro chose to leave the roadmap commit `6d1b132` and this entry for the next push.
 - Phase 4 is finished. Next item: for Pedro to choose (DL §129).
+
+## 2026-11-15 — #148 chosen next; contract approved
+
+- Pedro chose #148 (Effect gate test rows time out at 5000ms under the unit run's load) as the next item after Phase 4.
+- Brief: `.rpiv/artifacts/designs/2026-11-14_16-36-18_effect-gate-test-timeouts-148.md`. Pedro's answers: Q1 (a) move the 12 real-compiler rows to the integration project; Q2 (a) the 30000ms bound moves unchanged; Q3 (a) TDD-exempt with mechanical proofs and one sabotage; Q4 (a) fast lane; Q5 (a) the slowest moved row is at most 7500ms in each of three integration runs, else back to Pedro.
+- M1 and M2 (10 runs each, after "livre"; two earlier starts were refused because another session's suite was running): the planted rows take about 1 s alone and at most 3452ms under the full unit run; no run failed. The recorded failures (5576, 7272ms) are contention spikes, so (a) stands.
+- The coordinator found one gap (a shared module would be a fifth path). Pedro chose to copy the four small shared fragments into the new file; the third statement of the canary path is parked for #139, and he was told it touches shared-vocab-union.
+- Pedro approved the contract of `i148-s1-effect-gate-real-rows` at hash `9a8c8e9b`, and a branch `fix/effect-gate-real-rows-148` in the main checkout, with no worktree.
