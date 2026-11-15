@@ -1,3 +1,19 @@
+/**
+ * Tells a gate script whether it is the process entry, by file identity. Accepted corner cases:
+ *
+ * - `runGateEntry` returns what `run()` returns and does not await it: an asynchronous script
+ *   awaits `runGateEntry` itself.
+ * - A script that imports this helper must be copied together with it.
+ * - A read error without a `code` answers `cannot read <path>: undefined`; a module URL that is not
+ *   a `file:` URL throws instead of answering unknown.
+ * - `node -e <code> <gate script>` answers `"entry"`: the first user argument is `process.argv[1]`.
+ * - A Worker whose file is the gate script answers `"entry"`.
+ * - Hard links to one script share its identity, so each counts as the entry.
+ * - An overlayfs copy-up without `xino` can change a file's identity between two reads; cloned
+ *   volumes can share one serial, so only the file index tells their files apart.
+ * - ReFS's all-ones file index is taken from its documentation, not observed; remote SMB shares,
+ *   mapped drives, exFAT and macOS were not observed.
+ */
 import { statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -29,19 +45,25 @@ function fileIdentity(path, stat, platform) {
 /**
  * Whether the gate script at `moduleUrl` is the process entry. It compares file identity, not path
  * spelling, so a launch through a linked folder, another drive spelling or a short name still
- * counts. Answers `"entry"`, `"imported"` (no entry path, or the entry is another file) or
- * `{ unknown: reason }` when either file cannot be read or has no usable identity, or the entry
- * path is a directory (`node <dir>` leaves the folder, not the file Node loaded, as the entry).
+ * counts. Answers `"entry"`, `"imported"` (the entry is another file, or there is no entry path
+ * and the module's own file has a usable identity) or `{ unknown: reason }` when a file it reads
+ * cannot be read or has no usable identity, or the entry path is a directory (`node <dir>` leaves
+ * the folder, not the file Node loaded, as the entry). With no entry path only the module's own
+ * file is read, so a gate whose source is fed to Node on stdin or through `-e` fails visibly.
  */
 export function gateEntry(moduleUrl, ports = {}) {
   const entry = "entry" in ports ? ports.entry : process.argv[1];
   const stat = ports.stat ?? statSync;
   const platform = ports.platform ?? process.platform;
-  if (entry === undefined) return "imported";
+  const ownIdentity = () => fileIdentity(fileURLToPath(moduleUrl), stat, platform);
+  if (entry === undefined) {
+    const own = ownIdentity();
+    return own.unknown ? { unknown: own.unknown } : "imported";
+  }
   const launched = fileIdentity(entry, stat, platform);
   if (launched.unknown) return { unknown: launched.unknown };
   if (launched.directory) return { unknown: `entry path is a directory: ${entry}` };
-  const own = fileIdentity(fileURLToPath(moduleUrl), stat, platform);
+  const own = ownIdentity();
   if (own.unknown) return { unknown: own.unknown };
   return launched.identity === own.identity ? "entry" : "imported";
 }

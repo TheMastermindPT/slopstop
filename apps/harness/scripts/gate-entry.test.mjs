@@ -40,7 +40,7 @@ it.each(importedRows)(
   ({ entry, identity }) => {
     const stat = fakeStat({ [own]: { dev: 3n, ino: 41n }, [other]: identity });
     expect(gateEntry(moduleUrl, { entry, stat })).toBe("imported");
-    if (entry === undefined) expect(stat).not.toHaveBeenCalled();
+    if (entry === undefined) expect(stat.mock.calls).toStrictEqual([[own, { bigint: true }]]);
   },
 );
 
@@ -208,5 +208,60 @@ it.each(devZeroRows)(
     const stat = fakeStat({ [own]: mine, [linked]: entry });
     const expected = answer ?? { unknown: `no volume identity for ${named}: dev 0` };
     expect(gateEntry(moduleUrl, { entry: linked, stat, platform })).toStrictEqual(expected);
+  },
+);
+
+const noEntryUnknownRows = [
+  {
+    name: "unreadable",
+    mine: { dev: 3n, ino: 41n },
+    failures: { [own]: "ENOENT" },
+    platform: "linux",
+    reason: `cannot read ${own}: ENOENT`,
+  },
+  {
+    name: "ino 0",
+    mine: { dev: 3n, ino: 0n },
+    platform: "linux",
+    reason: `no file identity for ${own}: ino 0`,
+  },
+  {
+    name: "win32 dev 0",
+    mine: { dev: 0n, ino: 41n },
+    platform: "win32",
+    reason: `no volume identity for ${own}: dev 0`,
+  },
+];
+
+it.each(noEntryUnknownRows)(
+  "answers unknown with no entry path when the module's own file has no identity: $name",
+  ({ mine, failures, platform, reason }) => {
+    const stat = fakeStat({ [own]: mine }, failures);
+    expect(gateEntry(moduleUrl, { entry: undefined, stat, platform })).toStrictEqual({
+      unknown: reason,
+    });
+  },
+);
+
+const processPlatformRows = [
+  {
+    name: "win32",
+    platform: "win32",
+    answer: { unknown: `no volume identity for ${linked}: dev 0` },
+  },
+  { name: "linux", platform: "linux", answer: "entry" },
+];
+
+it.each(processPlatformRows)(
+  "reads the process platform when none is given: $name",
+  ({ platform, answer }) => {
+    const stat = fakeStat({ [own]: { dev: 0n, ino: 41n }, [linked]: { dev: 0n, ino: 41n } });
+    const original = Object.getOwnPropertyDescriptor(process, "platform");
+    Object.defineProperty(process, "platform", { ...original, value: platform });
+    try {
+      expect(gateEntry(moduleUrl, { entry: linked, stat })).toStrictEqual(answer);
+    } finally {
+      Object.defineProperty(process, "platform", original);
+    }
   },
 );

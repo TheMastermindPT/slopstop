@@ -2,7 +2,8 @@ import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { runGateEntry } from "./gate-entry.mjs";
 
 const harnessDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const productionMigrationsDirectory = join(harnessDirectory, "drizzle");
@@ -94,7 +95,4 @@ export const checkGeneratedMigrations = async ({
   }
 };
 
-const entrypoint = process.argv[1];
-if (entrypoint !== undefined && pathToFileURL(resolve(entrypoint)).href === import.meta.url) {
-  await checkGeneratedMigrations();
-}
+await runGateEntry(import.meta.url, () => checkGeneratedMigrations());

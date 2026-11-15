@@ -43,10 +43,14 @@ function linkedScripts(files) {
   return { work, link };
 }
 
-/** Runs `node <script> ...args` in `cwd`, answering what a gate command shows. */
-function launch(script, args, cwd) {
+/**
+ * Runs `node <script> ...args` in `cwd`, answering what a gate command shows. With no `env` the
+ * child inherits this process's environment.
+ */
+function launch(script, args, cwd, env) {
   const { status, stdout, stderr } = spawnSync(process.execPath, [script, ...args], {
     cwd,
+    env,
     encoding: "utf8",
   });
   return { status, stdout, stderr };
@@ -89,3 +93,46 @@ it("fails visibly when the entry path cannot be read", () => {
     stderr: "GATE_ENTRY_UNKNOWN: cannot read -: ENOENT\n",
   });
 });
+
+/**
+ * This process's environment without `npm_execpath`. Vitest runs under pnpm, which sets it; with it
+ * set the migrations gate would run the real `pnpm db:generate` over `apps/harness/drizzle`.
+ */
+function withoutPnpm() {
+  return Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => name.toLowerCase() !== "npm_execpath"),
+  );
+}
+
+it("gives the migrations gate's real answer through a linked folder", () => {
+  const { work, link } = linkedScripts({});
+  const env = withoutPnpm();
+  const real = launch(join(scripts, "check-generated-migrations.mjs"), [], work, env);
+  expect(real.status).toBe(1);
+  expect(real.stdout).toBe("");
+  expect(real.stderr.split(/\r?\n/)).toContain("Error: pnpm entrypoint is unavailable.");
+  expect(launch(join(link, "check-generated-migrations.mjs"), [], work, env)).toEqual(real);
+});
+
+const ownSource = readFileSync(join(scripts, "check-golden-sql.mjs"), "utf8");
+const programRows = [
+  { name: "stdin as a module", args: ["--input-type=module"], input: ownSource },
+  { name: "plain stdin", args: [], input: ownSource },
+  { name: "-e as a module", args: ["--input-type=module", "-e", ownSource], input: "" },
+];
+
+it.each(programRows)(
+  "fails visibly when the gate's own source is the program: $name",
+  ({ args, input }) => {
+    const { status, stdout, stderr } = spawnSync(process.execPath, args, {
+      cwd: scripts,
+      input,
+      encoding: "utf8",
+    });
+    expect({ status, stdout, stderr }).toEqual({
+      status: 1,
+      stdout: "",
+      stderr: `GATE_ENTRY_UNKNOWN: cannot read ${join(scripts, "[eval1]")}: ENOENT\n`,
+    });
+  },
+);
