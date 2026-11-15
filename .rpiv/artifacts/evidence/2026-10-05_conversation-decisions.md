@@ -2736,3 +2736,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - **Candidate review, one round** (three reviewers, each finding verified; workflow `wf_28fd59b6-51d`): no blocker; five minor findings, listed in the brief's Developer Context. The main one: a gate fed as the main program on stdin in module mode still exits 0 without checking (not a regression; no project command does it).
 - **Pedro accepted the slice** as it is. The stdin case, the missing header of accepted risks, the missing platform-default row and the three missing bindings go into the contract of slice 2 (`check-generated-migrations.mjs`). The limit of proof 5 (it shows only that Stryker did not crash) stays recorded, with no rerun.
 - **Pedro approved** a fast-forward of local `main` to `89b32ba`, no squash. Push later.
+
+## 2026-11-15 — #145 slice 2 chosen; contract approved; branch of slice 1 deleted
+
+- Pedro chose to push later (local main is ahead of origin), approved deleting the merged local branch `fix/gate-entry-guard-145` (done), and chose #145 slice 2 as the next item, before #146.
+- **Slice `i145-s2-migrations-entry`** (four paths: `check-generated-migrations.mjs`, `gate-entry.mjs`, `gate-entry.test.mjs`, the alias integration test). Pedro's answers: Q6 (a) normal lane, a named deviation from `lane.mjs`, which answers rigorous only because the file name holds the word "migration"; Q7 (a) fix the stdin case (with no entry path the helper still reads its own file and answers unknown when it cannot); Q8 (a) one slice with the fourth script and the carried findings.
+- The designer measured: the stdin case reproduces on all four scripts; Vitest (forks, threads, vmThreads) always has an entry path, so the changed branch is not reached there. Stated limits: the `await` in the migrations script is written but no row can prove it; the migrations row must remove `npm_execpath` from the child environment, or it would run the real `pnpm db:generate`.
+- Pedro approved the contract at hash `3f0bdd63` and a branch `fix/gate-entry-guard-145-s2` in the main checkout, no worktree (same named deviation as slice 1).
