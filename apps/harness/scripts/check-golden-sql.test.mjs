@@ -213,6 +213,10 @@ function runRootCommand(scannerExit) {
   const localChecker = join(root, "apps/harness/scripts/check-golden-sql.mjs");
   mkdirSync(dirname(localChecker), { recursive: true });
   copyFileSync(checker, localChecker);
+  copyFileSync(
+    new URL("./gate-entry.mjs", import.meta.url),
+    join(dirname(localChecker), "gate-entry.mjs"),
+  );
   const windows = process.platform === "win32";
   const scanner = windows
     ? `@echo off\r\necho SCANNER_RAN\r\nexit /b ${scannerExit}\r\n`

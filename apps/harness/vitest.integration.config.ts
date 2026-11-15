@@ -12,6 +12,7 @@ export default defineConfig({
     include: [
       "tests/integration/**/*.test.ts",
       "tests/integration/effect-gate-real-compiler.integration.test.mjs",
+      "tests/integration/gate-entry-alias.integration.test.mjs",
     ],
     exclude: [
       ...configDefaults.exclude,

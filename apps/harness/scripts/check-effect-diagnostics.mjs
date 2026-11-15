@@ -2,7 +2,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { runGateEntry } from "./gate-entry.mjs";
 
 /** The packages the gate checks, from the repository root. */
 const defaultProjects = ["packages/kernel", "packages/protocol", "apps/harness", "apps/desktop"];
@@ -433,7 +434,7 @@ export function checkEffectDiagnostics({
   return result.ok && canary ? { ...result, canary: "matched" } : result;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+runGateEntry(import.meta.url, () => {
   const projects = process.argv.slice(2);
   const result = checkEffectDiagnostics(projects.length > 0 ? { projects } : {});
   if (result.ok) {
@@ -442,4 +443,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     process.stderr.write(`${[result.code, ...(result.lines ?? [])].join("\n")}\n`);
     process.exitCode = 1;
   }
-}
+});

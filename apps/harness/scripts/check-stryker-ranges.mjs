@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join } from "node:path";
+import { runGateEntry } from "./gate-entry.mjs";
 
 const anchorsFile = "stryker-range-anchors.json";
 const configName = /^stryker(\.[\w-]+)?\.config\.json$/;
@@ -258,6 +258,6 @@ export function runStrykerRanges({
   return 0;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+runGateEntry(import.meta.url, () => {
   process.exitCode = runStrykerRanges();
-}
+});

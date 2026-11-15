@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { runGateEntry } from "./gate-entry.mjs";
 
 // Fixed raw S2 blobs from 37e3f83a9b0ce1868d8b896b9f9b0a9cdfe3f2e2.
 // The reference has a terminal LF; the migration does not. Never normalize either.
@@ -55,7 +55,7 @@ export function checkGoldenSql({
   return { ok: true };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+runGateEntry(import.meta.url, () => {
   const result = checkGoldenSql();
   if (result.ok) {
     process.stdout.write("Golden SQL verified: 2 independent pinned files.\n");
@@ -63,4 +63,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     process.stderr.write(`${result.code}: ${result.path}\n`);
     process.exitCode = 1;
   }
-}
+});
