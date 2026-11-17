@@ -2756,3 +2756,16 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - The designer re-pinned the #146 brief to main `7a194c3`: none of the ten paths changed with #145; three Test pins now name their `it.each` titles as written, and one structural check was narrowed to the project-storage files. Pedro's earlier answers stand.
 - Pedro approved the contract of `i146-s1-rename-retry` at hash `95ad8a4b`, in the normal lane, on a branch `fix/staging-rename-retry-146` in the main checkout with no worktree (named deviation, as #145). He was told that `canonical-writer-lease.ts` and `repository-physical-observation.ts` also test some of these error codes for other decisions and stay separate owners.
 - Pedro chose to push main before #146 starts. The push started on 2026-11-16 was cut off when the session ended, before the hook ran: origin/main is still `b758737`. On 2026-11-17 the coordinator's read showed CPU 38-76% with no game process, above the 30% rule, so the push was not started.
+
+## 2026-11-17 — push of main failed in check:deep on one registration row; Pedro chose to investigate first
+
+- After Pedro's "livre" and a clean read (CPU 12-18%, no game, no foreign suite), the coordinator pushed main (`ddecde3`, 14 commits ahead). The pre-push `check:deep` failed and nothing was pushed: in the coverage run, 1 of 6265 tests failed, `competing composed owners create one generation and publish only the winner` in `registration-bootstrap-guards.integration.test.ts` (win32 only), with `Error: Preparation unavailable` from the file's `fixture` (`:90`) after 8632ms. The unit run (4005 tests), the dependency check and every other coverage row passed, including the new #145 and #148 files. Log: `.rpiv/evidence/2026-11-17_push-check-deep-registration-failure/push-main.log`.
+- The 14 unpushed commits touch nothing under `apps/harness/src/registration` or that test file. No earlier record of this failure was found in the artifacts or the issues.
+- No rerun. Pedro chose to investigate the cause first; the push waits.
+
+## 2026-11-17 — registration failure diagnosed; issue #149; push of main done; #145 closed
+
+- Diagnosis (implementer, by reading, plus two runs of the file alone, both green): a load-sensitive failure on a wall-clock budget. `owner.prepare` runs six Git queries, each a native child with a hard 2000 ms deadline; the fixture threw the same message for every status other than `prepared`, so the path could not be named. No recent commit is involved.
+- Pedro chose: a one-line test-only change so the error carries the real proposal, committed directly on main (`eb92f0f`), a new issue for the flake, and one push retry. Issue #149 opened. The 2000 ms budget and the coverage load were not changed.
+- The retry passed `check:deep` (unit 4005, coverage 6259 passed and 6 skipped, integration 2254 passed and 6 skipped) and main was pushed: `b758737..eb92f0f`. This was the first coverage run of the #148 and #145 files.
+- #145 closed, as Pedro had chosen for after the push. The Linux CI run of the new integration rows is still to be read.
