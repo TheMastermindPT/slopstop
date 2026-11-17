@@ -87,7 +87,8 @@ async function fixture(
     admission: { ...scenario.request, ...trust },
   };
   const proposal = await owner.prepare(preparation);
-  if (proposal.status !== "prepared") throw new Error("Preparation unavailable");
+  if (proposal.status !== "prepared")
+    throw new Error(`Preparation unavailable: ${JSON.stringify(proposal)}`);
   const request = confirmationRequest(preparation, proposal);
   const peers: Array<{ close(): Promise<unknown>; stopRegistry(): Promise<void> }> = [];
   return {
