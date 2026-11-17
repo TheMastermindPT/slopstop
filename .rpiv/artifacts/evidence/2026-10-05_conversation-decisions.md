@@ -2750,3 +2750,9 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Candidate review, one round (workflow `wf_57af7693-45b`): no blocker and no code defect. Two minor coverage gaps on the migrations script, which runs in no gate and no CI step: nothing fails if the final `await` is dropped, and nothing asserts that importing the script runs nothing.
 - Pedro accepted the slice and chose to record both gaps as deferred work in the brief (trigger: the script joins a gate or CI), with no issue and no fix round.
 - Pedro approved a fast-forward of local `main` to `dd01315` and deleting the branch `fix/gate-entry-guard-145-s2`. He chose to close #145 after the push `check:deep` passes. The new integration rows have run on Windows only; CI after the push is their first Linux run.
+
+## 2026-11-16 — #146 contract approved; push of main approved but not yet run
+
+- The designer re-pinned the #146 brief to main `7a194c3`: none of the ten paths changed with #145; three Test pins now name their `it.each` titles as written, and one structural check was narrowed to the project-storage files. Pedro's earlier answers stand.
+- Pedro approved the contract of `i146-s1-rename-retry` at hash `95ad8a4b`, in the normal lane, on a branch `fix/staging-rename-retry-146` in the main checkout with no worktree (named deviation, as #145). He was told that `canonical-writer-lease.ts` and `repository-physical-observation.ts` also test some of these error codes for other decisions and stay separate owners.
+- Pedro chose to push main before #146 starts. The push started on 2026-11-16 was cut off when the session ended, before the hook ran: origin/main is still `b758737`. On 2026-11-17 the coordinator's read showed CPU 38-76% with no game process, above the 30% rule, so the push was not started.

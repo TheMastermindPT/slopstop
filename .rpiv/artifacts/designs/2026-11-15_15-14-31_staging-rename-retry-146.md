@@ -9,10 +9,10 @@ tags: [design, project-storage, rename, retry, effect, schedule, windows, issue-
 lane: normal
 lane_reasons: ["no upstream lane", "lane.mjs --paths over the ten paths of Q3 (a): files: 6 > 5", "product code on the path that makes a generation active"]
 status: in-review
-last_updated: 2026-11-15T17:30:00+0000
+last_updated: 2026-11-16T11:00:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "Q1-Q7 decided (all (a)); contract fixed; base re-pinned at build authorization; awaiting Pedro's approval later. Earlier: draft."
-content_hash: 565df695511a7f3373cf51418ce5920c0dc763e9c9ec42c86d6a0d5412fb7fb4
+last_updated_note: "Contract approved by Pedro at 95ad8a4b (approval entry appended); base 7a194c3; branch fix/staging-rename-retry-146 in the main checkout."
+content_hash: 86de95d976a8fa2b95700fb9fa7c04b59e903b797f53feab84c0c6ffe902e35c
 ---
 
 # Design: #146 a bounded wait for Windows to release a just-written staging folder
@@ -36,12 +36,12 @@ Lane: **normal** (Q6 (a), Pedro). `lane.mjs --paths` over the ten paths answers 
 
 ## Architecture
 
-### What is on main (read at `e6b6a76`)
+### What is on main (read at `e6b6a76`; re-read at `7a194c3` on 2026-11-16, every fact and line reference below holds)
 
 - **`renameAtomic`** (`apps/harness/src/storage/project-storage-file-adapter.ts:157-174`, async, not exported): resolves both paths, checks the shape (`.staging-<id>` to `<id>`, same parent), checks that parent and source are directories and that the destination does not exist, calls `rename` once (`:167`), then checks the destination is a directory. Any failure goes through `normalizeStorageError` (`:169-173`).
 - **The port:** `files.renameAtomic(source, destination): Promise<void>` (`project-storage-store.ts:242`), built by `createProjectStorageFileAdapter` (`project-storage-file-adapter.ts:268`, `:293`).
 - **Callers:** creation (`project-storage-store.ts:402`, inside `runWhileRunning`, which checks the owner is running before and after) and the upgrade seal (`project-storage-upgrade-pipeline.ts:273`, inside a `step` that does the same).
-- **Classification** (`project-storage-node-errors.ts`): `unavailableExactCodes` is `EACCES`, `EPERM`, `EBUSY` (`:31`, not exported). `storageFailureFor` turns such an error into `ProjectStorageUnavailableError("Project Storage authority is unavailable.")` (`:84-87`).
+- **Classification** (`project-storage-node-errors.ts`): `unavailableExactCodes` is `EACCES`, `EPERM`, `EBUSY` (`:31`, not exported). `storageFailureFor` turns such an error into `ProjectStorageUnavailableError("Project Storage authority is unavailable.")` (`:80-89`).
 - **What the caller and the user get today:** creation answers `status: "unavailable"` with that message; the upgrade answers `status: "unavailable"`, `reason: "unavailable"` (`project-storage-upgrade-pipeline.ts:481-483`) and discards its staged output. Nothing is corrupted; the user must try again.
 - **The test helper** `apps/harness/tests/integration/rename-when-released.ts`: 10 attempts, 50 ms apart, on the same three codes (its own copy, `:13`), with an injected `rename` and `delay`. Used at `project-storage-upgrade-directories.integration.test.ts:262` and `project-storage-upgrade-recovery.integration.test.ts:300`.
 - **Is the tests' case-only rename the same path? No.** Those two tests rename a `.staging-<id>` folder to another spelling with Node's `rename`, as test setup. `renameAtomic` would refuse that shape. So the product retry does not cover them, and the helper stays.
@@ -106,11 +106,11 @@ The tenth failure reaches `normalizeStorageError` as today: `ProjectStorageUnava
 
 ## Next Slice
 
-### Slice i146-s1-rename-retry (on Q1-Q7 (a); not executable until Pedro approves this contract and the base is re-pinned)
+### Slice i146-s1-rename-retry (on Q1-Q7 (a); base re-pinned at `7a194c3` on 2026-11-16; not executable until Pedro approves this contract)
 
 - **`slice_id`:** `i146-s1-rename-retry`.
 - **Lane:** normal (Q6 (a)).
-- **Base:** read at `e6b6a76` (main). The slice is built after #145 is integrated, so the base moves: it is re-pinned at build authorization, and every line number here is re-read at the new base then. #145 touches none of this slice's ten paths except `apps/harness/scripts/check-stryker-ranges.test.mjs`, which #145 leaves unedited; if the re-read finds a changed fact, the contract is revised before the build.
+- **Base:** `7a194c3` (main, after #145 was integrated; code head `dd01315`). Re-pinned on 2026-11-16. Between `e6b6a76` and `7a194c3` none of the ten paths changed. `apps/harness/scripts/check-stryker-ranges.mjs`, which the tenth path imports, now starts its entry block through `gate-entry.mjs` (#145); under Vitest it still answers as an import, and the repository row that this slice edits (`check-stryker-ranges.test.mjs:455`) is unchanged.
 - **Deliverable:** as "Option 1, the shape" above, plus Q5 (a) and Q3 (a).
 - **Affected paths (ten):**
   - `apps/harness/src/storage/project-storage-node-errors.ts`;
@@ -140,7 +140,7 @@ Public seams: `isHeldFileError`; `renameWhenReleased` with an injected rename Ef
 Time rows fork the program, then advance the test clock; no row sleeps for real. An injected rename counts its calls and answers a coded error (`Object.assign(new Error(...), { code })`) or succeeds.
 
 - **Behavior S146-B1: the three held-file codes have one owner.**
-  - Test: `knows a held file by its code` in `apps/harness/src/storage/project-storage-node-errors.test.ts`, one row per value.
+  - Test: `knows a held file by its code: $name` in `apps/harness/src/storage/project-storage-node-errors.test.ts`, one row per value.
   - Oracle: `isHeldFileError` is true for errors coded `EPERM`, `EACCES` and `EBUSY`, and false for `ENOENT`, `EEXIST`, `SQLITE_BUSY`, an error with no code, and `undefined`.
   - Expected red: the export does not exist, so the file fails to load.
 - **Behavior S146-B2: a held rename is tried again until Windows releases it.**
@@ -152,11 +152,11 @@ Time rows fork the program, then advance the test clock; no row sleeps for real.
   - Oracle: on `win32`, with a rename that always fails `EACCES` with a new error each time: after 450 ms of test time the program has failed with the tenth error itself (identity), the rename was called exactly ten times, and a further 1000 ms adds no call.
   - Expected red: the module does not exist.
 - **Behavior S146-B4: another failure is not retried.**
-  - Test: `does not retry another failure` in `apps/harness/src/storage/project-storage-rename-retry.test.ts`, rows `ENOENT`, `EEXIST` and an error with no code.
-  - Oracle: on `win32` the program fails with that error itself after one call, with no test time advanced; advancing 1000 ms adds no call. A held failure followed by `ENOENT` stops at the second call with the `ENOENT` error.
+  - Test: `does not retry another failure: $name` and `stops at another failure after a held one` -> `apps/harness/src/storage/project-storage-rename-retry.test.ts`
+  - Oracle: the first title has three rows, `ENOENT`, `EEXIST` and an error with no code: on `win32` the program fails with that error itself after one call, with no test time advanced, and advancing 1000 ms adds no call. The second title: a held failure followed by `ENOENT` stops at the second call with the `ENOENT` error.
   - Expected red: the module does not exist.
 - **Behavior S146-B5: no retry off Windows.**
-  - Test: `tries once on another platform` in `apps/harness/src/storage/project-storage-rename-retry.test.ts`, rows `linux` and `darwin`.
+  - Test: `tries once on another platform: $platform` in `apps/harness/src/storage/project-storage-rename-retry.test.ts`, rows `linux` and `darwin`.
   - Oracle: with a rename that always fails `EPERM`, the program fails with the first error after one call; advancing 1000 ms adds no call.
   - Expected red: the module does not exist.
 - **Behavior S146-B6: the adapter's rename waits out a short hold and makes the generation active.**
@@ -192,7 +192,7 @@ Time rows fork the program, then advance the test clock; no row sleeps for real.
 **Order (red first):** S146-B1 row, then the predicate (green); the S146-B2 to B5 rows (red), then the policy module (green); the S146-B6 to B8 rows (red), then the adapter (green); the helper's one-line change (S146-B9 green); the mutation config entries and the count in `check-stryker-ranges.test.mjs`.
 
 **Structural checks (on the candidate):**
-- `rg -n "EPERM|EACCES|EBUSY" apps/harness/src apps/harness/tests/integration/rename-when-released.ts --glob '!*.test.ts'`: `project-storage-node-errors.ts` only.
+- `rg -n "EPERM|EACCES|EBUSY" apps/harness/src/storage apps/harness/tests/integration/rename-when-released.ts --glob 'project-storage-*.ts' --glob 'rename-when-released.ts' --glob '!*.test.ts'`: `project-storage-node-errors.ts` only. (The search is limited to the Project Storage files on purpose: `canonical-writer-lease.ts:114` and `repository-physical-observation.ts:46-47` name some of these codes for other decisions and are not copies of this set.)
 - `rg -n "setTimeout|new Promise" apps/harness/src/storage/project-storage-rename-retry.ts apps/harness/src/storage/project-storage-file-adapter.ts`: no hit.
 - `rg -n "Effect\.runPromise" apps/harness/src/storage/project-storage-file-adapter.ts`: the `renameAtomic` facade only.
 
@@ -218,6 +218,8 @@ Time rows fork the program, then advance the test clock; no row sleeps for real.
 - `TestClock` comes from `effect/testing` (`TestClock.layer()`, `TestClock.adjust`); the program under test is forked (`Effect.forkChild`) before the clock is moved. The repository has no `@effect/vitest`; rows run through `Effect.runPromise` in plain Vitest tests.
 - S146-B7 reads the failure "as the facade would reject it": the row applies the same unwrapping the facade uses, so the oracle is the caller-visible error.
 - Mutation run cost for `stryker.project-storage.config.json` is not known to the designer; the coordinator sizes it before the GO.
+- The titles of rows written with `it.each` are pinned as written, placeholders included (`: $name`, `: $platform`), so the slice preflight finds them (the #145 lesson). The implementer keeps those exact titles.
+- The product policy and the test helper are both named `renameWhenReleased`, in different folders, with different signatures. Kept: the helper is not renamed (Q5 (a) changes one line of it).
 
 ## Developer Context
 
@@ -232,6 +234,23 @@ Time rows fork the program, then advance the test clock; no row sleeps for real.
   - **Told to Pedro by the coordinator:** a true permission error now takes up to 450 ms to surface; a stop during the wait is seen only at its end; without the retry log line the provisional numbers can never be measured.
   - **Changed in the contract:** the questions are marked decided; the base is re-pinned at build authorization (the slice is built after #145 is integrated); the retry log line is in Deferred Work, linked to #122, with its reason; a short section states what gets slower. The ten paths, the behaviors and the bindings are unchanged.
   - **Approval:** not yet given; it is Pedro's, later.
+- **2026-11-16: base re-pinned to `7a194c3` and the contract re-checked (coordinator instruction, after #145 was accepted and integrated locally).**
+  - **Re-read at `7a194c3`:** `renameAtomic` (`project-storage-file-adapter.ts:157-174`, the `rename` at `:167`, the facade at `:293`), the port (`project-storage-store.ts:242`), both callers (`:402`, `project-storage-upgrade-pipeline.ts:273`), the code set (`project-storage-node-errors.ts:31`), the test helper and its test, both mutation configs, `check-stryker-ranges.test.mjs:455` (`ranges: 28, wholeFiles: 17`), the script `test:mutation:project-storage:harness`.
+  - **Changed since `e6b6a76`:** none of the ten paths. `git diff e6b6a76 7a194c3` over the storage folder, the integration folder and the configs shows only #145 files (`check-stryker-ranges.mjs`, the new `gate-entry-alias.integration.test.mjs`, one line of `vitest.integration.config.ts`).
+  - **Effect API checked against the installed package (effect 4.0.0):** `Effect.retry`, `Effect.forkChild` and `Schedule.spaced` are functions; `effect/testing` exports `TestClock` with `layer` and `adjust`.
+  - **Lane:** `lane.mjs --paths` over the ten paths still answers `normal` (`files: 6 > 5`). Q6 (a) stands.
+  - **Corrected in the contract:**
+    - three Test lines now name the `it.each` titles as written: S146-B1 (`: $name`), S146-B4 (`: $name`, and its fourth case under its own title), S146-B5 (`: $platform`). No behavior or oracle changed; the S146-B4 oracle says which title holds which case;
+    - the first structural check was wrong as written (designer): a search of all of `apps/harness/src` also finds `canonical-writer-lease.ts:114` and `repository-physical-observation.ts:46-47`, which name some of these codes for other decisions. It is now limited to the Project Storage files;
+    - one line range (`storageFailureFor`, `:80-89`).
+  - **Unchanged:** the ten paths, the ten behaviors, the seven bindings, the numbers (10 attempts, 50 ms, Windows only), the mutation entry, the Deferred retry log line (#122). Pedro's answers Q1-Q7 stand.
+  - **Approval:** not yet given. No question for Pedro arose from the re-check.
+- **2026-11-16: contract approved (Pedro, answered to the coordinator through AskUserQuestion; relayed and confirmed by the coordinator, who validated the hash).**
+  - **Approved:** the contract of slice `i146-s1-rename-retry` at `content_hash` `95ad8a4b3419f3ca6c3317ec5e8490a3d7674bd9b468486490210278b8c2ba0d`. Approved copy: `.rpiv/evidence/2026-11-15_15-14-31_staging-rename-retry-146/approved-95ad8a4b.md`.
+  - **Lane:** normal (Q6 (a)), as `lane.mjs` answers. The label is recorded over the ten paths.
+  - **Workspace:** branch `fix/staging-rename-retry-146` in the main checkout, no worktree. A named deviation from the normal lane's linked worktree, as in #145.
+  - **Told to Pedro by the coordinator:** `canonical-writer-lease.ts` and `repository-physical-observation.ts`, which test `EBUSY` and `EACCES` / `EPERM` for other decisions, stay separate owners.
+  - The slice heading's words "not executable until Pedro approves this contract" are met by this entry; the heading is left as approved.
 
 ## References
 
