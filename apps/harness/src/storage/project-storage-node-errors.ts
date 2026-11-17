@@ -28,7 +28,16 @@ export function isSqliteBusy(error: unknown): boolean {
   return code === "SQLITE_BUSY" || code === "SQLITE_LOCKED";
 }
 
-const unavailableExactCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
+const heldFileCodes = new Set(["EACCES", "EPERM", "EBUSY"]);
+
+/**
+ * A file or folder another process still holds: on Windows a scanner or the indexer answers these
+ * codes for a moment after a write. The one owner of this code set (shared-vocab-union).
+ */
+export function isHeldFileError(error: unknown): boolean {
+  return heldFileCodes.has(storageErrorCode({ error }) ?? "");
+}
+
 const unavailableSqliteCodeFamilies = [
   "SQLITE_AUTH",
   "SQLITE_BUSY",
@@ -57,8 +66,8 @@ export function isKnownStorageFailure(
 }
 
 export function isUnavailableStorageError(input: { error: unknown }): boolean {
+  if (isHeldFileError(input.error)) return true;
   const code = storageErrorCode(input);
-  if (unavailableExactCodes.has(code ?? "")) return true;
   return unavailableSqliteCodeFamilies.some((family) => belongsToErrorCodeFamily(code, family));
 }
 

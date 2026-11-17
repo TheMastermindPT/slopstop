@@ -43,6 +43,7 @@
     "apps/harness/src/project-registration-observer.ts:97-113",
     "apps/harness/src/project-registration-observer.ts:147-162",
     "apps/harness/src/storage/project-storage-node-errors.ts",
+    "apps/harness/src/storage/project-storage-rename-retry.ts",
     "apps/harness/src/storage/project-storage-upgrade-node-adapter.ts:560-567",
     "apps/harness/src/registration/registry-database.ts:126-137",
     "apps/harness/src/registration/registration-registry.ts:209-227"

@@ -42,6 +42,8 @@ export default defineConfig({
       "apps/harness/src/project-registration-observer.test.ts",
       "apps/harness/src/storage/project-storage-node-registry.test.ts",
       "apps/harness/src/storage/project-storage-node-errors.test.ts",
+      "apps/harness/src/storage/project-storage-rename-retry.test.ts",
+      "apps/harness/tests/integration/project-storage-rename-retry.integration.test.ts",
       "apps/harness/src/storage/project-storage-upgrade-node-adapter.test.ts",
       "apps/harness/tests/integration/project-storage-upgrade-steps.integration.test.ts",
       "apps/harness/src/registration/registration-registry.test.ts",

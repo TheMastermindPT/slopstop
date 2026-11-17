@@ -1,5 +1,6 @@
 import { rename } from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
+import { isHeldFileError } from "../../src/storage/project-storage-node-errors.js";
 
 /** The rename and the wait between attempts, injectable so rows need no real sleeps. */
 export type RenameIo = Readonly<{
@@ -9,17 +10,13 @@ export type RenameIo = Readonly<{
 
 const nodeIo: RenameIo = { rename, delay: (ms) => sleep(ms) };
 
-/** The codes Windows answers while a scanner or the indexer still holds a just-written file. */
-const releaseCodes = new Set(["EPERM", "EACCES", "EBUSY"]);
 const maxAttempts = 10;
 const retryDelayMs = 50;
 
-const awaitsRelease = (error: unknown) => releaseCodes.has(Reflect.get(Object(error), "code"));
-
 /**
  * Renames `from` to `to`, retrying while Windows has not yet released the directory's new files:
- * up to 10 attempts 50 ms apart on EPERM, EACCES or EBUSY. Any other failure, and the last one,
- * is rethrown.
+ * up to 10 attempts 50 ms apart while the failure is a held file (`isHeldFileError`, the owner of
+ * those codes). Any other failure, and the last one, is rethrown.
  */
 export async function renameWhenReleased(
   from: string,
@@ -31,7 +28,7 @@ export async function renameWhenReleased(
       await io.rename(from, to);
       return;
     } catch (error) {
-      if (attempt >= maxAttempts || !awaitsRelease(error)) throw error;
+      if (attempt >= maxAttempts || !isHeldFileError(error)) throw error;
       await io.delay(retryDelayMs);
     }
   }

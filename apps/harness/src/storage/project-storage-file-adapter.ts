@@ -10,7 +10,12 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { acceptsStrict, decodeStrict, StorageGenerationIdSchema } from "@slopstop/protocol";
-import { ProjectStorageBrokenError } from "./project-storage-errors.js";
+import { Effect, Result } from "effect";
+import { untypedRejection, unwrapRejection } from "../effect-rejection.js";
+import {
+  ProjectStorageBrokenError,
+  type ProjectStorageUnavailableError,
+} from "./project-storage-errors.js";
 import {
   assertStagingPath,
   lstatIfPresent,
@@ -19,7 +24,12 @@ import {
   upgradeDirectoryProjectRoot,
   upgradeOutputNames,
 } from "./project-storage-filesystem-authority.js";
-import { isUnavailableStorageError, normalizeStorageError } from "./project-storage-node-errors.js";
+import {
+  isUnavailableStorageError,
+  normalizeStorageError,
+  storageFailureFor,
+} from "./project-storage-node-errors.js";
+import { renameWhenReleased } from "./project-storage-rename-retry.js";
 import type { ProjectStorageStoreDependencies, UpgradeOutput } from "./project-storage-store.js";
 import { ProjectStorageUpgradeBusyError } from "./project-storage-upgrade.js";
 
@@ -154,24 +164,61 @@ function requireAtomicRenameShape(input: { source: string; destination: string }
   decodeStrict(StorageGenerationIdSchema, path.basename(input.destination));
 }
 
-async function renameAtomic(input: { source: string; destination: string }): Promise<void> {
-  try {
-    const source = path.resolve(input.source);
-    const destination = path.resolve(input.destination);
-    requireAtomicRenameShape({ source, destination });
-    await requireDirectory(path.dirname(source), "Project Storage rename parent is unavailable.");
-    await requireDirectory(source, "Project Storage rename source is unavailable.");
-    if ((await lstatIfPresent({ targetPath: destination })) !== undefined) {
-      throw new ProjectStorageBrokenError("Project Storage activation target already exists.");
-    }
-    await rename(source, destination);
-    await requireDirectory(destination, "Project Storage activation target type is invalid.");
-  } catch (error) {
-    normalizeStorageError({
-      error,
-      message: "Project Storage atomic rename failed.",
-    });
+/** The checks before an atomic rename: its shape, a parent and a source directory, no target. */
+async function requireRenamePreconditions(source: string, destination: string): Promise<void> {
+  requireAtomicRenameShape({ source, destination });
+  await requireDirectory(path.dirname(source), "Project Storage rename parent is unavailable.");
+  await requireDirectory(source, "Project Storage rename source is unavailable.");
+  if ((await lstatIfPresent({ targetPath: destination })) !== undefined) {
+    throw new ProjectStorageBrokenError("Project Storage activation target already exists.");
   }
+}
+
+/** One Promise step of the atomic rename, its rejection kept as a typed failure. */
+function renameStep(run: () => Promise<void>) {
+  return Effect.tryPromise({ try: run, catch: untypedRejection });
+}
+
+/**
+ * Makes `.staging-<id>` the generation `<id>`: the checks once, the rename through
+ * {@link renameWhenReleased} (Windows may hold the just-written folder for a moment), then the
+ * target check once. Fails with the storage failure the port rejects with. `rename` and
+ * `platform` are ports for its rows.
+ */
+export function renameAtomicProgram(input: {
+  source: string;
+  destination: string;
+  rename: (source: string, destination: string) => Promise<void>;
+  platform: NodeJS.Platform;
+}): Effect.Effect<void, ProjectStorageBrokenError | ProjectStorageUnavailableError> {
+  const source = path.resolve(input.source);
+  const destination = path.resolve(input.destination);
+  return renameStep(() => requireRenamePreconditions(source, destination)).pipe(
+    Effect.andThen(
+      renameWhenReleased(
+        renameStep(() => input.rename(source, destination)),
+        input.platform,
+      ),
+    ),
+    Effect.andThen(
+      renameStep(() =>
+        requireDirectory(destination, "Project Storage activation target type is invalid."),
+      ),
+    ),
+    Effect.mapError((failure) =>
+      storageFailureFor({
+        error: unwrapRejection(failure),
+        message: "Project Storage atomic rename failed.",
+      }),
+    ),
+  );
+}
+
+async function renameAtomic(input: { source: string; destination: string }): Promise<void> {
+  const outcome = await Effect.runPromise(
+    Effect.result(renameAtomicProgram({ ...input, rename, platform: process.platform })),
+  );
+  if (Result.isFailure(outcome)) throw outcome.failure;
 }
 
 const invalidUpgradeDirectory = "Project Storage upgrade directory is invalid.";

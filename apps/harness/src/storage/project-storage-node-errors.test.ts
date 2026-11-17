@@ -13,6 +13,7 @@ import {
 } from "./project-storage-errors.js";
 import {
   isCorruptStorageError,
+  isHeldFileError,
   isKnownStorageFailure,
   isRetryableStorageError,
   isSqliteBusy,
@@ -370,4 +371,19 @@ describe("the storage failure an error stands for", () => {
       expect(failure).toHaveProperty("cause", error);
     }
   });
+});
+
+const heldFileRows = [
+  { name: "EPERM", error: codedError("EPERM"), held: true },
+  { name: "EACCES", error: codedError("EACCES"), held: true },
+  { name: "EBUSY", error: codedError("EBUSY"), held: true },
+  { name: "ENOENT", error: codedError("ENOENT"), held: false },
+  { name: "EEXIST", error: codedError("EEXIST"), held: false },
+  { name: "SQLITE_BUSY", error: codedError("SQLITE_BUSY"), held: false },
+  { name: "no code", error: new Error("no code"), held: false },
+  { name: "undefined", error: undefined, held: false },
+];
+
+it.each(heldFileRows)("knows a held file by its code: $name", ({ error, held }) => {
+  expect(isHeldFileError(error)).toBe(held);
 });
