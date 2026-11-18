@@ -6,15 +6,7 @@
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     --surface: #101411;
-    --ink: #edf0e8;
-    --ink-muted: #aeb8ab;
-    --line: rgb(196 210 189 / 0.22);
-    --line-strong: rgb(196 210 189 / 0.42);
-    --grid-line: rgb(196 210 189 / 0.055);
-    --axis-line: rgb(196 210 189 / 0.11);
     --signal: #9eb58c;
-    --danger: #dc8873;
-    --font-measure: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
   }
 
   * {

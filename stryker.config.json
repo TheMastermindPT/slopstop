@@ -51,9 +51,9 @@
     "apps/desktop/src/renderer/projects-workspace.tsx:94-94",
     "apps/desktop/src/renderer/projects-workspace.tsx:106-107",
     "apps/desktop/src/renderer/projects-workspace.tsx:307-317",
-    "apps/desktop/src/renderer/workspace-view.tsx:46-58",
-    "apps/desktop/src/renderer/workspace-view.tsx:82-116",
-    "apps/desktop/src/renderer/workspace-view.tsx:122-178"
+    "apps/desktop/src/renderer/workspace-view.tsx:45-57",
+    "apps/desktop/src/renderer/workspace-view.tsx:81-115",
+    "apps/desktop/src/renderer/workspace-view.tsx:121-177"
   ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],

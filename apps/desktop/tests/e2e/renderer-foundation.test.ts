@@ -362,6 +362,45 @@ function workspacePadding(page: Page) {
   return page.locator(workspaceSelector).evaluate((section) => getComputedStyle(section).padding);
 }
 
+const globalTokens = {
+  "--canvas": "#050606",
+  "--frost": "#9cc9e0",
+  "--ink": "#eceff1",
+  "--radius-pill": "999px",
+  "--space-4": "16px",
+};
+
+/** The computed value of each global token on the document root and on the Projects sidebar. */
+function tokensOnRootAndSidebar(page: Page) {
+  return page.evaluate((names) => {
+    const read = (element: Element) =>
+      Object.fromEntries(
+        names.map((name) => [
+          name,
+          getComputedStyle(element).getPropertyValue(name).trim().toLowerCase(),
+        ]),
+      );
+    const sidebar = document.querySelector('aside[aria-label="Projects"]');
+    return { root: read(document.documentElement), sidebar: sidebar ? read(sidebar) : null };
+  }, Object.keys(globalTokens));
+}
+
+test("gives the whole window the theme tokens", async () => {
+  test.setTimeout(150_000);
+  const { application, page, errors, userData } = await launch();
+  try {
+    await expect(page.locator('aside[aria-label="Projects"]')).toBeVisible();
+    expect(await tokensOnRootAndSidebar(page)).toEqual({
+      root: globalTokens,
+      sidebar: globalTokens,
+    });
+    expect(errors).toEqual([]);
+  } finally {
+    await application.close();
+  }
+  await expectNoHarnessRequestFailure(userData);
+});
+
 test("keeps the old shell's look", async () => {
   test.setTimeout(150_000);
   const { application, page, errors, proof, userData, projects } = await seededLaunch();

@@ -7,7 +7,6 @@ import { ConversationRegion } from "./conversation/conversation-region.js";
 import styles from "./projects-workspace.module.css";
 import { RemovalView } from "./remove-from-list/removal-view.js";
 import type { RemovalScreen, useRemoveFromList } from "./remove-from-list/use-remove-from-list.js";
-import theme from "./theme/seixo.module.css";
 import { UpgradeProblem } from "./upgrade-problem.js";
 import type { UpgradeProblem as Problem } from "./use-project-upgrade.js";
 
@@ -137,7 +136,7 @@ function ActiveWorkspace(
   return (
     <>
       {notes ? (
-        <div className={`${theme["seixoTokens"]} ${styles["noteStrip"]}`}>
+        <div className={styles["noteStrip"]}>
           <WorkspaceNotes note={props.note} error={props.error} />
           {props.upgradeProblem}
         </div>

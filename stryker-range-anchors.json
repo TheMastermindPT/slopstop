@@ -91,19 +91,19 @@
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/workspace-view.tsx:46-58",
+    "entry": "apps/desktop/src/renderer/workspace-view.tsx:45-57",
     "first": "  const idle = flow.screen.kind === \"idle\" && !removing;",
     "last": "      {idle ? ("
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/workspace-view.tsx:82-116",
+    "entry": "apps/desktop/src/renderer/workspace-view.tsx:81-115",
     "first": "  const upgradeProblem =",
     "last": "          {upgradeProblem}"
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/workspace-view.tsx:122-178",
+    "entry": "apps/desktop/src/renderer/workspace-view.tsx:121-177",
     "first": "",
     "last": "}"
   },

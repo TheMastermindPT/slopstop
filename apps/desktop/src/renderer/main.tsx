@@ -7,6 +7,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app.js";
 import "./global.css";
+import "./theme/tokens.css";
 
 const root = document.getElementById("root");
 

@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 const renderer = path.resolve(import.meta.dirname, "..");
 const read = (file: string) => readFileSync(file, "utf8");
 const theme = read(path.join(renderer, "theme/seixo.module.css"));
+const tokensFile = path.join(renderer, "theme/tokens.css");
+const tokens = read(tokensFile);
 const designLines = read(path.resolve(renderer, "../../../../DESIGN.md")).split(/\r?\n/);
 
 /** A flat front-matter block of DESIGN.md: two-space keys with quoted values. */
@@ -20,42 +22,84 @@ function designBlock(name: "colors" | "rounded" | "spacing"): [string, string][]
   return entries;
 }
 
-/** The `backgroundColor` of one entry under `components`. */
-function componentBackground(name: "button-primary-hover" | "button-secondary-hover"): string {
-  const start = designLines.indexOf(`  ${name}:`);
-  const line = designLines
-    .slice(start + 1, start + 4)
-    .find((next) => next.includes("backgroundColor"));
-  return /"([^"]*)"/.exec(line ?? "")?.[1] ?? "";
-}
+/** Where one token's value is written in DESIGN.md. */
+type DesignSource =
+  | { component: "button-primary-hover" | "button-secondary-hover" }
+  | {
+      shadow: "Soft lift" | "Button lift" | "Frost lift" | "Composer lift" | "Row lift" | "Overlay";
+    }
+  | { font: "body" | "code" | "wordmark" };
 
-/** The code span of one "Shadow Vocabulary" bullet, without `box-shadow: ` and any trailing `;`. */
-function shadow(bullet: "Soft lift" | "Button lift" | "Frost lift" | "Composer lift"): string {
-  const line = designLines.find((next) => next.startsWith(`- **${bullet}** (`)) ?? "";
-  return /`box-shadow: ([^`;]*);?`/.exec(line)?.[1] ?? "";
+/**
+ * One token's value in DESIGN.md: the `backgroundColor` of an entry under `components`, the code
+ * span of a "Shadow Vocabulary" bullet without `box-shadow: ` and any trailing `;`, or the
+ * `fontFamily` of an entry under `typography`.
+ */
+function designValue(source: DesignSource): string {
+  if ("component" in source) {
+    const start = designLines.indexOf(`  ${source.component}:`);
+    const line = designLines
+      .slice(start + 1, start + 4)
+      .find((next) => next.includes("backgroundColor"));
+    return /"([^"]*)"/.exec(line ?? "")?.[1] ?? "";
+  }
+  if ("shadow" in source) {
+    const line = designLines.find((next) => next.startsWith(`- **${source.shadow}** (`)) ?? "";
+    return /`box-shadow: ([^`;]*);?`/.exec(line)?.[1] ?? "";
+  }
+  const start = designLines.indexOf(`  ${source.font}:`, designLines.indexOf("typography:"));
+  const line = designLines.slice(start + 1).find((next) => next.includes("fontFamily"));
+  return /fontFamily: "([^"]*)"/.exec(line ?? "")?.[1] ?? "";
 }
 
 const expectedProperties: [string, string][] = [
   ...designBlock("colors").map(([name, value]): [string, string] => [`--${name}`, value]),
   ...designBlock("rounded").map(([name, value]): [string, string] => [`--radius-${name}`, value]),
   ...designBlock("spacing").map(([name, value]): [string, string] => [`--space-${name}`, value]),
-  ["--button-primary-hover", componentBackground("button-primary-hover")],
-  ["--button-secondary-hover", componentBackground("button-secondary-hover")],
-  ["--shadow-soft-lift", shadow("Soft lift")],
-  ["--shadow-button-lift", shadow("Button lift")],
-  ["--shadow-frost-lift", shadow("Frost lift")],
-  ["--shadow-composer-lift", shadow("Composer lift")],
+  ["--button-primary-hover", designValue({ component: "button-primary-hover" })],
+  ["--button-secondary-hover", designValue({ component: "button-secondary-hover" })],
+  ["--shadow-soft-lift", designValue({ shadow: "Soft lift" })],
+  ["--shadow-button-lift", designValue({ shadow: "Button lift" })],
+  ["--shadow-frost-lift", designValue({ shadow: "Frost lift" })],
+  ["--shadow-composer-lift", designValue({ shadow: "Composer lift" })],
+  ["--shadow-row-lift", designValue({ shadow: "Row lift" })],
+  ["--shadow-overlay", designValue({ shadow: "Overlay" })],
+  ["--font-text", designValue({ font: "body" })],
+  ["--font-code", designValue({ font: "code" })],
+  ["--font-mark", designValue({ font: "wordmark" })],
 ];
 
-/** Lower-cases a value and collapses its whitespace, as the formatter may rewrap and re-case it. */
-const normalise = (value: string) => value.toLowerCase().replace(/\s+/g, " ").trim();
+/**
+ * Lower-cases a value, writes its quotes as double quotes and collapses its whitespace, as the
+ * formatter may rewrap, re-case and re-quote it.
+ */
+const normalise = (value: string) =>
+  value.toLowerCase().replaceAll("'", '"').replace(/\s+/g, " ").trim();
 
-/** Every declaration of one custom property in the theme module, normalised. */
-function declarations(property: string): string[] {
-  return [...theme.matchAll(new RegExp(`(?:^|[\\s;{])${property}:\\s*([^;]+);`, "g"))].map(
-    (match) => normalise(match[1] ?? ""),
-  );
+/**
+ * One custom property in the token style sheet: every declaration of it, normalised, and the
+ * selectors of the rules that hold them.
+ */
+function tokenDeclarations(property: string) {
+  const declaring = new RegExp(`(?:^|[\\s;{])${property}:\\s*([^;]+);`, "g");
+  return {
+    values: [...tokens.matchAll(declaring)].map((match) => normalise(match[1] ?? "")),
+    selectors: rules(tokens)
+      .filter((rule) => [...rule.body.matchAll(declaring)].length > 0)
+      .map((rule) => rule.selector),
+  };
 }
+
+/** Every `.css` file under the renderer, at any depth. */
+const rendererStyleSheets = readdirSync(renderer, { recursive: true, withFileTypes: true })
+  .filter((entry) => entry.isFile() && entry.name.endsWith(".css"))
+  .map((entry) => path.join(entry.parentPath, entry.name));
+
+/** The custom properties a style sheet declares, comments removed, in order. */
+const customProperties = (css: string) =>
+  [...css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/(?:^|[\s;{])(--[\w-]+)\s*:/g)].map(
+    (match) => match[1] ?? "",
+  );
 
 type Rule = { selector: string; body: string; media: string | null };
 
@@ -172,14 +216,14 @@ type ToneName =
   | "moss-tint"
   | "blood-tint";
 
-function contrast(foreground: ToneName, background: ToneName): number {
-  const [light, dark] = [luminance(token(foreground)), luminance(token(background))].sort(
+function contrast(pair: { foreground: ToneName; background: ToneName }): number {
+  const [light, dark] = [luminance(token(pair.foreground)), luminance(token(pair.background))].sort(
     (first, second) => second - first,
   );
   return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
 }
 
-const token = (name: ToneName) => declarations(`--${name}`)[0] ?? "";
+const token = (name: ToneName) => tokenDeclarations(`--${name}`).values[0] ?? "";
 
 describe("the Seixo theme module", () => {
   it.each([
@@ -192,7 +236,22 @@ describe("the Seixo theme module", () => {
 
   it.each(expectedProperties)("declares %s exactly once, equal to DESIGN.md", (property, value) => {
     expect(value).not.toBe("");
-    expect(declarations(property)).toEqual([normalise(value)]);
+    expect(tokenDeclarations(property)).toEqual({
+      values: [normalise(value)],
+      selectors: [":root"],
+    });
+  });
+
+  it("declares the theme tokens in tokens.css only", () => {
+    const owned = new Set(customProperties(tokens));
+    const elsewhere = rendererStyleSheets
+      .filter((file) => file !== tokensFile)
+      .flatMap((file) =>
+        customProperties(read(file))
+          .filter((property) => owned.has(property))
+          .map((property) => `${path.relative(renderer, file)}: ${property}`),
+      );
+    expect(elsewhere).toEqual([]);
   });
 
   it("writes the focus halo from --frost and keeps colour literals in the token declarations", () => {
@@ -203,12 +262,12 @@ describe("the Seixo theme module", () => {
       "--fault-halo": "rgb(from var(--blood) r g b / 0.14)",
     } as const;
     for (const [property, value] of Object.entries(derived))
-      expect(declarations(property)).toEqual([value]);
+      expect(tokenDeclarations(property).values).toEqual([value]);
     const allowed = new Set([
       ...expectedProperties.map(([property]) => property),
       ...Object.keys(derived),
     ]);
-    const strays = rules(theme)
+    const strays = [...rules(tokens), ...rules(theme)]
       .flatMap((rule) => rule.body.split(";"))
       .map((declaration) => declaration.trim())
       .filter((declaration) => holdsColour(declaration))
@@ -294,7 +353,7 @@ describe("the Seixo theme module", () => {
   ] satisfies [ToneName, ToneName, number][])(
     "gives %s on %s at least %s:1 contrast",
     (foreground, background, minimum) => {
-      expect(contrast(foreground, background)).toBeGreaterThanOrEqual(minimum);
+      expect(contrast({ foreground, background })).toBeGreaterThanOrEqual(minimum);
     },
   );
 });
