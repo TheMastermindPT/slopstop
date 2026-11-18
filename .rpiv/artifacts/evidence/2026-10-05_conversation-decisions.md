@@ -2785,3 +2785,8 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - One review round with three read-only reviewers (Agent subagents): all passed, no defect. One coverage concern, grounded by the coordinator: no row observes the platform that reaches the retry through the real adapter.
 - Pedro accepted the slice as is; the concern and three suggestions are tracked in #151. He approved the docs commit and the fast-forward of main; no push yet.
 - New standing rule from Pedro: mutation tests run only on the last slice of a piece of work. Exception, also his: when a slice touches something critical, mutation runs on the files it changed. The coordinator's reading, not his words: on the last slice the run is also limited to the touched files, and a brief that claims the exception says why the slice is critical. The designer acknowledged both.
+
+## 2026-11-18 — main pushed with #146; #146 closed
+
+- After Pedro closed TFTAcademy and a clean read (CPU 10-25%, no game, no foreign suite), the coordinator pushed main: `eb92f0f..d095974`. The pre-push `check:deep` passed on the first run (unit 4021; coverage 6279 passed and 6 skipped; integration 2258 passed and 6 skipped; e2e 27; package smoke validated). Log: `.rpiv/evidence/2026-11-18_push-main-146/push-main.log`.
+- Pedro chose to close #146; closed with a comment naming `7245fab`, #150 and #151.
