@@ -2769,3 +2769,19 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 - Pedro chose: a one-line test-only change so the error carries the real proposal, committed directly on main (`eb92f0f`), a new issue for the flake, and one push retry. Issue #149 opened. The 2000 ms budget and the coverage load were not changed.
 - The retry passed `check:deep` (unit 4005, coverage 6259 passed and 6 skipped, integration 2254 passed and 6 skipped) and main was pushed: `b758737..eb92f0f`. This was the first coverage run of the #148 and #145 files.
 - #145 closed, as Pedro had chosen for after the push. The Linux CI run of the new integration rows is still to be read.
+
+## 2026-11-17 — #146 mutation proof scoped by Pedro; contract amended and approved at 768bb19e; issue #150
+
+- The Linux CI run for `eb92f0f` passed.
+- The contract's full mutation command (`pnpm test:mutation:project-storage:harness`, 3801 mutants, 29 files) broke once on a Windows process-creation failure (`0xC0000142`, no result; Pedro rebooted) and was stopped the second time at about 1 h 38 with no result, by Pedro's decision: he has no two hours for one run. The coordinator should have sized the run to the change before the go-ahead.
+- Pedro chose a scoped run on the three changed source files (315 mutants, 32 min). Result: 68.83, under the break of 80; `project-storage-rename-retry.ts` 100%, `project-storage-node-errors.ts` 96.43%, `project-storage-file-adapter.ts` 57.14%, mostly old lines never mutated before. Two survivors on new lines: the facade's `throw` (`:221`) and the `Effect.mapError` function (`:208`). No rerun.
+- Pedro chose to close the two (not to accept them) and to open an issue for the adapter's old lines: #150.
+- The designer amended the contract: behavior S146-B11 on the real `renameAtomic` port (a pin; no honest red exists; bindings 8 and 9 prove it), the slice integration file joins the mutation Vitest config, the mutation proof is scoped to the two new files and the adapter range 167-222. Four message strings stay predicted survivors. Pedro approved it as is at `content_hash` `768bb19e841a01663a0d9fcbc54fdf657c0e58c4739e1c8889940e88624f5efd` (approved copy `approved-768bb19e.md`); brief hash after the approval record: `c3efcb1f`.
+- Open for later: Pedro to decide whether briefs should pin mutation runs to the touched files from the start.
+
+## 2026-11-18 — #146 accepted; issue #151; mutation only on the last slice
+
+- The implementer finished `i146-s1-rename-retry` at commit `7245fab` (ten paths): scoped mutation 93.91 with no survivor at `:208` or `:221`, `pnpm check`, duplicates and dead-code exit 0, CodeScene 10, committed-tree tests and slice-preflight clean.
+- One review round with three read-only reviewers (Agent subagents): all passed, no defect. One coverage concern, grounded by the coordinator: no row observes the platform that reaches the retry through the real adapter.
+- Pedro accepted the slice as is; the concern and three suggestions are tracked in #151. He approved the docs commit and the fast-forward of main; no push yet.
+- New standing rule from Pedro: mutation tests run only on the last slice of a piece of work. Exception, also his: when a slice touches something critical, mutation runs on the files it changed. The coordinator's reading, not his words: on the last slice the run is also limited to the touched files, and a brief that claims the exception says why the slice is critical. The designer acknowledged both.

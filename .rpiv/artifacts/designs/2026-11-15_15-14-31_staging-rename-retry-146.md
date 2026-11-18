@@ -9,10 +9,10 @@ tags: [design, project-storage, rename, retry, effect, schedule, windows, issue-
 lane: normal
 lane_reasons: ["no upstream lane", "lane.mjs --paths over the ten paths of Q3 (a): files: 6 > 5", "product code on the path that makes a generation active"]
 status: in-review
-last_updated: 2026-11-16T11:00:00+0000
+last_updated: 2026-11-17T19:30:00+0000
 last_updated_by: Pedro Mesquita
-last_updated_note: "Contract approved by Pedro at 95ad8a4b (approval entry appended); base 7a194c3; branch fix/staging-rename-retry-146 in the main checkout."
-content_hash: 86de95d976a8fa2b95700fb9fa7c04b59e903b797f53feab84c0c6ffe902e35c
+last_updated_note: "Amended contract (Q8 (a), S146-B11, scoped mutation proof, #150) approved by Pedro at 768bb19e (approval entry appended). Earlier: approved at 95ad8a4b."
+content_hash: 28a0dc6dcd0b617e4ba6ac8c0c62acf5f764b9ba2b03f54e8b5557d2661fba76
 ---
 
 # Design: #146 a bounded wait for Windows to release a just-written staging folder
@@ -102,6 +102,7 @@ The tenth failure reaches `normalizeStorageError` as today: `ProjectStorageUnava
 - **Q5 (decided (a), Pedro, 2026-11-15): the test helper's copy of the three codes.** (a) `rename-when-released.ts` takes `isHeldFileError` from the owner and keeps its own numbers and loop; (b) leave the helper as it is and name the copy. **Recommendation: (a)**: shared-vocab-union, one line.
 - **Q6 (decided (a), Pedro, 2026-11-15): lane.** (a) normal; (b) rigorous. **Recommendation: (a)**: no schema, protocol, migration or outcome changes; rigorous would add an intent review for one retried call.
 - **Q7 (decided (a), Pedro, 2026-11-15): record retries?** (a) not now: the file adapter has no logger; (b) add a diagnostics line per retried rename, as a later slice, which would also give #122 its data. **Recommendation: (a) now, (b) kept in Deferred Work.**
+- **Q8 (decided (a), Pedro, 2026-11-17, amendment): the two survivors on the adapter's new lines.** (a) one row on the real `renameAtomic` facade, the slice's integration file joins the mutation Vitest config, and the mutation proof of this slice is scoped to what the slice changed; the full-suite command is replaced. This amends Q3 (a): the config entries of Q3 stay, the run changes. The adapter's old lines are out of scope, tracked in #150.
 - **Rejected:** retrying inside the two callers (two copies of the policy); retrying the whole `renameAtomic` (it would re-run checks that cannot have changed under the owner's lock); a hand-written loop with `setTimeout` (against the Effect rules).
 
 ## Next Slice
@@ -118,13 +119,14 @@ The tenth failure reaches `normalizeStorageError` as today: `ProjectStorageUnava
   - `apps/harness/src/storage/project-storage-rename-retry.ts` (new);
   - `apps/harness/src/storage/project-storage-rename-retry.test.ts` (new);
   - `apps/harness/src/storage/project-storage-file-adapter.ts`;
-  - `apps/harness/tests/integration/project-storage-rename-retry.integration.test.ts` (new; matched by the existing `tests/integration/**/*.test.ts` include);
+  - `apps/harness/tests/integration/project-storage-rename-retry.integration.test.ts` (new; matched by the existing `tests/integration/**/*.test.ts` include; amendment: it also holds S146-B11);
   - `apps/harness/tests/integration/rename-when-released.ts` (Q5 (a));
   - `stryker.project-storage.config.json` (Q3 (a));
-  - `apps/harness/vitest.project-storage-mutation.config.ts` (Q3 (a));
+  - `apps/harness/vitest.project-storage-mutation.config.ts` (Q3 (a); amendment: its `include` also names the slice's integration file);
   - `apps/harness/scripts/check-stryker-ranges.test.mjs` (Q3 (a): the repository row, 17 to 18 whole files).
 - **Not touched:** the port type, `project-storage-store.ts`, `project-storage-upgrade-pipeline.ts`, the protocol, the desktop, `stryker-range-anchors.json` (no range is added or moved), `stryker.conversation.config.json`.
 - **Stryker:** `project-storage-node-errors.ts` stays a whole file in both configs; its new predicate is mutated there and killed by S146-B1. The new module is one whole-file entry: no anchor. `check:mutation-ranges` on the candidate is the authority.
+- **Amendment (2026-11-17, Q8 (a)):** no new path; the ten stand. `project-storage-file-adapter.ts` source does not change in the amendment, and it does not join `stryker.project-storage.config.json` (its range is named on the command line only, so `check-stryker-ranges.test.mjs` keeps `28` ranges and `18` whole files, and `stryker-range-anchors.json` stays untouched).
 - **Full-integration exposure:**
   - **Harness integration:** every creation and upgrade row goes through the real adapter and `renameAtomic` (`project-storage-create`, `project-storage-lifecycle`, the `project-storage-upgrade-*` files, the registration flows). On Windows they now retry a real hold instead of failing, which is the point; no row expects an immediate `unavailable` from a real rename.
   - **Windows real-file rows:** the new integration file creates fresh folders and renames them. Its rows inject the rename, so a real transient `EPERM` there would be retried by the code under test, not by the helper.
@@ -135,7 +137,7 @@ The tenth failure reaches `normalizeStorageError` as today: `ProjectStorageUnava
 
 #### Test Contract: i146-s1-rename-retry
 
-Public seams: `isHeldFileError`; `renameWhenReleased` with an injected rename Effect and platform, under `TestClock`; `renameAtomicProgram` with an injected `rename` over real temporary folders, under `TestClock`.
+Public seams: `isHeldFileError`; `renameWhenReleased` with an injected rename Effect and platform, under `TestClock`; `renameAtomicProgram` with an injected `rename` over real temporary folders, under `TestClock`; the adapter's files port, `createProjectStorageFileAdapter(...).renameAtomic`, over real temporary folders with Node's own rename (S146-B11).
 
 Time rows fork the program, then advance the test clock; no row sleeps for real. An injected rename counts its calls and answers a coded error (`Object.assign(new Error(...), { code })`) or succeeds.
 
@@ -179,6 +181,11 @@ Time rows fork the program, then advance the test clock; no row sleeps for real.
   - Test: `apps/harness/tests/integration/project-storage-create.integration.test.ts` and `apps/harness/tests/integration/project-storage-lifecycle.integration.test.ts`, unchanged.
   - Oracle: their existing rows, word for word.
   - Expected red: none — pin.
+- **Behavior S146-B11: the real port rejects with the storage failure, and renames nothing.**
+  - Test: `rejects an existing target through the real adapter` in `apps/harness/tests/integration/project-storage-rename-retry.integration.test.ts`.
+  - Oracle: with a real `.staging-<id>` directory and `<id>` already a directory in a fresh temporary root, `createProjectStorageFileAdapter({ applicationStorageRoot: <root> }).renameAtomic(<.staging-<id>>, <id>)` rejects; the rejection is a `ProjectStorageBrokenError` with message "Project Storage activation target already exists."; afterwards `.staging-<id>` is still a directory and `<id>` is still a directory. Nothing is injected: the facade, Node's rename and `process.platform` are the real ones.
+  - Expected red: none — pin
+  - Why a pin, said openly: the port already rejected an existing target this way before the slice (the old `renameAtomic` at the base), and the candidate's facade does too. A red cannot be observed honestly. What the row adds is proved by bindings 8 and 9, which the implementer runs first, before counting the row as green.
 
 **Bindings that bite (each on the candidate, each restored after):**
 1. Retry 10 times instead of 9. S146-B3 fails (eleven calls).
@@ -187,9 +194,11 @@ Time rows fork the program, then advance the test clock; no row sleeps for real.
 4. Space the retries 5 ms apart. S146-B2 fails at the 49 ms reading.
 5. In `isHeldFileError`, add `ENOENT`. S146-B1 fails.
 6. In the adapter, call `rename` without `renameWhenReleased`. S146-B6 fails.
+8. (Amendment.) In the `renameAtomic` facade, drop the `throw` of the failure. S146-B11 fails: the promise resolves. This is the scoped run's survivor at `:221`.
+9. (Amendment.) In `renameAtomicProgram`, make the `Effect.mapError` function answer `undefined`. S146-B11 fails: the rejection is not a `ProjectStorageBrokenError`. This is the survivor at `:208`. (S146-B8 fails too.)
 7. **Not killed, named openly:** in the adapter, moving the destination-absent check inside the retried step changes no row's result (the lock keeps the target absent between attempts). It is the same behavior under the owner's lock, so no row is written for it and none is claimed.
 
-**Order (red first):** S146-B1 row, then the predicate (green); the S146-B2 to B5 rows (red), then the policy module (green); the S146-B6 to B8 rows (red), then the adapter (green); the helper's one-line change (S146-B9 green); the mutation config entries and the count in `check-stryker-ranges.test.mjs`.
+**Order (red first):** S146-B1 row, then the predicate (green); the S146-B2 to B5 rows (red), then the policy module (green); the S146-B6 to B8 rows (red), then the adapter (green); the helper's one-line change (S146-B9 green); the mutation config entries and the count in `check-stryker-ranges.test.mjs`. Amendment, after all of that: the S146-B11 row with bindings 8 and 9 (each fails the row, each restored), then the integration file's line in the mutation Vitest config `include`.
 
 **Structural checks (on the candidate):**
 - `rg -n "EPERM|EACCES|EBUSY" apps/harness/src/storage apps/harness/tests/integration/rename-when-released.ts --glob 'project-storage-*.ts' --glob 'rename-when-released.ts' --glob '!*.test.ts'`: `project-storage-node-errors.ts` only. (The search is limited to the Project Storage files on purpose: `canonical-writer-lease.ts:114` and `repository-physical-observation.ts:46-47` name some of these codes for other decisions and are not copies of this set.)
@@ -198,7 +207,13 @@ Time rows fork the program, then advance the test clock; no row sleeps for real.
 
 **Runs:**
 - Red-green: the three touched test files alone.
-- **Need the coordinator's GO (CPU rule):** `pnpm check`; the mutation run `pnpm test:mutation:project-storage:harness`, once, on the final candidate (Q3 (a)); the final `check:deep` before push.
+- **Need the coordinator's GO (CPU rule):** `pnpm check`; the mutation run, once, on the final candidate (Q3 (a), as amended by Q8 (a), below); the final `check:deep` before push.
+- **Mutation proof, scoped (Q8 (a), Pedro, 2026-11-17).** It replaces the full-suite command `pnpm test:mutation:project-storage:harness`, by user decision: the full run did not finish in 1 h 38 min and was stopped with no result.
+  - Command: `pnpm exec stryker run stryker.project-storage.config.json --mutate apps/harness/src/storage/project-storage-rename-retry.ts,apps/harness/src/storage/project-storage-node-errors.ts,apps/harness/src/storage/project-storage-file-adapter.ts:167-222`. Same config, same thresholds (break 80), same concurrency; no config file is edited for the scope.
+  - Scope: `project-storage-rename-retry.ts` and `project-storage-node-errors.ts` whole, and lines 167-222 of `project-storage-file-adapter.ts`, which is the range the slice changed (`requireRenamePreconditions` to the `renameAtomic` facade). If the adapter's lines move before the run, the implementer re-reads the range from the diff and names the one used.
+  - Must hold: exit 0; no survivor at the facade's `throw` (`:221`) and none at the `Effect.mapError` function (`:208`); every mutant of `project-storage-rename-retry.ts` killed.
+  - Predicted to survive, named openly and not claimed: four message strings in the adapter's range (`:170`, `:171`, `:205`, and `:211`), because no row fails a rename for a missing parent, a missing source, a wrong target type or an unknown error. The first three are old text the slice moved; the fourth is the old fallback message. In `project-storage-node-errors.ts`: `:38` (equivalent: neither string is a held code) and two on old lines (`:7`, `:11`). Predicted score from the earlier scoped report: about 108 of 115.
+  - Out of scope: every line of `project-storage-file-adapter.ts` outside 167-222 (it was never in this config's mutate list; the scoped run of 2026-11-17 measured it whole at 57%). Tracked in #150.
 - CodeScene 10 on the new and touched source and test files.
 
 **Manual acceptance:** none. The real hold cannot be produced on demand; the rows prove the policy with an injected rename, and that is stated, not hidden.
@@ -209,6 +224,8 @@ Time rows fork the program, then advance the test clock; no row sleeps for real.
 - **Measure the hold and replace the provisional numbers** (#122). Trigger: the log line above, or a reference Windows machine under load.
 - **A signal through the `renameAtomic` port**, so a stop ends the wait at once. Trigger: the file adapter or its callers move to Effect.
 - **The rest of the file adapter as Effect programs.** Trigger: a slice that changes them.
+- **Mutation proof of the file adapter's old lines** (#150). The adapter is not in `stryker.project-storage.config.json`; the one whole-file measurement (2026-11-17) left 82 survivors and no-coverage mutants outside the slice's range. Trigger: #150.
+- **The full `test:mutation:project-storage:harness` run takes longer than 1 h 38 min on this machine.** Not sized further here. Trigger: #150, or the next slice that needs that run.
 - **The same hold on other steps** (`removeUpgradeOutput`, directory creation). No failure recorded. Trigger: a first report.
 
 ## Verification Notes
@@ -217,7 +234,9 @@ Time rows fork the program, then advance the test clock; no row sleeps for real.
 - The rows inject the rename; no row proves that Windows releases a folder within 450 ms. That claim is not made.
 - `TestClock` comes from `effect/testing` (`TestClock.layer()`, `TestClock.adjust`); the program under test is forked (`Effect.forkChild`) before the clock is moved. The repository has no `@effect/vitest`; rows run through `Effect.runPromise` in plain Vitest tests.
 - S146-B7 reads the failure "as the facade would reject it": the row applies the same unwrapping the facade uses, so the oracle is the caller-visible error.
-- Mutation run cost for `stryker.project-storage.config.json` is not known to the designer; the coordinator sizes it before the GO.
+- Mutation run cost for `stryker.project-storage.config.json` is not known to the designer; the coordinator sizes it before the GO. (2026-11-17: the full run was stopped at 1 h 38 min with no result; the scoped run took 32 min 30 s.)
+- S146-B6 to B8 inject the rename into `renameAtomicProgram`, so before the amendment nothing made the real `renameAtomic` facade fail. S146-B11 does, through the adapter's public files port, with nothing injected. It uses the one failure that real disk gives on demand on every platform: a target that already exists.
+- The mutation Vitest config did not run the slice's integration file, so mutants on the adapter's new lines were judged without S146-B6 to B8. With the file in the `include`, they count.
 - The titles of rows written with `it.each` are pinned as written, placeholders included (`: $name`, `: $platform`), so the slice preflight finds them (the #145 lesson). The implementer keeps those exact titles.
 - The product policy and the test helper are both named `renameWhenReleased`, in different folders, with different signatures. Kept: the helper is not renamed (Q5 (a) changes one line of it).
 
@@ -251,10 +270,29 @@ Time rows fork the program, then advance the test clock; no row sleeps for real.
   - **Workspace:** branch `fix/staging-rename-retry-146` in the main checkout, no worktree. A named deviation from the normal lane's linked worktree, as in #145.
   - **Told to Pedro by the coordinator:** `canonical-writer-lease.ts` and `repository-physical-observation.ts`, which test `EBUSY` and `EACCES` / `EPERM` for other decisions, stay separate owners.
   - The slice heading's words "not executable until Pedro approves this contract" are met by this entry; the heading is left as approved.
+- **2026-11-17: contract amended after the scoped mutation run (Q8 (a), Pedro, answered to the coordinator; relayed by the coordinator). The approval at `95ad8a4b` does not cover this text.**
+  - **Facts (evidence folder: `i146-s1-tdd.md`, `mutation-project-storage-scoped-summary.txt`, `mutation-project-storage-scoped.json`):** the full mutation run broke once (Windows process creation, `0xC0000142`) and was stopped the second time at 1 h 38 min, no result. A scoped run over the three changed source files ended at 68.83, under break 80, pulled down by the adapter mutated whole (57.14%). On the slice's new lines two survivors matter: `:221` (the facade may swallow every failure) and `:208` (the failure mapping). No test made the real facade fail, and the slice's integration file was not in the mutation Vitest config.
+  - **Added:** behavior S146-B11 (a pin, with its reason), bindings 8 and 9, one step in the order, the scoped mutation proof in place of the full-suite command, two Deferred Work items (#150), Q8 in Decisions.
+  - **Read for this:** the candidate's `project-storage-file-adapter.ts:154-222` and `:315-342`, the base's `renameAtomic` (`git show HEAD`), the slice's integration file, `vitest.project-storage-mutation.config.ts`, the scoped report (24 mutants in lines 167-222: 13 killed, 7 survived, 4 not covered).
+  - **Different from the instruction, for the coordinator and Pedro:** the row was asked as red-first. It cannot be: the port rejected an existing target the same way before the slice. It is written as a pin, and bindings 8 and 9 are its proof. Four message-string mutants in the range are predicted to survive and are named, not hidden; closing them would take more rows (missing parent, missing source, wrong target type, unknown rename error) and is not part of the minimum asked.
+  - **Unchanged:** the ten paths, S146-B1 to B10, bindings 1 to 7, the numbers, the lane (normal), the workspace, Q1-Q7.
+  - **Invalidated:** the approval at `95ad8a4b` for the amended parts. The TDD evidence already recorded for S146-B1 to B10 stands as it is. Not executable until Pedro approves the new hash.
+  - No test or gate was run by the designer; no code was touched.
+- **2026-11-17: amended contract approved (Pedro, answered to the coordinator through AskUserQuestion; relayed and confirmed by the coordinator, who saved the approved copy).**
+  - **Approved:** the amended contract of slice `i146-s1-rename-retry` at `content_hash` `768bb19e841a01663a0d9fcbc54fdf657c0e58c4739e1c8889940e88624f5efd`, as is. Approved copy: `.rpiv/evidence/2026-11-15_15-14-31_staging-rename-retry-146/approved-768bb19e.md`. It replaces `approved-95ad8a4b.md` as the copy later checks compare against.
+  - **Decided with it:** the four message strings in the adapter's range (`:170`, `:171`, `:205`, `:211`) stay predicted survivors; no rows are added for them. S146-B11 stays a pin, proved by bindings 8 and 9.
+  - **Unchanged:** lane (normal), workspace (branch `fix/staging-rename-retry-146` in the main checkout), the ten paths.
+- **2026-11-18: slice `i146-s1-rename-retry` accepted (Pedro, answered to the coordinator through AskUserQuestion).**
+  - **Candidate:** commit `7245fab` on `fix/staging-rename-retry-146`, base `3af9507`, the ten contract paths.
+  - **Proof on the candidate:** scoped mutation 93.91 (exit 0; no survivor at `:208` or `:221`; the four named message strings survive), `pnpm check`, `check:duplicates`, `check:dead-code` exit 0, CodeScene 10, committed tree unit 92 and integration 4 passed, slice-preflight clean.
+  - **Review, one round:** slice-verifier, artifact-code-reviewer and artifact-coverage-reviewer all passed with no defect. One coverage concern, grounded by the coordinator: no row observes the platform that reaches the retry through the real adapter (`project-storage-file-adapter.ts:219`, `:200`). Suggestions: an interruption row, `failureOf` failing by timeout, eager `path.resolve`. Record: `.rpiv/evidence/2026-11-15_15-14-31_staging-rename-retry-146/i146-s1-candidate-review-2026-11-18.md`.
+  - **Decision:** accepted as is; the concern and the suggestions are tracked in #151, not fixed in this slice.
+  - **Accepted notes:** the reds surfaced as per-row `is not a function`, not "fails to load"; binding 9 also failed S146-B7 (not predicted); the full mutation command was replaced by the scoped one (see the amendment).
+
 
 ## References
 
-- GitHub issues #146, #122 (`TheMastermindPT/slopstop`).
+- GitHub issues #146, #122, #150 (`TheMastermindPT/slopstop`).
 - `apps/harness/src/storage/project-storage-file-adapter.ts`, `project-storage-node-errors.ts`, `project-storage-store.ts`, `project-storage-upgrade-pipeline.ts`.
 - `apps/harness/tests/integration/rename-when-released.ts` and its test.
 - `stryker.project-storage.config.json`, `apps/harness/vitest.project-storage-mutation.config.ts`, `apps/harness/scripts/check-stryker-ranges.test.mjs`.
