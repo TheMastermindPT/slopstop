@@ -2790,3 +2790,10 @@ The user answered the seven #121 boards in the ui-ux agent's session (hub `ragna
 
 - After Pedro closed TFTAcademy and a clean read (CPU 10-25%, no game, no foreign suite), the coordinator pushed main: `eb92f0f..d095974`. The pre-push `check:deep` passed on the first run (unit 4021; coverage 6279 passed and 6 skipped; integration 2258 passed and 6 skipped; e2e 27; package smoke validated). Log: `.rpiv/evidence/2026-11-18_push-main-146/push-main.log`.
 - Pedro chose to close #146; closed with a comment naming `7245fab`, #150 and #151.
+
+## 2026-11-18 — issue #152; what blocks C2; #93 decided: rename inside C2
+
+- Issue #152 opened (Pedro's choice): `check-stryker-ranges.mjs` reports "verified" and exits 0 when it finds no Stryker config.
+- Pedro asked whether any open issue blocks C2. The coordinator's answer: none technically. #93 blocked it only by Pedro's rule of 2026-10-11 (§55, "before any new feature"); #136 (launch of a Run-absent governed CLI session) is decided with the C2 work and comes first in it, since subscription mode is the only live model path (no API credits); #149 may break pushes. Phase 3 (the interface) is before C2 by roadmap order, not by dependency.
+- Facts shown to Pedro for #93: `mastra.db` holds only `slopstop_runtime_schema_metadata` and `slopstop_runtime_storage_identity`, yet every generation creates, hashes, backs up and upgrades it; `mastraMigrationHead` is always `null`; ADR 0006 keeps a second database for adapter-private runtime tables (Runs); a rename or removal needs a storage upgrade.
+- **Decision (Pedro, AskUserQuestion):** keep a second, runtime database with a neutral name (for example `runtime.db`) and drop `mastraMigrationHead` from the manifest, both inside the first storage upgrade C2 needs. This replaces the §55 timing ("before any new feature"). The C2 design corrects ADR 0006's "Mastra Withdrawn" amendment, which says "before C2". Roadmap Phase 2 item 7 updated.
