@@ -142,3 +142,32 @@ User decisions for v1, the personal version with possibly one trusted tester (FR
 ## Amendment 2026-10-11: Mastra Withdrawn
 
 Mastra is not used (decision on #101; decisions log §55). In API mode the agent runtime is the official Anthropic client (`@anthropic-ai/sdk`) behind the ADR 0009 AgentRuntime port; subscription mode is a governed Claude CLI session. Read the Mastra mentions above (harness ownership, the `mastra.db` file, semantic data and observability) as the adapter-private runtime database and the provider client; no framework owns runtime state. The runtime database keeps its file name `mastra.db` and the manifest keeps `mastraMigrationHead` until a later code slice, planned after #105 (TypeScript 7) and #123 (Effect migration) and before C2, decides whether a runtime database is still needed and renames or removes it with a storage upgrade (#93).
+
+## Amendment 2026-11-18: The Startup Splash Window And Its CSP
+
+This note records a decision the user made on 2026-10-09 (decisions log §22, "Rive and the CSP": "ok faremos com uma janela so para abertura") and confirmed on 2026-10-10 (decisions log §44, "nothing changes"). It narrows one line of **Electron Security** above ("Use CSP, ASAR, ASAR integrity validation, and restrictive Electron fuses"). Nothing is built yet; the slice that builds the splash window follows this note.
+
+**Context.** The startup brand moment is a Rive animation. The Rive runtime compiles WebAssembly, and the renderer's Content Security Policy (`script-src 'self'`) refuses that. Allowing it means adding `'wasm-unsafe-eval'` to `script-src`, which loosens a renderer security default.
+
+**Decision (user).**
+
+- The Rive startup animation runs in its own splash window.
+- The splash window is the only window whose policy allows `'wasm-unsafe-eval'`.
+- The main window keeps the strict policy unchanged.
+- The splash window never shows model content or repository content.
+- Map motion and every other motion in the main window use CSS only, so no later screen needs the looser policy.
+
+**What follows from the decision and from the rules above.** These are consequences, written so the building slice does not have to rediscover them; a consequence that turns out wrong is corrected there, with the user.
+
+- **One policy owner.** The splash policy comes from the same owner as the main policy (`apps/desktop/src/shared/content-security-policy.ts`), as a second window kind. It differs from the main policy by `'wasm-unsafe-eval'` in `script-src` and by nothing else that widens it. It never allows `'unsafe-eval'`.
+- **Per-window delivery.** Today the response header is set once for the whole default session, always with the main policy (`apps/desktop/src/main/security.ts`). The building slice must deliver each window its own policy, and must prove that the main window's policy is the same text before and after.
+- **Every other rule still holds for the splash window:** context isolation and sandbox on, Node integration off, permissions denied, navigation and new windows denied.
+- **Local files only.** The runtime, its WebAssembly file and the animation file are bundled with the application and loaded from it. The splash window makes no network request.
+- **No Project data.** Because it never shows model or repository content, the splash window gets none of the main window's preload API and is not a trusted sender for the harness, workspace, registration or Conversation channels.
+- **Short life.** It closes when the main window is ready to show. Under reduced motion it shows the final frame instead of playing.
+
+**Rejected.** `'wasm-unsafe-eval'` in the main window's policy: the main window shows model and repository content, and the looser policy would apply to all of it for the sake of one animation.
+
+**Not decided here.** The Rive paid plan (the free export plays a watermark) is a release gate (#103). The header-only CSP gap (#130) was closed in Conversation C1 S4a and is not reopened by this note.
+
+**Where it is also written.** `AGENTS.md`, Safety And Privacy, names "strict CSP" as a renderer security default; this note is the one stated exception, and it applies to the splash window only.
