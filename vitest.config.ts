@@ -4,6 +4,7 @@ export const unitTestProjects = [
   "packages/*/vitest.config.ts",
   "apps/harness/vitest.config.ts",
   "apps/desktop/vitest.config.ts",
+  "apps/desktop/vitest.renderer-jsdom.config.ts",
   "apps/desktop/vitest.main.config.ts",
 ];
 

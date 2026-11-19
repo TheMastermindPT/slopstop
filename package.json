@@ -58,6 +58,7 @@
     "@typescript/native": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "dependency-cruiser": "catalog:",
+    "happy-dom": "catalog:",
     "husky": "catalog:",
     "jscpd": "catalog:",
     "jsdom": "catalog:",
