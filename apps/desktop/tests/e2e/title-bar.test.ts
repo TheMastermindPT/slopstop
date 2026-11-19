@@ -719,3 +719,67 @@ for (const row of proportionRows) {
     });
   });
 }
+
+/** The banner, the brand's mark and heading, and the rune's computed stroke, in CSS px. */
+function brandSpacing(page: Page) {
+  return page.evaluate((selector) => {
+    const banner = document.querySelector(selector);
+    if (banner === null) return null;
+    const mark = banner.querySelector("svg");
+    if (mark === null) return null;
+    const stroke = mark.querySelector("path");
+    if (stroke === null) return null;
+    const heading = banner.querySelector("h1");
+    if (heading === null) return null;
+    const strokeStyle = getComputedStyle(stroke);
+    return {
+      bannerHeight: banner.getBoundingClientRect().height,
+      markLeft: mark.getBoundingClientRect().left,
+      markRight: mark.getBoundingClientRect().right,
+      headingLeft: heading.getBoundingClientRect().left,
+      strokeWidth: Number.parseFloat(strokeStyle.strokeWidth),
+      vectorEffect: strokeStyle.vectorEffect,
+    };
+  }, bannerSelector);
+}
+
+type BrandSpacing = NonNullable<Awaited<ReturnType<typeof brandSpacing>>>;
+
+/** The brand's inset, gap and stroke against the banner's height `B`, as 16/44, 8/44 and 1.25/44. */
+function spacingProportion(spacing: BrandSpacing, area: Area) {
+  const height = spacing.bannerHeight;
+  return {
+    inset: within((spacing.markLeft - area.x) / height, 16 / 44, 0.02),
+    gap: within((spacing.headingLeft - spacing.markRight) / height, 8 / 44, 0.02),
+    stroke: within(spacing.strokeWidth / height, 1.25 / 44, 0.003),
+    nonScalingStroke: spacing.vectorEffect === "non-scaling-stroke",
+  };
+}
+
+for (const row of proportionRows) {
+  test(`keeps the brand's spacing and stroke in proportion to the bar: ${row.name}`, async () => {
+    test.setTimeout(150_000);
+    await withTitleBarWindow(async (application, page) => {
+      await sizeContent(application, page, 1280, 800);
+      if (row.factor !== 1) await setZoom(application, page, { ...row, width: 1280, height: 800 });
+      const spacing = await brandSpacing(page);
+      expect(spacing).not.toBeNull();
+      const area = await overlayArea(page);
+      expect(spacing && spacingProportion(spacing, area)).toEqual({
+        inset: true,
+        gap: true,
+        stroke: true,
+        nonScalingStroke: true,
+      });
+      // The reference: at 100% the inset is 16px, the gap 8px and the stroke 1.25px, as approved.
+      if (row.factor === 1)
+        expect(
+          spacing && {
+            inset: within(spacing.markLeft - area.x, 16, 0.5),
+            gap: within(spacing.headingLeft - spacing.markRight, 8, 0.5),
+            stroke: within(spacing.strokeWidth, 1.25, 0.05),
+          },
+        ).toEqual({ inset: true, gap: true, stroke: true });
+    });
+  });
+}

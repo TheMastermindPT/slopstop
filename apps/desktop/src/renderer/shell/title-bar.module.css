@@ -19,9 +19,10 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  /* The inset and the gap follow the bar's height, so the brand keeps its proportion (Q16). */
+  gap: calc(env(titlebar-area-height, 44px) * 8 / 44);
   min-width: 0;
-  padding-inline: var(--space-4);
+  padding-inline: calc(env(titlebar-area-height, 44px) * 16 / 44);
 }
 
 .mark {
@@ -29,6 +30,8 @@
   /* Sized from the bar's height, so it keeps its proportion at every page zoom (Q15). */
   width: calc(env(titlebar-area-height, 44px) * 11 / 44);
   height: calc(env(titlebar-area-height, 44px) * 21 / 44);
+  /* Wins over the SVG's stroke-width attribute; the path inherits it (non-scaling stroke). */
+  stroke-width: calc(env(titlebar-area-height, 44px) * 1.25 / 44);
   color: var(--frost);
 }
 
