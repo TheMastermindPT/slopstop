@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import { axeViolations, forcedTextColours, setZoom, sizeContent } from "./accessibility.js";
@@ -394,6 +395,327 @@ for (const row of shortWindowRows) {
       const header = await oldHeader(page);
       expect(header).not.toBeNull();
       expect(header && row.measure(header)).toEqual(row.expected);
+    });
+  });
+}
+
+/** The static drag strip and the banners, measured in the page. */
+function dragStrip(page: Page) {
+  return page.evaluate((selector) => {
+    const strip = document.getElementById("drag-strip");
+    const box = strip?.getBoundingClientRect();
+    return {
+      banners: document.querySelectorAll(selector).length,
+      strip:
+        strip && box
+          ? {
+              x: box.x,
+              y: box.y,
+              width: box.width,
+              height: box.height,
+              appRegion: getComputedStyle(strip).getPropertyValue("app-region"),
+              ariaHidden: strip.getAttribute("aria-hidden"),
+              text: strip.textContent,
+            }
+          : null,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      documentSize: {
+        width: document.documentElement.scrollWidth,
+        height: document.documentElement.scrollHeight,
+      },
+    };
+  }, bannerSelector);
+}
+
+/** The strip against the viewport; `height` is the title-bar area's height in CSS px. */
+async function stripAgainstViewport(page: Page, height: number) {
+  const measured = await dragStrip(page);
+  const { strip } = measured;
+  return {
+    banners: measured.banners,
+    strip: strip && {
+      atOrigin: strip.x === 0 && strip.y === 0,
+      asWideAsWindow: within(strip.width, measured.viewport.width, 0.5),
+      asHighAsArea: within(strip.height, height, 1),
+      appRegion: strip.appRegion,
+      ariaHidden: strip.ariaHidden,
+      text: strip.text,
+    },
+    documentFits:
+      measured.documentSize.width <= measured.viewport.width &&
+      measured.documentSize.height <= measured.viewport.height,
+  };
+}
+
+const strippedPage = {
+  banners: 0,
+  strip: {
+    atOrigin: true,
+    asWideAsWindow: true,
+    asHighAsArea: true,
+    appRegion: "drag",
+    ariaHidden: "true",
+    text: "",
+  },
+  documentFits: true,
+};
+
+test("keeps a drag strip when the React root is empty", async () => {
+  test.setTimeout(150_000);
+  const builtPage = await readFile(path.resolve(".vite/renderer/main_window/index.html"), "utf8");
+  const body = builtPage.slice(builtPage.indexOf("<body"));
+  const stripAt = body.indexOf('<div id="drag-strip"');
+  const rootAt = body.indexOf('<div id="root"');
+  expect({
+    stripBeforeRoot: stripAt !== -1 && rootAt !== -1 && stripAt < rootAt,
+    stripClosedBeforeRoot: stripAt !== -1 && body.slice(stripAt, rootAt).includes("</div>"),
+  }).toEqual({ stripBeforeRoot: true, stripClosedBeforeRoot: true });
+  await withTitleBarWindow(async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    await page.evaluate(() => document.getElementById("root")?.replaceChildren());
+    expect(await stripAgainstViewport(page, 44)).toEqual(strippedPage);
+    await setZoom(application, page, { factor: 2, width: 1280, height: 800 });
+    expect(await stripAgainstViewport(page, 22)).toEqual(strippedPage);
+  });
+});
+
+/**
+ * The ids of the harness processes, read from the main process: the utility processes whose
+ * name is the `serviceName` the supervisor forks the harness with ("SlopStop Harness").
+ */
+const harnessPids = (application: ElectronApplication) =>
+  application.evaluate(({ app }) =>
+    app
+      .getAppMetrics()
+      .filter((metric) => metric.type === "Utility" && metric.name === "SlopStop Harness")
+      .map((metric) => metric.pid),
+  );
+
+/**
+ * Ends the harness process from the main process, each time a new one runs, until the
+ * supervisor gives up its automatic recovery and the old header offers "Retry harness".
+ */
+async function crashHarness(application: ElectronApplication, page: Page) {
+  const retry = page.getByRole("button", { name: "Retry harness" });
+  let ended: number | null = null;
+  const newHarnessRuns = async () => {
+    const pids = await harnessPids(application);
+    return pids.length > 0 && !pids.includes(ended ?? -1);
+  };
+  for (let attempt = 0; attempt < 6 && !(await retry.isVisible()); attempt += 1) {
+    await expect
+      .poll(async () => (await retry.isVisible()) || (await newHarnessRuns()), {
+        timeout: 30_000,
+      })
+      .toBe(true);
+    if (await retry.isVisible()) break;
+    const pids = await harnessPids(application);
+    // Exactly one process is the harness; it is the one this step ends.
+    expect(pids).toHaveLength(1);
+    const pid = pids[0] ?? -1;
+    await application.evaluate((_electron, target) => process.kill(target), pid);
+    ended = pid;
+  }
+  await expect(retry).toBeVisible({ timeout: 30_000 });
+}
+
+/** The old header with Retry in it, measured in the page. */
+function crashedHeader(page: Page) {
+  return page.evaluate(() => {
+    const header = document.querySelector('[role="status"]')?.closest("header");
+    if (header == null) return null;
+    const sides = (element: Element | null) => {
+      if (element === null) return null;
+      const { left, top, right, bottom } = element.getBoundingClientRect();
+      return { left, top, right, bottom };
+    };
+    return {
+      header: sides(header),
+      status: sides(header.querySelector('[role="status"]')),
+      retry: sides(header.querySelector("button")),
+      contentFits: header.scrollHeight <= header.clientHeight,
+      documentFits: document.documentElement.scrollHeight <= window.innerHeight,
+    };
+  });
+}
+
+/** The alert in the old header, its box and the styles that could clip or hide it. */
+function headerAlert(page: Page) {
+  return page.evaluate(() => {
+    const alert = document
+      .querySelector('[role="status"]')
+      ?.closest("header")
+      ?.querySelector('[role="alert"]');
+    if (alert == null) return null;
+    const { left, top, right, bottom } = alert.getBoundingClientRect();
+    const style = getComputedStyle(alert);
+    return {
+      box: { left, top, right, bottom },
+      text: alert.textContent,
+      overflow: style.overflow,
+      textOverflow: style.textOverflow,
+      display: style.display,
+    };
+  });
+}
+
+type CrashedHeader = NonNullable<Awaited<ReturnType<typeof crashedHeader>>>;
+
+/** The state of PF-B38: a crashed harness, at zoom 200% of 1280 by 800. */
+async function arrangeCrashedShortHeader(application: ElectronApplication, page: Page) {
+  await crashHarness(application, page);
+  await sizeContent(application, page, 1280, 800);
+  await setZoom(application, page, { factor: 2, width: 1280, height: 800 });
+}
+
+/** Whether `inner` lies wholly inside the old header's box. */
+const insideHeader = (header: CrashedHeader, inner: Sides | null) =>
+  header.header !== null && inner !== null && encloses(header.header, inner);
+
+test("keeps Retry inside the short header", async () => {
+  test.setTimeout(150_000);
+  await withTitleBarWindow(async (application, page) => {
+    await arrangeCrashedShortHeader(application, page);
+    const header = await crashedHeader(page);
+    expect(header).not.toBeNull();
+    expect(
+      header && {
+        height: header.header !== null && within(header.header.bottom - header.header.top, 28, 1),
+        retryInside: insideHeader(header, header.retry),
+        statusInside: insideHeader(header, header.status),
+        contentFits: header.contentFits,
+      },
+    ).toEqual({ height: true, retryInside: true, statusInside: true, contentFits: true });
+  });
+});
+
+/** A failed retry's message, 160 characters long. */
+const retryFailure =
+  "The harness could not be started again: the process ended before it answered the first request, so Ragnarok stopped trying. Check the local log, then try later.";
+
+test("keeps a wrapped retry alert inside the short header", async () => {
+  test.setTimeout(150_000);
+  expect(retryFailure).toHaveLength(160);
+  await withTitleBarWindow(async (application, page) => {
+    await arrangeCrashedShortHeader(application, page);
+    // The markup `app.tsx` renders for a failed retry (PF-B40), placed by the test.
+    await page.evaluate((message) => {
+      const alert = document.createElement("p");
+      alert.setAttribute("role", "alert");
+      alert.textContent = message;
+      document.querySelector('[role="status"]')?.closest("header")?.append(alert);
+    }, retryFailure);
+    const header = await crashedHeader(page);
+    const alert = await headerAlert(page);
+    expect(alert).not.toBeNull();
+    expect(
+      header &&
+        alert && {
+          alertInside: insideHeader(header, alert.box),
+          contentFits: header.contentFits,
+          text: alert.text,
+          overflow: alert.overflow,
+          ellipsis: alert.textOverflow === "ellipsis",
+          shown: alert.display !== "none",
+          documentFits: header.documentFits,
+        },
+    ).toEqual({
+      alertInside: true,
+      contentFits: true,
+      text: retryFailure,
+      overflow: "visible",
+      ellipsis: false,
+      shown: true,
+      documentFits: true,
+    });
+  });
+});
+
+/** The banner, the mark and the heading, measured in the page in CSS px. */
+function brandSizes(page: Page) {
+  return page.evaluate((selector) => {
+    const banner = document.querySelector(selector);
+    if (banner === null) return null;
+    const mark = banner.querySelector("svg");
+    if (mark === null) return null;
+    const heading = banner.querySelector("h1");
+    if (heading === null) return null;
+    const sides = (element: Element) => {
+      const { left, top, right, bottom } = element.getBoundingClientRect();
+      return { left, top, right, bottom };
+    };
+    return {
+      banner: sides(banner),
+      mark: sides(mark),
+      heading: sides(heading),
+      fontSize: Number.parseFloat(getComputedStyle(heading).fontSize),
+    };
+  }, bannerSelector);
+}
+
+type BrandSizes = NonNullable<Awaited<ReturnType<typeof brandSizes>>>;
+
+/** Whether `inner` clears the banner's top and bottom by 18% of its height, and by 3.9px. */
+const clearsBanner = (sizes: BrandSizes, inner: Sides) => {
+  const height = sizes.banner.bottom - sizes.banner.top;
+  const clearance = Math.max(0.18 * height, 3.9);
+  return (
+    inner.top - sizes.banner.top >= clearance && sizes.banner.bottom - inner.bottom >= clearance
+  );
+};
+
+/** The mark and the heading against the banner and the title-bar area, at zoom `factor`. */
+function brandProportion(sizes: BrandSizes, area: Area, factor: number) {
+  const height = sizes.banner.bottom - sizes.banner.top;
+  const ratio = (value: number, expected: number) => within(value / height, expected, 0.02);
+  return {
+    barOnScreen: within(height * factor, 44, 1),
+    markHeight: ratio(sizes.mark.bottom - sizes.mark.top, 21 / 44),
+    markWidth: ratio(sizes.mark.right - sizes.mark.left, 11 / 44),
+    fontSize: ratio(sizes.fontSize, 16 / 44),
+    markClear: clearsBanner(sizes, sizes.mark),
+    headingClear: clearsBanner(sizes, sizes.heading),
+    insideArea: liesInside(sizes.mark, area) && liesInside(sizes.heading, area),
+  };
+}
+
+const inProportion = {
+  barOnScreen: true,
+  markHeight: true,
+  markWidth: true,
+  fontSize: true,
+  markClear: true,
+  headingClear: true,
+  insideArea: true,
+};
+
+const proportionRows = [
+  { name: "zoom 50%", factor: 0.5 },
+  { name: "zoom 67%", factor: 0.67 },
+  { name: "100%", factor: 1 },
+  { name: "zoom 150%", factor: 1.5 },
+  { name: "zoom 200%", factor: 2 },
+] as const;
+
+for (const row of proportionRows) {
+  test(`keeps the mark and the wordmark in proportion to the bar: ${row.name}`, async () => {
+    test.setTimeout(150_000);
+    await withTitleBarWindow(async (application, page) => {
+      await sizeContent(application, page, 1280, 800);
+      if (row.factor !== 1) await setZoom(application, page, { ...row, width: 1280, height: 800 });
+      const sizes = await brandSizes(page);
+      expect(sizes).not.toBeNull();
+      const area = await overlayArea(page);
+      expect(sizes && brandProportion(sizes, area, row.factor)).toEqual(inProportion);
+      // The reference: at 100% the mark is 11 by 21 and the wordmark 16px, as approved.
+      if (row.factor === 1)
+        expect(
+          sizes && {
+            markWidth: within(sizes.mark.right - sizes.mark.left, 11, 0.5),
+            markHeight: within(sizes.mark.bottom - sizes.mark.top, 21, 0.5),
+            fontSize: within(sizes.fontSize, 16, 0.5),
+          },
+        ).toEqual({ markWidth: true, markHeight: true, fontSize: true });
     });
   });
 }

@@ -4,8 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ragnarok</title>
+    <style>
+      /* The window drags by its title-bar area even if React never renders. */
+      #drag-strip {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: env(titlebar-area-height, 44px);
+        app-region: drag;
+        z-index: -1;
+      }
+    </style>
   </head>
   <body>
+    <div id="drag-strip" aria-hidden="true"></div>
     <div id="root"></div>
     <script type="module" src="/src/renderer/main.tsx"></script>
   </body>

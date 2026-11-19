@@ -127,7 +127,7 @@
   },
   {
     "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/main.ts:108-118",
+    "entry": "apps/desktop/src/main/main.ts:109-119",
     "first": "let shutdownServices: DesktopServices | undefined;",
     "last": "    servicesAtShutdown()?.logger.error({ err: error }, \"SlopStop shutdown failed.\"),"
   },
@@ -139,7 +139,7 @@
   },
   {
     "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/main.ts:408-408",
+    "entry": "apps/desktop/src/main/main.ts:465-465",
     "first": "  if (!desktopShutdown.accepting()) return;",
     "last": "  if (!desktopShutdown.accepting()) return;"
   },

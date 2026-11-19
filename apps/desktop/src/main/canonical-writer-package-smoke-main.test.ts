@@ -4,6 +4,32 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
 import { bootstrap } from "./canonical-writer-package-smoke-test-peers.js";
 
+/**
+ * A mocked window's `webContents`. Its keys model the packaged zoom-only menu, for the bootstrap
+ * smoke's keys proof on win32: a zoom key acts at once; reload and DevTools keys do nothing.
+ */
+const mockContents = vi.hoisted(() => (id: number) => {
+  const zoom = { level: 0 };
+  const zoomKeys: Readonly<Record<string, (level: number) => number>> = {
+    Plus: (level) => level + 0.5,
+    "-": (level) => level - 0.5,
+    "0": () => 0,
+  };
+  return {
+    id,
+    mainFrame: { processId: 100, routingId: id },
+    executeJavaScript: vi.fn().mockResolvedValue({}),
+    focus: vi.fn(),
+    on: vi.fn(),
+    removeListener: vi.fn(),
+    getZoomLevel: vi.fn(() => zoom.level),
+    isDevToolsOpened: vi.fn(() => false),
+    sendInputEvent: vi.fn((input: Readonly<{ type: string; keyCode: string }>) => {
+      const key = input.type === "keyDown" ? zoomKeys[input.keyCode] : undefined;
+      if (key !== undefined) zoom.level = key(zoom.level);
+    }),
+  };
+});
 const ports = vi.hoisted(() => ({
   app: {
     isPackaged: true,
@@ -31,11 +57,8 @@ const ports = vi.hoisted(() => ({
       isDestroyed = vi.fn(() => false);
       // While `loadHold` is set, every load stays pending (P4-B30).
       loadFile = vi.fn(() => ports.loadHold ?? Promise.resolve());
-      webContents = ((id) => ({
-        id,
-        mainFrame: { processId: 100, routingId: id },
-        executeJavaScript: vi.fn().mockResolvedValue({}),
-      }))(++ports.webContentsCount);
+      focus = vi.fn();
+      webContents = mockContents(++ports.webContentsCount);
     },
   ),
   webContentsCount: 0,
@@ -84,7 +107,9 @@ const chromePorts = vi.hoisted(() => ({
   setMenu: vi.fn(),
   themeOn: vi.fn(),
   themeRemove: vi.fn(),
-  getColor: vi.fn(() => "#000000FF"),
+  getColor: vi.fn((_name: string) => "#000000FF"),
+  /** The native theme main reads; a row may switch high contrast on. */
+  theme: { shouldUseHighContrastColors: false },
 }));
 vi.mock("electron", () => ({
   app: ports.app,
@@ -96,7 +121,9 @@ vi.mock("electron", () => ({
   dialog: { showOpenDialog: ports.showOpenDialog },
   Menu: { buildFromTemplate: chromePorts.buildMenu, setApplicationMenu: chromePorts.setMenu },
   nativeTheme: {
-    shouldUseHighContrastColors: false,
+    get shouldUseHighContrastColors() {
+      return chromePorts.theme.shouldUseHighContrastColors;
+    },
     on: chromePorts.themeOn,
     removeListener: chromePorts.themeRemove,
   },
@@ -1113,6 +1140,69 @@ describe("the window chrome in main", () => {
     await flush();
     expect(ports.app.quit).toHaveBeenCalledOnce();
     expect(chromePorts.themeRemove.mock.calls).toEqual([["updated", updated[0]?.[1]]]);
+  });
+
+  describe("under high contrast", () => {
+    beforeEach(() => {
+      chromePorts.theme.shouldUseHighContrastColors = true;
+    });
+    afterEach(() => {
+      chromePorts.theme.shouldUseHighContrastColors = false;
+      chromePorts.getColor.mockImplementation(() => "#000000FF");
+    });
+
+    /** Answers `colours` for each system colour name main asks for. */
+    const answerColours = (colours: Readonly<Record<string, string>>) =>
+      chromePorts.getColor.mockImplementation((name: string) => colours[name] ?? "");
+    /** Every argument any logger call received, as text. */
+    const loggedText = () =>
+      JSON.stringify(
+        [ports.logInfo, ports.logError, ports.logWarn].flatMap((log) => log.mock.calls),
+      );
+    /** The repaint on a theme change: new colours, then the captured `updated` listener. */
+    const repaintWith = (colours: Readonly<Record<string, string>>) => {
+      answerColours(colours);
+      chromePorts.themeOn.mock.calls.find(([name]) => name === "updated")?.[1]?.();
+      return ports.window.mock.instances[0]?.setTitleBarOverlay.mock.calls;
+    };
+
+    it.each([
+      {
+        name: "readable",
+        colours: { window: "#FFFFFFFF", "window-text": "#1A2B3CFF" },
+        overlay: { color: "#ffffff", symbolColor: "#1a2b3c", height: 44 },
+        warnings: [],
+        repaint: [[{ color: "#ffffff", symbolColor: "#00ff00", height: 44 }]],
+      },
+      {
+        name: "unreadable",
+        colours: { window: "#FFFFFFFF", "window-text": "rgb(1, 2, 3)" },
+        overlay: { color: "#000000", symbolColor: "#ffffff", height: 44 },
+        warnings: [{ code: "DESKTOP_SYSTEM_COLOUR_UNREADABLE", colour: "window-text" }],
+        repaint: undefined,
+      },
+    ])("follows high contrast at the entry: $name", async (row) => {
+      answerColours(row.colours);
+      await onPlatform("win32", ordinaryLaunch);
+      expect(ports.window).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ titleBarOverlay: row.overlay }),
+      );
+      expect(new Set(chromePorts.getColor.mock.calls.map(([name]) => name))).toEqual(
+        new Set(["window", "window-text"]),
+      );
+      expect(
+        ports.logWarn.mock.calls
+          .map(([fields]) => fields)
+          .filter((fields) => fields?.code === "DESKTOP_SYSTEM_COLOUR_UNREADABLE"),
+      ).toStrictEqual(row.warnings);
+      // The unreadable row: the warning is the logger's only warning.
+      if (row.warnings.length > 0) expect(ports.logWarn).toHaveBeenCalledOnce();
+      expect(loggedText()).not.toContain("rgb(1, 2, 3)");
+      if (row.repaint !== undefined)
+        expect(repaintWith({ window: "#FFFFFFFF", "window-text": "#00FF00FF" })).toEqual(
+          row.repaint,
+        );
+    });
   });
 });
 

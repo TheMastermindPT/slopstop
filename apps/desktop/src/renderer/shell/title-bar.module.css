@@ -26,6 +26,9 @@
 
 .mark {
   flex: none;
+  /* Sized from the bar's height, so it keeps its proportion at every page zoom (Q15). */
+  width: calc(env(titlebar-area-height, 44px) * 11 / 44);
+  height: calc(env(titlebar-area-height, 44px) * 21 / 44);
   color: var(--frost);
 }
 
@@ -33,7 +36,7 @@
   margin: 0;
   overflow: hidden;
   font-family: var(--font-mark);
-  font-size: 16px;
+  font-size: calc(env(titlebar-area-height, 44px) * 16 / 44);
   font-weight: 400;
   line-height: 1;
   letter-spacing: 0.16em;

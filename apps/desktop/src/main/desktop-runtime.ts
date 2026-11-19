@@ -177,9 +177,9 @@ function desktopLayer(ports: DesktopRuntimePorts, owners: Scope.Scope) {
       return { ...supervision, session: supervision.owner.getSession() };
     }),
   );
-  // The bridges depend on the supervision, so they release first. The release always runs
-  // `release()` once at dispose: it stops every bridge, where a second stop does nothing, then
-  // ends the core (S7-S4).
+  // The bridges depend on the supervision, so they release first, as does the chrome's theme
+  // subscription. The release always runs `release()` once at dispose: it stops every bridge,
+  // where a second stop does nothing, then ends the core (S7-S4).
   const bridgesLayer = Layer.effect(
     HarnessBridges,
     Effect.gen(function* () {
@@ -222,9 +222,10 @@ function desktopLayer(ports: DesktopRuntimePorts, owners: Scope.Scope) {
  * One lazily built runtime over the desktop owners.
  *
  * The owners' releases live in their own scope, a child of the runtime's scope forked after the
- * Layer scope, so dispose closes it first, in reverse acquisition order: the bridges, then the
- * supervisor. A failed build does not close it: the read fails with the build's own error, without
- * waiting on an asynchronous release, and the owners built so far stop at dispose (S6-K2).
+ * Layer scope, so dispose closes it first, in reverse acquisition order: the bridges and the
+ * chrome's theme subscription, then the supervisor. A failed build does not close it: the read
+ * fails with the build's own error, without waiting on an asynchronous release, and the owners
+ * built so far stop at dispose (S6-K2).
  */
 export function makeDesktopRuntime(ports: DesktopRuntimePorts): DesktopRuntime {
   const runtime: DesktopRuntime = ManagedRuntime.make(

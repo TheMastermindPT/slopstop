@@ -467,7 +467,10 @@ async function launchScenario(root, token, scenario) {
   ].find(([failed]) => failed);
   if (failedCheck !== undefined) {
     const failure = startupFailed ? "startup failed" : failedCheck[1];
-    activeSmokeStage = `${scenario} scenario ${failure}`;
+    // With diagnostics on (CI), main names the proof stage that failed, e.g. `menu-reload`.
+    const proofStage = /^Package smoke proof failed at ([a-z-]+)\.$/mu.exec(launch.stderr)?.[1];
+    const at = proofStage === undefined ? "" : ` at ${proofStage}`;
+    activeSmokeStage = `${scenario} scenario ${failure}${at}`;
     throw new Error(`Packaged SlopStop ${scenario} scenario ${failedCheck[1]}.`);
   }
 }

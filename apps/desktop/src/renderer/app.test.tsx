@@ -4,6 +4,7 @@ import {
   decodeStrict,
   type HarnessStatus,
   ProjectListResultSchema,
+  type RetryHarnessResult,
 } from "@slopstop/protocol";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -310,8 +311,8 @@ describe("desktop shell", () => {
     expect(screen.queryByRole("button", { name: "Retry harness" })).toBeNull();
   });
 
-  it("offers an explicit retry after the harness exhausts automatic recovery", async () => {
-    const retryHarness = vi.fn(async () => ({ ok: true as const }));
+  /** A harness that exhausted automatic recovery, retried through `retryHarness`. */
+  function exposeCrashedHarness(retryHarness: () => Promise<RetryHarnessResult>) {
     exposeApi({
       ...unusedWorkspaceApi,
       getHarnessStatus: async () => ({
@@ -326,6 +327,11 @@ describe("desktop shell", () => {
       retryHarness,
       subscribeHarnessStatus: () => () => undefined,
     });
+  }
+
+  it("offers an explicit retry after the harness exhausts automatic recovery", async () => {
+    const retryHarness = vi.fn(async () => ({ ok: true as const }));
+    exposeCrashedHarness(retryHarness);
 
     render(<App />);
 
@@ -333,6 +339,23 @@ describe("desktop shell", () => {
     await userEvent.setup().click(retry);
 
     expect(retryHarness).toHaveBeenCalledOnce();
+  });
+
+  it("shows the whole retry failure as an alert", async () => {
+    const message =
+      "The harness could not be started again: the process ended before it answered the first request, so Ragnarok stopped trying. Check the local log, then try later.";
+    expect(message).toHaveLength(160);
+    exposeCrashedHarness(async () => ({
+      ok: false,
+      error: { code: "HARNESS_RETRY_UNAVAILABLE", message },
+    }));
+
+    render(<App />);
+
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Retry harness" }));
+
+    const alerts = await screen.findAllByRole("alert");
+    expect(alerts.map((alert) => [alert.tagName, alert.textContent])).toEqual([["P", message]]);
   });
 });
 

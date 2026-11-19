@@ -170,13 +170,18 @@
   /* A short window (zoom 200% of 1280 by 800): the header row halves (Q13; leaves with the Shell slice). */
   @media (max-height: 420px) {
     .shell {
-      grid-template-rows: 1.75rem minmax(0, 1fr);
+      /* 28px when the content fits; it grows when a retry alert wraps, so nothing is clipped. */
+      grid-template-rows: minmax(1.75rem, auto) minmax(0, 1fr);
     }
     .header {
       padding-block: 0;
     }
     .header button {
       padding-block: 0.2rem;
+    }
+    .header :global([role="alert"]) {
+      margin-block: 0;
+      min-width: 0;
     }
   }
   .add {

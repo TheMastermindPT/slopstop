@@ -27,6 +27,7 @@ import { HarnessSupervisor, harnessEntryPath } from "./harness-supervisor.js";
 import { handleIpc } from "./ipc-gate.js";
 import { createIpcSender, type IpcSender } from "./ipc-sender.js";
 import { createMainLogger } from "./logger.js";
+import { type MenuKeysProofStage, menuKeysProof } from "./menu-keys-package-smoke.js";
 import {
   applyPackageSmokeAuthorization,
   type PackageSmokeAuthorization,
@@ -234,6 +235,12 @@ const runPackageSmokeIfReady = (): void => {
         await desktopShutdown.requestExit(1);
         return;
       }
+      const menuKeysStage = await proveMenuKeys(context);
+      if (menuKeysStage !== undefined) {
+        reportPackageSmokeStage(menuKeysStage);
+        await desktopShutdown.requestExit(1);
+        return;
+      }
       packageSmokeState = "passed";
       await desktopShutdown.requestExit(0);
     } catch {
@@ -241,6 +248,56 @@ const runPackageSmokeIfReady = (): void => {
     }
   })();
 };
+
+/**
+ * On Windows the bootstrap smoke also proves the packaged menu's keys (zoom acts; reload and
+ * DevTools do not) in the smoke's window. Answers the failed stage, or nothing when it passed or
+ * does not apply (Q9: other platforms keep the default menu).
+ */
+function proveMenuKeys(
+  context: NonNullable<ReturnType<typeof readyPackageSmokeContext>>,
+): Promise<MenuKeysProofStage | undefined> {
+  if (process.platform !== "win32" || context.authorization.scenario !== "bootstrap")
+    return Promise.resolve(undefined);
+  const contents = context.window.webContents;
+  const proof = Effect.gen(function* () {
+    const loads = yield* Effect.acquireRelease(
+      Effect.sync(() => {
+        const counter = { started: 0 };
+        const listener = () => {
+          counter.started += 1;
+        };
+        contents.on("did-start-loading", listener);
+        return { counter, listener };
+      }),
+      ({ listener }) => Effect.sync(() => contents.removeListener("did-start-loading", listener)),
+    );
+    yield* menuKeysProof({
+      sendKey: (key) =>
+        Effect.sync(() => {
+          context.window.focus();
+          contents.focus();
+          const modifiers = [...key.modifiers];
+          contents.sendInputEvent({ type: "keyDown", keyCode: key.keyCode, modifiers });
+          contents.sendInputEvent({ type: "keyUp", keyCode: key.keyCode, modifiers });
+        }),
+      zoomLevel: () => Effect.sync(() => contents.getZoomLevel()),
+      loadsStarted: () => Effect.sync(() => loads.counter.started),
+      devToolsOpen: () => Effect.sync(() => contents.isDevToolsOpened()),
+    });
+  });
+  return Effect.runPromise(
+    Effect.scoped(proof).pipe(
+      Effect.match({ onSuccess: () => undefined, onFailure: (error) => error.stage }),
+    ),
+  );
+}
+
+/** With diagnostics on, names the stage a package smoke proof failed at. */
+function reportPackageSmokeStage(stage: string): void {
+  if (process.env["SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS"] !== "1") return;
+  process.stderr.write(`Package smoke proof failed at ${stage}.\n`);
+}
 
 function reportPackageSmokeFailure(results: readonly PromiseSettledResult<unknown>[]): void {
   if (process.env["SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS"] !== "1") return;
@@ -257,7 +314,7 @@ function reportPackageSmokeFailure(results: readonly PromiseSettledResult<unknow
       : storageStage === undefined
         ? "storage"
         : `storage-${storageStage}`;
-  process.stderr.write(`Package smoke proof failed at ${failureStage}.\n`);
+  reportPackageSmokeStage(failureStage);
 }
 
 function broadcastHarnessStatus(status: HarnessStatus): void {
