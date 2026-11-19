@@ -19,6 +19,8 @@ export function rendererProject(
     environment: "happy-dom" | "jsdom";
     include: string[];
     exclude?: string[];
+    /** False only for a project that passed twice in a row without isolation. */
+    isolate?: boolean;
   }>,
 ) {
   return defineProject({
@@ -33,6 +35,8 @@ export function rendererProject(
     test: {
       name: project.name,
       environment: project.environment,
+      pool: "threads",
+      isolate: project.isolate ?? true,
       include: project.include,
       exclude: [...configDefaults.exclude, ...(project.exclude ?? [])],
       setupFiles: ["src/renderer/test-setup.ts"],
@@ -45,4 +49,5 @@ export default rendererProject({
   environment: "happy-dom",
   include: ["src/renderer/**/*.test.{ts,tsx}"],
   exclude: jsdomRendererFiles,
+  isolate: false,
 });

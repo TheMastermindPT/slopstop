@@ -4,6 +4,8 @@ export default defineProject({
   test: {
     name: "desktop-main",
     environment: "node",
+    // The default forks pool: package-smoke-launcher.test.ts fails 77 rows in worker threads.
+    pool: "forks",
     include: [
       "src/main/**/*.test.ts",
       "src/preload/**/*.test.ts",
