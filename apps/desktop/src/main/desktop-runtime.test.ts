@@ -1,3 +1,4 @@
+import type { BrowserWindow } from "electron";
 import { pino } from "pino";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -6,6 +7,7 @@ import {
   readDesktopServices,
 } from "./desktop-runtime.js";
 import type { HarnessSessionClient } from "./harness-session.js";
+import type { WindowChromePorts } from "./window-chrome.js";
 
 type Owner = "project-entry" | "project-storage" | "workspace" | "supervisor";
 type Faults = Partial<Record<Owner, () => void | Promise<void>>>;
@@ -91,7 +93,26 @@ function fakes(faults: Faults = {}, throws: Throws = {}) {
       release,
     };
   });
+  /** The chrome's fake ports on Windows; its window constructor throws `windowReached`. */
+  const chrome = {
+    unsubscribe: vi.fn(),
+    onThemeUpdated: vi.fn((_listener: () => void) => chrome.unsubscribe),
+    createWindow: vi.fn((): BrowserWindow => {
+      throw windowReached;
+    }),
+  };
   const ports = {
+    windowChromePorts: vi.fn(
+      (): WindowChromePorts<BrowserWindow> => ({
+        platform: "win32",
+        packaged: false,
+        highContrast: () => false,
+        systemColour: () => "#000000FF",
+        onThemeUpdated: chrome.onThemeUpdated,
+        createWindow: chrome.createWindow,
+        reportUnreadableColour: () => undefined,
+      }),
+    ),
     createLogger: vi.fn(() => pino({ level: "silent" })),
     harnessEntryPath: vi.fn(() => "harness.cjs"),
     harnessBootstrap: vi.fn(() => ({
@@ -114,8 +135,11 @@ function fakes(faults: Faults = {}, throws: Throws = {}) {
     }),
     createHarnessBridges,
   } satisfies DesktopRuntimePorts;
-  return { ports, stops, ownerStops, release };
+  return { ports, stops, ownerStops, release, chrome };
 }
+
+/** What the fake window constructor throws, so a row sees that `open` reached it. */
+const windowReached = new Error("fake window constructor reached");
 
 const bridges: Owner[] = ["project-entry", "project-storage", "workspace"];
 
@@ -270,4 +294,19 @@ it("hands the supervisor the clock it was given", () => {
   const calls: unknown[][] = ports.createSupervisor.mock.calls;
   expect(calls).toHaveLength(1);
   expect(calls[0]?.[3]).toStrictEqual({ createId: ports.createId, now: ports.now });
+});
+
+it("builds the window chrome with the owners and releases it at dispose", async () => {
+  const { ports, chrome } = fakes();
+  const runtime = makeDesktopRuntime(ports);
+  const services = runtime.runSync(readDesktopServices);
+  expect(chrome.onThemeUpdated).toHaveBeenCalledTimes(1);
+  const request = { width: 1120, height: 720, backgroundColor: "#101411", preload: "P" };
+  expect(() => runtime.runSync(services.windowChrome.open(request))).toThrow(windowReached);
+  expect(chrome.createWindow).toHaveBeenCalledTimes(1);
+  runtime.runSync(readDesktopServices);
+  expect(ports.windowChromePorts).toHaveBeenCalledTimes(1);
+  expect(chrome.onThemeUpdated).toHaveBeenCalledTimes(1);
+  await runtime.dispose();
+  expect(chrome.unsubscribe).toHaveBeenCalledTimes(1);
 });

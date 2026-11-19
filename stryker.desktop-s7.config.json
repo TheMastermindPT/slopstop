@@ -9,7 +9,7 @@
     "apps/desktop/src/main/workspace-bridge.ts:91-200",
     "apps/desktop/src/main/project-upgrade-failure.ts:31-36",
     "apps/desktop/src/main/harness-session.ts:105-134",
-    "apps/desktop/src/main/desktop-runtime.ts:173-196"
+    "apps/desktop/src/main/desktop-runtime.ts:183-206"
   ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],

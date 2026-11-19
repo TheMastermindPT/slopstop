@@ -8,8 +8,9 @@ import {
   RetryHarnessResultSchema,
 } from "@slopstop/protocol";
 import { Effect } from "effect";
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, Menu, nativeTheme, systemPreferences } from "electron";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
+import { applicationMenuTemplate } from "./application-menu.js";
 import { runCanonicalWriterPackageSmoke } from "./canonical-writer-package-smoke.js";
 import { initializeCrashReporting } from "./crash-reporting.js";
 import {
@@ -50,6 +51,7 @@ import {
 } from "./project-storage-package-smoke.js";
 import { runRegistrationPackageSmoke } from "./registration-package-smoke.js";
 import { configureSessionSecurity, lockNavigation } from "./security.js";
+import type { WindowChromeService } from "./window-chrome.js";
 import { reopenWindowWhenNoneIsOpen } from "./window-reopen.js";
 import { broadcastWorkspaceNotification, registerWorkspaceIpc } from "./workspace-ipc.js";
 import { writeWriterProofReport } from "./writer-proof-report.js";
@@ -82,6 +84,23 @@ const runtime = makeDesktopRuntime({
   createSupervisor: (logger, entryPath, bootstrap, clock) =>
     new HarnessSupervisor(entryPath, logger, bootstrap, clock),
   createHarnessBridges,
+  windowChromePorts: (logger) => ({
+    platform: process.platform,
+    packaged: app.isPackaged,
+    highContrast: () => nativeTheme.shouldUseHighContrastColors,
+    systemColour: (name) => systemPreferences.getColor(name),
+    onThemeUpdated: (listener) => {
+      nativeTheme.on("updated", listener);
+      return () => nativeTheme.removeListener("updated", listener);
+    },
+    createWindow: (options) => new BrowserWindow(options),
+    // The colour's name only, never its value.
+    reportUnreadableColour: (name) =>
+      logger.warn(
+        { code: "DESKTOP_SYSTEM_COLOUR_UNREADABLE", colour: name },
+        "System colour unreadable.",
+      ),
+  }),
 });
 let packageSmokeState: "inactive" | "pending" | "passed" = "inactive";
 // The services as the shutdown program first found them: undefined if never built. Dispose
@@ -272,23 +291,16 @@ type WindowOptions = Readonly<{
 async function createApplicationWindow(
   options: WindowOptions,
   sender: IpcSenderRule,
+  chrome: WindowChromeService<BrowserWindow>,
 ): Promise<BrowserWindow> {
-  const window = new BrowserWindow({
-    width: options.width,
-    height: options.height,
-    minWidth: 640,
-    minHeight: 480,
-    show: false,
-    backgroundColor: options.backgroundColor,
-    webPreferences: {
-      contextIsolation: true,
-      devTools: !app.isPackaged,
-      nodeIntegration: false,
-      sandbox: true,
-      webSecurity: true,
+  const window = runtime.runSync(
+    chrome.open({
+      width: options.width,
+      height: options.height,
+      backgroundColor: options.backgroundColor,
       preload: options.preload,
-    },
-  });
+    }),
+  );
   // Tracked before the page loads: the renderer calls IPC while it is still loading.
   sender.track(window);
 
@@ -308,7 +320,10 @@ async function createApplicationWindow(
   return window;
 }
 
-function createActiveWindow(sender: IpcSenderRule): Promise<BrowserWindow> {
+function createActiveWindow(
+  sender: IpcSenderRule,
+  chrome: WindowChromeService<BrowserWindow>,
+): Promise<BrowserWindow> {
   const options: WindowOptions = {
     width: 1120,
     height: 720,
@@ -317,7 +332,7 @@ function createActiveWindow(sender: IpcSenderRule): Promise<BrowserWindow> {
     viteName: MAIN_WINDOW_VITE_NAME,
     preload: path.join(__dirname, "preload.js"),
   };
-  return createApplicationWindow(options, sender);
+  return createApplicationWindow(options, sender, chrome);
 }
 
 /** In package-smoke mode, checks its authorization and moves `userData` to its root. */
@@ -368,6 +383,15 @@ function focusExistingWindow(): void {
   window.focus();
 }
 
+/** Before the first window: packaged Windows keeps only the zoom shortcuts. */
+function setStartMenu(): void {
+  const template = applicationMenuTemplate({
+    packaged: app.isPackaged,
+    platform: process.platform,
+  });
+  if (template !== undefined) Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 async function bootstrap(): Promise<void> {
   // The package-smoke userData is set first: the single-instance lock belongs to it.
   const authorization = authorizePackageSmoke();
@@ -386,13 +410,15 @@ async function bootstrap(): Promise<void> {
   app.setAppLogsPath();
 
   configureSessionSecurity();
+  setStartMenu();
 
   // The one read of the services builds every owner, after the logs and userData paths are set.
-  const { logger, harness, projectEntry, workspace } = runtime.runSync(readDesktopServices);
+  const { logger, harness, projectEntry, workspace, windowChrome } =
+    runtime.runSync(readDesktopServices);
 
   const supervisor = harness.owner;
   const sender = createIpcSender({ logger });
-  const createWindow = () => createActiveWindow(sender);
+  const createWindow = () => createActiveWindow(sender, windowChrome);
   registerProjectEntryIpc(projectEntry.owner, desktopShutdown, sender);
   registerHarnessIpc(supervisor, sender);
   registerProjectRegistrationIpc(projectEntry.owner, desktopShutdown, sender);

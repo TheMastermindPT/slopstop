@@ -1,0 +1,42 @@
+/*
+ * The rune title bar. It sits in the title-bar area that Windows leaves beside the native buttons
+ * (`env(titlebar-area-*)`), so nothing is drawn under them; without an overlay the area is the
+ * whole width. Every colour and font comes from the theme tokens.
+ */
+.bar {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  height: env(titlebar-area-height, 44px);
+  padding-left: env(titlebar-area-x, 0px);
+  padding-right: calc(100% - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100%));
+  background: var(--canvas);
+  color: var(--ink);
+  app-region: drag;
+  user-select: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-inline: var(--space-4);
+}
+
+.mark {
+  flex: none;
+  color: var(--frost);
+}
+
+.wordmark {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-mark);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

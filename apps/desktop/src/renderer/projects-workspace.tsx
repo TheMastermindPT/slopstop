@@ -232,9 +232,6 @@ export function ProjectsWorkspace({
   return (
     <main className={styles["shell"]}>
       <nav className={styles["rail"]} aria-label="Workspace">
-        <span className={styles["mark"]} aria-hidden="true">
-          R
-        </span>
         <button
           type="button"
           aria-label="Projects"
@@ -244,10 +241,7 @@ export function ProjectsWorkspace({
           <FolderOpenIcon size={23} />
         </button>
       </nav>
-      <header className={styles["header"]}>
-        <h1>Ragnarok</h1>
-        {header}
-      </header>
+      <header className={styles["header"]}>{header}</header>
       <aside className={styles["sidebar"]} aria-label="Projects">
         <div className={styles["listHeader"]}>
           <h2 id="projects-heading" tabIndex={-1}>

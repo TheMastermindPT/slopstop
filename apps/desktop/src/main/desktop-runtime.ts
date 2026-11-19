@@ -1,5 +1,6 @@
 import type { HarnessBootstrap } from "@slopstop/protocol";
 import { Context, Effect, Layer, ManagedRuntime, Scope } from "effect";
+import type { BrowserWindow } from "electron";
 import type { Logger } from "pino";
 import type { HarnessBridgesInput, HarnessBridges as SharedBridges } from "./harness-bridges.js";
 import type { Clock } from "./harness-request-core.js";
@@ -7,6 +8,7 @@ import type { HarnessSessionClient } from "./harness-session.js";
 import type { HarnessSupervisor } from "./harness-supervisor.js";
 import type { ProjectEntryBridge as ProjectEntryBridgeClient } from "./project-entry-bridge.js";
 import type { ProjectStorageBridgeClient } from "./project-storage-bridge.js";
+import { makeWindowChrome, type WindowChromePorts, windowChromeService } from "./window-chrome.js";
 import type { WorkspaceBridgeClient } from "./workspace-bridge.js";
 
 /** The supervisor surface Electron main uses. */
@@ -23,6 +25,7 @@ type DesktopBridgeInput = HarnessBridgesInput;
  * module load; the owner ports are the constructors.
  */
 export type DesktopRuntimePorts = Readonly<{
+  windowChromePorts(logger: Logger): WindowChromePorts<BrowserWindow>;
   createLogger(): Logger;
   harnessEntryPath(): string;
   harnessBootstrap(): HarnessBootstrap;
@@ -57,6 +60,10 @@ class HarnessBridges extends Context.Service<
   }>
 >()("slopstop/desktop/HarnessBridges") {}
 
+/** The window chrome over Electron's windows. */
+const DesktopWindowChrome = windowChromeService<BrowserWindow>();
+type DesktopWindowChrome = InstanceType<typeof DesktopWindowChrome>;
+
 /** The services Electron main reads. */
 export type DesktopServices = Readonly<{
   logger: Logger;
@@ -64,10 +71,11 @@ export type DesktopServices = Readonly<{
   projectEntry: HarnessBridges["Service"]["projectEntry"];
   projectStorage: HarnessBridges["Service"]["projectStorage"];
   workspace: HarnessBridges["Service"]["workspace"];
+  windowChrome: DesktopWindowChrome["Service"];
 }>;
 
 export type DesktopRuntime = ManagedRuntime.ManagedRuntime<
-  DesktopLogger | HarnessSupervision | HarnessBridges,
+  DesktopLogger | HarnessSupervision | HarnessBridges | DesktopWindowChrome,
   never
 >;
 
@@ -77,6 +85,7 @@ export const readDesktopServices = Effect.gen(function* () {
     logger: yield* DesktopLogger,
     harness: yield* HarnessSupervision,
     ...(yield* HarnessBridges),
+    windowChrome: yield* DesktopWindowChrome,
   } satisfies DesktopServices;
 });
 
@@ -95,6 +104,7 @@ export function builtDesktopServices(runtime: DesktopRuntime): DesktopServices |
     logger: Context.get(context, DesktopLogger),
     harness: Context.get(context, HarnessSupervision),
     ...Context.get(context, HarnessBridges),
+    windowChrome: Context.get(context, DesktopWindowChrome),
   };
 }
 
@@ -194,7 +204,18 @@ function desktopLayer(ports: DesktopRuntimePorts, owners: Scope.Scope) {
       };
     }),
   );
-  return bridgesLayer.pipe(Layer.provideMerge(supervisionLayer), Layer.provideMerge(loggerLayer));
+  // The chrome's theme subscription is released with the owners.
+  const chromeLayer = Layer.effect(
+    DesktopWindowChrome,
+    Effect.gen(function* () {
+      const logger = yield* DesktopLogger;
+      return yield* Scope.provide(makeWindowChrome(ports.windowChromePorts(logger)), owners);
+    }),
+  );
+  return Layer.merge(bridgesLayer, chromeLayer).pipe(
+    Layer.provideMerge(supervisionLayer),
+    Layer.provideMerge(loggerLayer),
+  );
 }
 
 /**

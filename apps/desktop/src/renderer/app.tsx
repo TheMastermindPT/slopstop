@@ -1,6 +1,7 @@
 import type { HarnessStatus } from "@slopstop/protocol";
 import { useEffect, useState, useTransition } from "react";
 import { ProjectsWorkspace } from "./projects-workspace.js";
+import { TitleBar } from "./shell/title-bar.js";
 
 const initialStatus: HarnessStatus = {
   state: "starting",
@@ -106,24 +107,27 @@ export function App() {
   }
 
   return (
-    <ProjectsWorkspace
-      status={status}
-      header={
-        <>
-          <div role="status" aria-live="polite">
-            <strong>{copy.heading}</strong>
-            <span>{copy.detail}</span>
-          </div>
+    <>
+      <TitleBar />
+      <ProjectsWorkspace
+        status={status}
+        header={
+          <>
+            <div role="status" aria-live="polite">
+              <strong>{copy.heading}</strong>
+              <span>{copy.detail}</span>
+            </div>
 
-          {canRetry ? (
-            <button type="button" onClick={retryHarness} disabled={isRetrying}>
-              {isRetrying ? "Retrying harness" : "Retry harness"}
-            </button>
-          ) : null}
+            {canRetry ? (
+              <button type="button" onClick={retryHarness} disabled={isRetrying}>
+                {isRetrying ? "Retrying harness" : "Retry harness"}
+              </button>
+            ) : null}
 
-          {retryMessage ? <p role="alert">{retryMessage}</p> : null}
-        </>
-      }
-    />
+            {retryMessage ? <p role="alert">{retryMessage}</p> : null}
+          </>
+        }
+      />
+    </>
   );
 }

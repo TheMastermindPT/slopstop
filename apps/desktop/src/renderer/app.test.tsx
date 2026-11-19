@@ -9,7 +9,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./app.js";
-import { exposeApi, readyStatus, unusedWorkspaceApi } from "./test-api.js";
+import { exposeApi, readyApi, readyStatus, unusedWorkspaceApi } from "./test-api.js";
 
 const startingStatus: HarnessStatus = {
   state: "starting",
@@ -334,4 +334,34 @@ describe("desktop shell", () => {
 
     expect(retryHarness).toHaveBeenCalledOnce();
   });
+});
+
+/** The text an element holds directly, not in its descendants. */
+function ownText(element: Element): string {
+  return [...element.childNodes]
+    .filter((node) => node.nodeType === Node.TEXT_NODE)
+    .map((node) => node.textContent ?? "")
+    .join("")
+    .trim();
+}
+
+it("keeps one level-1 heading, in the title bar", async () => {
+  exposeApi(readyApi());
+  const { container } = render(<App />);
+  await screen.findByText("Harness ready");
+  const headings = screen.getAllByRole("heading", { level: 1 });
+  expect(headings.map((heading) => heading.textContent)).toEqual(["Ragnarok"]);
+  screen.getByRole("heading", { level: 1, name: "Ragnarok" });
+  // The banner landmark by the HTML-AAM rule: Testing Library gives every header the role.
+  const banners = container.querySelectorAll(
+    "header:not(:is(article, aside, main, nav, section) header)",
+  );
+  expect(banners).toHaveLength(1);
+  const banner = banners[0];
+  expect(banner?.contains(headings[0] ?? null)).toBe(true);
+  const outside = [...container.querySelectorAll("*")].filter(
+    (element) => !banner?.contains(element) && ownText(element) === "Ragnarok",
+  );
+  expect(outside.map((element) => element.tagName)).toEqual([]);
+  expect(screen.getByRole("navigation", { name: "Workspace" }).textContent).toBe("");
 });

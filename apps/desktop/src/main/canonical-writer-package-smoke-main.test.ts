@@ -27,6 +27,8 @@ const ports = vi.hoisted(() => ({
   window: vi.fn(
     class {
       once = vi.fn();
+      setTitleBarOverlay = vi.fn();
+      isDestroyed = vi.fn(() => false);
       // While `loadHold` is set, every load stays pending (P4-B30).
       loadFile = vi.fn(() => ports.loadHold ?? Promise.resolve());
       webContents = ((id) => ({
@@ -76,6 +78,14 @@ vi.mock("node:fs/promises", () => ({
   lstat: ports.lstat,
   realpath: ports.realpath,
 }));
+/** The application menu, the native theme and the system colours main reads (pf-s2). */
+const chromePorts = vi.hoisted(() => ({
+  buildMenu: vi.fn((template: unknown) => ({ template })),
+  setMenu: vi.fn(),
+  themeOn: vi.fn(),
+  themeRemove: vi.fn(),
+  getColor: vi.fn(() => "#000000FF"),
+}));
 vi.mock("electron", () => ({
   app: ports.app,
   ipcMain: { handle: ports.ipc },
@@ -84,6 +94,13 @@ vi.mock("electron", () => ({
     fromWebContents: ports.fromWebContents,
   }),
   dialog: { showOpenDialog: ports.showOpenDialog },
+  Menu: { buildFromTemplate: chromePorts.buildMenu, setApplicationMenu: chromePorts.setMenu },
+  nativeTheme: {
+    shouldUseHighContrastColors: false,
+    on: chromePorts.themeOn,
+    removeListener: chromePorts.themeRemove,
+  },
+  systemPreferences: { getColor: chromePorts.getColor },
 }));
 vi.mock("./canonical-writer-package-smoke.js", () => ({
   runCanonicalWriterPackageSmoke: ports.runner,
@@ -1034,6 +1051,70 @@ const invokeChannels = Object.values(desktopIpcChannels).filter(
 
 /** The channels in a fixed order, so two lists compare as sets of names. */
 const sorted = (channels: readonly string[]) => [...channels].sort((a, b) => a.localeCompare(b));
+
+describe("the window chrome in main", () => {
+  /** Runs `run` with `process.platform` set to `platform`, and restores it after. */
+  async function onPlatform(platform: NodeJS.Platform, run: () => Promise<void>) {
+    const original = Object.getOwnPropertyDescriptor(process, "platform");
+    Object.defineProperty(process, "platform", { configurable: true, value: platform });
+    try {
+      await run();
+    } finally {
+      if (original) Object.defineProperty(process, "platform", original);
+    }
+  }
+
+  it.each([
+    { name: "packaged on win32", packaged: true, platform: "win32", sets: true },
+    { name: "packaged on linux", packaged: true, platform: "linux", sets: false },
+    { name: "development on win32", packaged: false, platform: "win32", sets: false },
+  ] as const)("sets the application menu at start: $name", async ({ packaged, platform, sets }) => {
+    ports.app.isPackaged = packaged;
+    await onPlatform(platform, ordinaryLaunch);
+    if (!sets) {
+      expect(chromePorts.buildMenu).not.toHaveBeenCalled();
+      expect(chromePorts.setMenu).not.toHaveBeenCalled();
+      return;
+    }
+    expect(chromePorts.buildMenu).toHaveBeenCalledExactlyOnceWith([
+      { label: "View", submenu: [{ role: "zoomIn" }, { role: "zoomOut" }, { role: "resetZoom" }] },
+    ]);
+    expect(chromePorts.setMenu).toHaveBeenCalledExactlyOnceWith(
+      chromePorts.buildMenu.mock.results[0]?.value,
+    );
+    expect(chromePorts.setMenu.mock.invocationCallOrder[0]).toBeLessThan(
+      ports.window.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it("creates the main window through the window chrome", async () => {
+    await onPlatform("win32", ordinaryLaunch);
+    expect(ports.window).toHaveBeenCalledExactlyOnceWith({
+      width: 1120,
+      height: 720,
+      minWidth: 640,
+      minHeight: 480,
+      show: false,
+      backgroundColor: "#101411",
+      titleBarStyle: "hidden",
+      titleBarOverlay: { color: "#050606", symbolColor: "#9aa3ab", height: 44 },
+      webPreferences: {
+        contextIsolation: true,
+        devTools: false,
+        nodeIntegration: false,
+        sandbox: true,
+        webSecurity: true,
+        preload: expect.stringMatching(/preload\.js$/),
+      },
+    });
+    const updated = chromePorts.themeOn.mock.calls.filter(([name]) => name === "updated");
+    expect(updated).toHaveLength(1);
+    event("before-quit");
+    await flush();
+    expect(ports.app.quit).toHaveBeenCalledOnce();
+    expect(chromePorts.themeRemove.mock.calls).toEqual([["updated", updated[0]?.[1]]]);
+  });
+});
 
 describe("the IPC sender rule in main", () => {
   const originalPlatform = Object.getOwnPropertyDescriptor(process, "platform");

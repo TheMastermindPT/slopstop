@@ -254,6 +254,22 @@ describe("the Seixo theme module", () => {
     expect(elsewhere).toEqual([]);
   });
 
+  it("declares every custom property in the one root rule of tokens.css", () => {
+    const owned = new Set(customProperties(tokens));
+    const outside = rendererStyleSheets
+      .filter((file) => file !== tokensFile)
+      .flatMap((file) =>
+        customProperties(read(file))
+          .filter((property) => !owned.has(property))
+          .filter((property) => !/^--(?:surface|signal|legacy-[\w-]+)$/.test(property))
+          .map((property) => `${path.relative(renderer, file)}: ${property}`),
+      );
+    expect(outside).toEqual([]);
+    expect(rules(tokens).map((rule) => rule.selector)).toEqual([":root"]);
+    expect(customProperties(tokens)).toEqual([...owned]);
+    expect(tokens.replace(/\/\*[\s\S]*?\*\//g, "")).not.toMatch(/@(?:layer|supports|media)\b/);
+  });
+
   it("writes the focus halo from --frost and keeps colour literals in the token declarations", () => {
     // Derived tones are written from their token, never as a new literal (decisions log §54).
     const derived = {
@@ -276,7 +292,7 @@ describe("the Seixo theme module", () => {
   });
 
   it("uses transparent and system colours only where the forced-colours and focus rules allow", () => {
-    for (const rule of rules(theme)) {
+    for (const rule of [...rules(tokens), ...rules(theme)]) {
       if (rule.media === forcedColours) continue;
       expect(rule.body).not.toMatch(systemColour);
       const transparent = rule.body
@@ -294,6 +310,21 @@ describe("the Seixo theme module", () => {
       expect(declarationsOf(css).filter(holdsColour)).toEqual([]);
       expect(css).not.toMatch(systemColour);
       expect(css).not.toContain("transparent");
+    }
+  });
+
+  it("keeps the title bar module free of colour literals", () => {
+    const css = read(path.join(renderer, "shell/title-bar.module.css"));
+    expect(customProperties(css)).toEqual([]);
+    const unforced = rules(css).filter((rule) => rule.media !== forcedColours);
+    const declarations = unforced
+      .flatMap((rule) => rule.body.split(";"))
+      .map((declaration) => declaration.trim())
+      .filter((declaration) => declaration.includes(":"));
+    expect(declarations.filter(holdsColour)).toEqual([]);
+    for (const rule of unforced) {
+      expect(rule.body).not.toMatch(systemColour);
+      expect(rule.body).not.toContain("transparent");
     }
   });
 

@@ -5,7 +5,8 @@
     grid-template-columns: 3.5rem 19rem minmax(0, 1fr);
     grid-template-rows: 3.5rem minmax(0, 1fr);
     width: 100vw;
-    height: 100vh;
+    /* The window below the rune title bar (`shell/title-bar.module.css`). */
+    height: calc(100vh - env(titlebar-area-height, 44px));
     color: var(--legacy-ink);
     background: var(--legacy-night);
     font-size: 0.875rem;
@@ -38,10 +39,6 @@
   .rail button {
     padding: 0.45rem;
   }
-  .mark {
-    font-weight: 700;
-    font-size: 1rem;
-  }
   .header {
     grid-column: 2 / -1;
     display: flex;
@@ -51,10 +48,6 @@
     padding: 0.5rem 1.2rem;
     border-bottom: 1px solid var(--legacy-line);
     background: var(--legacy-deep);
-  }
-  .header h1 {
-    font-size: 1.1rem;
-    margin: 0;
   }
   .header :global([role="status"]) {
     display: flex;
@@ -172,6 +165,18 @@
     }
     .header :global([role="status"]) span {
       display: none;
+    }
+  }
+  /* A short window (zoom 200% of 1280 by 800): the header row halves (Q13; leaves with the Shell slice). */
+  @media (max-height: 420px) {
+    .shell {
+      grid-template-rows: 1.75rem minmax(0, 1fr);
+    }
+    .header {
+      padding-block: 0;
+    }
+    .header button {
+      padding-block: 0.2rem;
     }
   }
   .add {
