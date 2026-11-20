@@ -17,6 +17,7 @@ import { useRemoveFromList } from "./remove-from-list/use-remove-from-list.js";
 import { AttentionSidebar, attentionHeadingId } from "./shell/attention-sidebar.js";
 import { type Destination, Rail } from "./shell/rail.js";
 import { ShellFrame } from "./shell/shell-frame.js";
+import { TitleBar } from "./shell/title-bar.js";
 import { type Busy, needsUpgrade, useProjectUpgrade } from "./use-project-upgrade.js";
 import {
   rememberNames,
@@ -301,29 +302,32 @@ export function ProjectsWorkspace({
   );
 
   return (
-    <ShellFrame
-      rail={<Rail current={destination} onSelect={selectDestination} />}
-      strip={strip}
-      sidebar={destination === "projects" ? projectsSidebar : <AttentionSidebar />}
-      workClassName={styles["shell"]}
-    >
-      <p className={styles["srOnly"]} aria-live="polite">
-        {announcement}
-      </p>
-      <p id="ws-progress" className={styles["progress"]} aria-live="polite">
-        {progressText[busy ?? "idle"]}
-      </p>
-      <ConversationMemoryProvider value={conversationMemory}>
-        <WorkspaceSection
-          flow={flow}
-          removal={removal}
-          view={view}
-          error={error}
-          busy={busy !== undefined}
-          problem={upgrade.problem}
-          onRetry={retryUpgrade}
-        />
-      </ConversationMemoryProvider>
-    </ShellFrame>
+    <>
+      <TitleBar projectName={view?.name} onShowProjects={() => selectDestination("projects")} />
+      <ShellFrame
+        rail={<Rail current={destination} onSelect={selectDestination} />}
+        strip={strip}
+        sidebar={destination === "projects" ? projectsSidebar : <AttentionSidebar />}
+        workClassName={styles["shell"]}
+      >
+        <p className={styles["srOnly"]} aria-live="polite">
+          {announcement}
+        </p>
+        <p id="ws-progress" className={styles["progress"]} aria-live="polite">
+          {progressText[busy ?? "idle"]}
+        </p>
+        <ConversationMemoryProvider value={conversationMemory}>
+          <WorkspaceSection
+            flow={flow}
+            removal={removal}
+            view={view}
+            error={error}
+            busy={busy !== undefined}
+            problem={upgrade.problem}
+            onRetry={retryUpgrade}
+          />
+        </ConversationMemoryProvider>
+      </ShellFrame>
+    </>
   );
 }

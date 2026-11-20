@@ -9,7 +9,12 @@ import { Schema } from "effect";
  * Runs one env-gated harness seed file in a vitest subprocess, so the E2E reaches harness
  * fixtures only through their own test runner. The seed writes under `userData`.
  */
-export function runHarnessSeed(testFile: string, envName: string, userData: string): void {
+export function runHarnessSeed(
+  testFile: string,
+  envName: string,
+  userData: string,
+  extraEnv: Readonly<Record<string, string>> = {},
+): void {
   const require = createRequire(import.meta.url);
   const repo = path.resolve(import.meta.dirname, "../../../..");
   const vitest = path.join(path.dirname(require.resolve("vitest/package.json")), "vitest.mjs");
@@ -18,20 +23,27 @@ export function runHarnessSeed(testFile: string, envName: string, userData: stri
     [vitest, "run", "--config", "apps/harness/vitest.integration.config.ts", testFile],
     {
       cwd: repo,
-      env: { ...process.env, [envName]: userData },
+      env: { ...process.env, ...extraEnv, [envName]: userData },
       timeout: 120000,
       stdio: "pipe",
     },
   );
 }
 
-/** Registers the two seed repositories (repository-a, repository-b) through the harness. */
-export async function seedTwoProjects(userData: string) {
-  runHarnessSeed("project-entry-ui-seed.integration.test.ts", "PC_UI_USER_DATA", userData);
-  const projects = decodeStrict(
+/** Registers one seed repository per folder name in `names` through the harness. */
+export async function seedProjectsNamed(userData: string, names: readonly string[]) {
+  runHarnessSeed("project-entry-ui-seed.integration.test.ts", "PC_UI_USER_DATA", userData, {
+    PC_UI_REPOSITORY_NAMES: names.join(","),
+  });
+  return decodeStrict(
     Schema.Array(RegisteredProjectSchema),
     JSON.parse(await readFile(path.join(userData, "fixture-projects.json"), "utf8")),
   );
+}
+
+/** Registers the two seed repositories (repository-a, repository-b) through the harness. */
+export async function seedTwoProjects(userData: string) {
+  const projects = await seedProjectsNamed(userData, ["repository-a", "repository-b"]);
   const first = projects[0];
   const second = projects[1];
   if (first === undefined || second === undefined) throw new Error("Seeded Projects missing");

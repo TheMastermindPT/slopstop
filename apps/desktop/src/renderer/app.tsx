@@ -8,7 +8,6 @@ import {
   type StatusCopy,
   useStripShown,
 } from "./shell/harness-strip.js";
-import { TitleBar } from "./shell/title-bar.js";
 
 const initialStatus: HarnessStatus = {
   state: "starting",
@@ -127,25 +126,22 @@ export function App() {
   }
 
   return (
-    <>
-      <TitleBar />
-      <ProjectsWorkspace
-        status={status}
-        strip={
-          <>
-            <HarnessStatusLine copy={copy} />
-            {stripShown && status.state !== "ready" ? (
-              <HarnessStrip
-                status={status}
-                copy={copy}
-                retrying={retrying}
-                retryFailure={retryFailure}
-                onRetry={retryHarness}
-              />
-            ) : null}
-          </>
-        }
-      />
-    </>
+    <ProjectsWorkspace
+      status={status}
+      strip={
+        <>
+          <HarnessStatusLine copy={copy} />
+          {stripShown && status.state !== "ready" ? (
+            <HarnessStrip
+              status={status}
+              copy={copy}
+              retrying={retrying}
+              retryFailure={retryFailure}
+              onRetry={retryHarness}
+            />
+          ) : null}
+        </>
+      }
+    />
   );
 }

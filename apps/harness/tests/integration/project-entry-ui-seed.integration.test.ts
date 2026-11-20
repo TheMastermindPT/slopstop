@@ -8,6 +8,10 @@ import { createProjectRegistrationOwner } from "../../src/registration/project-r
 import { RepositoryTrustDecisionSchema } from "../../src/registration/repository-trust.js";
 import { createControlledIdentityConsent } from "./registration-consent-fixture.js";
 
+/** The repositories' folder names, comma-separated in the environment; by default the journey's two. */
+const seedNames = () =>
+  process.env["PC_UI_REPOSITORY_NAMES"]?.split(",") ?? ["repository-a", "repository-b"];
+
 // Invoked only by the Electron E2E fixture, never a fake renderer data source.
 it.runIf(process.env["PC_UI_USER_DATA"] !== undefined)(
   "seeds real registered Projects for the Electron entry journey",
@@ -22,7 +26,7 @@ it.runIf(process.env["PC_UI_USER_DATA"] !== undefined)(
     };
     const git = path.join(process.env["ProgramFiles"] ?? "C:/Program Files", "Git/cmd/git.exe");
     const projects = [];
-    for (const name of ["repository-a", "repository-b"]) {
+    for (const name of seedNames()) {
       const directory = path.join(root, name);
       execFileSync(git, ["init", "--quiet", directory]);
       const scenario = await createControlledIdentityConsent(

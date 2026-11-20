@@ -2,7 +2,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import { axeViolations, forcedTextColours, setZoom, sizeContent } from "./accessibility.js";
+import { computedValue } from "./computed-style.js";
 import { expectNoHarnessRequestFailure, launchBuiltDesktop } from "./electron-launch.js";
+import { seedProjectsNamed } from "./harness-seed.js";
 import { temporaryRoot } from "./temporary-root.js";
 
 /** The banner landmark: a `header` outside every sectioning element and `main`. */
@@ -560,3 +562,198 @@ for (const row of proportionRows) {
     });
   });
 }
+
+/** A seeded repository folder name of 60 characters, for the bar's long-name case. */
+const longName = "a-repository-whose-folder-name-is-long-enough-to-be-cut-60ch";
+
+/**
+ * Runs `journey` on the built desktop at display scale 1, with the seeded repositories `names`
+ * and the first of them open, then checks the desktop log.
+ */
+async function withProjectOpen(
+  names: readonly string[],
+  journey: (application: ElectronApplication, page: Page) => Promise<void>,
+) {
+  const proof = await temporaryRoot("sh-bar-");
+  const userData = path.join(proof, "user-data");
+  await seedProjectsNamed(userData, names);
+  const application = await launchBuiltDesktop(proof, userData, ["--force-device-scale-factor=1"]);
+  try {
+    const page = await application.firstWindow();
+    await page.getByRole("button", { name: `Open Project ${names[0]}`, exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: `Project ${names[0]}`, exact: true }),
+    ).toBeVisible();
+    await expect(nameButton(page, names[0] ?? "")).toBeVisible();
+    await journey(application, page);
+  } finally {
+    await application.close();
+  }
+  await expectNoHarnessRequestFailure(userData);
+}
+
+/** Whether `inner` lies wholly inside `outer`. */
+const encloses = (outer: Sides, inner: Sides) =>
+  inner.left >= outer.left &&
+  inner.top >= outer.top &&
+  inner.right <= outer.right &&
+  inner.bottom <= outer.bottom;
+
+/** The bar's name button, found in the banner by its accessible name. */
+const nameButton = (page: Page, name: string) =>
+  page.locator(bannerSelector).getByRole("button", { name: `Project ${name}`, exact: true });
+
+/** The rail's Projects item. */
+const railProjects = (page: Page) =>
+  page
+    .getByRole("navigation", { name: "Activity" })
+    .getByRole("button", { name: "Projects", exact: true });
+
+/** The banner's `app-region`, and the elements in it whose `app-region` is `no-drag`. */
+function dragRegions(page: Page) {
+  return page.locator(bannerSelector).evaluate((banner) => ({
+    banner: getComputedStyle(banner).getPropertyValue("app-region"),
+    noDrag: [...banner.querySelectorAll("*")]
+      .filter((element) => getComputedStyle(element).getPropertyValue("app-region") === "no-drag")
+      .map((element) => element.tagName),
+  }));
+}
+
+/** The banner's box in CSS px. */
+function bannerBox(page: Page) {
+  return page.locator(bannerSelector).evaluate((element) => {
+    const { left, top, right, bottom } = element.getBoundingClientRect();
+    return { left, top, right, bottom };
+  });
+}
+
+/** The name button's box, focus look and text sizes. */
+function nameLook(page: Page, name: string) {
+  return nameButton(page, name).evaluate((button) => {
+    const style = getComputedStyle(button);
+    const { left, top, right, bottom } = button.getBoundingClientRect();
+    return {
+      box: { left, top, right, bottom },
+      shadow: style.boxShadow,
+      outline: [style.outlineWidth, style.outlineStyle, style.outlineColor],
+      fontSize: Number.parseFloat(style.fontSize),
+      overflow: style.overflow,
+      textOverflow: style.textOverflow,
+      cut: button.scrollWidth > button.clientWidth,
+    };
+  });
+}
+
+test("SH-B19: keeps the name out of the drag region, ringed and inside the bar: 1280 by 800", async () => {
+  test.setTimeout(240_000);
+  await withProjectOpen(["repository-a", "repository-b"], async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    const rail = page.getByRole("navigation", { name: "Activity" });
+    await rail.getByRole("button", { name: "Attention", exact: true }).click();
+    expect(await dragRegions(page)).toEqual({ banner: "drag", noDrag: ["BUTTON"] });
+    const name = nameButton(page, "repository-a");
+    await railProjects(page).focus();
+    await page.keyboard.press("Shift+Tab");
+    await expect(name).toBeFocused();
+    const look = await nameLook(page, "repository-a");
+    expect([look.shadow, ...look.outline]).toEqual([
+      await computedValue(page, "boxShadow", "var(--focus-ring)"),
+      "2px",
+      "solid",
+      "rgba(0, 0, 0, 0)",
+    ]);
+    await page.keyboard.press("Tab");
+    await expect(railProjects(page)).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Enter");
+    await expect(railProjects(page)).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeFocused();
+    const area = await overlayArea(page);
+    const box = (await nameLook(page, "repository-a")).box;
+    expect({
+      inBanner: encloses(await bannerBox(page), box),
+      inArea: liesInside(box, area),
+    }).toEqual({ inBanner: true, inArea: true });
+    expect(await axeViolations(page, { selector: bannerSelector })).toEqual([]);
+  });
+});
+
+test("SH-B19: cuts a long name before the native buttons and keeps the brand whole: minimum window", async () => {
+  test.setTimeout(240_000);
+  expect(longName).toHaveLength(60);
+  await withProjectOpen([longName], async (application, page) => {
+    await application.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setSize(640, 480);
+    });
+    await expect.poll(() => page.evaluate(() => innerWidth)).toBeLessThanOrEqual(640);
+    const area = await overlayArea(page);
+    const look = await nameLook(page, longName);
+    const brand = await brandSpacing(page);
+    const sizes = await brandSizes(page);
+    const wordmarkWhole = await page
+      .locator(bannerSelector)
+      .getByRole("heading", { level: 1 })
+      .evaluate((heading) => heading.scrollWidth <= heading.clientWidth);
+    const label = await nameButton(page, longName).getAttribute("aria-label");
+    // Under keyboard focus the ring and its halo (about 6px) stay clear of the native buttons.
+    await railProjects(page).focus();
+    await page.keyboard.press("Shift+Tab");
+    await expect(nameButton(page, longName)).toBeFocused();
+    const focused = await nameLook(page, longName);
+    expect(focused.box.right + 6 <= area.x + area.width + 0.5).toBe(true);
+    expect({
+      beforeNativeButtons: look.box.right <= area.x + area.width + 0.5,
+      cut: [look.overflow, look.textOverflow, look.cut],
+      wholeName: label === `Project ${longName}`,
+      wordmarkWhole,
+      mark: sizes && [
+        within(sizes.mark.right - sizes.mark.left, 11, 0.5),
+        within(sizes.mark.bottom - sizes.mark.top, 21, 0.5),
+      ],
+      inset: brand !== null && within(brand.markLeft - area.x, 16, 0.5),
+      gap: brand !== null && within(brand.headingLeft - brand.markRight, 8, 0.5),
+    }).toEqual({
+      beforeNativeButtons: true,
+      cut: ["hidden", "ellipsis", true],
+      wholeName: true,
+      wordmarkWhole: true,
+      mark: [true, true],
+      inset: true,
+      gap: true,
+    });
+  });
+});
+
+test("SH-B19: sizes the name from the bar at zoom 50%, 100% and 200%", async () => {
+  test.setTimeout(240_000);
+  await withProjectOpen(["repository-a", "repository-b"], async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    const ratios: number[] = [];
+    for (const factor of [0.5, 1, 2]) {
+      await setZoom(application, page, { factor, width: 1280, height: 800 });
+      const look = await nameLook(page, "repository-a");
+      const banner = await bannerBox(page);
+      expect(encloses(banner, look.box)).toBe(true);
+      ratios.push(look.fontSize / (banner.bottom - banner.top));
+    }
+    const [first = 0] = ratios;
+    expect(ratios.map((ratio) => within(ratio, first, 0.01))).toEqual([true, true, true]);
+  });
+});
+
+test("SH-B19: marks the focused name under forced colours", async () => {
+  test.setTimeout(240_000);
+  await withProjectOpen(["repository-a", "repository-b"], async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    await page.emulateMedia({ forcedColors: "active" });
+    await railProjects(page).focus();
+    await page.keyboard.press("Shift+Tab");
+    await expect(nameButton(page, "repository-a")).toBeFocused();
+    const [, outlineStyle, outlineColour] = (await nameLook(page, "repository-a")).outline;
+    expect([outlineStyle, outlineColour !== "rgba(0, 0, 0, 0)"]).toEqual(["solid", true]);
+    const forcedText = await forcedTextColours(page, bannerSelector);
+    expect(forcedText.checked).toBeGreaterThan(0);
+    expect(forcedText.failures).toEqual([]);
+    expect(await axeViolations(page, { selector: bannerSelector, forcedColors: true })).toEqual([]);
+  });
+});

@@ -18,6 +18,7 @@
 
 .brand {
   display: flex;
+  flex: none;
   align-items: center;
   /* The inset and the gap follow the bar's height, so the brand keeps its proportion (Q16). */
   gap: calc(env(titlebar-area-height, 44px) * 8 / 44);
@@ -51,4 +52,38 @@
   .mark {
     color: CanvasText;
   }
+}
+
+/*
+ * The open Project's name (sh-s3). Its wrapper carries the `seixo` class, so the button gets the
+ * Seixo ring and outline; the wrapper still drags, and only the button is `no-drag`. Its sizes
+ * follow the bar's height, as the brand's do. A long name is cut here, never the brand.
+ */
+.project {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  /* A gap before the native buttons, sized like the brand's gap, so the focus ring stays clear. */
+  padding-inline-end: calc(env(titlebar-area-height, 44px) * 8 / 44);
+  background: none;
+}
+
+.name {
+  max-width: 100%;
+  height: calc(env(titlebar-area-height, 44px) * 28 / 44);
+  padding-inline: calc(env(titlebar-area-height, 44px) * 10 / 44);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--ink-muted);
+  font: 500 calc(env(titlebar-area-height, 44px) * 13 / 44) / 1 var(--font-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  app-region: no-drag;
+}
+
+.name:hover {
+  color: var(--ink);
 }

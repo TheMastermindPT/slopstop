@@ -31,3 +31,13 @@ describe("the title bar", () => {
     expect(banner.textContent).toBe("Ragnarok");
   });
 });
+
+describe("the open Project's name in the bar", () => {
+  it("SH-B17: writes the name as text, never as markup", () => {
+    const name = '<img src=x onerror=alert(1)> & "b"';
+    render(<TitleBar projectName={name} onShowProjects={() => undefined} />);
+    const banner = screen.getByRole("banner");
+    expect(within(banner).getByRole("button").textContent).toBe(name);
+    expect(banner.querySelectorAll("img")).toHaveLength(0);
+  });
+});

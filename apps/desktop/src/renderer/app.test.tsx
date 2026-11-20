@@ -7,9 +7,10 @@ import {
   ProjectRegistrationResultSchema,
   type RetryHarnessResult,
 } from "@slopstop/protocol";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { SlopStopApi } from "../shared/desktop-api.js";
 import { projectId, registrationApi } from "./add-repository/registration-fake.js";
 import { App } from "./app.js";
 import { exposeApi, readyApi, readyStatus, unusedWorkspaceApi } from "./test-api.js";
@@ -774,5 +775,201 @@ describe("SH-B8: a retry keeps its strip, its button and the focus until the out
     notify(starting);
     notify(readyStatus);
     expect(document.activeElement).toBe(attention);
+  });
+});
+
+const alphaId = "11111111-1111-4111-8111-111111111111";
+const betaId = "22222222-2222-4222-8222-222222222222";
+
+/** The list of two healthy Projects, "alpha" and "beta". */
+const alphaBeta = () =>
+  decodeStrict(ProjectListResultSchema, {
+    status: "listed",
+    projects: [
+      { ...registeredEntry(alphaId, healthyStorage(alphaId)), name: "alpha" },
+      { ...registeredEntry(betaId, healthyStorage(betaId)), name: "beta" },
+    ],
+    hiddenCount: 0,
+  });
+
+function healthyStorage(id: string) {
+  return { status: "healthy", storageId: id, generationId: id };
+}
+
+/** Opens Projects read-write, as the harness would; answers its activation result. */
+const activeResult = (request: { projectId: string }) =>
+  decodeStrict(CanonicalProjectActivationResultSchema, {
+    status: "active",
+    request,
+    access: "read-write",
+    activationId: request.projectId,
+    writerGeneration: 1,
+  });
+
+/** The app over "alpha" and "beta", with `overrides`; answers the list spy and a user. */
+function renderAlphaBeta(overrides: Partial<SlopStopApi> = {}) {
+  const listProjects = vi.fn(async () => alphaBeta());
+  exposeApi(
+    readyApi({
+      listProjects,
+      activateProject: async (request) => activeResult(request),
+      ...overrides,
+    }),
+  );
+  render(<App />);
+  return { listProjects, user: userEvent.setup() };
+}
+
+/**
+ * The bar: the banner landmark by the HTML-AAM rule (Testing Library gives every `header` the
+ * banner role, and the work area has its own).
+ */
+const bar = () => {
+  const banner = document.querySelector(
+    "header:not(:is(article, aside, main, nav, section) header)",
+  );
+  if (!(banner instanceof HTMLElement)) throw new Error("No banner");
+  return banner;
+};
+
+/** The buttons in the bar. */
+const barButtons = () => within(bar()).queryAllByRole("button");
+
+async function openProject(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.click(await screen.findByRole("button", { name: `Open Project ${name}` }));
+  await screen.findByRole("heading", { name: `Project ${name}` });
+}
+
+describe("SH-B16: the bar names the open Project", () => {
+  it("SH-B16: names the open Project in one button, and holds none before", async () => {
+    const { user } = renderAlphaBeta();
+    await screen.findByRole("button", { name: "Open Project alpha" });
+    expect(barButtons()).toEqual([]);
+    await openProject(user, "alpha");
+    const banner = bar();
+    expect(
+      barButtons().map((button) => [button.textContent, button.getAttribute("aria-label")]),
+    ).toEqual([["alpha", "Project alpha"]]);
+    expect(within(banner).getByRole("button", { name: "Project alpha" })).toBeTruthy();
+    expect(
+      screen.getAllByRole("heading", { level: 1 }).map((heading) => heading.textContent),
+    ).toEqual(["Ragnarok"]);
+    expect(banner.textContent).toBe("Ragnarokalpha");
+  });
+
+  it("SH-B16: follows a switch to another Project", async () => {
+    const { user } = renderAlphaBeta({
+      switchProject: async (request) =>
+        decodeStrict(CanonicalProjectSwitchResultSchema, {
+          status: "target-result",
+          sourceReleased: true,
+          request,
+          target: activeResult(request.to),
+        }),
+    });
+    await openProject(user, "alpha");
+    await user.click(screen.getByRole("button", { name: "Open Project beta" }));
+    await screen.findByRole("heading", { name: "Project beta" });
+    expect(barButtons().map((button) => button.textContent)).toEqual(["beta"]);
+  });
+
+  it("SH-B16: keeps the name, and none of the failure's words, when a switch fails to release", async () => {
+    const message = "Project activation resources could not be released.";
+    const { user } = renderAlphaBeta({
+      switchProject: async (request) =>
+        decodeStrict(CanonicalProjectSwitchResultSchema, {
+          status: "release-failed",
+          request,
+          diagnostic: { code: "PROJECT_STORAGE_RELEASE_FAILED", message, retryable: true },
+        }),
+    });
+    await openProject(user, "alpha");
+    await user.click(screen.getByRole("button", { name: "Open Project beta" }));
+    await screen.findByText(message);
+    expect(barButtons().map((button) => button.textContent)).toEqual(["alpha"]);
+    expect(bar().textContent).toBe("Ragnarokalpha");
+  });
+
+  it("SH-B16: names a Project in safe mode, without its state's words", async () => {
+    const { user } = renderAlphaBeta({
+      activateProject: async (request) =>
+        decodeStrict(CanonicalProjectActivationResultSchema, {
+          status: "safe-mode",
+          request,
+          identity: {
+            storageId: request.projectId,
+            generationId: request.projectId,
+            canonicalDatabaseLineageId: request.projectId,
+            runtimeDatabaseLineageId: request.projectId,
+          },
+          canonicalHealth: { status: "healthy" },
+          runtimeHealth: {
+            status: "missing",
+            diagnostic: { code: "DATABASE_MISSING", message: "Database missing" },
+          },
+        }),
+    });
+    await user.click(await screen.findByRole("button", { name: "Open Project alpha" }));
+    await screen.findByText(/Safe mode/, { selector: "p" });
+    expect(bar().textContent).toBe("Ragnarokalpha");
+  });
+
+  it("SH-B16: holds no control once the harness leaves ready", async () => {
+    let notify: ((status: HarnessStatus) => void) | undefined;
+    const { user } = renderAlphaBeta({
+      subscribeHarnessStatus: (listener) => {
+        notify = listener;
+        return () => undefined;
+      },
+    });
+    await openProject(user, "alpha");
+    act(() => notify?.(unavailable));
+    expect(barButtons()).toEqual([]);
+  });
+
+  it.each(["the add flow starts", "a removal is asked for another Project"] as const)(
+    "SH-B16: keeps the open Project's name while %s",
+    async (flow) => {
+      const { user } = renderAlphaBeta({
+        chooseRepository: () => new Promise(() => undefined),
+      });
+      await openProject(user, "alpha");
+      if (flow === "the add flow starts")
+        await user.click(screen.getByRole("button", { name: "Add existing repository" }));
+      else {
+        await user.click(screen.getByRole("button", { name: "Remove beta from list" }));
+        await screen.findByRole("heading", { level: 2, name: "Remove beta from the list?" });
+      }
+      expect(barButtons().map((button) => button.textContent)).toEqual(["alpha"]);
+    },
+  );
+});
+
+describe("SH-B18: the name shows the Projects sidebar", () => {
+  it.each([
+    { name: "a click from Attention", fromAttention: true, press: "click" },
+    { name: "Space from Attention", fromAttention: true, press: "space" },
+    { name: "Enter with Projects already current", fromAttention: false, press: "enter" },
+  ] as const)("SH-B18: shows Projects and focuses its heading: $name", async (row) => {
+    const { listProjects, user } = renderAlphaBeta();
+    await openProject(user, "alpha");
+    // The opened conversation focuses its composer once it has loaded; let that happen first.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Message" })),
+    );
+    const rail = within(screen.getByRole("navigation", { name: "Activity" }));
+    if (row.fromAttention) await user.click(rail.getByRole("button", { name: "Attention" }));
+    const name = within(bar()).getByRole("button", { name: "Project alpha" });
+    if (row.press === "click") await user.click(name);
+    else {
+      name.focus();
+      await user.keyboard(row.press === "space" ? " " : "{Enter}");
+    }
+    expect(rail.getByRole("button", { name: "Projects" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Open Project alpha" })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Projects" }));
+    expect(listProjects).toHaveBeenCalledOnce();
   });
 });

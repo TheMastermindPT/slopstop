@@ -67,27 +67,27 @@
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:86-86",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:87-87",
     "first": "    conversationMemory.newEpoch();",
     "last": "    conversationMemory.newEpoch();"
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:99-99",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:100-100",
     "first": "  }, [ready, attempt, refresh, clearProblem, conversationMemory]);",
     "last": "  }, [ready, attempt, refresh, clearProblem, conversationMemory]);"
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:111-112",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:112-113",
     "first": "        activationId: result.activationId,",
     "last": "        readOnly: result.access === \"read-only\","
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:316-326",
-    "first": "      <ConversationMemoryProvider value={conversationMemory}>",
-    "last": "      </ConversationMemoryProvider>"
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:319-329",
+    "first": "        <ConversationMemoryProvider value={conversationMemory}>",
+    "last": "        </ConversationMemoryProvider>"
   },
   {
     "config": "stryker.config.json",
