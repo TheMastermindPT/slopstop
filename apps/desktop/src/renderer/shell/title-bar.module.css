@@ -87,3 +87,10 @@
 .name:hover {
   color: var(--ink);
 }
+
+/* Under forced colours the resting name still reads as a button (the Seixo precedent). */
+@media (forced-colors: active) {
+  .name {
+    border: 1px solid ButtonText;
+  }
+}

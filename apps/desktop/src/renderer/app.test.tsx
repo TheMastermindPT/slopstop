@@ -806,6 +806,24 @@ const activeResult = (request: { projectId: string }) =>
     writerGeneration: 1,
   });
 
+/** Opens Projects in safe mode, the runtime database missing; answers its activation result. */
+const safeModeResult = (request: { projectId: string }) =>
+  decodeStrict(CanonicalProjectActivationResultSchema, {
+    status: "safe-mode",
+    request,
+    identity: {
+      storageId: request.projectId,
+      generationId: request.projectId,
+      canonicalDatabaseLineageId: request.projectId,
+      runtimeDatabaseLineageId: request.projectId,
+    },
+    canonicalHealth: { status: "healthy" },
+    runtimeHealth: {
+      status: "missing",
+      diagnostic: { code: "DATABASE_MISSING", message: "Database missing" },
+    },
+  });
+
 /** The app over "alpha" and "beta", with `overrides`; answers the list spy and a user. */
 function renderAlphaBeta(overrides: Partial<SlopStopApi> = {}) {
   const listProjects = vi.fn(async () => alphaBeta());
@@ -855,6 +873,11 @@ describe("SH-B16: the bar names the open Project", () => {
       screen.getAllByRole("heading", { level: 1 }).map((heading) => heading.textContent),
     ).toEqual(["Ragnarok"]);
     expect(banner.textContent).toBe("Ragnarokalpha");
+    // Nothing else repository-derived: no title, link or image, and the button's own attributes.
+    expect(banner.querySelectorAll("[title], a, img")).toHaveLength(0);
+    expect(barButtons().map((button) => button.getAttributeNames().sort())).toEqual([
+      ["aria-label", "class", "type"],
+    ]);
   });
 
   it("SH-B16: follows a switch to another Project", async () => {
@@ -892,22 +915,7 @@ describe("SH-B16: the bar names the open Project", () => {
 
   it("SH-B16: names a Project in safe mode, without its state's words", async () => {
     const { user } = renderAlphaBeta({
-      activateProject: async (request) =>
-        decodeStrict(CanonicalProjectActivationResultSchema, {
-          status: "safe-mode",
-          request,
-          identity: {
-            storageId: request.projectId,
-            generationId: request.projectId,
-            canonicalDatabaseLineageId: request.projectId,
-            runtimeDatabaseLineageId: request.projectId,
-          },
-          canonicalHealth: { status: "healthy" },
-          runtimeHealth: {
-            status: "missing",
-            diagnostic: { code: "DATABASE_MISSING", message: "Database missing" },
-          },
-        }),
+      activateProject: async (request) => safeModeResult(request),
     });
     await user.click(await screen.findByRole("button", { name: "Open Project alpha" }));
     await screen.findByText(/Safe mode/, { selector: "p" });
@@ -923,6 +931,7 @@ describe("SH-B16: the bar names the open Project", () => {
       },
     });
     await openProject(user, "alpha");
+    expect(barButtons().map((button) => button.textContent)).toEqual(["alpha"]);
     act(() => notify?.(unavailable));
     expect(barButtons()).toEqual([]);
   });
@@ -931,18 +940,52 @@ describe("SH-B16: the bar names the open Project", () => {
     "SH-B16: keeps the open Project's name while %s",
     async (flow) => {
       const { user } = renderAlphaBeta({
-        chooseRepository: () => new Promise(() => undefined),
+        chooseRepository: registrationApi().api.chooseRepository,
       });
       await openProject(user, "alpha");
-      if (flow === "the add flow starts")
+      if (flow === "the add flow starts") {
         await user.click(screen.getByRole("button", { name: "Add existing repository" }));
-      else {
+        await screen.findByRole("heading", { level: 2, name: "Do you trust this repository?" });
+      } else {
         await user.click(screen.getByRole("button", { name: "Remove beta from list" }));
         await screen.findByRole("heading", { level: 2, name: "Remove beta from the list?" });
       }
       expect(barButtons().map((button) => button.textContent)).toEqual(["alpha"]);
     },
   );
+});
+
+it("SH-B16: closes the view and clears the bar when the Project in view is removed", async () => {
+  let removed = false;
+  const { user } = renderAlphaBeta({
+    listProjects: async () =>
+      decodeStrict(ProjectListResultSchema, {
+        status: "listed",
+        projects: [
+          ...(removed
+            ? []
+            : [{ ...registeredEntry(alphaId, healthyStorage(alphaId)), name: "alpha" }]),
+          { ...registeredEntry(betaId, healthyStorage(betaId)), name: "beta" },
+        ],
+        hiddenCount: 0,
+      }),
+    activateProject: async (request) => safeModeResult(request),
+    registerProject: async () => {
+      removed = true;
+      return decodeStrict(ProjectRegistrationResultSchema, {
+        status: "removed",
+        projectId: alphaId,
+      });
+    },
+  });
+  await user.click(await screen.findByRole("button", { name: "Open Project alpha" }));
+  await screen.findByRole("heading", { name: "Project alpha" });
+  expect(barButtons().map((button) => button.textContent)).toEqual(["alpha"]);
+  await user.click(screen.getByRole("button", { name: "Remove alpha from list" }));
+  await user.click(await screen.findByRole("button", { name: "Remove from list" }));
+  await screen.findByText(/alpha was removed from the list/, { selector: "p[role=status]" });
+  expect(barButtons()).toEqual([]);
+  expect(screen.queryByRole("heading", { name: "Project alpha" })).toBeNull();
 });
 
 describe("SH-B18: the name shows the Projects sidebar", () => {

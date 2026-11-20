@@ -37,7 +37,11 @@ describe("the open Project's name in the bar", () => {
     const name = '<img src=x onerror=alert(1)> & "b"';
     render(<TitleBar projectName={name} onShowProjects={() => undefined} />);
     const banner = screen.getByRole("banner");
-    expect(within(banner).getByRole("button").textContent).toBe(name);
+    const button = within(banner).getByRole("button");
+    expect([button.textContent, button.getAttribute("aria-label")]).toEqual([
+      name,
+      `Project ${name}`,
+    ]);
     expect(banner.querySelectorAll("img")).toHaveLength(0);
   });
 });

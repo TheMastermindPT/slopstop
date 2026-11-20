@@ -636,6 +636,7 @@ function nameLook(page: Page, name: string) {
       box: { left, top, right, bottom },
       shadow: style.boxShadow,
       outline: [style.outlineWidth, style.outlineStyle, style.outlineColor],
+      border: [style.borderTopWidth, style.borderTopStyle, style.borderTopColor],
       fontSize: Number.parseFloat(style.fontSize),
       overflow: style.overflow,
       textOverflow: style.textOverflow,
@@ -695,7 +696,10 @@ test("SH-B19: cuts a long name before the native buttons and keeps the brand who
       .getByRole("heading", { level: 1 })
       .evaluate((heading) => heading.scrollWidth <= heading.clientWidth);
     const label = await nameButton(page, longName).getAttribute("aria-label");
-    // Under keyboard focus the ring and its halo (about 6px) stay clear of the native buttons.
+    // The overlay area is fresh at this size: the native buttons take their own width beside it.
+    const viewportWidth = await page.evaluate(() => innerWidth);
+    expect(within(viewportWidth - area.x - area.width, nativeStrip.width, 1)).toBe(true);
+    // Under keyboard focus the ring stays clear of the native buttons: its 5px halo plus 1px.
     await railProjects(page).focus();
     await page.keyboard.press("Shift+Tab");
     await expect(nameButton(page, longName)).toBeFocused();
@@ -749,8 +753,15 @@ test("SH-B19: marks the focused name under forced colours", async () => {
     await railProjects(page).focus();
     await page.keyboard.press("Shift+Tab");
     await expect(nameButton(page, "repository-a")).toBeFocused();
-    const [, outlineStyle, outlineColour] = (await nameLook(page, "repository-a")).outline;
+    const forced = await nameLook(page, "repository-a");
+    const [, outlineStyle, outlineColour] = forced.outline;
     expect([outlineStyle, outlineColour !== "rgba(0, 0, 0, 0)"]).toEqual(["solid", true]);
+    // At rest or focused, the name keeps a 1px ButtonText border under forced colours.
+    expect(forced.border).toEqual([
+      "1px",
+      "solid",
+      await computedValue(page, "borderTopColor", "ButtonText"),
+    ]);
     const forcedText = await forcedTextColours(page, bannerSelector);
     expect(forcedText.checked).toBeGreaterThan(0);
     expect(forcedText.failures).toEqual([]);

@@ -67,25 +67,25 @@
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:87-87",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:92-92",
     "first": "    conversationMemory.newEpoch();",
     "last": "    conversationMemory.newEpoch();"
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:100-100",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:105-105",
     "first": "  }, [ready, attempt, refresh, clearProblem, conversationMemory]);",
     "last": "  }, [ready, attempt, refresh, clearProblem, conversationMemory]);"
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:112-113",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:117-118",
     "first": "        activationId: result.activationId,",
     "last": "        readOnly: result.access === \"read-only\","
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:319-329",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:324-334",
     "first": "        <ConversationMemoryProvider value={conversationMemory}>",
     "last": "        </ConversationMemoryProvider>"
   },

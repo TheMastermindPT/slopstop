@@ -56,6 +56,11 @@ export function ProjectsWorkspace({
   const names = useRef(new Map<ProjectId, string>());
   const [newProjectId, setNewProjectId] = useState<ProjectId | undefined>(undefined);
   const [destination, setDestination] = useState<Destination>("projects");
+  // A Project in view that leaves the list (removed from it) closes the view and leaves the bar.
+  useEffect(() => {
+    if (view === null || list.status !== "listed") return;
+    if (!list.projects.some((project) => project.projectId === view.projectId)) setView(null);
+  }, [list, view]);
   const epoch = useRef(0);
   const request = useRef(0);
   const selecting = useRef(false);
