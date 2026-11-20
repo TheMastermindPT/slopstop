@@ -78,6 +78,13 @@
   color: var(--ink);
 }
 
+/* Less motion: the colours change at once. */
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}
+
 /* Below 1280px the rail narrows to its icons; each button keeps its name (`aria-label`). */
 @media (max-width: 1279.98px) {
   .item {

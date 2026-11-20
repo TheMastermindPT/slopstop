@@ -2,6 +2,7 @@ import path from "node:path";
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import { axeViolations, forcedTextColours, setZoom, sizeContent } from "./accessibility.js";
 import { expectNoHarnessRequestFailure, launchBuiltDesktop } from "./electron-launch.js";
+import { seedTwoProjects } from "./harness-seed.js";
 import { temporaryRoot } from "./temporary-root.js";
 
 /** The banner landmark: a `header` outside every sectioning element and `main`. */
@@ -11,9 +12,11 @@ const railSelector = 'nav[aria-label="Activity"]';
 /** Runs `journey` on the built desktop at display scale 1, then checks the desktop log. */
 async function inShellWindow(
   journey: (application: ElectronApplication, page: Page) => Promise<void>,
+  seed?: (userData: string) => Promise<unknown>,
 ) {
   const proof = await temporaryRoot("sh-frame-");
   const userData = path.join(proof, "user-data");
+  await seed?.(userData);
   const application = await launchBuiltDesktop(proof, userData, ["--force-device-scale-factor=1"]);
   try {
     const page = await application.firstWindow();
@@ -37,11 +40,14 @@ function frameBoxes(page: Page) {
         return { left, top, right, bottom };
       };
       const main = document.querySelector("main");
+      const railElement = document.querySelector(rail);
       return {
         banner: box(document.querySelector(banner)),
         rail: box(document.querySelector(rail)),
         main: box(main),
         mainHoldsOldHeader: main?.querySelector("header") != null,
+        railOutsideMain: railElement !== null && main !== null && !main.contains(railElement),
+        oldHeader: box(main?.querySelector("header") ?? null),
         sidebar: box(document.querySelector('aside[aria-label="Projects"]')),
         centre: box(document.querySelector('[aria-label="Project workspace"]')),
         viewport: { width: innerWidth, height: innerHeight },
@@ -70,6 +76,7 @@ function frameLayout(boxes: Boxes) {
     railToBottom: near(rail.bottom, viewport.height),
     mainUnderBanner: near(main.top, banner.bottom),
     mainHoldsOldHeader: boxes.mainHoldsOldHeader,
+    railOutsideMain: boxes.railOutsideMain,
     sidebarAfterRail: near(sidebar.left, rail.right),
     centreAfterSidebar: near(centre.left, sidebar.right),
     centreToRightEdge: near(centre.right, viewport.width),
@@ -84,6 +91,7 @@ const placed = {
   railToBottom: true,
   mainUnderBanner: true,
   mainHoldsOldHeader: true,
+  railOutsideMain: true,
   sidebarAfterRail: true,
   centreAfterSidebar: true,
   centreToRightEdge: true,
@@ -160,6 +168,12 @@ test("SH-B4: lays out the rail, the sidebar and the centre: 640 by 480 at zoom 2
     const boxes = await frameBoxes(page);
     const [projects, attention] = await railButtonBoxes(page);
     expect({
+      railOutsideMain: boxes.railOutsideMain,
+      mainUnderBanner: near(boxes.main.top, boxes.banner.bottom),
+      sidebarBesideRail: near(boxes.sidebar.left, boxes.rail.right),
+      sidebarToRightEdge: near(boxes.sidebar.right, boxes.viewport.width),
+      // Q13's short-window row: the old header stays 28px.
+      oldHeader28: near(boxes.oldHeader.bottom - boxes.oldHeader.top, 28),
       noSidewaysScroll: boxes.document.width <= boxes.viewport.width,
       sidebarAboveCentre: boxes.sidebar.bottom <= boxes.centre.top,
       railColumn:
@@ -167,7 +181,16 @@ test("SH-B4: lays out the rail, the sidebar and the centre: 640 by 480 at zoom 2
         projects !== undefined &&
         attention !== undefined &&
         attention.top >= projects.bottom,
-    }).toEqual({ noSidewaysScroll: true, sidebarAboveCentre: true, railColumn: true });
+    }).toEqual({
+      railOutsideMain: true,
+      mainUnderBanner: true,
+      sidebarBesideRail: true,
+      sidebarToRightEdge: true,
+      oldHeader28: true,
+      noSidewaysScroll: true,
+      sidebarAboveCentre: true,
+      railColumn: true,
+    });
   });
 });
 
@@ -203,6 +226,14 @@ function railButtonLook(page: Page, name: string) {
         borderColor: style.borderTopColor,
       };
     });
+}
+
+/** The Projects rail button's computed transition duration. */
+function railTransition(page: Page) {
+  return page
+    .getByRole("navigation", { name: "Activity" })
+    .getByRole("button", { name: "Projects", exact: true })
+    .evaluate((button) => getComputedStyle(button).transitionDuration);
 }
 
 /** Presses Tab until the rail button `name` has keyboard focus. */
@@ -242,7 +273,9 @@ test("SH-B5: gives the current rail item the forged look, the ring under focus a
     await tabTo(page, "Projects");
     expect((await railButtonLook(page, "Projects")).shadow).toBe(ringAndLift);
     expect(await axeViolations(page, { selector: railSelector })).toEqual([]);
-    await page.emulateMedia({ forcedColors: "active" });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    expect(await railTransition(page)).toBe("0s");
+    await page.emulateMedia({ reducedMotion: "no-preference", forcedColors: "active" });
     const highlight = await computedValue(page, "borderTopColor", "Highlight");
     const marked = await railButtonLook(page, "Projects");
     expect([marked.borderStyle, marked.borderColor]).toEqual(["solid", highlight]);
@@ -252,4 +285,23 @@ test("SH-B5: gives the current rail item the forged look, the ring under focus a
     expect(forcedText.failures).toEqual([]);
     expect(await axeViolations(page, { selector: railSelector, forcedColors: true })).toEqual([]);
   });
+});
+
+test("SH-B13: hands focus to the next Project after a removal confirmed from Attention", async () => {
+  test.setTimeout(150_000);
+  await inShellWindow(async (_application, page) => {
+    const rail = page.getByRole("navigation", { name: "Activity" });
+    await page.getByRole("button", { name: "Remove repository-a from list", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Remove repository-a from the list?" }),
+    ).toBeVisible();
+    await rail.getByRole("button", { name: "Attention", exact: true }).click();
+    await page.getByRole("button", { name: "Remove from list", exact: true }).click();
+    const next = page.getByRole("button", { name: "Open Project repository-b", exact: true });
+    await expect(next).toBeFocused();
+    await expect(rail.getByRole("button", { name: "Projects", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  }, seedTwoProjects);
 });

@@ -42,12 +42,21 @@
   }
 }
 
-/* Below 480 CSS px the sidebar sits above the centre, and the work area scrolls down only. */
+/*
+ * Below 480 CSS px the sidebar sits above the centre, and the work area scrolls down only. The old
+ * header keeps its row: 56px, and Q13's 28px in a short window.
+ */
 @media (max-width: 479.98px) {
   .work {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: none;
+    grid-template-rows: 3.5rem;
     grid-auto-rows: auto;
     overflow-y: auto;
+  }
+}
+
+@media (max-width: 479.98px) and (max-height: 420px) {
+  .work {
+    grid-template-rows: minmax(1.75rem, auto);
   }
 }

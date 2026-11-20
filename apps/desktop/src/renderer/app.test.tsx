@@ -10,7 +10,7 @@ import {
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { registrationApi } from "./add-repository/registration-fake.js";
+import { projectId, registrationApi } from "./add-repository/registration-fake.js";
 import { App } from "./app.js";
 import { exposeApi, readyApi, readyStatus, unusedWorkspaceApi } from "./test-api.js";
 
@@ -19,22 +19,23 @@ const startingStatus: HarnessStatus = {
   attempt: 1,
 };
 
+/** One registered, present Project, as the list carries it, with the Storage state given. */
+const registeredEntry = (id: string, storage: unknown) => ({
+  registration: "registered",
+  projectId: id,
+  name: `repo-${id.slice(0, 8)}`,
+  repositoryBindingId: id,
+  workspaceId: id,
+  access: "not-assessed",
+  repositoryLocation: { status: "present" },
+  storage,
+});
+
 /** One registered, present Project whose Storage state the test chooses. */
 function registeredProjectList(id: string, storage: unknown) {
   return decodeStrict(ProjectListResultSchema, {
     status: "listed",
-    projects: [
-      {
-        registration: "registered",
-        projectId: id,
-        name: `repo-${id.slice(0, 8)}`,
-        repositoryBindingId: id,
-        workspaceId: id,
-        access: "not-assessed",
-        repositoryLocation: { status: "present" },
-        storage,
-      },
-    ],
+    projects: [registeredEntry(id, storage)],
     hiddenCount: 0,
   });
 }
@@ -443,29 +444,43 @@ it.each(["Escape", "Cancel"] as const)(
   },
 );
 
+const first = "11111111-1111-4111-8111-111111111111";
+const second = "22222222-2222-4222-8222-222222222222";
+
 it.each([
-  { name: "cancelled", press: "Cancel", focus: "Remove repo-11111111 from list" },
+  { name: "cancelled", listed: [first], press: "Cancel", focus: "Remove repo-11111111 from list" },
   {
     name: "ended with no Project left",
+    listed: [first],
     press: "Remove from list",
     focus: "Add existing repository",
+  },
+  {
+    name: "ended with a next Project",
+    listed: [first, second],
+    press: "Remove from list",
+    focus: "Open Project repo-22222222",
   },
 ])(
   "SH-B13: hands focus back to the Projects list when the removal is $name from Attention",
   async (row) => {
-    const id = "11111111-1111-4111-8111-111111111111";
     let removed = false;
+    const listed = () => (removed ? row.listed.slice(1) : row.listed);
     exposeApi(
       readyApi({
         listProjects: async () =>
-          removed
-            ? { status: "listed", projects: [], hiddenCount: 0 }
-            : registeredProjectList(id, { status: "healthy", storageId: id, generationId: id }),
+          decodeStrict(ProjectListResultSchema, {
+            status: "listed",
+            projects: listed().map((id) =>
+              registeredEntry(id, { status: "healthy", storageId: id, generationId: id }),
+            ),
+            hiddenCount: 0,
+          }),
         registerProject: async () => {
           removed = true;
           return decodeStrict(ProjectRegistrationResultSchema, {
             status: "removed",
-            projectId: id,
+            projectId: first,
           });
         },
       }),
@@ -483,3 +498,29 @@ it.each([
     expect(document.activeElement).toBe(screen.getByRole("button", { name: row.focus }));
   },
 );
+
+it("SH-B13: hands focus back to the Project's row when the add flow shows it from Attention", async () => {
+  const healthy = { status: "healthy", storageId: projectId, generationId: projectId };
+  exposeApi(
+    registrationApi(
+      { prepare: { status: "belongs-to-project", projectId, name: "chess" } },
+      undefined,
+      { listProjects: async () => registeredProjectList(projectId, healthy) },
+    ).api,
+  );
+  render(<App />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Add existing repository" }));
+  await user.click(await screen.findByRole("button", { name: "Trust and continue" }));
+  await user.click(await screen.findByRole("button", { name: "Run version check" }));
+  await user.click(await screen.findByRole("button", { name: "Allow 6 queries" }));
+  await screen.findByRole("heading", {
+    level: 2,
+    name: "This worktree is part of a Project you already have",
+  });
+  const rail = await pressRail(user, "Attention");
+  await user.click(screen.getByRole("button", { name: "Show chess" }));
+  const row = `Open Project repo-${projectId.slice(0, 8)}`;
+  expect(rail.getByRole("button", { name: "Projects" }).getAttribute("aria-pressed")).toBe("true");
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: row }));
+});

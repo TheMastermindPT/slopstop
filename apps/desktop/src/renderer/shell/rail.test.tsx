@@ -13,9 +13,10 @@ describe("the activity rail", () => {
     render(<Rail current="projects" onSelect={onSelect} />);
     const rail = within(screen.getByRole("navigation", { name: "Activity" }));
     const buttons = rail.getAllByRole("button");
-    expect(
-      buttons.map((button) => button.getAttribute("aria-label") ?? button.textContent),
-    ).toEqual(["Projects", "Attention"]);
+    expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Projects",
+      "Attention",
+    ]);
     const [projects, attention] = buttons;
     expect(rail.getByRole("button", { name: "Projects" })).toBe(projects);
     expect(rail.getByRole("button", { name: "Attention" })).toBe(attention);

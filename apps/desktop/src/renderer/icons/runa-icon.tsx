@@ -11,7 +11,7 @@ const staves = {
   info: "M12 2.5L21.5 12L12 21.5L2.5 12ZM12 7V7.5M10.5 11H12V17H13.5",
   "circle-help": "M12 2.5L21.5 12L12 21.5L2.5 12ZM8.5 9L12 6.5L15.5 9V10.5L12 13V14M12 17V17.5",
   folder: "M3 5.5H9L12 8.5H21V19H3Z",
-  // Kenaz, the Attention rune.
+  /** Kenaz, the Attention rune. */
   flame: "M15.5 4L7.5 12L15.5 20M16 10L18 12L16 14L14 12Z",
 } as const;
 
