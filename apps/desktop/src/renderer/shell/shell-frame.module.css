@@ -55,7 +55,10 @@
   }
 }
 
-/* Below 480 CSS px the sidebar, the strip and the centre stack; the work area scrolls down only. */
+/*
+ * Below 480 CSS px everything stacks in document order (the strip, the sidebar, the centre); the
+ * work area scrolls down only.
+ */
 @media (max-width: 479.98px) {
   .work {
     grid-template-columns: minmax(0, 1fr);

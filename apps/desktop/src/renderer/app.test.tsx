@@ -567,6 +567,7 @@ describe("the harness strip in the window", () => {
       name: "unavailable",
       status: unavailable,
       word: "Harness unavailable",
+      detail: "Harness exited with code 1.",
       tone: "fault",
       retry: true,
     },
@@ -574,6 +575,7 @@ describe("the harness strip in the window", () => {
       name: "recovering",
       status: recovering,
       word: "Harness recovering",
+      detail: "Harness exited; restarting it.",
       tone: "warn",
       retry: false,
     },
@@ -581,6 +583,7 @@ describe("the harness strip in the window", () => {
       name: "stopped",
       status: { state: "stopped" } as const,
       word: "Harness stopped",
+      detail: "The utility process is not running.",
       tone: "dim",
       retry: false,
     },
@@ -591,7 +594,13 @@ describe("the harness strip in the window", () => {
       render(<App />);
       const region = await screen.findByRole("region", { name: row.word });
       const status = screen.getByRole("status");
-      expect(within(status).getByText(row.word).tagName).toBe("STRONG");
+      // The one polite status: the state word in its own element, then the detail.
+      expect([...status.children].map((child) => [child.tagName, child.textContent])).toEqual([
+        ["STRONG", row.word],
+        ["SPAN", row.detail],
+      ]);
+      expect(status.getAttribute("aria-live")).toBe("polite");
+      expect(region.hasAttribute("aria-live")).toBe(false);
       expect(region.getAttribute("data-tone")).toBe(row.tone);
       expect(within(region).getByText(row.word)).toBeTruthy();
       const retry = within(region).queryByRole("button", { name: "Retry harness" });
@@ -669,6 +678,8 @@ describe("SH-B8: a retry keeps its strip, its button and the focus until the out
     const { notify, retry, user } = await pressRetry();
     const retrying = screen.getByRole("button", { name: "Retrying harness" });
     expect(retrying.getAttribute("aria-disabled")).toBe("true");
+    // Not `disabled`: a disabled button would drop the focus.
+    expect(retrying.hasAttribute("disabled")).toBe(false);
     expect(document.activeElement).toBe(retrying);
     await user.click(retrying);
     expect(retry).toHaveBeenCalledOnce();
@@ -710,8 +721,45 @@ describe("SH-B8: a retry keeps its strip, its button and the focus until the out
       if (clear === "Retry pressed again") await user.click(again);
       else notify(starting);
       expect(screen.queryAllByRole("alert")).toEqual([]);
+      // The message is gone, not hidden: the next unavailable state shows none.
+      notify(starting);
+      notify(unavailable);
+      expect(screen.queryAllByRole("alert")).toEqual([]);
     },
   );
+
+  it("SH-B8: keeps Retrying harness focused while the harness recovers, until it is unavailable again", async () => {
+    const { notify } = await pressRetry();
+    for (const status of [starting, recovering, starting]) {
+      notify(status);
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Retrying harness" }));
+    }
+    notify(unavailable);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Retry harness" }));
+  });
+
+  it("SH-B8: says so when a retry cannot reach the desktop process", async () => {
+    await pressRetry(() => Promise.reject(new Error("The bridge is gone.")));
+    const region = screen.getByRole("region", { name: "Harness unavailable" });
+    const alert = await within(region).findByRole("alert");
+    expect([alert.textContent, alert.getAttribute("data-code")]).toEqual([
+      "Retry could not reach the desktop process.",
+      "DESKTOP_RETRY_FAILED",
+    ]);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Retry harness" }));
+  });
+
+  it("SH-B8: leaves focus where the user moved it after pressing Retry", async () => {
+    const { notify } = await pressRetry();
+    const attention = within(screen.getByRole("navigation", { name: "Activity" })).getByRole(
+      "button",
+      { name: "Attention" },
+    );
+    attention.focus();
+    notify(starting);
+    notify(readyStatus);
+    expect(document.activeElement).toBe(attention);
+  });
 
   it("SH-B8: leaves focus on the rail while the strip comes, changes and goes", async () => {
     const { notify } = drivenHarness(readyStatus);

@@ -14,7 +14,7 @@ export const harnessPids = (application: ElectronApplication) =>
 
 /**
  * Ends the harness process from the main process, each time a new one runs, until the
- * supervisor gives up its automatic recovery and the old header offers "Retry harness".
+ * supervisor gives up its automatic recovery and the harness strip offers "Retry harness".
  */
 export async function crashHarness(application: ElectronApplication, page: Page) {
   const retry = page.getByRole("button", { name: "Retry harness" });

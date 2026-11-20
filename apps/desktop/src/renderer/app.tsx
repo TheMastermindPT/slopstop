@@ -1,7 +1,13 @@
 import type { HarnessStatus } from "@slopstop/protocol";
 import { useEffect, useState } from "react";
 import { ProjectsWorkspace } from "./projects-workspace.js";
-import { HarnessStatusLine, HarnessStrip, useStripShown } from "./shell/harness-strip.js";
+import {
+  HarnessStatusLine,
+  HarnessStrip,
+  type RetryFailure,
+  type StatusCopy,
+  useStripShown,
+} from "./shell/harness-strip.js";
 import { TitleBar } from "./shell/title-bar.js";
 
 const initialStatus: HarnessStatus = {
@@ -9,46 +15,44 @@ const initialStatus: HarnessStatus = {
   attempt: 1,
 };
 
-type StatusCopy = Readonly<{
-  heading: string;
-  detail: string;
-  coordinate: string;
-}>;
-
 function copyForStatus(status: HarnessStatus): StatusCopy {
   switch (status.state) {
     case "starting":
       return {
         heading: "Harness starting",
         detail: `Establishing process link, attempt ${status.attempt}.`,
-        coordinate: "LINK / ACQUIRING",
       };
     case "ready":
       return {
         heading: "Harness ready",
         detail: `Protocol link established with harness ${status.harnessVersion}.`,
-        coordinate: "LINK / LOCKED",
       };
     case "degraded":
       return {
         heading: "Harness recovering",
         detail: status.diagnostic.message,
-        coordinate: "LINK / RECOVERY",
       };
     case "crashed":
       return {
         heading: "Harness unavailable",
         detail: status.diagnostic.message,
-        coordinate: "LINK / LOST",
       };
     case "stopped":
       return {
         heading: "Harness stopped",
         detail: "The utility process is not running.",
-        coordinate: "LINK / OFFLINE",
       };
   }
 }
+
+/** A retry the desktop process never answered: a failure of its own, never a silent one. */
+const retryBridgeFailure: RetryFailure = {
+  code: "DESKTOP_RETRY_FAILED",
+  message: "Retry could not reach the desktop process.",
+};
+
+/** Whether `state` is an outcome that ends a pending retry: starting and recovering are not. */
+const endsRetry = (state: HarnessStatus["state"]) => state !== "starting" && state !== "degraded";
 
 function bridgeFailure(): HarnessStatus {
   return {
@@ -64,18 +68,21 @@ function bridgeFailure(): HarnessStatus {
 
 export function App() {
   const [status, setStatus] = useState<HarnessStatus>(initialStatus);
-  const [retryMessage, setRetryMessage] = useState<string | null>(null);
+  const [retryFailure, setRetryFailure] = useState<RetryFailure | null>(null);
   // A pressed retry waits for its outcome: ready, unavailable again, or a refusal.
   const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     let active = true;
     let notified = false;
-    /** A new status ends a pending retry unless it is starting; only unavailable keeps the message. */
+    /**
+     * A pending retry ends at an outcome: ready, unavailable again, or stopped. Starting and
+     * recovering are part of the attempt. Only unavailable keeps a refused retry's message.
+     */
     const apply = (next: HarnessStatus) => {
       setStatus(next);
-      if (next.state !== "starting") setRetrying(false);
-      if (next.state !== "crashed") setRetryMessage(null);
+      if (endsRetry(next.state)) setRetrying(false);
+      if (next.state !== "crashed") setRetryFailure(null);
     };
     const unsubscribe = window.slopstop.subscribeHarnessStatus((next) => {
       notified = true;
@@ -105,15 +112,17 @@ export function App() {
   const stripShown = useStripShown(status.state);
 
   function retryHarness(): void {
-    setRetryMessage(null);
+    setRetryFailure(null);
     setRetrying(true);
+    const refused = (failure: RetryFailure) => {
+      setRetrying(false);
+      setRetryFailure(failure);
+    };
     window.slopstop.retryHarness().then(
       (result) => {
-        if (result.ok) return;
-        setRetrying(false);
-        setRetryMessage(result.error.message);
+        if (!result.ok) refused(result.error);
       },
-      () => setRetrying(false),
+      () => refused(retryBridgeFailure),
     );
   }
 
@@ -130,7 +139,7 @@ export function App() {
                 status={status}
                 copy={copy}
                 retrying={retrying}
-                retryMessage={retryMessage}
+                retryFailure={retryFailure}
                 onRetry={retryHarness}
               />
             ) : null}

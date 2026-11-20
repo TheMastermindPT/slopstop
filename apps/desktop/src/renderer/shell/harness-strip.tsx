@@ -7,6 +7,12 @@ import styles from "./harness-strip.module.css";
 /** The harness state's words: the state word and its detail (`copyForStatus` in `app.tsx`). */
 export type StatusCopy = Readonly<{ heading: string; detail: string }>;
 
+/** Why a retry failed: the main process refused it, or the desktop process never answered. */
+export type RetryFailure = Readonly<{
+  code: "HARNESS_RETRY_UNAVAILABLE" | "DESKTOP_RETRY_FAILED";
+  message: string;
+}>;
+
 type StripState = Exclude<HarnessStatus["state"], "ready">;
 
 /** Each state's tone, read by the style sheet, and its icon. Stopped is not a fault. */
@@ -73,7 +79,7 @@ export function HarnessStrip(
     status: Exclude<HarnessStatus, { state: "ready" }>;
     copy: StatusCopy;
     retrying: boolean;
-    retryMessage: string | null;
+    retryFailure: RetryFailure | null;
     onRetry: () => void;
   }>,
 ) {
@@ -92,9 +98,9 @@ export function HarnessStrip(
       <div className={styles["text"]}>
         <p className={styles["word"]}>{props.copy.heading}</p>
         <p className={styles["detail"]}>{props.copy.detail}</p>
-        {unavailable && props.retryMessage !== null ? (
-          <p role="alert" className={styles["alert"]}>
-            {props.retryMessage}
+        {unavailable && props.retryFailure !== null ? (
+          <p role="alert" className={styles["alert"]} data-code={props.retryFailure.code}>
+            {props.retryFailure.message}
           </p>
         ) : null}
       </div>

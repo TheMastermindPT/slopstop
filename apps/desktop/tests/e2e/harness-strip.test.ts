@@ -32,42 +32,45 @@ async function withUnavailableHarness(
   await expectNoHarnessRequestFailure(userData);
 }
 
-/** The markup `app.tsx` renders for a refused retry, placed by the test under the detail. */
-function addRetryAlert(page: Page) {
-  return page.evaluate(
-    ({ region, message }) => {
-      const detail = document.querySelector(region)?.querySelectorAll("p")[1];
-      const alert = document.createElement("p");
-      alert.setAttribute("role", "alert");
-      alert.className = detail?.className ?? "";
-      alert.textContent = message;
-      detail?.after(alert);
-    },
-    { region: regionSelector, message: retryFailure },
-  );
+/**
+ * A refused retry, for real: the test swaps main's retry handler for one that refuses with
+ * `retryFailure`, presses Retry, and waits for the strip's own alert. No product code changes.
+ */
+async function refuseRetry(application: ElectronApplication, page: Page) {
+  await application.evaluate(({ ipcMain }, message) => {
+    ipcMain.removeHandler("harness:retry");
+    ipcMain.handle("harness:retry", () => ({
+      ok: false,
+      error: { code: "HARNESS_RETRY_UNAVAILABLE", message },
+    }));
+  }, retryFailure);
+  await page.locator(regionSelector).getByRole("button", { name: "Retry harness" }).click();
+  await expect(page.locator(regionSelector).getByRole("alert")).toHaveText(retryFailure);
 }
 
 /** The strip and its parts, the sidebar, the banner and the page, as boxes in CSS px. */
 function stripBoxes(page: Page) {
   return page.evaluate(
     ({ banner, region }) => {
-      const box = (element: Element | null | undefined) => {
-        if (element == null)
+      // A missing element reads as NaN, which no comparison accepts.
+      const box = (element: Element | null) => {
+        const rect = element?.getBoundingClientRect();
+        if (rect === undefined)
           return { left: Number.NaN, top: Number.NaN, right: Number.NaN, bottom: Number.NaN };
-        const { left, top, right, bottom } = element.getBoundingClientRect();
-        return { left, top, right, bottom };
+        return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
       };
-      const strip = document.querySelector(region);
-      const words = strip?.querySelectorAll("p");
+      const strip = document.querySelector(region) ?? document.createElement("section");
+      const words = strip.querySelectorAll("p");
       return {
         banner: box(document.querySelector(banner)),
         sidebar: box(document.querySelector('aside[aria-label="Projects"]')),
-        place: box(strip?.parentElement),
-        region: box(strip),
-        word: box(words?.[0]),
-        detail: box(words?.[1]),
-        alert: box(strip?.querySelector('[role="alert"]')),
-        retry: box(strip?.querySelector("button")),
+        place: box(strip.parentElement),
+        region: box(strip.isConnected ? strip : null),
+        text: box(strip.querySelector("div")),
+        word: box(words.item(0)),
+        detail: box(words.item(1)),
+        alert: box(strip.querySelector('[role="alert"]')),
+        retry: box(strip.querySelector("button")),
         headers: document.querySelectorAll("header").length,
         viewport: { width: innerWidth, height: innerHeight },
         document: {
@@ -78,6 +81,18 @@ function stripBoxes(page: Page) {
     },
     { banner: bannerSelector, region: regionSelector },
   );
+}
+
+/** How many of the strip's parts are cut: overflowing their box, or ending in an ellipsis. */
+function cutParts(page: Page) {
+  return page.locator(regionSelector).evaluate((strip) => {
+    const parts = [...strip.querySelectorAll('p, [role="alert"], button')];
+    const cut = (element: Element) =>
+      element.scrollWidth > element.clientWidth ||
+      element.scrollHeight > element.clientHeight ||
+      getComputedStyle(element).textOverflow === "ellipsis";
+    return parts.filter(cut).length;
+  });
 }
 
 type StripBoxes = Awaited<ReturnType<typeof stripBoxes>>;
@@ -143,18 +158,20 @@ for (const row of fitRows) {
       else await sizeContent(application, page, 1280, 800);
       if (row.zoom !== 1)
         await setZoom(application, page, { factor: row.zoom, width: 1280, height: 800 });
-      if (row.alert) await addRetryAlert(page);
+      if (row.alert) await refuseRetry(application, page);
       const boxes = await stripBoxes(page);
       expect(stripFit(boxes, row.alert)).toEqual(fits);
+      // Whole means uncut too: no part overflows or ends in an ellipsis.
+      expect(await cutParts(page)).toBe(0);
       if (row.minimum) expect(near(boxes.place.right - boxes.place.left, 336)).toBe(true);
       // Narrow: the button under the text, level with it. Wide: beside the text, at the right.
       const layout = row.under
         ? {
-            under: boxes.retry.top >= boxes.detail.bottom,
+            under: boxes.retry.top >= boxes.text.bottom,
             level: near(boxes.retry.left, boxes.word.left),
           }
         : {
-            beside: boxes.retry.left >= boxes.detail.right,
+            beside: boxes.retry.left >= boxes.text.right,
             atRight: boxes.region.right - boxes.retry.right <= 24,
           };
       expect(Object.values(layout)).toEqual([true, true]);
@@ -175,6 +192,7 @@ test("SH-B10: paints the unavailable strip, rings Retry and passes the accessibi
           radius: style.borderTopLeftRadius,
           borderWidth: style.borderTopWidth,
           borderStyle: style.borderTopStyle,
+          borderColor: style.borderTopColor,
         };
       });
     const painted = await look();
@@ -194,7 +212,11 @@ test("SH-B10: paints the unavailable strip, rings Retry and passes the accessibi
     expect(await axeViolations(page, { selector: regionSelector })).toEqual([]);
     await page.emulateMedia({ forcedColors: "active" });
     const forced = await look();
-    expect([forced.borderWidth, forced.borderStyle]).toEqual(["1px", "solid"]);
+    expect([forced.borderWidth, forced.borderStyle, forced.borderColor]).toEqual([
+      "1px",
+      "solid",
+      await computedValue(page, "borderTopColor", "CanvasText"),
+    ]);
     const forcedText = await forcedTextColours(page, regionSelector);
     expect(forcedText.checked).toBeGreaterThan(0);
     expect(forcedText.failures).toEqual([]);

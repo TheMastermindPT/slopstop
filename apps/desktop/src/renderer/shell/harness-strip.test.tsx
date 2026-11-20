@@ -52,13 +52,15 @@ describe("the harness strip", () => {
         status={{ state: "starting", attempt: 2 }}
         copy={{ heading: "Harness starting", detail: "Establishing process link, attempt 2." }}
         retrying={false}
-        retryMessage={null}
+        retryFailure={null}
         onRetry={() => undefined}
       />,
     );
     const region = screen.getByRole("region", { name: "Harness starting" });
     const icons = [...region.querySelectorAll("svg path")].map((icon) => icon.getAttribute("d"));
     expect(icons).toEqual(["M5 9L12 2L22 12L18 16M16 18L12 22L6 16M4 14L2 12"]);
+    // The loader carries the spin class, which the style sheet animates only when allowed.
+    expect(region.querySelector("svg")?.getAttribute("class")).toMatch(/spin/);
     expect(within(region).getByText("Harness starting")).toBeTruthy();
     expect(within(region).getByText("Establishing process link, attempt 2.")).toBeTruthy();
     const animations = count(sheet, /\banimation\s*:/g);
