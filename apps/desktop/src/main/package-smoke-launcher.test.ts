@@ -64,6 +64,7 @@ let spawnError = false;
 let killThrows = false;
 let bootstrapStderr: string | Buffer = "";
 let bootstrapDelay = 0;
+/** The bootstrap scenario's exit code; the other authorized scenarios exit 0. */
 let bootstrapCode = 0;
 let witnessMutation: (value: Record<string, unknown>) => string | Buffer | undefined;
 let beforeWriter: (root: string) => void;
@@ -250,6 +251,14 @@ function prepareBootstrap(launch: Launch, valid: boolean) {
   }
   return "";
 }
+/** A child's exit code: unauthorized 1, the writer `writerCode`, bootstrap `bootstrapCode`. */
+function childCode(
+  input: Readonly<{ valid: boolean; writer: boolean; scenario?: string | undefined }>,
+) {
+  if (!input.valid) return 1;
+  if (input.writer) return writerCode;
+  return input.scenario === "bootstrap" ? bootstrapCode : 0;
+}
 function completeLaunch(input: {
   launch: Launch;
   child: ReturnType<typeof makeChild>;
@@ -263,7 +272,7 @@ function completeLaunch(input: {
   else if (!valid) child.stderr.write("Package smoke authorization failed.\n");
   if (writer && !closeWriter) return;
   operations.push(`close:${scenario}`);
-  finishChild({ child, code: writer ? writerCode : valid ? bootstrapCode : 1, writer });
+  finishChild({ child, code: childCode({ valid, writer, scenario }), writer });
 }
 function finishChild(input: {
   child: ReturnType<typeof makeChild>;
@@ -655,7 +664,25 @@ describe.runIf(hostPlatform === "win32")("package smoke launcher", () => {
     try {
       await execute();
       expect(process.exitCode).toBe(1);
+      // Registration passed, so the failure is the bootstrap scenario's own.
+      expect(stderr).toHaveBeenCalledWith(
+        "Packaged SlopStop smoke failed at bootstrap scenario exited nonzero.\n",
+      );
       expect(JSON.stringify(stderr.mock.calls)).not.toContain("private-child-detail");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+  it("reflects the menu keys stage in fixed CI failure output", async () => {
+    vi.stubEnv("CI", "true");
+    bootstrapCode = 1;
+    bootstrapStderr = "Package smoke proof failed at menu-reload.\n";
+    try {
+      await execute();
+      expect(process.exitCode).toBe(1);
+      expect(stderr).toHaveBeenCalledWith(
+        "Packaged SlopStop smoke failed at bootstrap scenario exited nonzero at menu-reload.\n",
+      );
     } finally {
       vi.unstubAllEnvs();
     }

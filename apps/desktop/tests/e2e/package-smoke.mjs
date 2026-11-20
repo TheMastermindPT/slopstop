@@ -60,6 +60,14 @@ const writerFailureStages = new Set([
   "cleanup",
   "internal",
 ]);
+/** The menu keys proof's stages (main's `MenuKeysProofStage`): the only child stages CI may show. */
+const menuKeysFailureStages = new Set([
+  "menu-zoom-in",
+  "menu-zoom-out",
+  "menu-zoom-reset",
+  "menu-reload",
+  "menu-devtools",
+]);
 const invalidRelativeSmokeRoot = "relative-smoke-root";
 const healthyProjectId = "00000000-0000-4000-8000-000000000101";
 const witnessProjectId = "00000000-0000-4000-8000-000000000103";
@@ -467,9 +475,10 @@ async function launchScenario(root, token, scenario) {
   ].find(([failed]) => failed);
   if (failedCheck !== undefined) {
     const failure = startupFailed ? "startup failed" : failedCheck[1];
-    // With diagnostics on (CI), main names the proof stage that failed, e.g. `menu-reload`.
+    // With diagnostics on (CI), main names the proof stage that failed, e.g. `menu-reload`; only a
+    // menu keys stage is shown, so no other child text reaches the fixed line.
     const proofStage = /^Package smoke proof failed at ([a-z-]+)\.$/mu.exec(launch.stderr)?.[1];
-    const at = proofStage === undefined ? "" : ` at ${proofStage}`;
+    const at = menuKeysFailureStages.has(proofStage) ? ` at ${proofStage}` : "";
     activeSmokeStage = `${scenario} scenario ${failure}${at}`;
     throw new Error(`Packaged SlopStop ${scenario} scenario ${failedCheck[1]}.`);
   }

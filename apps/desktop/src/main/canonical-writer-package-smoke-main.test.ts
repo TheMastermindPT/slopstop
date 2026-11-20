@@ -4,29 +4,37 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
 import { bootstrap } from "./canonical-writer-package-smoke-test-peers.js";
 
+/** Whether Ctrl+R starts a load in the mocked window, as the default menu's reload would. */
+const menuKeys = vi.hoisted(() => ({ reloadActs: false }));
 /**
  * A mocked window's `webContents`. Its keys model the packaged zoom-only menu, for the bootstrap
- * smoke's keys proof on win32: a zoom key acts at once; reload and DevTools keys do nothing.
+ * smoke's keys proof on win32: a zoom key acts at once; reload and DevTools keys do nothing,
+ * unless `menuKeys.reloadActs` lets Ctrl+R start a load.
  */
 const mockContents = vi.hoisted(() => (id: number) => {
   const zoom = { level: 0 };
-  const zoomKeys: Readonly<Record<string, (level: number) => number>> = {
-    Plus: (level) => level + 0.5,
-    "-": (level) => level - 0.5,
-    "0": () => 0,
+  const loadListeners = new Set<() => void>();
+  const keyDown: Readonly<Record<string, () => void>> = {
+    Plus: () => (zoom.level += 0.5),
+    "-": () => (zoom.level -= 0.5),
+    "0": () => (zoom.level = 0),
+    R: () => {
+      for (const listener of menuKeys.reloadActs ? loadListeners : []) listener();
+    },
   };
   return {
     id,
     mainFrame: { processId: 100, routingId: id },
     executeJavaScript: vi.fn().mockResolvedValue({}),
     focus: vi.fn(),
-    on: vi.fn(),
-    removeListener: vi.fn(),
+    on: vi.fn((name: string, listener: () => void) => {
+      if (name === "did-start-loading") loadListeners.add(listener);
+    }),
+    removeListener: vi.fn((_name: string, listener: () => void) => loadListeners.delete(listener)),
     getZoomLevel: vi.fn(() => zoom.level),
     isDevToolsOpened: vi.fn(() => false),
     sendInputEvent: vi.fn((input: Readonly<{ type: string; keyCode: string }>) => {
-      const key = input.type === "keyDown" ? zoomKeys[input.keyCode] : undefined;
-      if (key !== undefined) zoom.level = key(zoom.level);
+      if (input.type === "keyDown") keyDown[input.keyCode]?.();
     }),
   };
 });
@@ -409,6 +417,7 @@ function answerOpenPaths() {
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  menuKeys.reloadActs = false;
   configureRuntimeFiles();
   writes = [];
   callbacks = [];
@@ -1203,6 +1212,40 @@ describe("the window chrome in main", () => {
           row.repaint,
         );
     });
+  });
+
+  const control = ["control"];
+  const reloadFailure = "Package smoke proof failed at menu-reload.\n";
+  // Every row sends the six keys: the proof checks reload only after zoom has answered.
+  it.each([
+    { name: "zoom only", reloadActs: false, diagnostics: false, exit: 0, writes: [] },
+    {
+      name: "reload, diagnostics on",
+      reloadActs: true,
+      diagnostics: true,
+      exit: 1,
+      writes: [reloadFailure],
+    },
+    { name: "reload, diagnostics off", reloadActs: true, diagnostics: false, exit: 1, writes: [] },
+  ])("proves the packaged menu's keys in the win32 bootstrap smoke: $name", async (row) => {
+    vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_SCENARIO", "bootstrap");
+    if (row.diagnostics) vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS", "1");
+    menuKeys.reloadActs = row.reloadActs;
+    await onPlatform("win32", async () => {
+      await load();
+      ready();
+      await flush();
+    });
+    const inputs = ports.window.mock.instances[0]?.webContents.sendInputEvent.mock.calls;
+    expect(inputs?.map(([input]) => input).filter(({ type }) => type === "keyDown")).toEqual(
+      ["R", "I", "Plus", "-", "-", "0"].map((keyCode) => ({
+        type: "keyDown",
+        keyCode,
+        modifiers: keyCode === "I" ? [...control, "shift"] : control,
+      })),
+    );
+    expect(ports.app.exit).toHaveBeenCalledExactlyOnceWith(row.exit);
+    expect(writes).toEqual(row.writes);
   });
 });
 

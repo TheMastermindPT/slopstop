@@ -220,6 +220,17 @@ for (const row of clearanceRows) {
 const focusInBanner = (page: Page) =>
   page.evaluate((selector) => document.activeElement?.closest(selector) != null, bannerSelector);
 
+/** Whether the mark's computed stroke is the forced text colour (the body's), and both values. */
+function markStrokeAgainstText(page: Page) {
+  return page.evaluate((selector) => {
+    const mark = document.querySelector(selector)?.querySelector("svg");
+    if (mark === null || mark === undefined) return { matches: false, stroke: "no mark" };
+    const stroke = getComputedStyle(mark).stroke;
+    const text = getComputedStyle(document.body).color;
+    return stroke === text ? { matches: true } : { matches: false, stroke, text };
+  }, bannerSelector);
+}
+
 test("passes the accessibility harness on the title bar", async () => {
   test.setTimeout(150_000);
   await withTitleBarWindow(async (_application, page) => {
@@ -232,6 +243,8 @@ test("passes the accessibility harness on the title bar", async () => {
     const forcedText = await forcedTextColours(page, bannerSelector);
     expect(forcedText.checked).toBeGreaterThan(0);
     expect(forcedText.failures).toEqual([]);
+    // The rune holds no text, so the text check skips it: its stroke must be the forced text colour.
+    expect(await markStrokeAgainstText(page)).toEqual({ matches: true });
     expect(await axeViolations(page, { selector: bannerSelector, forcedColors: true })).toEqual([]);
     await page.emulateMedia({ forcedColors: "none" });
     expect(await axeViolations(page, { selector: bannerSelector })).toEqual([]);
