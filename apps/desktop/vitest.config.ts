@@ -12,6 +12,18 @@ export const jsdomRendererFiles = [
   "src/renderer/app.test.tsx",
 ];
 
+/** React for renderer tests: the plugin, and one copy of react and react-dom. */
+export const rendererReact = {
+  plugins: [react()],
+  resolve: {
+    alias: {
+      react: path.resolve(import.meta.dirname, "../../node_modules/react"),
+      "react-dom": path.resolve(import.meta.dirname, "../../node_modules/react-dom"),
+    },
+    dedupe: ["react", "react-dom"],
+  },
+};
+
 /** The renderer test project: React, the shared setup, one DOM environment. */
 export function rendererProject(
   project: Readonly<{
@@ -24,14 +36,7 @@ export function rendererProject(
   }>,
 ) {
   return defineProject({
-    plugins: [react()],
-    resolve: {
-      alias: {
-        react: path.resolve(import.meta.dirname, "../../node_modules/react"),
-        "react-dom": path.resolve(import.meta.dirname, "../../node_modules/react-dom"),
-      },
-      dedupe: ["react", "react-dom"],
-    },
+    ...rendererReact,
     test: {
       name: project.name,
       environment: project.environment,

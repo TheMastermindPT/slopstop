@@ -1,6 +1,5 @@
-import path from "node:path";
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import { rendererReact } from "./vitest.config.js";
 
 // Port Foundation scoped mutation (rigorous lane): the tests of the logic pf-s2 changed. Every
 // project keeps Vitest's default per-file isolation, whatever the unit projects use.
@@ -21,14 +20,7 @@ export default defineConfig({
         },
       },
       {
-        plugins: [react()],
-        resolve: {
-          alias: {
-            react: path.resolve(import.meta.dirname, "../../node_modules/react"),
-            "react-dom": path.resolve(import.meta.dirname, "../../node_modules/react-dom"),
-          },
-          dedupe: ["react", "react-dom"],
-        },
+        ...rendererReact,
         test: {
           name: "port-foundation-mutation-renderer",
           environment: "happy-dom",
