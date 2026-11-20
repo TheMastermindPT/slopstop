@@ -4,11 +4,13 @@ import {
   decodeStrict,
   type HarnessStatus,
   ProjectListResultSchema,
+  ProjectRegistrationResultSchema,
   type RetryHarnessResult,
 } from "@slopstop/protocol";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { registrationApi } from "./add-repository/registration-fake.js";
 import { App } from "./app.js";
 import { exposeApi, readyApi, readyStatus, unusedWorkspaceApi } from "./test-api.js";
 
@@ -386,5 +388,98 @@ it("keeps one level-1 heading, in the title bar", async () => {
     (element) => !banner?.contains(element) && ownText(element) === "Ragnarok",
   );
   expect(outside.map((element) => element.tagName)).toEqual([]);
-  expect(screen.getByRole("navigation", { name: "Workspace" }).textContent).toBe("");
 });
+
+it("SH-B3: swaps the one sidebar between Projects and Attention", async () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  const listProjects = vi.fn(async () =>
+    registeredProjectList(id, { status: "healthy", storageId: id, generationId: id }),
+  );
+  exposeApi(readyApi({ listProjects }));
+  render(<App />);
+  const row = `Open Project repo-${id.slice(0, 8)}`;
+  const projects = screen.getByRole("complementary", { name: "Projects" });
+  expect(await within(projects).findByRole("button", { name: row })).toBeTruthy();
+  expect(screen.queryByRole("complementary", { name: "Attention" })).toBeNull();
+  const rail = within(screen.getByRole("navigation", { name: "Activity" }));
+  const user = userEvent.setup();
+  await user.click(rail.getByRole("button", { name: "Attention" }));
+  const attention = within(screen.getByRole("complementary", { name: "Attention" }));
+  expect(attention.getByText("Attention has no sources yet.")).toBeTruthy();
+  expect(document.activeElement).toBe(attention.getByRole("heading", { name: "Attention" }));
+  expect(rail.getByRole("button", { name: "Attention" }).getAttribute("aria-pressed")).toBe("true");
+  expect(rail.getByRole("button", { name: "Projects" }).getAttribute("aria-pressed")).toBe("false");
+  expect(screen.queryByRole("button", { name: row })).toBeNull();
+  await user.click(rail.getByRole("button", { name: "Projects" }));
+  expect(screen.getByRole("button", { name: row })).toBeTruthy();
+  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Projects" }));
+  expect(listProjects).toHaveBeenCalledOnce();
+});
+
+/** Presses a rail item and answers the rail, for the rows that leave a flow from Attention. */
+async function pressRail(user: ReturnType<typeof userEvent.setup>, name: string) {
+  const rail = within(screen.getByRole("navigation", { name: "Activity" }));
+  await user.click(rail.getByRole("button", { name }));
+  return rail;
+}
+
+it.each(["Escape", "Cancel"] as const)(
+  "SH-B13: hands focus back to Add when the add flow closes from Attention: %s",
+  async (close) => {
+    exposeApi(registrationApi().api);
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Add existing repository" }));
+    await screen.findByRole("heading", { level: 2, name: "Do you trust this repository?" });
+    const rail = await pressRail(user, "Attention");
+    if (close === "Escape") await user.keyboard("{Escape}");
+    else await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(rail.getByRole("button", { name: "Projects" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Add existing repository" }),
+    );
+  },
+);
+
+it.each([
+  { name: "cancelled", press: "Cancel", focus: "Remove repo-11111111 from list" },
+  {
+    name: "ended with no Project left",
+    press: "Remove from list",
+    focus: "Add existing repository",
+  },
+])(
+  "SH-B13: hands focus back to the Projects list when the removal is $name from Attention",
+  async (row) => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    let removed = false;
+    exposeApi(
+      readyApi({
+        listProjects: async () =>
+          removed
+            ? { status: "listed", projects: [], hiddenCount: 0 }
+            : registeredProjectList(id, { status: "healthy", storageId: id, generationId: id }),
+        registerProject: async () => {
+          removed = true;
+          return decodeStrict(ProjectRegistrationResultSchema, {
+            status: "removed",
+            projectId: id,
+          });
+        },
+      }),
+    );
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Remove repo-11111111 from list" }));
+    await screen.findByRole("heading", { level: 2, name: "Remove repo-11111111 from the list?" });
+    const rail = await pressRail(user, "Attention");
+    await user.click(screen.getByRole("button", { name: row.press }));
+    await screen.findByRole("button", { name: row.focus });
+    expect(rail.getByRole("button", { name: "Projects" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: row.focus }));
+  },
+);

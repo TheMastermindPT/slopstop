@@ -27,29 +27,37 @@ export function useRegistrationCapability(ready: boolean, attempt: number) {
   return capability;
 }
 
-const focusSelector = (selector: string) =>
-  document.querySelector<HTMLButtonElement>(selector)?.focus();
+/** Makes the Projects sidebar current, so the controls a flow hands focus back to are there. */
+type ShowProjects = Readonly<{ showProjects: () => void }>;
+
+/** Focuses the first element matching `selector`, after making the Projects sidebar current. */
+const focusInProjects = (actions: ShowProjects, selector: string) => {
+  actions.showProjects();
+  document.querySelector<HTMLElement>(selector)?.focus();
+};
 
 /** The removal's host: focus targets in the document plus the workspace's list. */
 export function workspaceRemovalHost(
-  actions: Pick<RemovalHost, "visibleOrder" | "refresh" | "announce">,
+  actions: Pick<RemovalHost, "visibleOrder" | "refresh" | "announce"> & ShowProjects,
 ): RemovalHost {
+  const { showProjects: _, ...rest } = actions;
   return {
-    ...actions,
-    focusAdd: () => document.getElementById("add-repository")?.focus(),
-    focusProject: (projectId: ProjectId) => focusSelector(`[data-project="${projectId}"]`),
-    focusRemove: (projectId: ProjectId) => focusSelector(`[data-remove="${projectId}"]`),
+    ...rest,
+    focusAdd: () => focusInProjects(actions, "#add-repository"),
+    focusProject: (projectId: ProjectId) =>
+      focusInProjects(actions, `[data-project="${projectId}"]`),
+    focusRemove: (projectId: ProjectId) => focusInProjects(actions, `[data-remove="${projectId}"]`),
   };
 }
 
 /** The add flow's host: focus targets in the document plus the workspace's own actions. */
 export function workspaceFlowHost(
-  actions: Pick<FlowHost, "registered" | "restored" | "open" | "announce">,
+  actions: Pick<FlowHost, "registered" | "restored" | "open" | "announce"> & ShowProjects,
 ): FlowHost {
+  const { showProjects: _, ...rest } = actions;
   return {
-    ...actions,
-    focusAdd: () => document.getElementById("add-repository")?.focus(),
-    show: (projectId: ProjectId) =>
-      document.querySelector<HTMLButtonElement>(`[data-project="${projectId}"]`)?.focus(),
+    ...rest,
+    focusAdd: () => focusInProjects(actions, "#add-repository"),
+    show: (projectId: ProjectId) => focusInProjects(actions, `[data-project="${projectId}"]`),
   };
 }

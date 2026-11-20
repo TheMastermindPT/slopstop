@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { RunaIcon } from "./runa-icon.js";
+import { RunaIcon, type RunaIconName } from "./runa-icon.js";
 
 /** Path data copied from `ragnarok-hero/icons-runa-v2/<name>.svg` (Runa v2, decisions log :359). */
 const runaV2 = {
@@ -14,22 +14,36 @@ const runaV2 = {
   "circle-help": "M12 2.5L21.5 12L12 21.5L2.5 12ZM8.5 9L12 6.5L15.5 9V10.5L12 13V14M12 17V17.5",
 } as const;
 
+/** The rail's staves: `icons-runa-v2/folder.svg` and `flame.svg` (the Kenaz rune). */
+const shellStaves = {
+  folder: "M3 5.5H9L12 8.5H21V19H3Z",
+  flame: "M15.5 4L7.5 12L15.5 20M16 10L18 12L16 14L14 12Z",
+} as const;
+
+/** `name` renders one decorative stave drawing `path`. */
+function expectStave(name: RunaIconName, path: string) {
+  const { container } = render(<RunaIcon name={name} />);
+  const svg = container.querySelector("svg");
+  expect(svg?.getAttribute("aria-hidden")).toBe("true");
+  expect(svg?.getAttribute("focusable")).toBe("false");
+  expect(svg?.getAttribute("stroke")).toBe("currentColor");
+  expect(svg?.getAttribute("stroke-width")).toBe("1.5");
+  expect(svg?.getAttribute("stroke-linecap")).toBe("square");
+  expect(svg?.getAttribute("stroke-linejoin")).toBe("miter");
+  expect(svg?.getAttribute("fill")).toBe("none");
+  expect([...(svg?.querySelectorAll("path") ?? [])].map((p) => p.getAttribute("d"))).toEqual([
+    path,
+  ]);
+}
+
 describe("RunaIcon", () => {
   it.each(Object.entries(runaV2) as [keyof typeof runaV2, string][])(
     "renders %s as a decorative stave",
-    (name, path) => {
-      const { container } = render(<RunaIcon name={name} />);
-      const svg = container.querySelector("svg");
-      expect(svg?.getAttribute("aria-hidden")).toBe("true");
-      expect(svg?.getAttribute("focusable")).toBe("false");
-      expect(svg?.getAttribute("stroke")).toBe("currentColor");
-      expect(svg?.getAttribute("stroke-width")).toBe("1.5");
-      expect(svg?.getAttribute("stroke-linecap")).toBe("square");
-      expect(svg?.getAttribute("stroke-linejoin")).toBe("miter");
-      expect(svg?.getAttribute("fill")).toBe("none");
-      expect([...(svg?.querySelectorAll("path") ?? [])].map((p) => p.getAttribute("d"))).toEqual([
-        path,
-      ]);
-    },
+    expectStave,
+  );
+
+  it.each(Object.entries(shellStaves) as [keyof typeof shellStaves, string][])(
+    "SH-B2: renders %s as a decorative stave",
+    expectStave,
   );
 });

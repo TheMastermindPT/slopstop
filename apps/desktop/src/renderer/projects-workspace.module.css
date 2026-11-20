@@ -1,10 +1,9 @@
 /* The old shell (design G22): layered, so the Conversation region wins. */
 @layer legacy-shell {
+  /* `<main>` under the rail: its columns are the frame's (`shell/shell-frame.module.css`). */
   .shell {
     display: grid;
-    grid-template-columns: 3.5rem 19rem minmax(0, 1fr);
     grid-template-rows: 3.5rem minmax(0, 1fr);
-    width: 100vw;
     /* The window below the rune title bar (`shell/title-bar.module.css`). */
     height: calc(100vh - env(titlebar-area-height, 44px));
     color: var(--legacy-ink);
@@ -26,21 +25,7 @@
     cursor: not-allowed;
     color: var(--legacy-muted);
   }
-  .rail {
-    grid-row: 1 / -1;
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    gap: 1.4rem;
-    padding-top: 0.8rem;
-    border-right: 1px solid var(--legacy-line);
-    background: var(--legacy-deep);
-  }
-  .rail button {
-    padding: 0.45rem;
-  }
   .header {
-    grid-column: 2 / -1;
     display: flex;
     gap: 1.5rem;
     justify-content: space-between;
@@ -157,9 +142,6 @@
     padding: 0.8rem;
   }
   @media (max-width: 760px) {
-    .shell {
-      grid-template-columns: 3rem 16rem minmax(0, 1fr);
-    }
     .workspace {
       padding: 1rem;
     }

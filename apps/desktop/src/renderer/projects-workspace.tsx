@@ -1,10 +1,10 @@
-import { FolderOpenIcon } from "@phosphor-icons/react";
 import type {
   CanonicalProjectActivationResult,
   HarnessStatus,
   ProjectId,
 } from "@slopstop/protocol";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useAddRepository } from "./add-repository/use-add-repository.js";
 import { AddRepositoryButton } from "./add-repository-button.js";
 import {
@@ -14,6 +14,9 @@ import {
 import { type ListState, ProjectRows, safeModeLabel } from "./projects-list.js";
 import styles from "./projects-workspace.module.css";
 import { useRemoveFromList } from "./remove-from-list/use-remove-from-list.js";
+import { AttentionSidebar, attentionHeadingId } from "./shell/attention-sidebar.js";
+import { type Destination, Rail } from "./shell/rail.js";
+import { ShellFrame } from "./shell/shell-frame.js";
 import { type Busy, needsUpgrade, useProjectUpgrade } from "./use-project-upgrade.js";
 import {
   rememberNames,
@@ -50,6 +53,7 @@ export function ProjectsWorkspace({
   const [announcement, setAnnouncement] = useState("");
   const names = useRef(new Map<ProjectId, string>());
   const [newProjectId, setNewProjectId] = useState<ProjectId | undefined>(undefined);
+  const [destination, setDestination] = useState<Destination>("projects");
   const epoch = useRef(0);
   const request = useRef(0);
   const selecting = useRef(false);
@@ -217,6 +221,7 @@ export function ProjectsWorkspace({
       restored: () => void refresh(),
       open: (projectId) => void open(projectId),
       announce: setAnnouncement,
+      showProjects,
     }),
   );
 
@@ -226,72 +231,81 @@ export function ProjectsWorkspace({
         list.status === "listed" ? list.projects.map((project) => project.projectId) : [],
       refresh,
       announce: setAnnouncement,
+      showProjects,
     }),
   );
 
-  return (
-    <main className={styles["shell"]}>
-      <nav className={styles["rail"]} aria-label="Workspace">
+  /** Makes Projects current at once, for a flow that hands focus back to the Projects sidebar. */
+  function showProjects() {
+    flushSync(() => setDestination("projects"));
+  }
+
+  /** Puts `next`'s sidebar in the one sidebar place and moves focus to its heading. */
+  function selectDestination(next: Destination) {
+    flushSync(() => setDestination(next));
+    document.getElementById(next === "projects" ? "projects-heading" : attentionHeadingId)?.focus();
+  }
+
+  const projectsSidebar = (
+    <aside className={styles["sidebar"]} aria-label="Projects">
+      <div className={styles["listHeader"]}>
+        <h2 id="projects-heading" tabIndex={-1}>
+          Projects
+        </h2>
         <button
           type="button"
-          aria-label="Projects"
-          aria-pressed="true"
-          onClick={() => document.getElementById("projects-heading")?.focus()}
+          onClick={() => void refresh()}
+          disabled={!ready || busy !== undefined || list.status === "loading"}
         >
-          <FolderOpenIcon size={23} />
+          Refresh
         </button>
-      </nav>
-      <header className={styles["header"]}>{header}</header>
-      <aside className={styles["sidebar"]} aria-label="Projects">
-        <div className={styles["listHeader"]}>
-          <h2 id="projects-heading" tabIndex={-1}>
-            Projects
-          </h2>
-          <button
-            type="button"
-            onClick={() => void refresh()}
-            disabled={!ready || busy !== undefined || list.status === "loading"}
-          >
-            Refresh
-          </button>
-        </div>
-        <AddRepositoryButton
-          capability={capability}
+      </div>
+      <AddRepositoryButton
+        capability={capability}
+        list={list}
+        busy={busy !== undefined}
+        onAdd={() => {
+          upgrade.clear();
+          flow.start();
+        }}
+        announce={setAnnouncement}
+      />
+      <div aria-busy={list.status === "loading"}>
+        <ProjectRows
           list={list}
+          activeProjectId={
+            session.kind === "active" ? session.activation.request.projectId : undefined
+          }
+          activeLabel={
+            session.kind === "active" && session.activation.access === "read-only"
+              ? "Read-only"
+              : "Read-write"
+          }
+          newProjectId={newProjectId}
+          disabled={!ready || busy !== undefined}
           busy={busy !== undefined}
-          onAdd={() => {
+          onOpen={(project) => void open(project.projectId)}
+          onRemove={(project) => {
+            if (project.registration === "unbound") return;
             upgrade.clear();
-            flow.start();
+            removal.ask({ projectId: project.projectId, name: project.name });
           }}
           announce={setAnnouncement}
         />
-        <div aria-busy={list.status === "loading"}>
-          <ProjectRows
-            list={list}
-            activeProjectId={
-              session.kind === "active" ? session.activation.request.projectId : undefined
-            }
-            activeLabel={
-              session.kind === "active" && session.activation.access === "read-only"
-                ? "Read-only"
-                : "Read-write"
-            }
-            newProjectId={newProjectId}
-            disabled={!ready || busy !== undefined}
-            busy={busy !== undefined}
-            onOpen={(project) => void open(project.projectId)}
-            onRemove={(project) => {
-              if (project.registration === "unbound") return;
-              upgrade.clear();
-              removal.ask({ projectId: project.projectId, name: project.name });
-            }}
-            announce={setAnnouncement}
-          />
-        </div>
-        <p className={styles["asideNote"]}>
-          Local Projects. No repository commands run while listing.
-        </p>
-      </aside>
+      </div>
+      <p className={styles["asideNote"]}>
+        Local Projects. No repository commands run while listing.
+      </p>
+    </aside>
+  );
+
+  return (
+    <ShellFrame
+      rail={<Rail current={destination} onSelect={selectDestination} />}
+      top={<header className={styles["header"]}>{header}</header>}
+      sidebar={destination === "projects" ? projectsSidebar : <AttentionSidebar />}
+      workClassName={styles["shell"]}
+    >
       <p className={styles["srOnly"]} aria-live="polite">
         {announcement}
       </p>
@@ -309,6 +323,6 @@ export function ProjectsWorkspace({
           onRetry={retryUpgrade}
         />
       </ConversationMemoryProvider>
-    </main>
+    </ShellFrame>
   );
 }

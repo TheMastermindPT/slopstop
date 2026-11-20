@@ -1,0 +1,53 @@
+/*
+ * The shell frame (DESIGN.md:266-278): rail 72px and sidebar 272px at 1280px and wider, 56px and
+ * 248px below. The sidebar stays at every width in this work (Q8 (a)). Unlayered.
+ */
+.frame {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  width: 100vw;
+  /* The window below the rune title bar (`shell/title-bar.module.css`). */
+  height: calc(100vh - env(titlebar-area-height, 44px));
+}
+
+/* Its rows stay the old shell's (`.shell`: the old header's 56px, 28px in a short window) until sh-s1b. */
+.work {
+  display: grid;
+  grid-template-columns: 272px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.top {
+  grid-column: 1 / -1;
+  display: grid;
+  min-width: 0;
+}
+
+.side,
+.centre {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+@media (max-width: 1279.98px) {
+  .frame {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .work {
+    grid-template-columns: 248px minmax(0, 1fr);
+  }
+}
+
+/* Below 480 CSS px the sidebar sits above the centre, and the work area scrolls down only. */
+@media (max-width: 479.98px) {
+  .work {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+    overflow-y: auto;
+  }
+}

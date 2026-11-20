@@ -1,0 +1,90 @@
+/*
+ * The activity rail (DESIGN.md:342; prototype components.css "Rail"). Unlayered, so it wins over
+ * the old shell's layered rules; the `seixo` class on the rail gives the Seixo focus ring.
+ */
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-height: 0;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  border-right: 1px solid var(--line-subtle);
+  background: var(--canvas);
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: var(--space-2) 0 6px;
+  border: 0;
+  border-radius: var(--radius-row);
+  background: none;
+  color: var(--ink-muted);
+  font: 500 11px / 14px var(--font-text);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-control),
+    color var(--transition-control);
+}
+
+.item:hover {
+  background: var(--iron);
+  color: var(--ink);
+}
+
+.item[aria-pressed="true"] {
+  background: var(--forged);
+  box-shadow: var(--shadow-row-lift);
+  color: var(--ink);
+}
+
+/* The current item keeps its lift under the Seixo ring. */
+.item[aria-pressed="true"]:focus-visible {
+  box-shadow: var(--focus-ring), var(--shadow-row-lift);
+}
+
+/*
+ * Under forced colours the fill is gone, so a system-colour border marks the current item. The
+ * border takes its 2px from the padding, so the item keeps its size and nothing shifts. The other
+ * item has no border: forced colours may paint a transparent one, which would mark both.
+ */
+@media (forced-colors: active) {
+  .item[aria-pressed="true"] {
+    border: 2px solid Highlight;
+    padding: 6px 0 4px;
+  }
+}
+
+@media (forced-colors: active) and (max-width: 1279.98px) {
+  .item[aria-pressed="true"] {
+    padding: 6px 0;
+  }
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+}
+
+.label {
+  color: var(--ink-dim);
+}
+
+.item:hover .label,
+.item[aria-pressed="true"] .label {
+  color: var(--ink);
+}
+
+/* Below 1280px the rail narrows to its icons; each button keeps its name (`aria-label`). */
+@media (max-width: 1279.98px) {
+  .item {
+    padding: var(--space-2) 0;
+  }
+
+  .label {
+    display: none;
+  }
+}
