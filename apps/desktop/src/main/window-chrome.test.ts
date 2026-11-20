@@ -305,6 +305,7 @@ describe("the window chrome", () => {
     { name: "six digits", window: "#FFFFFF" },
     { name: "a colour name", window: "white" },
     { name: "nine digits", window: "#FFFFFFFF0" },
+    { name: "text before the hash", window: "x#FFFFFFFF" },
   ] as const)(
     "falls back to black and white when a system colour is unreadable: $name",
     ({ window }) => {

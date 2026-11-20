@@ -5,7 +5,7 @@ import { desktopIpcChannels } from "../shared/desktop-api.js";
 import { bootstrap } from "./canonical-writer-package-smoke-test-peers.js";
 
 /** Whether Ctrl+R starts a load in the mocked window, as the default menu's reload would. */
-const menuKeys = vi.hoisted(() => ({ reloadActs: false }));
+const menuKeys = vi.hoisted(() => ({ reloadActs: false, devToolsOpens: false }));
 /**
  * A mocked window's `webContents`. Its keys model the packaged zoom-only menu, for the bootstrap
  * smoke's keys proof on win32: a zoom key acts at once; reload and DevTools keys do nothing,
@@ -32,7 +32,7 @@ const mockContents = vi.hoisted(() => (id: number) => {
     }),
     removeListener: vi.fn((_name: string, listener: () => void) => loadListeners.delete(listener)),
     getZoomLevel: vi.fn(() => zoom.level),
-    isDevToolsOpened: vi.fn(() => false),
+    isDevToolsOpened: vi.fn(() => menuKeys.devToolsOpens),
     sendInputEvent: vi.fn((input: Readonly<{ type: string; keyCode: string }>) => {
       if (input.type === "keyDown") keyDown[input.keyCode]?.();
     }),
@@ -418,6 +418,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
   menuKeys.reloadActs = false;
+  menuKeys.devToolsOpens = false;
   configureRuntimeFiles();
   writes = [];
   callbacks = [];
@@ -1215,38 +1216,71 @@ describe("the window chrome in main", () => {
   });
 
   const control = ["control"];
-  const reloadFailure = "Package smoke proof failed at menu-reload.\n";
-  // Every row sends the six keys: the proof checks reload only after zoom has answered.
+  const sixKeys = ["R", "I", "Plus", "-", "-", "0"].map((keyCode) => ({
+    type: "keyDown",
+    keyCode,
+    modifiers: keyCode === "I" ? [...control, "shift"] : control,
+  }));
+  const failedAt = {
+    reload: "Package smoke proof failed at menu-reload.\n",
+    devTools: "Package smoke proof failed at menu-devtools.\n",
+    storage: "Package smoke proof failed at storage.\n",
+  };
+  // A passing win32 bootstrap smoke with diagnostics on; each row changes what it names.
+  const smoke = {
+    platform: "win32" as NodeJS.Platform,
+    scenario: "bootstrap",
+    reloadActs: false,
+    devTools: false,
+    storageFails: false,
+    diagnostics: true,
+    pressed: true,
+    exit: 0,
+    writes: [] as string[],
+  };
+  // The proof checks reload and DevTools only after zoom answered, so those rows press all six.
   it.each([
-    { name: "zoom only", reloadActs: false, diagnostics: false, exit: 0, writes: [] },
+    { ...smoke, name: "zoom only" },
     {
+      ...smoke,
       name: "reload, diagnostics on",
       reloadActs: true,
-      diagnostics: true,
       exit: 1,
-      writes: [reloadFailure],
+      writes: [failedAt.reload],
     },
-    { name: "reload, diagnostics off", reloadActs: true, diagnostics: false, exit: 1, writes: [] },
-  ])("proves the packaged menu's keys in the win32 bootstrap smoke: $name", async (row) => {
-    vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_SCENARIO", "bootstrap");
-    if (row.diagnostics) vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS", "1");
-    menuKeys.reloadActs = row.reloadActs;
-    await onPlatform("win32", async () => {
-      await load();
-      ready();
-      await flush();
-    });
-    const inputs = ports.window.mock.instances[0]?.webContents.sendInputEvent.mock.calls;
-    expect(inputs?.map(([input]) => input).filter(({ type }) => type === "keyDown")).toEqual(
-      ["R", "I", "Plus", "-", "-", "0"].map((keyCode) => ({
-        type: "keyDown",
-        keyCode,
-        modifiers: keyCode === "I" ? [...control, "shift"] : control,
-      })),
-    );
-    expect(ports.app.exit).toHaveBeenCalledExactlyOnceWith(row.exit);
-    expect(writes).toEqual(row.writes);
-  });
+    { ...smoke, name: "reload, diagnostics off", reloadActs: true, diagnostics: false, exit: 1 },
+    { ...smoke, name: "DevTools opens", devTools: true, exit: 1, writes: [failedAt.devTools] },
+    { ...smoke, name: "bootstrap on linux", platform: "linux" as NodeJS.Platform, pressed: false },
+    { ...smoke, name: "missing-runtime on win32", scenario: "missing-runtime", pressed: false },
+    {
+      ...smoke,
+      name: "failed storage proof",
+      storageFails: true,
+      pressed: false,
+      exit: 1,
+      writes: [failedAt.storage],
+    },
+  ])(
+    "presses the packaged menu's keys only in a passing win32 bootstrap smoke: $name",
+    async (row) => {
+      vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_SCENARIO", row.scenario);
+      if (row.diagnostics) vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS", "1");
+      if (row.storageFails) ports.storageSmoke.mockRejectedValueOnce(new Error("storage"));
+      menuKeys.reloadActs = row.reloadActs;
+      menuKeys.devToolsOpens = row.devTools;
+      await onPlatform(row.platform, async () => {
+        await load();
+        ready();
+        await flush();
+      });
+      const inputs = ports.window.mock.instances[0]?.webContents.sendInputEvent.mock.calls ?? [];
+      expect(inputs.map(([input]) => input).filter(({ type }) => type === "keyDown")).toEqual(
+        row.pressed ? sixKeys : [],
+      );
+      expect(ports.app.exit).toHaveBeenCalledExactlyOnceWith(row.exit);
+      expect(writes).toEqual(row.writes);
+    },
+  );
 });
 
 describe("the IPC sender rule in main", () => {

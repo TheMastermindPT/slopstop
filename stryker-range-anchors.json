@@ -382,5 +382,53 @@
     "entry": "apps/harness/src/registration/registration-registry.ts:209-227",
     "first": "    stop: async () => {",
     "last": "    },"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/main.ts:88-104",
+    "first": "  windowChromePorts: (logger) => ({",
+    "last": "  }),"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/main.ts:238-243",
+    "first": "      const menuKeysStage = await proveMenuKeys(context);",
+    "last": "      }"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/main.ts:257-300",
+    "first": "function proveMenuKeys(",
+    "last": "}"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/main.ts:317-317",
+    "first": "  reportPackageSmokeStage(failureStage);",
+    "last": "  reportPackageSmokeStage(failureStage);"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/main.ts:353-360",
+    "first": "  const window = runtime.runSync(",
+    "last": "  );"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/main.ts:444-450",
+    "first": "function setStartMenu(): void {",
+    "last": "}"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/main.ts:470-470",
+    "first": "  setStartMenu();",
+    "last": "  setStartMenu();"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/desktop-runtime.ts:208-218",
+    "first": "  const chromeLayer = Layer.effect(",
+    "last": "  );"
   }
 ]

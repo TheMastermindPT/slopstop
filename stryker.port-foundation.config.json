@@ -1,6 +1,20 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "mutate": ["apps/desktop/src/main/window-chrome.ts", "apps/desktop/src/main/application-menu.ts"],
+  "mutate": [
+    "apps/desktop/src/main/window-chrome.ts",
+    "apps/desktop/src/main/application-menu.ts",
+    "apps/desktop/src/main/menu-keys-package-smoke.ts",
+    "apps/desktop/src/main/main.ts:88-104",
+    "apps/desktop/src/main/main.ts:238-243",
+    "apps/desktop/src/main/main.ts:257-300",
+    "apps/desktop/src/main/main.ts:317-317",
+    "apps/desktop/src/main/main.ts:353-360",
+    "apps/desktop/src/main/main.ts:444-450",
+    "apps/desktop/src/main/main.ts:470-470",
+    "apps/desktop/src/main/desktop-runtime.ts:208-218",
+    "apps/desktop/src/renderer/shell/title-bar.tsx",
+    "apps/desktop/src/renderer/brand/raidho-mark.tsx"
+  ],
   "testRunner": "vitest",
   "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": {

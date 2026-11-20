@@ -10,6 +10,8 @@ type FakeBehaviour = Readonly<{
   reset: boolean;
   reloadActs: boolean;
   devToolsOpens: boolean;
+  /** The lowest level a zoom-out key reaches. */
+  zoomOutFloor: number;
 }>;
 
 const zoomOnly: FakeBehaviour = {
@@ -18,6 +20,7 @@ const zoomOnly: FakeBehaviour = {
   reset: true,
   reloadActs: false,
   devToolsOpens: false,
+  zoomOutFloor: Number.NEGATIVE_INFINITY,
 };
 
 /** A key as text, for the order of the keys sent. */
@@ -33,7 +36,10 @@ const keyEffects = (
   behaviour: FakeBehaviour,
 ): Record<MenuKey["keyCode"], readonly [boolean, (state: WindowState) => void]> => ({
   Plus: [behaviour.zoomIn, (state) => (state.level += 0.5)],
-  "-": [behaviour.zoomOut, (state) => (state.level -= 0.5)],
+  "-": [
+    behaviour.zoomOut,
+    (state) => (state.level = Math.max(state.level - 0.5, behaviour.zoomOutFloor)),
+  ],
   "0": [behaviour.reset, (state) => (state.level = 0)],
   R: [behaviour.reloadActs, (state) => (state.loads += 1)],
   I: [behaviour.devToolsOpens, (state) => (state.devTools = true)],
@@ -108,6 +114,11 @@ describe("the packaged menu's keys proof", () => {
     { name: "zoom only", behaviour: zoomOnly, stage: undefined },
     { name: "zoom in dead", behaviour: { ...zoomOnly, zoomIn: false }, stage: "menu-zoom-in" },
     { name: "zoom out dead", behaviour: { ...zoomOnly, zoomOut: false }, stage: "menu-zoom-out" },
+    {
+      name: "zoom out stops at the start",
+      behaviour: { ...zoomOnly, zoomOutFloor: 0 },
+      stage: "menu-zoom-out",
+    },
     { name: "reset dead", behaviour: { ...zoomOnly, reset: false }, stage: "menu-zoom-reset" },
     { name: "reload acts", behaviour: { ...zoomOnly, reloadActs: true }, stage: "menu-reload" },
     {
