@@ -1,11 +1,7 @@
 /* The old shell (design G22): layered, so the Conversation region wins. */
 @layer legacy-shell {
-  /* `<main>` under the rail: its columns are the frame's (`shell/shell-frame.module.css`). */
+  /* `<main>`'s old look until PORT-PLAN slice 3; its layout is the frame's (`shell/shell-frame`). */
   .shell {
-    display: grid;
-    grid-template-rows: 3.5rem minmax(0, 1fr);
-    /* The window below the rune title bar (`shell/title-bar.module.css`). */
-    height: calc(100vh - env(titlebar-area-height, 44px));
     color: var(--legacy-ink);
     background: var(--legacy-night);
     font-size: 0.875rem;
@@ -24,25 +20,6 @@
   .shell button:disabled {
     cursor: not-allowed;
     color: var(--legacy-muted);
-  }
-  .header {
-    display: flex;
-    gap: 1.5rem;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 1.2rem;
-    border-bottom: 1px solid var(--legacy-line);
-    background: var(--legacy-deep);
-  }
-  .header :global([role="status"]) {
-    display: flex;
-    gap: 0.8rem;
-    align-items: center;
-    font-size: 0.75rem;
-    color: var(--legacy-muted);
-  }
-  .header :global([role="status"]) strong {
-    color: var(--legacy-ink);
   }
   .sidebar {
     display: flex;
@@ -144,26 +121,6 @@
   @media (max-width: 760px) {
     .workspace {
       padding: 1rem;
-    }
-    .header :global([role="status"]) span {
-      display: none;
-    }
-  }
-  /* A short window (zoom 200% of 1280 by 800): the header row halves (Q13; leaves with the Shell slice). */
-  @media (max-height: 420px) {
-    .shell {
-      /* 28px when the content fits; it grows when a retry alert wraps, so nothing is clipped. */
-      grid-template-rows: minmax(1.75rem, auto) minmax(0, 1fr);
-    }
-    .header {
-      padding-block: 0;
-    }
-    .header button {
-      padding-block: 0.2rem;
-    }
-    .header :global([role="alert"]) {
-      margin-block: 0;
-      min-width: 0;
     }
   }
   .add {

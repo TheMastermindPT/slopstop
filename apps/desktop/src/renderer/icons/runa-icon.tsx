@@ -13,6 +13,8 @@ const staves = {
   folder: "M3 5.5H9L12 8.5H21V19H3Z",
   /** Kenaz, the Attention rune. */
   flame: "M15.5 4L7.5 12L15.5 20M16 10L18 12L16 14L14 12Z",
+  "loader-circle": "M5 9L12 2L22 12L18 16M16 18L12 22L6 16M4 14L2 12",
+  "refresh-cw": "M4.5 9L12 3L19.5 9M19.5 4.5V9H15M19.5 15L12 21L4.5 15M4.5 19.5V15H9",
 } as const;
 
 export type RunaIconName = keyof typeof staves;

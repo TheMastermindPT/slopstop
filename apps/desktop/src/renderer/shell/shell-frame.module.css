@@ -10,18 +10,31 @@
   height: calc(100vh - env(titlebar-area-height, 44px));
 }
 
-/* Its rows stay the old shell's (`.shell`: the old header's 56px, 28px in a short window) until sh-s1b. */
+/* The sidebar takes the whole height; beside it, the strip's place sits above the centre. */
 .work {
   display: grid;
   grid-template-columns: 272px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
 }
 
-.top {
-  grid-column: 1 / -1;
-  display: grid;
+.side {
+  grid-column: 1;
+  grid-row: 1 / -1;
+}
+
+/* The work area beside the sidebar is a size container: the strip lays itself out by its width. */
+.strip {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
+  container-type: inline-size;
+}
+
+.centre {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .side,
@@ -42,21 +55,19 @@
   }
 }
 
-/*
- * Below 480 CSS px the sidebar sits above the centre, and the work area scrolls down only. The old
- * header keeps its row: 56px, and Q13's 28px in a short window.
- */
+/* Below 480 CSS px the sidebar, the strip and the centre stack; the work area scrolls down only. */
 @media (max-width: 479.98px) {
   .work {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 3.5rem;
+    grid-template-rows: none;
     grid-auto-rows: auto;
     overflow-y: auto;
   }
-}
 
-@media (max-width: 479.98px) and (max-height: 420px) {
-  .work {
-    grid-template-rows: minmax(1.75rem, auto);
+  .side,
+  .strip,
+  .centre {
+    grid-column: 1;
+    grid-row: auto;
   }
 }

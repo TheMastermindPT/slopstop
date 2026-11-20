@@ -9,7 +9,7 @@ import {
 } from "@slopstop/protocol";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { projectId, registrationApi } from "./add-repository/registration-fake.js";
 import { App } from "./app.js";
 import { exposeApi, readyApi, readyStatus, unusedWorkspaceApi } from "./test-api.js";
@@ -523,4 +523,208 @@ it("SH-B13: hands focus back to the Project's row when the add flow shows it fro
   const row = `Open Project repo-${projectId.slice(0, 8)}`;
   expect(rail.getByRole("button", { name: "Projects" }).getAttribute("aria-pressed")).toBe("true");
   expect(document.activeElement).toBe(screen.getByRole("button", { name: row }));
+});
+
+const unavailable: HarnessStatus = {
+  state: "crashed",
+  attempt: 3,
+  canRetry: true,
+  diagnostic: { code: "HARNESS_PROCESS_EXITED", message: "Harness exited with code 1." },
+};
+const recovering: HarnessStatus = {
+  state: "degraded",
+  attempt: 2,
+  diagnostic: { code: "HARNESS_PROCESS_EXITED", message: "Harness exited; restarting it." },
+};
+const starting: HarnessStatus = { state: "starting", attempt: 4 };
+
+/** A harness whose status the test drives; answers `notify` (inside `act`) and the retry spy. */
+function drivenHarness(
+  initial: HarnessStatus,
+  retryHarness: () => Promise<RetryHarnessResult> = async () => ({ ok: true }),
+) {
+  let listener: ((status: HarnessStatus) => void) | undefined;
+  const retry = vi.fn(retryHarness);
+  exposeApi(
+    readyApi({
+      getHarnessStatus: async () => initial,
+      retryHarness: retry,
+      subscribeHarnessStatus: (next) => {
+        listener = next;
+        return () => undefined;
+      },
+    }),
+  );
+  const notify = (status: HarnessStatus) => act(() => listener?.(status));
+  return { notify, retry };
+}
+
+const strip = (name: string) => screen.queryByRole("region", { name });
+
+describe("the harness strip in the window", () => {
+  it.each([
+    {
+      name: "unavailable",
+      status: unavailable,
+      word: "Harness unavailable",
+      tone: "fault",
+      retry: true,
+    },
+    {
+      name: "recovering",
+      status: recovering,
+      word: "Harness recovering",
+      tone: "warn",
+      retry: false,
+    },
+    {
+      name: "stopped",
+      status: { state: "stopped" } as const,
+      word: "Harness stopped",
+      tone: "dim",
+      retry: false,
+    },
+  ])(
+    "SH-B6: says the state in one status and shows a strip only when not ready: $name",
+    async (row) => {
+      const harness = drivenHarness(row.status);
+      render(<App />);
+      const region = await screen.findByRole("region", { name: row.word });
+      const status = screen.getByRole("status");
+      expect(within(status).getByText(row.word).tagName).toBe("STRONG");
+      expect(region.getAttribute("data-tone")).toBe(row.tone);
+      expect(within(region).getByText(row.word)).toBeTruthy();
+      const retry = within(region).queryByRole("button", { name: "Retry harness" });
+      expect(retry !== null).toBe(row.retry);
+      if (retry !== null) {
+        await userEvent.setup().click(retry);
+        expect(harness.retry).toHaveBeenCalledOnce();
+      }
+      harness.notify(readyStatus);
+      expect(screen.getByRole("status")).toBe(status);
+      expect(status.textContent).toContain("Harness ready");
+      expect(strip(row.word)).toBeNull();
+      expect(screen.queryByRole("region", { name: "Harness starting" })).toBeNull();
+      expect(screen.queryByRole("button", { name: /harness/ })).toBeNull();
+    },
+  );
+
+  describe("SH-B7: the starting strip", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /** Renders the app on fake timers and lets the first status arrive. */
+    async function renderOnFakeTimers(initial: HarnessStatus) {
+      vi.useFakeTimers();
+      const harness = drivenHarness(initial);
+      render(<App />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      return harness;
+    }
+
+    it("SH-B7: waits one second before a fresh start shows its strip", async () => {
+      await renderOnFakeTimers(starting);
+      expect(screen.getByRole("status").textContent).toContain("Harness starting");
+      act(() => vi.advanceTimersByTime(999));
+      expect(strip("Harness starting")).toBeNull();
+      act(() => vi.advanceTimersByTime(1));
+      expect(strip("Harness starting")?.getAttribute("data-tone")).toBe("busy");
+    });
+
+    it("SH-B7: shows no strip for a start that is ready within the second", async () => {
+      const harness = await renderOnFakeTimers(starting);
+      act(() => vi.advanceTimersByTime(500));
+      expect(screen.queryAllByRole("region", { name: /^Harness/ })).toEqual([]);
+      harness.notify(readyStatus);
+      act(() => vi.advanceTimersByTime(2000));
+      expect(screen.queryAllByRole("region", { name: /^Harness/ })).toEqual([]);
+    });
+
+    it.each([
+      { name: "unavailable", from: unavailable },
+      { name: "recovering", from: recovering },
+    ])("SH-B7: turns a showing strip into the starting one at once: $name", async (row) => {
+      const harness = await renderOnFakeTimers(row.from);
+      expect(screen.queryAllByRole("region", { name: /^Harness/ })).toHaveLength(1);
+      harness.notify(starting);
+      expect(strip("Harness starting")?.getAttribute("data-tone")).toBe("busy");
+    });
+  });
+});
+
+describe("SH-B8: a retry keeps its strip, its button and the focus until the outcome", () => {
+  /** An unavailable harness with Retry pressed; answers the driven harness and the button. */
+  async function pressRetry(retryHarness?: () => Promise<RetryHarnessResult>) {
+    const harness = drivenHarness(unavailable, retryHarness);
+    render(<App />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Retry harness" }));
+    return { ...harness, user };
+  }
+
+  it("SH-B8: keeps Retry focused through starting and hands focus to the work when ready", async () => {
+    const { notify, retry, user } = await pressRetry();
+    const retrying = screen.getByRole("button", { name: "Retrying harness" });
+    expect(retrying.getAttribute("aria-disabled")).toBe("true");
+    expect(document.activeElement).toBe(retrying);
+    await user.click(retrying);
+    expect(retry).toHaveBeenCalledOnce();
+    notify(starting);
+    expect(strip("Harness starting")).not.toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Retrying harness" }));
+    notify(readyStatus);
+    expect(screen.queryAllByRole("region", { name: /^Harness/ })).toEqual([]);
+    expect(document.activeElement).toBe(document.getElementById("ws-heading"));
+  });
+
+  it("SH-B8: offers Retry again, still focused, when the harness is unavailable again", async () => {
+    const { notify } = await pressRetry();
+    notify(starting);
+    notify(unavailable);
+    const again = screen.getByRole("button", { name: "Retry harness" });
+    expect(document.activeElement).toBe(again);
+    expect(strip("Harness unavailable")).not.toBeNull();
+  });
+
+  it.each(["Retry pressed again", "the state leaving unavailable"] as const)(
+    "SH-B8: keeps a refused retry's message inside the strip until %s",
+    async (clear) => {
+      const message = "The harness could not be started again.";
+      let calls = 0;
+      // The first retry is refused; a second one waits for its outcome.
+      const { notify, user } = await pressRetry(() =>
+        calls++ === 0
+          ? Promise.resolve({ ok: false, error: { code: "HARNESS_RETRY_UNAVAILABLE", message } })
+          : new Promise<RetryHarnessResult>(() => undefined),
+      );
+      const region = screen.getByRole("region", { name: "Harness unavailable" });
+      const alerts = await screen.findAllByRole("alert");
+      expect(alerts.map((alert) => [region.contains(alert), alert.textContent])).toEqual([
+        [true, message],
+      ]);
+      const again = screen.getByRole("button", { name: "Retry harness" });
+      expect(document.activeElement).toBe(again);
+      if (clear === "Retry pressed again") await user.click(again);
+      else notify(starting);
+      expect(screen.queryAllByRole("alert")).toEqual([]);
+    },
+  );
+
+  it("SH-B8: leaves focus on the rail while the strip comes, changes and goes", async () => {
+    const { notify } = drivenHarness(readyStatus);
+    render(<App />);
+    const attention = within(screen.getByRole("navigation", { name: "Activity" })).getByRole(
+      "button",
+      { name: "Attention" },
+    );
+    attention.focus();
+    notify(unavailable);
+    expect(strip("Harness unavailable")).not.toBeNull();
+    notify(starting);
+    notify(readyStatus);
+    expect(document.activeElement).toBe(attention);
+  });
 });

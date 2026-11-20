@@ -36,10 +36,11 @@ type Session =
 
 export function ProjectsWorkspace({
   status,
-  header,
+  strip,
 }: {
   status: HarnessStatus;
-  header: ReactNode;
+  /** The harness status and its strip, above the centre. */
+  strip: ReactNode;
 }) {
   const ready = status.state === "ready";
   const attempt = "attempt" in status ? status.attempt : 0;
@@ -302,7 +303,7 @@ export function ProjectsWorkspace({
   return (
     <ShellFrame
       rail={<Rail current={destination} onSelect={selectDestination} />}
-      top={<header className={styles["header"]}>{header}</header>}
+      strip={strip}
       sidebar={destination === "projects" ? projectsSidebar : <AttentionSidebar />}
       workClassName={styles["shell"]}
     >

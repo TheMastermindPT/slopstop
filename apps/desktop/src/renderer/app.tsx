@@ -1,6 +1,7 @@
 import type { HarnessStatus } from "@slopstop/protocol";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { ProjectsWorkspace } from "./projects-workspace.js";
+import { HarnessStatusLine, HarnessStrip, useStripShown } from "./shell/harness-strip.js";
 import { TitleBar } from "./shell/title-bar.js";
 
 const initialStatus: HarnessStatus = {
@@ -64,26 +65,33 @@ function bridgeFailure(): HarnessStatus {
 export function App() {
   const [status, setStatus] = useState<HarnessStatus>(initialStatus);
   const [retryMessage, setRetryMessage] = useState<string | null>(null);
-  const [isRetrying, startRetry] = useTransition();
+  // A pressed retry waits for its outcome: ready, unavailable again, or a refusal.
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     let active = true;
     let notified = false;
+    /** A new status ends a pending retry unless it is starting; only unavailable keeps the message. */
+    const apply = (next: HarnessStatus) => {
+      setStatus(next);
+      if (next.state !== "starting") setRetrying(false);
+      if (next.state !== "crashed") setRetryMessage(null);
+    };
     const unsubscribe = window.slopstop.subscribeHarnessStatus((next) => {
       notified = true;
-      setStatus(next);
+      apply(next);
     });
 
     void window.slopstop
       .getHarnessStatus()
       .then((nextStatus) => {
         if (active && !notified) {
-          setStatus(nextStatus);
+          apply(nextStatus);
         }
       })
       .catch(() => {
         if (active) {
-          setStatus(bridgeFailure());
+          apply(bridgeFailure());
         }
       });
 
@@ -94,16 +102,19 @@ export function App() {
   }, []);
 
   const copy = copyForStatus(status);
-  const canRetry = status.state === "crashed" && status.canRetry;
+  const stripShown = useStripShown(status.state);
 
   function retryHarness(): void {
     setRetryMessage(null);
-    startRetry(async () => {
-      const result = await window.slopstop.retryHarness();
-      if (!result.ok) {
+    setRetrying(true);
+    window.slopstop.retryHarness().then(
+      (result) => {
+        if (result.ok) return;
+        setRetrying(false);
         setRetryMessage(result.error.message);
-      }
-    });
+      },
+      () => setRetrying(false),
+    );
   }
 
   return (
@@ -111,20 +122,18 @@ export function App() {
       <TitleBar />
       <ProjectsWorkspace
         status={status}
-        header={
+        strip={
           <>
-            <div role="status" aria-live="polite">
-              <strong>{copy.heading}</strong>
-              <span>{copy.detail}</span>
-            </div>
-
-            {canRetry ? (
-              <button type="button" onClick={retryHarness} disabled={isRetrying}>
-                {isRetrying ? "Retrying harness" : "Retry harness"}
-              </button>
+            <HarnessStatusLine copy={copy} />
+            {stripShown && status.state !== "ready" ? (
+              <HarnessStrip
+                status={status}
+                copy={copy}
+                retrying={retrying}
+                retryMessage={retryMessage}
+                onRetry={retryHarness}
+              />
             ) : null}
-
-            {retryMessage ? <p role="alert">{retryMessage}</p> : null}
           </>
         }
       />

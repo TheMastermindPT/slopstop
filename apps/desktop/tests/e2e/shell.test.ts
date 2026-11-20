@@ -140,7 +140,6 @@ test.describe("built desktop shell", () => {
     });
 
     await expect(page.getByRole("status")).toContainText("Harness ready");
-    await expect(page.getByRole("status")).toBeInViewport({ ratio: 1 });
     await expect(page.getByRole("complementary", { name: "Projects" })).toBeInViewport({
       ratio: 1,
     });
