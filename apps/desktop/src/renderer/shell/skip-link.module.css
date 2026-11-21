@@ -1,7 +1,7 @@
 /*
  * The skip button (the approved accessibility board, "Ordem do foco"). Its place takes no room;
- * the button waits above the window until it has focus. Only then is it `no-drag`, so a click on
- * it over the bar reaches it. Sizes follow the bar's height, as the bar's own do.
+ * the button waits just above the window, by its own height, until it has focus. Only then is it
+ * `no-drag`. Sizes follow the bar's height, as the bar's own do.
  */
 .place {
   position: fixed;
@@ -15,8 +15,10 @@
 
 .skip {
   position: absolute;
-  top: -100px;
+  bottom: 100%;
   left: calc(env(titlebar-area-height, 44px) * 8 / 44);
+  /* Focused, it covers the whole brand (mark and wordmark) and stops before the name (F1). */
+  width: calc(env(titlebar-area-height, 44px) * 147 / 44);
   height: calc(env(titlebar-area-height, 44px) * 28 / 44);
   padding-inline: calc(env(titlebar-area-height, 44px) * 12 / 44);
   border: 0;
@@ -30,5 +32,6 @@
 
 .skip:focus {
   top: calc(env(titlebar-area-height, 44px) * 8 / 44);
+  bottom: auto;
   app-region: no-drag;
 }

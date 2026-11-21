@@ -74,3 +74,13 @@
     grid-row: auto;
   }
 }
+
+/*
+ * The headings F6 and the hand-backs focus wear the Seixo ring, as every other stop does: a
+ * transparent outline that forced colours paint, and the ring (F2).
+ */
+.work :global(:is(#projects-heading, #attention-heading, #ws-heading):focus-visible) {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}

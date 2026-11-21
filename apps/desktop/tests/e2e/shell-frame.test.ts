@@ -325,6 +325,10 @@ function skipLayout(page: Page) {
         bar: barBox,
         nativeStart: barBox.right - Number.parseFloat(getComputedStyle(bar).paddingRight),
         inset: mark.getBoundingClientRect().left - barBox.left,
+        mark: rect(mark),
+        wordmark: rect(bar.querySelector("h1") ?? mark),
+        brand: rect(mark.parentElement ?? mark),
+        nameLeft: bar.querySelector("button")?.getBoundingClientRect().left ?? Number.NaN,
         noDrag: [...bar.querySelectorAll("*")]
           .filter(
             (element) => getComputedStyle(element).getPropertyValue("app-region") === "no-drag",
@@ -339,9 +343,31 @@ function skipLayout(page: Page) {
 
 type SkipLayout = NonNullable<Awaited<ReturnType<typeof skipLayout>>>;
 
+/** Whether `inner` lies wholly inside `outer`. */
+const holdsBox = (outer: SkipLayout["skip"], inner: SkipLayout["skip"]) =>
+  inner.left >= outer.left &&
+  inner.top >= outer.top &&
+  inner.right <= outer.right &&
+  inner.bottom <= outer.bottom;
+
+/** While focused, the skip button covers the whole brand (mark and wordmark), up to the name. */
+const coversBrand = (layout: SkipLayout) => ({
+  markCovered: holdsBox(layout.skip, layout.mark),
+  wordmarkCovered: holdsBox(layout.skip, layout.wordmark),
+  clearOfName: layout.skip.right <= layout.nameLeft,
+});
+
+const brandCovered = { markCovered: true, wordmarkCovered: true, clearOfName: true };
+
 /** Whether the skip button is unseen: its box lies above the window or has no area. */
 const unseen = (layout: SkipLayout) =>
   layout.skip.bottom <= 0 || layout.skip.right - layout.skip.left <= 0;
+
+/** Whether the skip button is unseen in the page as it is now. */
+async function unseenNow(page: Page) {
+  const layout = await skipLayout(page);
+  return layout !== null && unseen(layout);
+}
 
 /** Opens `repository-a` from the seeded list and moves focus back to the page's start. */
 async function openAndRestart(page: Page) {
@@ -430,6 +456,7 @@ test("SH-B22: shows the skip button over the bar only under focus, ringed: 1280 
       insetUnchanged: true,
       noDrag: ["BUTTON"],
     });
+    expect(focused && coversBrand(focused)).toEqual(brandCovered);
     expect(await axeViolations(page, { selector: skipSelector })).toEqual([]);
     await page.keyboard.press("Enter");
     await expect(
@@ -440,6 +467,9 @@ test("SH-B22: shows the skip button over the bar only under focus, ringed: 1280 
     await expect(page.getByRole("heading", { name: "Attention", exact: true })).toBeFocused();
     const after = await skipLayout(page);
     expect(after !== null && unseen(after)).toBe(true);
+    // Hidden by its own box, so it stays unseen at the lowest page zoom too.
+    await setZoom(application, page, { factor: 0.25, width: 1280, height: 800 });
+    expect(await unseenNow(page)).toBe(true);
   }, seedTwoProjects);
 });
 
@@ -463,6 +493,7 @@ test("SH-B22: keeps the focused skip button in the window, clear of the native b
         clearOfNativeButtons: focused.skip.right <= focused.nativeStart,
       },
     ).toEqual({ inWindow: true, clearOfNativeButtons: true });
+    expect(focused && coversBrand(focused)).toEqual(brandCovered);
   }, seedTwoProjects);
 });
 
@@ -483,4 +514,40 @@ test("SH-B22: marks the focused skip button under forced colours", async () => {
     expect(forcedText.failures).toEqual([]);
     expect(await axeViolations(page, { selector: skipSelector, forcedColors: true })).toEqual([]);
   }, seedTwoProjects);
+});
+
+/** The focused element's ring: its shadow and its outline's width, style and colour. */
+const focusLook = (page: Page) =>
+  page.evaluate(() => {
+    const active = document.activeElement;
+    if (active === null) return null;
+    const style = getComputedStyle(active);
+    return {
+      id: active.id,
+      shadow: style.boxShadow,
+      outline: [style.outlineWidth, style.outlineStyle, style.outlineColor],
+    };
+  });
+
+test("SH-B20: rings the sidebar and work-area headings F6 focuses with the Seixo ring", async () => {
+  test.setTimeout(150_000);
+  await inShellWindow(async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    const ring = await computedValue(page, "boxShadow", "var(--focus-ring)");
+    await page
+      .getByRole("navigation", { name: "Activity" })
+      .getByRole("button", { name: "Projects", exact: true })
+      .focus();
+    const seixo = { shadow: ring, outline: ["2px", "solid", "rgba(0, 0, 0, 0)"] };
+    await page.keyboard.press("F6");
+    expect(await focusLook(page)).toEqual({ id: "projects-heading", ...seixo });
+    await page.keyboard.press("F6");
+    expect(await focusLook(page)).toEqual({ id: "ws-heading", ...seixo });
+    await page.emulateMedia({ forcedColors: "active" });
+    const forced = await focusLook(page);
+    expect(forced && [forced.outline[1], forced.outline[2] !== "rgba(0, 0, 0, 0)"]).toEqual([
+      "solid",
+      true,
+    ]);
+  });
 });
