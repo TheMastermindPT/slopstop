@@ -56,6 +56,7 @@ import type { WindowChromeService } from "./window-chrome.js";
 import { reopenWindowWhenNoneIsOpen } from "./window-reopen.js";
 import { broadcastWorkspaceNotification, registerWorkspaceIpc } from "./workspace-ipc.js";
 import { writeWriterProofReport } from "./writer-proof-report.js";
+import { liftSavedZoom, zoomedOut } from "./zoom-floor.js";
 
 /** The main logger, which logs the start and crash reporting before any other owner exists. */
 function startMainLogger() {
@@ -373,6 +374,7 @@ async function createApplicationWindow(
     lockNavigation(window.webContents, pathToFileURL(rendererPath).href);
     await window.loadFile(rendererPath);
   }
+  liftSavedZoom(window.webContents);
 
   return window;
 }
@@ -440,12 +442,18 @@ function focusExistingWindow(): void {
   window.focus();
 }
 
+/** The app's zoom out, on the focused window: one step down, never below the zoom floor. */
+function zoomFocusedOut(): void {
+  const contents = BrowserWindow.getFocusedWindow()?.webContents;
+  contents?.setZoomFactor(zoomedOut(contents.getZoomFactor()));
+}
+
 /** Before the first window: packaged Windows keeps only the zoom shortcuts. */
 function setStartMenu(): void {
-  const template = applicationMenuTemplate({
-    packaged: app.isPackaged,
-    platform: process.platform,
-  });
+  const template = applicationMenuTemplate(
+    { packaged: app.isPackaged, platform: process.platform },
+    zoomFocusedOut,
+  );
   if (template !== undefined) Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 

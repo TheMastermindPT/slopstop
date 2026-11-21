@@ -32,6 +32,8 @@ const mockContents = vi.hoisted(() => (id: number) => {
     }),
     removeListener: vi.fn((_name: string, listener: () => void) => loadListeners.delete(listener)),
     getZoomLevel: vi.fn(() => zoom.level),
+    getZoomFactor: vi.fn().mockReturnValue(1),
+    setZoomFactor: vi.fn(),
     isDevToolsOpened: vi.fn(() => menuKeys.devToolsOpens),
     sendInputEvent: vi.fn((input: Readonly<{ type: string; keyCode: string }>) => {
       if (input.type === "keyDown") keyDown[input.keyCode]?.();
@@ -1114,7 +1116,14 @@ describe("the window chrome in main", () => {
       return;
     }
     expect(chromePorts.buildMenu).toHaveBeenCalledExactlyOnceWith([
-      { label: "View", submenu: [{ role: "zoomIn" }, { role: "zoomOut" }, { role: "resetZoom" }] },
+      {
+        label: "View",
+        submenu: [
+          { role: "zoomIn" },
+          { label: "Zoom Out", accelerator: "CommandOrControl+-", click: expect.any(Function) },
+          { role: "resetZoom" },
+        ],
+      },
     ]);
     expect(chromePorts.setMenu).toHaveBeenCalledExactlyOnceWith(
       chromePorts.buildMenu.mock.results[0]?.value,

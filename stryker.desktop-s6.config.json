@@ -9,10 +9,10 @@
     "apps/desktop/src/main/project-registration-ipc.ts:36-36",
     "apps/desktop/src/main/project-registration-ipc.ts:44-44",
     "apps/desktop/src/main/project-registration-ipc.ts:65-73",
-    "apps/desktop/src/main/main.ts:109-119",
+    "apps/desktop/src/main/main.ts:110-120",
     "apps/desktop/src/main/writer-proof-report.ts:4-18",
     "apps/desktop/src/main/workspace-ipc.ts",
-    "apps/desktop/src/main/main.ts:465-465",
+    "apps/desktop/src/main/main.ts:473-473",
     "apps/desktop/src/main/canonical-writer-package-smoke.ts:302-343"
   ],
   "testRunner": "vitest",
