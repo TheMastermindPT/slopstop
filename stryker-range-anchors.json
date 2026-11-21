@@ -127,7 +127,7 @@
   },
   {
     "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/main.ts:110-120",
+    "entry": "apps/desktop/src/main/main.ts:123-133",
     "first": "let shutdownServices: DesktopServices | undefined;",
     "last": "    servicesAtShutdown()?.logger.error({ err: error }, \"SlopStop shutdown failed.\"),"
   },
@@ -139,7 +139,7 @@
   },
   {
     "config": "stryker.desktop-s6.config.json",
-    "entry": "apps/desktop/src/main/main.ts:473-473",
+    "entry": "apps/desktop/src/main/main.ts:548-548",
     "first": "  if (!desktopShutdown.accepting()) return;",
     "last": "  if (!desktopShutdown.accepting()) return;"
   },
@@ -385,43 +385,43 @@
   },
   {
     "config": "stryker.port-foundation.config.json",
-    "entry": "apps/desktop/src/main/main.ts:89-105",
+    "entry": "apps/desktop/src/main/main.ts:102-118",
     "first": "  windowChromePorts: (logger) => ({",
     "last": "  }),"
   },
   {
     "config": "stryker.port-foundation.config.json",
-    "entry": "apps/desktop/src/main/main.ts:239-244",
+    "entry": "apps/desktop/src/main/main.ts:252-257",
     "first": "      const menuKeysStage = await proveMenuKeys(context);",
     "last": "      }"
   },
   {
     "config": "stryker.port-foundation.config.json",
-    "entry": "apps/desktop/src/main/main.ts:258-301",
+    "entry": "apps/desktop/src/main/main.ts:346-382",
     "first": "function proveMenuKeys(",
     "last": "}"
   },
   {
     "config": "stryker.port-foundation.config.json",
-    "entry": "apps/desktop/src/main/main.ts:318-318",
+    "entry": "apps/desktop/src/main/main.ts:399-399",
     "first": "  reportPackageSmokeStage(failureStage);",
     "last": "  reportPackageSmokeStage(failureStage);"
   },
   {
     "config": "stryker.port-foundation.config.json",
-    "entry": "apps/desktop/src/main/main.ts:354-361",
+    "entry": "apps/desktop/src/main/main.ts:435-442",
     "first": "  const window = runtime.runSync(",
     "last": "  );"
   },
   {
     "config": "stryker.port-foundation.config.json",
-    "entry": "apps/desktop/src/main/main.ts:452-458",
+    "entry": "apps/desktop/src/main/main.ts:531-533",
     "first": "function setStartMenu(): void {",
     "last": "}"
   },
   {
     "config": "stryker.port-foundation.config.json",
-    "entry": "apps/desktop/src/main/main.ts:478-478",
+    "entry": "apps/desktop/src/main/main.ts:553-553",
     "first": "  setStartMenu();",
     "last": "  setStartMenu();"
   },

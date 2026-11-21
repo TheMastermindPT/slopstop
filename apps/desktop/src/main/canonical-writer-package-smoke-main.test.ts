@@ -7,37 +7,81 @@ import { bootstrap } from "./canonical-writer-package-smoke-test-peers.js";
 /** Whether Ctrl+R starts a load in the mocked window, as the default menu's reload would. */
 const menuKeys = vi.hoisted(() => ({ reloadActs: false, devToolsOpens: false }));
 /**
- * A mocked window's `webContents`. Its keys model the packaged zoom-only menu, for the bootstrap
- * smoke's keys proof on win32: a zoom key acts at once; reload and DevTools keys do nothing,
- * unless `menuKeys.reloadActs` lets Ctrl+R start a load.
+ * A mocked window's `webContents`, for the bootstrap smoke's keys proof on win32. A key sent goes
+ * first to the `before-input-event` listeners the app set, as Electron's `Input`; a key none of
+ * them stops goes on to the page. The page starts a load on Ctrl+R only when `menuKeys.reloadActs`
+ * lets it, as the default menu's reload would, and writes the proof's marker to its console when
+ * Ctrl+Shift+I comes back up. The page's document keeps the token the proof's script sets, and a
+ * reload makes a new document without it.
  */
 const mockContents = vi.hoisted(() => (id: number) => {
+  type KeyListener = (
+    event: { preventDefault(): void; message?: string | undefined },
+    input: Readonly<object>,
+  ) => void;
   const zoom = { level: 0 };
-  const loadListeners = new Set<() => void>();
-  const keyDown: Readonly<Record<string, () => void>> = {
-    Plus: () => (zoom.level += 0.5),
-    "-": () => (zoom.level -= 0.5),
-    "0": () => (zoom.level = 0),
-    R: () => {
-      for (const listener of menuKeys.reloadActs ? loadListeners : []) listener();
+  const page: { token?: string | undefined } = {};
+  const listeners = {
+    "did-start-loading": new Set<KeyListener>(),
+    "before-input-event": new Set<KeyListener>(),
+    "console-message": new Set<KeyListener>(),
+  };
+  const emit = (name: keyof typeof listeners, message?: string) => {
+    for (const listener of listeners[name])
+      listener({ preventDefault: () => undefined, message }, {});
+  };
+  // What each sent key code types and which key it is, as a US keyboard gives them.
+  const keyFields: Readonly<Record<string, readonly [string, string]>> = {
+    Plus: ["+", "Equal"],
+    "-": ["-", "Minus"],
+    "0": ["0", "Digit0"],
+    R: ["r", "KeyR"],
+    I: ["I", "KeyI"],
+  };
+  const pageKeys: Readonly<Record<string, () => void>> = {
+    "keyDown R": () => {
+      if (!menuKeys.reloadActs) return;
+      page.token = undefined;
+      emit("did-start-loading");
     },
+    "keyUp I": () => emit("console-message", "slopstop-menu-keys-marker"),
   };
   return {
     id,
     mainFrame: { processId: 100, routingId: id },
-    executeJavaScript: vi.fn().mockResolvedValue({}),
+    executeJavaScript: vi.fn(async (script: string) => {
+      const set = /slopstopMenuKeysToken = "([^"]+)"/u.exec(script);
+      if (set) page.token = set[1];
+      return script === "document.slopstopMenuKeysToken" ? page.token : {};
+    }),
     focus: vi.fn(),
-    on: vi.fn((name: string, listener: () => void) => {
-      if (name === "did-start-loading") loadListeners.add(listener);
+    on: vi.fn((name: string, listener: KeyListener) => {
+      if (name in listeners) listeners[name as keyof typeof listeners].add(listener);
     }),
-    removeListener: vi.fn((_name: string, listener: () => void) => loadListeners.delete(listener)),
+    removeListener: vi.fn((name: string, listener: KeyListener) =>
+      listeners[name as keyof typeof listeners]?.delete(listener),
+    ),
     getZoomLevel: vi.fn(() => zoom.level),
-    getZoomFactor: vi.fn().mockReturnValue(1),
-    setZoomFactor: vi.fn(),
+    setZoomLevel: vi.fn((level: number) => (zoom.level = level)),
     isDevToolsOpened: vi.fn(() => menuKeys.devToolsOpens),
-    sendInputEvent: vi.fn((input: Readonly<{ type: string; keyCode: string }>) => {
-      if (input.type === "keyDown") keyDown[input.keyCode]?.();
-    }),
+    sendInputEvent: vi.fn(
+      (input: Readonly<{ type: string; keyCode: string; modifiers?: readonly string[] }>) => {
+        const [key, code] = keyFields[input.keyCode] ?? [input.keyCode, input.keyCode];
+        const modifiers = input.modifiers ?? [];
+        const event = { stopped: false, preventDefault: () => (event.stopped = true) };
+        for (const listener of listeners["before-input-event"])
+          listener(event, {
+            type: input.type,
+            key,
+            code,
+            control: modifiers.includes("control"),
+            shift: modifiers.includes("shift"),
+            alt: false,
+            meta: false,
+          });
+        if (!event.stopped) pageKeys[`${input.type} ${input.keyCode}`]?.();
+      },
+    ),
   };
 });
 const ports = vi.hoisted(() => ({
@@ -1115,19 +1159,9 @@ describe("the window chrome in main", () => {
       expect(chromePorts.setMenu).not.toHaveBeenCalled();
       return;
     }
-    expect(chromePorts.buildMenu).toHaveBeenCalledExactlyOnceWith([
-      {
-        label: "View",
-        submenu: [
-          { role: "zoomIn" },
-          { label: "Zoom Out", accelerator: "CommandOrControl+-", click: expect.any(Function) },
-          { role: "resetZoom" },
-        ],
-      },
-    ]);
-    expect(chromePorts.setMenu).toHaveBeenCalledExactlyOnceWith(
-      chromePorts.buildMenu.mock.results[0]?.value,
-    );
+    // Packaged Windows has no menu (SH-B28): set to none, built from nothing.
+    expect(chromePorts.buildMenu).not.toHaveBeenCalled();
+    expect(chromePorts.setMenu).toHaveBeenCalledExactlyOnceWith(null);
     expect(chromePorts.setMenu.mock.invocationCallOrder[0]).toBeLessThan(
       ports.window.mock.invocationCallOrder[0] ?? 0,
     );

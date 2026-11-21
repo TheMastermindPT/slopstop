@@ -1,23 +1,19 @@
-import type { MenuItemConstructorOptions } from "electron";
+/** Where the app runs: packaged or in development, and on which platform. */
+export type Start = Readonly<{ packaged: boolean; platform: NodeJS.Platform }>;
 
 /**
- * The application menu's template: packaged Windows keeps only the zoom shortcuts; development
- * and every other platform keep Electron's default menu (`undefined`). Zoom in and reset are
- * Electron's roles; zoom out is the app's, on the role's key, so it can stop at the zoom floor.
+ * Whether the app handles the zoom keys itself and has no menu: on packaged Windows only (Q24).
+ * The one owner of that test, for the menu and for the keys.
  */
-export function applicationMenuTemplate(
-  start: Readonly<{ packaged: boolean; platform: NodeJS.Platform }>,
-  zoomOut: () => void,
-): MenuItemConstructorOptions[] | undefined {
-  if (!start.packaged || start.platform !== "win32") return undefined;
-  return [
-    {
-      label: "View",
-      submenu: [
-        { role: "zoomIn" },
-        { label: "Zoom Out", accelerator: "CommandOrControl+-", click: zoomOut },
-        { role: "resetZoom" },
-      ],
-    },
-  ];
+export function ownsZoomKeys(start: Start): boolean {
+  return start.packaged && start.platform === "win32";
+}
+
+/**
+ * The application menu to set before the first window: none (`null`) on packaged Windows, where
+ * the title bar is the app's own and the app handles the zoom keys (Pedro: "Sem menu"); `undefined`
+ * elsewhere, which leaves Electron's default menu alone.
+ */
+export function applicationMenu(start: Start): null | undefined {
+  return ownsZoomKeys(start) ? null : undefined;
 }

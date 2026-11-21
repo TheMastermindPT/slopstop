@@ -1,59 +1,104 @@
 import { describe, expect, it, vi } from "vitest";
-import { liftSavedZoom, savedZoomCorrection, zoomedOut, zoomFloor } from "./zoom-floor.js";
+import {
+  liftSavedZoom,
+  savedZoomCorrection,
+  zoomedIn,
+  zoomedOut,
+  zoomFloorLevel,
+  zoomTopLevel,
+} from "./zoom-floor.js";
 
-/** One press of Electron's zoomOut role: half a zoom level down. */
-const roleStep = 1.2 ** -0.5;
+/** Chromium's zoom level for a factor, and back: a level is `log(factor) / log(1.2)`. */
+const levelOf = (factor: number) => Math.log(factor) / Math.log(1.2);
+const factorOf = (level: number) => 1.2 ** level;
 
-/** The factors after each of `presses` zoom outs from `start`. */
-function pressZoomOut(start: number, presses: number): number[] {
-  const factors: number[] = [];
-  let factor = start;
-  for (let press = 0; press < presses; press += 1) {
-    factor = zoomedOut(factor);
-    factors.push(factor);
+/** A factor as a percentage to one decimal place, as the brief writes it. */
+const percent = (level: number) => Math.round(factorOf(level) * 1000) / 10;
+
+/** The levels a page at `start` goes through, one press of `press` after another. */
+function pressFrom(start: number, press: (level: number) => number, presses: number): number[] {
+  const levels: number[] = [];
+  let level = start;
+  for (let count = 0; count < presses; count += 1) {
+    level = press(level);
+    levels.push(level);
   }
-  return factors;
+  return levels;
 }
 
+/** The doubles just above and just below `level`. */
+const ulpOver = (level: number) => level + Math.abs(level) * Number.EPSILON;
+const ulpUnder = (level: number) => level - Math.abs(level) * Number.EPSILON;
+
 describe("the zoom floor", () => {
-  it("SH-B26: steps down from 100% as the role does, reaches exactly 80% and stays there", () => {
-    expect(zoomFloor).toBe(0.8);
-    const factors = pressZoomOut(1, 10);
-    const reached = factors.indexOf(0.8);
-    expect(reached).toBeGreaterThan(0);
-    // Before the floor, each press is the role's step; from the floor on, every press is 80%.
-    expect(factors.slice(0, reached)).toEqual(
-      factors.slice(0, reached).map((_, press) => roleStep ** (press + 1)),
-    );
-    expect(factors.slice(reached)).toEqual(Array(factors.length - reached).fill(0.8));
+  it("SH-B26: stops zooming out at 80% and comes back to 100% in as many zoom ins", () => {
+    const out = pressFrom(0, zoomedOut, 5);
+    expect(out.map(percent)).toEqual([91.3, 83.3, 80, 80, 80]);
+    expect(factorOf(out[2] ?? 0)).toBe(0.8);
+    const back = pressFrom(zoomFloorLevel, zoomedIn, 3);
+    expect(back.map(percent)).toEqual([83.3, 91.3, 100]);
+    expect(factorOf(back[2] ?? 1)).toBe(1);
   });
 
-  it("SH-B26: steps down from 200% with no jump", () => {
-    expect(zoomedOut(2)).toBe(2 * roleStep);
+  it("SH-B26: steps down from 200% by half a level, with no jump", () => {
+    const start = levelOf(2);
+    expect(zoomedOut(start)).toBeCloseTo(start - 0.5, 12);
   });
 
-  it("SH-B26: brings a page already under 80% to 80%", () => {
-    expect(zoomedOut(0.5)).toBe(0.8);
+  it("SH-B26: brings a page already under 80% to 80% on zoom out", () => {
+    expect(zoomedOut(levelOf(0.5))).toBe(zoomFloorLevel);
+  });
+
+  it.each([
+    { name: "100%", start: 0, next: 0.5 },
+    { name: "87.6%, between two steps", start: levelOf(0.876), next: -0.5 },
+    { name: "one ulp under the step 0.5", start: ulpUnder(0.5), next: 1 },
+    { name: "one ulp over the step 0.5", start: ulpOver(0.5), next: 1 },
+    { name: "one ulp under the floor", start: ulpUnder(zoomFloorLevel), next: -1 },
+    { name: "one ulp over the floor", start: ulpOver(zoomFloorLevel), next: -1 },
+    { name: "471%", start: 8.5, next: zoomTopLevel },
+    { name: "500%", start: zoomTopLevel, next: zoomTopLevel },
+  ])("SH-B26: zooms in to the next step above: $name", ({ start, next }) => {
+    expect(zoomedIn(start)).toBe(next);
+  });
+
+  it.each([
+    { name: "one ulp under the floor", start: ulpUnder(zoomFloorLevel) },
+    { name: "one ulp over the floor", start: ulpOver(zoomFloorLevel) },
+  ])("SH-B26: zooms out to the floor: $name", ({ start }) => {
+    expect(zoomedOut(start)).toBe(zoomFloorLevel);
+  });
+
+  it("SH-B26: names the floor and the top as zoom levels of 80% and 500%", () => {
+    expect([factorOf(zoomFloorLevel), factorOf(zoomTopLevel)]).toEqual([
+      0.8,
+      expect.closeTo(5, 12),
+    ]);
   });
 
   it("SH-B27: brings a saved zoom under 80% to 80%", () => {
-    expect(savedZoomCorrection(0.5)).toBe(0.8);
+    expect(savedZoomCorrection(levelOf(0.5))).toBe(zoomFloorLevel);
   });
 
-  it.each([0.8, 1, 2])("SH-B27: leaves a saved zoom of %s as it is", (saved) => {
+  it.each([
+    { name: "80%", saved: zoomFloorLevel },
+    { name: "80%, read back one ulp under it", saved: ulpUnder(zoomFloorLevel) },
+    { name: "100%", saved: 0 },
+    { name: "200%", saved: levelOf(2) },
+  ])("SH-B27: leaves a saved zoom of $name as it is", ({ saved }) => {
     expect(savedZoomCorrection(saved)).toBeUndefined();
   });
 
   it.each([
-    { saved: 0.5, sets: [[0.8]] },
-    { saved: 0.8, sets: [] },
-    { saved: 1, sets: [] },
+    { name: "50%", saved: levelOf(0.5), sets: [[zoomFloorLevel]] },
+    { name: "80%", saved: zoomFloorLevel, sets: [] },
+    { name: "100%", saved: 0, sets: [] },
   ])(
-    "SH-B27: sets the loaded page's zoom once only when it opened under 80%: $saved",
+    "SH-B27: sets the loaded page's zoom once only when it opened under 80%: $name",
     ({ saved, sets }) => {
-      const contents = { getZoomFactor: vi.fn().mockReturnValue(saved), setZoomFactor: vi.fn() };
+      const contents = { getZoomLevel: vi.fn().mockReturnValue(saved), setZoomLevel: vi.fn() };
       liftSavedZoom(contents);
-      expect(contents.setZoomFactor.mock.calls).toEqual(sets);
+      expect(contents.setZoomLevel.mock.calls).toEqual(sets);
     },
   );
 });

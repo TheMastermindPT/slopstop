@@ -67,6 +67,7 @@ const menuKeysFailureStages = new Set([
   "menu-zoom-reset",
   "menu-reload",
   "menu-devtools",
+  "menu-keys-unseen",
 ]);
 const invalidRelativeSmokeRoot = "relative-smoke-root";
 const healthyProjectId = "00000000-0000-4000-8000-000000000101";

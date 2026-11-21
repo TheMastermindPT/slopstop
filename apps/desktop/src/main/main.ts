@@ -8,9 +8,16 @@ import {
   RetryHarnessResultSchema,
 } from "@slopstop/protocol";
 import { Effect } from "effect";
-import { app, BrowserWindow, Menu, nativeTheme, systemPreferences } from "electron";
+import {
+  app,
+  BrowserWindow,
+  Menu,
+  nativeTheme,
+  systemPreferences,
+  type WebContents,
+} from "electron";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
-import { applicationMenuTemplate } from "./application-menu.js";
+import { applicationMenu } from "./application-menu.js";
 import { runCanonicalWriterPackageSmoke } from "./canonical-writer-package-smoke.js";
 import { initializeCrashReporting } from "./crash-reporting.js";
 import {
@@ -27,7 +34,12 @@ import { HarnessSupervisor, harnessEntryPath } from "./harness-supervisor.js";
 import { handleIpc } from "./ipc-gate.js";
 import { createIpcSender, type IpcSender } from "./ipc-sender.js";
 import { createMainLogger } from "./logger.js";
-import { type MenuKeysProofStage, menuKeysProof } from "./menu-keys-package-smoke.js";
+import {
+  MenuKeysProofError,
+  type MenuKeysProofStage,
+  menuKeysProof,
+  PageTokenUnread,
+} from "./menu-keys-package-smoke.js";
 import {
   applyPackageSmokeAuthorization,
   type PackageSmokeAuthorization,
@@ -56,7 +68,8 @@ import type { WindowChromeService } from "./window-chrome.js";
 import { reopenWindowWhenNoneIsOpen } from "./window-reopen.js";
 import { broadcastWorkspaceNotification, registerWorkspaceIpc } from "./workspace-ipc.js";
 import { writeWriterProofReport } from "./writer-proof-report.js";
-import { liftSavedZoom, zoomedOut } from "./zoom-floor.js";
+import { liftSavedZoom } from "./zoom-floor.js";
+import { attachZoomKeys } from "./zoom-keys.js";
 
 /** The main logger, which logs the start and crash reporting before any other owner exists. */
 function startMainLogger() {
@@ -250,8 +263,83 @@ const runPackageSmokeIfReady = (): void => {
   })();
 };
 
+/** The console line the page writes once it has been through Ctrl+R and Ctrl+Shift+I. */
+const menuKeysMarker = "slopstop-menu-keys-marker";
+
 /**
- * On Windows the bootstrap smoke also proves the packaged menu's keys (zoom acts; reload and
+ * Run in the page before the keys: it sets `token` on its document, and writes the marker when
+ * Ctrl+Shift+I comes back up. A reload makes a new document, which has neither.
+ */
+const menuKeysMarkerScript = (
+  token: string,
+) => `document.slopstopMenuKeysToken = ${JSON.stringify(token)};
+addEventListener("keyup", (event) => {
+  if ([event.code, event.ctrlKey, event.shiftKey].join() === "KeyI,true,true") console.debug(${JSON.stringify(menuKeysMarker)});
+}, true);`;
+
+/** Read in the page after the marker: the token its document holds, if any. */
+const menuKeysTokenScript = "document.slopstopMenuKeysToken";
+
+/**
+ * Arms the page's marker for the keys proof: listens for the page's console line, then has the
+ * page set a token made for this arming and add its key listener, before any key is sent.
+ * Answers the proof's two reads of the page: whether the marker has come, and whether the page
+ * still holds the token (a second round trip; another value or none is another document).
+ */
+function armMenuKeysMarker(contents: WebContents) {
+  return Effect.gen(function* () {
+    const marker = yield* Effect.acquireRelease(
+      Effect.sync(() => {
+        const state = { seen: false };
+        const listener = (details: Readonly<{ message: string }>) => {
+          if (details.message === menuKeysMarker) state.seen = true;
+        };
+        contents.on("console-message", listener);
+        return { state, listener };
+      }),
+      ({ listener }) => Effect.sync(() => contents.removeListener("console-message", listener)),
+    );
+    const token = randomUUID();
+    yield* Effect.tryPromise({
+      try: () => contents.executeJavaScript(menuKeysMarkerScript(token)),
+      catch: () => new MenuKeysProofError("menu-keys-unseen"),
+    });
+    return {
+      markerSeen: () => Effect.sync(() => marker.state.seen),
+      samePage: () =>
+        Effect.tryPromise({
+          try: () => contents.executeJavaScript(menuKeysTokenScript),
+          catch: () => new PageTokenUnread(),
+        }).pipe(Effect.map((held: unknown) => held === token)),
+    };
+  });
+}
+
+/**
+ * Counts the loads and navigations the window starts, from now until the scope closes: any is a
+ * reload to the keys proof (`did-start-navigation` also fires inside a document and for a frame).
+ */
+function countLoads(contents: WebContents) {
+  return Effect.acquireRelease(
+    Effect.sync(() => {
+      const counter = { started: 0 };
+      const listener = () => {
+        counter.started += 1;
+      };
+      contents.on("did-start-loading", listener);
+      contents.on("did-start-navigation", listener);
+      return { counter, listener };
+    }),
+    ({ listener }) =>
+      Effect.sync(() => {
+        contents.removeListener("did-start-loading", listener);
+        contents.removeListener("did-start-navigation", listener);
+      }),
+  );
+}
+
+/**
+ * On Windows the bootstrap smoke also proves the packaged window's keys (zoom answers; reload and
  * DevTools do not) in the smoke's window. Answers the failed stage, or nothing when it passed or
  * does not apply (Q9: other platforms keep the default menu).
  */
@@ -262,18 +350,11 @@ function proveMenuKeys(
     return Promise.resolve(undefined);
   const contents = context.window.webContents;
   const proof = Effect.gen(function* () {
-    const loads = yield* Effect.acquireRelease(
-      Effect.sync(() => {
-        const counter = { started: 0 };
-        const listener = () => {
-          counter.started += 1;
-        };
-        contents.on("did-start-loading", listener);
-        return { counter, listener };
-      }),
-      ({ listener }) => Effect.sync(() => contents.removeListener("did-start-loading", listener)),
-    );
+    // From before Ctrl+R until the proof's last read.
+    const loads = yield* countLoads(contents);
+    const page = yield* armMenuKeysMarker(contents);
     yield* menuKeysProof({
+      ...page,
       sendKey: (key) =>
         Effect.sync(() => {
           context.window.focus();
@@ -361,6 +442,7 @@ async function createApplicationWindow(
   );
   // Tracked before the page loads: the renderer calls IPC while it is still loading.
   sender.track(window);
+  attachZoomKeys(startPlace(), window.webContents);
 
   window.once("ready-to-show", () => {
     window.show();
@@ -442,19 +524,12 @@ function focusExistingWindow(): void {
   window.focus();
 }
 
-/** The app's zoom out, on the focused window: one step down, never below the zoom floor. */
-function zoomFocusedOut(): void {
-  const contents = BrowserWindow.getFocusedWindow()?.webContents;
-  contents?.setZoomFactor(zoomedOut(contents.getZoomFactor()));
-}
+/** Where this process runs, for the menu and the zoom keys. */
+const startPlace = () => ({ packaged: app.isPackaged, platform: process.platform });
 
-/** Before the first window: packaged Windows keeps only the zoom shortcuts. */
+/** Before the first window: packaged Windows has no menu; elsewhere the default menu stays. */
 function setStartMenu(): void {
-  const template = applicationMenuTemplate(
-    { packaged: app.isPackaged, platform: process.platform },
-    zoomFocusedOut,
-  );
-  if (template !== undefined) Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  if (applicationMenu(startPlace()) === null) Menu.setApplicationMenu(null);
 }
 
 async function bootstrap(): Promise<void> {
