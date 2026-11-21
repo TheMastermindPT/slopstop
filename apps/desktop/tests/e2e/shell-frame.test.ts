@@ -282,3 +282,16 @@ test("SH-B13: hands focus to the next Project after a removal confirmed from Att
     );
   }, seedTwoProjects);
 });
+
+test("SH-B20: moves focus to the next zone with F6 in the real window", async () => {
+  test.setTimeout(150_000);
+  await inShellWindow(async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    const projects = page
+      .getByRole("navigation", { name: "Activity" })
+      .getByRole("button", { name: "Projects", exact: true });
+    await projects.focus();
+    await page.keyboard.press("F6");
+    await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeFocused();
+  });
+});

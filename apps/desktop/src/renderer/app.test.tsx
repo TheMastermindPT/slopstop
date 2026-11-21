@@ -1016,3 +1016,77 @@ describe("SH-B18: the name shows the Projects sidebar", () => {
     expect(listProjects).toHaveBeenCalledOnce();
   });
 });
+
+describe("SH-B20: F6 between the zones", () => {
+  const rail = () => within(screen.getByRole("navigation", { name: "Activity" }));
+  const workHeading = () => document.getElementById("ws-heading");
+  /** Presses F6 (`back`: Shift+F6) and answers where focus went. */
+  async function f6(user: ReturnType<typeof userEvent.setup>, back = false) {
+    await user.keyboard(back ? "{Shift>}{F6}{/Shift}" : "{F6}");
+    return document.activeElement;
+  }
+
+  it("SH-B20: cycles the rail, the sidebar and the work area, and back, with no Project open", async () => {
+    const { user } = renderAlphaBeta();
+    await screen.findByRole("button", { name: "Open Project alpha" });
+    rail().getByRole("button", { name: "Projects" }).focus();
+    expect(await f6(user)).toBe(screen.getByRole("heading", { name: "Projects" }));
+    expect(await f6(user)).toBe(workHeading());
+    expect(await f6(user)).toBe(rail().getByRole("button", { name: "Projects" }));
+    expect(await f6(user, true)).toBe(workHeading());
+  });
+
+  it("SH-B20: adds the name button and the message box while a conversation shows", async () => {
+    const { user } = renderAlphaBeta();
+    await openProject(user, "alpha");
+    const message = await screen.findByRole("textbox", { name: "Message" });
+    await waitFor(() => expect(document.activeElement).toBe(message));
+    const name = within(bar()).getByRole("button", { name: "Project alpha" });
+    name.focus();
+    const stops = [];
+    for (let press = 0; press < 5; press += 1) stops.push(await f6(user));
+    expect(stops).toEqual([
+      rail().getByRole("button", { name: "Projects" }),
+      screen.getByRole("heading", { name: "Projects" }),
+      workHeading(),
+      message,
+      name,
+    ]);
+  });
+
+  it("SH-B20: stops at the Attention heading while Attention is current", async () => {
+    const { user } = renderAlphaBeta();
+    await screen.findByRole("button", { name: "Open Project alpha" });
+    await user.click(rail().getByRole("button", { name: "Attention" }));
+    rail().getByRole("button", { name: "Attention" }).focus();
+    expect(await f6(user)).toBe(screen.getByRole("heading", { name: "Attention" }));
+  });
+
+  it("SH-B20: goes to the next zone from inside a zone, not to this zone's target", async () => {
+    const { user } = renderAlphaBeta();
+    const refresh = await screen.findByRole("button", { name: "Refresh" });
+    await waitFor(() => expect(refresh.hasAttribute("disabled")).toBe(false));
+    refresh.focus();
+    expect(await f6(user)).toBe(workHeading());
+  });
+
+  it("SH-B20: leaves the message box with its text unchanged", async () => {
+    const { user } = renderAlphaBeta();
+    await openProject(user, "alpha");
+    const message = await screen.findByRole("textbox", { name: "Message" });
+    await waitFor(() => expect(document.activeElement).toBe(message));
+    await user.type(message, "a draft");
+    const next = await f6(user);
+    expect(next).toBe(within(bar()).getByRole("button", { name: "Project alpha" }));
+    expect((message as HTMLTextAreaElement).value).toBe("a draft");
+  });
+
+  it("SH-B20: starts at the first zone, or the last going back, from the page's body", async () => {
+    const { user } = renderAlphaBeta();
+    await screen.findByRole("button", { name: "Open Project alpha" });
+    (document.activeElement as HTMLElement | null)?.blur();
+    expect(await f6(user)).toBe(rail().getByRole("button", { name: "Projects" }));
+    (document.activeElement as HTMLElement | null)?.blur();
+    expect(await f6(user, true)).toBe(workHeading());
+  });
+});

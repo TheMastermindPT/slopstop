@@ -18,6 +18,7 @@ import { AttentionSidebar, attentionHeadingId } from "./shell/attention-sidebar.
 import { type Destination, Rail } from "./shell/rail.js";
 import { ShellFrame } from "./shell/shell-frame.js";
 import { TitleBar } from "./shell/title-bar.js";
+import { useZoneKeys } from "./shell/use-zone-keys.js";
 import { type Busy, needsUpgrade, useProjectUpgrade } from "./use-project-upgrade.js";
 import {
   rememberNames,
@@ -56,6 +57,7 @@ export function ProjectsWorkspace({
   const names = useRef(new Map<ProjectId, string>());
   const [newProjectId, setNewProjectId] = useState<ProjectId | undefined>(undefined);
   const [destination, setDestination] = useState<Destination>("projects");
+  useZoneKeys();
   // A Project in view that leaves the list (removed from it) closes the view and leaves the bar.
   useEffect(() => {
     if (view === null || list.status !== "listed") return;
