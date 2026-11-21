@@ -295,3 +295,192 @@ test("SH-B20: moves focus to the next zone with F6 in the real window", async ()
     await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeFocused();
   });
 });
+
+const skipSelector = "#skip-to-attention";
+
+/**
+ * The skip button's box, its look, the bar's box, where the native buttons begin (the bar's
+ * content edge), the brand's inset, and the banner's `no-drag` elements.
+ */
+function skipLayout(page: Page) {
+  return page.evaluate(
+    ({ banner, skip }) => {
+      const bar = document.querySelector(banner);
+      if (bar === null) return null;
+      const button = document.querySelector(skip);
+      if (button === null) return null;
+      const mark = bar.querySelector("svg");
+      if (mark === null) return null;
+      const rect = (element: Element) => {
+        const { left, top, right, bottom } = element.getBoundingClientRect();
+        return { left, top, right, bottom };
+      };
+      const style = getComputedStyle(button);
+      const barBox = rect(bar);
+      return {
+        skip: rect(button),
+        shadow: style.boxShadow,
+        appRegion: style.getPropertyValue("app-region"),
+        outline: [style.outlineStyle, style.outlineColor],
+        bar: barBox,
+        nativeStart: barBox.right - Number.parseFloat(getComputedStyle(bar).paddingRight),
+        inset: mark.getBoundingClientRect().left - barBox.left,
+        noDrag: [...bar.querySelectorAll("*")]
+          .filter(
+            (element) => getComputedStyle(element).getPropertyValue("app-region") === "no-drag",
+          )
+          .map((element) => element.tagName),
+        viewport: { width: innerWidth, height: innerHeight },
+      };
+    },
+    { banner: bannerSelector, skip: skipSelector },
+  );
+}
+
+type SkipLayout = NonNullable<Awaited<ReturnType<typeof skipLayout>>>;
+
+/** Whether the skip button is unseen: its box lies above the window or has no area. */
+const unseen = (layout: SkipLayout) =>
+  layout.skip.bottom <= 0 || layout.skip.right - layout.skip.left <= 0;
+
+/** Opens `repository-a` from the seeded list and moves focus back to the page's start. */
+async function openAndRestart(page: Page) {
+  await page.getByRole("button", { name: "Open Project repository-a", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Project repository-a", exact: true }),
+  ).toBeVisible();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+}
+
+/**
+ * Reaches the skip button with Tab, then proves it is the page's first stop: Tab goes on to the
+ * name button (repository-a is open); Shift+Tab from the skip button lands on the page's last
+ * tabbable stop, and Tab from there returns to the skip button, which keeps keyboard focus.
+ */
+async function tabToSkipAsFirstStop(page: Page) {
+  const skip = page.locator(skipSelector);
+  for (let press = 0; press < 60; press += 1) {
+    if (await skip.evaluate((button) => button === document.activeElement)) break;
+    await page.keyboard.press("Tab");
+  }
+  await expect(skip).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    page.locator(bannerSelector).getByRole("button", { name: "Project repository-a", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(skip).toBeFocused();
+  // An Electron window has no browser UI around the page, so focus wraps inside it: from the
+  // first stop, Shift+Tab goes to the page's last stop, found here on its own, in document order.
+  const stops = await page.evaluate(() => {
+    const candidates = [
+      ...document.querySelectorAll<HTMLElement>(
+        "a[href], button, input, select, textarea, [tabindex]",
+      ),
+    ];
+    const tabbable = candidates.filter(
+      (element) =>
+        element.tabIndex >= 0 &&
+        !element.matches(":disabled") &&
+        element.getClientRects().length > 0 &&
+        getComputedStyle(element).visibility !== "hidden",
+    );
+    const last = tabbable.at(-1);
+    if (last !== undefined) last.setAttribute("data-last-stop", "");
+    return {
+      positive: candidates.filter((element) => element.tabIndex > 0).length,
+      found: last !== undefined,
+    };
+  });
+  expect(stops).toEqual({ positive: 0, found: true });
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.locator("[data-last-stop]")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(skip).toBeFocused();
+  await page.evaluate(() =>
+    document.querySelector("[data-last-stop]")?.removeAttribute("data-last-stop"),
+  );
+}
+
+test("SH-B22: shows the skip button over the bar only under focus, ringed: 1280 by 800", async () => {
+  test.setTimeout(150_000);
+  await inShellWindow(async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    await openAndRestart(page);
+    const before = await skipLayout(page);
+    expect(before !== null && [unseen(before), before.noDrag]).toEqual([true, ["BUTTON"]]);
+    await tabToSkipAsFirstStop(page);
+    const focused = await skipLayout(page);
+    expect(
+      focused && {
+        inBar: focused.skip.top >= 0 && focused.skip.bottom <= 44,
+        leftOfNativeButtons: focused.skip.right <= focused.nativeStart,
+        ring: focused.shadow === (await computedValue(page, "boxShadow", "var(--focus-ring)")),
+        appRegion: focused.appRegion,
+        barUnchanged: JSON.stringify(focused.bar) === JSON.stringify(before?.bar),
+        insetUnchanged: focused.inset === before?.inset,
+        noDrag: focused.noDrag,
+      },
+    ).toEqual({
+      inBar: true,
+      leftOfNativeButtons: true,
+      ring: true,
+      appRegion: "no-drag",
+      barUnchanged: true,
+      insetUnchanged: true,
+      noDrag: ["BUTTON"],
+    });
+    expect(await axeViolations(page, { selector: skipSelector })).toEqual([]);
+    await page.keyboard.press("Enter");
+    await expect(
+      page
+        .getByRole("navigation", { name: "Activity" })
+        .getByRole("button", { name: "Attention", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("heading", { name: "Attention", exact: true })).toBeFocused();
+    const after = await skipLayout(page);
+    expect(after !== null && unseen(after)).toBe(true);
+  }, seedTwoProjects);
+});
+
+test("SH-B22: keeps the focused skip button in the window, clear of the native buttons: minimum window", async () => {
+  test.setTimeout(150_000);
+  await inShellWindow(async (application, page) => {
+    await application.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setSize(640, 480);
+    });
+    await expect.poll(() => page.evaluate(() => innerWidth)).toBeLessThanOrEqual(640);
+    await openAndRestart(page);
+    await tabToSkipAsFirstStop(page);
+    const focused = await skipLayout(page);
+    expect(
+      focused && {
+        inWindow:
+          focused.skip.left >= 0 &&
+          focused.skip.top >= 0 &&
+          focused.skip.right <= focused.viewport.width &&
+          focused.skip.bottom <= focused.viewport.height,
+        clearOfNativeButtons: focused.skip.right <= focused.nativeStart,
+      },
+    ).toEqual({ inWindow: true, clearOfNativeButtons: true });
+  }, seedTwoProjects);
+});
+
+test("SH-B22: marks the focused skip button under forced colours", async () => {
+  test.setTimeout(150_000);
+  await inShellWindow(async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    await openAndRestart(page);
+    await page.emulateMedia({ forcedColors: "active" });
+    await tabToSkipAsFirstStop(page);
+    const focused = await skipLayout(page);
+    expect(focused && [focused.outline[0], focused.outline[1] !== "rgba(0, 0, 0, 0)"]).toEqual([
+      "solid",
+      true,
+    ]);
+    const forcedText = await forcedTextColours(page, skipSelector);
+    expect(forcedText.checked).toBeGreaterThan(0);
+    expect(forcedText.failures).toEqual([]);
+    expect(await axeViolations(page, { selector: skipSelector, forcedColors: true })).toEqual([]);
+  }, seedTwoProjects);
+});

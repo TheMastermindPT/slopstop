@@ -1116,3 +1116,50 @@ describe("SH-B20: F6 between the zones", () => {
     expect(await f6(user, true)).toBe(workHeading());
   });
 });
+
+describe("SH-B21: Skip to Attention", () => {
+  const rail = () => within(screen.getByRole("navigation", { name: "Activity" }));
+  const skip = () => screen.getByRole("button", { name: "Skip to Attention" });
+
+  it.each([
+    { name: "Enter", key: "{Enter}" },
+    { name: "Space", key: " " },
+  ])("SH-B21: is the first Tab stop and shows Attention: $name", async (row) => {
+    const { listProjects, user } = renderAlphaBeta();
+    await screen.findByRole("button", { name: "Open Project alpha" });
+    await user.tab();
+    expect(document.activeElement).toBe(skip());
+    await user.keyboard(row.key);
+    expect(rail().getByRole("button", { name: "Attention" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Attention" }));
+    expect(listProjects).toHaveBeenCalledOnce();
+  });
+
+  it("SH-B21: moves focus to the Attention heading when Attention is already current", async () => {
+    const { user } = renderAlphaBeta();
+    await screen.findByRole("button", { name: "Open Project alpha" });
+    await user.click(rail().getByRole("button", { name: "Attention" }));
+    skip().focus();
+    await user.keyboard("{Enter}");
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Attention" }));
+  });
+
+  it("SH-B21: comes before the name button, outside the banner, with a Project open", async () => {
+    const { user } = renderAlphaBeta();
+    await openProject(user, "alpha");
+    const name = within(bar()).getByRole("button", { name: "Project alpha" });
+    expect(skip().compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bar().contains(skip())).toBe(false);
+    expect(barButtons()).toHaveLength(1);
+  });
+
+  it("SH-B21: hands F6 to the first zone that exists", async () => {
+    const { user } = renderAlphaBeta();
+    await screen.findByRole("button", { name: "Open Project alpha" });
+    skip().focus();
+    await user.keyboard("{F6}");
+    expect(document.activeElement).toBe(rail().getByRole("button", { name: "Projects" }));
+  });
+});
