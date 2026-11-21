@@ -27,9 +27,10 @@
   color: var(--ink);
 }
 
-/* The rune rule: a hairline, a 6px frost diamond, a hairline. */
+/* The rune rule: a hairline, a 6px frost diamond, a hairline, directly under the head. */
 .rule {
   display: flex;
+  margin-top: calc(var(--space-3) * -1);
   align-items: center;
   gap: var(--space-2);
   height: 8px;

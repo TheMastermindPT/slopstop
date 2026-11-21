@@ -23,9 +23,16 @@
   border-radius: var(--radius-row);
   /*
    * An even gap above, on the left and on the right, so the rounded corners never touch the work
-   * area's or the sidebar's edge (Q22). Provisional: the ui-ux shots set the value.
+   * area's or the sidebar's edge (Q22).
    */
   margin: var(--space-2) var(--space-2) 0;
+}
+
+/* When the frame stacks (`shell/shell-frame.module.css`), the strip has no gap (Pedro). */
+@media (max-width: 479.98px) {
+  .strip {
+    margin: 0;
+  }
 }
 
 .strip[data-tone="busy"] {

@@ -658,12 +658,20 @@ function attentionStack(look: AttentionLook) {
   return {
     inside,
     ruleUnderHead: rule.top >= head.bottom - 0.5,
+    // Directly under the head, as in the mock.
+    ruleAtHead: Math.abs(rule.top - head.bottom) <= 1,
     lineUnderRule: empty.top >= rule.bottom - 0.5,
     lineWhole: !look.emptyCut,
   };
 }
 
-const stacked = { inside: true, ruleUnderHead: true, lineUnderRule: true, lineWhole: true };
+const stacked = {
+  inside: true,
+  ruleUnderHead: true,
+  ruleAtHead: true,
+  lineUnderRule: true,
+  lineWhole: true,
+};
 
 test("SH-B15: draws the Attention head and the rune rule as approved, whole down to the minimum window", async () => {
   test.setTimeout(150_000);

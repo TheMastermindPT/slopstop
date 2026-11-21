@@ -274,3 +274,28 @@ test("SH-B23: keeps the rounded corners of the strip off the edges of the work a
   // No strip shown: its place takes no room.
   expect(emptyPlace).toBe(0);
 });
+
+/** The strip's own margins and how far its bottom sits above the window's. */
+async function stackedStrip(page: Page) {
+  const margins = await page.locator(regionSelector).evaluate((element) => {
+    const style = getComputedStyle(element);
+    return [style.marginTop, style.marginRight, style.marginLeft];
+  });
+  const boxes = await stripBoxes(page);
+  return { margins, aboveFold: boxes.viewport.height - boxes.region.bottom };
+}
+
+test("SH-B23: drops the gap when the frame stacks: 640 by 480 at zoom 200% with the long alert", async () => {
+  test.setTimeout(240_000);
+  await withUnavailableHarness(async (application, page) => {
+    await setMinimumWindow(application, page);
+    await setZoom(application, page, { factor: 2, width: 640, height: 480 });
+    await refuseRetry(application, page);
+    const strip = await stackedStrip(page);
+    expect({
+      margins: strip.margins,
+      // Pedro's accepted exception: the strip ends 6px above the fold.
+      aboveFold: Math.abs(strip.aboveFold - 6) <= 1,
+    }).toEqual({ margins: ["0px", "0px", "0px"], aboveFold: true });
+  });
+});
