@@ -257,7 +257,7 @@ const framed = { sameGap: true, gapAboveZero: true, radius: "12px", inWindow: tr
 const placeHeight = (page: Page) =>
   page.evaluate(() => document.querySelector("main > div")?.getBoundingClientRect().height);
 
-test("SH-B23: keeps the strip's rounded corners off the work area's and the sidebar's edges", async () => {
+test("SH-B23: keeps the rounded corners of the strip off the edges of the work area and the sidebar", async () => {
   test.setTimeout(240_000);
   let emptyPlace: number | undefined;
   await withUnavailableHarness(
