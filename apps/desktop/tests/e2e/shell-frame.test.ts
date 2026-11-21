@@ -591,3 +591,130 @@ test("SH-B20: rings the sidebar and work-area headings F6 focuses with the Seixo
     ]);
   });
 });
+
+const attentionSelector = 'aside[aria-label="Attention"]';
+
+/** The `--font-mark` token as the page declares it. */
+const markFont = (page: Page) =>
+  page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue("--font-mark").trim(),
+  );
+
+/** The rail's Attention item. */
+const railAttention = (page: Page) =>
+  page.locator(railSelector).getByRole("button", { name: "Attention", exact: true });
+
+/** The Attention sidebar's head, rune rule and empty line: their looks and boxes. */
+function attentionLook(page: Page) {
+  return page.locator(attentionSelector).evaluate((aside) => {
+    const rect = (element: Element) => {
+      const { left, top, right, bottom } = element.getBoundingClientRect();
+      return { left, top, right, bottom };
+    };
+    const heading = aside.querySelector("h2") ?? aside;
+    const head = heading.parentElement ?? aside;
+    const rule = aside.querySelector('[aria-hidden="true"]') ?? aside;
+    const diamond = rule.firstElementChild ?? rule;
+    const empty = aside.querySelector("p") ?? aside;
+    const text = getComputedStyle(heading);
+    const line = (pseudo: string) => {
+      const style = getComputedStyle(rule, pseudo);
+      return [style.height, style.backgroundColor];
+    };
+    const diamondStyle = getComputedStyle(diamond);
+    const middle = (box: ReturnType<typeof rect>) => [
+      (box.left + box.right) / 2,
+      (box.top + box.bottom) / 2,
+    ];
+    return {
+      heading: [text.fontFamily, text.fontSize, text.textTransform, text.letterSpacing],
+      headHeight: head.getBoundingClientRect().height,
+      ruleHeight: rule.getBoundingClientRect().height,
+      diamond: [diamondStyle.width, diamondStyle.height, diamondStyle.backgroundColor],
+      diamondMiddle: middle(rect(diamond)),
+      ruleMiddle: middle(rect(rule)),
+      lines: [line("::before"), line("::after")],
+      boxes: { aside: rect(aside), head: rect(head), rule: rect(rule), empty: rect(empty) },
+      emptyCut:
+        empty.scrollWidth > empty.clientWidth ||
+        getComputedStyle(empty).textOverflow === "ellipsis" ||
+        getComputedStyle(empty).whiteSpace === "nowrap",
+    };
+  });
+}
+
+type AttentionLook = Awaited<ReturnType<typeof attentionLook>>;
+
+/** Whether the head, the rule and the line stack in that order, whole inside the sidebar. */
+function attentionStack(look: AttentionLook) {
+  const { aside, head, rule, empty } = look.boxes;
+  const inside = [head, rule, empty].every(
+    (box) =>
+      box.left >= aside.left - 0.5 &&
+      box.right <= aside.right + 0.5 &&
+      box.top >= aside.top - 0.5 &&
+      box.bottom <= aside.bottom + 0.5,
+  );
+  return {
+    inside,
+    ruleUnderHead: rule.top >= head.bottom - 0.5,
+    lineUnderRule: empty.top >= rule.bottom - 0.5,
+    lineWhole: !look.emptyCut,
+  };
+}
+
+const stacked = { inside: true, ruleUnderHead: true, lineUnderRule: true, lineWhole: true };
+
+test("SH-B15: draws the Attention head and the rune rule as approved, whole down to the minimum window", async () => {
+  test.setTimeout(150_000);
+  await inShellWindow(async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    await railAttention(page).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#attention-heading")).toBeFocused();
+    const look = await attentionLook(page);
+    const line = ["1px", await computedValue(page, "backgroundColor", "var(--line-strong)")];
+    expect({
+      heading: look.heading,
+      headHeight: look.headHeight,
+      ruleHeight: look.ruleHeight,
+      diamond: look.diamond,
+      diamondCentred: look.diamondMiddle.map(
+        (at, index) => Math.abs(at - (look.ruleMiddle[index] ?? Number.NaN)) <= 0.5,
+      ),
+      lines: look.lines,
+    }).toEqual({
+      heading: [await markFont(page), "15px", "uppercase", "2.1px"],
+      headHeight: 48,
+      ruleHeight: 8,
+      diamond: ["6px", "6px", await computedValue(page, "backgroundColor", "var(--frost)")],
+      diamondCentred: [true, true],
+      lines: [line, line],
+    });
+    expect(attentionStack(look)).toEqual(stacked);
+    expect(await axeViolations(page, { selector: attentionSelector })).toEqual([]);
+    // F6 from the rail lands on the heading, which wears the Seixo ring.
+    await railAttention(page).focus();
+    await page.keyboard.press("F6");
+    const ring = await focusLook(page);
+    expect(ring && [ring.id, ring.shadow]).toEqual([
+      "attention-heading",
+      await computedValue(page, "boxShadow", "var(--focus-ring)"),
+    ]);
+    await page.emulateMedia({ forcedColors: "active" });
+    const forcedText = await forcedTextColours(page, attentionSelector);
+    expect(forcedText.checked).toBeGreaterThan(0);
+    expect(forcedText.failures).toEqual([]);
+    expect(await axeViolations(page, { selector: attentionSelector, forcedColors: true })).toEqual(
+      [],
+    );
+    await page.emulateMedia({ forcedColors: "none" });
+    await application.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.setSize(640, 480);
+    });
+    await expect.poll(() => page.evaluate(() => innerWidth)).toBeLessThanOrEqual(640);
+    const small = await attentionLook(page);
+    expect(Math.abs(small.boxes.aside.right - small.boxes.aside.left - 248) <= 1).toBe(true);
+    expect(attentionStack(small)).toEqual(stacked);
+  });
+});

@@ -16,6 +16,7 @@ const retryFailure =
 /** Runs `journey` on the built desktop at display scale 1 with the harness unavailable. */
 async function withUnavailableHarness(
   journey: (application: ElectronApplication, page: Page) => Promise<void>,
+  whileReady?: (page: Page) => Promise<void>,
 ) {
   const proof = await temporaryRoot("sh-strip-");
   const userData = path.join(proof, "user-data");
@@ -23,6 +24,7 @@ async function withUnavailableHarness(
   try {
     const page = await application.firstWindow();
     await expect(page.getByRole("heading", { name: "Projects", exact: true })).toBeVisible();
+    await whileReady?.(page);
     await crashHarness(application, page);
     await expect(page.locator(regionSelector)).toBeVisible();
     await journey(application, page);
@@ -111,12 +113,21 @@ function partsInView(boxes: StripBoxes, parts: readonly Box[]) {
   return parts.every((part) => encloses(boxes.region, part) && encloses(viewport, part));
 }
 
+/** The strip's gaps: to the banner above, to the sidebar on its left, to the window's right edge. */
+const stripGaps = (boxes: StripBoxes) => ({
+  top: boxes.region.top - boxes.banner.bottom,
+  left: boxes.region.left - boxes.sidebar.right,
+  right: boxes.viewport.width - boxes.region.right,
+});
+
 /** Where the strip sits and whether it fits, for every SH-B9 case. */
 function stripFit(boxes: StripBoxes, withAlert: boolean) {
   const parts = [boxes.word, boxes.detail, boxes.retry, ...(withAlert ? [boxes.alert] : [])];
+  const gaps = stripGaps(boxes);
   return {
-    besideSidebar: near(boxes.region.left, boxes.sidebar.right),
-    underBanner: near(boxes.region.top, boxes.banner.bottom),
+    // Beside the sidebar and under the banner, at the strip's gap (SH-B23's).
+    besideSidebar: near(gaps.left, gaps.right),
+    underBanner: near(gaps.top, gaps.right),
     partsWhole: partsInView(boxes, parts),
     workInView: boxes.viewport.height - boxes.region.bottom >= 40,
     documentFits:
@@ -222,4 +233,44 @@ test("SH-B10: paints the unavailable strip, rings Retry and passes the accessibi
     expect(forcedText.failures).toEqual([]);
     expect(await axeViolations(page, { selector: regionSelector, forcedColors: true })).toEqual([]);
   });
+});
+
+/** The strip's gaps and corner radius, and whether it lies inside the window. */
+async function stripFrame(page: Page) {
+  const boxes = await stripBoxes(page);
+  const gaps = stripGaps(boxes);
+  const radius = await page
+    .locator(regionSelector)
+    .evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
+  const window = { left: 0, top: 0, right: boxes.viewport.width, bottom: boxes.viewport.height };
+  return {
+    sameGap: near(gaps.top, gaps.right) && near(gaps.left, gaps.right),
+    gapAboveZero: gaps.right > 0,
+    radius,
+    inWindow: encloses(window, boxes.region),
+  };
+}
+
+const framed = { sameGap: true, gapAboveZero: true, radius: "12px", inWindow: true };
+
+/** The strip's place above the centre: its height, while no strip is shown. */
+const placeHeight = (page: Page) =>
+  page.evaluate(() => document.querySelector("main > div")?.getBoundingClientRect().height);
+
+test("SH-B23: keeps the strip's rounded corners off the work area's and the sidebar's edges", async () => {
+  test.setTimeout(240_000);
+  let emptyPlace: number | undefined;
+  await withUnavailableHarness(
+    async (application, page) => {
+      await sizeContent(application, page, 1280, 800);
+      expect(await stripFrame(page)).toEqual(framed);
+      await setMinimumWindow(application, page);
+      expect(await stripFrame(page)).toEqual(framed);
+    },
+    async (page) => {
+      emptyPlace = await placeHeight(page);
+    },
+  );
+  // No strip shown: its place takes no room.
+  expect(emptyPlace).toBe(0);
 });

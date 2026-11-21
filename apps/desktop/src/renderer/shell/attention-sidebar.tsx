@@ -5,15 +5,21 @@ import styles from "./attention-sidebar.module.css";
 export const attentionHeadingId = "attention-heading";
 
 /**
- * The Attention sidebar, as far as this slice goes: its heading and a line that says no source
- * feeds it yet. The typed items, the rune rule and the diamond arrive with `sh-s2-attention-sidebar`.
+ * The Attention sidebar while no source feeds it: its head, the rune rule (decoration, hidden from
+ * assistive technology) and a line that says so in words. No count and no list until a source
+ * exists (Q2, Q7, Q11).
  */
 export function AttentionSidebar() {
   return (
     <aside aria-label="Attention" className={`${seixo["seixo"]} ${styles["sidebar"]}`}>
-      <h2 id={attentionHeadingId} className={styles["heading"]} tabIndex={-1}>
-        Attention
-      </h2>
+      <div className={styles["head"]}>
+        <h2 id={attentionHeadingId} className={styles["heading"]} tabIndex={-1}>
+          Attention
+        </h2>
+      </div>
+      <div aria-hidden="true" className={styles["rule"]}>
+        <span className={styles["diamond"]} />
+      </div>
       <p className={styles["empty"]}>Attention has no sources yet.</p>
     </aside>
   );

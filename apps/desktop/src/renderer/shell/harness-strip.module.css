@@ -21,6 +21,11 @@
   padding: var(--space-3) var(--space-4);
   border: 1px solid transparent;
   border-radius: var(--radius-row);
+  /*
+   * An even gap above, on the left and on the right, so the rounded corners never touch the work
+   * area's or the sidebar's edge (Q22). Provisional: the ui-ux shots set the value.
+   */
+  margin: var(--space-2) var(--space-2) 0;
 }
 
 .strip[data-tone="busy"] {
