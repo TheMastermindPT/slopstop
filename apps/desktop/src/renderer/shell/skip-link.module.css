@@ -35,3 +35,16 @@
   bottom: auto;
   app-region: no-drag;
 }
+
+/*
+ * The banner comes later in the page and drags, so it would cover the focused button's `no-drag`
+ * in the window's hit test. While the skip button has focus, the brand under it (the banner's
+ * first element: mark and wordmark) stops dragging too; the rest of the bar still drags (V1).
+ */
+:global(
+  body:has(#skip-to-attention:focus)
+    header:not(:is(article, aside, main, nav, section) header)
+    > div:first-child
+) {
+  app-region: no-drag;
+}

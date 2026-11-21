@@ -333,7 +333,9 @@ function skipLayout(page: Page) {
           .filter(
             (element) => getComputedStyle(element).getPropertyValue("app-region") === "no-drag",
           )
-          .map((element) => element.tagName),
+          .map((element) =>
+            element.contains(mark) ? `${element.tagName}:brand` : element.tagName,
+          ),
         viewport: { width: innerWidth, height: innerHeight },
       };
     },
@@ -454,7 +456,8 @@ test("SH-B22: shows the skip button over the bar only under focus, ringed: 1280 
       appRegion: "no-drag",
       barUnchanged: true,
       insetUnchanged: true,
-      noDrag: ["BUTTON"],
+      // While the skip button has focus the brand under it stops dragging too (Pedro, V1).
+      noDrag: ["DIV:brand", "BUTTON"],
     });
     expect(focused && coversBrand(focused)).toEqual(brandCovered);
     expect(await axeViolations(page, { selector: skipSelector })).toEqual([]);
@@ -522,12 +525,28 @@ const focusLook = (page: Page) =>
     const active = document.activeElement;
     if (active === null) return null;
     const style = getComputedStyle(active);
+    const ring = getComputedStyle(active, "::before");
     return {
       id: active.id,
-      shadow: style.boxShadow,
+      shadow: ring.boxShadow,
+      radius: ring.borderTopLeftRadius,
       outline: [style.outlineWidth, style.outlineStyle, style.outlineColor],
     };
   });
+
+/** A heading's box and its text's box, to compare focused and unfocused. */
+const headingBoxes = (page: Page, id: string) =>
+  page.evaluate((target) => {
+    const heading = document.getElementById(target);
+    if (heading === null) return null;
+    const range = document.createRange();
+    range.selectNodeContents(heading);
+    const box = (rect: DOMRect) => [rect.left, rect.top, rect.width, rect.height];
+    return {
+      heading: box(heading.getBoundingClientRect()),
+      text: box(range.getBoundingClientRect()),
+    };
+  }, id);
 
 test("SH-B20: rings the sidebar and work-area headings F6 focuses with the Seixo ring", async () => {
   test.setTimeout(150_000);
@@ -538,11 +557,19 @@ test("SH-B20: rings the sidebar and work-area headings F6 focuses with the Seixo
       .getByRole("navigation", { name: "Activity" })
       .getByRole("button", { name: "Projects", exact: true })
       .focus();
-    const seixo = { shadow: ring, outline: ["2px", "solid", "rgba(0, 0, 0, 0)"] };
+    // The ring is drawn around the heading, a little away from its glyphs, with the row radius.
+    const seixo = { shadow: ring, radius: "12px", outline: ["2px", "solid", "rgba(0, 0, 0, 0)"] };
+    const unfocused = {
+      projects: await headingBoxes(page, "projects-heading"),
+      work: await headingBoxes(page, "ws-heading"),
+    };
     await page.keyboard.press("F6");
     expect(await focusLook(page)).toEqual({ id: "projects-heading", ...seixo });
+    // Focus moves neither the heading's box nor its text.
+    expect(await headingBoxes(page, "projects-heading")).toEqual(unfocused.projects);
     await page.keyboard.press("F6");
     expect(await focusLook(page)).toEqual({ id: "ws-heading", ...seixo });
+    expect(await headingBoxes(page, "ws-heading")).toEqual(unfocused.work);
     await page.emulateMedia({ forcedColors: "active" });
     const forced = await focusLook(page);
     expect(forced && [forced.outline[1], forced.outline[2] !== "rgba(0, 0, 0, 0)"]).toEqual([
