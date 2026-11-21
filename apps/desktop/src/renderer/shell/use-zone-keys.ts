@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { attentionHeadingId } from "./attention-sidebar.js";
 
 /** The banner landmark: a `header` outside every sectioning element and `main`. */
 const bannerSelector = "header:not(:is(article, aside, main, nav, section) header)";
@@ -22,23 +23,36 @@ const zones: readonly Zone[] = [
   {
     container: () =>
       document.querySelector('aside[aria-label="Projects"], aside[aria-label="Attention"]'),
-    target: element("#projects-heading, #attention-heading"),
+    target: element(`#projects-heading, #${attentionHeadingId}`),
   },
-  { container: element('[aria-label="Project workspace"]'), target: element("#ws-heading") },
+  // The work area is the frame's <main>: it also holds the harness strip.
+  { container: element("main"), target: element("#ws-heading") },
+  // The message box is the conversation's field: the text field and its Save button.
   {
-    container: element('textarea[aria-label="Message"]'),
+    container: element("[data-conversation-field]"),
     target: element('textarea[aria-label="Message"]'),
   },
 ];
 
+/** Whether `container` holds `active`; neither is missing. */
+const holds = (container: Element | null, active: Element | null): container is Element =>
+  active !== null && container?.contains(active) === true;
+
 /**
- * The index, among `present`, of the zone that holds `active`: the innermost one, since the
- * message box sits inside the work area. `-1` when no zone holds it.
+ * The index, among `present`, of the zone that holds `active`: the innermost container that holds
+ * it, by containment (the sidebar and the message box sit inside the work area's <main>). `-1` when
+ * no zone holds it.
  */
 function zoneOf(present: readonly Zone[], active: Element | null): number {
   let found = -1;
+  let innermost: Element | null = null;
   present.forEach((zone, index) => {
-    if (active !== null && zone.container()?.contains(active)) found = index;
+    const container = zone.container();
+    if (!holds(container, active)) return;
+    if (innermost === null || innermost.contains(container)) {
+      innermost = container;
+      found = index;
+    }
   });
   return found;
 }

@@ -1081,6 +1081,32 @@ describe("SH-B20: F6 between the zones", () => {
     expect((message as HTMLTextAreaElement).value).toBe("a draft");
   });
 
+  it("SH-B20: counts the harness strip's Retry as the work area's", async () => {
+    const { user } = await (async () => {
+      drivenHarness(unavailable);
+      render(<App />);
+      return { user: userEvent.setup() };
+    })();
+    const retry = await screen.findByRole("button", { name: "Retry harness" });
+    retry.focus();
+    expect(await f6(user)).toBe(rail().getByRole("button", { name: "Projects" }));
+    retry.focus();
+    expect(await f6(user, true)).toBe(screen.getByRole("heading", { name: "Projects" }));
+  });
+
+  it("SH-B20: counts Save as the message box's", async () => {
+    const { user } = renderAlphaBeta();
+    await openProject(user, "alpha");
+    const message = await screen.findByRole("textbox", { name: "Message" });
+    await waitFor(() => expect(document.activeElement).toBe(message));
+    await user.type(message, "a draft");
+    const save = screen.getByRole("button", { name: "Save locally" });
+    save.focus();
+    expect(await f6(user)).toBe(within(bar()).getByRole("button", { name: "Project alpha" }));
+    save.focus();
+    expect(await f6(user, true)).toBe(workHeading());
+  });
+
   it("SH-B20: starts at the first zone, or the last going back, from the page's body", async () => {
     const { user } = renderAlphaBeta();
     await screen.findByRole("button", { name: "Open Project alpha" });
