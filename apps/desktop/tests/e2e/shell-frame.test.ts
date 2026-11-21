@@ -352,14 +352,26 @@ const holdsBox = (outer: SkipLayout["skip"], inner: SkipLayout["skip"]) =>
   inner.right <= outer.right &&
   inner.bottom <= outer.bottom;
 
-/** While focused, the skip button covers the whole brand (mark and wordmark), up to the name. */
+/**
+ * While focused, the skip button covers the whole brand (mark and wordmark), up to the name, and
+ * the brand's `no-drag` box holds the whole button, so no edge of it drags the window.
+ */
 const coversBrand = (layout: SkipLayout) => ({
   markCovered: holdsBox(layout.skip, layout.mark),
   wordmarkCovered: holdsBox(layout.skip, layout.wordmark),
   clearOfName: layout.skip.right <= layout.nameLeft,
+  brandHoldsSkip: holdsBox(layout.brand, layout.skip),
 });
 
-const brandCovered = { markCovered: true, wordmarkCovered: true, clearOfName: true };
+const brandCovered = {
+  markCovered: true,
+  wordmarkCovered: true,
+  clearOfName: true,
+  brandHoldsSkip: true,
+};
+
+/** The mark's and the wordmark's boxes, to compare focused and unfocused. */
+const brandBoxes = (layout: SkipLayout | null) => layout && [layout.mark, layout.wordmark];
 
 /** Whether the skip button is unseen: its box lies above the window or has no area. */
 const unseen = (layout: SkipLayout) =>
@@ -460,6 +472,7 @@ test("SH-B22: shows the skip button over the bar only under focus, ringed: 1280 
       noDrag: ["DIV:brand", "BUTTON"],
     });
     expect(focused && coversBrand(focused)).toEqual(brandCovered);
+    expect(brandBoxes(focused)).toEqual(brandBoxes(before));
     expect(await axeViolations(page, { selector: skipSelector })).toEqual([]);
     await page.keyboard.press("Enter");
     await expect(
