@@ -91,6 +91,16 @@ describe("the zoom keys", () => {
       start: zoomFloorLevel,
       level: zoomFloorLevel,
     },
+    // What the key types decides before the 0 key's place does.
+    {
+      name: "row 3 typed by the 0 key",
+      input: { ...row[3], code: "Digit0" },
+      start: 0,
+      level: -0.5,
+    },
+    { name: "row 4 from the floor", input: row[4], start: zoomFloorLevel, level: 0 },
+    { name: "row 4 from 200%", input: row[4], start: Math.log(2) / Math.log(1.2), level: 0 },
+    { name: "row 3 above the top", input: row[3], start: 9, level: 8.5 },
   ])("SH-B28: answers a zoom key once and stops it: $name", ({ input, start, level }) => {
     expect(press(input, start)).toEqual({ levels: [[level]], prevented: 1 });
   });
@@ -100,12 +110,27 @@ describe("the zoom keys", () => {
     { name: "row 10, Ctrl and numpad 0, Num Lock off", input: row[10] },
     { name: "row 1 without Ctrl", input: { ...row[1], control: false } },
     { name: "row 1 with Alt", input: { ...row[1], alt: true } },
+    { name: "row 1 with meta", input: { ...row[1], meta: true } },
     { name: "row 4 with Alt, as AltGr and 0 sends", input: { ...row[4], alt: true } },
     { name: "row 1 on key up", input: { ...row[1], type: "keyUp" } },
     { name: "row 1 as Ctrl and A", input: { ...row[1], key: "a", code: "KeyA" } },
     { name: "row 11 with Shift", input: { ...row[11], shift: true } },
   ])("SH-B28: leaves a key that is not a zoom key alone: $name", ({ input }) => {
     expect(press(input, 0)).toEqual({ levels: [], prevented: 0 });
+  });
+
+  it("SH-B28: stops zoom in above the top and sets nothing", () => {
+    expect(press(row[1], 9)).toEqual({ levels: [], prevented: 1 });
+  });
+
+  it("SH-B28: reads the level at each key, not when the listener was set", () => {
+    const contents = fakeContents(0);
+    attachZoomKeys(packagedWindows, contents);
+    // The level changes from outside the listener, after it was set.
+    contents.setZoomLevel(zoomFloorLevel);
+    contents.setZoomLevel.mockClear();
+    contents.on.mock.calls[0]?.[1]({ preventDefault: vi.fn() }, row[1]);
+    expect(contents.setZoomLevel.mock.calls).toEqual([[-1]]);
   });
 
   it("SH-B28: sets one key listener on the window on packaged Windows", () => {

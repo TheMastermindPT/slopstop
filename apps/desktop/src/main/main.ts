@@ -302,7 +302,7 @@ function armMenuKeysMarker(contents: WebContents) {
     const token = randomUUID();
     yield* Effect.tryPromise({
       try: () => contents.executeJavaScript(menuKeysMarkerScript(token)),
-      catch: () => new MenuKeysProofError("menu-keys-unseen"),
+      catch: (cause) => new MenuKeysProofError("menu-keys-unseen", cause),
     });
     return {
       markerSeen: () => Effect.sync(() => marker.state.seen),

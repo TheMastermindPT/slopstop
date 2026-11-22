@@ -451,7 +451,7 @@ it("passes on the repository's own configs and anchors", () => {
       { config: "stryker.effect-gate.config.json", ranges: 0, wholeFiles: 1 },
       { config: "stryker.ledger-table.config.json", ranges: 0, wholeFiles: 1 },
       { config: "stryker.ledger.config.json", ranges: 2, wholeFiles: 1 },
-      { config: "stryker.port-foundation.config.json", ranges: 8, wholeFiles: 5 },
+      { config: "stryker.port-foundation.config.json", ranges: 10, wholeFiles: 5 },
       { config: "stryker.project-storage-desktop.config.json", ranges: 0, wholeFiles: 4 },
       { config: "stryker.project-storage.config.json", ranges: 28, wholeFiles: 18 },
       { config: "stryker.stryker-ranges.config.json", ranges: 0, wholeFiles: 1 },

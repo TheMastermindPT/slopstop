@@ -263,6 +263,12 @@ describe("the packaged menu's keys proof", () => {
       second: 0,
     },
     {
+      name: "a reload that also loses the marker and the token",
+      behaviour: { ...zoomOnly, reloadActs: true, markerAfter: undefined, token: "other" },
+      stage: "menu-reload",
+      second: 5,
+    },
+    {
       name: "a token round trip that never answers, with no load counted",
       behaviour: { ...zoomOnly, token: "silent" },
       stage: "menu-keys-unseen",
@@ -271,7 +277,8 @@ describe("the packaged menu's keys proof", () => {
   ] as const)("SH-B29: fails the proof on $name", async ({ behaviour, stage, second }) => {
     const run = await runProof(behaviour);
     expect(run.outcome).toEqual({ passed: false, tag: "MenuKeysProofError", stage });
-    // The round trip has its own wait of 5 s, from the marker on (at 0.3 s).
+    // The round trip has its own wait of 5 s, from the marker on (at 0.3 s); a marker that never
+    // comes is waited for 5 s first.
     expect(Math.floor(run.at / 1000)).toBe(second);
   });
 });

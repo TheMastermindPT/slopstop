@@ -397,6 +397,18 @@
   },
   {
     "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/main.ts:289-316",
+    "first": "function armMenuKeysMarker(contents: WebContents) {",
+    "last": "}"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/main.ts:322-339",
+    "first": "function countLoads(contents: WebContents) {",
+    "last": "}"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
     "entry": "apps/desktop/src/main/main.ts:346-382",
     "first": "function proveMenuKeys(",
     "last": "}"

@@ -16,19 +16,32 @@ const factorOf = (level: number) => 1.2 ** level;
 const percent = (level: number) => Math.round(factorOf(level) * 1000) / 10;
 
 /** The levels a page at `start` goes through, one press of `press` after another. */
-function pressFrom(start: number, press: (level: number) => number, presses: number): number[] {
+function pressFrom(
+  start: number,
+  press: (level: number) => number | undefined,
+  presses: number,
+): number[] {
   const levels: number[] = [];
   let level = start;
   for (let count = 0; count < presses; count += 1) {
-    level = press(level);
+    level = press(level) ?? level;
     levels.push(level);
   }
   return levels;
 }
 
-/** The doubles just above and just below `level`. */
-const ulpOver = (level: number) => level + Math.abs(level) * Number.EPSILON;
-const ulpUnder = (level: number) => level - Math.abs(level) * Number.EPSILON;
+const bits = new BigInt64Array(1);
+const double = new Float64Array(bits.buffer);
+/** The next double above (`up`) or below a non-zero `level`, one ulp away. */
+function nextDouble(level: number, up: boolean): number {
+  double[0] = level;
+  const current: bigint = bits[0] ?? 0n;
+  const away: bigint = level > 0 === up ? 1n : -1n;
+  bits[0] = current + away;
+  return double[0] ?? level;
+}
+const ulpOver = (level: number) => nextDouble(level, true);
+const ulpUnder = (level: number) => nextDouble(level, false);
 
 describe("the zoom floor", () => {
   it("SH-B26: stops zooming out at 80% and comes back to 100% in as many zoom ins", () => {
@@ -56,10 +69,22 @@ describe("the zoom floor", () => {
     { name: "one ulp over the step 0.5", start: ulpOver(0.5), next: 1 },
     { name: "one ulp under the floor", start: ulpUnder(zoomFloorLevel), next: -1 },
     { name: "one ulp over the floor", start: ulpOver(zoomFloorLevel), next: -1 },
-    { name: "471%", start: 8.5, next: zoomTopLevel },
-    { name: "500%", start: zoomTopLevel, next: zoomTopLevel },
+    { name: "level 8, about 430%", start: 8, next: 8.5 },
+    { name: "level 8.5, the top", start: 8.5, next: 8.5 },
   ])("SH-B26: zooms in to the next step above: $name", ({ start, next }) => {
     expect(zoomedIn(start)).toBe(next);
+  });
+
+  it("SH-B26: reaches the top in 17 zoom ins from 100% and comes back to 100% in 17 zoom outs", () => {
+    const up = pressFrom(0, zoomedIn, 18);
+    expect(up.slice(15)).toEqual([8, 8.5, 8.5]);
+    const down = pressFrom(up[17] ?? 0, zoomedOut, 17);
+    expect(down[16]).toBe(0);
+  });
+
+  it("SH-B26: sets nothing on zoom in from a page above the top, and steps down from it", () => {
+    expect(zoomedIn(9)).toBeUndefined();
+    expect(zoomedOut(9)).toBe(8.5);
   });
 
   it.each([
@@ -69,10 +94,9 @@ describe("the zoom floor", () => {
     expect(zoomedOut(start)).toBe(zoomFloorLevel);
   });
 
-  it("SH-B26: names the floor and the top as zoom levels of 80% and 500%", () => {
-    expect([factorOf(zoomFloorLevel), factorOf(zoomTopLevel)]).toEqual([
-      0.8,
-      expect.closeTo(5, 12),
+  it("SH-B26: names the floor and the top as zoom levels of 80% and about 471%", () => {
+    expect([factorOf(zoomFloorLevel), zoomTopLevel, percent(zoomTopLevel)]).toEqual([
+      0.8, 8.5, 471,
     ]);
   });
 

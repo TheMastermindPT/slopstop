@@ -1,6 +1,6 @@
 import { Data, Effect } from "effect";
 
-/** Where the packaged menu's keys proof failed. */
+/** Where the packaged window's keys proof failed. */
 export type MenuKeysProofStage =
   | "menu-zoom-in"
   | "menu-zoom-out"
@@ -12,9 +12,10 @@ export type MenuKeysProofStage =
 export class MenuKeysProofError extends Data.TaggedError("MenuKeysProofError")<{
   readonly message: string;
   readonly stage: MenuKeysProofStage;
+  readonly cause?: unknown;
 }> {
-  constructor(stage: MenuKeysProofStage) {
-    super({ message: "Packaged menu keys proof failed.", stage });
+  constructor(stage: MenuKeysProofStage, cause?: unknown) {
+    super({ message: "Packaged window keys proof failed.", stage, cause });
   }
 }
 

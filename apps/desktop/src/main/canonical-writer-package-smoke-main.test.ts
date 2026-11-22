@@ -4,8 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
 import { bootstrap } from "./canonical-writer-package-smoke-test-peers.js";
 
-/** Whether Ctrl+R starts a load in the mocked window, as the default menu's reload would. */
-const menuKeys = vi.hoisted(() => ({ reloadActs: false, devToolsOpens: false }));
+/** The signals of a reload, each of which the keys proof reads on its own. */
+type ReloadSignal = "loading" | "navigation" | "token";
+/**
+ * Whether Ctrl+R reloads the mocked window, as the default menu's reload would, and which signals
+ * that reload gives: a full reload starts a load and makes a new document, without the token.
+ */
+const menuKeys = vi.hoisted(() => ({
+  reloadActs: false,
+  reloadSignals: ["loading", "token"] as readonly ReloadSignal[],
+  devToolsOpens: false,
+}));
 /**
  * A mocked window's `webContents`, for the bootstrap smoke's keys proof on win32. A key sent goes
  * first to the `before-input-event` listeners the app set, as Electron's `Input`; a key none of
@@ -23,6 +32,7 @@ const mockContents = vi.hoisted(() => (id: number) => {
   const page: { token?: string | undefined } = {};
   const listeners = {
     "did-start-loading": new Set<KeyListener>(),
+    "did-start-navigation": new Set<KeyListener>(),
     "before-input-event": new Set<KeyListener>(),
     "console-message": new Set<KeyListener>(),
   };
@@ -41,13 +51,17 @@ const mockContents = vi.hoisted(() => (id: number) => {
   const pageKeys: Readonly<Record<string, () => void>> = {
     "keyDown R": () => {
       if (!menuKeys.reloadActs) return;
-      page.token = undefined;
-      emit("did-start-loading");
+      const signals = menuKeys.reloadSignals;
+      if (signals.includes("token")) page.token = undefined;
+      if (signals.includes("loading")) emit("did-start-loading");
+      if (signals.includes("navigation")) emit("did-start-navigation");
     },
     "keyUp I": () => emit("console-message", "slopstop-menu-keys-marker"),
   };
   return {
     id,
+    /** The listeners the app set, by event. */
+    listeners,
     mainFrame: { processId: 100, routingId: id },
     executeJavaScript: vi.fn(async (script: string) => {
       const set = /slopstopMenuKeysToken = "([^"]+)"/u.exec(script);
@@ -464,6 +478,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
   menuKeys.reloadActs = false;
+  menuKeys.reloadSignals = ["loading", "token"];
   menuKeys.devToolsOpens = false;
   configureRuntimeFiles();
   writes = [];
@@ -1154,6 +1169,10 @@ describe("the window chrome in main", () => {
   ] as const)("sets the application menu at start: $name", async ({ packaged, platform, sets }) => {
     ports.app.isPackaged = packaged;
     await onPlatform(platform, ordinaryLaunch);
+    // The zoom keys are the app's where it has no menu (SH-B28): one listener, else none.
+    expect(ports.window.mock.instances[0]?.webContents.listeners["before-input-event"].size).toBe(
+      sets ? 1 : 0,
+    );
     if (!sets) {
       expect(chromePorts.buildMenu).not.toHaveBeenCalled();
       expect(chromePorts.setMenu).not.toHaveBeenCalled();
@@ -1274,14 +1293,19 @@ describe("the window chrome in main", () => {
     platform: "win32" as NodeJS.Platform,
     scenario: "bootstrap",
     reloadActs: false,
+    reloadSignals: ["loading", "token"] as readonly ReloadSignal[],
     devTools: false,
     storageFails: false,
     diagnostics: true,
     pressed: true,
+    // One zoom key listener on packaged Windows; the zoom keys step 0.5, 0, -0.5, then reset.
+    keyListeners: 1,
+    zoomSets: [[0.5], [0], [-0.5], [0]] as number[][],
     exit: 0,
     writes: [] as string[],
   };
-  // The proof checks reload and DevTools only after zoom answered, so those rows press all six.
+  // The proof judges reload and DevTools only after all six keys and the page's marker, so those
+  // rows press all six.
   it.each([
     { ...smoke, name: "zoom only" },
     {
@@ -1292,14 +1316,52 @@ describe("the window chrome in main", () => {
       writes: [failedAt.reload],
     },
     { ...smoke, name: "reload, diagnostics off", reloadActs: true, diagnostics: false, exit: 1 },
+    {
+      ...smoke,
+      name: "SH-B29 reload by a navigation alone",
+      reloadActs: true,
+      reloadSignals: ["navigation"] as const,
+      exit: 1,
+      writes: [failedAt.reload],
+    },
+    {
+      ...smoke,
+      name: "SH-B29 reload by a load alone",
+      reloadActs: true,
+      reloadSignals: ["loading"] as const,
+      exit: 1,
+      writes: [failedAt.reload],
+    },
+    {
+      ...smoke,
+      name: "SH-B29 reload by a new document, with no load event alone",
+      reloadActs: true,
+      reloadSignals: ["token"] as const,
+      exit: 1,
+      writes: [failedAt.reload],
+    },
     { ...smoke, name: "DevTools opens", devTools: true, exit: 1, writes: [failedAt.devTools] },
-    { ...smoke, name: "bootstrap on linux", platform: "linux" as NodeJS.Platform, pressed: false },
-    { ...smoke, name: "missing-runtime on win32", scenario: "missing-runtime", pressed: false },
+    {
+      ...smoke,
+      name: "bootstrap on linux",
+      platform: "linux" as NodeJS.Platform,
+      pressed: false,
+      keyListeners: 0,
+      zoomSets: [],
+    },
+    {
+      ...smoke,
+      name: "missing-runtime on win32",
+      scenario: "missing-runtime",
+      pressed: false,
+      zoomSets: [],
+    },
     {
       ...smoke,
       name: "failed storage proof",
       storageFails: true,
       pressed: false,
+      zoomSets: [],
       exit: 1,
       writes: [failedAt.storage],
     },
@@ -1310,16 +1372,20 @@ describe("the window chrome in main", () => {
       if (row.diagnostics) vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_DIAGNOSTICS", "1");
       if (row.storageFails) ports.storageSmoke.mockRejectedValueOnce(new Error("storage"));
       menuKeys.reloadActs = row.reloadActs;
+      menuKeys.reloadSignals = row.reloadSignals;
       menuKeys.devToolsOpens = row.devTools;
       await onPlatform(row.platform, async () => {
         await load();
         ready();
         await flush();
       });
-      const inputs = ports.window.mock.instances[0]?.webContents.sendInputEvent.mock.calls ?? [];
+      const contents = ports.window.mock.instances[0]?.webContents;
+      const inputs = contents?.sendInputEvent.mock.calls ?? [];
       expect(inputs.map(([input]) => input).filter(({ type }) => type === "keyDown")).toEqual(
         row.pressed ? sixKeys : [],
       );
+      expect(contents?.listeners["before-input-event"].size ?? 0).toBe(row.keyListeners);
+      expect(contents?.setZoomLevel.mock.calls).toEqual(row.zoomSets);
       expect(ports.app.exit).toHaveBeenCalledExactlyOnceWith(row.exit);
       expect(writes).toEqual(row.writes);
     },

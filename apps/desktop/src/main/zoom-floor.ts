@@ -9,8 +9,11 @@ const levelOf = (factor: number) => Math.log(factor) / Math.log(1.2);
 /** The lowest level the app's own controls reach: 80% (Pedro: "limita a 80%"). */
 export const zoomFloorLevel = levelOf(0.8);
 
-/** The highest level zoom in reaches: 500%. */
-export const zoomTopLevel = levelOf(5);
+/**
+ * The highest level zoom in reaches: level 8.5, about 471%, on the steps (Pedro: "Máximo nos
+ * 471%").
+ */
+export const zoomTopLevel = 8.5;
 
 const step = 0.5;
 const tolerance = 1e-9;
@@ -22,9 +25,11 @@ export function zoomedOut(level: number): number {
 
 /**
  * One zoom in from `level`: the next step above, so a page between two steps lands on a step and
- * as many zoom ins as zoom outs bring it back to 100%. Never above the top.
+ * as many zoom ins as zoom outs bring it back to 100%. Never above the top; `undefined`, nothing
+ * to set, for a page already above it, so a zoom in never zooms out.
  */
-export function zoomedIn(level: number): number {
+export function zoomedIn(level: number): number | undefined {
+  if (level > zoomTopLevel + tolerance) return undefined;
   return Math.min((Math.floor(level / step + tolerance) + 1) * step, zoomTopLevel);
 }
 
