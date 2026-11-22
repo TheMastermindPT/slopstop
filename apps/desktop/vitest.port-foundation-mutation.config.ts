@@ -16,6 +16,7 @@ export default defineConfig({
             "apps/desktop/src/main/menu-keys-package-smoke.test.ts",
             "apps/desktop/src/main/desktop-runtime.test.ts",
             "apps/desktop/src/main/canonical-writer-package-smoke-main.test.ts",
+            "apps/desktop/src/main/menu-keys-proof-page-main.test.ts",
           ],
         },
       },

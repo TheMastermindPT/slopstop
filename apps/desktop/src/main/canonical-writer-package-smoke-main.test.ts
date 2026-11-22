@@ -2,555 +2,47 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { desktopIpcChannels } from "../shared/desktop-api.js";
-import { bootstrap } from "./canonical-writer-package-smoke-test-peers.js";
+import {
+  callbacks,
+  challengeFileFault,
+  chromePorts,
+  configureReportingException,
+  event,
+  exeBytes,
+  failed,
+  faultPublication,
+  fileOperations,
+  flush,
+  holdReportWrites,
+  load,
+  menuKeys,
+  nonce,
+  noOrdinaryStartup,
+  onPlatform,
+  passed,
+  ports,
+  type ReloadSignal,
+  runtimeFiles,
+  runtimeRoot,
+  terminal,
+  unconfirmed,
+  useMainEntryFakes,
+  witnessFile,
+  writes,
+} from "./canonical-writer-package-smoke-main-fakes.js";
 
-/** The signals of a reload, each of which the keys proof reads on its own. */
-type ReloadSignal = "loading" | "navigation" | "token";
-/**
- * Whether Ctrl+R reloads the mocked window, as the default menu's reload would, and which signals
- * that reload gives: a full reload starts a load and makes a new document, without the token.
- */
-const menuKeys = vi.hoisted(() => ({
-  reloadActs: false,
-  reloadSignals: ["loading", "token"] as readonly ReloadSignal[],
-  devToolsOpens: false,
-}));
-/**
- * A mocked window's `webContents`, for the bootstrap smoke's keys proof on win32. A key sent goes
- * first to the `before-input-event` listeners the app set, as Electron's `Input`; a key none of
- * them stops goes on to the page. The page starts a load on Ctrl+R only when `menuKeys.reloadActs`
- * lets it, as the default menu's reload would, and writes the proof's marker to its console when
- * Ctrl+Shift+I comes back up. The page's document keeps the token the proof's script sets, and a
- * reload makes a new document without it.
- */
-const mockContents = vi.hoisted(() => (id: number) => {
-  type KeyListener = (
-    event: { preventDefault(): void; message?: string | undefined },
-    input: Readonly<object>,
-  ) => void;
-  const zoom = { level: 0 };
-  const page: { token?: string | undefined } = {};
-  const listeners = {
-    "did-start-loading": new Set<KeyListener>(),
-    "did-start-navigation": new Set<KeyListener>(),
-    "before-input-event": new Set<KeyListener>(),
-    "console-message": new Set<KeyListener>(),
-  };
-  const emit = (name: keyof typeof listeners, message?: string) => {
-    for (const listener of listeners[name])
-      listener({ preventDefault: () => undefined, message }, {});
-  };
-  // What each sent key code types and which key it is, as a US keyboard gives them.
-  const keyFields: Readonly<Record<string, readonly [string, string]>> = {
-    Plus: ["+", "Equal"],
-    "-": ["-", "Minus"],
-    "0": ["0", "Digit0"],
-    R: ["r", "KeyR"],
-    I: ["I", "KeyI"],
-  };
-  const pageKeys: Readonly<Record<string, () => void>> = {
-    "keyDown R": () => {
-      if (!menuKeys.reloadActs) return;
-      const signals = menuKeys.reloadSignals;
-      if (signals.includes("token")) page.token = undefined;
-      if (signals.includes("loading")) emit("did-start-loading");
-      if (signals.includes("navigation")) emit("did-start-navigation");
-    },
-    "keyUp I": () => emit("console-message", "slopstop-menu-keys-marker"),
-  };
-  return {
-    id,
-    /** The listeners the app set, by event. */
-    listeners,
-    mainFrame: { processId: 100, routingId: id },
-    executeJavaScript: vi.fn(async (script: string) => {
-      const set = /slopstopMenuKeysToken = "([^"]+)"/u.exec(script);
-      if (set) page.token = set[1];
-      return script === "document.slopstopMenuKeysToken" ? page.token : {};
-    }),
-    focus: vi.fn(),
-    on: vi.fn((name: string, listener: KeyListener) => {
-      if (name in listeners) listeners[name as keyof typeof listeners].add(listener);
-    }),
-    removeListener: vi.fn((name: string, listener: KeyListener) =>
-      listeners[name as keyof typeof listeners]?.delete(listener),
-    ),
-    getZoomLevel: vi.fn(() => zoom.level),
-    setZoomLevel: vi.fn((level: number) => (zoom.level = level)),
-    isDevToolsOpened: vi.fn(() => menuKeys.devToolsOpens),
-    sendInputEvent: vi.fn(
-      (input: Readonly<{ type: string; keyCode: string; modifiers?: readonly string[] }>) => {
-        const [key, code] = keyFields[input.keyCode] ?? [input.keyCode, input.keyCode];
-        const modifiers = input.modifiers ?? [];
-        const event = { stopped: false, preventDefault: () => (event.stopped = true) };
-        for (const listener of listeners["before-input-event"])
-          listener(event, {
-            type: input.type,
-            key,
-            code,
-            control: modifiers.includes("control"),
-            shift: modifiers.includes("shift"),
-            alt: false,
-            meta: false,
-          });
-        if (!event.stopped) pageKeys[`${input.type} ${input.keyCode}`]?.();
-      },
-    ),
-  };
-});
-const ports = vi.hoisted(() => ({
-  app: {
-    isPackaged: true,
-    whenReady: vi.fn(),
-    // This process holds the single-instance lock.
-    requestSingleInstanceLock: vi.fn(() => true),
-    on: vi.fn(),
-    exit: vi.fn(),
-    quit: vi.fn(),
-    setPath: vi.fn(),
-    getPath: vi.fn(),
-    setAppUserModelId: vi.fn(),
-    setAppLogsPath: vi.fn(),
-  },
-  authorize: vi.fn(),
-  runner: vi.fn(),
-  log: vi.fn(),
-  sentry: vi.fn(),
-  security: vi.fn(),
-  ipc: vi.fn(),
-  window: vi.fn(
-    class {
-      once = vi.fn();
-      setTitleBarOverlay = vi.fn();
-      isDestroyed = vi.fn(() => false);
-      // While `loadHold` is set, every load stays pending (P4-B30).
-      loadFile = vi.fn(() => ports.loadHold ?? Promise.resolve());
-      focus = vi.fn();
-      webContents = mockContents(++ports.webContentsCount);
-    },
-  ),
-  webContentsCount: 0,
-  loadHold: undefined as Promise<void> | undefined,
-  fromWebContents: vi.fn(),
-  showOpenDialog: vi.fn(),
-  storageSmoke: vi.fn(),
-  start: vi.fn(),
-  stop: vi.fn(),
-  storageStop: vi.fn(),
-  workspaceStop: vi.fn(),
-  entryStop: vi.fn(),
-  entryList: vi.fn(),
-  entryRegister: vi.fn(),
-  entryActivate: vi.fn(),
-  entrySwitch: vi.fn(),
-  entryUpgrade: vi.fn(),
-  entryRead: vi.fn(),
-  entrySave: vi.fn(),
-  workspaceQuery: vi.fn(),
-  workspaceSubmit: vi.fn(),
-  getStatus: vi.fn(),
-  retry: vi.fn(),
-  supervisorCreated: vi.fn(),
-  runtimePorts: vi.fn(),
-  logInfo: vi.fn(),
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  bootstrapArgs: vi.fn(),
-  order: [] as string[],
-  /** While set, the real runtime dispose waits for it (B1 main row). */
-  disposeHold: undefined as Promise<void> | undefined,
-  subscribe: vi.fn(),
-  open: vi.fn(),
-  lstat: vi.fn(),
-  realpath: vi.fn(),
-}));
-vi.mock("node:fs/promises", () => ({
-  open: ports.open,
-  lstat: ports.lstat,
-  realpath: ports.realpath,
-}));
-/** The application menu, the native theme and the system colours main reads (pf-s2). */
-const chromePorts = vi.hoisted(() => ({
-  buildMenu: vi.fn((template: unknown) => ({ template })),
-  setMenu: vi.fn(),
-  themeOn: vi.fn(),
-  themeRemove: vi.fn(),
-  getColor: vi.fn((_name: string) => "#000000FF"),
-  /** The native theme main reads; a row may switch high contrast on. */
-  theme: { shouldUseHighContrastColors: false },
-}));
-vi.mock("electron", () => ({
-  app: ports.app,
-  ipcMain: { handle: ports.ipc },
-  BrowserWindow: Object.assign(ports.window, {
-    getAllWindows: () => [],
-    fromWebContents: ports.fromWebContents,
-  }),
-  dialog: { showOpenDialog: ports.showOpenDialog },
-  Menu: { buildFromTemplate: chromePorts.buildMenu, setApplicationMenu: chromePorts.setMenu },
-  nativeTheme: {
-    get shouldUseHighContrastColors() {
-      return chromePorts.theme.shouldUseHighContrastColors;
-    },
-    on: chromePorts.themeOn,
-    removeListener: chromePorts.themeRemove,
-  },
-  systemPreferences: { getColor: chromePorts.getColor },
-}));
-vi.mock("./canonical-writer-package-smoke.js", () => ({
-  runCanonicalWriterPackageSmoke: ports.runner,
-}));
-vi.mock("./package-smoke-authorization.js", async (original) => ({
-  ...(await original<typeof import("./package-smoke-authorization.js")>()),
-  applyPackageSmokeAuthorization: ports.authorize,
-}));
-vi.mock("./logger.js", () => ({ createMainLogger: ports.log }));
-vi.mock("./crash-reporting.js", () => ({ initializeCrashReporting: ports.sentry }));
-vi.mock("./security.js", () => ({
-  configureSessionSecurity: ports.security,
-  lockNavigation: vi.fn(),
-}));
-vi.mock("./project-storage-bootstrap.js", () => ({
-  createProjectStorageHarnessBootstrap: (input: unknown) => {
-    ports.order.push("createProjectStorageHarnessBootstrap");
-    ports.bootstrapArgs(input);
-    return bootstrap;
-  },
-  projectStorageMigrationResourcesRoot: () => "C:/proof/migrations",
-}));
-vi.mock("./harness-supervisor.js", () => ({
-  harnessEntryPath: () => "harness.cjs",
-  HarnessSupervisor: class {
-    constructor(...args: unknown[]) {
-      ports.supervisorCreated(...args);
-    }
-    start = ports.start;
-    stop = ports.stop;
-    subscribe = ports.subscribe;
-    getStatus = ports.getStatus;
-    retry = ports.retry;
-    getSession() {
-      return {};
-    }
-  },
-}));
-// The shared bridges (s7): the same port-backed bridges, and a no-op release, so the latched
-// s6 stop ports are never called twice (S7-R11, S7-S4).
-vi.mock("./harness-bridges.js", () => ({
-  createHarnessBridges: () => ({
-    projectEntry: {
-      list: ports.entryList,
-      register: ports.entryRegister,
-      activate: ports.entryActivate,
-      switchProject: ports.entrySwitch,
-      upgrade: ports.entryUpgrade,
-      readConversation: ports.entryRead,
-      saveConversationMessage: ports.entrySave,
-      stop: ports.entryStop,
-    },
-    projectStorage: { open: vi.fn(), create: vi.fn(), close: vi.fn(), stop: ports.storageStop },
-    workspace: {
-      stop: ports.workspaceStop,
-      subscribe: vi.fn(),
-      query: ports.workspaceQuery,
-      submit: ports.workspaceSubmit,
-    },
-    release: vi.fn(),
-  }),
-}));
-// The real runtime, with its dispose recorded in the shared order and held on demand.
-vi.mock("./desktop-runtime.js", async (original) => {
-  const actual = await original<typeof import("./desktop-runtime.js")>();
-  return {
-    ...actual,
-    makeDesktopRuntime: (runtimePorts: Parameters<typeof actual.makeDesktopRuntime>[0]) => {
-      ports.runtimePorts(runtimePorts);
-      const runtime = actual.makeDesktopRuntime(runtimePorts);
-      const dispose = runtime.dispose.bind(runtime);
-      vi.spyOn(runtime, "dispose").mockImplementation(async () => {
-        ports.order.push("dispose");
-        await ports.disposeHold;
-        return dispose();
-      });
-      return runtime;
-    },
-  };
-});
-vi.mock("./project-storage-package-smoke.js", () => ({
-  runProjectStoragePackageSmoke: ports.storageSmoke,
-  projectStoragePackageSmokeFailureStage: () => undefined,
-}));
-vi.mock("./package-smoke-verifier.js", async (original) => ({
-  ...(await original<typeof import("./package-smoke-verifier.js")>()),
-  validatePackageSmokeResult: vi.fn(),
-}));
-
-const terminal = "Package smoke writer processes terminal.\n";
-const unconfirmed = "Package smoke writer process exit unconfirmed.\n";
-const passed = "Package smoke writer proof passed.\n";
-const failed = (stage: string) => `Package smoke proof failed at writer-${stage}.\n`;
-const originalArgv = [...process.argv];
-const originalElectron = Object.getOwnPropertyDescriptor(process.versions, "electron");
-const runtimeRoot = path.resolve(path.parse(process.cwd()).root, "proof", "user");
-const challengeFile = path.join(runtimeRoot, ".slopstop-runtime-challenge.json");
-const witnessFile = path.join(runtimeRoot, ".slopstop-runtime-witness.json");
-const nonce = "a".repeat(64);
-const exeBytes = Buffer.from("actual main image bytes");
-const runtimeFiles = new Map<string, { kind: "file" | "dir" | "link"; bytes: Buffer }>();
-let publicationFault = "";
-let releaseFileClose = () => {};
-const fileOperations: string[] = [];
-function configureRuntimeFiles() {
-  runtimeFiles.clear();
-  fileOperations.length = 0;
-  publicationFault = "";
-  Object.defineProperty(process.versions, "electron", { configurable: true, value: "43.4.0" });
-  runtimeFiles.set(runtimeRoot, { kind: "dir", bytes: Buffer.alloc(0) });
-  runtimeFiles.set(process.execPath, { kind: "file", bytes: exeBytes });
-  runtimeFiles.set(challengeFile, {
-    kind: "file",
-    bytes: Buffer.from(JSON.stringify({ version: 1, nonce })),
-  });
-  ports.lstat.mockImplementation(async (file) => runtimeStat(file));
-  ports.realpath.mockImplementation(async (file) => file);
-  ports.open.mockImplementation(openRuntimeFile);
-}
-function runtimeEntry(file: string) {
-  const result = runtimeFiles.get(file);
-  if (!result) throw Object.assign(new Error("missing"), { code: "ENOENT" });
-  return result;
-}
-function runtimeStat(file: string) {
-  return {
-    dev: 1,
-    ino: 1,
-    mtimeMs: 1,
-    size: runtimeEntry(file).bytes.length,
-    isFile: () => runtimeEntry(file).kind === "file",
-    isDirectory: () => runtimeEntry(file).kind === "dir",
-    isSymbolicLink: () => runtimeEntry(file).kind === "link",
-  };
-}
-async function closeRuntimeFile(file: string) {
-  if (file === witnessFile && publicationFault === "close")
-    throw new Error("private close failure");
-  if (file === witnessFile && publicationFault === "held")
-    await new Promise<void>((resolve) => {
-      releaseFileClose = resolve;
-    });
-  fileOperations.push(`closed:${file}`);
-}
-async function openRuntimeFile(file: string, flags: "r" | "wx") {
-  if (flags === "wx") {
-    if (runtimeFiles.has(file) || publicationFault === "race")
-      throw Object.assign(new Error("private existing"), { code: "EEXIST" });
-    runtimeFiles.set(file, { kind: "file", bytes: Buffer.alloc(0) });
-  }
-  const value = runtimeEntry(file);
-  return {
-    stat: async () => runtimeStat(file),
-    read: async (buffer: Buffer, offset: number, length: number, position: number) => ({
-      buffer,
-      bytesRead: value.bytes.copy(buffer, offset, position, position + length),
-    }),
-    writeFile: async (text: string) => {
-      value.bytes = Buffer.from(publicationFault === "write" ? "{" : text);
-      if (publicationFault === "write") throw new Error("private write failure");
-    },
-    close: () => closeRuntimeFile(file),
-  };
-}
-const challengeMutations: Record<string, (text: string) => string> = {
-  duplicate: (text) => text.replace('"version":1', '"version":1,"version":1'),
-  "escaped-duplicate": (text) => text.replace('"version":1', '"version":1,"vers\\u0069on":1'),
-  extra: () => JSON.stringify({ version: 1, nonce, electronVersion: "43.4.0" }),
-  missing: () => '{"version":1}',
-  nonce: () => JSON.stringify({ version: 1, nonce: "A".repeat(64) }),
-  version: () => JSON.stringify({ version: "1", nonce }),
-  truncated: (text) => text.slice(0, -1),
-  "256": (text) => text.padEnd(256, " "),
-  "257": (text) => text.padEnd(257, " "),
-};
-function challengeFileFault(fault: string) {
-  const original = JSON.stringify({ version: 1, nonce });
-  const text = challengeMutations[fault]?.(original) ?? original;
-  const kinds: Record<string, "file" | "link" | "dir"> = {
-    symlink: "link",
-    directory: "dir",
-    "exe-symlink": "link",
-    "exe-directory": "dir",
-  };
-  const challengeKind = fault.startsWith("exe-") ? "file" : (kinds[fault] ?? "file");
-  runtimeFiles.set(challengeFile, { kind: challengeKind, bytes: Buffer.from(text) });
-  if (fault === "utf8")
-    runtimeFiles.set(challengeFile, { kind: "file", bytes: Buffer.from([255]) });
-  if (fault === "absent") runtimeFiles.delete(challengeFile);
-  if (fault === "witness-exists")
-    runtimeFiles.set(witnessFile, { kind: "file", bytes: Buffer.from("{}") });
-  if (fault.startsWith("exe-"))
-    runtimeFiles.set(process.execPath, { kind: kinds[fault] ?? "file", bytes: exeBytes });
-}
-let writes: string[];
-let callbacks: Array<() => void>;
-let holdWrites: boolean;
 let ready: () => void;
-let statusListeners: Array<(status: unknown) => void>;
-async function flush() {
-  for (let index = 0; index < 200; index++) await Promise.resolve();
-}
-async function load() {
-  await import("./main.js");
-  await flush();
-}
-function event(name: string) {
-  const listener = ports.app.on.mock.calls.find(([candidate]) => candidate === name)?.[1];
-  if (typeof listener !== "function") throw new Error(`Missing app event: ${name}`);
-  const value = { preventDefault: vi.fn() };
-  listener(value);
-  return value;
-}
-function noOrdinaryStartup() {
-  for (const port of [
-    ports.log,
-    ports.sentry,
-    ports.security,
-    ports.ipc,
-    ports.window,
-    ports.start,
-    ports.storageSmoke,
-    ports.app.setAppLogsPath,
-    ports.app.setAppUserModelId,
-  ])
-    expect(port).not.toHaveBeenCalled();
-}
-function rejectReportWrite(error: Error): void {
-  vi.mocked(process.stderr.write).mockImplementationOnce((_chunk, encoding, callback) => {
-    const complete = typeof encoding === "function" ? encoding : callback;
-    complete?.(error);
-    return false;
-  });
-}
-function configureReportingException(mode: string): void {
-  const secret = new Error("private root token SQL native-path");
-  const throwSecret = () => {
-    throw secret;
-  };
-  switch (mode) {
-    case "ready":
-      ports.app.whenReady.mockRejectedValue(secret);
-      break;
-    case "runner":
-      ports.runner.mockRejectedValue(secret);
-      break;
-    case "write-callback":
-      rejectReportWrite(secret);
-      break;
-    case "write-throw":
-      vi.mocked(process.stderr.write).mockImplementationOnce(throwSecret);
-      break;
-    case "fallback-throw":
-      ports.runner.mockRejectedValue(secret);
-      vi.mocked(process.stderr.write).mockImplementation(throwSecret);
-      break;
-  }
-}
-/** Every window loads at once, and every open-path port answers unlike any gated envelope. */
-function answerOpenPaths() {
-  ports.loadHold = undefined;
-  for (const bridge of [
-    ports.entryList,
-    ports.entryRegister,
-    ports.entryActivate,
-    ports.entrySwitch,
-    ports.entryUpgrade,
-    ports.entryRead,
-    ports.entrySave,
-    ports.workspaceQuery,
-    ports.workspaceSubmit,
-  ])
-    bridge.mockResolvedValue({ status: "open-path" });
-  ports.getStatus.mockReturnValue({ state: "ready", attempt: 1, harnessVersion: "0.0.0" });
-  ports.retry.mockReturnValue({ ok: true });
-  ports.fromWebContents.mockReturnValue(undefined);
-  ports.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
-}
-beforeEach(() => {
-  vi.resetModules();
-  vi.clearAllMocks();
-  menuKeys.reloadActs = false;
-  menuKeys.reloadSignals = ["loading", "token"];
-  menuKeys.devToolsOpens = false;
-  configureRuntimeFiles();
-  writes = [];
-  callbacks = [];
-  statusListeners = [];
-  holdWrites = false;
-  ports.app.isPackaged = true;
-  ports.app.whenReady.mockImplementation(
-    () =>
-      new Promise<void>((resolve) => {
-        ready = resolve;
-      }),
-  );
-  ports.app.getPath.mockReturnValue(runtimeRoot);
-  ports.authorize.mockImplementation((input, setter) => {
-    setter(runtimeRoot);
-    return { root: runtimeRoot, scenario: input.scenario };
-  });
-  ports.runner.mockReset().mockResolvedValue({ status: "passed", cleanupSafe: true });
-  ports.order.length = 0;
-  ports.disposeHold = undefined;
-  answerOpenPaths();
-  ports.log.mockImplementation(() => {
-    ports.order.push("createMainLogger");
-    return { info: ports.logInfo, error: ports.logError, warn: ports.logWarn };
-  });
-  ports.app.setAppLogsPath.mockImplementation(() => {
-    ports.order.push("setAppLogsPath");
-  });
-  ports.stop.mockImplementation(async () => {
-    ports.order.push("harness");
-  });
-  // The bridge stops record their names, so the program's order is observable (S6-L4).
-  for (const [stop, name] of [
-    [ports.storageStop, "project-storage"],
-    [ports.workspaceStop, "workspace"],
-    [ports.entryStop, "project-entry"],
-  ] as const)
-    stop.mockImplementation(() => {
-      ports.order.push(name);
-    });
-  ports.storageSmoke.mockResolvedValue(undefined);
-  ports.subscribe.mockImplementation((listener) => {
-    statusListeners.push(listener);
-    return vi.fn();
-  });
-  ports.start.mockImplementation(() =>
-    queueMicrotask(() => {
-      for (const listener of statusListeners)
-        listener({ state: "ready", attempt: 1, harnessVersion: "0.0.0" });
+let releaseFileClose = () => {};
+useMainEntryFakes({
+  untilReady: () =>
+    new Promise<void>((resolve) => {
+      ready = resolve;
     }),
-  );
-  vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE", "1");
-  vi.stubEnv("SLOPSTOP_PACKAGE_SMOKE_SCENARIO", "writer-proof");
-  vi.stubGlobal("MAIN_WINDOW_VITE_DEV_SERVER_URL", undefined);
-  vi.stubGlobal("MAIN_WINDOW_VITE_NAME", "main_window");
-  vi.spyOn(process.stderr, "write").mockImplementation((chunk, encoding, callback) => {
-    writes.push(String(chunk));
-    const complete = typeof encoding === "function" ? encoding : callback;
-    const finish = () => complete?.();
-    if (holdWrites) callbacks.push(finish);
-    else finish();
-    return true;
-  });
-});
-afterEach(() => {
-  if (originalElectron) Object.defineProperty(process.versions, "electron", originalElectron);
-  else Reflect.deleteProperty(process.versions, "electron");
-  process.argv.splice(0, process.argv.length, ...originalArgv);
-  vi.restoreAllMocks();
-  vi.unstubAllEnvs();
-  vi.unstubAllGlobals();
+  untilCloseReleased: () =>
+    new Promise<void>((resolve) => {
+      releaseFileClose = resolve;
+    }),
+  loadMain: () => import("./main.js"),
 });
 
 describe("ordinary main characterization", () => {
@@ -643,7 +135,7 @@ describe("private main composition", () => {
     expect(writes.join("")).toBe(terminal + passed);
   });
   it("closes the complete witness before reporting", async () => {
-    publicationFault = "held";
+    faultPublication("held");
     await load();
     ready();
     await flush();
@@ -656,7 +148,7 @@ describe("private main composition", () => {
   it.each(["race", "write", "close"])(
     "refuses failed exclusive witness publication: %s",
     async (fault) => {
-      publicationFault = fault;
+      faultPublication(fault);
       await load();
       ready();
       await flush();
@@ -754,7 +246,7 @@ describe("private main composition", () => {
               cleanupFailures: [{ processIndex: 0, stage: "cleanup" }],
             };
       ports.runner.mockResolvedValue(result);
-      holdWrites = true;
+      holdReportWrites();
       await load();
       expect(ports.runner).not.toHaveBeenCalled();
       noOrdinaryStartup();
@@ -787,7 +279,7 @@ describe("private main composition", () => {
           complete = resolve;
         }),
     );
-    holdWrites = true;
+    holdReportWrites();
     await load();
     if (stage !== "before-ready") {
       ready();
@@ -1151,17 +643,6 @@ const invokeChannels = Object.values(desktopIpcChannels).filter(
 const sorted = (channels: readonly string[]) => [...channels].sort((a, b) => a.localeCompare(b));
 
 describe("the window chrome in main", () => {
-  /** Runs `run` with `process.platform` set to `platform`, and restores it after. */
-  async function onPlatform(platform: NodeJS.Platform, run: () => Promise<void>) {
-    const original = Object.getOwnPropertyDescriptor(process, "platform");
-    Object.defineProperty(process, "platform", { configurable: true, value: platform });
-    try {
-      await run();
-    } finally {
-      if (original) Object.defineProperty(process, "platform", original);
-    }
-  }
-
   it.each([
     { name: "packaged on win32", packaged: true, platform: "win32", sets: true },
     { name: "packaged on linux", packaged: true, platform: "linux", sets: false },

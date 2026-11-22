@@ -23,6 +23,7 @@ export default defineConfig({
             "menu-keys-package-smoke.test.ts",
             "application-menu.test.ts",
             "canonical-writer-package-smoke-main.test.ts",
+            "menu-keys-proof-page-main.test.ts",
           ].map((file) => desktop(`src/main/${file}`)),
         },
       },

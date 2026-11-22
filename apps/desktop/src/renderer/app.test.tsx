@@ -19,6 +19,7 @@ import {
   projectsHeadingId,
   workHeadingId,
 } from "./shell/focus-headings.js";
+import { useZoneKeys } from "./shell/use-zone-keys.js";
 import { exposeApi, readyApi, readyStatus, unusedWorkspaceApi } from "./test-api.js";
 
 const startingStatus: HarnessStatus = {
@@ -1222,4 +1223,61 @@ describe("SH-B24: the headings that take focus", () => {
       });
     },
   );
+});
+
+describe("SH-B20: the F6 listener on its own", () => {
+  /** A page with only the zone keys mounted, and no zone of the shell's own. */
+  function ZoneKeysOnly() {
+    useZoneKeys();
+    return null;
+  }
+  /** Presses F6 on the document; answers whether the page took the key. */
+  const pressF6 = () => {
+    const event = new KeyboardEvent("keydown", { key: "F6", bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+  /** Puts the rail's current item in the page, outside React; answers it. */
+  const railItem = () => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<nav aria-label="Activity" data-zone-row=""><button aria-pressed="true">Projects</button></nav>',
+    );
+    return document.querySelector<HTMLElement>("[data-zone-row] button");
+  };
+  afterEach(() => document.querySelector("[data-zone-row]")?.remove());
+
+  it("SH-B20: leaves F6 to the page when no zone exists", () => {
+    render(<ZoneKeysOnly />);
+    expect(pressF6()).toBe(false);
+  });
+
+  it("SH-B20: takes F6 and moves focus when a zone exists", () => {
+    render(<ZoneKeysOnly />);
+    const item = railItem();
+    expect([pressF6(), document.activeElement === item]).toEqual([true, true]);
+  });
+
+  it("SH-B20: stops listening once the shell is gone", () => {
+    render(<ZoneKeysOnly />).unmount();
+    railItem();
+    expect([pressF6(), document.activeElement]).toEqual([false, document.body]);
+  });
+
+  it("SH-B20: moves focus without failing when a zone target sits outside its container", () => {
+    render(<ZoneKeysOnly />);
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<div data-zone-row=""><textarea aria-label="Message"></textarea></div>',
+    );
+    const errors: unknown[] = [];
+    const onError = (event: ErrorEvent) => errors.push(event.error);
+    window.addEventListener("error", onError);
+    try {
+      expect([pressF6(), errors]).toEqual([true, []]);
+      expect(document.activeElement).toBe(document.querySelector('textarea[aria-label="Message"]'));
+    } finally {
+      window.removeEventListener("error", onError);
+    }
+  });
 });

@@ -55,11 +55,17 @@ module.exports = {
       },
     },
     {
-      // Q4 (a): the Electron entry only wires; nothing imports it. The smoke wiring test is the one
-      // exception, because it loads the real entry to prove what main.ts itself registers.
+      // Q4 (a): the Electron entry only wires; nothing imports it. The smoke wiring test and the
+      // keys proof's page test are the exceptions, because they load the real entry to prove what
+      // main.ts itself registers.
       name: "no-import-of-electron-entry",
       severity: "error",
-      from: { pathNot: "^apps/desktop/src/main/canonical-writer-package-smoke-main\\.test\\.ts$" },
+      from: {
+        pathNot: [
+          "^apps/desktop/src/main/canonical-writer-package-smoke-main\\.test\\.ts$",
+          "^apps/desktop/src/main/menu-keys-proof-page-main\\.test\\.ts$",
+        ],
+      },
       to: { path: "^apps/desktop/src/main/main\\.ts$" },
     },
   ],

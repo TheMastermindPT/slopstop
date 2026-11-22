@@ -21,4 +21,9 @@ describe("the Attention sidebar", () => {
       digits: /\d/.test(region.textContent ?? ""),
     }).toEqual({ lists: 0, links: 0, buttons: 0, digits: false });
   });
+
+  it("SH-B20: lets the Attention heading take focus by script only", () => {
+    render(<AttentionSidebar />);
+    expect(screen.getByRole("heading", { name: "Attention" }).tabIndex).toBe(-1);
+  });
 });
