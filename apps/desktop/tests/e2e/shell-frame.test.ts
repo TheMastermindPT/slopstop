@@ -561,6 +561,40 @@ const headingBoxes = (page: Page, id: string) =>
     };
   }, id);
 
+/** The focused heading's id, its own box shadow and its ring's (the `::before`) shadow. */
+const headingShadows = (page: Page) =>
+  page.evaluate(() => {
+    const active = document.activeElement;
+    if (active === null) return null;
+    return {
+      id: active.id,
+      own: getComputedStyle(active).boxShadow,
+      ring: getComputedStyle(active, "::before").boxShadow,
+    };
+  });
+
+test("SH-B24: draws the ring once, on its pseudo-element, around the Attention and conversation headings", async () => {
+  test.setTimeout(150_000);
+  await inShellWindow(async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    const ring = await computedValue(page, "boxShadow", "var(--focus-ring)");
+    const rail = page.getByRole("navigation", { name: "Activity" });
+    await rail.getByRole("button", { name: "Attention", exact: true }).click();
+    await rail.getByRole("button", { name: "Attention", exact: true }).focus();
+    await page.keyboard.press("F6");
+    expect(await headingShadows(page)).toEqual({ id: "attention-heading", own: "none", ring });
+    await rail.getByRole("button", { name: "Projects", exact: true }).click();
+    await openAndRestart(page);
+    await rail.getByRole("button", { name: "Projects", exact: true }).focus();
+    await page.keyboard.press("F6");
+    await page.keyboard.press("F6");
+    await expect(
+      page.getByRole("heading", { name: "Project repository-a", exact: true }),
+    ).toBeFocused();
+    expect(await headingShadows(page)).toEqual({ id: "ws-heading", own: "none", ring });
+  }, seedTwoProjects);
+});
+
 test("SH-B25: stops the brand dragging by its own name with an element put before it in the banner", async () => {
   test.setTimeout(150_000);
   await inShellWindow(async (application, page) => {

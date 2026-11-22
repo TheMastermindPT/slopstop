@@ -1216,9 +1216,9 @@ describe("SH-B24: the headings that take focus", () => {
     async ({ id, api, reach }) => {
       const { user } = renderAlphaBeta(api?.());
       const heading = await reach(user);
-      expect({ id: heading?.id, ring: heading?.hasAttribute(focusHeadingAttribute) }).toEqual({
+      expect({ id: heading?.id, ring: heading?.getAttribute(focusHeadingAttribute) }).toEqual({
         id,
-        ring: true,
+        ring: "",
       });
     },
   );

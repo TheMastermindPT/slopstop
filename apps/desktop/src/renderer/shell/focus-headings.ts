@@ -13,10 +13,10 @@ export const workHeadingId = "ws-heading";
 /** The attribute the ring's rule selects. */
 export const focusHeadingAttribute = "data-focus-heading";
 
-/** What a heading that takes focus spreads: its id and the ring's attribute. */
-type FocusHeadingProps = Readonly<{ id: string; "data-focus-heading": "" }>;
+/** What a heading that takes focus spreads: its id and the ring's attribute, empty. */
+type FocusHeadingProps = Readonly<{ id: string } & Record<typeof focusHeadingAttribute, "">>;
 
-const focusHeading = (id: string): FocusHeadingProps => ({ id, "data-focus-heading": "" });
+const focusHeading = (id: string): FocusHeadingProps => ({ id, [focusHeadingAttribute]: "" });
 
 export const projectsHeading = focusHeading(projectsHeadingId);
 export const attentionHeading = focusHeading(attentionHeadingId);

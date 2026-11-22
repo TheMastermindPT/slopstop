@@ -32,6 +32,12 @@ describe("the title bar", () => {
   });
 });
 
+it("SH-B25: names the brand for the skip button rule, with an empty value", () => {
+  const banner = render(<TitleBar />).container.querySelector("header");
+  const brand = banner?.querySelector("svg")?.parentElement;
+  expect(brand?.getAttribute("data-title-bar-brand")).toBe("");
+});
+
 describe("the open Project's name in the bar", () => {
   it("SH-B17: writes the name as text, never as markup", () => {
     const name = '<img src=x onerror=alert(1)> & "b"';

@@ -50,4 +50,19 @@ describe("the focus headings' owner", () => {
   it("SH-B24: writes the ring attribute only in its owner and the ring rule", () => {
     expect(holding([focusHeadingAttribute])).toEqual([owner, "shell/shell-frame.module.css"]);
   });
+
+  it("SH-B24: selects the headings by the exact attribute in each part of the ring rule", () => {
+    const rule = readFileSync(path.join(renderer, "shell/shell-frame.module.css"), "utf8");
+    const selector = `.work :global([${focusHeadingAttribute}]`;
+    expect(rule.split(selector).length - 1).toBe(3);
+    for (const part of [")", ":focus-visible)", ":focus-visible::before)"])
+      expect(rule).toContain(`${selector}${part} {`);
+  });
+
+  it("SH-B24: gives no heading an owner id without its props object", () => {
+    const bareIds = ["projectsHeadingId", "attentionHeadingId", "workHeadingId"].map(
+      (name) => `id={${name}}`,
+    );
+    expect(holding(bareIds)).toEqual([]);
+  });
 });
