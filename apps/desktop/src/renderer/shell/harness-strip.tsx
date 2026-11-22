@@ -2,6 +2,7 @@ import type { HarnessStatus } from "@slopstop/protocol";
 import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { RunaIcon, type RunaIconName } from "../icons/runa-icon.js";
 import seixo from "../theme/seixo.module.css";
+import { workHeadingId } from "./focus-headings.js";
 import styles from "./harness-strip.module.css";
 
 /** The harness state's words: the state word and its detail (`copyForStatus` in `app.tsx`). */
@@ -64,7 +65,7 @@ function useFocusAfterLeaving(button: RefObject<HTMLButtonElement | null>) {
   useLayoutEffect(
     () => () => {
       if (button.current !== null && button.current === document.activeElement)
-        document.getElementById("ws-heading")?.focus();
+        document.getElementById(workHeadingId)?.focus();
     },
     [button],
   );

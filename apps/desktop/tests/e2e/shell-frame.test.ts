@@ -561,6 +561,28 @@ const headingBoxes = (page: Page, id: string) =>
     };
   }, id);
 
+test("SH-B25: stops the brand dragging by its own name with an element put before it in the banner", async () => {
+  test.setTimeout(150_000);
+  await inShellWindow(async (application, page) => {
+    await sizeContent(application, page, 1280, 800);
+    await openAndRestart(page);
+    // An empty element first in the banner: the brand is no longer the banner's first child.
+    await page.evaluate(
+      (banner) => document.querySelector(banner)?.prepend(document.createElement("div")),
+      bannerSelector,
+    );
+    await tabToSkipAsFirstStop(page);
+    const focused = await skipLayout(page);
+    expect(
+      focused && { noDrag: focused.noDrag, brandHoldsSkip: coversBrand(focused).brandHoldsSkip },
+    ).toEqual({
+      // The empty element still drags; the brand and the name button do not.
+      noDrag: ["DIV:brand", "BUTTON"],
+      brandHoldsSkip: true,
+    });
+  }, seedTwoProjects);
+});
+
 test("SH-B20: rings the sidebar and work-area headings F6 focuses with the Seixo ring", async () => {
   test.setTimeout(150_000);
   await inShellWindow(async (application, page) => {

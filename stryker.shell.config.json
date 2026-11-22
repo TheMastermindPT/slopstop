@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "mutate": [
+    "apps/desktop/src/renderer/shell/title-bar.tsx",
+    "apps/desktop/src/renderer/shell/use-zone-keys.ts",
+    "apps/desktop/src/renderer/shell/skip-link.tsx",
+    "apps/desktop/src/renderer/shell/rail.tsx",
+    "apps/desktop/src/renderer/shell/harness-strip.tsx",
+    "apps/desktop/src/renderer/shell/shell-frame.tsx",
+    "apps/desktop/src/renderer/shell/attention-sidebar.tsx",
+    "apps/desktop/src/renderer/shell/focus-headings.ts",
+    "apps/desktop/src/main/zoom-floor.ts",
+    "apps/desktop/src/main/zoom-keys.ts",
+    "apps/desktop/src/main/menu-keys-package-smoke.ts",
+    "apps/desktop/src/main/application-menu.ts",
+    "apps/desktop/src/main/main.ts:289-316",
+    "apps/desktop/src/main/main.ts:322-339"
+  ],
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "vitest": {
+    "configFile": "apps/desktop/vitest.shell-mutation.config.ts",
+    "related": false
+  },
+  "coverageAnalysis": "perTest",
+  "ignoreStatic": false,
+  "incremental": false,
+  "concurrency": 4,
+  "reporters": ["json", "html"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/shell.html"
+  },
+  "jsonReporter": {
+    "fileName": "reports/mutation/shell.json"
+  },
+  "thresholds": {
+    "high": 90,
+    "low": 80,
+    "break": 80
+  }
+}

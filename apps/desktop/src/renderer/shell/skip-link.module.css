@@ -38,14 +38,15 @@
 
 /*
  * The banner comes later in the page and drags, so it would cover the focused button's `no-drag`
- * in the window's hit test. While the skip button has focus, the brand under it (the banner's
- * first element: mark and wordmark) stops dragging too; the rest of the bar still drags (V1). It
- * stretches to the bar's height so its box holds the whole button; its items stay centred.
+ * in the window's hit test. While the skip button has focus, the brand under it (mark and
+ * wordmark, found by its own name `data-title-bar-brand`) stops dragging too; the rest of the bar
+ * still drags (V1). It stretches to the bar's height so its box holds the whole button; its items
+ * stay centred.
  */
 :global(
   body:has(#skip-to-attention:focus)
     header:not(:is(article, aside, main, nav, section) header)
-    > div:first-child
+    > [data-title-bar-brand]
 ) {
   align-self: stretch;
   app-region: no-drag;

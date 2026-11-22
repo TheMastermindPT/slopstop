@@ -1,5 +1,6 @@
 import { projectConversationDiagnostics } from "@slopstop/protocol";
 import { RunaIcon } from "../icons/runa-icon.js";
+import { workHeading } from "../shell/focus-headings.js";
 import theme from "../theme/seixo.module.css";
 import { Composer, MessageStream } from "./conversation-parts.js";
 import styles from "./conversation-region.module.css";
@@ -92,7 +93,7 @@ export function ConversationRegion(
   return (
     <div className={`${theme["seixo"]} ${styles["region"]}`} data-conversation-region="">
       <header className={styles["regionHeader"]}>
-        <h2 id="ws-heading" className={styles["heading"]} tabIndex={-1}>
+        <h2 {...workHeading} className={styles["heading"]} tabIndex={-1}>
           {`Project ${props.name}`}
         </h2>
         <span className={styles["accessWord"]}>{props.access}</span>

@@ -20,6 +20,7 @@
         "vitest.desktop-s7-mutation.config.ts",
         "vitest.desktop-s8-mutation.config.ts",
         "vitest.port-foundation-mutation.config.ts",
+        "vitest.shell-mutation.config.ts",
         "vite.*.config.ts"
       ],
       "project": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "*.config.ts"]

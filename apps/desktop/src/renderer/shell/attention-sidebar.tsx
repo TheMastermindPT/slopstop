@@ -1,8 +1,6 @@
 import seixo from "../theme/seixo.module.css";
 import styles from "./attention-sidebar.module.css";
-
-/** The heading the rail focuses when Attention becomes current. */
-export const attentionHeadingId = "attention-heading";
+import { attentionHeading } from "./focus-headings.js";
 
 /**
  * The Attention sidebar while no source feeds it: its head, the rune rule (decoration, hidden from
@@ -13,7 +11,7 @@ export function AttentionSidebar() {
   return (
     <aside aria-label="Attention" className={`${seixo["seixo"]} ${styles["sidebar"]}`}>
       <div className={styles["head"]}>
-        <h2 id={attentionHeadingId} className={styles["heading"]} tabIndex={-1}>
+        <h2 {...attentionHeading} className={styles["heading"]} tabIndex={-1}>
           Attention
         </h2>
       </div>

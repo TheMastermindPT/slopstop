@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -451,10 +451,33 @@ it("passes on the repository's own configs and anchors", () => {
       { config: "stryker.effect-gate.config.json", ranges: 0, wholeFiles: 1 },
       { config: "stryker.ledger-table.config.json", ranges: 0, wholeFiles: 1 },
       { config: "stryker.ledger.config.json", ranges: 2, wholeFiles: 1 },
-      { config: "stryker.port-foundation.config.json", ranges: 10, wholeFiles: 5 },
+      { config: "stryker.port-foundation.config.json", ranges: 11, wholeFiles: 5 },
       { config: "stryker.project-storage-desktop.config.json", ranges: 0, wholeFiles: 4 },
       { config: "stryker.project-storage.config.json", ranges: 28, wholeFiles: 18 },
+      { config: "stryker.shell.config.json", ranges: 2, wholeFiles: 12 },
       { config: "stryker.stryker-ranges.config.json", ranges: 0, wholeFiles: 1 },
     ],
   });
+});
+
+it("keeps the port-foundation ranges of main.ts at their own functions", () => {
+  const { mutate } = JSON.parse(
+    readFileSync(join(repository, "stryker.port-foundation.config.json"), "utf8"),
+  );
+  // proveMenuKeys and reportPackageSmokeStage each have their own range; the range that ran from
+  // one into the other (346-382) is gone.
+  expect(mutate.filter((entry) => entry.startsWith("apps/desktop/src/main/main.ts:"))).toEqual(
+    [
+      "102-118",
+      "252-257",
+      "289-316",
+      "322-339",
+      "346-376",
+      "379-382",
+      "399-399",
+      "435-442",
+      "531-533",
+      "553-553",
+    ].map((lines) => `apps/desktop/src/main/main.ts:${lines}`),
+  );
 });

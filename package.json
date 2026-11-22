@@ -41,6 +41,7 @@
     "test:mutation:ledger-table:harness": "pnpm exec stryker run stryker.ledger-table.config.json",
     "test:mutation:project-storage:desktop": "pnpm exec stryker run stryker.project-storage-desktop.config.json",
     "test:mutation:project-storage:harness": "pnpm exec stryker run stryker.project-storage.config.json",
+    "test:mutation:shell:desktop": "pnpm exec stryker run stryker.shell.config.json",
     "test:related": "vitest run --changed",
     "test:unit": "vitest run",
     "test:watch": "vitest",

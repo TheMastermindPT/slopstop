@@ -67,43 +67,43 @@
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:95-95",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:101-101",
     "first": "    conversationMemory.newEpoch();",
     "last": "    conversationMemory.newEpoch();"
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:108-108",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:114-114",
     "first": "  }, [ready, attempt, refresh, clearProblem, conversationMemory]);",
     "last": "  }, [ready, attempt, refresh, clearProblem, conversationMemory]);"
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:120-121",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:126-127",
     "first": "        activationId: result.activationId,",
     "last": "        readOnly: result.access === \"read-only\","
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:328-338",
+    "entry": "apps/desktop/src/renderer/projects-workspace.tsx:334-344",
     "first": "        <ConversationMemoryProvider value={conversationMemory}>",
     "last": "        </ConversationMemoryProvider>"
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/workspace-view.tsx:45-57",
+    "entry": "apps/desktop/src/renderer/workspace-view.tsx:46-58",
     "first": "  const idle = flow.screen.kind === \"idle\" && !removing;",
     "last": "      {idle ? ("
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/workspace-view.tsx:81-115",
+    "entry": "apps/desktop/src/renderer/workspace-view.tsx:82-116",
     "first": "  const upgradeProblem =",
     "last": "          {upgradeProblem}"
   },
   {
     "config": "stryker.config.json",
-    "entry": "apps/desktop/src/renderer/workspace-view.tsx:121-177",
+    "entry": "apps/desktop/src/renderer/workspace-view.tsx:122-178",
     "first": "",
     "last": "}"
   },
@@ -396,6 +396,18 @@
     "last": "      }"
   },
   {
+    "config": "stryker.shell.config.json",
+    "entry": "apps/desktop/src/main/main.ts:289-316",
+    "first": "function armMenuKeysMarker(contents: WebContents) {",
+    "last": "}"
+  },
+  {
+    "config": "stryker.shell.config.json",
+    "entry": "apps/desktop/src/main/main.ts:322-339",
+    "first": "function countLoads(contents: WebContents) {",
+    "last": "}"
+  },
+  {
     "config": "stryker.port-foundation.config.json",
     "entry": "apps/desktop/src/main/main.ts:289-316",
     "first": "function armMenuKeysMarker(contents: WebContents) {",
@@ -409,8 +421,14 @@
   },
   {
     "config": "stryker.port-foundation.config.json",
-    "entry": "apps/desktop/src/main/main.ts:346-382",
+    "entry": "apps/desktop/src/main/main.ts:346-376",
     "first": "function proveMenuKeys(",
+    "last": "}"
+  },
+  {
+    "config": "stryker.port-foundation.config.json",
+    "entry": "apps/desktop/src/main/main.ts:379-382",
+    "first": "function reportPackageSmokeStage(stage: string): void {",
     "last": "}"
   },
   {

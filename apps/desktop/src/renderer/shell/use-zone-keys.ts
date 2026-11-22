@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { attentionHeadingId } from "./attention-sidebar.js";
+import { attentionHeadingId, projectsHeadingId, workHeadingId } from "./focus-headings.js";
 
 /** The banner landmark: a `header` outside every sectioning element and `main`. */
 const bannerSelector = "header:not(:is(article, aside, main, nav, section) header)";
@@ -23,10 +23,10 @@ const zones: readonly Zone[] = [
   {
     container: () =>
       document.querySelector('aside[aria-label="Projects"], aside[aria-label="Attention"]'),
-    target: element(`#projects-heading, #${attentionHeadingId}`),
+    target: element(`#${projectsHeadingId}, #${attentionHeadingId}`),
   },
   // The work area is the frame's <main>: it also holds the harness strip.
-  { container: element("main"), target: element("#ws-heading") },
+  { container: element("main"), target: element(`#${workHeadingId}`) },
   // The message box is the conversation's field: the text field and its Save button.
   {
     container: element("[data-conversation-field]"),

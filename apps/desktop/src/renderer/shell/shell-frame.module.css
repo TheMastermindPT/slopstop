@@ -79,19 +79,20 @@
  * The headings F6 and the hand-backs focus wear the Seixo ring, as every other stop does: a
  * transparent outline that forced colours paint, and the ring (F2). The ring is drawn a little
  * away from the glyphs, with the row radius, on a pseudo-element, so the heading's box and text
- * do not move.
+ * do not move. Each such heading carries the attribute its owner names (`focus-headings.ts`);
+ * the `.work` prefix keeps the rule above `.seixo :focus-visible`.
  */
-.work :global(:is(#projects-heading, #attention-heading, #ws-heading)) {
+.work :global([data-focus-heading]) {
   position: relative;
 }
 
-.work :global(:is(#projects-heading, #attention-heading, #ws-heading):focus-visible) {
+.work :global([data-focus-heading]:focus-visible) {
   outline: 2px solid transparent;
   outline-offset: 2px;
   box-shadow: none;
 }
 
-.work :global(:is(#projects-heading, #attention-heading, #ws-heading):focus-visible::before) {
+.work :global([data-focus-heading]:focus-visible::before) {
   content: "";
   position: absolute;
   inset: -2px -6px;

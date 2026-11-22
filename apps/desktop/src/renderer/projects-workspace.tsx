@@ -14,7 +14,13 @@ import {
 import { type ListState, ProjectRows, safeModeLabel } from "./projects-list.js";
 import styles from "./projects-workspace.module.css";
 import { useRemoveFromList } from "./remove-from-list/use-remove-from-list.js";
-import { AttentionSidebar, attentionHeadingId } from "./shell/attention-sidebar.js";
+import { AttentionSidebar } from "./shell/attention-sidebar.js";
+import {
+  attentionHeadingId,
+  projectsHeading,
+  projectsHeadingId,
+  workHeadingId,
+} from "./shell/focus-headings.js";
 import { type Destination, Rail } from "./shell/rail.js";
 import { ShellFrame } from "./shell/shell-frame.js";
 import { SkipLink } from "./shell/skip-link.js";
@@ -218,7 +224,7 @@ export function ProjectsWorkspace({
 
   /** "Try again": the whole upgrade again, without a new first activation. */
   function retryUpgrade(projectId: ProjectId) {
-    document.getElementById("ws-heading")?.focus();
+    document.getElementById(workHeadingId)?.focus();
     void select("updating", (generation) => upgrade.update(projectId, generation));
   }
 
@@ -253,13 +259,13 @@ export function ProjectsWorkspace({
   /** Puts `next`'s sidebar in the one sidebar place and moves focus to its heading. */
   function selectDestination(next: Destination) {
     flushSync(() => setDestination(next));
-    document.getElementById(next === "projects" ? "projects-heading" : attentionHeadingId)?.focus();
+    document.getElementById(next === "projects" ? projectsHeadingId : attentionHeadingId)?.focus();
   }
 
   const projectsSidebar = (
     <aside className={styles["sidebar"]} aria-label="Projects">
       <div className={styles["listHeader"]}>
-        <h2 id="projects-heading" tabIndex={-1}>
+        <h2 {...projectsHeading} tabIndex={-1}>
           Projects
         </h2>
         <button

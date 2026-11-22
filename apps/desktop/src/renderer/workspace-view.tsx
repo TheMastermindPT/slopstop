@@ -7,6 +7,7 @@ import { ConversationRegion } from "./conversation/conversation-region.js";
 import styles from "./projects-workspace.module.css";
 import { RemovalView } from "./remove-from-list/removal-view.js";
 import type { RemovalScreen, useRemoveFromList } from "./remove-from-list/use-remove-from-list.js";
+import { workHeading } from "./shell/focus-headings.js";
 import { UpgradeProblem } from "./upgrade-problem.js";
 import type { UpgradeProblem as Problem } from "./use-project-upgrade.js";
 
@@ -99,7 +100,7 @@ function WorkspaceView(
   return (
     <>
       <WorkspaceNotes note={props.note} error={props.error} />
-      <h2 id="ws-heading" tabIndex={-1}>
+      <h2 {...workHeading} tabIndex={-1}>
         {view === null ? "No Project selected" : `Project ${view.name}`}
       </h2>
       {view === null ? (

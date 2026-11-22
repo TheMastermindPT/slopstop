@@ -13,6 +13,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SlopStopApi } from "../shared/desktop-api.js";
 import { projectId, registrationApi } from "./add-repository/registration-fake.js";
 import { App } from "./app.js";
+import {
+  attentionHeadingId,
+  focusHeadingAttribute,
+  projectsHeadingId,
+  workHeadingId,
+} from "./shell/focus-headings.js";
 import { exposeApi, readyApi, readyStatus, unusedWorkspaceApi } from "./test-api.js";
 
 const startingStatus: HarnessStatus = {
@@ -1162,4 +1168,58 @@ describe("SH-B21: Skip to Attention", () => {
     await user.keyboard("{F6}");
     expect(document.activeElement).toBe(rail().getByRole("button", { name: "Projects" }));
   });
+});
+
+describe("SH-B24: the headings that take focus", () => {
+  type User = ReturnType<typeof userEvent.setup>;
+  const level2 = (name: string) => screen.findByRole("heading", { level: 2, name });
+  it.each([
+    {
+      name: "no Project",
+      id: workHeadingId,
+      reach: async () => level2("No Project selected"),
+    },
+    {
+      name: "add flow",
+      id: workHeadingId,
+      // The add flow's first step asks the desktop process for a repository.
+      api: () =>
+        registrationApi(undefined, undefined, { listProjects: async () => alphaBeta() }).api,
+      reach: async (user: User) => {
+        await user.click(await screen.findByRole("button", { name: "Add existing repository" }));
+        await screen.findByRole("button", { name: "Trust and continue" });
+        // The step heading takes focus as the step shows.
+        await waitFor(() => expect(document.activeElement?.tagName).toBe("H2"));
+        return document.activeElement;
+      },
+    },
+    {
+      name: "open conversation",
+      id: workHeadingId,
+      reach: async (user: User) => {
+        await openProject(user, "alpha");
+        return level2("Project alpha");
+      },
+    },
+    { name: "Projects", id: projectsHeadingId, reach: async () => level2("Projects") },
+    {
+      name: "Attention",
+      id: attentionHeadingId,
+      reach: async (user: User) => {
+        await screen.findByRole("button", { name: "Open Project alpha" });
+        await pressRail(user, "Attention");
+        return level2("Attention");
+      },
+    },
+  ])(
+    "SH-B24: gives the heading that takes focus the owner id and ring attribute: $name",
+    async ({ id, api, reach }) => {
+      const { user } = renderAlphaBeta(api?.());
+      const heading = await reach(user);
+      expect({ id: heading?.id, ring: heading?.hasAttribute(focusHeadingAttribute) }).toEqual({
+        id,
+        ring: true,
+      });
+    },
+  );
 });

@@ -1,6 +1,7 @@
 import { FolderIcon, TerminalIcon, WarningIcon } from "@phosphor-icons/react";
 import { type ReactNode, useEffect, useRef } from "react";
 import styles from "../projects-workspace.module.css";
+import { workHeading } from "../shell/focus-headings.js";
 import type { FlowScreen } from "./use-add-repository.js";
 
 const steps = ["Folder", "Trust", "Git version", "Git access", "Confirm"] as const;
@@ -22,7 +23,7 @@ export function StepHeading({
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), [focusKey]);
   return (
-    <h2 id="ws-heading" tabIndex={-1} ref={heading}>
+    <h2 {...workHeading} tabIndex={-1} ref={heading}>
       {children}
     </h2>
   );
