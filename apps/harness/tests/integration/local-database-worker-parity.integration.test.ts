@@ -1,7 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createWorkerLocalLibsqlClient,
   type LocalLibsqlClient,
@@ -21,6 +22,42 @@ async function newRoot() {
   const root = await mkdtemp(path.join(os.tmpdir(), "slopstop-sqlite-parity-"));
   roots.push(root);
   return root;
+}
+
+/**
+ * What holds `directory` open, as Sysinternals `handle.exe` lists it, or why it could not say.
+ * `-accepteula` keeps its first run from waiting on a licence dialog.
+ */
+function holderOf(directory: string, command = "handle.exe"): string {
+  const found = spawnSync(command, ["-accepteula", "-nobanner", directory], {
+    encoding: "utf8",
+    timeout: 10_000,
+  });
+  if ((found.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT")
+    return `${command} not found`;
+  if (found.error !== undefined) return `${command} failed: ${found.error.message}`;
+  return `${found.stdout}${found.stderr}`.trim();
+}
+
+/**
+ * Renames `directory` to `to`, at once and once. A Windows `EPERM` fails with the original error
+ * and what held the folder, so a failure tells a handle the client kept from a scanner's; any
+ * other error is rethrown unchanged.
+ */
+async function renameNamingHolder(
+  directory: string,
+  to: string,
+  move: typeof rename = rename,
+  holder: (directory: string) => string = holderOf,
+): Promise<void> {
+  try {
+    await move(directory, to);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EPERM") throw error;
+    throw new Error(`${String(error)}\nHolder of ${directory}:\n${holder(directory)}`, {
+      cause: error,
+    });
+  }
 }
 
 function open(file: string) {
@@ -140,6 +177,41 @@ it("releases every file of a closed client at once, without waiting for collecti
     await transaction.execute("INSERT INTO t (n) VALUES (1)");
     await transaction.commit();
     await client.close();
-    await expect(rename(directory, `${directory}-released`)).resolves.toBeUndefined();
+    await expect(renameNamingHolder(directory, `${directory}-released`)).resolves.toBeUndefined();
   }
+});
+
+describe("the released-files row's failure report", () => {
+  const eperm = Object.assign(new Error("EPERM: operation not permitted, rename"), {
+    code: "EPERM",
+  });
+
+  it("fails an EPERM rename with the original error and the folder's holder", async () => {
+    const failure = renameNamingHolder(
+      "C:/proof/generation-4",
+      "C:/proof/generation-4-released",
+      async () => Promise.reject(eperm),
+      (directory) => `node.exe pid: 1 type: File ${directory}\\slopstop.db-wal`,
+    );
+    await expect(failure).rejects.toThrow(
+      "Error: EPERM: operation not permitted, rename\nHolder of C:/proof/generation-4:\n" +
+        "node.exe pid: 1 type: File C:/proof/generation-4\\slopstop.db-wal",
+    );
+    await expect(failure).rejects.toMatchObject({ cause: eperm });
+  });
+
+  it("rethrows any other rename error unchanged, without asking for a holder", async () => {
+    const missing = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+    const holder = vi.fn(() => "unused");
+    await expect(
+      renameNamingHolder("C:/a", "C:/b", async () => Promise.reject(missing), holder),
+    ).rejects.toBe(missing);
+    expect(holder).not.toHaveBeenCalled();
+  });
+
+  it("says the holder tool was not found, never nothing, when it is absent", () => {
+    expect(holderOf(os.tmpdir(), "slopstop-no-such-handle-tool.exe")).toBe(
+      "slopstop-no-such-handle-tool.exe not found",
+    );
+  });
 });
